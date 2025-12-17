@@ -1,0 +1,25 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+
+# Pixi
+.pixi
+
+
+# Media and Static
+media/
+staticfiles/
+
+# IDEs
+.idea
+.vscode

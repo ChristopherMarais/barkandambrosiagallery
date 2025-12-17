@@ -1,28 +1,16 @@
-version: '3.8'
-
 services:
   web:
     build: .
-    command: pixi run start # Dev mode (runserver)
+    command: pixi run start
     volumes:
       - .:/app
+      - media_data:/app/media
+      # Keep pixi env cached but separate
+      - pixi_cache:/app/.pixi
     ports:
       - "8000:8000"
     depends_on:
       - db
-      - redis
-    env_file:
-      - .env
-
-  # Background Worker for your file uploads
-  worker:
-    build: .
-    command: pixi run worker
-    volumes:
-      - .:/app
-    depends_on:
-      - db
-      - redis
     env_file:
       - .env
 
@@ -34,9 +22,11 @@ services:
       - POSTGRES_DB=beetles_db
       - POSTGRES_USER=beetles_user
       - POSTGRES_PASSWORD=devpass
-
-  redis:
-    image: redis:7
+    ports:
+      # Expose DB to localhost so you can access it from your local machine
+      - "5432:5432"
 
 volumes:
   postgres_data:
+  media_data:
+  pixi_cache:
