@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    command: pixi run start # Dev mode (runserver)
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    env_file:
+      - .env
+
+  # Background Worker for your file uploads
+  worker:
+    build: .
+    command: pixi run worker
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+    env_file:
+      - .env
+
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=beetles_db
+      - POSTGRES_USER=beetles_user
+      - POSTGRES_PASSWORD=devpass
+
+  redis:
+    image: redis:7
+
+volumes:
+  postgres_data:

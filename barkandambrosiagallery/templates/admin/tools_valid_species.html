@@ -1,0 +1,32 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+{% block title %}Valid species • Tools{% endblock %}
+
+{% block content %}
+<div id="content" class="content">
+  <h1>Tools: valid_species.csv</h1>
+
+  <div class="module">
+    <h2>Current status</h2>
+    <ul>
+      <li>Updating: <strong>{{ status.updating|yesno:"Yes,No" }}</strong></li>
+      <li>Label: <code>{{ status.label|default:"—" }}</code></li>
+      <li>Version (internal): <code>{{ status.version|default:"—" }}</code></li>
+    </ul>
+  </div>
+
+  <div class="module">
+    <h2>Publish new CSV</h2>
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      <table>
+        {{ form.as_table }}
+      </table>
+      <p class="help">The CSV must contain headers:
+        <code>valid_species_id, scientificName, scientificNameAuthority, subfamily, tribe, subtribe, genus, species, subspecies, authority, authorityYear, originalGenus</code>.
+      </p>
+      <input type="submit" class="default" value="Publish">
+    </form>
+  </div>
+</div>
+{% endblock %}

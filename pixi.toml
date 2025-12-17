@@ -1,0 +1,45 @@
+[workspace]
+channels = ["conda-forge"]
+name = "barkandambrosiagallery"
+version = "0.1.0"
+description = "Beetles gallery app"
+authors = ["Christopher Marais <gmarais@ufl.edu>"]
+platforms = ["linux-64", "win-64", "osx-arm64"]
+
+[tasks]
+# Developer Tasks (Cross-platform)
+manage = "python manage.py"
+start = "python manage.py runserver 0.0.0.0:8000"
+shell = "python manage.py shell"
+makemigrations = "python manage.py makemigrations"
+migrate = "python manage.py migrate"
+test = "python manage.py test"
+
+# Production/Docker Tasks
+collectstatic = "python manage.py collectstatic --noinput"
+gunicorn = "gunicorn barkandambrosiagallery.wsgi:application --bind 0.0.0.0:8000"
+worker = "celery -A barkandambrosiagallery worker -l info"
+
+[dependencies]
+python = "3.11.*"
+django = "5.0.1.*"
+psycopg2 = "*"
+celery = "*"
+redis-py = "*"
+pandas = ">=2.3.3,<3"
+numpy = ">=2.3.5,<3"
+matplotlib = ">=3.10.8,<4"
+openpyxl = ">=3.1.5,<4"
+pillow = ">=12.0.0,<13"
+django-simple-history = ">=3.11.0,<4"
+whitenoise = ">=6.11.0,<7"
+django-crispy-forms = ">=2.5,<3"
+
+[target.win-64.dependencies]
+waitress = "*"
+
+[target.linux-64.dependencies]
+gunicorn = "*"
+
+[target.osx-arm64.dependencies]
+gunicorn = "*"

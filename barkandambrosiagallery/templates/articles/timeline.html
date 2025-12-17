@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load static date_format humanize %}
+{% block content %}
+  <section class="flex flex-col container mx-auto py-10">
+    <h1 class="text-text text-2xl uppercase text-center my-5 font-pavelt">Timeline</h1>
+    <div class="flex  flex-col justify-center items-center my-4">
+      <ol class="relative border-s border-spacepurple2 mt-10 w-full sm:w-3/4 md:w-1/2">
+        <li class="mb-10 ms-12">
+          <span class="absolute flex items-center justify-center w-10 h-10 bg-primary rounded-full -start-5 ring-8 ring-primary"><img class="rounded-full shadow-lg" src="{% static 'articles/img/team/Cleydson.jpeg' %}" alt="" /></span>
+          <div class="items-center justify-between p-4 bg-primary rounded-lg shadow-sm sm:flex">
+            <time class="mb-1 text-xs font-normal text-text sm:order-last sm:mb-0">2017</time>
+            <div class="text-sm font-normal text-text">
+              <a href="{% url "team_view" %}" class="font-semibold text-blue-600 hover:underline">Cleydson</a> created <span class="bg-background border-spacepurple2 shadow-[0_0_5px_.5px] shadow-spacepurple2 text-text text-xs font-semibold ms-1 px-2 py-0.5 rounded">SpaceBio</span>
+            </div>
+          </div>
+        </li>
+        <li class="mb-10 ms-12">
+          <span class="absolute flex items-center justify-center w-10 h-10 bg-primary rounded-full -start-5 ring-8 ring-primary"><img class="rounded-full shadow-lg" src="{% static 'articles/img/team/Cleydson.jpeg' %}" alt="" /></span>
+          <div class="p-4 bg-primary rounded-lg shadow-sm">
+            <div class="items-center justify-between mb-3 sm:flex">
+              <time class="mb-1 text-xs font-normal text-text sm:order-last sm:mb-0">2023</time>
+              <div class="text-sm font-normal text-text lex">First SpaceBio interface</div>
+            </div>
+            <div class="p-3 text-xs italic font-normal text-text rounded-lg bg-background">
+                <img src="{% static 'articles/img/old_spacebio.png' %}" alt="">
+            </div>
+          </div>
+        </li>
+        <li class="mb-10 ms-12">
+            <span class="absolute flex items-center justify-center w-10 h-10 bg-primary rounded-full -start-5 ring-8 ring-primary"><img class="rounded-full shadow-lg" src="{% static 'articles/img/team/Arthur.jpeg' %}" alt="" /></span>
+            <div class="items-center justify-between p-4 bg-primary rounded-lg shadow-sm sm:flex">
+                <time class="mb-1 text-xs font-normal text-text sm:order-last sm:mb-0">November, 2023</time>
+                <div class="text-sm font-normal text-text lex">
+                    <a href="{% url "team_view" %}" class="font-semibold text-blue-600 hover:underline">Arthur</a> joined the team
+                </div>
+            </div>
+        </li>
+        <li class="mb-10 ms-12">
+          <span class="absolute flex items-center justify-center w-10 h-10 bg-primary rounded-full -start-5 ring-8 ring-primary"><img class="rounded-full shadow-lg" src="{% static 'articles/img/team/Arthur.jpeg' %}" alt="" /></span>
+          <div class="p-4 bg-primary rounded-lg shadow-sm">
+            <div class="items-center justify-between mb-3 sm:flex">
+              <time class="mb-1 text-xs font-normal text-text sm:order-last sm:mb-0">1 day ago</time>
+              <div class="text-sm font-normal text-text lex">
+                Lorem ipsum, dolor sit amet consectetur adipisicing elit. Neque, non.
+              </div>
+            </div>
+            <div class="p-3 text-xs italic font-normal text-text rounded-lg bg-background">Hi ya'll! I wanted to share a webinar zeroheight is having regarding how to best measure your design system! This is the second session of our new webinar series on #DesignSystems discussions where we'll be speaking about Measurement.</div>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+{% endblock %}

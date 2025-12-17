@@ -1,0 +1,169 @@
+{% block slider %}
+  <!-- SPLIDE JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/js/splide.min.js"></script>
+
+  <style>
+    .splide {
+      padding: 0;
+    }
+    .splide__track {
+      padding: 0 1rem;
+      margin: 0 1rem;
+    }
+    .splide__list {
+      padding: 0;
+    }
+    .splide__arrow {
+      width: 4rem;
+      height: 4rem;
+      position: absolute; /* Set the position to absolute */
+      top: 45%; /* Position the arrows at the middle of the screen vertically */
+    }
+    .splide__arrow svg {
+      height: 3rem;
+      width: 3rem;
+      fill: rgba(60, 60, 60, 0.7);
+      transition: fill 0.2s linear;
+    }
+    .splide__arrow:hover:not(:disabled) svg {
+      fill: rgb(104, 38, 207);
+    }
+    
+    .splide__arrow--prev {
+      left: -2px;
+    }
+    .splide__arrow--next {
+      right: 0px;
+    }
+    
+    .splide__pagination {
+      position: static;
+      padding-top: 1rem;
+    }
+    .splide__pagination__page {
+      background: rgba(50, 50, 50, 0.55);
+      border: 0;
+      margin: 5px;
+      border-radius: 2.5px;
+      display: inline-block;
+      position: relative;
+      padding: 13px;
+      transition: background-color 0.2s linear;
+      width: 20px;
+    }
+    .splide__pagination__page:hover {
+      background: rgba(104, 38, 207, 0.8);
+    }
+    .splide__pagination__page.is-active {
+      background: linear-gradient(145deg, blue 0%, purple 100%);
+      z-index: 1;
+    }
+    .splide__pagination {
+      counter-reset: pagination-num;
+    }
+    
+    .splide__pagination__page:before {
+      counter-increment: pagination-num;
+      content: counter(pagination-num);
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+    }
+    @media screen and (min-width: 1536px) {
+      .splide__slide {
+        margin-right: 1.2rem;
+        max-width: 32%;
+      }
+      .splide__list {
+        max-width: 1320px;
+      }
+      .splide__arrow--prev {
+        left: -5px;
+      }
+      .splide__arrow--next {
+        right: 5px; /* Move the right arrow to the right corner of the screen */
+      }
+    }
+    @media screen and (min-width: 1025px) and (max-width: 1535px) {
+      .splide {
+        margin-left: 0rem;
+      }
+      .splide__slide {
+        max-width: 49%;
+        margin-right: 1rem;
+      }
+    }
+    @media screen and (min-width: 1024px) {
+      .splide {
+        padding: 0 2rem;
+      }
+      .splide__slide {
+        padding: 0;
+      }
+    }
+    @media screen and (min-width: 641px) and (max-width: 1023px) {
+      .splide__slide {
+        padding: 0 0.3rem;
+        max-width: 600px;
+      }
+    }
+    @media screen and (min-width: 390px) and (max-width: 640px) {
+      .splide {
+        margin: 0 0.8rem;
+      }
+    }
+  </style>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      new Splide('#splide2', {
+        type: 'carousel',
+        perPage: 3,
+        perMove: 1,
+        lazyLoad: true,
+        autoplay: true, // Autoplay habilitado
+        loop: true,
+        interval: 5000, // Intervalo de tempo entre os slides (em milissegundos)
+        pauseOnHover: true, // Pausar autoplay ao passar o mouse sobre o slider
+        arrows: true, // Mostrar setas de navegação
+        pagination: true, // Desativar a paginação
+        rewind: true,
+        breakpoints: {
+          1536: {
+            perPage: 2
+          },
+          1280: {
+            Width: '50%',
+            perPage: 2
+          },
+          1024: {
+            arrows: false,
+            perPage: 2,
+            gap: 15
+          },
+          767: {
+            Width: '100%',
+            perPage: 1,
+            gap: 5
+          },
+          640: {
+            perPage: 1, // Alterar o número de slides visíveis em telas menores
+            Width: '100%', // Largura total dos slides em telas menores para mostrar apenas 1 slide por vez
+            gap: 10, // Espaçamento entre os cartões em telas menores
+            pagination: false,
+            arrows: false // Esconder as setas de navegação em telas menores
+          }
+        },
+        speed: 1000, // Velocidade da transição entre os slides (em milissegundos)
+        easing: 'ease-in-out', // Tipo de easing para a transição entre os slides
+        drag: true, // Permitir arrastar o slider com o mouse
+        preloadPages: false, // Quantidade de slides a serem pré-carregados
+        trimSpace: true, // Remover espaço em branco do final do track quando não houver mais slides
+        updateOnMove: true, // Atualizar o estado do slider enquanto é movido
+        accessibility: true // Adicionar atributos de acessibilidade aos elementos do slider
+      }).mount()
+    })
+  </script>
+{% endblock %}

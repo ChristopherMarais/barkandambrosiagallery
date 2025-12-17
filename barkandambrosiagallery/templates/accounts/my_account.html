@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<main>
+  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10 space-y-8">
+    <h2 class="text-title-md2 font-bold text-black">My Account</h2>
+
+    <!-- Profile card -->
+    <div class="rounded-sm border border-stroke bg-white shadow-default">
+      <div class="w-full p-4 sm:p-8">
+        <h3 class="text-lg font-semibold text-black mb-4">Profile</h3>
+        <form method="post" action="">
+          {% csrf_token %}
+          {{ profile_form.non_field_errors }}
+
+          {% include "accounts/field.html" with field=profile_form.first_name label="First name" %}
+          {% include "accounts/field.html" with field=profile_form.last_name  label="Last name" %}
+          {% include "accounts/field.html" with field=profile_form.email      label="Email" %}
+
+          <div class="mt-5">
+            <button 
+              name="profile_submit" 
+              type="submit"
+              class="inline-flex items-center justify-center px-4 py-2 rounded-lg
+                   border border-gray-300 bg-white text-black
+                   hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Save profile
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Password card -->
+    <div class="rounded-sm border border-stroke bg-white shadow-default">
+      <div class="w-full p-4 sm:p-8">
+        <h3 class="text-lg font-semibold text-black mb-4">Change password</h3>
+        <form method="post" action="">
+          {% csrf_token %}
+          {{ password_form.non_field_errors }}
+
+          {% include "accounts/field.html" with field=password_form.old_password  label="Current password" %}
+          {% include "accounts/field.html" with field=password_form.new_password1 label="New password" %}
+          {% include "accounts/field.html" with field=password_form.new_password2 label="Re-type new password" %}
+
+          <div class="mt-5">
+            <button 
+              name="password_submit" 
+              type="submit"
+              class="inline-flex items-center justify-center px-4 py-2 rounded-lg
+                     border border-gray-300 bg-white text-black
+                     hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Change password
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</main>
+{% endblock %}
