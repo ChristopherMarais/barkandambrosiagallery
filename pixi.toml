@@ -7,10 +7,21 @@ channels = ["conda-forge"]
 platforms = ["linux-64", "osx-arm64", "osx-64", "win-64"]
 
 [tasks]
+# One-time setup
+install-js = "npm install"
+
+# Run this to fix broken CSS
+build-css = "npx tailwindcss -i ./beetlesgallery/static/css/input.css -o ./beetlesgallery/static/css/style.css"
+
+# Run this in a separate terminal while developing
+watch-css = "npx tailwindcss -i ./beetlesgallery/static/css/input.css -o ./beetlesgallery/static/css/style.css --watch"
+
+# Run this to start the server
 start = "python manage.py runserver 0.0.0.0:8000"
 migrate = "python manage.py migrate"
 collectstatic = "python manage.py collectstatic --noinput"
 gunicorn = "gunicorn beetlesgallery.wsgi:application --bind 0.0.0.0:8000"
+
 
 # --- Dependencies for ALL platforms (Windows, Mac, Linux) ---
 [dependencies]
@@ -19,6 +30,15 @@ django = "5.0.*"
 psycopg2 = "2.9.*"
 dj-database-url = "*"
 python-dotenv = "*"
+pandas = "*"
+openpyxl = "*"       # For reading Excel files
+xlsxwriter = "*"     # For writing Excel files (downloads)
+pillow = "*"         # For ImageFields
+django-crispy-forms = "*"
+django-filter = "*"
+django-simple-history = "*"
+django-cleanup = "*"  # Optional but good for file management
+nodejs = "20.*"
 
 # --- Dependencies for LINUX/MAC ONLY (Server/Docker) ---
 # Gunicorn will be installed in Docker, but ignored on your Windows laptop.

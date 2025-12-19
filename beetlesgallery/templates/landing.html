@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="container mx-auto px-4 h-[calc(100vh-80px)] flex flex-col overflow-hidden py-2">
+
+    <div class="flex-none flex flex-col items-center text-center gap-1 mb-2">
+        <h1 class="text-xl md:text-3xl font-bold text-text leading-tight">Bark and Ambrosia Beetle Image Database</h1>
+        <p class="text-[10px] md:text-xs text-text/70 max-w-4xl leading-tight">
+            Search, upload, and download curated images and specimen data for the world’s bark and ambrosia beetles
+            (Scolytinae and Platypodinae). Maintained by the UF Forest Entomology lab.
+        </p>
+    </div>
+
+    <div class="flex-1 min-h-0 flex flex-col lg:flex-row gap-4 items-center justify-center max-w-6xl mx-auto w-full">
+
+        <div class="flex-1 min-h-0 w-full flex justify-center items-center h-full overflow-hidden">
+
+            <img src="{% static 'img/IMG_5557.PNG' %}" alt="Beetles DB specimen"
+                class="w-auto h-auto max-w-full max-h-full object-contain" />
+
+        </div>
+
+        <div class="flex-none w-full max-w-md flex flex-col gap-2 lg:w-[400px]">
+
+            <div class="rounded-xl border border-text/10 bg-white p-3 shadow-sm flex flex-col justify-center">
+                <div class="flex items-center gap-2 mb-1">
+                    <i class="fi fi-rr-bug text-lg text-blue-600"></i>
+                    <h2 class="text-sm font-semibold text-text">Search Specimens</h2>
+                </div>
+                <p class="text-[11px] text-text/70 leading-tight">Browse the database and view high-res images.</p>
+                <a href="{% url 'beetles_home' %}" class="text-xs text-blue-600 font-medium hover:underline mt-1">Go to
+                    database →</a>
+            </div>
+
+            <div class="rounded-xl border border-text/10 bg-white p-3 shadow-sm flex flex-col justify-center">
+                <div class="flex items-center gap-2 mb-1">
+                    <i class="fi fi-rr-upload text-lg text-green-600"></i>
+                    <h2 class="text-sm font-semibold text-text">Upload Data</h2>
+                </div>
+                <p class="text-[11px] text-text/70 leading-tight">Contribute images and metadata via bulk uploader.</p>
+                <a href="{% url 'upload' %}" class="text-xs text-green-600 font-medium hover:underline mt-1">Start
+                    upload →</a>
+            </div>
+
+            <div class="rounded-xl border border-text/10 bg-white p-3 shadow-sm flex flex-col justify-center">
+                <div class="flex items-center gap-2 mb-1">
+                    <i class="fi fi-rr-folder text-lg text-purple-600"></i>
+                    <h2 class="text-md font-semibold text-text">My History</h2>
+                </div>
+                <p class="text-[11px] text-text/70 leading-tight">Track status of imports and view logs.</p>
+                <a href="{% url 'my_uploads' %}" class="text-xs text-purple-600 font-medium hover:underline mt-1">View
+                    my files →</a>
+            </div>
+
+        </div>
+    </div>
+</section>
+{% endblock %}

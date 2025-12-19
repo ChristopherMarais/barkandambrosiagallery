@@ -29,9 +29,9 @@ db.sqlite3
 *.log
 celerybeat-schedule
 
-# --- 6. Temporary Uploads ---
-# Your settings.py defines this for chunked uploads
+# --- 6. Folders ---
 tmp_uploads/
+node_modules/
 
 # --- 7. IDE & OS Junk ---
 .vscode/

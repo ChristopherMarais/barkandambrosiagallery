@@ -1,22 +1,39 @@
-"""
-URL configuration for beetlesgallery project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.contrib import admin
 from django.urls import path
+from django.conf import settings
+from django.conf.urls.static import static
+
+from beetlesgallery.beetles_app import views as beetles_views
+from beetlesgallery.beetles_app.views import LoginViewWithRedirectMessage, PostOnlyLogoutView
 
 urlpatterns = [
+    path("admin/tools/valid-species/", beetles_views.admin_valid_species, name="admin_valid_species"),
     path('admin/', admin.site.urls),
+    
+    # --- Auth ---
+    path("accounts/login/", LoginViewWithRedirectMessage.as_view(template_name="accounts/signin.html"), name="login"),
+    path("accounts/logout/", PostOnlyLogoutView.as_view(), name="logout"),
+    path("accounts/signup/", beetles_views.signup, name="signup"),
+    path("accounts/me/", beetles_views.my_account, name="my_account"),
+
+    # --- Pages ---
+    # 1. Root URL -> Landing View (Sidebar "Home" links here)
+    path('', beetles_views.landing, name='home'),
+    
+    # 2. /beetles/ -> Gallery View (Sidebar "Beetles" links here)
+    path('beetles/', beetles_views.gallery, name='beetles_home'),
+
+    path('beetles/<uuid:beetle_id>/', beetles_views.beetle_detail, name='beetle_detail'),
+
+    # --- Tools ---
+    path('upload/', beetles_views.upload_file, name='upload'),
+    path("my-uploads/", beetles_views.my_uploads, name="my_uploads"),
+    path("downloads/start/", beetles_views.start_batch_download, name="start_batch_download"),
+    path("updates/", beetles_views.update_upload, name="update_upload"),
+    path("reference/download/", beetles_views.download_taxonomy_ref, name="download_taxonomy_ref"),
+    
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

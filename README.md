@@ -2,186 +2,177 @@
 
 A dedicated web platform for storing, browsing, and managing large datasets of annotated images for **Bark and Ambrosia Beetles**.
 
-This project is designed to handle high-resolution image libraries (up to 500GB+) by separating the heavy image data (stored locally or on object storage) from the lightweight metadata (stored in PostgreSQL).
+# Development Workflow
 
-## 🏗 Architecture Overview
+This guide covers how to set up the project, run it locally, make changes (Python, HTML, CSS), and share your work with the team.
 
-We use a **Hybrid Development Workflow** to ensure the setup is simple, fast, and scalable:
-
-* **Django (via Pixi):** Runs directly on your machine for fast debugging and file watching.
-* **PostgreSQL (via Docker):** Runs in a container to ensure a consistent, production-grade database environment without complex local installation.
-* **Pixi:** Manages all Python dependencies (Django, Pillow, etc.) to guarantee every developer uses the exact same environment.
-
----
-
-## 🛠 Prerequisites
+## **1. Prerequisites**
 
 Before starting, ensure you have the following installed:
-1.  **[Pixi](https://pixi.sh/)** (for Python environment management)
-2.  **[Docker Desktop](https://www.docker.com/products/docker-desktop/)** (for the database)
-3.  **Git**
+
+* **Docker Desktop** (must be running)
+* **Git**
+* **(Optional)** [Pixi](https://prefix.dev/) (installed locally helps with managing `pixi.lock`, though Docker handles the runtime).
 
 ---
 
-## 🚀 Getting Started (Local Development)
+## **2. Initial Setup (First Time Only)**
 
-Follow these steps to set up the project on your local machine.
+If you are cloning this repository for the first time (or setting up a new machine), follow these steps to initialize the environment.
 
-### 1. Clone the Repository
+1. **Clone the Repository**
 ```bash
-git clone [https://github.com/your-username/barkandambrosiagallery.git](https://github.com/your-username/barkandambrosiagallery.git)
-cd barkandambrosiagallery
+git clone https://github.com/your-org/beetlesgallery.git
+cd beetlesgallery
 
 ```
 
-### 2. Start the Database
 
-We run the database in a Docker container to keep it isolated.
-
+2. **Build the Environment**
+This builds the Docker container and installs all Python (Pixi) and JavaScript (npm) dependencies.
 ```bash
-# Start the database in the background
-docker compose up -d db
+docker compose build
 
 ```
 
-### 3. Install Dependencies
 
-Use Pixi to install the Python environment and dependencies.
-
+3. **Initialize the Database**
+Run the migrations to create the database schema.
 ```bash
-pixi install
+docker compose run --rm web pixi run migrate
 
 ```
 
-### 4. Setup the Database (Migrations)
 
-Create the database tables. We must explicitly tell the local Django app to look for the database on `localhost`.
-
-**Windows (PowerShell):**
-
-```powershell
-$env:POSTGRES_HOST="localhost"; pixi run migrate
-
-```
-
-**Mac / Linux:**
-
+4. **Create an Admin User**
+You need this to access the upload tools and admin panel.
 ```bash
-POSTGRES_HOST=localhost pixi run migrate
+docker compose run --rm web pixi run python manage.py createsuperuser
 
 ```
-
-### 5. Create an Admin User
-
-To access the Django admin panel:
-
-**Windows (PowerShell):**
-
-```powershell
-$env:POSTGRES_HOST="localhost"; pixi run python manage.py createsuperuser
-
-```
-
-**Mac / Linux:**
-
-```bash
-POSTGRES_HOST=localhost pixi run python manage.py createsuperuser
-
-```
-
----
-
-## 🏃‍♂️ Running the Website
-
-To start the development server, ensure your Docker database is running, then run the start command.
-
-**Windows (PowerShell):**
-
-```powershell
-$env:POSTGRES_HOST="localhost"; pixi run start
-
-```
-
-**Mac / Linux:**
-
-```bash
-POSTGRES_HOST=localhost pixi run start
-
-```
-
-### 🌐 Access the Site
-
-* **Website:** [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
-* **Admin Panel:** [http://127.0.0.1:8000/admin/](https://www.google.com/search?q=http://127.0.0.1:8000/admin/)
-
-*(Press `Ctrl+C` in your terminal to stop the server)*
-
----
-
-## 🤝 Contribution Guidelines
-
-We follow a standard Git feature-branch workflow to maintain stability. **Please do not commit directly to the `main` branch.**
-
-### How to Contribute:
-
-1. **Create a Branch:**
-Always create a new branch for your specific task or feature.
-```bash
-git checkout main
-git pull origin main
-git checkout -b feature/name-of-your-feature
-
-```
-
-
-*(Example branch names: `feature/add-image-upload`, `fix/login-bug`, `style/homepage-redesign`)*
-2. **Develop & Test:**
-Make your changes and verify they work locally using the instructions above.
-3. **Commit & Push:**
-```bash
-git add .
-git commit -m "Brief description of changes"
-git push origin feature/name-of-your-feature
-
-```
-
-
-4. **Create a Pull Request (PR):**
-* Go to the repository on GitHub.
-* Click **"Compare & pull request"**.
-* Describe your changes and submit.
-* Your code will be reviewed by the team before being merged into the public version of the website.
 
 
 
 ---
 
-## 🐳 Full Docker (Optional)
+## **3. Daily Development Cycle**
 
-If you need to simulate the production server environment (running both the web server and database in containers):
+### **Step A: Start the Server**
+
+To view the website, start the containers. This runs the database and the Django web server.
 
 ```bash
-docker compose up --build
+docker compose up
 
 ```
 
+* **View the site:** [http://localhost:8000](https://www.google.com/search?q=http://localhost:8000)
+* **Stop the site:** Press `Ctrl+C` in the terminal.
+
+### **Step B: Editing Code (Python & HTML)**
+
+* **Hot Reloading:** The project is configured to "watch" your folders. If you edit any `.py` file (views, models) or `.html` template, the server will automatically reload. You just need to refresh your browser.
+
+### **Step C: Editing Styles (Tailwind CSS)**
+
+Because we use Tailwind, changing classes in HTML (e.g., `text-red-500` to `text-blue-500`) requires recompiling the CSS file.
+
+1. Open a **new terminal** window (keep `docker compose up` running in the first one).
+2. Run the CSS watcher:
+```bash
+docker compose run --rm web pixi run build-css
+
 ```
 
-### **How to Push this to GitHub**
 
-Since you are setting this up for the first time, run these commands in your terminal to save the README and push everything to GitHub:
+* *Note: This command runs in "watch mode" (it will stay open).*
+* As you save HTML or JS files, you will see it regenerate `style.css` instantly.
 
-```powershell
-# 1. Check status (you should see README.md as untracked or modified)
+
+
+### **Step D: Modifying the Database (Models)**
+
+If you edit `models.py` (e.g., adding a new field to `Beetles`), you must update the database schema.
+
+1. **Create Migration File:**
+```bash
+docker compose run --rm web pixi run python manage.py makemigrations
+
+```
+
+
+2. **Apply Migration:**
+```bash
+docker compose run --rm web pixi run migrate
+
+```
+
+
+
+### **Step E: Adding New Dependencies**
+
+* **Python:** Add the package to `pixi.toml` under `[dependencies]`.
+* Run `pixi install` locally (if you have Pixi) to update `pixi.lock`.
+* Run `docker compose build` to rebuild the container with the new library.
+
+
+* **JavaScript:** Edit `package.json`.
+* Run `docker compose build` to update.
+
+
+
+---
+
+## **4. Sharing Your Changes (Git Workflow)**
+
+Once you are happy with your changes and have tested them at `localhost:8000`:
+
+1. **Check Status:**
+See which files you changed.
+```bash
 git status
 
-# 2. Add all files
+```
+
+
+2. **Add & Commit:**
+```bash
 git add .
+git commit -m "Description of what I changed (e.g., Fixed sidebar layout)"
 
-# 3. Commit
-git commit -m "Initial commit: Basic Django setup with Pixi and Docker"
+```
 
-# 4. Push to your main branch
+
+3. **Pull Updates (Important):**
+Before pushing, always pull the latest code from your collaborators to avoid conflicts.
+```bash
+git pull origin main
+
+```
+
+
+* *If there are new dependencies in the update, run `docker compose build` again.*
+* *If there are database changes, run `docker compose run --rm web pixi run migrate`.*
+
+
+4. **Push:**
+```bash
 git push origin main
 
 ```
+
+
+
+---
+
+## **5. Cheat Sheet (Commands)**
+
+| Goal | Command |
+| --- | --- |
+| **Start Site** | `docker compose up` |
+| **Watch CSS** | `docker compose run --rm web pixi run build-css` |
+| **Apply DB Changes** | `docker compose run --rm web pixi run migrate` |
+| **Create Migration** | `docker compose run --rm web pixi run python manage.py makemigrations` |
+| **Create Admin** | `docker compose run --rm web pixi run python manage.py createsuperuser` |
+| **Rebuild Container** | `docker compose build` |
+| **Run Arbitrary Command** | `docker compose run --rm web pixi run python manage.py <command>` |

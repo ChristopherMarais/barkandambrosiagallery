@@ -1,0 +1,195 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Beetles DB</title>
+
+  <link href="{% static 'css/style.css' %}" rel="stylesheet" />
+
+  <link rel="stylesheet"
+    href="https://cdn-uicons.flaticon.com/2.2.0/uicons-regular-rounded/css/uicons-regular-rounded.css" />
+  <style>
+    /* Sidebar Defaults */
+    #sidenav {
+      transition: width 0.3s ease-in-out;
+    }
+
+    /* Home Icon Animation */
+    #home-icon {
+      /* Initial State: Vertical */
+      width: 3rem;
+      height: 3rem;
+      transform: rotate(0deg);
+      transition: all 0.3s ease-in-out;
+      object-fit: contain;
+      /* Ensures the whole beetle fits */
+    }
+
+    @media (min-width: 1024px) {
+      #sidenavWrap {
+        width: 5rem;
+        z-index: 50;
+      }
+
+      #sidenav {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 5rem;
+      }
+
+      #sidenav:hover {
+        width: 16rem;
+      }
+
+      #sidenav:hover span {
+        opacity: 1;
+        width: auto;
+        margin-left: 0.75rem;
+        transition-delay: 75ms;
+      }
+
+      /* UPDATED: Rotate 90deg and fill FULL horizontal space */
+      #sidenav:hover #home-icon {
+        transform: rotate(90deg);
+        height: 16rem;
+        width: 10rem;
+        margin-top: -6.5rem;
+        margin-bottom: -6.5rem;
+      }
+    }
+  </style>
+
+  <script src="{% static 'js/footer_basehtml.js' %}" defer></script>
+</head>
+
+<body class="flex flex-col min-h-screen bg-white text-gray-800">
+
+  <div class="flex h-full min-h-screen w-full">
+
+    <div id="sidenavWrap" class="block sticky left-0 top-0 h-screen bg-gray-50 border-r border-gray-200">
+
+      <div class="lg:hidden flex items-center justify-between px-4 py-3 border-b">
+        <a href="{% url 'home' %}">
+          <img src="{% static 'img/IMG_5557.PNG' %}" alt="Logo" class="h-8" />
+        </a>
+        <button onclick="menuToggle()" class="p-2 rounded focus:bg-gray-200">
+          <i class="fi fi-rr-menu-burger text-2xl"></i>
+        </button>
+      </div>
+
+      <aside id="sidenav"
+        class="hidden lg:flex flex-col h-full bg-gray-50 border-r border-gray-200 overflow-hidden shadow-lg">
+        <div id="sideItems" class="flex flex-col gap-2 w-full p-2 mt-4">
+
+          <a href="{% url 'home' %}"
+            class="flex items-center p-4 rounded-lg group overflow-hidden whitespace-nowrap justify-center relative {% if request.resolver_match.url_name == 'home' %}bg-gray-300{% else %}hover:bg-gray-400{% endif %}">
+            <img id="home-icon" src="{% static 'img/IMG_5557.PNG' %}" alt="Home" class="object-contain" />
+          </a>
+
+          <div class="h-px bg-gray-300 my-2 mx-2"></div>
+
+          <a href="{% url 'beetles_home' %}"
+            class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'beetles_home' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+            <div class="w-8 flex justify-center items-center shrink-0 mr-4">
+              <i class="fi fi-rr-bug text-xl text-gray-700"></i>
+            </div>
+            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
+              Beetles
+            </span>
+          </a>
+
+          {% if user.is_staff %}
+          <a href="{% url 'upload' %}"
+            class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'upload' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+            <i class="fi fi-rr-upload text-xl text-gray-700 w-8 text-center"></i>
+            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
+              Upload
+            </span>
+          </a>
+
+          <a href="{% url 'update_upload' %}"
+            class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'update_upload' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+            <i class="fi fi-rr-refresh text-xl text-gray-700 w-8 text-center"></i>
+            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
+              Update
+            </span>
+          </a>
+          {% endif %}
+
+          {% if user.is_authenticated %}
+          <a href="{% url 'my_account' %}"
+            class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'my_account' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+            <i class="fi fi-rr-user text-xl text-gray-700 w-8 text-center"></i>
+            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
+              Account
+            </span>
+          </a>
+
+          <a href="{% url 'my_uploads' %}"
+            class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'my_uploads' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+            <i class="fi fi-rr-folder text-xl text-gray-700 w-8 text-center"></i>
+            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
+              My Files
+            </span>
+          </a>
+
+          <div class="h-px bg-gray-300 my-2 mx-2"></div>
+
+          <form action="{% url 'logout' %}" method="post" class="w-full"
+            onsubmit="return confirm('Are you sure you want to log out?');">
+            {% csrf_token %}
+            <button type="submit"
+              class="flex items-center w-full min-h-[3.5rem] rounded-lg hover:bg-gray-200 group overflow-hidden whitespace-nowrap px-5 transition-all">
+              <i class="fi fi-rr-sign-out-alt text-xl text-red-600 w-8 text-center"></i>
+              <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-red-600">
+                Logout
+              </span>
+            </button>
+          </form>
+          {% else %}
+          <a href="{% url 'login' %}"
+            class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'login' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+            <i class="fi fi-rr-sign-in-alt text-xl text-gray-700 w-8 text-center"></i>
+            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
+              Login
+            </span>
+          </a>
+
+          <a href="{% url 'signup' %}"
+            class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'signup' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+            <i class="fi fi-rr-user-add text-xl text-gray-700 w-8 text-center"></i>
+            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
+              Sign Up
+            </span>
+          </a>
+          {% endif %}
+
+        </div>
+      </aside>
+    </div>
+
+    <div class="flex-1 overflow-x-hidden">
+      <main class="max-w-7xl mx-auto px-6 py-8 min-h-[80vh]">
+        {% if messages %}
+        <div class="mb-6 space-y-2">
+          {% for message in messages %}
+          <div
+            class="p-4 rounded border {% if message.tags == 'error' %}bg-red-50 border-red-200 text-red-700{% else %}bg-green-50 border-green-200 text-green-700{% endif %}">
+            {{ message }}
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+</body>
+
+</html>

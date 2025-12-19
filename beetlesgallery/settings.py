@@ -16,7 +16,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# [cite_start]Defaults to a dev key if not found in environment [cite: 1]
+# Defaults to a dev key if not found in environment
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-fallback-dev-key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -35,6 +35,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',      # Required for template filters
+    
+    # Third-party libraries
+    'simple_history',
+    'crispy_forms',
+    'django_filters',
+
+    # Local App (Internal Module)
+    'beetlesgallery.beetles_app',
 ]
 
 MIDDLEWARE = [
@@ -43,6 +52,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'simple_history.middleware.HistoryRequestMiddleware',  # Added for simple_history
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -52,7 +62,8 @@ ROOT_URLCONF = 'beetlesgallery.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        # Point to the internal templates folder inside beetlesgallery/
+        'DIRS': [BASE_DIR / 'beetlesgallery' / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -60,6 +71,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                # Internal App Context Processor
+                "beetlesgallery.beetles_app.context_processors.species_ref_status"
             ],
         },
     },
@@ -72,7 +85,6 @@ WSGI_APPLICATION = 'beetlesgallery.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 # Automatically configures database from environment variables (POSTGRES_USER, etc.)
-# [cite_start]derived from the defaults you provided in your .env [cite: 1, 15]
 DATABASES = {
     'default': dj_database_url.config(
         default=f"postgres://{os.environ.get('POSTGRES_USER', 'beetles_user')}:{os.environ.get('POSTGRES_PASSWORD', 'devpass')}@{os.environ.get('POSTGRES_HOST', 'db')}:{os.environ.get('POSTGRES_PORT', '5432')}/{os.environ.get('POSTGRES_DB', 'beetles_db')}",
@@ -116,11 +128,42 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = 'static/'
-
-# [cite_start]Defined so 'collectstatic' in Docker has a place to put files [cite: 5]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Point to the internal static folder inside beetlesgallery/
+STATICFILES_DIRS = [
+    BASE_DIR / "beetlesgallery" / "static",
+]
+
+# Media Files (User Uploads)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# --- Beetles App Configuration ---
+
+# Auth Redirects
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "home"
+LOGOUT_REDIRECT_URL = "home"
+
+# Upload Constraints
+MAX_UPLOAD_SIZE = 10 * 1024 * 1024
+MAX_UPLOAD_SIZE_XLSX = 10 * 1024 * 1024
+MAX_UPLOAD_SIZE_ZIP = 1024 * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
+FILE_UPLOAD_TEMP_DIR = BASE_DIR / "tmp_uploads"
+
+# Create temp dir if it doesn't exist
+os.makedirs(FILE_UPLOAD_TEMP_DIR, exist_ok=True)
+
+# Taxonomy Reference
+VALID_SPECIES_PATH = "reference/valid_species.csv"
+VALID_SPECIES_VERSION_CACHE_KEY = "valid_species:version"
+VALID_SPECIES_VERSION_LABEL_CACHE_KEY = "valid_species:label"
+VALID_SPECIES_UPDATING_CACHE_KEY = "valid_species:updating"
