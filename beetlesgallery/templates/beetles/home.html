@@ -95,26 +95,60 @@
         </div>
       </div>
 
+      {# --- TOP CONTROLS (Download & Pagination) --- #}
       {% if total_matches is not None %}
-        <div class="flex flex-wrap items-center justify-between gap-4 mb-4 pb-4 border-b border-text/10">
-          <div class="text-sm text-text/70">
-            Found <span class="font-bold text-text">{{ total_matches }}</span> specimen{{ total_matches|pluralize }}.
-          </div>
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-text/10">
           
-          <div class="flex items-center gap-3">
-             <button type="submit" form="download-selected-form" id="download-selected-btn" disabled
-                     class="rounded-lg border border-text/20 bg-primary2 px-4 py-2 text-sm font-semibold text-text hover:bg-secondary/30 disabled:opacity-50 disabled:cursor-not-allowed transition">
-                Download Selected (<span id="selected-count">0</span>)
-             </button>
+          <div class="flex flex-wrap items-center gap-4">
+             <div class="text-sm text-text/70">
+               Found <span class="font-bold text-text">{{ total_matches }}</span> specimen{{ total_matches|pluralize }}.
+             </div>
+             
+             <div class="flex items-center gap-2">
+                 <button type="submit" form="download-selected-form" disabled
+                         class="download-selected-btn rounded-lg border border-text/20 bg-primary2 px-4 py-2 text-sm font-semibold text-text hover:bg-secondary/30 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                    Download Selected (<span class="selected-count">0</span>)
+                 </button>
 
-             {% if request.user.is_staff and total_matches > 0 %}
-                <div class="h-4 w-px bg-text/20 mx-1"></div>
-                <button type="button" form="download-all-form" onclick="document.getElementById('download-all-form').submit()"
-                        class="text-sm font-semibold text-accent hover:text-accent/80 hover:underline">
-                  Download All {{ total_matches }} Results
-                </button>
-             {% endif %}
+                 {% if request.user.is_staff and total_matches > 0 %}
+                    <div class="h-4 w-px bg-text/20 mx-1"></div>
+                    <button type="button" onclick="document.getElementById('download-all-form').submit()"
+                            class="text-sm font-semibold text-accent hover:text-accent/80 hover:underline">
+                      Download All
+                    </button>
+                 {% endif %}
+             </div>
           </div>
+
+          {% if is_paginated %}
+            <nav class="flex items-center gap-2">
+              {% if page_obj.has_previous %}
+                <button type="submit" name="page" value="{{ page_obj.previous_page_number }}"
+                   class="rounded border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30 transition">
+                  Previous
+                </button>
+              {% endif %}
+
+              <div class="flex items-center gap-2 text-sm text-text/70">
+                <span>Page</span>
+                {# Note: No 'name' attribute initially to prevent conflict with buttons. Added via JS on change. #}
+                <select onchange="this.name='page'; this.form.submit()" class="rounded border border-text/20 bg-background py-1.5 px-2 text-sm focus:ring-accent cursor-pointer">
+                  {% for p in paginator.page_range %}
+                    <option value="{{ p }}" {% if p == page_obj.number %}selected{% endif %}>{{ p }}</option>
+                  {% endfor %}
+                </select>
+                <span>of {{ paginator.num_pages }}</span>
+              </div>
+
+              {% if page_obj.has_next %}
+                <button type="submit" name="page" value="{{ page_obj.next_page_number }}"
+                   class="rounded border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30 transition">
+                  Next
+                </button>
+              {% endif %}
+            </nav>
+          {% endif %}
+
         </div>
       {% endif %}
 
@@ -250,26 +284,60 @@
         {% endfor %}
       </div>
 
-      {% if is_paginated %}
-        <nav class="flex items-center justify-center gap-2 mt-8">
-          {% if page_obj.has_previous %}
-            <button type="submit" name="page" value="{{ page_obj.previous_page_number }}"
-               class="rounded border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30">
-              Previous
-            </button>
+      {# --- BOTTOM CONTROLS (Duplicate) --- #}
+      {% if total_matches is not None %}
+        <div class="flex flex-wrap items-center justify-between gap-4 mt-6 pt-4 border-t border-text/10">
+          
+          <div class="flex flex-wrap items-center gap-4">
+             <div class="text-sm text-text/70">
+               Found <span class="font-bold text-text">{{ total_matches }}</span> specimen{{ total_matches|pluralize }}.
+             </div>
+             
+             <div class="flex items-center gap-2">
+                 <button type="submit" form="download-selected-form" disabled
+                         class="download-selected-btn rounded-lg border border-text/20 bg-primary2 px-4 py-2 text-sm font-semibold text-text hover:bg-secondary/30 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                    Download Selected (<span class="selected-count">0</span>)
+                 </button>
+
+                 {% if request.user.is_staff and total_matches > 0 %}
+                    <div class="h-4 w-px bg-text/20 mx-1"></div>
+                    <button type="button" onclick="document.getElementById('download-all-form').submit()"
+                            class="text-sm font-semibold text-accent hover:text-accent/80 hover:underline">
+                      Download All
+                    </button>
+                 {% endif %}
+             </div>
+          </div>
+
+          {% if is_paginated %}
+            <nav class="flex items-center gap-2">
+              {% if page_obj.has_previous %}
+                <button type="submit" name="page" value="{{ page_obj.previous_page_number }}"
+                   class="rounded border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30 transition">
+                  Previous
+                </button>
+              {% endif %}
+
+              <div class="flex items-center gap-2 text-sm text-text/70">
+                <span>Page</span>
+                <select onchange="this.name='page'; this.form.submit()" class="rounded border border-text/20 bg-background py-1.5 px-2 text-sm focus:ring-accent cursor-pointer">
+                  {% for p in paginator.page_range %}
+                    <option value="{{ p }}" {% if p == page_obj.number %}selected{% endif %}>{{ p }}</option>
+                  {% endfor %}
+                </select>
+                <span>of {{ paginator.num_pages }}</span>
+              </div>
+
+              {% if page_obj.has_next %}
+                <button type="submit" name="page" value="{{ page_obj.next_page_number }}"
+                   class="rounded border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30 transition">
+                  Next
+                </button>
+              {% endif %}
+            </nav>
           {% endif %}
 
-          <span class="text-xs text-text/50 px-2">
-            Page {{ page_obj.number }} / {{ paginator.num_pages }}
-          </span>
-
-          {% if page_obj.has_next %}
-            <button type="submit" name="page" value="{{ page_obj.next_page_number }}"
-               class="rounded border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30">
-              Next
-            </button>
-          {% endif %}
-        </nav>
+        </div>
       {% endif %}
 
     </main>
@@ -293,15 +361,24 @@
 <script>
   // Selection Logic
   const rows = document.querySelectorAll('.row-select');
-  const dlBtn = document.getElementById('download-selected-btn');
-  const countSpan = document.getElementById('selected-count');
+  
+  // Use classes because we now have two buttons and two spans (top and bottom)
+  const dlBtns = document.querySelectorAll('.download-selected-btn');
+  const countSpans = document.querySelectorAll('.selected-count');
 
   function updateState() {
     const checked = document.querySelectorAll('.row-select:checked');
-    if (dlBtn && countSpan) {
-      dlBtn.disabled = checked.length === 0;
-      countSpan.textContent = checked.length;
-    }
+    const count = checked.length;
+
+    // Update all download buttons
+    dlBtns.forEach(btn => {
+        if (btn) btn.disabled = count === 0;
+    });
+
+    // Update all count spans
+    countSpans.forEach(span => {
+        if (span) span.textContent = count;
+    });
   }
 
   rows.forEach(r => r.addEventListener('change', updateState));
