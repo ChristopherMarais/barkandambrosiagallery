@@ -169,71 +169,75 @@
                 </div>
               </div>
               
-              <div class="text-xs text-text/80 mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1 w-full">
+              <div class="text-xs text-text/80 mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
                 
-                {% if not b.depicts_described_name_id %}
-                  <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <span class="ml-1">unidentified</span></div>
-                {% elif b.ref_subfamily %}
-                  <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <span class="ml-1">{{ b.ref_subfamily }}</span></div>
-                {% endif %}
+                <div class="space-y-1">
+                  {% if not b.depicts_described_name_id %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <span class="ml-1">unidentified</span></div>
+                  {% elif b.ref_subfamily %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <span class="ml-1">{{ b.ref_subfamily }}</span></div>
+                  {% endif %}
 
-                {% if not b.depicts_described_name_id %}
-                  <div class="truncate"><span class="font-semibold text-text/50">Tribe:</span> <span class="ml-1">unidentified</span></div>
-                {% elif b.ref_tribe %}
-                  <div class="truncate"><span class="font-semibold text-text/50">Tribe:</span> <span class="ml-1">{{ b.ref_tribe }}</span></div>
-                {% endif %}
+                  {% if not b.depicts_described_name_id %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Tribe:</span> <span class="ml-1">unidentified</span></div>
+                  {% elif b.ref_tribe %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Tribe:</span> <span class="ml-1">{{ b.ref_tribe }}</span></div>
+                  {% endif %}
 
-                {% if not b.depicts_described_name_id %}
-                  <div class="truncate"><span class="font-semibold text-text/50">Subtribe:</span> <span class="ml-1">unidentified</span></div>
-                {% elif b.ref_subtribe %}
-                  <div class="truncate"><span class="font-semibold text-text/50">Subtribe:</span> <span class="ml-1">{{ b.ref_subtribe }}</span></div>
-                {% endif %}
+                  {% if not b.depicts_described_name_id %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Subtribe:</span> <span class="ml-1">unidentified</span></div>
+                  {% elif b.ref_subtribe %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Subtribe:</span> <span class="ml-1">{{ b.ref_subtribe }}</span></div>
+                  {% endif %}
 
-                {% if not b.depicts_described_name_id %}
-                  <div class="truncate"><span class="font-semibold text-text/50">Genus:</span> <span class="ml-1 italic">unidentified</span></div>
-                {% elif b.ref_genus %}
-                  <div class="truncate"><span class="font-semibold text-text/50">Genus:</span> <span class="ml-1 italic">{{ b.ref_genus }}</span></div>
-                {% endif %}
+                  {% if not b.depicts_described_name_id %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Genus:</span> <span class="ml-1 italic">unidentified</span></div>
+                  {% elif b.ref_genus %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Genus:</span> <span class="ml-1 italic">{{ b.ref_genus }}</span></div>
+                  {% endif %}
 
-                {% if not b.depicts_described_name_id %}
-                  <div class="truncate"><span class="font-semibold text-text/50">Species:</span> <span class="ml-1 italic">unidentified</span></div>
-                {% elif b.ref_species %}
-                  <div class="truncate"><span class="font-semibold text-text/50">Species:</span> <span class="ml-1 italic">{{ b.ref_species }}</span></div>
-                {% endif %}
+                  {% if not b.depicts_described_name_id %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Species:</span> <span class="ml-1 italic">unidentified</span></div>
+                  {% elif b.ref_species %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Species:</span> <span class="ml-1 italic">{{ b.ref_species }}</span></div>
+                  {% endif %}
 
-                {% if not b.depicts_described_name_id %}
-                   <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic">unidentified</span></div>
-                {% elif b.ref_subspecies %}
-                   <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic">{{ b.ref_subspecies }}</span></div>
-                {% endif %}
+                  {% if not b.depicts_described_name_id %}
+                     <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic">unidentified</span></div>
+                  {% elif b.ref_subspecies %}
+                     <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic">{{ b.ref_subspecies }}</span></div>
+                  {% endif %}
+                </div>
 
-                {% if b.image_institution %}
-                  <div class="truncate"><span class="font-semibold text-text/50">Institution:</span> <span class="ml-1">{{ b.image_institution }}</span></div>
-                {% endif %}
-                
-                {% if b.aspect %}
-                  <div class="truncate"><span class="font-semibold text-text/50">Aspect:</span> <span class="ml-1">{{ b.aspect }}</span></div>
-                {% endif %}
-                
-                {% if b.image_has_multiple_individuals is not None %}
-                  <div class="truncate"><span class="font-semibold text-text/50">Multiple Individuals:</span> <span class="ml-1">{% if b.image_has_multiple_individuals %}Yes{% else %}No{% endif %}</span></div>
-                {% endif %}
+                <div class="space-y-1">
+                  {% if b.image_institution %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Institution:</span> <span class="ml-1">{{ b.image_institution }}</span></div>
+                  {% endif %}
+                  
+                  {% if b.aspect %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Aspect:</span> <span class="ml-1">{{ b.aspect }}</span></div>
+                  {% endif %}
+                  
+                  {% if b.image_has_multiple_individuals is not None %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Multiple Individuals:</span> <span class="ml-1">{% if b.image_has_multiple_individuals %}Yes{% else %}No{% endif %}</span></div>
+                  {% endif %}
 
-                {% if b.collection_country %}
-                  <div class="truncate"><span class="font-semibold text-text/50">Country:</span> <span class="ml-1">{{ b.collection_country }}</span></div>
-                {% endif %}
+                  {% if b.image_size_bytes %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Size:</span> <span class="ml-1">{{ b.image_size_bytes|filesizeformat }}</span></div>
+                  {% endif %}
 
-                {% if b.specimen_sex %}
-                  <div class="truncate"><span class="font-semibold text-text/50">Sex:</span> <span class="ml-1">{{ b.specimen_sex|upper }}</span></div>
-                {% endif %}
+                  {% if b.collection_country %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Country:</span> <span class="ml-1">{{ b.collection_country }}</span></div>
+                  {% endif %}
 
-                {% if b.specimen_type_status %}
-                  <div class="truncate"><span class="font-semibold text-text/50">Type:</span> <span class="ml-1 text-accent">{{ b.specimen_type_status }}</span></div>
-                {% endif %}
+                  {% if b.specimen_sex %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Sex:</span> <span class="ml-1">{{ b.specimen_sex|upper }}</span></div>
+                  {% endif %}
 
-                {% if b.image_size_bytes %}
-                  <div class="truncate"><span class="font-semibold text-text/50">Size:</span> <span class="ml-1">{{ b.image_size_bytes|filesizeformat }}</span></div>
-                {% endif %}
+                  {% if b.specimen_type_status %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Type:</span> <span class="ml-1 text-accent">{{ b.specimen_type_status }}</span></div>
+                  {% endif %}
+                </div>
 
               </div>
 
