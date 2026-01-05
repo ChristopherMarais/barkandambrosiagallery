@@ -129,9 +129,9 @@
                     src="{{ b.thumb_small.url }}"
                     alt="{{ b.depicts_specimen }}"
                     loading="lazy"
-                    class="h-full w-full object-cover"
+                    class="h-full w-full object-contain" 
                   />
-                {% else %}
+                  {% else %}
                   <div class="flex h-full items-center justify-center text-text/20 text-xs text-center p-2">
                     No Image
                   </div>
@@ -149,13 +149,13 @@
                   </h3>
                   
                   <div class="flex items-center gap-1.5 mt-1">
-                     <span class="font-bold text-xs text-text/50">Record ID: </span>
+                     <span class="font-bold text-xs text-text/50">Record ID:</span>
                      <span class="font-mono text-xs text-text/70 break-all select-all">{{ b.id|stringformat:"s" }}</span>
                      <button type="button" 
-                             class="copy-uuid shrink-0 text-text/40 hover:text-accent transition"
+                             class="copy-uuid shrink-0 text-accent hover:text-accent/80 transition"
                              data-uuid="{{ b.id }}" 
                              title="Copy Full Record ID">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                      </button>
                   </div>
                 </div>
@@ -169,74 +169,75 @@
                 </div>
               </div>
               
-              <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-text/80 mt-3">
+              <div class="text-xs text-text/80 mt-3 space-y-1">
                 
                 {% if not b.depicts_described_name_id %}
-                  <dt class="font-semibold text-text/50">Subfamily:</dt><dd class="truncate">unidentified</dd>
+                  <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <span class="ml-1">unidentified</span></div>
                 {% elif b.ref_subfamily %}
-                  <dt class="font-semibold text-text/50">Subfamily:</dt><dd class="truncate">{{ b.ref_subfamily }}</dd>
+                  <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <span class="ml-1">{{ b.ref_subfamily }}</span></div>
                 {% endif %}
 
                 {% if not b.depicts_described_name_id %}
-                  <dt class="font-semibold text-text/50">Tribe:</dt><dd class="truncate">unidentified</dd>
+                  <div class="truncate"><span class="font-semibold text-text/50">Tribe:</span> <span class="ml-1">unidentified</span></div>
                 {% elif b.ref_tribe %}
-                  <dt class="font-semibold text-text/50">Tribe:</dt><dd class="truncate">{{ b.ref_tribe }}</dd>
+                  <div class="truncate"><span class="font-semibold text-text/50">Tribe:</span> <span class="ml-1">{{ b.ref_tribe }}</span></div>
                 {% endif %}
 
                 {% if not b.depicts_described_name_id %}
-                  <dt class="font-semibold text-text/50">Subtribe:</dt><dd class="truncate">unidentified</dd>
+                  <div class="truncate"><span class="font-semibold text-text/50">Subtribe:</span> <span class="ml-1">unidentified</span></div>
                 {% elif b.ref_subtribe %}
-                  <dt class="font-semibold text-text/50">Subtribe:</dt><dd class="truncate">{{ b.ref_subtribe }}</dd>
+                  <div class="truncate"><span class="font-semibold text-text/50">Subtribe:</span> <span class="ml-1">{{ b.ref_subtribe }}</span></div>
                 {% endif %}
 
                 {% if not b.depicts_described_name_id %}
-                  <dt class="font-semibold text-text/50">Genus:</dt><dd class="truncate italic">unidentified</dd>
+                  <div class="truncate"><span class="font-semibold text-text/50">Genus:</span> <span class="ml-1 italic">unidentified</span></div>
                 {% elif b.ref_genus %}
-                  <dt class="font-semibold text-text/50">Genus:</dt><dd class="truncate italic">{{ b.ref_genus }}</dd>
+                  <div class="truncate"><span class="font-semibold text-text/50">Genus:</span> <span class="ml-1 italic">{{ b.ref_genus }}</span></div>
                 {% endif %}
 
                 {% if not b.depicts_described_name_id %}
-                  <dt class="font-semibold text-text/50">Species:</dt><dd class="truncate italic">unidentified</dd>
+                  <div class="truncate"><span class="font-semibold text-text/50">Species:</span> <span class="ml-1 italic">unidentified</span></div>
                 {% elif b.ref_species %}
-                  <dt class="font-semibold text-text/50">Species:</dt><dd class="truncate italic">{{ b.ref_species }}</dd>
+                  <div class="truncate"><span class="font-semibold text-text/50">Species:</span> <span class="ml-1 italic">{{ b.ref_species }}</span></div>
                 {% endif %}
 
                 {% if not b.depicts_described_name_id %}
-                   <dt class="font-semibold text-text/50">Subspecies:</dt><dd class="truncate italic">unidentified</dd>
+                   <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic">unidentified</span></div>
                 {% elif b.ref_subspecies %}
-                   <dt class="font-semibold text-text/50">Subspecies:</dt><dd class="truncate italic">{{ b.ref_subspecies }}</dd>
+                   <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic">{{ b.ref_subspecies }}</span></div>
                 {% endif %}
+
+                <br>
 
                 {% if b.image_institution %}
-                  <dt class="font-semibold text-text/50">Inst:</dt> <dd class="truncate">{{ b.image_institution }}</dd>
+                  <div class="truncate"><span class="font-semibold text-text/50">Institution:</span> <span class="ml-1">{{ b.image_institution }}</span></div>
                 {% endif %}
                 
                 {% if b.aspect %}
-                  <dt class="font-semibold text-text/50">Aspect:</dt> <dd class="truncate">{{ b.aspect }}</dd>
+                  <div class="truncate"><span class="font-semibold text-text/50">Aspect:</span> <span class="ml-1">{{ b.aspect }}</span></div>
                 {% endif %}
                 
                 {% if b.image_has_multiple_individuals is not None %}
-                  <dt class="font-semibold text-text/50">Multiple:</dt> 
-                  <dd class="truncate">{% if b.image_has_multiple_individuals %}Yes{% else %}No{% endif %}</dd>
+                  <div class="truncate"><span class="font-semibold text-text/50">Multiple Individuals:</span> <span class="ml-1">{% if b.image_has_multiple_individuals %}Yes{% else %}No{% endif %}</span></div>
                 {% endif %}
 
                 {% if b.collection_country %}
-                  <dt class="font-semibold text-text/50">Country:</dt> <dd class="truncate">{{ b.collection_country }}</dd>
+                  <div class="truncate"><span class="font-semibold text-text/50">Country:</span> <span class="ml-1">{{ b.collection_country }}</span></div>
                 {% endif %}
 
                 {% if b.specimen_sex %}
-                  <dt class="font-semibold text-text/50">Sex:</dt> <dd>{{ b.specimen_sex|upper }}</dd>
+                  <div class="truncate"><span class="font-semibold text-text/50">Sex:</span> <span class="ml-1">{{ b.specimen_sex|upper }}</span></div>
                 {% endif %}
 
                 {% if b.specimen_type_status %}
-                  <dt class="font-semibold text-text/50">Type:</dt> <dd class="truncate text-accent">{{ b.specimen_type_status }}</dd>
+                  <div class="truncate"><span class="font-semibold text-text/50">Type:</span> <span class="ml-1 text-accent">{{ b.specimen_type_status }}</span></div>
                 {% endif %}
 
                 {% if b.image_size_bytes %}
-                  <dt class="font-semibold text-text/50">Size:</dt> <dd class="truncate">{{ b.image_size_bytes|filesizeformat }}</dd>
+                  <div class="truncate"><span class="font-semibold text-text/50">Size:</span> <span class="ml-1">{{ b.image_size_bytes|filesizeformat }}</span></div>
                 {% endif %}
 
-              </dl>
+              </div>
 
             </div>
           </div>
