@@ -15,6 +15,11 @@
         </a>
       {% endif %}
 
+      {# --- NEW: Deselect All Button (Hidden by default, controlled by JS) --- #}
+      <button type="button" id="clear-selection-btn" class="hidden text-sm text-red-500 hover:underline block mb-4 text-left w-full">
+          × Deselect all items (<span id="global-selection-count">0</span>)
+      </button>
+
       <div class="space-y-1">
         <label class="text-xs font-semibold text-text/70 uppercase">Country</label>
         <select name="country" onchange="this.form.submit()" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent">
@@ -359,39 +364,102 @@
 </section>
 
 <script>
-  // Selection Logic
-  const rows = document.querySelectorAll('.row-select');
+  // --- Selection Logic (Persisted via sessionStorage) ---
+  const STORAGE_KEY = 'beetles_selected_ids';
+  let selectedIds = new Set();
   
-  // Use classes because we now have two buttons and two spans (top and bottom)
+  // DOM Elements
+  const rowCheckboxes = document.querySelectorAll('.row-select');
   const dlBtns = document.querySelectorAll('.download-selected-btn');
   const countSpans = document.querySelectorAll('.selected-count');
+  const clearBtn = document.getElementById('clear-selection-btn');
+  const globalCountSpan = document.getElementById('global-selection-count');
 
-  function updateState() {
-    const checked = document.querySelectorAll('.row-select:checked');
-    const count = checked.length;
+  function initSelection() {
+    // 1. Load from storage
+    const stored = sessionStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          selectedIds = new Set(parsed);
+        }
+      } catch (e) {
+        console.error("Failed to parse selection storage", e);
+      }
+    }
+    updateUI();
+  }
 
-    // Update all download buttons
-    dlBtns.forEach(btn => {
-        if (btn) btn.disabled = count === 0;
+  function saveSelection() {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(selectedIds)));
+  }
+
+  function updateUI() {
+    const count = selectedIds.size;
+
+    // 1. Update Checkboxes on current page
+    rowCheckboxes.forEach(cb => {
+      cb.checked = selectedIds.has(cb.value);
     });
 
-    // Update all count spans
+    // 2. Update Counts in buttons/labels
     countSpans.forEach(span => {
-        if (span) span.textContent = count;
+       span.textContent = count;
+    });
+    if (globalCountSpan) globalCountSpan.textContent = count;
+
+    // 3. Toggle Buttons
+    dlBtns.forEach(btn => {
+       btn.disabled = count === 0;
+    });
+
+    // 4. Toggle Clear Button
+    if (clearBtn) {
+        if (count > 0) {
+            clearBtn.classList.remove('hidden');
+        } else {
+            clearBtn.classList.add('hidden');
+        }
+    }
+  }
+
+  // Event Listeners for Checkboxes
+  rowCheckboxes.forEach(r => {
+    r.addEventListener('change', (e) => {
+        const id = e.target.value;
+        if (e.target.checked) {
+            selectedIds.add(id);
+        } else {
+            selectedIds.delete(id);
+        }
+        saveSelection();
+        updateUI();
+    });
+  });
+
+  // Event Listener for Clear Button
+  if (clearBtn) {
+    clearBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        selectedIds.clear();
+        saveSelection();
+        updateUI();
     });
   }
 
-  rows.forEach(r => r.addEventListener('change', updateState));
-
-  // Collect IDs for download
+  // Hook into the download form submission
   window.collectSelectedIds = function(form) {
-    const ids = Array.from(document.querySelectorAll('.row-select:checked')).map(el => el.value);
-    if (ids.length === 0) return false;
-    form.querySelector('input[name="selected_ids"]').value = ids.join(',');
+    if (selectedIds.size === 0) return false;
+    form.querySelector('input[name="selected_ids"]').value = Array.from(selectedIds).join(',');
     return true;
   }
 
-  // Copy UUID
+  // Initialize on load
+  initSelection();
+
+
+  // --- Copy UUID Logic (Preserved) ---
   document.addEventListener('click', async (e) => {
     const btn = e.target.closest('.copy-uuid');
     if (!btn) return;
@@ -407,7 +475,5 @@
       console.error(err);
     }
   });
-
-  updateState();
 </script>
 {% endblock %}
