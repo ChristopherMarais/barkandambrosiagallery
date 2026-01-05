@@ -273,6 +273,10 @@ FIELD_MAP = {
     "country": "collection_country",
     "state/province": "collection_stateProvince",
     "type status": "specimen_type_status",
+    
+    # New searchable fields
+    "specimen notes": "specimen_notes",
+    "image notes": "image_notes",
 
     # Special handling fields
     "sex": "specimen_sex",                                     # normalized m/f
@@ -287,6 +291,15 @@ REF_FIELD_LABELS = {"scientific name", "genus", "species"}
 # Operator precedence (no parentheses): NOT > AND > OR
 OP_PRECEDENCE = {"NOT": 3, "AND": 2, "OR": 1}
 OPERATORS = set(OP_PRECEDENCE.keys())
+
+# Fields to search when user provides "free text" (not Field:Value)
+FREE_TEXT_FIELDS = [
+    "alternative_id", "image_institution", "photographer", "image_email", 
+    "photo_usage_statement", "image_notes", "depicts_specimen", 
+    "depicts_valid_name_id", "depicts_described_name_id", 
+    "depicts_name_verbatim", "collection_country", "collection_stateProvince", 
+    "specimen_type_status", "specimen_notes"
+]
 
 
 #----------------------
@@ -307,22 +320,30 @@ def _tokenize_query(qs: str):
     Returns a list of either:
       - dict(field='Name ID', value='123')
       - dict(op='AND'/'OR'/'NOT')
-      - dict(error='...') for ignored token messaging
+      - dict(free_text='...') for words not part of a Field:Value pair
     """
     if not qs:
         return []
 
-    raw = shlex.split(qs, posix=True)
+    try:
+        raw = shlex.split(qs, posix=True)
+    except ValueError:
+        # Fallback for unbalanced quotes
+        raw = qs.split()
+
     out = []
     acc = []  # accumulating header words that include spaces
 
-    def flush_error(msg):
-        out.append({"error": msg})
+    def flush_free_text(tokens):
+        if tokens:
+            out.append({"free_text": " ".join(tokens)})
 
     i = 0
     while i < len(raw):
         t = raw[i]
         U = t.upper()
+        
+        # If we hit an operator and haven't accumulated a header, it's an operator
         if not acc and U in OPERATORS:
             out.append({"op": U})
             i += 1
@@ -336,10 +357,17 @@ def _tokenize_query(qs: str):
             header_words = acc + [left]
             acc = []  # reset for the next clause
             header = " ".join(header_words).strip()
+            
+            # If the header part is empty (e.g. ":value"), treat as free text
             if not header:
-                flush_error(f"Missing field before '{delim}'")
+                flush_free_text(header_words)  # Should handle [left] if left is empty?
+                # Actually if left is empty, header_words is empty or just spaces
+                # Treat 'right' as value? Without header we can't do Field search.
+                # Treat the whole thing as free text.
+                flush_free_text([t])
                 i += 1
                 continue
+                
             value = right.strip()
             if value == "":
                 # If value is empty, but next token exists and is not an operator, treat next token as value
@@ -350,13 +378,13 @@ def _tokenize_query(qs: str):
             i += 1
             continue
 
-        # No operator, no delimiter -> could be part of a multi-word header
+        # No operator, no delimiter -> part of a header OR free text
         acc.append(t)
         i += 1
 
-    # Trailing header without value/delimiter -> ignore gently
+    # Trailing tokens without value/delimiter -> treat as free text
     if acc:
-        out.append({"error": f"Incomplete field: {' '.join(acc)}"})
+        flush_free_text(acc)
 
     return out
 
@@ -464,14 +492,6 @@ def _normalize_sex(v: str):
 def _clause_to_q(field_label: str, value: str, ignored):
     """
     Build a Q() for a single field:value clause.
-
-    - CSV-backed fields (Scientific Name, Genus, Species): maps through species_ref to depicts_valid_name_id__in
-    - IDs: iexact
-    - Short text: icontains
-    - Sex: normalize to 'm'/'f'
-    - Boolean: yes/no/true/false/1/0
-    - Date: YYYY / YYYY-MM / YYYY-MM-DD (range or exact)
-    - Numeric: <, <=, >, >=, = or bare number for equality
     """
     if not field_label:
         ignored.append("empty field")
@@ -562,10 +582,10 @@ def build_query_q(user_qs: str):
     Returns (Q_object, ignored_tokens_list)
     """
     parts = _tokenize_query(user_qs or "")
-    ignored = [p["error"] for p in parts if "error" in p]
+    ignored = []  # We don't use 'error' key anymore, but check for weird states if needed
 
     # Filter only valid parts/ops for RPN
-    linear = [p for p in parts if "error" not in p]
+    linear = parts # All parts are now valid (either field, op, or free_text)
 
     rpn = _to_rpn(linear)
 
@@ -587,6 +607,13 @@ def build_query_q(user_qs: str):
                 b = stack.pop()
                 a = stack.pop()
                 stack.append((a & b) if op == "AND" else (a | b))
+        elif "free_text" in node:
+            # Construct a massive OR query across all textual fields
+            val = node["free_text"]
+            q_any = Q()
+            for f in FREE_TEXT_FIELDS:
+                q_any |= Q(**{f"{f}__icontains": val})
+            stack.append(q_any)
         else:
             q = _clause_to_q(node.get("field", ""), node.get("value", ""), ignored)
             if q is not None:
@@ -604,24 +631,23 @@ def build_query_q(user_qs: str):
 # --- 2. GALLERY VIEW (The Database Browser) ---
 def gallery(request):
     """
-    Renders the searchable database gallery.
-    Mapped to URL name='beetles_home'
-    (Renamed from 'home' to 'gallery' to avoid confusion)
+    Renders the searchable database gallery (Card/Shopping view).
     """
-    PAGE_SIZE = 10
+    # 1. Page Size Selection
+    try:
+        page_size = int(request.GET.get("per_page", 12))
+    except (ValueError, TypeError):
+        page_size = 12
+
     WARN_IMAGE_SIZE_BYTES = getattr(settings, "WARN_IMAGE_SIZE_BYTES", 10 * 1024 * 1024)
 
     base_qs = (
         Beetles.objects
-        .only(
-            "id", "depicts_valid_name_id", "depicts_specimen", "depicts_name_verbatim",
-            "collection_country", "specimen_sex", "specimen_type_status",
-            "thumb_small", "image_size_bytes",
-        )
+        .all()
         .order_by("-id")
     )
 
-    # --- parse & apply search ---
+    # --- 2. Basic Text Search (q) ---
     raw_q = request.GET.get("q", "").strip()
     if raw_q:
         q_obj, ignored = build_query_q(raw_q)
@@ -631,14 +657,79 @@ def gallery(request):
         qs = base_qs
         ignored_tokens = []
 
-    # --- count before pagination ---
+    # --- 3. Faceted Search Options ---
+    # Fetch distinct values for DB fields
+    country_opts = base_qs.exclude(collection_country="").values_list('collection_country', flat=True).distinct().order_by('collection_country')
+    sex_opts = base_qs.exclude(specimen_sex="").values_list('specimen_sex', flat=True).distinct().order_by('specimen_sex')
+    type_opts = base_qs.exclude(specimen_type_status="").values_list('specimen_type_status', flat=True).distinct().order_by('specimen_type_status')
+
+    # Calculate Genus/Species options based on used IDs
+    # (We find all Name IDs used in the DB, then resolve them to get the distinct names)
+    used_name_ids = base_qs.exclude(depicts_valid_name_id__isnull=True).values_list('depicts_valid_name_id', flat=True).distinct()
+    
+    # Bulk resolve to get taxonomies
+    resolved_map = species_ref.bulk_resolve(list(used_name_ids))
+    
+    genus_set = set()
+    species_set = set()
+    
+    for info in resolved_map.values():
+        g = info.get("genus")
+        s = info.get("scientificName")
+        if g and g.lower() != "unknown":
+            genus_set.add(g)
+        if s and s.lower() != "unknown":
+            species_set.add(s)
+
+    filter_options = {
+        "countries": country_opts,
+        "sexes": sex_opts,
+        "types": type_opts,
+        "genera": sorted(list(genus_set)),
+        "species": sorted(list(species_set)),
+    }
+
+    # --- 4. Apply Filters ---
+    selected_filters = {
+        "country": request.GET.get("country"),
+        "sex": request.GET.get("sex"),
+        "type_status": request.GET.get("type_status"),
+        "genus": request.GET.get("genus"),
+        "species": request.GET.get("species"),
+    }
+
+    if selected_filters["country"]:
+        qs = qs.filter(collection_country=selected_filters["country"])
+    
+    if selected_filters["sex"]:
+        qs = qs.filter(specimen_sex=selected_filters["sex"])
+        
+    if selected_filters["type_status"]:
+        qs = qs.filter(specimen_type_status=selected_filters["type_status"])
+
+    # Filter by Genus (using reference lookup)
+    if selected_filters["genus"]:
+        ids = species_ref.ids_for("genus", selected_filters["genus"])
+        if ids:
+            qs = qs.filter(depicts_valid_name_id__in=ids)
+        else:
+            qs = qs.none() # Found nothing for that genus
+
+    # Filter by Species (Scientific Name)
+    if selected_filters["species"]:
+        ids = species_ref.ids_for("scientific name", selected_filters["species"])
+        if ids:
+            qs = qs.filter(depicts_valid_name_id__in=ids)
+        else:
+            qs = qs.none()
+
+    # --- 5. Pagination ---
     try:
         total_matches = qs.count()
     except Exception:
         total_matches = None
 
-    # --- paginate ---
-    paginator = Paginator(qs, PAGE_SIZE)
+    paginator = Paginator(qs, page_size)
     page = request.GET.get("page", 1)
     try:
         beetles_page = paginator.page(page)
@@ -647,14 +738,24 @@ def gallery(request):
     except EmptyPage:
         beetles_page = paginator.page(paginator.num_pages)
 
-    # --- taxonomy enrichment ---
+    # --- 6. Taxonomy Enrichment ---
+    # We purposefully use .get() without a default so missing fields are None
+    # This makes the template logic {% if b.field %} much cleaner.
     for b in beetles_page.object_list:
-        ref = species_ref.resolve(
-            (str(b.depicts_valid_name_id).strip() if b.depicts_valid_name_id is not None else None)
-        )
-        b.ref_scientificName = ref.get("scientificName", "Unknown")
-        b.ref_genus = ref.get("genus", "Unknown")
-        b.ref_species = ref.get("species", "Unknown")
+        raw_id = (str(b.depicts_valid_name_id).strip() if b.depicts_valid_name_id else None)
+        ref = species_ref.resolve(raw_id)
+        
+        # Helper to treat "Unknown" string as None for cleaner UI
+        def clean(val):
+            return val if val and val.lower() != "unknown" else None
+
+        b.ref_scientificName = clean(ref.get("scientificName"))
+        b.ref_genus = clean(ref.get("genus"))
+        b.ref_species = clean(ref.get("species"))
+        b.ref_subfamily = clean(ref.get("subfamily"))
+        b.ref_tribe = clean(ref.get("tribe"))
+        b.ref_subtribe = clean(ref.get("subtribe"))
+        b.ref_subspecies = clean(ref.get("subspecies"))
         b.warn_large = (b.image_size_bytes or 0) >= WARN_IMAGE_SIZE_BYTES
 
     return render(
@@ -669,6 +770,9 @@ def gallery(request):
             "ignored_tokens": ignored_tokens,
             "total_matches": total_matches,
             "warn_size_bytes": WARN_IMAGE_SIZE_BYTES,
+            "filter_options": filter_options,
+            "selected_filters": selected_filters,
+            "per_page": page_size,
         },
     )
 
@@ -682,19 +786,7 @@ def beetle_detail(request, beetle_id):
 
     beetle = (
         Beetles.objects
-        .only(
-            "id",
-            "depicts_specimen", "depicts_valid_name_id",
-            "depicts_described_name_id", "depicts_name_verbatim",
-            "alternative_id",
-            "image_institution", "photographer", "image_email",
-            "photo_usage_statement",
-            "aspect", "resolution_in_ppmm",
-            "image_notes", "image_date_taken", "image_has_multiple_individuals",
-            "collection_country", "collection_stateProvince",
-            "specimen_sex", "specimen_type_status", "specimen_notes",
-            "image_file", "thumb_small", "image_width", "image_height"
-        )
+        .all()
         .get(pk=beetle_id)
     )
 

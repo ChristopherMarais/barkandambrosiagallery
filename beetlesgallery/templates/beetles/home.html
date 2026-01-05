@@ -2,329 +2,332 @@
 {% load humanize %}
 
 {% block content %}
-<section class="relative z-0">
-  <h1 class="text-2xl font-bold text-text mb-4">Specimens</h1>
+<section class="relative z-0 min-h-screen">
+  
+  <form method="get" id="main-form" class="flex flex-col lg:flex-row gap-6">
+    
+    <aside class="w-full lg:w-64 shrink-0 space-y-4">
+      <h2 class="text-xl font-bold text-text mb-2">Filters</h2>
 
-  <!-- Search bar -->
-  <form method="get" class="mb-4">
-    <div class="flex items-center gap-2">
-      <input
-        type="text"
-        name="q"
-        value="{{ q|default:'' }}"
-        placeholder='e.g., Name ID:12345 AND Country:Brazil OR Sex:male'
-        class="w-full rounded-lg border border-text/30 bg-background px-3 py-2 text-sm text-text placeholder:text-text/50 focus:outline-none focus:ring-2 focus:ring-accent/60"
-        spellcheck="false"
-        autocomplete="off"
-      />
-      <button
-        type="submit"
-        class="rounded-lg border border-text/20 bg-primary px-4 py-2 text-sm hover:bg-secondary/30"
-      >
-        Search
-      </button>
-
-      {% if q %}
-        <a
-          href="{% url 'beetles_home' %}"
-          class="rounded-lg border border-text/20 bg-primary px-4 py-2 text-sm hover:bg-secondary/30"
-        >
-          Clear
+      {% if q or selected_filters.country or selected_filters.sex or selected_filters.type_status or selected_filters.genus or selected_filters.species %}
+        <a href="{% url 'beetles_home' %}?per_page={{ per_page }}" class="text-sm text-red-500 hover:underline block mb-4">
+          × Clear all filters
         </a>
       {% endif %}
-    </div>
 
-    <!-- Subtle guidance -->
-    <p class="mt-2 text-xs text-text/60">
-      Use fielded search like <code>Field:Value</code>. Available fields:
-      <code>Name ID</code>, <code>Described Name ID</code>,
-      <code>Specimen</code>, <code>Name (verbatim)</code>,
-      <code>Country</code>, <code>State/Province</code>, <code>Type Status</code>,
-      <code>Photographer</code>, <code>Image Institution</code>, <code>Email</code>,
-      <code>Photo Usage</code>, <code>Aspect</code>,
-      <code>Sex</code> (m/f), <code>Multiple Individuals</code> (yes/no),
-      <code>Image Date</code> (YYYY or YYYY-MM or YYYY-MM-DD),
-      <code>Resolution</code> (&lt;, &lt;=, &gt;, &gt;=, = number),
-      plus reference lookups: <code>Scientific Name</code>, <code>Genus</code>, <code>Species</code>.
-      Operators: <code>AND</code>, <code>OR</code>, <code>NOT</code>. Text is case-insensitive; non-ID text uses substring matching.
-    </p>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-text/70 uppercase">Country</label>
+        <select name="country" onchange="this.form.submit()" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent">
+          <option value="">All Countries</option>
+          {% for c in filter_options.countries %}
+            <option value="{{ c }}" {% if c == selected_filters.country %}selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select>
+      </div>
 
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-text/70 uppercase">Genus</label>
+        <select name="genus" onchange="this.form.submit()" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent">
+          <option value="">All Genera</option>
+          {% for g in filter_options.genera %}
+            <option value="{{ g }}" {% if g == selected_filters.genus %}selected{% endif %}>{{ g }}</option>
+          {% endfor %}
+        </select>
+      </div>
 
-    <!-- Forgiving validation note -->
-    {% if ignored_tokens %}
-      <p class="mt-1 text-xs text-text/60">
-        Ignored search term: {{ ignored_tokens|join:", " }}
-      </p>
-    {% endif %}
-  </form>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-text/70 uppercase">Species</label>
+        <select name="species" onchange="this.form.submit()" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent">
+          <option value="">All Species</option>
+          {% for s in filter_options.species %}
+            <option value="{{ s }}" {% if s == selected_filters.species %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
 
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-text/70 uppercase">Sex</label>
+        <select name="sex" onchange="this.form.submit()" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent">
+          <option value="">All Sexes</option>
+          {% for s in filter_options.sexes %}
+            <option value="{{ s }}" {% if s == selected_filters.sex %}selected{% endif %}>
+               {% if s == 'm' %}Male{% elif s == 'f' %}Female{% else %}{{ s }}{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
 
-  <div class="overflow-x-auto rounded-xl border border-text/20 bg-primary2 p-4 mb-6">
-    <table class="min-w-full divide-y divide-text/20">
-      <thead class="bg-primary">
-        <tr class="text-left text-xs sm:text-sm uppercase tracking-wider text-text/80">
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-text/70 uppercase">Type Status</label>
+        <select name="type_status" onchange="this.form.submit()" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent">
+          <option value="">All Types</option>
+          {% for t in filter_options.types %}
+            <option value="{{ t }}" {% if t == selected_filters.type_status %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
 
-          {# Add select all checkbox #}
-          <th class="px-4 py-3 w-10">
-            <input id="select-all-page" type="checkbox" class="h-4 w-4 align-middle" aria-label="Select all on this page">
-          </th>
+    </aside>
 
-        <th class="px-4 py-3">Name ID</th>
-        <th class="px-4 py-3">Specimen</th>
-        <th class="px-4 py-3">Scientific Name</th>
-        <th class="px-4 py-3">Genus</th>
-        <th class="px-4 py-3">Species</th>
-        <th class="px-4 py-3">Country</th>
-        <th class="px-4 py-3">Sex</th>
-        <th class="px-4 py-3">Type Status</th>
-        <th class="px-4 py-3">File Size</th>
-        <th class="px-4 py-3 text-right">Image Preview</th>
-        {% if request.user.is_staff %}
-          <th class="px-4 py-3 text-center w-32">Record ID</th>
-        {% endif %}
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-text/10">
+    <main class="w-full flex-1">
+      
+      <div class="flex flex-col sm:flex-row gap-4 mb-6">
+        <div class="flex-1 flex gap-2">
+          <input
+            type="text"
+            name="q"
+            value="{{ q|default:'' }}"
+            placeholder="Search metadata..."
+            class="w-full rounded-lg border border-text/30 bg-background px-4 py-2.5 text-text focus:outline-none focus:ring-2 focus:ring-accent/60 shadow-sm"
+          />
+          <button type="submit" class="shrink-0 rounded-lg bg-text/10 px-6 py-2.5 font-bold text-text hover:bg-text/20 focus:outline-none focus:ring-2 focus:ring-accent/60 transition shadow-sm">
+            Search
+          </button>
+        </div>
+        
+        <div class="w-32">
+          <select name="per_page" onchange="this.form.submit()" class="w-full rounded-lg border border-text/30 bg-background py-2.5 px-2 text-sm shadow-sm cursor-pointer">
+            <option value="10" {% if per_page == 10 %}selected{% endif %}>10 per page</option>
+            <option value="25" {% if per_page == 25 %}selected{% endif %}>25 per page</option>
+            <option value="50" {% if per_page == 50 %}selected{% endif %}>50 per page</option>
+            <option value="100" {% if per_page == 100 %}selected{% endif %}>100 per page</option>
+          </select>
+        </div>
+      </div>
+
+      {% if total_matches is not None %}
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-4 pb-4 border-b border-text/10">
+          <div class="text-sm text-text/70">
+            Found <span class="font-bold text-text">{{ total_matches }}</span> specimen{{ total_matches|pluralize }}.
+          </div>
+          
+          <div class="flex items-center gap-3">
+             <button type="submit" form="download-selected-form" id="download-selected-btn" disabled
+                     class="rounded-lg border border-text/20 bg-primary2 px-4 py-2 text-sm font-semibold text-text hover:bg-secondary/30 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                Download Selected (<span id="selected-count">0</span>)
+             </button>
+
+             {% if request.user.is_staff and total_matches > 0 %}
+                <div class="h-4 w-px bg-text/20 mx-1"></div>
+                <button type="button" form="download-all-form" onclick="document.getElementById('download-all-form').submit()"
+                        class="text-sm font-semibold text-accent hover:text-accent/80 hover:underline">
+                  Download All {{ total_matches }} Results
+                </button>
+             {% endif %}
+          </div>
+        </div>
+      {% endif %}
+
+      <div class="flex flex-col gap-4">
         {% for b in beetles %}
-          <tr class="hover:bg-secondary/30 text-sm text-text">
-
-            {# Add checkbox per row #}
-            <td class="px-4 py-3">
-              <input type="checkbox" class="row-select h-4 w-4 align-middle" value="{{ b.id }}" aria-label="Select {{ b.depicts_valid_name_id|default:'specimen' }}">
-            </td>
-
-            <td class="px-4 py-3">{{ b.depicts_valid_name_id|default:"—" }}</td>
-            <td class="px-4 py-3 font-medium">
-              <a class="underline hover:no-underline hover:text-spacegreen"
-                 href="{% url 'beetle_detail' beetle_id=b.id %}">
-                {{ b.depicts_specimen|default:"—" }}
-              </a>
-            </td>
-            <td class="px-4 py-3">{{ b.ref_scientificName|default:"—" }}</td>
-            <td class="px-4 py-3">{{ b.ref_genus|default:"—" }}</td>
-            <td class="px-4 py-3">{{ b.ref_species|default:"—" }}</td>
-            <td class="px-4 py-3">{{ b.collection_country|default:"—" }}</td>
-            <td class="px-4 py-3">{{ b.specimen_sex|default:"—" }}</td>
-            <td class="px-4 py-3">{{ b.specimen_type_status|default:"—" }}</td>
-
-            <td class="px-4 py-3">
-              {% if b.image_size_bytes %}
-                <span title="{{ b.image_size_bytes }} bytes">
-                  {{ b.image_size_bytes|filesizeformat }}
-                </span>
-                {% if b.warn_large %}
-                  <span class="ml-2 inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-200"
-                        title="Large file (≥ {{ warn_size_bytes|filesizeformat }}); download may be slow">
-                    slow
-                  </span>
-                {% endif %}
-              {% else %}
-                —
-              {% endif %}
-            </td>
-
-            {# Thumbnail cell #}
-            <td class="px-4 py-3">
-              {% if b.thumb_small %}
-                <a href="{% url 'beetle_detail' beetle_id=b.id %}" class="block ml-auto w-24">
+          <div class="group relative flex flex-row rounded-lg border border-text/10 bg-primary2 overflow-hidden hover:shadow-md transition h-auto min-h-40">
+            
+            <div class="w-24 sm:w-32 shrink-0 bg-black/5 relative">
+              <a href="{% url 'beetle_detail' beetle_id=b.id %}" class="block w-full h-full">
+                {% if b.thumb_small %}
                   <img
                     src="{{ b.thumb_small.url }}"
-                    alt="{{ b.depicts_name_verbatim|default:b.depicts_specimen|default:'Specimen image' }}"
+                    alt="{{ b.depicts_specimen }}"
                     loading="lazy"
-                    decoding="async"
-                    width="96" height="96"
-                    class="block ml-auto h-24 w-24 rounded-lg object-cover ring-1 ring-text/20"
+                    class="h-full w-full object-cover"
                   />
-                </a>
-              {% else %}
-                <span class="block ml-auto w-24 h-24 rounded-lg bg-text/10"></span>
-              {% endif %}
-            </td>
+                {% else %}
+                  <div class="flex h-full items-center justify-center text-text/20 text-xs text-center p-2">
+                    No Image
+                  </div>
+                {% endif %}
+              </a>
+            </div>
 
-            {% if request.user.is_staff %}
-              <td class="px-4 py-3 text-center">
-                <button
-                  type="button"
-                  class="rounded-lg border border-text/20 px-3 py-1 text-xs bg-background hover:bg-secondary/40 transition copy-uuid"
-                  data-uuid="{{ b.id }}"
-                  aria-label="Copy Record ID {{ b.id }}"
-                  title="Copy Record ID to clipboard"
-                >
-                  Copy Record ID
-                </button>
-              </td>
-            {% endif %}
+            <div class="flex-1 p-3 sm:p-4 overflow-y-auto scrollbar-thin">
+              <div class="flex justify-between items-start gap-2 mb-2">
+                <div class="min-w-0 flex-1">
+                  <h3 class="font-bold text-base text-text leading-tight truncate">
+                    <a href="{% url 'beetle_detail' beetle_id=b.id %}" class="hover:text-accent hover:underline">
+                      {{ b.depicts_specimen|default:"Unknown Specimen" }}
+                    </a>
+                  </h3>
+                  
+                  <div class="flex items-center gap-1.5 mt-1">
+                     <span class="font-bold text-xs text-text/50">Record ID: </span>
+                     <span class="font-mono text-xs text-text/70 break-all select-all">{{ b.id|stringformat:"s" }}</span>
+                     <button type="button" 
+                             class="copy-uuid shrink-0 text-text/40 hover:text-accent transition"
+                             data-uuid="{{ b.id }}" 
+                             title="Copy Full Record ID">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                     </button>
+                  </div>
+                </div>
+                
+                <div class="shrink-0 pt-0.5">
+                   <label class="flex items-center gap-1.5 cursor-pointer select-none group/check">
+                    <input type="checkbox" 
+                           class="row-select h-4 w-4 rounded border-text/30 bg-background text-accent focus:ring-accent cursor-pointer" 
+                           value="{{ b.id }}">
+                  </label>
+                </div>
+              </div>
+              
+              <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-text/80 mt-3">
+                
+                {% if not b.depicts_described_name_id %}
+                  <dt class="font-semibold text-text/50">Subfamily:</dt><dd class="truncate">unidentified</dd>
+                {% elif b.ref_subfamily %}
+                  <dt class="font-semibold text-text/50">Subfamily:</dt><dd class="truncate">{{ b.ref_subfamily }}</dd>
+                {% endif %}
 
-          </tr>
+                {% if not b.depicts_described_name_id %}
+                  <dt class="font-semibold text-text/50">Tribe:</dt><dd class="truncate">unidentified</dd>
+                {% elif b.ref_tribe %}
+                  <dt class="font-semibold text-text/50">Tribe:</dt><dd class="truncate">{{ b.ref_tribe }}</dd>
+                {% endif %}
+
+                {% if not b.depicts_described_name_id %}
+                  <dt class="font-semibold text-text/50">Subtribe:</dt><dd class="truncate">unidentified</dd>
+                {% elif b.ref_subtribe %}
+                  <dt class="font-semibold text-text/50">Subtribe:</dt><dd class="truncate">{{ b.ref_subtribe }}</dd>
+                {% endif %}
+
+                {% if not b.depicts_described_name_id %}
+                  <dt class="font-semibold text-text/50">Genus:</dt><dd class="truncate italic">unidentified</dd>
+                {% elif b.ref_genus %}
+                  <dt class="font-semibold text-text/50">Genus:</dt><dd class="truncate italic">{{ b.ref_genus }}</dd>
+                {% endif %}
+
+                {% if not b.depicts_described_name_id %}
+                  <dt class="font-semibold text-text/50">Species:</dt><dd class="truncate italic">unidentified</dd>
+                {% elif b.ref_species %}
+                  <dt class="font-semibold text-text/50">Species:</dt><dd class="truncate italic">{{ b.ref_species }}</dd>
+                {% endif %}
+
+                {% if not b.depicts_described_name_id %}
+                   <dt class="font-semibold text-text/50">Subspecies:</dt><dd class="truncate italic">unidentified</dd>
+                {% elif b.ref_subspecies %}
+                   <dt class="font-semibold text-text/50">Subspecies:</dt><dd class="truncate italic">{{ b.ref_subspecies }}</dd>
+                {% endif %}
+
+                {% if b.image_institution %}
+                  <dt class="font-semibold text-text/50">Inst:</dt> <dd class="truncate">{{ b.image_institution }}</dd>
+                {% endif %}
+                
+                {% if b.aspect %}
+                  <dt class="font-semibold text-text/50">Aspect:</dt> <dd class="truncate">{{ b.aspect }}</dd>
+                {% endif %}
+                
+                {% if b.image_has_multiple_individuals is not None %}
+                  <dt class="font-semibold text-text/50">Multiple:</dt> 
+                  <dd class="truncate">{% if b.image_has_multiple_individuals %}Yes{% else %}No{% endif %}</dd>
+                {% endif %}
+
+                {% if b.collection_country %}
+                  <dt class="font-semibold text-text/50">Country:</dt> <dd class="truncate">{{ b.collection_country }}</dd>
+                {% endif %}
+
+                {% if b.specimen_sex %}
+                  <dt class="font-semibold text-text/50">Sex:</dt> <dd>{{ b.specimen_sex|upper }}</dd>
+                {% endif %}
+
+                {% if b.specimen_type_status %}
+                  <dt class="font-semibold text-text/50">Type:</dt> <dd class="truncate text-accent">{{ b.specimen_type_status }}</dd>
+                {% endif %}
+
+                {% if b.image_size_bytes %}
+                  <dt class="font-semibold text-text/50">Size:</dt> <dd class="truncate">{{ b.image_size_bytes|filesizeformat }}</dd>
+                {% endif %}
+
+              </dl>
+
+            </div>
+          </div>
         {% empty %}
-          <tr>
-          <td {% if request.user.is_staff %}colspan="12"{% else %}colspan="11"{% endif %}
-              class="px-4 py-6 text-center text-text/70">
-            No beetles found.
-          </td>
-          </tr>
+          <div class="py-12 text-center text-text/50 border-2 border-dashed border-text/10 rounded-xl">
+            <p>No specimens found matching your search.</p>
+          </div>
         {% endfor %}
-      </tbody>
-    </table>
-  </div>
+      </div>
 
+      {% if is_paginated %}
+        <nav class="flex items-center justify-center gap-2 mt-8">
+          {% if page_obj.has_previous %}
+            <button type="submit" name="page" value="{{ page_obj.previous_page_number }}"
+               class="rounded border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30">
+              Previous
+            </button>
+          {% endif %}
 
-{% if total_matches %}
-  <div class="mt-3 flex items-center justify-between text-sm text-text/70">
-    <div>
-      {{ total_matches }} matching records{% if q %} for <span class="font-mono">{{ q }}</span>{% endif %}.
-    </div>
+          <span class="text-xs text-text/50 px-2">
+            Page {{ page_obj.number }} / {{ paginator.num_pages }}
+          </span>
 
-    <div class="flex items-center gap-2">
-      <!-- Download selected (IDs from checkboxes) -->
-      <form id="download-form" method="post" action="{% url 'start_batch_download' %}" onsubmit="return collectSelectedIds(this);">
-        {% csrf_token %}
-        <input type="hidden" name="selection_mode" value="ids">
-        <input type="hidden" name="selected_ids" value="">
-        <button id="download-selected-btn" type="submit"
-                class="rounded-md border border-text/20 px-3 py-1.5 bg-primary hover:bg-secondary/30 disabled:opacity-60 disabled:cursor-not-allowed">
-          Download selected
-        </button>
-      </form>
-
-      <!-- Download all results (current filter across all pages) -->
-      {% if request.user.is_staff %}
-        <form method="post" action="{% url 'start_batch_download' %}">
-          {% csrf_token %}
-          <input type="hidden" name="selection_mode" value="query">
-          <input type="hidden" name="q" value="{{ q|default:'' }}">
-          <input type="hidden" name="total_matches" value="{{ total_matches|default:0 }}">
-          <button type="submit"
-                  class="rounded-md border border-text/20 px-3 py-1.5 bg-primary hover:bg-secondary/30">
-            Download all results ({{ total_matches }})
-          </button>
-        </form>
+          {% if page_obj.has_next %}
+            <button type="submit" name="page" value="{{ page_obj.next_page_number }}"
+               class="rounded border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30">
+              Next
+            </button>
+          {% endif %}
+        </nav>
       {% endif %}
-    </div>
-  </div>
-{% endif %}
+
+    </main>
+  </form>
+
+  <form id="download-selected-form" method="post" action="{% url 'start_batch_download' %}" onsubmit="return collectSelectedIds(this);">
+    {% csrf_token %}
+    <input type="hidden" name="selection_mode" value="ids">
+    <input type="hidden" name="selected_ids" value="">
+  </form>
+
+  <form id="download-all-form" method="post" action="{% url 'start_batch_download' %}" class="hidden">
+    {% csrf_token %}
+    <input type="hidden" name="selection_mode" value="query">
+    <input type="hidden" name="q" value="{{ q|default:'' }}">
+    <input type="hidden" name="total_matches" value="{{ total_matches|default:0 }}">
+  </form>
+
+</section>
 
 <script>
-  // Collect checked row IDs into the hidden input before submit
-  function collectSelectedIds(form) {
-    const ids = Array.from(document.querySelectorAll('.row-select:checked')).map(el => el.value);
-    if (ids.length === 0) {
-      alert('Please select at least one row.');
-      return false;
+  // Selection Logic
+  const rows = document.querySelectorAll('.row-select');
+  const dlBtn = document.getElementById('download-selected-btn');
+  const countSpan = document.getElementById('selected-count');
+
+  function updateState() {
+    const checked = document.querySelectorAll('.row-select:checked');
+    if (dlBtn && countSpan) {
+      dlBtn.disabled = checked.length === 0;
+      countSpan.textContent = checked.length;
     }
+  }
+
+  rows.forEach(r => r.addEventListener('change', updateState));
+
+  // Collect IDs for download
+  window.collectSelectedIds = function(form) {
+    const ids = Array.from(document.querySelectorAll('.row-select:checked')).map(el => el.value);
+    if (ids.length === 0) return false;
     form.querySelector('input[name="selected_ids"]').value = ids.join(',');
     return true;
   }
 
-  // Optional UX nicety: disable "Download selected" until a row is ticked
-  (function () {
-    const btn = document.getElementById('download-selected-btn');
+  // Copy UUID
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.copy-uuid');
     if (!btn) return;
-    const update = () => {
-      const anyChecked = document.querySelector('.row-select:checked') !== null;
-      btn.disabled = !anyChecked;
-    };
-    document.addEventListener('change', (e) => {
-      if (e.target && e.target.classList && e.target.classList.contains('row-select')) {
-        update();
-      }
-    });
-    update();
-  })();
-</script>
-
-
-{# Select all on this page #}
-<script>
-  (function () {
-    const master = document.getElementById('select-all-page');
-    if (!master) return;
-
-    function updateMasterFromRows() {
-      const rows = Array.from(document.querySelectorAll('.row-select'));
-      if (rows.length === 0) { master.checked = false; master.indeterminate = false; return; }
-      const checked = rows.filter(r => r.checked).length;
-      master.checked = checked === rows.length;
-      master.indeterminate = checked > 0 && checked < rows.length;
+    e.preventDefault(); e.stopPropagation();
+    const uuid = btn.getAttribute('data-uuid');
+    try {
+      await navigator.clipboard.writeText(uuid);
+      // Visual feedback (flash checkmark)
+      const originalHTML = btn.innerHTML;
+      btn.innerHTML = `<svg class="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+      setTimeout(() => { btn.innerHTML = originalHTML; }, 1500);
+    } catch (err) {
+      console.error(err);
     }
+  });
 
-    master.addEventListener('change', () => {
-      const rows = document.querySelectorAll('.row-select');
-      rows.forEach(r => { r.checked = master.checked; });
-      // Nudge the “Download selected” button enable/disable logic:
-      const first = document.querySelector('.row-select');
-      if (first) {
-        first.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-    });
-
-    // Keep header checkbox in sync if user toggles individual rows
-    document.addEventListener('change', (e) => {
-      if (e.target && e.target.classList && e.target.classList.contains('row-select')) {
-        updateMasterFromRows();
-      }
-    });
-
-    // On page load, reflect current state
-    updateMasterFromRows();
-  })();
+  updateState();
 </script>
-
-
-<script>
-  // Copy UUID to clipboard for staff
-  (function () {
-    document.addEventListener('click', async (e) => {
-      const btn = e.target.closest('.copy-uuid');
-      if (!btn) return;
-      const uuid = btn.getAttribute('data-uuid') || '';
-      try {
-        await navigator.clipboard.writeText(uuid);
-        const old = btn.textContent;
-        btn.textContent = 'Copied!';
-        setTimeout(() => { btn.textContent = old; }, 1200);
-      } catch (err) {
-        alert('Copy failed. You can select the UUID text and copy manually.');
-      }
-    });
-  })();
-</script>
-
-
-  {# Pagination controls #}
-  {% if is_paginated %}
-    <nav class="mt-4 flex items-center justify-between" aria-label="Pagination">
-      <div>
-        {% if page_obj.has_previous %}
-          <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}"
-             class="inline-flex items-center rounded-md border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30">
-            ← Previous
-          </a>
-        {% else %}
-          <span class="inline-flex items-center rounded-md border border-text/10 px-3 py-1.5 text-sm text-text/50 cursor-not-allowed">
-            ← Previous
-          </span>
-        {% endif %}
-      </div>
-
-      <div class="text-sm text-text/70">
-        Page {{ page_obj.number }} of {{ paginator.num_pages }}
-      </div>
-
-      <div>
-        {% if page_obj.has_next %}
-          <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}"
-             class="inline-flex items-center rounded-md border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30">
-            Next →
-          </a>
-        {% else %}
-          <span class="inline-flex items-center rounded-md border border-text/10 px-3 py-1.5 text-sm text-text/50 cursor-not-allowed">
-            Next →
-          </span>
-        {% endif %}
-      </div>
-    </nav>
-  {% endif %}
-
-</section>
 {% endblock %}
