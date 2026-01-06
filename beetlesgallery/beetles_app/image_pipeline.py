@@ -122,8 +122,8 @@ def write_original_and_thumb96(sha256: str, fileobj: BinaryIO) -> dict:
             img = _ensure_rgb(img)
             w, h = img.size
 
-            thumb = _center_crop_square(img)
-            thumb = thumb.resize((96, 96), Image.LANCZOS)
+            img.thumbnail((96, 96), Image.LANCZOS)
+            thumb = img
 
             # Prefer WEBP; fallback to JPEG if WEBP not available
             thumb_is_webp = True
