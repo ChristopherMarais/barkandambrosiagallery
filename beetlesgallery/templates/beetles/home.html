@@ -453,24 +453,37 @@
       const container = btn.closest('.group-filter');
       const dropdown = container.querySelector('.filter-dropdown');
       
-      // Close all other dropdowns
-      document.querySelectorAll('.filter-dropdown').forEach(d => {
-          if (d !== dropdown) d.classList.add('hidden');
+      // 1. RESET: Close all other dropdowns AND reset their parent z-indexes
+      document.querySelectorAll('.group-filter').forEach(group => {
+          const d = group.querySelector('.filter-dropdown');
+          if (d && d !== dropdown) {
+              d.classList.add('hidden');
+              // Remove the high z-index from inactive parents
+              group.classList.remove('z-50'); 
+          }
       });
 
+      // 2. TOGGLE: Show/Hide current dropdown
       dropdown.classList.toggle('hidden');
       
-      // Focus search if opening
+      // 3. ELEVATE: If visible, lift the parent. If hidden, drop it back.
       if (!dropdown.classList.contains('hidden')) {
+          container.classList.add('z-50');
+          
+          // Focus search if opening
           const searchInput = dropdown.querySelector('input[type="text"]');
           if (searchInput) setTimeout(() => searchInput.focus(), 50);
+      } else {
+          container.classList.remove('z-50');
       }
   }
 
-  // Close dropdowns on outside click
+  // Update the outside click listener to also reset z-indexes
   document.addEventListener('click', (e) => {
       if (!e.target.closest('.group-filter')) {
           document.querySelectorAll('.filter-dropdown').forEach(d => d.classList.add('hidden'));
+          // Reset all parents
+          document.querySelectorAll('.group-filter').forEach(g => g.classList.remove('z-50'));
       }
   });
 
