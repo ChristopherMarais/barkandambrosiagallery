@@ -41,6 +41,10 @@
     .animation-delay-4000 {
         animation-delay: 4s;
     }
+    
+    .h-40 {
+        height: 2rem;
+    }
 }
 
 @font-face {

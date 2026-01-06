@@ -62,6 +62,14 @@
 
     {# 4. Collapsible Advanced Filters Panel #}
     <div id="advanced-filters" class="hidden mt-6 rounded-xl border border-text/10 bg-primary2 p-6 shadow-inner">
+        
+        {# Top Apply Button #}
+        <div class="flex flex-wrap items-center justify-end gap-4 mb-6 border-b border-text/10 pb-4">
+            <button type="submit" class="w-full rounded-lg bg-accent/10 border border-accent/20 py-2 text-sm font-bold text-accent hover:bg-accent hover:text-white transition">
+                Apply Filters
+            </button>
+        </div>
+
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-8">
             
             {# Loop through categories #}
@@ -91,8 +99,8 @@
                         {% endfor %}
                     </select>
 
-                    {# CUSTOM UI: Scrollable list of clickable divs #}
-                    <div class="w-full h-40 rounded-lg border border-text/20 bg-background overflow-hidden flex flex-col shadow-sm">
+                    {# Scrollable Component #}
+                    <div class="w-full rounded-lg border border-text/20 bg-background overflow-hidden flex flex-col shadow-sm" style="max-height: 10rem;">
                         <div class="overflow-y-auto p-1 scrollbar-thin flex-1">
                             {% for opt in f.options %}
                                 <div class="filter-option cursor-pointer select-none rounded px-2 py-1.5 text-xs sm:text-sm flex items-center justify-between transition-colors
@@ -101,7 +109,7 @@
                                      onclick="toggleCustomOption(this, '{{ f.param }}')">
                                     <span class="truncate">{{ opt }}</span>
                                     {# Checkmark Icon #}
-                                    <svg class="w-3.5 h-4 shrink-0 ml-2 {% if opt not in f.selected %}hidden{% endif %} check-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                    <svg class="w-4 h-4 shrink-0 ml-2 {% if opt not in f.selected %}hidden{% endif %} check-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                                 </div>
                             {% endfor %}
                         </div>
