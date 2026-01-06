@@ -35,10 +35,10 @@
                 {% for val in vals %}
                 <button type="button" 
                         onclick="removeFilter('{{ param }}', '{{ val|escapejs }}')"
-                        class="group inline-flex items-center gap-1 rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-800 capitalize border border-gray-300 hover:bg-red-100 hover:text-red-700 hover:border-red-200 transition cursor-pointer"
+                        class="group inline-flex items-center gap-1 rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-800 capitalize border border-gray-300 hover:bg-gray-300 hover:text-gray-900 hover:border-gray-200 transition cursor-pointer"
                         title="Click to remove filter">
                     {{ param|title }}: {{ val }}
-                    <span class="ml-1 text-text/50 group-hover:text-red-700">×</span>
+                    <span class="ml-1 text-text/50 group-hover:text-gray-700">×</span>
                 </button>
                 {% endfor %}
             {% endfor %}
@@ -118,10 +118,10 @@
 
                         {# Batch Actions #}
                         <div class="flex items-center justify-between px-1 border-b border-text/5 pb-2">
-                             <button type="button" class="text-xs font-bold text-gray-100 hover:underline tracking-wide" onclick="selectVisibleOptions(this)">
+                             <button type="button" class="text-xs font-bold text-gray-500 hover:text-gray-500 hover:underline tracking-wide" onclick="selectVisibleOptions(this)">
                                 Select All
                             </button>
-                            <button type="button" class="text-xs font-bold text-gray-100 hover:text-gray-100 hover:underline tracking-wide" onclick="clearFilterSelection(this)">
+                            <button type="button" class="text-xs font-bold text-gray-500 hover:text-gray-500 hover:underline tracking-wide" onclick="clearFilterSelection(this)">
                                 Clear All
                             </button>
                         </div>
@@ -173,7 +173,7 @@
             {# Display Settings #}
             <div class="contents">
                  <div class="col-span-full border-t border-text/10 pt-4 mt-4">
-                    <h3 class="text-m font-bold uppercase text-text/50 tracking-wider mb-4">Display</h3>
+                    <h3 class="text-m font-bold uppercase text-text/50 tracking-wider mb-2">Display</h3>
                 </div>
                 <div class="col-span-1 space-y-1">
                       <label class="text-xs font-semibold text-text/70">Items Per Page</label>
@@ -221,7 +221,7 @@
                  {% endif %}
              </div>
              
-             <button type="button" id="clear-selection-btn" class="hidden text-sm text-red-600 hover:underline">
+             <button type="button" id="clear-selection-btn" class="hidden text-sm text-gray-600 hover:underline">
                  × Deselect all (<span id="global-selection-count">0</span>)
              </button>
          </div>
@@ -349,7 +349,7 @@
                     <div class="truncate"><span class="font-semibold text-text/50">Sex:</span> <span class="ml-1">{{ b.specimen_sex|upper }}</span></div>
                   {% endif %}
                   {% if b.specimen_type_status %}
-                    <div class="truncate"><span class="font-semibold text-text/50">Type:</span> <span class="ml-1 text-gray-900 font-bold">{{ b.specimen_type_status }}</span></div>
+                    <div class="truncate"><span class="font-semibold text-text/50">Type Status:</span> <span class="ml-1">{{ b.specimen_type_status }}</span></div>
                   {% endif %}
                 </div>
              </div>

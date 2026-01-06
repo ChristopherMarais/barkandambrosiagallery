@@ -98,7 +98,5 @@ module.exports = {
             'spin-3': 'spin 3s linear infinite',
         },
     },
-    plugins: [
-        require('tailwind-scrollbar'),
-    ],
+    plugins: [],
 }
