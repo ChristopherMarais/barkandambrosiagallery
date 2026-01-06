@@ -11,12 +11,12 @@
       
       {# 1. Search Bar #}
       <div class="relative w-full">
-        <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Search metadata..." class="w-full rounded-lg border border-text/10 bg-background px-6 py-4 text-md text-text shadow-md shadow-black/1" />
+        <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Search metadata..." class="w-full rounded-lg border border-text/10 bg-background px-6 py-4 text-md text-text shadow-md shadow-black/1 focus:ring-2 focus:ring-accent outline-none transition" />
       </div>
 
       {# 2. Controls #}
       <div class="flex flex-wrap items-center justify-between gap-4 px-2">
-          <button type="submit" class="rounded-lg border border-text/20 bg-primary2 px-4 py-2 text-sm font-semibold text-text hover:bg-secondary/80 transition">Search</button>
+          <button type="submit" class="rounded-lg border border-text/20 bg-primary2 px-4 py-2 text-sm font-semibold text-text hover:bg-secondary/80 transition shadow-sm">Search</button>
 
           <button type="button" id="toggle-filters-btn" class="group flex items-center gap-2 text-sm text-red-500 hover:underline" aria-expanded="false">
             <span>Detailed Search</span>
@@ -58,14 +58,14 @@
         </div>
       {% endif %}
 
-    </div> {# Closes the flex-col gap-4 wrapper for search/pills #}
+    </div> 
 
     {# 4. Collapsible Advanced Filters Panel #}
-    <div id="advanced-filters" class="hidden mt-6 rounded-xl border border-text/10 bg-primary2 p-6 shadow-inner">
+    <div id="advanced-filters" class="hidden mt-6 rounded-xl border border-text/10 bg-primary2 p-6 shadow-inner relative z-10">
         
-        {# Top Apply Button #}
-        <div class="flex flex-wrap items-center justify-end gap-4 mb-6 border-b border-text/10 pb-4">
-            <button type="submit" class="w-full rounded-lg bg-accent/10 border border-accent/20 py-2 text-sm font-bold text-accent hover:bg-accent hover:text-white transition">
+        {# Top Apply Button (Full Width) #}
+        <div class="w-full mb-8 border-b border-text/10 pb-6">
+            <button type="submit" class="w-full rounded-lg bg-accent/10 border border-accent/20 py-3 text-sm font-bold text-accent hover:bg-accent hover:text-white transition shadow-sm uppercase tracking-wide">
                 Apply Filters
             </button>
         </div>
@@ -80,58 +80,91 @@
                 </div>
 
                 {% for f in filters_list %}
-                {# Wrapper div with data-param for JS lookup #}
-                <div class="space-y-1 group-filter" data-param="{{ f.param }}">
-                    <div class="flex justify-between items-end">
-                        <label class="text-ms font-semibold text-text/70 mb-2 mt-2">{{ f.label }}</label>
-                        {# Specific Clear Button: Hidden by default, toggled by JS #}
-                        <button type="button" 
-                                class="clear-single-filter text-[10px] text-red-400 hover:text-red-600 hover:underline hidden mb-0.5"
-                                onclick="clearSpecificFilter('{{ f.param }}')">
-                            Clear
-                        </button>
-                    </div>
-
-                    {# HIDDEN SELECT: Keeps form submission logic intact #}
+                {# Wrapper div with relative positioning for dropdown #}
+                <div class="space-y-1 group-filter relative" data-param="{{ f.param }}">
+                    <label class="block text-xs font-semibold text-text/70 mb-1 ml-1">{{ f.label }}</label>
+                    
+                    {# Hidden Select for form submission #}
                     <select name="{{ f.param }}" multiple class="hidden">
                         {% for opt in f.options %}
                             <option value="{{ opt }}" {% if opt in f.selected %}selected{% endif %}>{{ opt }}</option>
                         {% endfor %}
                     </select>
 
-                    {# Scrollable Component #}
-                    <div class="w-full rounded-lg border border-text/20 bg-background overflow-hidden flex flex-col shadow-sm" style="max-height: 10rem;">
-                        <div class="overflow-y-auto p-1 scrollbar-thin flex-1">
+                    {# DROPDOWN TOGGLE BUTTON #}
+                    <button type="button" 
+                            class="filter-toggle-btn w-full text-left rounded-lg border bg-background px-3 py-2.5 text-sm flex items-center justify-between transition shadow-sm
+                                   {% if f.selected %}border-accent ring-1 ring-accent/30 text-accent font-medium{% else %}border-text/20 text-text hover:border-accent/50{% endif %}"
+                            onclick="toggleFilterDropdown(this)">
+                        <span class="truncate pr-2">
+                            {% if f.selected %}
+                                {{ f.selected|length }} Selected
+                            {% else %}
+                                All
+                            {% endif %}
+                        </span>
+                        <svg class="w-4 h-4 opacity-50 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+
+                    {# DROPDOWN MENU (Absolute, solid background, high z-index) #}
+                    <div class="filter-dropdown hidden absolute top-full left-0 z-50 w-full min-w-[280px] mt-1 rounded-xl border border-text/10 bg-white shadow-2xl p-3 flex flex-col gap-2 isolate">
+                        
+                        {# Search Input #}
+                        <div class="relative">
+                            <input type="text" placeholder="Search..." 
+                                   class="w-full rounded-md border border-text/10 bg-secondary/10 px-3 py-1.5 text-sm focus:ring-2 focus:ring-accent focus:border-accent outline-none text-text"
+                                   onkeyup="filterDropdownOptions(this)">
+                            <svg class="absolute right-2.5 top-2 w-4 h-4 text-text/30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
+
+                        {# Batch Actions #}
+                        <div class="flex items-center justify-between px-1 border-b border-text/5 pb-2">
+                             <button type="button" class="text-[10px] font-bold text-accent hover:underline uppercase tracking-wide" onclick="selectVisibleOptions(this)">
+                                Select Visible
+                            </button>
+                            <button type="button" class="text-[10px] font-bold text-red-400 hover:text-red-600 hover:underline uppercase tracking-wide" onclick="clearFilterSelection(this)">
+                                Clear All
+                            </button>
+                        </div>
+
+                        {# Scrollable Options #}
+                        <div class="max-h-60 overflow-y-auto scrollbar-thin flex flex-col gap-0.5">
                             {% for opt in f.options %}
-                                <div class="filter-option cursor-pointer select-none rounded px-2 py-1.5 text-xs sm:text-sm flex items-center justify-between transition-colors
-                                            {% if opt in f.selected %}bg-accent/10 text-accent font-semibold{% else %}text-text/80 hover:bg-secondary/50{% endif %}"
+                                <div class="filter-option cursor-pointer select-none rounded px-2 py-2 text-sm flex items-center justify-between transition-colors
+                                            {% if opt in f.selected %}bg-accent/10 text-accent font-semibold{% else %}text-text/80 hover:bg-secondary/20{% endif %}"
                                      data-value="{{ opt }}"
-                                     onclick="toggleCustomOption(this, '{{ f.param }}')">
-                                    <span class="truncate">{{ opt }}</span>
-                                    {# Checkmark Icon #}
-                                    <svg class="w-4 h-4 shrink-0 ml-2 {% if opt not in f.selected %}hidden{% endif %} check-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                     onclick="toggleDropdownOption(this)">
+                                    <span class="truncate select-text">{{ opt }}</span>
+                                    <div class="w-4 h-4 rounded border flex items-center justify-center ml-2 shrink-0 transition-colors
+                                                {% if opt in f.selected %}bg-accent border-accent text-white{% else %}border-text/30 bg-white{% endif %}">
+                                        <svg class="w-3 h-3 {% if opt not in f.selected %}hidden{% endif %} check-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                    </div>
                                 </div>
                             {% endfor %}
+                            <div class="no-results hidden px-2 py-4 text-center text-xs text-text/40 italic">No matches found.</div>
                         </div>
                     </div>
+
                 </div>
                 {% endfor %}
 
                 {% if category_name == "Image Details" %}
-                    <div class="space-y-1">
-                        <label class="text-ms font-semibold text-text/70">Image Size (MB)</label>
-                        <div class="flex items-center gap-2">
-                            <input type="number" step="0.1" name="size_min" value="{{ size_min }}" placeholder="Min" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent" onchange="this.form.submit()">
-                            <span class="text-text/50">-</span>
-                            <input type="number" step="0.1" name="size_max" value="{{ size_max }}" placeholder="Max" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent" onchange="this.form.submit()">
+                    <div class="col-span-1 sm:col-span-2 space-y-4">
+                        <div class="space-y-1">
+                            <label class="text-xs font-semibold text-text/70">Image Size (MB)</label>
+                            <div class="flex items-center gap-2">
+                                <input type="number" step="0.1" name="size_min" value="{{ size_min }}" placeholder="Min" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent" onchange="this.form.submit()">
+                                <span class="text-text/50">-</span>
+                                <input type="number" step="0.1" name="size_max" value="{{ size_max }}" placeholder="Max" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent" onchange="this.form.submit()">
+                            </div>
                         </div>
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-ms font-semibold text-text/70">Resolution (px/mm)</label>
-                        <div class="flex items-center gap-2">
-                            <input type="number" step="0.1" name="res_min" value="{{ res_min }}" placeholder="Min" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent" onchange="this.form.submit()">
-                            <span class="text-text/50">-</span>
-                            <input type="number" step="0.1" name="res_max" value="{{ res_max }}" placeholder="Max" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent" onchange="this.form.submit()">
+                        <div class="space-y-1">
+                            <label class="text-xs font-semibold text-text/70">Resolution (px/mm)</label>
+                            <div class="flex items-center gap-2">
+                                <input type="number" step="0.1" name="res_min" value="{{ res_min }}" placeholder="Min" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent" onchange="this.form.submit()">
+                                <span class="text-text/50">-</span>
+                                <input type="number" step="0.1" name="res_max" value="{{ res_max }}" placeholder="Max" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent" onchange="this.form.submit()">
+                            </div>
                         </div>
                     </div>
                 {% endif %}
@@ -140,11 +173,11 @@
 
             {# Display Settings #}
             <div class="contents">
-                 <div class="col-span-full border-b border-text/10 pb-1 mb-2 mt-8">
-                    <h3 class="text-m font-bold uppercase text-text/50 tracking-wider">Display</h3>
+                 <div class="col-span-full border-t border-text/10 pt-4 mt-4">
+                    <h3 class="text-m font-bold uppercase text-text/50 tracking-wider mb-4">Display</h3>
                 </div>
-                <div class="space-y-1 mb-8">
-                      <label class="text-ms font-semibold text-text/70">Items Per Page</label>
+                <div class="col-span-1 space-y-1">
+                      <label class="text-xs font-semibold text-text/70">Items Per Page</label>
                       <select name="per_page" onchange="this.form.submit()" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent">
                           <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
                           <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
@@ -152,8 +185,12 @@
                           <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
                       </select>
                 </div>
-                <div class="flex flex-col justify-end">
-                    <button type="submit" class="w-full rounded-lg bg-accent/10 border border-accent/20 py-2 text-sm font-bold text-accent hover:bg-accent hover:text-white transition">Apply Filters</button>
+                
+                {# Bottom Apply Button (Full Width) #}
+                <div class="col-span-full mt-4">
+                    <button type="submit" class="w-full rounded-lg bg-accent/10 border border-accent/20 py-3 text-sm font-bold text-accent hover:bg-accent hover:text-white transition shadow-sm uppercase tracking-wide">
+                        Apply Filters
+                    </button>
                 </div>
             </div>
 
@@ -226,19 +263,13 @@
        <div class="group relative flex flex-row rounded-lg border border-text/10 bg-primary2 overflow-hidden hover:shadow-md transition h-auto min-h-40">
            
             <div class="w-32 sm:w-48 shrink-0 flex flex-col justify-center p-3">
-              
               <a href="{% url 'beetle_detail' beetle_id=b.id %}" 
                 class="flex items-center justify-center w-full h-32 bg-black/5 rounded-xl overflow-hidden border border-black/5 shadow-sm">
-                
                 {% if b.thumb_small %}
-                  <img src="{{ b.thumb_small.url }}" 
-                      alt="{{ b.depicts_specimen }}" 
-                      loading="lazy" 
-                      class="w-full h-full object-contain" />
+                  <img src="{{ b.thumb_small.url }}" alt="{{ b.depicts_specimen }}" loading="lazy" class="w-full h-full object-contain" />
                 {% else %}
                   <div class="text-text/20 text-xs text-center">No Image</div>
                 {% endif %}
-                
               </a>
             </div>
 
@@ -417,120 +448,150 @@
 {# --- JAVASCRIPT --- #}
 <script>
 
+  // --- 1. Filter Dropdown Logic ---
+
+  function toggleFilterDropdown(btn) {
+      const container = btn.closest('.group-filter');
+      const dropdown = container.querySelector('.filter-dropdown');
+      
+      // Close all other dropdowns
+      document.querySelectorAll('.filter-dropdown').forEach(d => {
+          if (d !== dropdown) d.classList.add('hidden');
+      });
+
+      dropdown.classList.toggle('hidden');
+      
+      // Focus search if opening
+      if (!dropdown.classList.contains('hidden')) {
+          const searchInput = dropdown.querySelector('input[type="text"]');
+          if (searchInput) setTimeout(() => searchInput.focus(), 50);
+      }
+  }
+
+  // Close dropdowns on outside click
+  document.addEventListener('click', (e) => {
+      if (!e.target.closest('.group-filter')) {
+          document.querySelectorAll('.filter-dropdown').forEach(d => d.classList.add('hidden'));
+      }
+  });
+
+  // Client-side search within dropdown
+  function filterDropdownOptions(input) {
+      const filterText = input.value.toLowerCase();
+      const container = input.closest('.filter-dropdown');
+      const options = container.querySelectorAll('.filter-option');
+      let hasVisible = false;
+
+      options.forEach(opt => {
+          const val = opt.getAttribute('data-value').toLowerCase();
+          if (val.includes(filterText)) {
+              opt.classList.remove('hidden');
+              opt.classList.add('flex');
+              hasVisible = true;
+          } else {
+              opt.classList.add('hidden');
+              opt.classList.remove('flex');
+          }
+      });
+      
+      const noRes = container.querySelector('.no-results');
+      if (noRes) {
+        if (!hasVisible) noRes.classList.remove('hidden');
+        else noRes.classList.add('hidden');
+      }
+  }
+
+  // Toggle selection for a single option
+  function toggleDropdownOption(div) {
+      const value = div.getAttribute('data-value');
+      const container = div.closest('.group-filter');
+      const hiddenSelect = container.querySelector('select');
+      const icon = div.querySelector('.check-icon');
+      const checkContainer = icon.parentElement;
+      const isSelected = div.classList.contains('bg-accent/10');
+
+      if (isSelected) {
+          // Deselect
+          div.classList.remove('bg-accent/10', 'text-accent', 'font-semibold');
+          div.classList.add('text-text/80', 'hover:bg-secondary/20');
+          icon.classList.add('hidden');
+          checkContainer.classList.remove('bg-accent', 'border-accent', 'text-white');
+          checkContainer.classList.add('border-text/30', 'bg-white');
+      } else {
+          // Select
+          div.classList.add('bg-accent/10', 'text-accent', 'font-semibold');
+          div.classList.remove('text-text/80', 'hover:bg-secondary/20');
+          icon.classList.remove('hidden');
+          checkContainer.classList.add('bg-accent', 'border-accent', 'text-white');
+          checkContainer.classList.remove('border-text/30', 'bg-white');
+      }
+
+      // Sync with hidden select
+      for (let i = 0; i < hiddenSelect.options.length; i++) {
+          if (hiddenSelect.options[i].value === value) {
+              hiddenSelect.options[i].selected = !isSelected;
+              break;
+          }
+      }
+      updateButtonLabel(container);
+  }
+
+  // "Select Visible" (Batch Select)
+  function selectVisibleOptions(btn) {
+      const dropdown = btn.closest('.filter-dropdown');
+      // Only select visible options that aren't already selected
+      const visibleOptions = dropdown.querySelectorAll('.filter-option:not(.hidden):not(.bg-accent\\/10)');
+      visibleOptions.forEach(opt => toggleDropdownOption(opt));
+  }
+
+  // "Clear All" (Batch Clear)
+  function clearFilterSelection(btn) {
+      const container = btn.closest('.group-filter');
+      const dropdown = container.querySelector('.filter-dropdown');
+      const selectedOptions = dropdown.querySelectorAll('.filter-option.bg-accent\\/10');
+      selectedOptions.forEach(opt => toggleDropdownOption(opt));
+  }
+
+  // Update button label with count
+  function updateButtonLabel(container) {
+      const hiddenSelect = container.querySelector('select');
+      const btn = container.querySelector('.filter-toggle-btn');
+      const span = btn.querySelector('span');
+      
+      let count = 0;
+      for(let i=0; i<hiddenSelect.options.length; i++) {
+          if(hiddenSelect.options[i].selected) count++;
+      }
+
+      if (count > 0) {
+          span.textContent = `${count} Selected`;
+          btn.classList.add('border-accent', 'ring-1', 'ring-accent/30', 'text-accent', 'font-medium');
+          btn.classList.remove('border-text/20', 'text-text', 'hover:border-accent/50');
+      } else {
+          span.textContent = 'All';
+          btn.classList.remove('border-accent', 'ring-1', 'ring-accent/30', 'text-accent', 'font-medium');
+          btn.classList.add('border-text/20', 'text-text', 'hover:border-accent/50');
+      }
+  }
+
+  // --- 2. Remove Pill Logic ---
   function removeFilter(param, value) {
-      // Find the hidden select element
       const select = document.querySelector(`select[name="${param}"]`);
       if (select) {
-          // Deselect the option matching the value
           for (let i = 0; i < select.options.length; i++) {
               if (select.options[i].value === value) {
                   select.options[i].selected = false;
               }
           }
-          // Submit the form
           document.getElementById('main-form').submit();
-      } else {
-          console.warn('Filter input not found for', param);
       }
   }
 
-  // --- NEW: Custom Multi-Select Logic ---
-  
-  // Toggles selection on the visible list item and syncs with hidden select
-  function toggleCustomOption(div, param) {
-      const value = div.getAttribute('data-value');
-      const hiddenSelect = document.querySelector(`select[name="${param}"]`);
-      if (!hiddenSelect) return;
-
-      // 1. Toggle Visual State
-      const isSelected = div.classList.contains('bg-accent/10');
-      const icon = div.querySelector('.check-icon');
-
-      if (isSelected) {
-          // Deselect
-          div.classList.remove('bg-accent/10', 'text-accent', 'font-semibold');
-          div.classList.add('text-text/80', 'hover:bg-secondary/50');
-          icon.classList.add('hidden');
-      } else {
-          // Select
-          div.classList.add('bg-accent/10', 'text-accent', 'font-semibold');
-          div.classList.remove('text-text/80', 'hover:bg-secondary/50');
-          icon.classList.remove('hidden');
-      }
-
-      // 2. Sync with Hidden Select
-      for (let i = 0; i < hiddenSelect.options.length; i++) {
-          if (hiddenSelect.options[i].value === value) {
-              hiddenSelect.options[i].selected = !isSelected; // Toggle
-              break;
-          }
-      }
-
-      // 3. Update "Clear" button visibility
-      updateClearButton(param);
-  }
-
-  // Updates the visibility of the "Clear" text button for a specific filter
-  function updateClearButton(param) {
-      const container = document.querySelector(`.group-filter[data-param="${param}"]`);
-      if (!container) return;
-      
-      const hiddenSelect = container.querySelector('select');
-      const clearBtn = container.querySelector('.clear-single-filter');
-      
-      let hasSelection = false;
-      for (let i = 0; i < hiddenSelect.options.length; i++) {
-          if (hiddenSelect.options[i].selected) {
-              hasSelection = true;
-              break;
-          }
-      }
-
-      if (hasSelection) {
-          clearBtn.classList.remove('hidden');
-      } else {
-          clearBtn.classList.add('hidden');
-      }
-  }
-
-  // Clears all options for a specific filter category
-  function clearSpecificFilter(param) {
-      const container = document.querySelector(`.group-filter[data-param="${param}"]`);
-      if (!container) return;
-
-      // 1. Reset Hidden Select
-      const hiddenSelect = container.querySelector('select');
-      for (let i = 0; i < hiddenSelect.options.length; i++) {
-          hiddenSelect.options[i].selected = false;
-      }
-
-      // 2. Reset Visuals
-      const options = container.querySelectorAll('.filter-option');
-      options.forEach(div => {
-          div.classList.remove('bg-accent/10', 'text-accent', 'font-semibold');
-          div.classList.add('text-text/80', 'hover:bg-secondary/50');
-          div.querySelector('.check-icon').classList.add('hidden');
-      });
-
-      // 3. Hide Clear Button
-      updateClearButton(param);
-  }
-
-  // Initialize visibility of Clear buttons on page load
-  document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.group-filter').forEach(group => {
-        updateClearButton(group.getAttribute('data-param'));
-    });
-  });
-
-  // --- End Custom Multi-Select Logic ---
-
-  // 1. Filter Toggle Logic
+  // --- 3. Filter Panel Toggle ---
   const toggleBtn = document.getElementById('toggle-filters-btn');
   const filtersDiv = document.getElementById('advanced-filters');
   const chevron = document.getElementById('chevron-icon');
 
-  // Auto-open if advanced filters are active
   const hasAdvancedFilters = Number("{{ selected_filters|length|default:0 }}") > 0 || 
                              "{{ size_min }}" !== "" || "{{ size_max }}" !== "" ||
                              "{{ res_min }}" !== "" || "{{ res_max }}" !== "";
@@ -538,7 +599,7 @@
   if (hasAdvancedFilters) {
       filtersDiv.classList.remove('hidden');
       toggleBtn.setAttribute('aria-expanded', 'true');
-      chevron.style.transform = 'rotate(180deg)';
+      if(chevron) chevron.style.transform = 'rotate(180deg)';
   }
 
   toggleBtn.addEventListener('click', () => {
@@ -546,19 +607,18 @@
       if (isHidden) {
           filtersDiv.classList.remove('hidden');
           toggleBtn.setAttribute('aria-expanded', 'true');
-          chevron.style.transform = 'rotate(180deg)';
+          if(chevron) chevron.style.transform = 'rotate(180deg)';
       } else {
           filtersDiv.classList.add('hidden');
           toggleBtn.setAttribute('aria-expanded', 'false');
-          chevron.style.transform = 'rotate(0deg)';
+          if(chevron) chevron.style.transform = 'rotate(0deg)';
       }
   });
 
-  // 2. Selection Logic (Persisted via sessionStorage)
+  // --- 4. Selection Persistence (Existing Logic) ---
   const STORAGE_KEY = 'beetles_selected_ids';
   let selectedIds = new Set();
   
-  // DOM Elements
   const rowCheckboxes = document.querySelectorAll('.row-select');
   const dlBtns = document.querySelectorAll('.download-selected-btn');
   const countSpans = document.querySelectorAll('.selected-count');
@@ -570,12 +630,8 @@
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          selectedIds = new Set(parsed);
-        }
-      } catch (e) {
-        console.error("Failed to parse selection storage", e);
-      }
+        if (Array.isArray(parsed)) selectedIds = new Set(parsed);
+      } catch (e) { console.error(e); }
     }
     updateUI();
   }
@@ -586,32 +642,20 @@
 
   function updateUI() {
     const count = selectedIds.size;
-    
-    // Sync checkboxes
-    rowCheckboxes.forEach(cb => {
-      cb.checked = selectedIds.has(cb.value);
-    });
-
-    // Sync counters
+    rowCheckboxes.forEach(cb => { cb.checked = selectedIds.has(cb.value); });
     countSpans.forEach(span => span.textContent = count);
     if (globalCountSpan) globalCountSpan.textContent = count;
-
-    // Toggle Buttons
     dlBtns.forEach(btn => btn.disabled = count === 0);
-
-    // Toggle Clear Button
     if (clearBtn) {
         if (count > 0) clearBtn.classList.remove('hidden');
         else clearBtn.classList.add('hidden');
     }
   }
 
-  // Listeners
   rowCheckboxes.forEach(r => {
     r.addEventListener('change', (e) => {
-        const id = e.target.value;
-        if (e.target.checked) selectedIds.add(id);
-        else selectedIds.delete(id);
+        if (e.target.checked) selectedIds.add(e.target.value);
+        else selectedIds.delete(e.target.value);
         saveSelection();
         updateUI();
     });
@@ -634,7 +678,7 @@
 
   initSelection();
 
-  // 3. Copy UUID Logic
+  // --- 5. Copy UUID ---
   document.addEventListener('click', async (e) => {
     const btn = e.target.closest('.copy-uuid');
     if (!btn) return;
@@ -645,9 +689,7 @@
       const originalHTML = btn.innerHTML;
       btn.innerHTML = `<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
       setTimeout(() => { btn.innerHTML = originalHTML; }, 1500);
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   });
 </script>
 {% endblock %}
