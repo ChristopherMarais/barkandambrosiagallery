@@ -87,7 +87,7 @@
         <div id="sideItems" class="flex flex-col gap-2 w-full p-2 mt-4">
 
           <a href="{% url 'home' %}"
-            class="flex items-center p-4 rounded-lg group overflow-hidden whitespace-nowrap justify-center relative {% if request.resolver_match.url_name == 'home' %}bg-gray-300{% else %}hover:bg-gray-400{% endif %}">
+            class="flex items-center p-4 rounded-lg group overflow-hidden whitespace-nowrap justify-center relative {% if request.resolver_match.url_name == 'home' %}bg-gray-200{% else %}hover:bg-gray-200{% endif %}">
             <img id="home-icon" src="{% static 'img/IMG_5557.PNG' %}" alt="Home" class="object-contain" />
           </a>
 
@@ -95,9 +95,7 @@
 
           <a href="{% url 'beetles_home' %}"
             class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'beetles_home' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
-            <div class="w-8 flex justify-center items-center shrink-0 mr-4">
-              <i class="fi fi-rr-bug text-xl text-gray-700"></i>
-            </div>
+            <i class="fi fi-rr-bug text-xl text-gray-700 w-8 text-center"></i>
             <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
               Beetles
             </span>
