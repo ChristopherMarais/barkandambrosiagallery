@@ -31,29 +31,6 @@ from .forms import TailwindUserCreationForm, ProfileForm, PasswordChangeFormStyl
 
 import pandas as pd
 
-def landing(request):
-    # 1. Total number of images
-    total_images = Beetles.objects.count()
-
-    # 2. Number of unique species (based on the valid name ID)
-    # We filter out nulls to get an accurate count of identified species
-    total_species = Beetles.objects.exclude(depicts_valid_name_id__isnull=True)\
-                                   .values('depicts_valid_name_id')\
-                                   .distinct().count()
-
-    # 3. Count of images with a Type Status
-    # This checks for fields that are neither null nor empty strings
-    type_status_count = Beetles.objects.exclude(specimen_type_status__isnull=True)\
-                                       .exclude(specimen_type_status="")\
-                                       .count()
-
-    context = {
-        'total_images': total_images,
-        'total_species': total_species,
-        'type_status_count': type_status_count,
-    }
-    return render(request, 'landing.html', context)
-
 
 @login_required
 def my_account(request):
@@ -108,10 +85,30 @@ class PostOnlyLogoutView(LogoutView):
 
 
 def landing(request):
-    """
-    Renders the marketing/landing page (templates/landing.html).
-    """
-    return render(request, 'landing.html')
+    # 1. Total number of images
+    total_images = Beetles.objects.count()
+
+    # 2. Number of unique species (based on the valid name ID)
+    total_species = Beetles.objects.exclude(depicts_valid_name_id__isnull=True)\
+                                   .values('depicts_valid_name_id')\
+                                   .distinct().count()
+
+    # 3. Count unique specimen IDs that have a Type Status
+    # This filters for records with a type status, then counts unique values in 'depicts_specimen'
+    type_status_count = Beetles.objects.exclude(specimen_type_status__isnull=True)\
+                                       .exclude(specimen_type_status="")\
+                                       .exclude(depicts_specimen__isnull=True)\
+                                       .exclude(depicts_specimen="")\
+                                       .values('depicts_specimen')\
+                                       .distinct()\
+                                       .count()
+
+    context = {
+        'total_images': total_images,
+        'total_species': total_species,
+        'type_status_count': type_status_count,
+    }
+    return render(request, 'landing.html', context)
 
 
 def _normalize_valid_id_for_lookup(v):
