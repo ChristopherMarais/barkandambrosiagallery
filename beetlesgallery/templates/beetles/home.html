@@ -11,14 +11,14 @@
       
       {# 1. Search Bar #}
       <div class="relative w-full">
-        <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Search metadata..." class="w-full rounded-lg border border-text/10 bg-background px-6 py-4 text-md text-text shadow-md shadow-black/1 focus:ring-2 focus:ring-accent outline-none transition" />
+        <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Search metadata..." class="w-full rounded-lg border border-text/10 bg-background px-6 py-4 text-md text-text shadow-md shadow-black/1 focus:ring-2 focus:ring-gray-400 outline-none transition" />
       </div>
 
       {# 2. Controls #}
       <div class="flex flex-wrap items-center justify-between gap-4 px-2">
-          <button type="submit" class="rounded-lg border border-text/20 bg-primary2 px-4 py-2 text-sm font-semibold text-text hover:bg-secondary/80 transition shadow-sm">Search</button>
+          <button type="submit" class="rounded-lg border border-text/20 bg-primary2 px-4 py-2 text-sm font-semibold text-text hover:bg-secondary/40 transition shadow-sm">Search</button>
 
-          <button type="button" id="toggle-filters-btn" class="group flex items-center gap-2 text-sm text-red-500 hover:underline" aria-expanded="false">
+          <button type="button" id="toggle-filters-btn" class="group flex items-center gap-2 text-sm text-gray-500 hover:underline hover:text-text" aria-expanded="false">
             <span>Detailed Search</span>
             <svg id="chevron-icon" class="w-4 h-4 text-text/50 transition-transform duration-200 group-hover:text-text" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
           </button>
@@ -28,33 +28,33 @@
       {% if q or selected_filters or size_min or size_max or res_min or res_max %}
         <div class="flex flex-wrap items-center gap-2 mt-2 px-2">
             {% if q %}
-                <span class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent border border-accent/20">Text: {{ q }}</span>
+                <span class="inline-flex items-center gap-1 rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-800 border border-gray-300">Text: {{ q }}</span>
             {% endif %}
             
             {% for param, vals in selected_filters.items %}
                 {% for val in vals %}
                 <button type="button" 
                         onclick="removeFilter('{{ param }}', '{{ val|escapejs }}')"
-                        class="group inline-flex items-center gap-1 rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent capitalize border border-accent/20 hover:bg-red-100 hover:text-red-700 hover:border-red-300 transition cursor-pointer"
+                        class="group inline-flex items-center gap-1 rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-800 capitalize border border-gray-300 hover:bg-red-100 hover:text-red-700 hover:border-red-200 transition cursor-pointer"
                         title="Click to remove filter">
                     {{ param|title }}: {{ val }}
-                    <span class="ml-1 text-accent/50 group-hover:text-red-700">×</span>
+                    <span class="ml-1 text-text/50 group-hover:text-red-700">×</span>
                 </button>
                 {% endfor %}
             {% endfor %}
 
             {% if size_min or size_max %}
-                <span class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent border border-accent/20">
+                <span class="inline-flex items-center gap-1 rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-800 border border-gray-300">
                     Size: {{ size_min|default:"0" }} - {{ size_max|default:"Max" }} MB
                 </span>
             {% endif %}
             {% if res_min or res_max %}
-                <span class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent border border-accent/20">
+                <span class="inline-flex items-center gap-1 rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-800 border border-gray-300">
                     Res: {{ res_min|default:"0" }} - {{ res_max|default:"Max" }} px/mm
                 </span>
             {% endif %}
             
-            <a href="{% url 'beetles_home' %}?per_page={{ per_page }}" class="text-xs text-red-500 hover:underline flex items-center self-center ml-2 font-medium">× Clear all</a>
+            <a href="{% url 'beetles_home' %}?per_page={{ per_page }}" class="text-xs text-gray-500 hover:underline hover:text-text flex items-center self-center ml-2 font-medium">× Clear all</a>
         </div>
       {% endif %}
 
@@ -64,8 +64,8 @@
     <div id="advanced-filters" class="hidden mt-6 rounded-xl border border-text/10 bg-primary2 p-6 shadow-inner relative z-10">
         
         {# Top Apply Button (Full Width) #}
-        <div class="w-full mb-8 border-b border-text/10 pb-6">
-            <button type="submit" class="w-full rounded-lg bg-accent/10 border border-accent/20 py-3 text-sm font-bold text-accent hover:bg-accent hover:text-white transition shadow-sm uppercase tracking-wide">
+        <div class="w-full mb-8 pb-6">
+            <button type="submit" class="w-full rounded-lg bg-gray-200 border border-gray-300 py-3 text-sm font-bold text-gray-800 hover:bg-gray-300 hover:text-black transition shadow-sm uppercase tracking-wide">
                 Apply Filters
             </button>
         </div>
@@ -94,7 +94,7 @@
                     {# DROPDOWN TOGGLE BUTTON #}
                     <button type="button" 
                             class="filter-toggle-btn w-full text-left rounded-lg border bg-background px-3 py-2.5 text-sm flex items-center justify-between transition shadow-sm
-                                   {% if f.selected %}border-accent ring-1 ring-accent/30 text-accent font-medium{% else %}border-text/20 text-text hover:border-accent/50{% endif %}"
+                                   {% if f.selected %}border-gray-400 ring-1 ring-gray-200 text-gray-900 font-medium{% else %}border-text/20 text-text hover:border-text/30{% endif %}"
                             onclick="toggleFilterDropdown(this)">
                         <span class="truncate pr-2">
                             {% if f.selected %}
@@ -112,17 +112,17 @@
                         {# Search Input #}
                         <div class="relative">
                             <input type="text" placeholder="Search..." 
-                                   class="w-full rounded-md border border-text/10 bg-secondary/10 px-3 py-1.5 text-sm focus:ring-2 focus:ring-accent focus:border-accent outline-none text-text"
+                                   class="w-full rounded-md border border-text/10 bg-secondary/10 px-3 py-1.5 text-sm focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none text-text"
                                    onkeyup="filterDropdownOptions(this)">
                             <svg class="absolute right-2.5 top-2 w-4 h-4 text-text/30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                         </div>
 
                         {# Batch Actions #}
                         <div class="flex items-center justify-between px-1 border-b border-text/5 pb-2">
-                             <button type="button" class="text-[10px] font-bold text-accent hover:underline uppercase tracking-wide" onclick="selectVisibleOptions(this)">
+                             <button type="button" class="text-[10px] font-bold text-gray-700 hover:underline uppercase tracking-wide" onclick="selectVisibleOptions(this)">
                                 Select Visible
                             </button>
-                            <button type="button" class="text-[10px] font-bold text-red-400 hover:text-red-600 hover:underline uppercase tracking-wide" onclick="clearFilterSelection(this)">
+                            <button type="button" class="text-[10px] font-bold text-red-600 hover:text-red-800 hover:underline uppercase tracking-wide" onclick="clearFilterSelection(this)">
                                 Clear All
                             </button>
                         </div>
@@ -131,12 +131,12 @@
                         <div class="max-h-60 overflow-y-auto scrollbar-thin flex flex-col gap-0.5">
                             {% for opt in f.options %}
                                 <div class="filter-option cursor-pointer select-none rounded px-2 py-2 text-sm flex items-center justify-between transition-colors
-                                            {% if opt in f.selected %}bg-accent/10 text-accent font-semibold{% else %}text-text/80 hover:bg-secondary/20{% endif %}"
+                                            {% if opt in f.selected %}bg-gray-100 text-gray-900 font-semibold{% else %}text-text/80 hover:bg-secondary/20{% endif %}"
                                      data-value="{{ opt }}"
                                      onclick="toggleDropdownOption(this)">
                                     <span class="truncate select-text">{{ opt }}</span>
                                     <div class="w-4 h-4 rounded border flex items-center justify-center ml-2 shrink-0 transition-colors
-                                                {% if opt in f.selected %}bg-accent border-accent text-white{% else %}border-text/30 bg-white{% endif %}">
+                                                {% if opt in f.selected %}bg-gray-800 border-gray-800 text-white{% else %}border-text/30 bg-white{% endif %}">
                                         <svg class="w-3 h-3 {% if opt not in f.selected %}hidden{% endif %} check-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                                     </div>
                                 </div>
@@ -153,17 +153,17 @@
                         <div class="space-y-1">
                             <label class="text-xs font-semibold text-text/70">Image Size (MB)</label>
                             <div class="flex items-center gap-2">
-                                <input type="number" step="0.1" name="size_min" value="{{ size_min }}" placeholder="Min" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent" onchange="this.form.submit()">
+                                <input type="number" step="0.1" name="size_min" value="{{ size_min }}" placeholder="Min" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-gray-400" onchange="this.form.submit()">
                                 <span class="text-text/50">-</span>
-                                <input type="number" step="0.1" name="size_max" value="{{ size_max }}" placeholder="Max" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent" onchange="this.form.submit()">
+                                <input type="number" step="0.1" name="size_max" value="{{ size_max }}" placeholder="Max" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-gray-400" onchange="this.form.submit()">
                             </div>
                         </div>
                         <div class="space-y-1">
                             <label class="text-xs font-semibold text-text/70">Resolution (px/mm)</label>
                             <div class="flex items-center gap-2">
-                                <input type="number" step="0.1" name="res_min" value="{{ res_min }}" placeholder="Min" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent" onchange="this.form.submit()">
+                                <input type="number" step="0.1" name="res_min" value="{{ res_min }}" placeholder="Min" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-gray-400" onchange="this.form.submit()">
                                 <span class="text-text/50">-</span>
-                                <input type="number" step="0.1" name="res_max" value="{{ res_max }}" placeholder="Max" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent" onchange="this.form.submit()">
+                                <input type="number" step="0.1" name="res_max" value="{{ res_max }}" placeholder="Max" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-gray-400" onchange="this.form.submit()">
                             </div>
                         </div>
                     </div>
@@ -178,7 +178,7 @@
                 </div>
                 <div class="col-span-1 space-y-1">
                       <label class="text-xs font-semibold text-text/70">Items Per Page</label>
-                      <select name="per_page" onchange="this.form.submit()" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent">
+                      <select name="per_page" onchange="this.form.submit()" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-gray-400">
                           <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
                           <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
                           <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
@@ -188,7 +188,7 @@
                 
                 {# Bottom Apply Button (Full Width) #}
                 <div class="col-span-full mt-4">
-                    <button type="submit" class="w-full rounded-lg bg-accent/10 border border-accent/20 py-3 text-sm font-bold text-accent hover:bg-accent hover:text-white transition shadow-sm uppercase tracking-wide">
+                    <button type="submit" class="w-full rounded-lg bg-gray-200 border border-gray-300 py-3 text-sm font-bold text-gray-800 hover:bg-gray-300 hover:text-black transition shadow-sm uppercase tracking-wide">
                         Apply Filters
                     </button>
                 </div>
@@ -209,20 +209,20 @@
              
              <div class="flex items-center gap-2">
                  <button type="submit" form="download-selected-form" disabled
-                         class="download-selected-btn text-sm font-semibold text-accent hover:text-accent/80 hover:underline">
+                         class="download-selected-btn text-sm font-semibold text-gray-700 hover:text-black hover:underline disabled:opacity-60 disabled:cursor-not-allowed">
                     Download Selected (<span class="selected-count">0</span>)
                  </button>
 
                  {% if request.user.is_staff and total_matches > 0 %}
                     <div class="h-4 w-px bg-text/20 mx-1"></div>
                     <button type="button" onclick="document.getElementById('download-all-form').submit()"
-                            class="text-sm font-semibold text-accent hover:text-accent/80 hover:underline">
+                            class="text-sm font-semibold text-gray-700 hover:text-black hover:underline">
                       Download All ({{ total_matches }})
                     </button>
                  {% endif %}
              </div>
              
-             <button type="button" id="clear-selection-btn" class="hidden text-sm text-red-500 hover:underline">
+             <button type="button" id="clear-selection-btn" class="hidden text-sm text-red-600 hover:underline">
                  × Deselect all (<span id="global-selection-count">0</span>)
              </button>
          </div>
@@ -238,7 +238,7 @@
 
               <div class="flex items-center gap-2 text-sm text-text/70">
                 <span>Page</span>
-                <select form="main-form" onchange="this.name='page'; this.form.submit()" class="rounded border border-text/20 bg-background py-1.5 px-2 text-sm focus:ring-accent cursor-pointer">
+                <select form="main-form" onchange="this.name='page'; this.form.submit()" class="rounded border border-text/20 bg-background py-1.5 px-2 text-sm focus:ring-gray-400 cursor-pointer">
                   {% for p in paginator.page_range %}
                     <option value="{{ p }}" {% if p == page_obj.number %}selected{% endif %}>{{ p }}</option>
                   {% endfor %}
@@ -277,21 +277,21 @@
              <div class="flex justify-between items-start gap-2 mb-2">
                <div class="min-w-0 flex-1">
                  <h3 class="font-bold text-base text-text leading-tight truncate">
-                   <a href="{% url 'beetle_detail' beetle_id=b.id %}" class="hover:text-accent hover:underline">
+                   <a href="{% url 'beetle_detail' beetle_id=b.id %}" class="hover:text-gray-600 hover:underline">
                      {{ b.depicts_specimen|default:"Unknown Specimen" }}
                    </a>
                  </h3>
                  <div class="flex items-center gap-2 mt-1">
                      <span class="font-bold text-xs text-text/50 mr-1">Record ID:</span>
                      <span class="font-mono text-xs text-text/70 break-all select-all">{{ b.id|stringformat:"s" }}</span>
-                     <button type="button" class="copy-uuid shrink-0 text-accent hover:text-accent/80 transition" data-uuid="{{ b.id }}" title="Copy Full Record ID">
+                     <button type="button" class="copy-uuid shrink-0 text-gray-500 hover:text-black transition" data-uuid="{{ b.id }}" title="Copy Full Record ID">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                      </button>
                  </div>
                </div>
                <div class="shrink-0 pt-0.5">
                    <label class="flex items-center gap-1.5 cursor-pointer select-none group/check">
-                    <input type="checkbox" class="row-select h-4 w-4 rounded border-text/30 bg-background text-accent focus:ring-accent cursor-pointer" value="{{ b.id }}">
+                    <input type="checkbox" class="row-select h-4 w-4 rounded border-text/30 bg-background text-gray-800 focus:ring-gray-400 cursor-pointer" value="{{ b.id }}">
                   </label>
                </div>
              </div>
@@ -350,7 +350,7 @@
                     <div class="truncate"><span class="font-semibold text-text/50">Sex:</span> <span class="ml-1">{{ b.specimen_sex|upper }}</span></div>
                   {% endif %}
                   {% if b.specimen_type_status %}
-                    <div class="truncate"><span class="font-semibold text-text/50">Type:</span> <span class="ml-1 text-accent">{{ b.specimen_type_status }}</span></div>
+                    <div class="truncate"><span class="font-semibold text-text/50">Type:</span> <span class="ml-1 text-gray-900 font-bold">{{ b.specimen_type_status }}</span></div>
                   {% endif %}
                 </div>
              </div>
@@ -374,14 +374,14 @@
              
              <div class="flex items-center gap-2">
                  <button type="submit" form="download-selected-form" disabled
-                         class="download-selected-btn text-sm font-semibold text-accent hover:text-accent/80 hover:underline">
+                         class="download-selected-btn text-sm font-semibold text-gray-700 hover:text-black hover:underline disabled:opacity-60 disabled:cursor-not-allowed">
                     Download Selected (<span class="selected-count">0</span>)
                  </button>
 
                  {% if request.user.is_staff and total_matches > 0 %}
                     <div class="h-4 w-px bg-text/20 mx-1"></div>
                     <button type="button" onclick="document.getElementById('download-all-form').submit()"
-                            class="text-sm font-semibold text-accent hover:text-accent/80 hover:underline">
+                            class="text-sm font-semibold text-gray-700 hover:text-black hover:underline">
                       Download All ({{ total_matches }})
                     </button>
                  {% endif %}
@@ -400,7 +400,7 @@
 
               <div class="flex items-center gap-2 text-sm text-text/70">
                 <span>Page</span>
-                <select form="main-form" onchange="this.name='page'; this.form.submit()" class="rounded border border-text/20 bg-background py-1.5 px-2 text-sm focus:ring-accent cursor-pointer">
+                <select form="main-form" onchange="this.name='page'; this.form.submit()" class="rounded border border-text/20 bg-background py-1.5 px-2 text-sm focus:ring-gray-400 cursor-pointer">
                   {% for p in paginator.page_range %}
                     <option value="{{ p }}" {% if p == page_obj.number %}selected{% endif %}>{{ p }}</option>
                   {% endfor %}
@@ -508,21 +508,21 @@
       const hiddenSelect = container.querySelector('select');
       const icon = div.querySelector('.check-icon');
       const checkContainer = icon.parentElement;
-      const isSelected = div.classList.contains('bg-accent/10');
+      const isSelected = div.classList.contains('bg-gray-100');
 
       if (isSelected) {
           // Deselect
-          div.classList.remove('bg-accent/10', 'text-accent', 'font-semibold');
+          div.classList.remove('bg-gray-100', 'text-gray-900', 'font-semibold');
           div.classList.add('text-text/80', 'hover:bg-secondary/20');
           icon.classList.add('hidden');
-          checkContainer.classList.remove('bg-accent', 'border-accent', 'text-white');
+          checkContainer.classList.remove('bg-gray-800', 'border-gray-800', 'text-white');
           checkContainer.classList.add('border-text/30', 'bg-white');
       } else {
           // Select
-          div.classList.add('bg-accent/10', 'text-accent', 'font-semibold');
+          div.classList.add('bg-gray-100', 'text-gray-900', 'font-semibold');
           div.classList.remove('text-text/80', 'hover:bg-secondary/20');
           icon.classList.remove('hidden');
-          checkContainer.classList.add('bg-accent', 'border-accent', 'text-white');
+          checkContainer.classList.add('bg-gray-800', 'border-gray-800', 'text-white');
           checkContainer.classList.remove('border-text/30', 'bg-white');
       }
 
@@ -540,7 +540,7 @@
   function selectVisibleOptions(btn) {
       const dropdown = btn.closest('.filter-dropdown');
       // Only select visible options that aren't already selected
-      const visibleOptions = dropdown.querySelectorAll('.filter-option:not(.hidden):not(.bg-accent\\/10)');
+      const visibleOptions = dropdown.querySelectorAll('.filter-option:not(.hidden):not(.bg-gray-100)');
       visibleOptions.forEach(opt => toggleDropdownOption(opt));
   }
 
@@ -548,7 +548,7 @@
   function clearFilterSelection(btn) {
       const container = btn.closest('.group-filter');
       const dropdown = container.querySelector('.filter-dropdown');
-      const selectedOptions = dropdown.querySelectorAll('.filter-option.bg-accent\\/10');
+      const selectedOptions = dropdown.querySelectorAll('.filter-option.bg-gray-100');
       selectedOptions.forEach(opt => toggleDropdownOption(opt));
   }
 
@@ -565,12 +565,12 @@
 
       if (count > 0) {
           span.textContent = `${count} Selected`;
-          btn.classList.add('border-accent', 'ring-1', 'ring-accent/30', 'text-accent', 'font-medium');
-          btn.classList.remove('border-text/20', 'text-text', 'hover:border-accent/50');
+          btn.classList.add('border-gray-400', 'ring-1', 'ring-gray-200', 'text-gray-900', 'font-medium');
+          btn.classList.remove('border-text/20', 'text-text', 'hover:border-text/30');
       } else {
           span.textContent = 'All';
-          btn.classList.remove('border-accent', 'ring-1', 'ring-accent/30', 'text-accent', 'font-medium');
-          btn.classList.add('border-text/20', 'text-text', 'hover:border-accent/50');
+          btn.classList.remove('border-gray-400', 'ring-1', 'ring-gray-200', 'text-gray-900', 'font-medium');
+          btn.classList.add('border-text/20', 'text-text', 'hover:border-text/30');
       }
   }
 
@@ -687,7 +687,7 @@
     try {
       await navigator.clipboard.writeText(uuid);
       const originalHTML = btn.innerHTML;
-      btn.innerHTML = `<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+      btn.innerHTML = `<svg class="w-4 h-4 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
       setTimeout(() => { btn.innerHTML = originalHTML; }, 1500);
     } catch (err) { console.error(err); }
   });
