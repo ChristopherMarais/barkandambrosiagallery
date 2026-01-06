@@ -19,7 +19,7 @@
           <button type="submit" class="rounded-lg border border-text/20 bg-primary2 px-4 py-2 text-sm font-semibold text-text hover:bg-secondary/40 transition shadow-sm">Search</button>
 
           <button type="button" id="toggle-filters-btn" class="group flex items-center gap-2 text-sm text-gray-500 hover:underline hover:text-text" aria-expanded="false">
-            <span>Detailed Search</span>
+            <span>Filter</span>
             <svg id="chevron-icon" class="w-4 h-4 text-text/50 transition-transform duration-200 group-hover:text-text" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
           </button>
       </div>
@@ -114,15 +114,14 @@
                             <input type="text" placeholder="Search..." 
                                    class="w-full rounded-md border border-text/10 bg-secondary/10 px-3 py-1.5 text-sm focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none text-text"
                                    onkeyup="filterDropdownOptions(this)">
-                            <svg class="absolute right-2.5 top-2 w-4 h-4 text-text/30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                         </div>
 
                         {# Batch Actions #}
                         <div class="flex items-center justify-between px-1 border-b border-text/5 pb-2">
-                             <button type="button" class="text-[10px] font-bold text-gray-700 hover:underline uppercase tracking-wide" onclick="selectVisibleOptions(this)">
-                                Select Visible
+                             <button type="button" class="text-xs font-bold text-gray-100 hover:underline tracking-wide" onclick="selectVisibleOptions(this)">
+                                Select All
                             </button>
-                            <button type="button" class="text-[10px] font-bold text-red-600 hover:text-red-800 hover:underline uppercase tracking-wide" onclick="clearFilterSelection(this)">
+                            <button type="button" class="text-xs font-bold text-gray-100 hover:text-gray-100 hover:underline tracking-wide" onclick="clearFilterSelection(this)">
                                 Clear All
                             </button>
                         </div>
