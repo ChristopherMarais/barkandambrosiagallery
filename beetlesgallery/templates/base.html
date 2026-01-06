@@ -5,7 +5,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Beetles DB</title>
+  <title>Bark and Ambrosia Gallery</title>
+
+  <link rel="icon" type="image/png" href="{% static 'img/IMG_5557.PNG' %}" />
 
   <link href="{% static 'css/style.css' %}" rel="stylesheet" />
 
@@ -97,7 +99,7 @@
             class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'beetles_home' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
             <i class="fi fi-rr-bug text-xl text-gray-700 w-8 text-center"></i>
             <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
-              Beetles
+              Beetle Images
             </span>
           </a>
 
