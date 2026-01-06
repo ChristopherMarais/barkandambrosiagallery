@@ -61,32 +61,57 @@
     </div> {# Closes the flex-col gap-4 wrapper for search/pills #}
 
     {# 4. Collapsible Advanced Filters Panel #}
-    {# Note: This is separate from the flex-col above to handle margins cleanly #}
     <div id="advanced-filters" class="hidden mt-6 rounded-xl border border-text/10 bg-primary2 p-6 shadow-inner">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-8">
             
             {# Loop through categories #}
             {% for category_name, filters_list in filter_groups %}
-            <div class="contents">
+            <div class="contents mb-8">
                 <div class="col-span-full border-b border-text/10 pb-1 mb-2 {% if not forloop.first %}mt-8{% endif %}">
                     <h3 class="text-sm font-bold uppercase text-text/50 tracking-wider">{{ category_name }}</h3>
                 </div>
 
                 {% for f in filters_list %}
-                <div class="space-y-1">
-                    <label class="text-xs font-semibold text-text/70">{{ f.label }}</label>
-                    <select name="{{ f.param }}" multiple size="5" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent overflow-y-auto scrollbar-thin">
+                {# Wrapper div with data-param for JS lookup #}
+                <div class="space-y-1 group-filter" data-param="{{ f.param }}">
+                    <div class="flex justify-between items-end">
+                        <label class="text-ms font-semibold text-text/70 mb-2 mt-2">{{ f.label }}</label>
+                        {# Specific Clear Button: Hidden by default, toggled by JS #}
+                        <button type="button" 
+                                class="clear-single-filter text-[10px] text-red-400 hover:text-red-600 hover:underline hidden mb-0.5"
+                                onclick="clearSpecificFilter('{{ f.param }}')">
+                            Clear
+                        </button>
+                    </div>
+
+                    {# HIDDEN SELECT: Keeps form submission logic intact #}
+                    <select name="{{ f.param }}" multiple class="hidden">
                         {% for opt in f.options %}
                             <option value="{{ opt }}" {% if opt in f.selected %}selected{% endif %}>{{ opt }}</option>
                         {% endfor %}
                     </select>
-                    <div class="text-[10px] text-text/40 italic text-right mt-1">Hold Ctrl (or Cmd) to select multiple</div>
+
+                    {# CUSTOM UI: Scrollable list of clickable divs #}
+                    <div class="w-full h-40 rounded-lg border border-text/20 bg-background overflow-hidden flex flex-col shadow-sm">
+                        <div class="overflow-y-auto p-1 scrollbar-thin flex-1">
+                            {% for opt in f.options %}
+                                <div class="filter-option cursor-pointer select-none rounded px-2 py-1.5 text-xs sm:text-sm flex items-center justify-between transition-colors
+                                            {% if opt in f.selected %}bg-accent/10 text-accent font-semibold{% else %}text-text/80 hover:bg-secondary/50{% endif %}"
+                                     data-value="{{ opt }}"
+                                     onclick="toggleCustomOption(this, '{{ f.param }}')">
+                                    <span class="truncate">{{ opt }}</span>
+                                    {# Checkmark Icon #}
+                                    <svg class="w-3.5 h-4 shrink-0 ml-2 {% if opt not in f.selected %}hidden{% endif %} check-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
                 {% endfor %}
 
                 {% if category_name == "Image Details" %}
                     <div class="space-y-1">
-                        <label class="text-xs font-semibold text-text/70">Image Size (MB)</label>
+                        <label class="text-ms font-semibold text-text/70">Image Size (MB)</label>
                         <div class="flex items-center gap-2">
                             <input type="number" step="0.1" name="size_min" value="{{ size_min }}" placeholder="Min" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent" onchange="this.form.submit()">
                             <span class="text-text/50">-</span>
@@ -94,7 +119,7 @@
                         </div>
                     </div>
                     <div class="space-y-1">
-                        <label class="text-xs font-semibold text-text/70">Resolution (px/mm)</label>
+                        <label class="text-ms font-semibold text-text/70">Resolution (px/mm)</label>
                         <div class="flex items-center gap-2">
                             <input type="number" step="0.1" name="res_min" value="{{ res_min }}" placeholder="Min" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent" onchange="this.form.submit()">
                             <span class="text-text/50">-</span>
@@ -108,10 +133,10 @@
             {# Display Settings #}
             <div class="contents">
                  <div class="col-span-full border-b border-text/10 pb-1 mb-2 mt-8">
-                    <h3 class="text-sm font-bold uppercase text-text/50 tracking-wider">Display</h3>
+                    <h3 class="text-m font-bold uppercase text-text/50 tracking-wider">Display</h3>
                 </div>
                 <div class="space-y-1 mb-8">
-                      <label class="text-xs font-semibold text-text/70">Items Per Page</label>
+                      <label class="text-ms font-semibold text-text/70">Items Per Page</label>
                       <select name="per_page" onchange="this.form.submit()" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent">
                           <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
                           <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
@@ -155,9 +180,9 @@
              <button type="button" id="clear-selection-btn" class="hidden text-sm text-red-500 hover:underline">
                  × Deselect all (<span id="global-selection-count">0</span>)
              </button>
-          </div>
+         </div>
 
-          {% if is_paginated %}
+         {% if is_paginated %}
             <nav class="flex items-center gap-2">
               {% if page_obj.has_previous %}
                 <button type="submit" form="main-form" name="page" value="{{ page_obj.previous_page_number }}"
@@ -260,9 +285,9 @@
                     <div class="truncate"><span class="font-semibold text-text/50">Species:</span> <span class="ml-1 italic">{{ b.ref_species }}</span></div>
                   {% endif %}
                   {% if not b.ref_scientificName %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic">unidentified</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic">unidentified</span></div>
                   {% elif b.ref_subspecies %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic">{{ b.ref_subspecies }}</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic">{{ b.ref_subspecies }}</span></div>
                   {% endif %}
                 </div>
                 
@@ -322,9 +347,10 @@
                     </button>
                  {% endif %}
              </div>
-          </div>
+             
+         </div>
 
-          {% if is_paginated %}
+         {% if is_paginated %}
             <nav class="flex items-center gap-2">
               {% if page_obj.has_previous %}
                 <button type="submit" form="main-form" name="page" value="{{ page_obj.previous_page_number }}"
@@ -384,21 +410,112 @@
 <script>
 
   function removeFilter(param, value) {
-      // Find the select element for this parameter
+      // Find the hidden select element
       const select = document.querySelector(`select[name="${param}"]`);
       if (select) {
-          // Uncheck the option matching the value
+          // Deselect the option matching the value
           for (let i = 0; i < select.options.length; i++) {
               if (select.options[i].value === value) {
                   select.options[i].selected = false;
               }
           }
-          // Submit the form to refresh
+          // Submit the form
           document.getElementById('main-form').submit();
       } else {
           console.warn('Filter input not found for', param);
       }
   }
+
+  // --- NEW: Custom Multi-Select Logic ---
+  
+  // Toggles selection on the visible list item and syncs with hidden select
+  function toggleCustomOption(div, param) {
+      const value = div.getAttribute('data-value');
+      const hiddenSelect = document.querySelector(`select[name="${param}"]`);
+      if (!hiddenSelect) return;
+
+      // 1. Toggle Visual State
+      const isSelected = div.classList.contains('bg-accent/10');
+      const icon = div.querySelector('.check-icon');
+
+      if (isSelected) {
+          // Deselect
+          div.classList.remove('bg-accent/10', 'text-accent', 'font-semibold');
+          div.classList.add('text-text/80', 'hover:bg-secondary/50');
+          icon.classList.add('hidden');
+      } else {
+          // Select
+          div.classList.add('bg-accent/10', 'text-accent', 'font-semibold');
+          div.classList.remove('text-text/80', 'hover:bg-secondary/50');
+          icon.classList.remove('hidden');
+      }
+
+      // 2. Sync with Hidden Select
+      for (let i = 0; i < hiddenSelect.options.length; i++) {
+          if (hiddenSelect.options[i].value === value) {
+              hiddenSelect.options[i].selected = !isSelected; // Toggle
+              break;
+          }
+      }
+
+      // 3. Update "Clear" button visibility
+      updateClearButton(param);
+  }
+
+  // Updates the visibility of the "Clear" text button for a specific filter
+  function updateClearButton(param) {
+      const container = document.querySelector(`.group-filter[data-param="${param}"]`);
+      if (!container) return;
+      
+      const hiddenSelect = container.querySelector('select');
+      const clearBtn = container.querySelector('.clear-single-filter');
+      
+      let hasSelection = false;
+      for (let i = 0; i < hiddenSelect.options.length; i++) {
+          if (hiddenSelect.options[i].selected) {
+              hasSelection = true;
+              break;
+          }
+      }
+
+      if (hasSelection) {
+          clearBtn.classList.remove('hidden');
+      } else {
+          clearBtn.classList.add('hidden');
+      }
+  }
+
+  // Clears all options for a specific filter category
+  function clearSpecificFilter(param) {
+      const container = document.querySelector(`.group-filter[data-param="${param}"]`);
+      if (!container) return;
+
+      // 1. Reset Hidden Select
+      const hiddenSelect = container.querySelector('select');
+      for (let i = 0; i < hiddenSelect.options.length; i++) {
+          hiddenSelect.options[i].selected = false;
+      }
+
+      // 2. Reset Visuals
+      const options = container.querySelectorAll('.filter-option');
+      options.forEach(div => {
+          div.classList.remove('bg-accent/10', 'text-accent', 'font-semibold');
+          div.classList.add('text-text/80', 'hover:bg-secondary/50');
+          div.querySelector('.check-icon').classList.add('hidden');
+      });
+
+      // 3. Hide Clear Button
+      updateClearButton(param);
+  }
+
+  // Initialize visibility of Clear buttons on page load
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.group-filter').forEach(group => {
+        updateClearButton(group.getAttribute('data-param'));
+    });
+  });
+
+  // --- End Custom Multi-Select Logic ---
 
   // 1. Filter Toggle Logic
   const toggleBtn = document.getElementById('toggle-filters-btn');
@@ -518,7 +635,7 @@
     try {
       await navigator.clipboard.writeText(uuid);
       const originalHTML = btn.innerHTML;
-      btn.innerHTML = `<svg class="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+      btn.innerHTML = `<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
       setTimeout(() => { btn.innerHTML = originalHTML; }, 1500);
     } catch (err) {
       console.error(err);
