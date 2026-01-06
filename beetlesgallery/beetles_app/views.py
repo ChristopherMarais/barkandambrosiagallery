@@ -9,7 +9,7 @@ import os
 import math
 from datetime import date
 
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.urls import reverse
 from django.conf import settings
 from django.contrib import messages
@@ -30,6 +30,29 @@ from .schema import REQUIRED_COLS, MAX_ROWS
 from .forms import TailwindUserCreationForm, ProfileForm, PasswordChangeFormStyled, ValidSpeciesUploadForm, UpdateBatchUploadForm
 
 import pandas as pd
+
+def landing(request):
+    # 1. Total number of images
+    total_images = Beetles.objects.count()
+
+    # 2. Number of unique species (based on the valid name ID)
+    # We filter out nulls to get an accurate count of identified species
+    total_species = Beetles.objects.exclude(depicts_valid_name_id__isnull=True)\
+                                   .values('depicts_valid_name_id')\
+                                   .distinct().count()
+
+    # 3. Count of images with a Type Status
+    # This checks for fields that are neither null nor empty strings
+    type_status_count = Beetles.objects.exclude(specimen_type_status__isnull=True)\
+                                       .exclude(specimen_type_status="")\
+                                       .count()
+
+    context = {
+        'total_images': total_images,
+        'total_species': total_species,
+        'type_status_count': type_status_count,
+    }
+    return render(request, 'landing.html', context)
 
 
 @login_required
