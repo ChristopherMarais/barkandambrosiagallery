@@ -502,6 +502,10 @@ def _clause_to_q(field_label: str, value: str, ignored):
 
     # --- CSV-backed fields ---
     if norm in REF_FIELD_LABELS:
+        # If user searches 'genus:N/A', return records where valid_name_id is null
+        if value and value.strip().upper() == "N/A":
+            return Q(depicts_valid_name_id__isnull=True)
+            
         ids = species_ref.ids_for(field_label, value)
         if ids is None:
             ignored.append(f"reference unavailable for '{field_label}'")
@@ -515,6 +519,17 @@ def _clause_to_q(field_label: str, value: str, ignored):
     if not model_field:
         ignored.append(f"unknown field '{field_label}'")
         return None
+
+    # Handle "N/A" or empty values
+    if value is None or value == "" or value.strip().upper() == "N/A":
+        if model_field == "image_date_taken":
+            # Prevents: django.core.exceptions.ValidationError: ['“” value has an invalid date format.']
+            return Q(image_date_taken__isnull=True)
+        
+        return (
+            Q(**{f"{model_field}__isnull": True}) |
+            Q(**{f"{model_field}": ""})
+        )
 
     # Special case: "Name ID:" with no value → Name ID is blank (NULL or empty string)
     if value is None or value == "":
@@ -674,6 +689,7 @@ FILTERS_CONFIG = [
 # In beetlesgallery/beetles_app/views.py
 
 def gallery(request):
+    NA = "N/A"
     try:
         page_size = int(request.GET.get("per_page", 12))
     except (ValueError, TypeError):
@@ -736,9 +752,25 @@ def gallery(request):
             cfg = next((c for c in FILTERS_CONFIG if c["param"] == param), None)
             if not cfg: continue
 
+            # Separate "N/A" from real values
+            has_na = NA in vals
+            real_vals = [v for v in vals if v != NA]
+
             if cfg["type"] == "db":
-                # Use __in for list of values
-                qs = qs.filter(**{f"{cfg['field']}__in": vals})
+                q_part = Q()
+                if real_vals:
+                    q_part |= Q(**{f"{cfg['field']}__in": real_vals})
+                
+                if has_na:
+                    if cfg["field"] == "image_date_taken":
+                        # Only use isnull for DateFields
+                        q_part |= Q(**{f"{cfg['field']}__isnull": True})
+                    else:
+                        q_part |= Q(**{f"{cfg['field']}__isnull": True}) | Q(**{f"{cfg['field']}": ""})
+
+                if q_part:
+                    qs = qs.filter(q_part)
+
             elif cfg["type"] == "bool":
                 # If both Yes and No are selected, it effectively means "All", so ignore.
                 # If only one is selected, filter by it.
@@ -750,16 +782,21 @@ def gallery(request):
                 if len(bool_vals) == 1:
                     qs = qs.filter(**{cfg['field']: list(bool_vals)[0]})
             elif cfg["type"] == "ref":
-                # Aggregate IDs for ALL selected values
-                all_ids = []
-                for v in vals:
-                    ids = species_ref.ids_for(cfg['field'], v)
-                    if ids:
-                        all_ids.extend(ids)
+                q_ref = Q()
+                if real_vals:
+                    all_ids = []
+                    for v in real_vals:
+                        ids = species_ref.ids_for(cfg['field'], v)
+                        if ids: all_ids.extend(ids)
+                    if all_ids:
+                        q_ref |= Q(depicts_valid_name_id__in=all_ids)
                 
-                if all_ids:
-                    qs = qs.filter(depicts_valid_name_id__in=all_ids)
-                else:
+                if has_na:
+                    q_ref |= Q(depicts_valid_name_id__isnull=True)
+
+                if q_ref:
+                    qs = qs.filter(q_ref)
+                elif vals: # If filters were selected but no IDs matched
                     return qs.none()
         return qs
 
@@ -783,18 +820,35 @@ def gallery(request):
         
         options = []
         if cfg["type"] == "db":
+            # 1. Get real values
             opts_qs = ctx_qs.exclude(**{f"{cfg['field']}__isnull": True})
-            if cfg["field"] not in ["image_date_taken"]:
+            
+            # Date fields cannot be empty strings, so only exclude nulls for them
+            if cfg["field"] == "image_date_taken":
+                options = list(opts_qs.values_list(cfg['field'], flat=True).distinct().order_by(cfg['field']))
+                # Use only isnull check for dates to avoid ValidationError
+                na_check = ctx_qs.filter(**{f"{cfg['field']}__isnull": True}).exists()
+            else:
+                # Standard fields: exclude both null and empty string
                 opts_qs = opts_qs.exclude(**{f"{cfg['field']}": ""})
-            options = list(opts_qs.values_list(cfg['field'], flat=True).distinct().order_by(cfg['field']))
+                options = list(opts_qs.values_list(cfg['field'], flat=True).distinct().order_by(cfg['field']))
+                na_check = ctx_qs.filter(Q(**{f"{cfg['field']}__isnull": True}) | Q(**{f"{cfg['field']}": ""})).exists()
+            
+            if na_check:
+                options.insert(0, NA)
             
         elif cfg["type"] == "bool":
             options = ["Yes", "No"]
             
         elif cfg["type"] == "ref":
+            # 1. Get real values via species_ref
             used_ids = ctx_qs.exclude(depicts_valid_name_id__isnull=True).values_list('depicts_valid_name_id', flat=True).distinct()
             vals = species_ref.get_field_values_for_ids(used_ids, cfg["field"])
             options = sorted(list(vals))
+
+            # 2. Add N/A if unidentified records exist
+            if ctx_qs.filter(depicts_valid_name_id__isnull=True).exists():
+                options.insert(0, NA)
 
         # Check if options exist OR if this filter is currently active
         if options or active_filters.get(param):
