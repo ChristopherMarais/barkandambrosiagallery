@@ -5,76 +5,79 @@
 <section class="container mx-auto px-4 h-[calc(100vh-80px)] flex flex-col overflow-hidden py-2">
 
     <div class="flex-none flex flex-col items-center text-center gap-1 mb-2">
-        <h1 class="text-xl md:text-3xl font-bold text-text leading-tight">Bark and Ambrosia Beetle Image Repository</h1>
-        <p class="text-[10px] md:text-xs text-text/70 max-w-4xl leading-tight">
+        <h1 class="text-xl md:text-3xl font-bold text-black leading-tight">Bark and Ambrosia Beetle Image Repository</h1>
+        <p class="text-[10px] md:text-xs text-black/60 max-w-4xl leading-tight">
             Search, upload, and download curated images and specimen data for the world’s bark and ambrosia beetles (Scolytinae and Platypodinae). 
             Maintained by the UF Forest Entomology lab.
         </p>
     </div>
 
-    <div class="flex-1 min-h-0 flex flex-row gap-6 items-center justify-center max-w-5xl mx-auto w-full overflow-hidden">
+    <div class="flex-1 min-h-0 flex flex-row gap-8 items-center justify-center max-w-6xl mx-auto w-full overflow-hidden">
         
-        <div class="flex-1 h-full flex justify-center items-center overflow-hidden">
+        <div class="flex-[0_0_45%] h-full flex justify-center items-center overflow-hidden">
             <img src="{% static 'img/IMG_5557.PNG' %}" alt="Beetles DB specimen"
-                class="w-auto h-auto max-w-full max-h-full object-contain" />
+                class="w-auto h-auto max-w-full max-h-[80%] object-contain grayscale" />
         </div>
 
-        <div class="flex-none w-[300px] flex flex-col gap-2">
-            <div class="rounded-lg border border-text/10 bg-white p-3 shadow-sm">
+        <div class="flex-none w-[350px] flex flex-col gap-3">
+    
+            <a href="{% url 'beetles_home' %}" class="block rounded-lg border border-black/10 bg-white p-4 shadow-sm hover:border-black/30 hover:bg-slate-50 transition-all group">
                 <div class="flex items-center gap-2 mb-1">
-                    <i class="fi fi-rr-bug text-blue-600"></i>
-                    <h2 class="text-xs font-bold text-text">Search Specimens</h2>
+                    <i class="fi fi-rr-bug text-black"></i>
+                    <h2 class="text-sm font-bold text-black">Browse Images</h2>
                 </div>
-                <a href="{% url 'beetles_home' %}" class="text-[10px] text-blue-600 font-bold hover:underline">Go to database →</a>
-            </div>
+                <span class="text-xs text-black/60 font-bold group-hover:text-black group-hover:underline">View Database →</span>
+            </a>
 
-            <div class="rounded-lg border border-text/10 bg-white p-3 shadow-sm">
+            <a href="{% url 'upload' %}" class="block rounded-lg border border-black/10 bg-white p-4 shadow-sm hover:border-black/30 hover:bg-slate-50 transition-all group">
                 <div class="flex items-center gap-2 mb-1">
-                    <i class="fi fi-rr-upload text-green-600"></i>
-                    <h2 class="text-xs font-bold text-text">Upload Data</h2>
+                    <i class="fi fi-rr-upload text-black/70"></i>
+                    <h2 class="text-sm font-bold text-black">Upload Data</h2>
                 </div>
-                <a href="{% url 'upload' %}" class="text-[10px] text-green-600 font-bold hover:underline">Start upload →</a>
-            </div>
+                <span class="text-xs text-black/60 font-bold group-hover:text-black group-hover:underline">Start Upload →</span>
+            </a>
 
-            <div class="rounded-lg border border-text/10 bg-white p-3 shadow-sm">
+            <a href="{% url 'my_uploads' %}" class="block rounded-lg border border-black/10 bg-white p-4 shadow-sm hover:border-black/30 hover:bg-slate-50 transition-all group">
                 <div class="flex items-center gap-2 mb-1">
-                    <i class="fi fi-rr-folder text-purple-600"></i>
-                    <h2 class="text-xs font-bold text-text">My History</h2>
+                    <i class="fi fi-rr-folder text-black/50"></i>
+                    <h2 class="text-sm font-bold text-black">My Files</h2>
                 </div>
-                <a href="{% url 'my_uploads' %}" class="text-[10px] text-purple-600 font-bold hover:underline">View my files →</a>
-            </div>
+                <span class="text-xs text-black/60 font-bold group-hover:text-black group-hover:underline">View My Files →</span>
+            </a>
 
-            <div class="rounded-lg border border-dashed border-text/20 bg-slate-50/50 p-3 relative overflow-hidden grayscale opacity-80">
-                <div class="absolute top-1 right-1 bg-blue-100 text-blue-700 text-[7px] px-1 rounded-full font-black">COMING SOON</div>
+            <div class="rounded-lg border border-dashed border-black/20 bg-slate-50/50 p-4 relative overflow-hidden opacity-60">
+                <div class="absolute top-1 right-1 bg-black text-white text-[7px] px-1 rounded-full font-black">COMING SOON</div>
                 <div class="flex items-center gap-2">
-                    <i class="fi fi-rr-microchip text-text/40"></i>
-                    <h2 class="text-xs font-bold text-text/60">AI Identification</h2>
+                    <i class="fi fi-rr-microchip text-black/40"></i>
+                    <h2 class="text-sm font-bold text-black/40">AI Identification</h2>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="flex-none flex flex-col items-center justify-center gap-2 py-4 border-t border-text/5">
+    <div class="mt-auto flex flex-row items-center justify-center gap-2 py-6 border-t border-black/5">
         <div class="flex flex-col items-center">
-            <span class="text-2xl font-black text-blue-600 leading-none">{{ total_images|default:"0" }}</span>
-            <span class="text-[8px] uppercase tracking-widest font-bold text-text/50">Total Images</span>
+            <span class="text-3xl font-black text-black leading-none">{{ total_images|default:"0" }}</span>
+            <span class="text-[9px] uppercase tracking-widest font-bold text-black/40 mt-1">Total Images</span>
         </div>
         <div class="flex flex-col items-center">
-            <span class="text-2xl font-black text-green-600 leading-none">{{ total_species|default:"0" }}</span>
-            <span class="text-[8px] uppercase tracking-widest font-bold text-text/50">Species</span>
+            <span class="text-3xl font-black text-black/70 leading-none">{{ total_species|default:"0" }}</span>
+            <span class="text-[9px] uppercase tracking-widest font-bold text-black/40 mt-1">Species</span>
         </div>
         <div class="flex flex-col items-center">
-            <span class="text-2xl font-black text-purple-600 leading-none">{{ type_status_count|default:"0" }}</span>
-            <span class="text-[8px] uppercase tracking-widest font-bold text-text/50">Type Specimens</span>
+            <span class="text-3xl font-black text-black/50 leading-none">{{ type_status_count|default:"0" }}</span>
+            <span class="text-[9px] uppercase tracking-widest font-bold text-black/40 mt-1">Type Specimens</span>
         </div>
     </div>
 
-    <div class="flex-none flex flex-col items-center gap-2 pt-2 border-t border-text/10">
-        <div class="flex flex-row items-center justify-center gap-6">
-            <img src="{% static 'img/NSF_4-Color_bitmap_Logo_RGB.png' %}" alt="NSF Logo" class="h-8 w-auto object-contain" />
-            <img src="{% static 'img/PngItem_2222864.png' %}" alt="USDA APHIS Logo" class="h-8 w-auto object-contain" />
+    <div class="flex-none flex flex-col items-center gap-2 pt-2 border-t border-black/10">
+        <div class="flex flex-row items-center justify-center gap-10">
+            <img src="{% static 'img/NSF_4-Color_bitmap_Logo_RGB.png' %}" alt="NSF Logo" 
+                 class="h-12 w-auto object-contain grayscale opacity-80" />
+            <img src="{% static 'img/PngItem_2222864.png' %}" alt="USDA APHIS Logo" 
+                 class="h-12 w-auto object-contain grayscale opacity-80" />
         </div>
-        <p class="text-[9px] text-text/60 text-center italic max-w-2xl">
+        <p class="text-[10px] text-black/40 text-center italic max-w-2xl">
             Sponsored by the National Science Foundation and USDA Animal and Plant Health Inspection Service (APHIS).
         </p>
     </div>
