@@ -406,7 +406,7 @@
   const chevron = document.getElementById('chevron-icon');
 
   // Auto-open if advanced filters are active
-  const hasAdvancedFilters = {{ selected_filters|length }} > 0 || 
+  const hasAdvancedFilters = Number("{{ selected_filters|length|default:0 }}") > 0 || 
                              "{{ size_min }}" !== "" || "{{ size_max }}" !== "" ||
                              "{{ res_min }}" !== "" || "{{ res_max }}" !== "";
 
