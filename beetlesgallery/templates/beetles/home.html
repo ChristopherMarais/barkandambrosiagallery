@@ -15,8 +15,8 @@
       </div>
 
       {# 2. Controls #}
-      <div class="flex flex-wrap items-center justify-between gap-4 px-2">
-          <button type="submit" class="rounded-lg border border-text/20 bg-primary2 px-4 py-2 text-sm font-semibold text-text hover:bg-secondary/40 transition shadow-sm">Search</button>
+      <div class="flex flex-wrap items-center justify-between gap-4">
+          <button type="submit" class="rw-full rounded-lg bg-gray-200 border border-gray-300 px-12 py-3 text-md font-bold text-gray-800 hover:bg-gray-300 hover:text-black transition shadow-sm uppercase tracking-wide">Search</button>
 
           <button type="button" id="toggle-filters-btn" class="group flex items-center gap-2 text-sm text-gray-500 hover:underline hover:text-text" aria-expanded="false">
             <span>Filter</span>
@@ -261,11 +261,11 @@
     {% for b in beetles %}
        <div class="group relative flex flex-row rounded-lg border border-text/10 bg-primary2 overflow-hidden hover:shadow-md transition h-auto min-h-40">
            
-            <div class="w-32 sm:w-48 shrink-0 flex flex-col justify-center p-3">
+            <div class="w-32 sm:w-36 shrink-0 flex flex-col justify-center p-3">
               <a href="{% url 'beetle_detail' beetle_id=b.id %}" 
                 class="flex items-center justify-center w-full h-32 bg-black/5 rounded-xl overflow-hidden border border-black/5 shadow-sm">
                 {% if b.thumb_small %}
-                  <img src="{{ b.thumb_small.url }}" alt="{{ b.depicts_specimen }}" loading="lazy" class="w-full h-full object-contain" />
+                  <img src="{{ b.thumb_small.url }}" alt="{{ b.ref_scientificName }}" loading="lazy" class="w-full h-full object-contain" />
                 {% else %}
                   <div class="text-text/20 text-xs text-center">No Image</div>
                 {% endif %}
@@ -277,7 +277,7 @@
                <div class="min-w-0 flex-1">
                  <h3 class="font-bold text-base text-text leading-tight truncate">
                    <a href="{% url 'beetle_detail' beetle_id=b.id %}" class="hover:text-gray-600 hover:underline">
-                     {{ b.depicts_specimen|default:"Unknown Specimen" }}
+                     {{ b.ref_scientificName|default:"Unknown Specimen" }}
                    </a>
                  </h3>
                  <div class="flex items-center gap-2 mt-1">
@@ -290,12 +290,39 @@
                </div>
                <div class="shrink-0 pt-0.5">
                    <label class="flex items-center gap-1.5 cursor-pointer select-none group/check">
-                    <input type="checkbox" class="row-select h-4 w-4 rounded border-text/30 bg-background text-gray-800 focus:ring-gray-400 cursor-pointer" value="{{ b.id }}">
+                    <input type="checkbox" class="row-select h-4 w-4 rounded border-gray-300 text-gray-800 accent-gray-500 focus:ring-gray-400 focus:ring-offset-0 cursor-pointer" value="{{ b.id }}">
                   </label>
                </div>
              </div>
              
              <div class="text-xs text-text/80 mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                <div class="space-y-1">
+                  {% if b.depicts_specimen %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Specimen ID:</span> <span class="ml-1">{{ b.depicts_specimen }}</span></div>
+                  {% endif %}
+                  {% if b.aspect %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Aspect:</span> <span class="ml-1">{{ b.aspect }}</span></div>
+                  {% endif %}
+                  {% if b.image_has_multiple_individuals is not None %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Multiple Individuals:</span> <span class="ml-1">{% if b.image_has_multiple_individuals %}Yes{% else %}No{% endif %}</span></div>
+                  {% endif %}
+                  {% if b.image_size_bytes %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Size:</span> <span class="ml-1">{{ b.image_size_bytes|filesizeformat }}</span></div>
+                  {% endif %}
+                  {% if b.collection_country %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Country:</span> <span class="ml-1">{{ b.collection_country }}</span></div>
+                  {% endif %}
+                  {% if b.specimen_sex %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Sex:</span> <span class="ml-1">{{ b.specimen_sex|upper }}</span></div>
+                  {% endif %}
+                  {% if b.image_institution %}
+                    <div class="text-text/80 break-words">
+                      <span class="font-semibold text-text/50">Institution:</span>
+                      <span class="ml-1">{{ b.image_institution }}</span>
+                    </div>
+                  {% endif %}
+                </div>
+
                 <div class="space-y-1">
                   {% if not b.ref_scientificName %}
                     <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <span class="ml-1">unidentified</span></div>
@@ -327,29 +354,11 @@
                   {% elif b.ref_subspecies %}
                       <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic">{{ b.ref_subspecies }}</span></div>
                   {% endif %}
-                </div>
-                
-                <div class="space-y-1">
-                  {% if b.image_institution %}
-                    <div class="truncate"><span class="font-semibold text-text/50">Institution:</span> <span class="ml-1">{{ b.image_institution }}</span></div>
-                  {% endif %}
-                  {% if b.aspect %}
-                    <div class="truncate"><span class="font-semibold text-text/50">Aspect:</span> <span class="ml-1">{{ b.aspect }}</span></div>
-                  {% endif %}
-                  {% if b.image_has_multiple_individuals is not None %}
-                    <div class="truncate"><span class="font-semibold text-text/50">Multiple Individuals:</span> <span class="ml-1">{% if b.image_has_multiple_individuals %}Yes{% else %}No{% endif %}</span></div>
-                  {% endif %}
-                  {% if b.image_size_bytes %}
-                    <div class="truncate"><span class="font-semibold text-text/50">Size:</span> <span class="ml-1">{{ b.image_size_bytes|filesizeformat }}</span></div>
-                  {% endif %}
-                  {% if b.collection_country %}
-                    <div class="truncate"><span class="font-semibold text-text/50">Country:</span> <span class="ml-1">{{ b.collection_country }}</span></div>
-                  {% endif %}
-                  {% if b.specimen_sex %}
-                    <div class="truncate"><span class="font-semibold text-text/50">Sex:</span> <span class="ml-1">{{ b.specimen_sex|upper }}</span></div>
-                  {% endif %}
                   {% if b.specimen_type_status %}
-                    <div class="truncate"><span class="font-semibold text-text/50">Type Status:</span> <span class="ml-1">{{ b.specimen_type_status }}</span></div>
+                    <div class="text-text/80 break-words">
+                      <span class="font-semibold text-text/50">Type Status:</span>
+                      <span class="ml-1">{{ b.specimen_type_status }}</span>
+                    </div>
                   {% endif %}
                 </div>
              </div>
