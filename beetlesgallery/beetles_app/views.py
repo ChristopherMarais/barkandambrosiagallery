@@ -298,7 +298,8 @@ FREE_TEXT_FIELDS = [
     "photo_usage_statement", "image_notes", "depicts_specimen", 
     "depicts_valid_name_id", "depicts_described_name_id", 
     "depicts_name_verbatim", "collection_country", "collection_stateProvince", 
-    "specimen_type_status", "specimen_notes"
+    "specimen_type_status", "specimen_notes",
+    "aspect", "specimen_sex"
 ]
 
 
@@ -607,13 +608,26 @@ def build_query_q(user_qs: str):
                 b = stack.pop()
                 a = stack.pop()
                 stack.append((a & b) if op == "AND" else (a | b))
+
         elif "free_text" in node:
-            # Construct a massive OR query across all textual fields
+            # --- MODIFIED LOGIC START ---
             val = node["free_text"]
             q_any = Q()
+            
+            # 1. Search DB text fields (requires FREE_TEXT_FIELDS to be updated globally)
             for f in FREE_TEXT_FIELDS:
                 q_any |= Q(**{f"{f}__icontains": val})
+            
+            # 2. Search Reference/Taxonomy CSV (e.g. Subfamily, Genus, Authority)
+            # This calls the new helper function in species_ref.py
+            matching_ids = species_ref.find_ids_matching_text(val)
+            if matching_ids:
+                # Add any image whose 'depicts_valid_name_id' matches the found taxonomy
+                q_any |= Q(depicts_valid_name_id__in=matching_ids)
+            
             stack.append(q_any)
+            # --- MODIFIED LOGIC END ---
+
         else:
             q = _clause_to_q(node.get("field", ""), node.get("value", ""), ignored)
             if q is not None:

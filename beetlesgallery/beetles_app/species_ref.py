@@ -392,3 +392,34 @@ def bulk_resolve(ids) -> dict[str, dict]:
         out[key] = row if row else dict(UNKNOWN_TAXON)
     return out
 
+def find_ids_matching_text(text: str) -> set[str]:
+    """
+    Return a set of valid_species_id strings where ANY of the taxonomy fields
+    contains the substring 'text' (case-insensitive).
+    """
+    _ensure_loaded()
+    if not _MAP:
+        return set()
+    
+    query = text.strip().lower()
+    if not query:
+        return set()
+
+    matches = set()
+    # Searchable columns in the CSV reference
+    searchable_cols = [
+        "scientificName", "scientificNameAuthority",
+        "subfamily", "tribe", "subtribe",
+        "genus", "species", "subspecies",
+        "authority", "originalGenus"
+    ]
+
+    for vid, data in _MAP.items():
+        # check each column
+        for col in searchable_cols:
+            val = data.get(col, "")
+            if val and query in val.lower():
+                matches.add(vid)
+                break # one match in this row is enough to include the ID
+                
+    return matches
