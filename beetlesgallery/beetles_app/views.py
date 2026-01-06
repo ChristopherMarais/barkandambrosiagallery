@@ -643,107 +643,154 @@ def build_query_q(user_qs: str):
 
 
 # --- 2. GALLERY VIEW (The Database Browser) ---
+# --- Configuration for Faceted Search ---
+# Grouped by category for display.
+FILTERS_CONFIG = [
+    # --- TAXONOMY ---
+    {"category": "Taxonomy", "param": "scientific_name", "type": "ref", "field": "scientificName", "label": "Scientific Name"},
+    {"category": "Taxonomy", "param": "subfamily", "type": "ref", "field": "subfamily", "label": "Subfamily"},
+    {"category": "Taxonomy", "param": "tribe", "type": "ref", "field": "tribe", "label": "Tribe"},
+    {"category": "Taxonomy", "param": "subtribe", "type": "ref", "field": "subtribe", "label": "Subtribe"},
+    {"category": "Taxonomy", "param": "genus", "type": "ref", "field": "genus", "label": "Genus"},
+    {"category": "Taxonomy", "param": "species", "type": "ref", "field": "species", "label": "Species"},
+    {"category": "Taxonomy", "param": "subspecies", "type": "ref", "field": "subspecies", "label": "Subspecies"},
+    {"category": "Taxonomy", "param": "authority", "type": "ref", "field": "authority", "label": "Authority"},
+    {"category": "Taxonomy", "param": "authority_year", "type": "ref", "field": "authorityYear", "label": "Authority Year"},
+    {"category": "Taxonomy", "param": "original_genus", "type": "ref", "field": "originalGenus", "label": "Original Genus"},
+
+    # --- COLLECTION ---
+    {"category": "Collection", "param": "country", "type": "db", "field": "collection_country", "label": "Country"},
+    {"category": "Collection", "param": "state", "type": "db", "field": "collection_stateProvince", "label": "State/Province"},
+    {"category": "Collection", "param": "sex", "type": "db", "field": "specimen_sex", "label": "Sex"},
+
+    # --- IMAGE DETAILS ---
+    {"category": "Image Details", "param": "institution", "type": "db", "field": "image_institution", "label": "Institution"},
+    {"category": "Image Details", "param": "photographer", "type": "db", "field": "photographer", "label": "Photographer"},
+    {"category": "Image Details", "param": "usage", "type": "db", "field": "photo_usage_statement", "label": "Photo Usage"},
+    {"category": "Image Details", "param": "aspect", "type": "db", "field": "aspect", "label": "Aspect"},
+    {"category": "Image Details", "param": "date_taken", "type": "db", "field": "image_date_taken", "label": "Image Date"},
+    {"category": "Image Details", "param": "multiple", "type": "bool", "field": "image_has_multiple_individuals", "label": "Multiple Individuals"},
+]
+
 def gallery(request):
-    """
-    Renders the searchable database gallery (Card/Shopping view).
-    """
-    # 1. Page Size Selection
     try:
         page_size = int(request.GET.get("per_page", 12))
     except (ValueError, TypeError):
         page_size = 12
 
     WARN_IMAGE_SIZE_BYTES = getattr(settings, "WARN_IMAGE_SIZE_BYTES", 10 * 1024 * 1024)
+    base_qs = Beetles.objects.all().order_by("-id")
 
-    base_qs = (
-        Beetles.objects
-        .all()
-        .order_by("-id")
-    )
-
-    # --- 2. Basic Text Search (q) ---
+    # 1. Text Search
     raw_q = request.GET.get("q", "").strip()
     if raw_q:
         q_obj, ignored = build_query_q(raw_q)
-        qs = base_qs.filter(q_obj)
+        base_search_qs = base_qs.filter(q_obj)
         ignored_tokens = ignored
     else:
-        qs = base_qs
+        base_search_qs = base_qs
         ignored_tokens = []
 
-    # --- 3. Faceted Search Options ---
-    # Fetch distinct values for DB fields
-    country_opts = base_qs.exclude(collection_country="").values_list('collection_country', flat=True).distinct().order_by('collection_country')
-    sex_opts = base_qs.exclude(specimen_sex="").values_list('specimen_sex', flat=True).distinct().order_by('specimen_sex')
-    type_opts = base_qs.exclude(specimen_type_status="").values_list('specimen_type_status', flat=True).distinct().order_by('specimen_type_status')
+    # 2. Capture Active Filters
+    active_filters = {}
+    for cfg in FILTERS_CONFIG:
+        val = request.GET.get(cfg["param"], "").strip()
+        if val:
+            active_filters[cfg["param"]] = val
 
-    # Calculate Genus/Species options based on used IDs
-    # (We find all Name IDs used in the DB, then resolve them to get the distinct names)
-    used_name_ids = base_qs.exclude(depicts_valid_name_id__isnull=True).values_list('depicts_valid_name_id', flat=True).distinct()
-    
-    # Bulk resolve to get taxonomies
-    resolved_map = species_ref.bulk_resolve(list(used_name_ids))
-    
-    genus_set = set()
-    species_set = set()
-    
-    for info in resolved_map.values():
-        g = info.get("genus")
-        s = info.get("scientificName")
-        if g and g.lower() != "unknown":
-            genus_set.add(g)
-        if s and s.lower() != "unknown":
-            species_set.add(s)
+    # Capture Range Filters (Size & Resolution)
+    size_min = request.GET.get("size_min", "").strip()
+    size_max = request.GET.get("size_max", "").strip()
+    res_min = request.GET.get("res_min", "").strip()
+    res_max = request.GET.get("res_max", "").strip()
 
-    filter_options = {
-        "countries": country_opts,
-        "sexes": sex_opts,
-        "types": type_opts,
-        "genera": sorted(list(genus_set)),
-        "species": sorted(list(species_set)),
-    }
+    # Helper: Apply filters
+    def apply_filters(qs, filters_dict, exclude_param=None):
+        # Apply Size Filter
+        if size_min:
+            try:
+                qs = qs.filter(image_size_bytes__gte=float(size_min) * 1024 * 1024)
+            except ValueError: pass
+        if size_max:
+            try:
+                qs = qs.filter(image_size_bytes__lte=float(size_max) * 1024 * 1024)
+            except ValueError: pass
 
-    # --- 4. Apply Filters ---
-    selected_filters = {
-        "country": request.GET.get("country"),
-        "sex": request.GET.get("sex"),
-        "type_status": request.GET.get("type_status"),
-        "genus": request.GET.get("genus"),
-        "species": request.GET.get("species"),
-    }
+        # Apply Resolution Filter
+        if res_min:
+            try:
+                qs = qs.filter(resolution_in_ppmm__gte=float(res_min))
+            except ValueError: pass
+        if res_max:
+            try:
+                qs = qs.filter(resolution_in_ppmm__lte=float(res_max))
+            except ValueError: pass
 
-    if selected_filters["country"]:
-        qs = qs.filter(collection_country=selected_filters["country"])
+        for param, val in filters_dict.items():
+            if param == exclude_param: continue 
+            
+            cfg = next((c for c in FILTERS_CONFIG if c["param"] == param), None)
+            if not cfg: continue
+
+            if cfg["type"] == "db":
+                qs = qs.filter(**{cfg["field"]: val})
+            elif cfg["type"] == "bool":
+                b = _normalize_bool(val)
+                if b is not None: qs = qs.filter(**{cfg["field"]: b})
+            elif cfg["type"] == "ref":
+                ids = species_ref.ids_for(cfg["field"], val)
+                if ids: qs = qs.filter(depicts_valid_name_id__in=ids)
+                else: return qs.none()
+        return qs
+
+    # 3. Final Results
+    final_qs = apply_filters(base_search_qs, active_filters, exclude_param=None)
+
+    # 4. Build Dynamic Options
+    from collections import defaultdict
+    grouped_filters = defaultdict(list)
     
-    if selected_filters["sex"]:
-        qs = qs.filter(specimen_sex=selected_filters["sex"])
+    categories = []
+    seen_cats = set()
+    for cfg in FILTERS_CONFIG:
+        if cfg["category"] not in seen_cats:
+            categories.append(cfg["category"])
+            seen_cats.add(cfg["category"])
+
+    for cfg in FILTERS_CONFIG:
+        param = cfg["param"]
+        ctx_qs = apply_filters(base_search_qs, active_filters, exclude_param=param)
         
-    if selected_filters["type_status"]:
-        qs = qs.filter(specimen_type_status=selected_filters["type_status"])
+        options = []
+        if cfg["type"] == "db":
+            opts_qs = ctx_qs.exclude(**{f"{cfg['field']}__isnull": True})
+            if cfg["field"] not in ["image_date_taken"]:
+                opts_qs = opts_qs.exclude(**{f"{cfg['field']}": ""})
+            options = list(opts_qs.values_list(cfg['field'], flat=True).distinct().order_by(cfg['field']))
+            
+        elif cfg["type"] == "bool":
+            options = ["Yes", "No"]
+            
+        elif cfg["type"] == "ref":
+            used_ids = ctx_qs.exclude(depicts_valid_name_id__isnull=True).values_list('depicts_valid_name_id', flat=True).distinct()
+            vals = species_ref.get_field_values_for_ids(used_ids, cfg["field"])
+            options = sorted(list(vals))
 
-    # Filter by Genus (using reference lookup)
-    if selected_filters["genus"]:
-        ids = species_ref.ids_for("genus", selected_filters["genus"])
-        if ids:
-            qs = qs.filter(depicts_valid_name_id__in=ids)
-        else:
-            qs = qs.none() # Found nothing for that genus
+        if options or active_filters.get(param):
+            grouped_filters[cfg["category"]].append({
+                "param": param,
+                "label": cfg["label"],
+                "options": options,
+                "selected": active_filters.get(param, ""),
+            })
 
-    # Filter by Species (Scientific Name)
-    if selected_filters["species"]:
-        ids = species_ref.ids_for("scientific name", selected_filters["species"])
-        if ids:
-            qs = qs.filter(depicts_valid_name_id__in=ids)
-        else:
-            qs = qs.none()
+    filter_context = []
+    for cat in categories:
+        if grouped_filters[cat]:
+            filter_context.append((cat, grouped_filters[cat]))
 
-    # --- 5. Pagination ---
-    try:
-        total_matches = qs.count()
-    except Exception:
-        total_matches = None
-
-    paginator = Paginator(qs, page_size)
+    # 5. Pagination
+    paginator = Paginator(final_qs, page_size)
     page = request.GET.get("page", 1)
     try:
         beetles_page = paginator.page(page)
@@ -752,17 +799,11 @@ def gallery(request):
     except EmptyPage:
         beetles_page = paginator.page(paginator.num_pages)
 
-    # --- 6. Taxonomy Enrichment ---
-    # We purposefully use .get() without a default so missing fields are None
-    # This makes the template logic {% if b.field %} much cleaner.
+    # Enrichment
     for b in beetles_page.object_list:
         raw_id = (str(b.depicts_valid_name_id).strip() if b.depicts_valid_name_id else None)
         ref = species_ref.resolve(raw_id)
-        
-        # Helper to treat "Unknown" string as None for cleaner UI
-        def clean(val):
-            return val if val and val.lower() != "unknown" else None
-
+        def clean(val): return val if val and val.lower() != "unknown" else None
         b.ref_scientificName = clean(ref.get("scientificName"))
         b.ref_genus = clean(ref.get("genus"))
         b.ref_species = clean(ref.get("species"))
@@ -782,11 +823,15 @@ def gallery(request):
             "is_paginated": beetles_page.has_other_pages(),
             "q": raw_q,
             "ignored_tokens": ignored_tokens,
-            "total_matches": total_matches,
+            "total_matches": final_qs.count(),
             "warn_size_bytes": WARN_IMAGE_SIZE_BYTES,
-            "filter_options": filter_options,
-            "selected_filters": selected_filters,
+            "filter_groups": filter_context,
+            "selected_filters": active_filters,
             "per_page": page_size,
+            "size_min": size_min,
+            "size_max": size_max,
+            "res_min": res_min,
+            "res_max": res_max,
         },
     )
 

@@ -6,57 +6,49 @@
 
   <h1 class="text-2xl sm:text-3xl font-semibold text-text mb-6">Beetle Image Browser</h1>
 
-  {# --- MAIN SEARCH FORM --- #}
   <form method="get" id="main-form" class="w-full max-w-7xl mx-auto mb-8">
-    
     <div class="flex flex-col gap-4">
       
-      {# 1. Search Bar (Full Width) #}
+      {# 1. Search Bar #}
       <div class="relative w-full">
-        <input
-          type="text"
-          name="q"
-          value="{{ q|default:'' }}"
-          placeholder="Search metadata (e.g. 'Scolytinae' or 'Platypodini')..."
-          class="w-full rounded-lg border border-text/10 bg-background px-6 py-4 text-md text-text shadow-md shadow-black/1"
-        />
+        <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Search metadata..." class="w-full rounded-lg border border-text/10 bg-background px-6 py-4 text-md text-text shadow-md shadow-black/1" />
       </div>
 
-      {# 2. Controls Row (Search Left, Advanced Right) #}
+      {# 2. Controls #}
       <div class="flex flex-wrap items-center justify-between gap-4 px-2">
-          {# Left: Search Button #}
-          <button type="submit" class="rounded-lg border border-text/20 bg-primary2 px-4 py-2 text-sm font-semibold text-text hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition">
-             Search
-          </button>
+          <button type="submit" class="rounded-lg border border-text/20 bg-primary2 px-4 py-2 text-sm font-semibold text-text hover:bg-secondary/80 transition">Search</button>
 
-          {# Right: Detailed Search Toggle #}
-          <button type="button" 
-                  id="toggle-filters-btn"
-                  class="group flex items-center gap-2 text-sm text-red-500 hover:underline"
-                  aria-expanded="false">
+          <button type="button" id="toggle-filters-btn" class="group flex items-center gap-2 text-sm text-red-500 hover:underline" aria-expanded="false">
             <span>Detailed Search</span>
             <svg id="chevron-icon" class="w-4 h-4 text-text/50 transition-transform duration-200 group-hover:text-text" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
           </button>
       </div>
 
       {# 3. Active Filters Pills #}
-      {% if q or selected_filters.country or selected_filters.sex or selected_filters.type_status or selected_filters.genus or selected_filters.species %}
+      {% if q or selected_filters or size_min or size_max or res_min or res_max %}
         <div class="flex flex-wrap items-center gap-2 mt-2 px-2">
             {% if q %}
+                <span class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent border border-accent/20">Text: {{ q }}</span>
+            {% endif %}
+            
+            {% for param, val in selected_filters.items %}
+                <span class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent capitalize border border-accent/20">
+                    {{ param|title }}: {{ val }}
+                </span>
+            {% endfor %}
+
+            {% if size_min or size_max %}
                 <span class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent border border-accent/20">
-                    Text: {{ q }}
+                    Size: {{ size_min|default:"0" }} - {{ size_max|default:"Max" }} MB
                 </span>
             {% endif %}
-            {% for key, val in selected_filters.items %}
-                {% if val %}
-                <span class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent capitalize border border-accent/20">
-                    {{ key }}: {{ val }}
+            {% if res_min or res_max %}
+                <span class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent border border-accent/20">
+                    Res: {{ res_min|default:"0" }} - {{ res_max|default:"Max" }} px/mm
                 </span>
-                {% endif %}
-            {% endfor %}
-            <a href="{% url 'beetles_home' %}?per_page={{ per_page }}" class="text-xs text-red-500 hover:underline flex items-center self-center ml-2 font-medium">
-                × Clear all
-            </a>
+            {% endif %}
+            
+            <a href="{% url 'beetles_home' %}?per_page={{ per_page }}" class="text-xs text-red-500 hover:underline flex items-center self-center ml-2 font-medium">× Clear all</a>
         </div>
       {% endif %}
 
@@ -64,89 +56,80 @@
 
     {# 4. Collapsible Advanced Filters Panel #}
     <div id="advanced-filters" class="hidden mt-6 rounded-xl border border-text/10 bg-primary2 p-6 shadow-inner">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-8">
             
-            {# --- Taxonomy --- #}
-            <div class="space-y-3">
-                <h3 class="text-xs font-bold uppercase text-text/50 tracking-wider border-b border-text/10 pb-1">Taxonomy</h3>
+            {# Loop through categories #}
+            {% for category_name, filters_list in filter_groups %}
+            <div class="contents  mb-8">
+                {# Subheading with EXTRA spacing (mt-8) before it #}
+                <div class="col-span-full border-b border-text/10 pb-1 mb-2 mt-8 first:mt-0">
+                    <h3 class="text-sm font-bold uppercase text-text/50 tracking-wider">{{ category_name }}</h3>
+                </div>
+
+                {# Filters in this category #}
+                {% for f in filters_list %}
                 <div class="space-y-1">
-                    <label class="text-xs font-semibold text-text/70">Genus</label>
-                    <select name="genus" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent">
-                        <option value="">All Genera</option>
-                        {% for g in filter_options.genera %}
-                            <option value="{{ g }}" {% if g == selected_filters.genus %}selected{% endif %}>{{ g }}</option>
+                    <label class="text-xs font-semibold text-text/70">{{ f.label }}</label>
+                    <select name="{{ f.param }}" onchange="this.form.submit()" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent">
+                        <option value="">All</option>
+                        {% for opt in f.options %}
+                            <option value="{{ opt }}" {% if opt == f.selected %}selected{% endif %}>{{ opt }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="space-y-1">
-                    <label class="text-xs font-semibold text-text/70">Species</label>
-                    <select name="species" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent">
-                        <option value="">All Species</option>
-                        {% for s in filter_options.species %}
-                            <option value="{{ s }}" {% if s == selected_filters.species %}selected{% endif %}>{{ s }}</option>
-                        {% endfor %}
-                    </select>
+                {% endfor %}
+
+                {# Special Case: Add Range inputs under "Image Details" #}
+                {% if category_name == "Image Details" %}
+                    {# Image Size #}
+                    <div class="space-y-1">
+                        <label class="text-xs font-semibold text-text/70">Image Size (MB)</label>
+                        <div class="flex items-center gap-2">
+                            <input type="number" step="0.1" name="size_min" value="{{ size_min }}" placeholder="Min" 
+                                   class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent"
+                                   onchange="this.form.submit()">
+                            <span class="text-text/50">-</span>
+                            <input type="number" step="0.1" name="size_max" value="{{ size_max }}" placeholder="Max" 
+                                   class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent"
+                                   onchange="this.form.submit()">
+                        </div>
+                    </div>
+                    {# Resolution #}
+                    <div class="space-y-1">
+                        <label class="text-xs font-semibold text-text/70">Resolution (px/mm)</label>
+                        <div class="flex items-center gap-2">
+                            <input type="number" step="0.1" name="res_min" value="{{ res_min }}" placeholder="Min" 
+                                   class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent"
+                                   onchange="this.form.submit()">
+                            <span class="text-text/50">-</span>
+                            <input type="number" step="0.1" name="res_max" value="{{ res_max }}" placeholder="Max" 
+                                   class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent"
+                                   onchange="this.form.submit()">
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            {# Display Settings #}
+            <div class="contents">
+                 <div class="col-span-full border-b border-text/10 pb-1 mb-2 mt-8">
+                    <h3 class="text-sm font-bold uppercase text-text/50 tracking-wider">Display</h3>
+                </div>
+                <div class="space-y-1 mb-8">
+                      <label class="text-xs font-semibold text-text/70">Items Per Page</label>
+                      <select name="per_page" onchange="this.form.submit()" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent">
+                          <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                          <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+                          <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                          <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                      </select>
+                </div>
+                <div class="flex flex-col justify-end">
+                    <button type="submit" class="w-full rounded-lg bg-accent/10 border border-accent/20 py-2 text-sm font-bold text-accent hover:bg-accent hover:text-white transition">Apply Filters</button>
                 </div>
             </div>
 
-            {# --- Specimen --- #}
-            <div class="space-y-3">
-                <h3 class="text-xs font-bold uppercase text-text/50 tracking-wider border-b border-text/10 pb-1">Specimen</h3>
-                <div class="space-y-1">
-                    <label class="text-xs font-semibold text-text/70">Country</label>
-                    <select name="country" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent">
-                        <option value="">All Countries</option>
-                        {% for c in filter_options.countries %}
-                            <option value="{{ c }}" {% if c == selected_filters.country %}selected{% endif %}>{{ c }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="space-y-1">
-                    <label class="text-xs font-semibold text-text/70">Sex</label>
-                    <select name="sex" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent">
-                        <option value="">All Sexes</option>
-                        {% for s in filter_options.sexes %}
-                            <option value="{{ s }}" {% if s == selected_filters.sex %}selected{% endif %}>
-                                {% if s == 'm' %}Male{% elif s == 'f' %}Female{% else %}{{ s }}{% endif %}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="space-y-1">
-                    <label class="text-xs font-semibold text-text/70">Type Status</label>
-                    <select name="type_status" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent">
-                        <option value="">All Types</option>
-                        {% for t in filter_options.types %}
-                            <option value="{{ t }}" {% if t == selected_filters.type_status %}selected{% endif %}>{{ t }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-
-            {# --- Display --- #}
-             <div class="space-y-3">
-                <h3 class="text-xs font-bold uppercase text-text/50 tracking-wider border-b border-text/10 pb-1">Display</h3>
-                <div class="space-y-1">
-                     <label class="text-xs font-semibold text-text/70">Items Per Page</label>
-                     <select name="per_page" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-accent">
-                        <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
-                        <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
-                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
-                        <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
-                     </select>
-                </div>
-            </div>
-
-            {# --- More / Apply --- #}
-            <div class="space-y-3 flex flex-col justify-between">
-                <div>
-                    <h3 class="text-xs font-bold uppercase text-text/50 tracking-wider border-b border-text/10 pb-1">Other</h3>
-                    <p class="text-xs text-text/50 italic py-2">Additional filters coming soon.</p>
-                </div>
-                <button type="submit" class="w-full rounded-lg bg-accent/10 border border-accent/20 py-2 text-sm font-bold text-accent hover:bg-accent hover:text-white transition">
-                    Apply Filters
-                </button>
-            </div>
         </div>
     </div>
   </form>
@@ -389,12 +372,14 @@
     <input type="hidden" name="selection_mode" value="query">
     <input type="hidden" name="q" value="{{ q|default:'' }}">
     <input type="hidden" name="total_matches" value="{{ total_matches|default:0 }}">
-    {# Pass active filters so 'Download All' respects the filtered set #}
-    {% if selected_filters.country %}<input type="hidden" name="country" value="{{ selected_filters.country }}">{% endif %}
-    {% if selected_filters.genus %}<input type="hidden" name="genus" value="{{ selected_filters.genus }}">{% endif %}
-    {% if selected_filters.species %}<input type="hidden" name="species" value="{{ selected_filters.species }}">{% endif %}
-    {% if selected_filters.sex %}<input type="hidden" name="sex" value="{{ selected_filters.sex }}">{% endif %}
-    {% if selected_filters.type_status %}<input type="hidden" name="type_status" value="{{ selected_filters.type_status }}">{% endif %}
+    
+    {% for param, val in selected_filters.items %}
+        <input type="hidden" name="{{ param }}" value="{{ val }}">
+    {% endfor %}
+    <input type="hidden" name="size_min" value="{{ size_min }}">
+    <input type="hidden" name="size_max" value="{{ size_max }}">
+    <input type="hidden" name="res_min" value="{{ res_min }}">
+    <input type="hidden" name="res_max" value="{{ res_max }}">
   </form>
 
 </section>
@@ -407,11 +392,9 @@
   const chevron = document.getElementById('chevron-icon');
 
   // Auto-open if advanced filters are active
-  const hasAdvancedFilters = {{ selected_filters.country|yesno:"true,false" }} || 
-                             {{ selected_filters.sex|yesno:"true,false" }} || 
-                             {{ selected_filters.type_status|yesno:"true,false" }} || 
-                             {{ selected_filters.genus|yesno:"true,false" }} || 
-                             {{ selected_filters.species|yesno:"true,false" }};
+  const hasAdvancedFilters = {{ selected_filters|length }} > 0 || 
+                             "{{ size_min }}" !== "" || "{{ size_max }}" !== "" ||
+                             "{{ res_min }}" !== "" || "{{ res_max }}" !== "";
 
   if (hasAdvancedFilters) {
       filtersDiv.classList.remove('hidden');
