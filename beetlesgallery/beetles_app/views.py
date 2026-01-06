@@ -647,7 +647,6 @@ def build_query_q(user_qs: str):
 # Grouped by category for display.
 FILTERS_CONFIG = [
     # --- TAXONOMY ---
-    {"category": "Taxonomy", "param": "scientific_name", "type": "ref", "field": "scientificName", "label": "Scientific Name"},
     {"category": "Taxonomy", "param": "subfamily", "type": "ref", "field": "subfamily", "label": "Subfamily"},
     {"category": "Taxonomy", "param": "tribe", "type": "ref", "field": "tribe", "label": "Tribe"},
     {"category": "Taxonomy", "param": "subtribe", "type": "ref", "field": "subtribe", "label": "Subtribe"},
@@ -672,6 +671,8 @@ FILTERS_CONFIG = [
     {"category": "Image Details", "param": "multiple", "type": "bool", "field": "image_has_multiple_individuals", "label": "Multiple Individuals"},
 ]
 
+# In beetlesgallery/beetles_app/views.py
+
 def gallery(request):
     try:
         page_size = int(request.GET.get("per_page", 12))
@@ -691,12 +692,15 @@ def gallery(request):
         base_search_qs = base_qs
         ignored_tokens = []
 
-    # 2. Capture Active Filters
+    # 2. Capture Active Filters (Updated for Multi-Select)
     active_filters = {}
     for cfg in FILTERS_CONFIG:
-        val = request.GET.get(cfg["param"], "").strip()
-        if val:
-            active_filters[cfg["param"]] = val
+        # Use getlist to capture multiple values (e.g. ?country=USA&country=Canada)
+        vals = request.GET.getlist(cfg["param"])
+        # Clean and filter empty strings
+        clean_vals = [v.strip() for v in vals if v.strip()]
+        if clean_vals:
+            active_filters[cfg["param"]] = clean_vals
 
     # Capture Range Filters (Size & Resolution)
     size_min = request.GET.get("size_min", "").strip()
@@ -704,7 +708,7 @@ def gallery(request):
     res_min = request.GET.get("res_min", "").strip()
     res_max = request.GET.get("res_max", "").strip()
 
-    # Helper: Apply filters
+    # Helper: Apply filters (Updated for Lists)
     def apply_filters(qs, filters_dict, exclude_param=None):
         # Apply Size Filter
         if size_min:
@@ -726,21 +730,37 @@ def gallery(request):
                 qs = qs.filter(resolution_in_ppmm__lte=float(res_max))
             except ValueError: pass
 
-        for param, val in filters_dict.items():
+        for param, vals in filters_dict.items():
             if param == exclude_param: continue 
             
             cfg = next((c for c in FILTERS_CONFIG if c["param"] == param), None)
             if not cfg: continue
 
             if cfg["type"] == "db":
-                qs = qs.filter(**{cfg["field"]: val})
+                # Use __in for list of values
+                qs = qs.filter(**{f"{cfg['field']}__in": vals})
             elif cfg["type"] == "bool":
-                b = _normalize_bool(val)
-                if b is not None: qs = qs.filter(**{cfg["field"]: b})
+                # If both Yes and No are selected, it effectively means "All", so ignore.
+                # If only one is selected, filter by it.
+                bool_vals = set()
+                for v in vals:
+                    b = _normalize_bool(v)
+                    if b is not None:
+                        bool_vals.add(b)
+                if len(bool_vals) == 1:
+                    qs = qs.filter(**{cfg['field']: list(bool_vals)[0]})
             elif cfg["type"] == "ref":
-                ids = species_ref.ids_for(cfg["field"], val)
-                if ids: qs = qs.filter(depicts_valid_name_id__in=ids)
-                else: return qs.none()
+                # Aggregate IDs for ALL selected values
+                all_ids = []
+                for v in vals:
+                    ids = species_ref.ids_for(cfg['field'], v)
+                    if ids:
+                        all_ids.extend(ids)
+                
+                if all_ids:
+                    qs = qs.filter(depicts_valid_name_id__in=all_ids)
+                else:
+                    return qs.none()
         return qs
 
     # 3. Final Results
@@ -776,12 +796,13 @@ def gallery(request):
             vals = species_ref.get_field_values_for_ids(used_ids, cfg["field"])
             options = sorted(list(vals))
 
+        # Check if options exist OR if this filter is currently active
         if options or active_filters.get(param):
             grouped_filters[cfg["category"]].append({
                 "param": param,
                 "label": cfg["label"],
                 "options": options,
-                "selected": active_filters.get(param, ""),
+                "selected": active_filters.get(param, []), # Pass the LIST of selected values
             })
 
     filter_context = []
