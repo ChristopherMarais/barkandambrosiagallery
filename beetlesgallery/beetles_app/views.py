@@ -30,6 +30,7 @@ from .schema import REQUIRED_COLS, MAX_ROWS
 from .forms import TailwindUserCreationForm, ProfileForm, PasswordChangeFormStyled, ValidSpeciesUploadForm, UpdateBatchUploadForm
 
 import pandas as pd
+from io import BytesIO
 
 
 @login_required
@@ -1428,3 +1429,80 @@ def update_upload(request):
     )
     # Send them where they can see the batch status
     return redirect("my_uploads")
+
+@login_required
+@staff_member_required
+@require_POST
+def update_single_beetle(request, beetle_id):
+    """
+    Receives individual field edits from the detail page, packages them into 
+    an UpdateBatch (XLSX), and triggers the standard update pipeline.
+    """
+    beetle = get_object_or_404(Beetles, pk=beetle_id)
+    
+    # 1. Collect data from POST
+    # We map form field names to the columns expected by the update pipeline
+    # (See UPDATE_ALLOWED_FIELDS in views.py)
+    row_data = {"record_id": str(beetle.id)}
+    
+    # Define mapping from form inputs to DB/Update columns
+    # Form input name -> Update column name
+    # (Using the same names simplifies this)
+    fields = [
+        "depicts_specimen", "depicts_valid_name_id", "depicts_described_name_id", 
+        "alternative_id", "depicts_name_verbatim", "image_institution", 
+        "photographer", "image_email", "photo_usage_statement", "aspect", 
+        "resolution_in_ppmm", "image_date_taken", "image_has_multiple_individuals", 
+        "collection_country", "collection_stateProvince", "specimen_sex", 
+        "specimen_type_status", "image_notes", "specimen_notes"
+    ]
+    
+    for f in fields:
+        val = request.POST.get(f)
+        # Handle booleans specifically for the pipeline
+        if f == "image_has_multiple_individuals":
+            if val == "unknown": val = ""
+        
+        # Determine if value has changed. If not, we can technically omit it, 
+        # but including current values is safer for the "all-or-nothing" overwrite policy 
+        # unless you implemented partial updates. 
+        # The update pipeline typically overwrites allowed fields if present.
+        row_data[f] = val
+
+    # 2. Create DataFrame and XLSX
+    df = pd.DataFrame([row_data])
+    
+    # Create in-memory file
+    buffer = BytesIO()
+    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False)
+    buffer.seek(0)
+    
+    # 3. Create UpdateBatch
+    batch = UpdateBatch.objects.create(
+        uploaded_by=request.user,
+        original_filename=f"single_edit_{beetle.id}.xlsx",
+        status=UpdateBatch.Status.STAGING,
+    )
+    
+    # Save the file content
+    from django.core.files.base import ContentFile
+    batch.file.save(f"single_edit_{beetle.id}.xlsx", ContentFile(buffer.read()), save=False)
+    batch.size_bytes = batch.file.size
+    batch.save()
+
+    # 4. Trigger Background Process
+    manage_py = os.path.join(settings.BASE_DIR, "manage.py")
+    python = sys.executable or "python3"
+    try:
+        subprocess.Popen(
+            [python, manage_py, "process_single_update", "--id", str(batch.id)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            cwd=settings.BASE_DIR,
+        )
+        messages.success(request, "Update queued successfully. Changes will appear shortly.")
+    except Exception as e:
+        messages.error(request, f"Failed to start update process: {e}")
+
+    return redirect("beetle_detail", beetle_id=beetle_id)

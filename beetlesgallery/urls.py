@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.urls import path
 
 from beetlesgallery.beetles_app import views as beetles_views
 from beetlesgallery.beetles_app.views import LoginViewWithRedirectMessage, PostOnlyLogoutView
@@ -31,6 +32,7 @@ urlpatterns = [
     path("downloads/start/", beetles_views.start_batch_download, name="start_batch_download"),
     path("updates/", beetles_views.update_upload, name="update_upload"),
     path("reference/download/", beetles_views.download_taxonomy_ref, name="download_taxonomy_ref"),
+    path('update_single/<uuid:beetle_id>/', beetles_views.update_single_beetle, name='update_single_beetle'),
     
 ]
 
