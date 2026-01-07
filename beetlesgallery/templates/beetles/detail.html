@@ -28,7 +28,7 @@
       {% if beetle.image_file %}
         <figure class="rounded-xl bg-primary2 p-3 ring-1 ring-text/10">
           <img
-            src="{{ beetle.image_file.url }}"
+            src="{{ beetle.display_url }}"
             alt="{{ beetle.depicts_name_verbatim|default:beetle.depicts_specimen|default:'Specimen image' }}"
             {% if beetle.image_width and beetle.image_height %}
               width="{{ beetle.image_width }}" height="{{ beetle.image_height }}"

@@ -63,6 +63,53 @@ def ensure_thumbnail(beetle, size: int = 96) -> str:
             default_storage.save(rel_jpg, buf)
             return rel_jpg
 
+def ensure_display_jpeg(beetle) -> str:
+    """
+    Checks if a beetle has a TIFF image. If so, generates a JPEG version
+    at the path defined by Beetles.path_for_display() if it doesn't exist.
+    """
+    if not beetle.image_file or not beetle.image_sha256:
+        return ""
+
+    # 1. Check if it's a TIFF
+    name = beetle.image_file.name.lower()
+    if not (name.endswith(".tif") or name.endswith(".tiff")):
+        return ""
+
+    # 2. Check if the display JPEG already exists
+    rel_path = Beetles.path_for_display(beetle.image_sha256)
+    if default_storage.exists(rel_path):
+        return rel_path
+
+    # 3. Generate it
+    try:
+        # Open original
+        with beetle.image_file.open("rb") as f:
+            img = Image.open(f)
+            
+            # Fix orientation if needed
+            try:
+                img = ImageOps.exif_transpose(img)
+            except Exception:
+                pass
+
+            # Convert to RGB (essential for TIFF -> JPEG)
+            if img.mode != "RGB":
+                img = img.convert("RGB")
+
+            # Save as JPEG
+            buf = io.BytesIO()
+            img.save(buf, format="JPEG", quality=90)
+            buf.seek(0)
+
+            # Write to storage
+            default_storage.save(rel_path, ContentFile(buf.getvalue()))
+            return rel_path
+
+    except Exception as e:
+        print(f"Error converting Beetle {beetle.id}: {e}")
+        return ""
+
 def _guess_ext_from_path_or_hdr(tmp_path: str) -> str:
     kind = imghdr.what(tmp_path)
     if kind in {"jpeg", "jpg"}:
@@ -121,6 +168,15 @@ def write_original_and_thumb96(sha256: str, fileobj: BinaryIO) -> dict:
                 pass
             img = _ensure_rgb(img)
             w, h = img.size
+
+            # Create display JPEG for TIFFs
+            if orig_ext in ("tif", "tiff"):
+                display_rel = Beetles.path_for_display(sha256)
+                if not default_storage.exists(display_rel):
+                    buf_display = io.BytesIO()
+                    # Save a high-quality JPEG version of the full image
+                    img.save(buf_display, format="JPEG", quality=85, optimize=True)
+                    default_storage.save(display_rel, ContentFile(buf_display.getvalue()))
 
             img.thumbnail((96, 96), Image.LANCZOS)
             thumb = img

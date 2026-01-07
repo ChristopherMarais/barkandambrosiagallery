@@ -94,6 +94,35 @@ class Beetles(models.Model):
     # Helpers: content-addressed relative paths based on sha256
     # ---------
     @staticmethod
+    def path_for_display(sha256: str) -> str:
+        """
+        Path for a web-friendly JPEG version of the original image.
+        Used primarily for displaying TIFFs.
+        """
+        a, b = Beetles.shard_from_sha(sha256)
+        return f"display/{a}/{b}/{sha256}.jpg"
+
+    @property
+    def display_url(self):
+        """
+        Returns the URL of the generated JPEG if the original is a TIFF,
+        otherwise returns the URL of the original file.
+        """
+        if not self.image_file:
+            return ""
+        
+        # Check if the original is a TIFF
+        name = self.image_file.name.lower()
+        if name.endswith(".tif") or name.endswith(".tiff"):
+            if self.image_sha256:
+                # Return the URL for the converted display JPEG
+                path = Beetles.path_for_display(self.image_sha256)
+                return self.image_file.storage.url(path)
+        
+        # Default to the original image
+        return self.image_file.url
+
+    @staticmethod
     def shard_from_sha(sha256: str) -> tuple[str, str]:
         """
         Returns ('aa', 'bb') from the sha256 'aabb...'.
