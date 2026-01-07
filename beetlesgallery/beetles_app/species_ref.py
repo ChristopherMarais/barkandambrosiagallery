@@ -18,8 +18,16 @@ _LABEL_KEY = getattr(settings, "VALID_SPECIES_VERSION_LABEL_CACHE_KEY", "valid_s
 # User-visible label -> CSV column key
 _REF_FIELD_LABEL_TO_CSV = {
     "scientific name": "scientificName",
+    "scientific name authority": "scientificNameAuthority",
     "genus": "genus",
     "species": "species",
+    "subfamily": "subfamily",
+    "tribe": "tribe",
+    "subtribe": "subtribe",
+    "subspecies": "subspecies",
+    "authority": "authority",
+    "authority year": "authorityYear",
+    "original genus": "originalGenus",
 }
 
 # In-process reverse index (rebuilt if version changes)
@@ -67,20 +75,27 @@ def _ensure_reverse_index():
         return
 
     rows = _load_all_rows()
-    idx = { "scientificName": defaultdict(set),
-            "genus": defaultdict(set),
-            "species": defaultdict(set) }
+    
+    # UPDATE: Index ALL columns we want to filter by
+    indexable_cols = [
+        "scientificName", "scientificNameAuthority",
+        "subfamily", "tribe", "subtribe", 
+        "genus", "species", "subspecies",
+        "authority", "authorityYear", "originalGenus"
+    ]
+    
+    idx = defaultdict(lambda: defaultdict(set))
 
-    # valid_species_id must be present; store as string
     for row in rows:
         vid = str(row.get("valid_species_id", "")).strip()
         if not vid:
             continue
-        # Fill index for the three supported fields
-        for csv_key in idx.keys():
-            val = (row.get(csv_key) or "").strip()
+        
+        for col in indexable_cols:
+            val = (row.get(col) or "").strip()
             if val:
-                idx[csv_key][val.lower()].add(vid)
+                # Index by lowercase for case-insensitive lookup
+                idx[col][val.lower()].add(vid)
 
     _rev_index = idx
     _rev_index_version = version
@@ -89,22 +104,43 @@ def ids_for(field_label: str, value: str):
     """
     Return a set of valid_species_id strings whose <field_label>
     equals <value> (case-insensitive, exact).
-    field_label must be one of: 'Scientific Name', 'Genus', 'Species'.
-    Returns None if reference unavailable; empty set if no matches.
     """
     if not field_label or not value:
         return set()
-    csv_key = _REF_FIELD_LABEL_TO_CSV.get(field_label.strip().lower())
-    if not csv_key:
-        return set()
+    
+    clean_label = field_label.strip().lower()
+    csv_key = _REF_FIELD_LABEL_TO_CSV.get(clean_label, clean_label)
 
     try:
         _ensure_reverse_index()
     except Exception:
-        # Reference unavailable (file missing/unreadable)
         return None
 
-    return set(_rev_index.get(csv_key, {}).get(value.strip().lower(), set()))
+    col_index = _rev_index.get(csv_key)
+    if not col_index:
+        return set()
+        
+    return set(col_index.get(value.strip().lower(), set()))
+
+def get_field_values_for_ids(ids: Iterable[object], field_key: str) -> set[str]:
+    """
+    Given a list of valid_species_ids (e.g. from the filtered search results),
+    return the set of distinct values for the specified column (e.g. 'subfamily').
+    """
+    _ensure_loaded()
+    if not _MAP: 
+        return set()
+    
+    res = set()
+    field = field_key.strip()
+    
+    for vid in ids:
+        key = str(vid).strip()
+        if key in _MAP:
+             val = _MAP[key].get(field)
+             if val and val.lower() != "unknown":
+                 res.add(val)
+    return res
 
 def _load_map_from_storage() -> tuple[Dict[str, Dict[str, str]], str]:
     """
@@ -392,3 +428,34 @@ def bulk_resolve(ids) -> dict[str, dict]:
         out[key] = row if row else dict(UNKNOWN_TAXON)
     return out
 
+def find_ids_matching_text(text: str) -> set[str]:
+    """
+    Return a set of valid_species_id strings where ANY of the taxonomy fields
+    contains the substring 'text' (case-insensitive).
+    """
+    _ensure_loaded()
+    if not _MAP:
+        return set()
+    
+    query = text.strip().lower()
+    if not query:
+        return set()
+
+    matches = set()
+    # Searchable columns in the CSV reference
+    searchable_cols = [
+        "scientificName", "scientificNameAuthority",
+        "subfamily", "tribe", "subtribe",
+        "genus", "species", "subspecies",
+        "authority", "originalGenus"
+    ]
+
+    for vid, data in _MAP.items():
+        # check each column
+        for col in searchable_cols:
+            val = data.get(col, "")
+            if val and query in val.lower():
+                matches.add(vid)
+                break # one match in this row is enough to include the ID
+                
+    return matches

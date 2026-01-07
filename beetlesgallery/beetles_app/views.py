@@ -9,7 +9,7 @@ import os
 import math
 from datetime import date
 
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.urls import reverse
 from django.conf import settings
 from django.contrib import messages
@@ -30,6 +30,7 @@ from .schema import REQUIRED_COLS, MAX_ROWS
 from .forms import TailwindUserCreationForm, ProfileForm, PasswordChangeFormStyled, ValidSpeciesUploadForm, UpdateBatchUploadForm
 
 import pandas as pd
+from io import BytesIO
 
 
 @login_required
@@ -85,10 +86,30 @@ class PostOnlyLogoutView(LogoutView):
 
 
 def landing(request):
-    """
-    Renders the marketing/landing page (templates/landing.html).
-    """
-    return render(request, 'landing.html')
+    # 1. Total number of images
+    total_images = Beetles.objects.count()
+
+    # 2. Number of unique species (based on the valid name ID)
+    total_species = Beetles.objects.exclude(depicts_valid_name_id__isnull=True)\
+                                   .values('depicts_valid_name_id')\
+                                   .distinct().count()
+
+    # 3. Count unique specimen IDs that have a Type Status
+    # This filters for records with a type status, then counts unique values in 'depicts_specimen'
+    type_status_count = Beetles.objects.exclude(specimen_type_status__isnull=True)\
+                                       .exclude(specimen_type_status="")\
+                                       .exclude(depicts_specimen__isnull=True)\
+                                       .exclude(depicts_specimen="")\
+                                       .values('depicts_specimen')\
+                                       .distinct()\
+                                       .count()
+
+    context = {
+        'total_images': total_images,
+        'total_species': total_species,
+        'type_status_count': type_status_count,
+    }
+    return render(request, 'landing.html', context)
 
 
 def _normalize_valid_id_for_lookup(v):
@@ -273,6 +294,10 @@ FIELD_MAP = {
     "country": "collection_country",
     "state/province": "collection_stateProvince",
     "type status": "specimen_type_status",
+    
+    # New searchable fields
+    "specimen notes": "specimen_notes",
+    "image notes": "image_notes",
 
     # Special handling fields
     "sex": "specimen_sex",                                     # normalized m/f
@@ -287,6 +312,16 @@ REF_FIELD_LABELS = {"scientific name", "genus", "species"}
 # Operator precedence (no parentheses): NOT > AND > OR
 OP_PRECEDENCE = {"NOT": 3, "AND": 2, "OR": 1}
 OPERATORS = set(OP_PRECEDENCE.keys())
+
+# Fields to search when user provides "free text" (not Field:Value)
+FREE_TEXT_FIELDS = [
+    "alternative_id", "image_institution", "photographer", "image_email", 
+    "photo_usage_statement", "image_notes", "depicts_specimen", 
+    "depicts_valid_name_id", "depicts_described_name_id", 
+    "depicts_name_verbatim", "collection_country", "collection_stateProvince", 
+    "specimen_type_status", "specimen_notes",
+    "aspect", "specimen_sex"
+]
 
 
 #----------------------
@@ -307,22 +342,30 @@ def _tokenize_query(qs: str):
     Returns a list of either:
       - dict(field='Name ID', value='123')
       - dict(op='AND'/'OR'/'NOT')
-      - dict(error='...') for ignored token messaging
+      - dict(free_text='...') for words not part of a Field:Value pair
     """
     if not qs:
         return []
 
-    raw = shlex.split(qs, posix=True)
+    try:
+        raw = shlex.split(qs, posix=True)
+    except ValueError:
+        # Fallback for unbalanced quotes
+        raw = qs.split()
+
     out = []
     acc = []  # accumulating header words that include spaces
 
-    def flush_error(msg):
-        out.append({"error": msg})
+    def flush_free_text(tokens):
+        if tokens:
+            out.append({"free_text": " ".join(tokens)})
 
     i = 0
     while i < len(raw):
         t = raw[i]
         U = t.upper()
+        
+        # If we hit an operator and haven't accumulated a header, it's an operator
         if not acc and U in OPERATORS:
             out.append({"op": U})
             i += 1
@@ -336,10 +379,17 @@ def _tokenize_query(qs: str):
             header_words = acc + [left]
             acc = []  # reset for the next clause
             header = " ".join(header_words).strip()
+            
+            # If the header part is empty (e.g. ":value"), treat as free text
             if not header:
-                flush_error(f"Missing field before '{delim}'")
+                flush_free_text(header_words)  # Should handle [left] if left is empty?
+                # Actually if left is empty, header_words is empty or just spaces
+                # Treat 'right' as value? Without header we can't do Field search.
+                # Treat the whole thing as free text.
+                flush_free_text([t])
                 i += 1
                 continue
+                
             value = right.strip()
             if value == "":
                 # If value is empty, but next token exists and is not an operator, treat next token as value
@@ -350,13 +400,13 @@ def _tokenize_query(qs: str):
             i += 1
             continue
 
-        # No operator, no delimiter -> could be part of a multi-word header
+        # No operator, no delimiter -> part of a header OR free text
         acc.append(t)
         i += 1
 
-    # Trailing header without value/delimiter -> ignore gently
+    # Trailing tokens without value/delimiter -> treat as free text
     if acc:
-        out.append({"error": f"Incomplete field: {' '.join(acc)}"})
+        flush_free_text(acc)
 
     return out
 
@@ -464,14 +514,6 @@ def _normalize_sex(v: str):
 def _clause_to_q(field_label: str, value: str, ignored):
     """
     Build a Q() for a single field:value clause.
-
-    - CSV-backed fields (Scientific Name, Genus, Species): maps through species_ref to depicts_valid_name_id__in
-    - IDs: iexact
-    - Short text: icontains
-    - Sex: normalize to 'm'/'f'
-    - Boolean: yes/no/true/false/1/0
-    - Date: YYYY / YYYY-MM / YYYY-MM-DD (range or exact)
-    - Numeric: <, <=, >, >=, = or bare number for equality
     """
     if not field_label:
         ignored.append("empty field")
@@ -481,6 +523,10 @@ def _clause_to_q(field_label: str, value: str, ignored):
 
     # --- CSV-backed fields ---
     if norm in REF_FIELD_LABELS:
+        # If user searches 'genus:N/A', return records where valid_name_id is null
+        if value and value.strip().upper() == "N/A":
+            return Q(depicts_valid_name_id__isnull=True)
+            
         ids = species_ref.ids_for(field_label, value)
         if ids is None:
             ignored.append(f"reference unavailable for '{field_label}'")
@@ -494,6 +540,17 @@ def _clause_to_q(field_label: str, value: str, ignored):
     if not model_field:
         ignored.append(f"unknown field '{field_label}'")
         return None
+
+    # Handle "N/A" or empty values
+    if value is None or value == "" or value.strip().upper() == "N/A":
+        if model_field == "image_date_taken":
+            # Prevents: django.core.exceptions.ValidationError: ['“” value has an invalid date format.']
+            return Q(image_date_taken__isnull=True)
+        
+        return (
+            Q(**{f"{model_field}__isnull": True}) |
+            Q(**{f"{model_field}": ""})
+        )
 
     # Special case: "Name ID:" with no value → Name ID is blank (NULL or empty string)
     if value is None or value == "":
@@ -562,10 +619,10 @@ def build_query_q(user_qs: str):
     Returns (Q_object, ignored_tokens_list)
     """
     parts = _tokenize_query(user_qs or "")
-    ignored = [p["error"] for p in parts if "error" in p]
+    ignored = []  # We don't use 'error' key anymore, but check for weird states if needed
 
     # Filter only valid parts/ops for RPN
-    linear = [p for p in parts if "error" not in p]
+    linear = parts # All parts are now valid (either field, op, or free_text)
 
     rpn = _to_rpn(linear)
 
@@ -587,6 +644,26 @@ def build_query_q(user_qs: str):
                 b = stack.pop()
                 a = stack.pop()
                 stack.append((a & b) if op == "AND" else (a | b))
+
+        elif "free_text" in node:
+            # --- MODIFIED LOGIC START ---
+            val = node["free_text"]
+            q_any = Q()
+            
+            # 1. Search DB text fields (requires FREE_TEXT_FIELDS to be updated globally)
+            for f in FREE_TEXT_FIELDS:
+                q_any |= Q(**{f"{f}__icontains": val})
+            
+            # 2. Search Reference/Taxonomy CSV (e.g. Subfamily, Genus, Authority)
+            # This calls the new helper function in species_ref.py
+            matching_ids = species_ref.find_ids_matching_text(val)
+            if matching_ids:
+                # Add any image whose 'depicts_valid_name_id' matches the found taxonomy
+                q_any |= Q(depicts_valid_name_id__in=matching_ids)
+            
+            stack.append(q_any)
+            # --- MODIFIED LOGIC END ---
+
         else:
             q = _clause_to_q(node.get("field", ""), node.get("value", ""), ignored)
             if q is not None:
@@ -602,43 +679,214 @@ def build_query_q(user_qs: str):
 
 
 # --- 2. GALLERY VIEW (The Database Browser) ---
+# --- Configuration for Faceted Search ---
+# Grouped by category for display.
+FILTERS_CONFIG = [
+    # --- TAXONOMY ---
+    {"category": "Taxonomy", "param": "subfamily", "type": "ref", "field": "subfamily", "label": "Subfamily"},
+    {"category": "Taxonomy", "param": "tribe", "type": "ref", "field": "tribe", "label": "Tribe"},
+    {"category": "Taxonomy", "param": "subtribe", "type": "ref", "field": "subtribe", "label": "Subtribe"},
+    {"category": "Taxonomy", "param": "genus", "type": "ref", "field": "genus", "label": "Genus"},
+    {"category": "Taxonomy", "param": "species", "type": "ref", "field": "species", "label": "Species"},
+    {"category": "Taxonomy", "param": "subspecies", "type": "ref", "field": "subspecies", "label": "Subspecies"},
+    {"category": "Taxonomy", "param": "authority", "type": "ref", "field": "authority", "label": "Authority"},
+    {"category": "Taxonomy", "param": "authority_year", "type": "ref", "field": "authorityYear", "label": "Authority Year"},
+    {"category": "Taxonomy", "param": "original_genus", "type": "ref", "field": "originalGenus", "label": "Original Genus"},
+
+    # --- COLLECTION ---
+    {"category": "Collection", "param": "country", "type": "db", "field": "collection_country", "label": "Country"},
+    {"category": "Collection", "param": "state", "type": "db", "field": "collection_stateProvince", "label": "State/Province"},
+    {"category": "Collection", "param": "sex", "type": "db", "field": "specimen_sex", "label": "Sex"},
+
+    # --- IMAGE DETAILS ---
+    {"category": "Image Details", "param": "institution", "type": "db", "field": "image_institution", "label": "Institution"},
+    {"category": "Image Details", "param": "photographer", "type": "db", "field": "photographer", "label": "Photographer"},
+    {"category": "Image Details", "param": "usage", "type": "db", "field": "photo_usage_statement", "label": "Photo Usage"},
+    {"category": "Image Details", "param": "aspect", "type": "db", "field": "aspect", "label": "Aspect"},
+    {"category": "Image Details", "param": "date_taken", "type": "db", "field": "image_date_taken", "label": "Image Date"},
+    {"category": "Image Details", "param": "multiple", "type": "bool", "field": "image_has_multiple_individuals", "label": "Multiple Individuals"},
+]
+
+# In beetlesgallery/beetles_app/views.py
+
 def gallery(request):
-    """
-    Renders the searchable database gallery.
-    Mapped to URL name='beetles_home'
-    (Renamed from 'home' to 'gallery' to avoid confusion)
-    """
-    PAGE_SIZE = 10
+    NA = "N/A"
+    try:
+        page_size = int(request.GET.get("per_page", 12))
+    except (ValueError, TypeError):
+        page_size = 12
+
     WARN_IMAGE_SIZE_BYTES = getattr(settings, "WARN_IMAGE_SIZE_BYTES", 10 * 1024 * 1024)
+    base_qs = Beetles.objects.all().order_by("-id")
 
-    base_qs = (
-        Beetles.objects
-        .only(
-            "id", "depicts_valid_name_id", "depicts_specimen", "depicts_name_verbatim",
-            "collection_country", "specimen_sex", "specimen_type_status",
-            "thumb_small", "image_size_bytes",
-        )
-        .order_by("-id")
-    )
-
-    # --- parse & apply search ---
+    # 1. Text Search
     raw_q = request.GET.get("q", "").strip()
     if raw_q:
         q_obj, ignored = build_query_q(raw_q)
-        qs = base_qs.filter(q_obj)
+        base_search_qs = base_qs.filter(q_obj)
         ignored_tokens = ignored
     else:
-        qs = base_qs
+        base_search_qs = base_qs
         ignored_tokens = []
 
-    # --- count before pagination ---
-    try:
-        total_matches = qs.count()
-    except Exception:
-        total_matches = None
+    # 2. Capture Active Filters (Updated for Multi-Select)
+    active_filters = {}
+    for cfg in FILTERS_CONFIG:
+        # Use getlist to capture multiple values (e.g. ?country=USA&country=Canada)
+        vals = request.GET.getlist(cfg["param"])
+        # Clean and filter empty strings
+        clean_vals = [v.strip() for v in vals if v.strip()]
+        if clean_vals:
+            active_filters[cfg["param"]] = clean_vals
 
-    # --- paginate ---
-    paginator = Paginator(qs, PAGE_SIZE)
+    # Capture Range Filters (Size & Resolution)
+    size_min = request.GET.get("size_min", "").strip()
+    size_max = request.GET.get("size_max", "").strip()
+    res_min = request.GET.get("res_min", "").strip()
+    res_max = request.GET.get("res_max", "").strip()
+
+    # Helper: Apply filters (Updated for Lists)
+    def apply_filters(qs, filters_dict, exclude_param=None):
+        # Apply Size Filter
+        if size_min:
+            try:
+                qs = qs.filter(image_size_bytes__gte=float(size_min) * 1024 * 1024)
+            except ValueError: pass
+        if size_max:
+            try:
+                qs = qs.filter(image_size_bytes__lte=float(size_max) * 1024 * 1024)
+            except ValueError: pass
+
+        # Apply Resolution Filter
+        if res_min:
+            try:
+                qs = qs.filter(resolution_in_ppmm__gte=float(res_min))
+            except ValueError: pass
+        if res_max:
+            try:
+                qs = qs.filter(resolution_in_ppmm__lte=float(res_max))
+            except ValueError: pass
+
+        for param, vals in filters_dict.items():
+            if param == exclude_param: continue 
+            
+            cfg = next((c for c in FILTERS_CONFIG if c["param"] == param), None)
+            if not cfg: continue
+
+            # Separate "N/A" from real values
+            has_na = NA in vals
+            real_vals = [v for v in vals if v != NA]
+
+            if cfg["type"] == "db":
+                q_part = Q()
+                if real_vals:
+                    q_part |= Q(**{f"{cfg['field']}__in": real_vals})
+                
+                if has_na:
+                    if cfg["field"] == "image_date_taken":
+                        # Only use isnull for DateFields
+                        q_part |= Q(**{f"{cfg['field']}__isnull": True})
+                    else:
+                        q_part |= Q(**{f"{cfg['field']}__isnull": True}) | Q(**{f"{cfg['field']}": ""})
+
+                if q_part:
+                    qs = qs.filter(q_part)
+
+            elif cfg["type"] == "bool":
+                # If both Yes and No are selected, it effectively means "All", so ignore.
+                # If only one is selected, filter by it.
+                bool_vals = set()
+                for v in vals:
+                    b = _normalize_bool(v)
+                    if b is not None:
+                        bool_vals.add(b)
+                if len(bool_vals) == 1:
+                    qs = qs.filter(**{cfg['field']: list(bool_vals)[0]})
+            elif cfg["type"] == "ref":
+                q_ref = Q()
+                if real_vals:
+                    all_ids = []
+                    for v in real_vals:
+                        ids = species_ref.ids_for(cfg['field'], v)
+                        if ids: all_ids.extend(ids)
+                    if all_ids:
+                        q_ref |= Q(depicts_valid_name_id__in=all_ids)
+                
+                if has_na:
+                    q_ref |= Q(depicts_valid_name_id__isnull=True)
+
+                if q_ref:
+                    qs = qs.filter(q_ref)
+                elif vals: # If filters were selected but no IDs matched
+                    return qs.none()
+        return qs
+
+    # 3. Final Results
+    final_qs = apply_filters(base_search_qs, active_filters, exclude_param=None)
+
+    # 4. Build Dynamic Options
+    from collections import defaultdict
+    grouped_filters = defaultdict(list)
+    
+    categories = []
+    seen_cats = set()
+    for cfg in FILTERS_CONFIG:
+        if cfg["category"] not in seen_cats:
+            categories.append(cfg["category"])
+            seen_cats.add(cfg["category"])
+
+    for cfg in FILTERS_CONFIG:
+        param = cfg["param"]
+        ctx_qs = apply_filters(base_search_qs, active_filters, exclude_param=param)
+        
+        options = []
+        if cfg["type"] == "db":
+            # 1. Get real values
+            opts_qs = ctx_qs.exclude(**{f"{cfg['field']}__isnull": True})
+            
+            # Date fields cannot be empty strings, so only exclude nulls for them
+            if cfg["field"] == "image_date_taken":
+                options = list(opts_qs.values_list(cfg['field'], flat=True).distinct().order_by(cfg['field']))
+                # Use only isnull check for dates to avoid ValidationError
+                na_check = ctx_qs.filter(**{f"{cfg['field']}__isnull": True}).exists()
+            else:
+                # Standard fields: exclude both null and empty string
+                opts_qs = opts_qs.exclude(**{f"{cfg['field']}": ""})
+                options = list(opts_qs.values_list(cfg['field'], flat=True).distinct().order_by(cfg['field']))
+                na_check = ctx_qs.filter(Q(**{f"{cfg['field']}__isnull": True}) | Q(**{f"{cfg['field']}": ""})).exists()
+            
+            if na_check:
+                options.insert(0, NA)
+            
+        elif cfg["type"] == "bool":
+            options = ["Yes", "No"]
+            
+        elif cfg["type"] == "ref":
+            # 1. Get real values via species_ref
+            used_ids = ctx_qs.exclude(depicts_valid_name_id__isnull=True).values_list('depicts_valid_name_id', flat=True).distinct()
+            vals = species_ref.get_field_values_for_ids(used_ids, cfg["field"])
+            options = sorted(list(vals))
+
+            # 2. Add N/A if unidentified records exist
+            if ctx_qs.filter(depicts_valid_name_id__isnull=True).exists():
+                options.insert(0, NA)
+
+        # Check if options exist OR if this filter is currently active
+        if options or active_filters.get(param):
+            grouped_filters[cfg["category"]].append({
+                "param": param,
+                "label": cfg["label"],
+                "options": options,
+                "selected": active_filters.get(param, []), # Pass the LIST of selected values
+            })
+
+    filter_context = []
+    for cat in categories:
+        if grouped_filters[cat]:
+            filter_context.append((cat, grouped_filters[cat]))
+
+    # 5. Pagination
+    paginator = Paginator(final_qs, page_size)
     page = request.GET.get("page", 1)
     try:
         beetles_page = paginator.page(page)
@@ -647,14 +895,18 @@ def gallery(request):
     except EmptyPage:
         beetles_page = paginator.page(paginator.num_pages)
 
-    # --- taxonomy enrichment ---
+    # Enrichment
     for b in beetles_page.object_list:
-        ref = species_ref.resolve(
-            (str(b.depicts_valid_name_id).strip() if b.depicts_valid_name_id is not None else None)
-        )
-        b.ref_scientificName = ref.get("scientificName", "Unknown")
-        b.ref_genus = ref.get("genus", "Unknown")
-        b.ref_species = ref.get("species", "Unknown")
+        raw_id = (str(b.depicts_valid_name_id).strip() if b.depicts_valid_name_id else None)
+        ref = species_ref.resolve(raw_id)
+        def clean(val): return val if val and val.lower() != "unknown" else None
+        b.ref_scientificName = clean(ref.get("scientificName"))
+        b.ref_genus = clean(ref.get("genus"))
+        b.ref_species = clean(ref.get("species"))
+        b.ref_subfamily = clean(ref.get("subfamily"))
+        b.ref_tribe = clean(ref.get("tribe"))
+        b.ref_subtribe = clean(ref.get("subtribe"))
+        b.ref_subspecies = clean(ref.get("subspecies"))
         b.warn_large = (b.image_size_bytes or 0) >= WARN_IMAGE_SIZE_BYTES
 
     return render(
@@ -667,8 +919,15 @@ def gallery(request):
             "is_paginated": beetles_page.has_other_pages(),
             "q": raw_q,
             "ignored_tokens": ignored_tokens,
-            "total_matches": total_matches,
+            "total_matches": final_qs.count(),
             "warn_size_bytes": WARN_IMAGE_SIZE_BYTES,
+            "filter_groups": filter_context,
+            "selected_filters": active_filters,
+            "per_page": page_size,
+            "size_min": size_min,
+            "size_max": size_max,
+            "res_min": res_min,
+            "res_max": res_max,
         },
     )
 
@@ -682,21 +941,20 @@ def beetle_detail(request, beetle_id):
 
     beetle = (
         Beetles.objects
-        .only(
-            "id",
-            "depicts_specimen", "depicts_valid_name_id",
-            "depicts_described_name_id", "depicts_name_verbatim",
-            "alternative_id",
-            "image_institution", "photographer", "image_email",
-            "photo_usage_statement",
-            "aspect", "resolution_in_ppmm",
-            "image_notes", "image_date_taken", "image_has_multiple_individuals",
-            "collection_country", "collection_stateProvince",
-            "specimen_sex", "specimen_type_status", "specimen_notes",
-            "image_file", "thumb_small", "image_width", "image_height"
-        )
+        .all()
         .get(pk=beetle_id)
     )
+
+    # Fetch related images of the same specimen
+    related_specimens = []
+    # Only search if specimen ID exists and is not just whitespace
+    if beetle.depicts_specimen and beetle.depicts_specimen.strip():
+        related_specimens = (
+            Beetles.objects
+            .filter(depicts_specimen=beetle.depicts_specimen)
+            .exclude(pk=beetle.id)  # Exclude the current image
+            .only("id", "thumb_small", "depicts_specimen") # Optimize query
+        )
 
     # CSV-based enrichment for detail page (all fields) with "Unknown" fallback
     raw_vid = beetle.depicts_valid_name_id
@@ -708,7 +966,12 @@ def beetle_detail(request, beetle_id):
     return render(
         request,
         "beetles/detail.html",
-        {"beetle": beetle, "ref_species": ref_species, "ref_version": ref_version},
+        {
+            "beetle": beetle, 
+            "ref_species": ref_species, 
+            "ref_version": ref_version,
+            "related_specimens": related_specimens, # Add to context
+        },
     )
 
 
@@ -1166,3 +1429,80 @@ def update_upload(request):
     )
     # Send them where they can see the batch status
     return redirect("my_uploads")
+
+@login_required
+@staff_member_required
+@require_POST
+def update_single_beetle(request, beetle_id):
+    """
+    Receives individual field edits from the detail page, packages them into 
+    an UpdateBatch (XLSX), and triggers the standard update pipeline.
+    """
+    beetle = get_object_or_404(Beetles, pk=beetle_id)
+    
+    # 1. Collect data from POST
+    # We map form field names to the columns expected by the update pipeline
+    # (See UPDATE_ALLOWED_FIELDS in views.py)
+    row_data = {"record_id": str(beetle.id)}
+    
+    # Define mapping from form inputs to DB/Update columns
+    # Form input name -> Update column name
+    # (Using the same names simplifies this)
+    fields = [
+        "depicts_specimen", "depicts_valid_name_id", "depicts_described_name_id", 
+        "alternative_id", "depicts_name_verbatim", "image_institution", 
+        "photographer", "image_email", "photo_usage_statement", "aspect", 
+        "resolution_in_ppmm", "image_date_taken", "image_has_multiple_individuals", 
+        "collection_country", "collection_stateProvince", "specimen_sex", 
+        "specimen_type_status", "image_notes", "specimen_notes"
+    ]
+    
+    for f in fields:
+        val = request.POST.get(f)
+        # Handle booleans specifically for the pipeline
+        if f == "image_has_multiple_individuals":
+            if val == "unknown": val = ""
+        
+        # Determine if value has changed. If not, we can technically omit it, 
+        # but including current values is safer for the "all-or-nothing" overwrite policy 
+        # unless you implemented partial updates. 
+        # The update pipeline typically overwrites allowed fields if present.
+        row_data[f] = val
+
+    # 2. Create DataFrame and XLSX
+    df = pd.DataFrame([row_data])
+    
+    # Create in-memory file
+    buffer = BytesIO()
+    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False)
+    buffer.seek(0)
+    
+    # 3. Create UpdateBatch
+    batch = UpdateBatch.objects.create(
+        uploaded_by=request.user,
+        original_filename=f"single_edit_{beetle.id}.xlsx",
+        status=UpdateBatch.Status.STAGING,
+    )
+    
+    # Save the file content
+    from django.core.files.base import ContentFile
+    batch.file.save(f"single_edit_{beetle.id}.xlsx", ContentFile(buffer.read()), save=False)
+    batch.size_bytes = batch.file.size
+    batch.save()
+
+    # 4. Trigger Background Process
+    manage_py = os.path.join(settings.BASE_DIR, "manage.py")
+    python = sys.executable or "python3"
+    try:
+        subprocess.Popen(
+            [python, manage_py, "process_single_update", "--id", str(batch.id)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            cwd=settings.BASE_DIR,
+        )
+        messages.success(request, "Update queued successfully. Changes will appear shortly.")
+    except Exception as e:
+        messages.error(request, f"Failed to start update process: {e}")
+
+    return redirect("beetle_detail", beetle_id=beetle_id)

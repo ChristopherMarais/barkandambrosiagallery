@@ -176,3 +176,4 @@ git push origin main
 | **Create Admin** | `docker compose run --rm web pixi run python manage.py createsuperuser` |
 | **Rebuild Container** | `docker compose build` |
 | **Run Arbitrary Command** | `docker compose run --rm web pixi run python manage.py <command>` |
+| **Rebuild CSS** | `docker compose run --rm web pixi run npx tailwindcss -i ./beetlesgallery/static/css/input.css -o ./beetlesgallery/static/css/style.css --watch` |

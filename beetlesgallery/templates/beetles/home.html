@@ -3,328 +3,713 @@
 
 {% block content %}
 <section class="relative z-0">
-  <h1 class="text-2xl font-bold text-text mb-4">Specimens</h1>
+  <h1 class="text-2xl sm:text-3xl font-semibold mb-8">Beetle Image Browser</h1>
 
-  <!-- Search bar -->
-  <form method="get" class="mb-4">
-    <div class="flex items-center gap-2">
-      <input
-        type="text"
-        name="q"
-        value="{{ q|default:'' }}"
-        placeholder='e.g., Name ID:12345 AND Country:Brazil OR Sex:male'
-        class="w-full rounded-lg border border-text/30 bg-background px-3 py-2 text-sm text-text placeholder:text-text/50 focus:outline-none focus:ring-2 focus:ring-accent/60"
-        spellcheck="false"
-        autocomplete="off"
-      />
-      <button
-        type="submit"
-        class="rounded-lg border border-text/20 bg-primary px-4 py-2 text-sm hover:bg-secondary/30"
-      >
-        Search
-      </button>
+  <form method="get" id="main-form" class="w-full max-w-7xl mx-auto mb-8">
+    <div class="flex flex-col gap-4">
+      
+      {# 1. Search Bar #}
+      <div class="relative w-full">
+        <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Search Metadata..." class="w-full rounded-lg border border-text/10 bg-background px-6 py-4 text-md text-text shadow-md shadow-black/1 focus:ring-2 focus:ring-gray-400 outline-none transition" />
+      </div>
 
-      {% if q %}
-        <a
-          href="{% url 'beetles_home' %}"
-          class="rounded-lg border border-text/20 bg-primary px-4 py-2 text-sm hover:bg-secondary/30"
-        >
-          Clear
-        </a>
+      {# 2. Controls #}
+      <div class="flex flex-wrap items-center justify-between gap-4">
+          <button type="submit" class="rw-full rounded-lg bg-gray-200 border border-gray-300 px-12 py-3 text-md font-bold text-gray-800 hover:bg-gray-300 hover:text-black transition shadow-sm tracking-wide">Search</button>
+
+          <button type="button" id="toggle-filters-btn" class="group flex items-center gap-2 text-sm text-gray-500 hover:underline hover:text-text" aria-expanded="false">
+            <span>Filter</span>
+            <svg id="chevron-icon" class="w-4 h-4 text-text/50 transition-transform duration-200 group-hover:text-text" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </button>
+      </div>
+
+      {# 3. Active Filters Pills #}
+      {% if q or selected_filters or size_min or size_max or res_min or res_max %}
+        <div class="flex flex-wrap items-center gap-2 mt-2 px-2">
+            {% if q %}
+                <span class="inline-flex items-center gap-1 rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-800 border border-gray-300">Text: {{ q }}</span>
+            {% endif %}
+            
+            {% for param, vals in selected_filters.items %}
+                {% for val in vals %}
+                <button type="button" 
+                        onclick="removeFilter('{{ param }}', '{{ val|escapejs }}')"
+                        class="group inline-flex items-center gap-1 rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-800 capitalize border border-gray-300 hover:bg-gray-300 hover:text-gray-900 hover:border-gray-200 transition cursor-pointer"
+                        title="Click to remove filter">
+                    {{ param|title }}: {{ val }}
+                    <span class="ml-1 text-text/50 group-hover:text-gray-700">×</span>
+                </button>
+                {% endfor %}
+            {% endfor %}
+
+            {% if size_min or size_max %}
+                <span class="inline-flex items-center gap-1 rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-800 border border-gray-300">
+                    Size: {{ size_min|default:"0" }} - {{ size_max|default:"Max" }} MB
+                </span>
+            {% endif %}
+            {% if res_min or res_max %}
+                <span class="inline-flex items-center gap-1 rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-800 border border-gray-300">
+                    Res: {{ res_min|default:"0" }} - {{ res_max|default:"Max" }} px/mm
+                </span>
+            {% endif %}
+            
+            <a href="{% url 'beetles_home' %}?per_page={{ per_page }}" class="text-xs text-gray-500 hover:underline hover:text-text flex items-center self-center ml-2 font-medium">× Clear all</a>
+        </div>
       {% endif %}
-    </div>
 
-    <!-- Subtle guidance -->
-    <p class="mt-2 text-xs text-text/60">
-      Use fielded search like <code>Field:Value</code>. Available fields:
-      <code>Name ID</code>, <code>Described Name ID</code>,
-      <code>Specimen</code>, <code>Name (verbatim)</code>,
-      <code>Country</code>, <code>State/Province</code>, <code>Type Status</code>,
-      <code>Photographer</code>, <code>Image Institution</code>, <code>Email</code>,
-      <code>Photo Usage</code>, <code>Aspect</code>,
-      <code>Sex</code> (m/f), <code>Multiple Individuals</code> (yes/no),
-      <code>Image Date</code> (YYYY or YYYY-MM or YYYY-MM-DD),
-      <code>Resolution</code> (&lt;, &lt;=, &gt;, &gt;=, = number),
-      plus reference lookups: <code>Scientific Name</code>, <code>Genus</code>, <code>Species</code>.
-      Operators: <code>AND</code>, <code>OR</code>, <code>NOT</code>. Text is case-insensitive; non-ID text uses substring matching.
-    </p>
+    </div> 
 
+    {# 4. Collapsible Advanced Filters Panel #}
+    <div id="advanced-filters" class="hidden mt-6 rounded-xl border border-text/10 bg-primary2 p-6 shadow-inner relative z-10">
+        
+        {# Top Apply Button (Full Width) #}
+        <div class="w-full mb-8 pb-6">
+            <button type="submit" class="w-full rounded-lg bg-gray-200 border border-gray-300 py-3 text-sm font-bold text-gray-800 hover:bg-gray-300 hover:text-black transition shadow-sm tracking-wide">
+                Apply Filters
+            </button>
+        </div>
 
-    <!-- Forgiving validation note -->
-    {% if ignored_tokens %}
-      <p class="mt-1 text-xs text-text/60">
-        Ignored search term: {{ ignored_tokens|join:", " }}
-      </p>
-    {% endif %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-8">
+            
+            {# Loop through categories #}
+            {% for category_name, filters_list in filter_groups %}
+            <div class="contents mb-8">
+                <div class="col-span-full border-b border-text/10 pb-1 mb-2 {% if not forloop.first %}mt-8{% endif %}">
+                    <h3 class="text-sm font-bold uppercase text-text/50 tracking-wider">{{ category_name }}</h3>
+                </div>
+
+                {% for f in filters_list %}
+                {# Wrapper div with relative positioning for dropdown #}
+                <div class="space-y-1 group-filter relative" data-param="{{ f.param }}">
+                    <label class="block text-xs font-semibold text-text/70 mb-1 ml-1">{{ f.label }}</label>
+                    
+                    {# Hidden Select for form submission #}
+                    <select name="{{ f.param }}" multiple class="hidden">
+                        {% for opt in f.options %}
+                            <option value="{{ opt }}" {% if opt in f.selected %}selected{% endif %}>{{ opt }}</option>
+                        {% endfor %}
+                    </select>
+
+                    {# DROPDOWN TOGGLE BUTTON #}
+                    <button type="button" 
+                            class="filter-toggle-btn w-full text-left rounded-lg border bg-background px-3 py-2.5 text-sm flex items-center justify-between transition shadow-sm
+                                   {% if f.selected %}border-gray-400 ring-1 ring-gray-200 text-gray-900 font-medium{% else %}border-text/20 text-text hover:border-text/30{% endif %}"
+                            onclick="toggleFilterDropdown(this)">
+                        <span class="truncate pr-2">
+                            {% if f.selected %}
+                                {{ f.selected|length }} Selected
+                            {% else %}
+                                All
+                            {% endif %}
+                        </span>
+                        <svg class="w-4 h-4 opacity-50 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+
+                    {# DROPDOWN MENU (Absolute, solid background, high z-index) #}
+                    <div class="filter-dropdown hidden absolute top-full left-0 z-50 w-full min-w-[280px] mt-1 rounded-xl border border-text/10 bg-white shadow-2xl p-3 flex flex-col gap-2 isolate">
+                        
+                        {# Search Input #}
+                        <div class="relative">
+                            <input type="text" placeholder="Search..." 
+                                   class="w-full rounded-md border border-text/10 bg-secondary/10 px-3 py-1.5 text-sm focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none text-text"
+                                   onkeyup="filterDropdownOptions(this)">
+                        </div>
+
+                        {# Batch Actions #}
+                        <div class="flex items-center justify-between px-1 border-b border-text/5 pb-2">
+                             <button type="button" class="text-xs font-bold text-gray-500 hover:text-gray-500 hover:underline tracking-wide" onclick="selectVisibleOptions(this)">
+                                Select All
+                            </button>
+                            <button type="button" class="text-xs font-bold text-gray-500 hover:text-gray-500 hover:underline tracking-wide" onclick="clearFilterSelection(this)">
+                                Clear All
+                            </button>
+                        </div>
+
+                        {# Scrollable Options #}
+                        <div class="max-h-60 overflow-y-auto scrollbar-thin flex flex-col gap-0.5">
+                            {% for opt in f.options %}
+                                <div class="filter-option cursor-pointer select-none rounded px-2 py-2 text-sm flex items-center justify-between transition-colors
+                                            {% if opt in f.selected %}bg-gray-100 text-gray-900 font-semibold{% else %}text-text/80 hover:bg-secondary/20{% endif %}"
+                                     data-value="{{ opt }}"
+                                     onclick="toggleDropdownOption(this)">
+                                    <span class="truncate select-text">{{ opt }}</span>
+                                    <div class="w-4 h-4 rounded border flex items-center justify-center ml-2 shrink-0 transition-colors
+                                                {% if opt in f.selected %}bg-gray-800 border-gray-800 text-white{% else %}border-text/30 bg-white{% endif %}">
+                                        <svg class="w-3 h-3 {% if opt not in f.selected %}hidden{% endif %} check-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                            <div class="no-results hidden px-2 py-4 text-center text-xs text-text/40 italic">No matches found.</div>
+                        </div>
+                    </div>
+
+                </div>
+                {% endfor %}
+
+                {% if category_name == "Image Details" %}
+                    <div class="col-span-1 sm:col-span-2 space-y-4">
+                        <div class="space-y-1">
+                            <label class="text-xs font-semibold text-text/70">Image Size (MB)</label>
+                            <div class="flex items-center gap-2">
+                                <input type="number" step="0.1" name="size_min" value="{{ size_min }}" placeholder="Min" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-gray-400" onchange="this.form.submit()">
+                                <span class="text-text/50">-</span>
+                                <input type="number" step="0.1" name="size_max" value="{{ size_max }}" placeholder="Max" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-gray-400" onchange="this.form.submit()">
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-semibold text-text/70">Resolution (px/mm)</label>
+                            <div class="flex items-center gap-2">
+                                <input type="number" step="0.1" name="res_min" value="{{ res_min }}" placeholder="Min" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-gray-400" onchange="this.form.submit()">
+                                <span class="text-text/50">-</span>
+                                <input type="number" step="0.1" name="res_max" value="{{ res_max }}" placeholder="Max" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-gray-400" onchange="this.form.submit()">
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            {# Display Settings #}
+            <div class="contents">
+                 <div class="col-span-full border-t border-text/10 pt-4 mt-4">
+                    <h3 class="text-m font-bold uppercase text-text/50 tracking-wider mb-2">Display</h3>
+                </div>
+                <div class="col-span-1 space-y-1">
+                      <label class="text-xs font-semibold text-text/70">Items Per Page</label>
+                      <select name="per_page" onchange="this.form.submit()" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-gray-400">
+                          <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                          <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+                          <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                          <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                      </select>
+                </div>
+                
+                {# Bottom Apply Button (Full Width) #}
+                <div class="col-span-full mt-4">
+                    <button type="submit" class="w-full rounded-lg bg-gray-200 border border-gray-300 py-3 text-sm font-bold text-gray-800 hover:bg-gray-300 hover:text-black transition shadow-sm tracking-wide">
+                        Apply Filters
+                    </button>
+                </div>
+            </div>
+
+        </div>  {# Closes grid #}
+    </div>      {# Closes advanced-filters #}
   </form>
 
+  {# --- TOP CONTROLS (Pagination & Download) --- #}
+  {% if total_matches is not None %}
+    <div class="w-full max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-text/10">
+         
+         <div class="flex flex-wrap items-center gap-4">
+             <div class="text-sm text-text/70">
+               Found <span class="font-bold text-text">{{ total_matches }}</span> specimen{{ total_matches|pluralize }}.
+             </div>
+             
+             <div class="flex items-center gap-2">
+                 <button type="submit" form="download-selected-form" disabled
+                         class="download-selected-btn text-sm font-semibold text-gray-700 hover:text-black hover:underline disabled:opacity-60 disabled:cursor-not-allowed">
+                    Download Selected (<span class="selected-count">0</span>)
+                 </button>
 
-  <div class="overflow-x-auto rounded-xl border border-text/20 bg-primary2 p-4 mb-6">
-    <table class="min-w-full divide-y divide-text/20">
-      <thead class="bg-primary">
-        <tr class="text-left text-xs sm:text-sm uppercase tracking-wider text-text/80">
+                 {% if request.user.is_staff and total_matches > 0 %}
+                    <div class="h-4 w-px bg-text/20 mx-1"></div>
+                    <button type="button" onclick="document.getElementById('download-all-form').submit()"
+                            class="text-sm font-semibold text-gray-700 hover:text-black hover:underline">
+                      Download All ({{ total_matches }})
+                    </button>
+                 {% endif %}
+             </div>
+             
+             <button type="button" id="clear-selection-btn" class="hidden text-sm text-gray-600 hover:underline">
+                 × Deselect all (<span id="global-selection-count">0</span>)
+             </button>
+         </div>
 
-          {# Add select all checkbox #}
-          <th class="px-4 py-3 w-10">
-            <input id="select-all-page" type="checkbox" class="h-4 w-4 align-middle" aria-label="Select all on this page">
-          </th>
-
-        <th class="px-4 py-3">Name ID</th>
-        <th class="px-4 py-3">Specimen</th>
-        <th class="px-4 py-3">Scientific Name</th>
-        <th class="px-4 py-3">Genus</th>
-        <th class="px-4 py-3">Species</th>
-        <th class="px-4 py-3">Country</th>
-        <th class="px-4 py-3">Sex</th>
-        <th class="px-4 py-3">Type Status</th>
-        <th class="px-4 py-3">File Size</th>
-        <th class="px-4 py-3 text-right">Image Preview</th>
-        {% if request.user.is_staff %}
-          <th class="px-4 py-3 text-center w-32">Record ID</th>
-        {% endif %}
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-text/10">
-        {% for b in beetles %}
-          <tr class="hover:bg-secondary/30 text-sm text-text">
-
-            {# Add checkbox per row #}
-            <td class="px-4 py-3">
-              <input type="checkbox" class="row-select h-4 w-4 align-middle" value="{{ b.id }}" aria-label="Select {{ b.depicts_valid_name_id|default:'specimen' }}">
-            </td>
-
-            <td class="px-4 py-3">{{ b.depicts_valid_name_id|default:"—" }}</td>
-            <td class="px-4 py-3 font-medium">
-              <a class="underline hover:no-underline hover:text-spacegreen"
-                 href="{% url 'beetle_detail' beetle_id=b.id %}">
-                {{ b.depicts_specimen|default:"—" }}
-              </a>
-            </td>
-            <td class="px-4 py-3">{{ b.ref_scientificName|default:"—" }}</td>
-            <td class="px-4 py-3">{{ b.ref_genus|default:"—" }}</td>
-            <td class="px-4 py-3">{{ b.ref_species|default:"—" }}</td>
-            <td class="px-4 py-3">{{ b.collection_country|default:"—" }}</td>
-            <td class="px-4 py-3">{{ b.specimen_sex|default:"—" }}</td>
-            <td class="px-4 py-3">{{ b.specimen_type_status|default:"—" }}</td>
-
-            <td class="px-4 py-3">
-              {% if b.image_size_bytes %}
-                <span title="{{ b.image_size_bytes }} bytes">
-                  {{ b.image_size_bytes|filesizeformat }}
-                </span>
-                {% if b.warn_large %}
-                  <span class="ml-2 inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-200"
-                        title="Large file (≥ {{ warn_size_bytes|filesizeformat }}); download may be slow">
-                    slow
-                  </span>
-                {% endif %}
-              {% else %}
-                —
-              {% endif %}
-            </td>
-
-            {# Thumbnail cell #}
-            <td class="px-4 py-3">
-              {% if b.thumb_small %}
-                <a href="{% url 'beetle_detail' beetle_id=b.id %}" class="block ml-auto w-24">
-                  <img
-                    src="{{ b.thumb_small.url }}"
-                    alt="{{ b.depicts_name_verbatim|default:b.depicts_specimen|default:'Specimen image' }}"
-                    loading="lazy"
-                    decoding="async"
-                    width="96" height="96"
-                    class="block ml-auto h-24 w-24 rounded-lg object-cover ring-1 ring-text/20"
-                  />
-                </a>
-              {% else %}
-                <span class="block ml-auto w-24 h-24 rounded-lg bg-text/10"></span>
-              {% endif %}
-            </td>
-
-            {% if request.user.is_staff %}
-              <td class="px-4 py-3 text-center">
-                <button
-                  type="button"
-                  class="rounded-lg border border-text/20 px-3 py-1 text-xs bg-background hover:bg-secondary/40 transition copy-uuid"
-                  data-uuid="{{ b.id }}"
-                  aria-label="Copy Record ID {{ b.id }}"
-                  title="Copy Record ID to clipboard"
-                >
-                  Copy Record ID
+         {% if is_paginated %}
+            <nav class="flex items-center gap-2">
+              {% if page_obj.has_previous %}
+                <button type="submit" form="main-form" name="page" value="{{ page_obj.previous_page_number }}"
+                   class="rounded border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30 transition">
+                  Previous
                 </button>
-              </td>
-            {% endif %}
+              {% endif %}
 
-          </tr>
-        {% empty %}
-          <tr>
-          <td {% if request.user.is_staff %}colspan="12"{% else %}colspan="11"{% endif %}
-              class="px-4 py-6 text-center text-text/70">
-            No beetles found.
-          </td>
-          </tr>
+              <div class="flex items-center gap-2 text-sm text-text/70">
+                <span>Page</span>
+                <select form="main-form" onchange="this.name='page'; this.form.submit()" class="rounded border border-text/20 bg-background py-1.5 px-2 text-sm focus:ring-gray-400 cursor-pointer">
+                  {% for p in paginator.page_range %}
+                    <option value="{{ p }}" {% if p == page_obj.number %}selected{% endif %}>{{ p }}</option>
+                  {% endfor %}
+                </select>
+                <span>of {{ paginator.num_pages }}</span>
+              </div>
+
+              {% if page_obj.has_next %}
+                <button type="submit" form="main-form" name="page" value="{{ page_obj.next_page_number }}"
+                   class="rounded border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30 transition">
+                  Next
+                </button>
+              {% endif %}
+            </nav>
+          {% endif %}
+    </div>
+  {% endif %}
+
+  {# --- RESULTS GRID (Preserved Card Layout) --- #}
+  <div class="w-full max-w-7xl mx-auto flex flex-col gap-4">
+    {% for b in beetles %}
+       <div class="group relative flex flex-row rounded-lg border border-text/10 bg-primary2 overflow-hidden hover:shadow-md transition h-auto min-h-40">
+           
+            <div class="w-32 sm:w-36 shrink-0 flex flex-col justify-center p-3">
+              <a href="{% url 'beetle_detail' beetle_id=b.id %}" 
+                class="flex items-center justify-center w-full h-32 bg-black/5 rounded-xl overflow-hidden border border-black/5 shadow-sm">
+                {% if b.thumb_small %}
+                  <img src="{{ b.thumb_small.url }}" alt="{{ b.ref_scientificName }}" loading="lazy" class="w-full h-full object-contain" />
+                {% else %}
+                  <div class="text-text/20 text-xs text-center">No Image</div>
+                {% endif %}
+              </a>
+            </div>
+
+           <div class="flex-1 p-3 sm:p-4 overflow-y-auto scrollbar-thin">
+             <div class="flex justify-between items-start gap-2 mb-2">
+               <div class="min-w-0 flex-1">
+                 <h3 class="font-bold text-base text-text leading-tight truncate">
+                   <a href="{% url 'beetle_detail' beetle_id=b.id %}" class="hover:text-gray-600 hover:underline">
+                     {{ b.ref_scientificName|default:"Unknown Specimen" }}
+                   </a>
+                 </h3>
+                 <div class="flex items-center gap-2 mt-1">
+                     <span class="font-bold text-xs text-text/50 mr-1">Record ID:</span>
+                     <span class="font-mono text-xs text-text/70 break-all select-all">{{ b.id|stringformat:"s" }}</span>
+                     <button type="button" class="copy-uuid shrink-0 text-gray-500 hover:text-black transition" data-uuid="{{ b.id }}" title="Copy Full Record ID">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                     </button>
+                 </div>
+               </div>
+               <div class="shrink-0 pt-0.5">
+                   <label class="flex items-center gap-1.5 cursor-pointer select-none group/check">
+                    <input type="checkbox" class="row-select h-4 w-4 rounded border-gray-300 text-gray-800 accent-gray-500 focus:ring-gray-400 focus:ring-offset-0 cursor-pointer" value="{{ b.id }}">
+                  </label>
+               </div>
+             </div>
+             
+             <div class="text-xs text-text/80 mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                <div class="space-y-1">
+                  {% if b.depicts_specimen %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Specimen ID:</span> <span class="ml-1">{{ b.depicts_specimen }}</span></div>
+                  {% endif %}
+                  {% if b.aspect %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Aspect:</span> <span class="ml-1">{{ b.aspect }}</span></div>
+                  {% endif %}
+                  {% if b.image_has_multiple_individuals is not None %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Multiple Individuals:</span> <span class="ml-1">{% if b.image_has_multiple_individuals %}Yes{% else %}No{% endif %}</span></div>
+                  {% endif %}
+                  {% if b.image_size_bytes %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Size:</span> <span class="ml-1">{{ b.image_size_bytes|filesizeformat }}</span></div>
+                  {% endif %}
+                  {% if b.collection_country %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Country:</span> <span class="ml-1">{{ b.collection_country }}</span></div>
+                  {% endif %}
+                  {% if b.specimen_sex %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Sex:</span> <span class="ml-1">{{ b.specimen_sex|upper }}</span></div>
+                  {% endif %}
+                  {% if b.image_institution %}
+                    <div class="text-text/80 break-words">
+                      <span class="font-semibold text-text/50">Institution:</span>
+                      <span class="ml-1">{{ b.image_institution }}</span>
+                    </div>
+                  {% endif %}
+                </div>
+
+                <div class="space-y-1">
+                  {% if not b.ref_scientificName %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <span class="ml-1">unidentified</span></div>
+                  {% elif b.ref_subfamily %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <span class="ml-1">{{ b.ref_subfamily }}</span></div>
+                  {% endif %}
+                  {% if not b.ref_scientificName %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Tribe:</span> <span class="ml-1">unidentified</span></div>
+                  {% elif b.ref_tribe %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Tribe:</span> <span class="ml-1">{{ b.ref_tribe }}</span></div>
+                  {% endif %}
+                  {% if not b.ref_scientificName %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Subtribe:</span> <span class="ml-1">unidentified</span></div>
+                  {% elif b.ref_subtribe %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Subtribe:</span> <span class="ml-1">{{ b.ref_subtribe }}</span></div>
+                  {% endif %}
+                  {% if not b.ref_scientificName %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Genus:</span> <span class="ml-1 italic">unidentified</span></div>
+                  {% elif b.ref_genus %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Genus:</span> <span class="ml-1 italic">{{ b.ref_genus }}</span></div>
+                  {% endif %}
+                  {% if not b.ref_scientificName %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Species:</span> <span class="ml-1 italic">unidentified</span></div>
+                  {% elif b.ref_species %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Species:</span> <span class="ml-1 italic">{{ b.ref_species }}</span></div>
+                  {% endif %}
+                  {% if not b.ref_scientificName %}
+                      <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic">unidentified</span></div>
+                  {% elif b.ref_subspecies %}
+                      <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic">{{ b.ref_subspecies }}</span></div>
+                  {% endif %}
+                  {% if b.specimen_type_status %}
+                    <div class="text-text/80 break-words">
+                      <span class="font-semibold text-text/50">Type Status:</span>
+                      <span class="ml-1">{{ b.specimen_type_status }}</span>
+                    </div>
+                  {% endif %}
+                </div>
+             </div>
+           </div>
+       </div>
+    {% empty %}
+       <div class="py-12 text-center text-text/50 border-2 border-dashed border-text/10 rounded-xl">
+          <p>No specimens found matching your search.</p>
+       </div>
+    {% endfor %}
+  </div>
+
+  {# --- BOTTOM CONTROLS (Duplicate of Top) --- #}
+  {% if total_matches is not None %}
+    <div class="w-full max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4 mt-8 pt-4 border-t border-text/10">
+         
+         <div class="flex flex-wrap items-center gap-4">
+             <div class="text-sm text-text/70">
+               Found <span class="font-bold text-text">{{ total_matches }}</span> specimen{{ total_matches|pluralize }}.
+             </div>
+             
+             <div class="flex items-center gap-2">
+                 <button type="submit" form="download-selected-form" disabled
+                         class="download-selected-btn text-sm font-semibold text-gray-700 hover:text-black hover:underline disabled:opacity-60 disabled:cursor-not-allowed">
+                    Download Selected (<span class="selected-count">0</span>)
+                 </button>
+
+                 {% if request.user.is_staff and total_matches > 0 %}
+                    <div class="h-4 w-px bg-text/20 mx-1"></div>
+                    <button type="button" onclick="document.getElementById('download-all-form').submit()"
+                            class="text-sm font-semibold text-gray-700 hover:text-black hover:underline">
+                      Download All ({{ total_matches }})
+                    </button>
+                 {% endif %}
+             </div>
+             
+         </div>
+
+         {% if is_paginated %}
+            <nav class="flex items-center gap-2">
+              {% if page_obj.has_previous %}
+                <button type="submit" form="main-form" name="page" value="{{ page_obj.previous_page_number }}"
+                   class="rounded border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30 transition">
+                  Previous
+                </button>
+              {% endif %}
+
+              <div class="flex items-center gap-2 text-sm text-text/70">
+                <span>Page</span>
+                <select form="main-form" onchange="this.name='page'; this.form.submit()" class="rounded border border-text/20 bg-background py-1.5 px-2 text-sm focus:ring-gray-400 cursor-pointer">
+                  {% for p in paginator.page_range %}
+                    <option value="{{ p }}" {% if p == page_obj.number %}selected{% endif %}>{{ p }}</option>
+                  {% endfor %}
+                </select>
+                <span>of {{ paginator.num_pages }}</span>
+              </div>
+
+              {% if page_obj.has_next %}
+                <button type="submit" form="main-form" name="page" value="{{ page_obj.next_page_number }}"
+                   class="rounded border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30 transition">
+                  Next
+                </button>
+              {% endif %}
+            </nav>
+          {% endif %}
+    </div>
+  {% endif %}
+
+  {# --- HIDDEN FORMS FOR DOWNLOADS (Persisted Logic) --- #}
+  <form id="download-selected-form" method="post" action="{% url 'start_batch_download' %}" onsubmit="return collectSelectedIds(this);">
+    {% csrf_token %}
+    <input type="hidden" name="selection_mode" value="ids">
+    <input type="hidden" name="selected_ids" value="">
+  </form>
+
+  <form id="download-all-form" method="post" action="{% url 'start_batch_download' %}" class="hidden">
+    {% csrf_token %}
+    <input type="hidden" name="selection_mode" value="query">
+    <input type="hidden" name="q" value="{{ q|default:'' }}">
+    <input type="hidden" name="total_matches" value="{{ total_matches|default:0 }}">
+    
+    {% for param, vals in selected_filters.items %}
+        {% for val in vals %}
+            <input type="hidden" name="{{ param }}" value="{{ val }}">
         {% endfor %}
-      </tbody>
-    </table>
-  </div>
+    {% endfor %}
+    <input type="hidden" name="size_min" value="{{ size_min }}">
+    <input type="hidden" name="size_max" value="{{ size_max }}">
+    <input type="hidden" name="res_min" value="{{ res_min }}">
+    <input type="hidden" name="res_max" value="{{ res_max }}">
+  </form>
 
+</section>
 
-{% if total_matches %}
-  <div class="mt-3 flex items-center justify-between text-sm text-text/70">
-    <div>
-      {{ total_matches }} matching records{% if q %} for <span class="font-mono">{{ q }}</span>{% endif %}.
-    </div>
-
-    <div class="flex items-center gap-2">
-      <!-- Download selected (IDs from checkboxes) -->
-      <form id="download-form" method="post" action="{% url 'start_batch_download' %}" onsubmit="return collectSelectedIds(this);">
-        {% csrf_token %}
-        <input type="hidden" name="selection_mode" value="ids">
-        <input type="hidden" name="selected_ids" value="">
-        <button id="download-selected-btn" type="submit"
-                class="rounded-md border border-text/20 px-3 py-1.5 bg-primary hover:bg-secondary/30 disabled:opacity-60 disabled:cursor-not-allowed">
-          Download selected
-        </button>
-      </form>
-
-      <!-- Download all results (current filter across all pages) -->
-      {% if request.user.is_staff %}
-        <form method="post" action="{% url 'start_batch_download' %}">
-          {% csrf_token %}
-          <input type="hidden" name="selection_mode" value="query">
-          <input type="hidden" name="q" value="{{ q|default:'' }}">
-          <input type="hidden" name="total_matches" value="{{ total_matches|default:0 }}">
-          <button type="submit"
-                  class="rounded-md border border-text/20 px-3 py-1.5 bg-primary hover:bg-secondary/30">
-            Download all results ({{ total_matches }})
-          </button>
-        </form>
-      {% endif %}
-    </div>
-  </div>
-{% endif %}
-
+{# --- JAVASCRIPT --- #}
 <script>
-  // Collect checked row IDs into the hidden input before submit
-  function collectSelectedIds(form) {
-    const ids = Array.from(document.querySelectorAll('.row-select:checked')).map(el => el.value);
-    if (ids.length === 0) {
-      alert('Please select at least one row.');
-      return false;
+
+  // --- 1. Filter Dropdown Logic ---
+
+  function toggleFilterDropdown(btn) {
+      const container = btn.closest('.group-filter');
+      const dropdown = container.querySelector('.filter-dropdown');
+      
+      // 1. RESET: Close all other dropdowns AND reset their parent z-indexes
+      document.querySelectorAll('.group-filter').forEach(group => {
+          const d = group.querySelector('.filter-dropdown');
+          if (d && d !== dropdown) {
+              d.classList.add('hidden');
+              // Remove the high z-index from inactive parents
+              group.classList.remove('z-50'); 
+          }
+      });
+
+      // 2. TOGGLE: Show/Hide current dropdown
+      dropdown.classList.toggle('hidden');
+      
+      // 3. ELEVATE: If visible, lift the parent. If hidden, drop it back.
+      if (!dropdown.classList.contains('hidden')) {
+          container.classList.add('z-50');
+          
+          // Focus search if opening
+          const searchInput = dropdown.querySelector('input[type="text"]');
+          if (searchInput) setTimeout(() => searchInput.focus(), 50);
+      } else {
+          container.classList.remove('z-50');
+      }
+  }
+
+  // Update the outside click listener to also reset z-indexes
+  document.addEventListener('click', (e) => {
+      if (!e.target.closest('.group-filter')) {
+          document.querySelectorAll('.filter-dropdown').forEach(d => d.classList.add('hidden'));
+          // Reset all parents
+          document.querySelectorAll('.group-filter').forEach(g => g.classList.remove('z-50'));
+      }
+  });
+
+  // Client-side search within dropdown
+  function filterDropdownOptions(input) {
+      const filterText = input.value.toLowerCase();
+      const container = input.closest('.filter-dropdown');
+      const options = container.querySelectorAll('.filter-option');
+      let hasVisible = false;
+
+      options.forEach(opt => {
+          const val = opt.getAttribute('data-value').toLowerCase();
+          if (val.includes(filterText)) {
+              opt.classList.remove('hidden');
+              opt.classList.add('flex');
+              hasVisible = true;
+          } else {
+              opt.classList.add('hidden');
+              opt.classList.remove('flex');
+          }
+      });
+      
+      const noRes = container.querySelector('.no-results');
+      if (noRes) {
+        if (!hasVisible) noRes.classList.remove('hidden');
+        else noRes.classList.add('hidden');
+      }
+  }
+
+  // Toggle selection for a single option
+  function toggleDropdownOption(div) {
+      const value = div.getAttribute('data-value');
+      const container = div.closest('.group-filter');
+      const hiddenSelect = container.querySelector('select');
+      const icon = div.querySelector('.check-icon');
+      const checkContainer = icon.parentElement;
+      const isSelected = div.classList.contains('bg-gray-100');
+
+      if (isSelected) {
+          // Deselect
+          div.classList.remove('bg-gray-100', 'text-gray-900', 'font-semibold');
+          div.classList.add('text-text/80', 'hover:bg-secondary/20');
+          icon.classList.add('hidden');
+          checkContainer.classList.remove('bg-gray-800', 'border-gray-800', 'text-white');
+          checkContainer.classList.add('border-text/30', 'bg-white');
+      } else {
+          // Select
+          div.classList.add('bg-gray-100', 'text-gray-900', 'font-semibold');
+          div.classList.remove('text-text/80', 'hover:bg-secondary/20');
+          icon.classList.remove('hidden');
+          checkContainer.classList.add('bg-gray-800', 'border-gray-800', 'text-white');
+          checkContainer.classList.remove('border-text/30', 'bg-white');
+      }
+
+      // Sync with hidden select
+      for (let i = 0; i < hiddenSelect.options.length; i++) {
+          if (hiddenSelect.options[i].value === value) {
+              hiddenSelect.options[i].selected = !isSelected;
+              break;
+          }
+      }
+      updateButtonLabel(container);
+  }
+
+  // "Select Visible" (Batch Select)
+  function selectVisibleOptions(btn) {
+      const dropdown = btn.closest('.filter-dropdown');
+      // Only select visible options that aren't already selected
+      const visibleOptions = dropdown.querySelectorAll('.filter-option:not(.hidden):not(.bg-gray-100)');
+      visibleOptions.forEach(opt => toggleDropdownOption(opt));
+  }
+
+  // "Clear All" (Batch Clear)
+  function clearFilterSelection(btn) {
+      const container = btn.closest('.group-filter');
+      const dropdown = container.querySelector('.filter-dropdown');
+      const selectedOptions = dropdown.querySelectorAll('.filter-option.bg-gray-100');
+      selectedOptions.forEach(opt => toggleDropdownOption(opt));
+  }
+
+  // Update button label with count
+  function updateButtonLabel(container) {
+      const hiddenSelect = container.querySelector('select');
+      const btn = container.querySelector('.filter-toggle-btn');
+      const span = btn.querySelector('span');
+      
+      let count = 0;
+      for(let i=0; i<hiddenSelect.options.length; i++) {
+          if(hiddenSelect.options[i].selected) count++;
+      }
+
+      if (count > 0) {
+          span.textContent = `${count} Selected`;
+          btn.classList.add('border-gray-400', 'ring-1', 'ring-gray-200', 'text-gray-900', 'font-medium');
+          btn.classList.remove('border-text/20', 'text-text', 'hover:border-text/30');
+      } else {
+          span.textContent = 'All';
+          btn.classList.remove('border-gray-400', 'ring-1', 'ring-gray-200', 'text-gray-900', 'font-medium');
+          btn.classList.add('border-text/20', 'text-text', 'hover:border-text/30');
+      }
+  }
+
+  // --- 2. Remove Pill Logic ---
+  function removeFilter(param, value) {
+      const select = document.querySelector(`select[name="${param}"]`);
+      if (select) {
+          for (let i = 0; i < select.options.length; i++) {
+              if (select.options[i].value === value) {
+                  select.options[i].selected = false;
+              }
+          }
+          document.getElementById('main-form').submit();
+      }
+  }
+
+  // --- 3. Filter Panel Toggle ---
+  const toggleBtn = document.getElementById('toggle-filters-btn');
+  const filtersDiv = document.getElementById('advanced-filters');
+  const chevron = document.getElementById('chevron-icon');
+
+  const hasAdvancedFilters = Number("{{ selected_filters|length|default:0 }}") > 0 || 
+                             "{{ size_min }}" !== "" || "{{ size_max }}" !== "" ||
+                             "{{ res_min }}" !== "" || "{{ res_max }}" !== "";
+
+  if (hasAdvancedFilters) {
+      filtersDiv.classList.remove('hidden');
+      toggleBtn.setAttribute('aria-expanded', 'true');
+      if(chevron) chevron.style.transform = 'rotate(180deg)';
+  }
+
+  toggleBtn.addEventListener('click', () => {
+      const isHidden = filtersDiv.classList.contains('hidden');
+      if (isHidden) {
+          filtersDiv.classList.remove('hidden');
+          toggleBtn.setAttribute('aria-expanded', 'true');
+          if(chevron) chevron.style.transform = 'rotate(180deg)';
+      } else {
+          filtersDiv.classList.add('hidden');
+          toggleBtn.setAttribute('aria-expanded', 'false');
+          if(chevron) chevron.style.transform = 'rotate(0deg)';
+      }
+  });
+
+  // --- 4. Selection Persistence (Existing Logic) ---
+  const STORAGE_KEY = 'beetles_selected_ids';
+  let selectedIds = new Set();
+  
+  const rowCheckboxes = document.querySelectorAll('.row-select');
+  const dlBtns = document.querySelectorAll('.download-selected-btn');
+  const countSpans = document.querySelectorAll('.selected-count');
+  const clearBtn = document.getElementById('clear-selection-btn');
+  const globalCountSpan = document.getElementById('global-selection-count');
+
+  function initSelection() {
+    const stored = sessionStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) selectedIds = new Set(parsed);
+      } catch (e) { console.error(e); }
     }
-    form.querySelector('input[name="selected_ids"]').value = ids.join(',');
+    updateUI();
+  }
+
+  function saveSelection() {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(selectedIds)));
+  }
+
+  function updateUI() {
+    const count = selectedIds.size;
+    rowCheckboxes.forEach(cb => { cb.checked = selectedIds.has(cb.value); });
+    countSpans.forEach(span => span.textContent = count);
+    if (globalCountSpan) globalCountSpan.textContent = count;
+    dlBtns.forEach(btn => btn.disabled = count === 0);
+    if (clearBtn) {
+        if (count > 0) clearBtn.classList.remove('hidden');
+        else clearBtn.classList.add('hidden');
+    }
+  }
+
+  rowCheckboxes.forEach(r => {
+    r.addEventListener('change', (e) => {
+        if (e.target.checked) selectedIds.add(e.target.value);
+        else selectedIds.delete(e.target.value);
+        saveSelection();
+        updateUI();
+    });
+  });
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        selectedIds.clear();
+        saveSelection();
+        updateUI();
+    });
+  }
+
+  window.collectSelectedIds = function(form) {
+    if (selectedIds.size === 0) return false;
+    form.querySelector('input[name="selected_ids"]').value = Array.from(selectedIds).join(',');
     return true;
   }
 
-  // Optional UX nicety: disable "Download selected" until a row is ticked
-  (function () {
-    const btn = document.getElementById('download-selected-btn');
+  initSelection();
+
+  // --- 5. Copy UUID ---
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.copy-uuid');
     if (!btn) return;
-    const update = () => {
-      const anyChecked = document.querySelector('.row-select:checked') !== null;
-      btn.disabled = !anyChecked;
-    };
-    document.addEventListener('change', (e) => {
-      if (e.target && e.target.classList && e.target.classList.contains('row-select')) {
-        update();
-      }
-    });
-    update();
-  })();
+    e.preventDefault(); e.stopPropagation();
+    const uuid = btn.getAttribute('data-uuid');
+    try {
+      await navigator.clipboard.writeText(uuid);
+      const originalHTML = btn.innerHTML;
+      btn.innerHTML = `<svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+      setTimeout(() => { btn.innerHTML = originalHTML; }, 1500);
+    } catch (err) { console.error(err); }
+  });
 </script>
-
-
-{# Select all on this page #}
-<script>
-  (function () {
-    const master = document.getElementById('select-all-page');
-    if (!master) return;
-
-    function updateMasterFromRows() {
-      const rows = Array.from(document.querySelectorAll('.row-select'));
-      if (rows.length === 0) { master.checked = false; master.indeterminate = false; return; }
-      const checked = rows.filter(r => r.checked).length;
-      master.checked = checked === rows.length;
-      master.indeterminate = checked > 0 && checked < rows.length;
-    }
-
-    master.addEventListener('change', () => {
-      const rows = document.querySelectorAll('.row-select');
-      rows.forEach(r => { r.checked = master.checked; });
-      // Nudge the “Download selected” button enable/disable logic:
-      const first = document.querySelector('.row-select');
-      if (first) {
-        first.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-    });
-
-    // Keep header checkbox in sync if user toggles individual rows
-    document.addEventListener('change', (e) => {
-      if (e.target && e.target.classList && e.target.classList.contains('row-select')) {
-        updateMasterFromRows();
-      }
-    });
-
-    // On page load, reflect current state
-    updateMasterFromRows();
-  })();
-</script>
-
-
-<script>
-  // Copy UUID to clipboard for staff
-  (function () {
-    document.addEventListener('click', async (e) => {
-      const btn = e.target.closest('.copy-uuid');
-      if (!btn) return;
-      const uuid = btn.getAttribute('data-uuid') || '';
-      try {
-        await navigator.clipboard.writeText(uuid);
-        const old = btn.textContent;
-        btn.textContent = 'Copied!';
-        setTimeout(() => { btn.textContent = old; }, 1200);
-      } catch (err) {
-        alert('Copy failed. You can select the UUID text and copy manually.');
-      }
-    });
-  })();
-</script>
-
-
-  {# Pagination controls #}
-  {% if is_paginated %}
-    <nav class="mt-4 flex items-center justify-between" aria-label="Pagination">
-      <div>
-        {% if page_obj.has_previous %}
-          <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}"
-             class="inline-flex items-center rounded-md border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30">
-            ← Previous
-          </a>
-        {% else %}
-          <span class="inline-flex items-center rounded-md border border-text/10 px-3 py-1.5 text-sm text-text/50 cursor-not-allowed">
-            ← Previous
-          </span>
-        {% endif %}
-      </div>
-
-      <div class="text-sm text-text/70">
-        Page {{ page_obj.number }} of {{ paginator.num_pages }}
-      </div>
-
-      <div>
-        {% if page_obj.has_next %}
-          <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}"
-             class="inline-flex items-center rounded-md border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30">
-            Next →
-          </a>
-        {% else %}
-          <span class="inline-flex items-center rounded-md border border-text/10 px-3 py-1.5 text-sm text-text/50 cursor-not-allowed">
-            Next →
-          </span>
-        {% endif %}
-      </div>
-    </nav>
-  {% endif %}
-
-</section>
 {% endblock %}
