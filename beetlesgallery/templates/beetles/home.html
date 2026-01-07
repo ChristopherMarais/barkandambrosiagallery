@@ -10,12 +10,12 @@
       
       {# 1. Search Bar #}
       <div class="relative w-full">
-        <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Search metadata..." class="w-full rounded-lg border border-text/10 bg-background px-6 py-4 text-md text-text shadow-md shadow-black/1 focus:ring-2 focus:ring-gray-400 outline-none transition" />
+        <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Search Metadata..." class="w-full rounded-lg border border-text/10 bg-background px-6 py-4 text-md text-text shadow-md shadow-black/1 focus:ring-2 focus:ring-gray-400 outline-none transition" />
       </div>
 
       {# 2. Controls #}
       <div class="flex flex-wrap items-center justify-between gap-4">
-          <button type="submit" class="rw-full rounded-lg bg-gray-200 border border-gray-300 px-12 py-3 text-md font-bold text-gray-800 hover:bg-gray-300 hover:text-black transition shadow-sm uppercase tracking-wide">Search</button>
+          <button type="submit" class="rw-full rounded-lg bg-gray-200 border border-gray-300 px-12 py-3 text-md font-bold text-gray-800 hover:bg-gray-300 hover:text-black transition shadow-sm tracking-wide">Search</button>
 
           <button type="button" id="toggle-filters-btn" class="group flex items-center gap-2 text-sm text-gray-500 hover:underline hover:text-text" aria-expanded="false">
             <span>Filter</span>
@@ -64,7 +64,7 @@
         
         {# Top Apply Button (Full Width) #}
         <div class="w-full mb-8 pb-6">
-            <button type="submit" class="w-full rounded-lg bg-gray-200 border border-gray-300 py-3 text-sm font-bold text-gray-800 hover:bg-gray-300 hover:text-black transition shadow-sm uppercase tracking-wide">
+            <button type="submit" class="w-full rounded-lg bg-gray-200 border border-gray-300 py-3 text-sm font-bold text-gray-800 hover:bg-gray-300 hover:text-black transition shadow-sm tracking-wide">
                 Apply Filters
             </button>
         </div>
@@ -186,7 +186,7 @@
                 
                 {# Bottom Apply Button (Full Width) #}
                 <div class="col-span-full mt-4">
-                    <button type="submit" class="w-full rounded-lg bg-gray-200 border border-gray-300 py-3 text-sm font-bold text-gray-800 hover:bg-gray-300 hover:text-black transition shadow-sm uppercase tracking-wide">
+                    <button type="submit" class="w-full rounded-lg bg-gray-200 border border-gray-300 py-3 text-sm font-bold text-gray-800 hover:bg-gray-300 hover:text-black transition shadow-sm tracking-wide">
                         Apply Filters
                     </button>
                 </div>
@@ -707,7 +707,7 @@
     try {
       await navigator.clipboard.writeText(uuid);
       const originalHTML = btn.innerHTML;
-      btn.innerHTML = `<svg class="w-4 h-4 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+      btn.innerHTML = `<svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
       setTimeout(() => { btn.innerHTML = originalHTML; }, 1500);
     } catch (err) { console.error(err); }
   });
