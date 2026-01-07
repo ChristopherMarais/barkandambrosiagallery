@@ -89,13 +89,24 @@ def landing(request):
     # 1. Total number of images
     total_images = Beetles.objects.count()
 
-    # 2. Number of unique species (based on the valid name ID)
-    total_species = Beetles.objects.exclude(depicts_valid_name_id__isnull=True)\
-                                   .values('depicts_valid_name_id')\
-                                   .distinct().count()
+    # 2. Get all distinct valid_name_ids associated with actual images
+    # We need the actual list of IDs to look up taxonomy (Genera) in the CSV reference
+    present_ids_qs = Beetles.objects.exclude(depicts_valid_name_id__isnull=True)\
+                                    .exclude(depicts_valid_name_id="")\
+                                    .values_list('depicts_valid_name_id', flat=True)\
+                                    .distinct()
+    
+    present_ids = list(present_ids_qs)
 
-    # 3. Count unique specimen IDs that have a Type Status
-    # This filters for records with a type status, then counts unique values in 'depicts_specimen'
+    # Count unique species (number of unique valid IDs)
+    total_species = len(present_ids)
+
+    # 3. Count unique Genera
+    # Use the helper in species_ref to map IDs -> Genera -> Unique Set
+    unique_genera_set = species_ref.get_field_values_for_ids(present_ids, "genus")
+    total_genera = len(unique_genera_set)
+
+    # 4. Count unique specimen IDs that have a Type Status
     type_status_count = Beetles.objects.exclude(specimen_type_status__isnull=True)\
                                        .exclude(specimen_type_status="")\
                                        .exclude(depicts_specimen__isnull=True)\
@@ -107,6 +118,7 @@ def landing(request):
     context = {
         'total_images': total_images,
         'total_species': total_species,
+        'total_genera': total_genera,  # Added this
         'type_status_count': type_status_count,
     }
     return render(request, 'landing.html', context)
