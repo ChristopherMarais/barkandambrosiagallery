@@ -944,6 +944,17 @@ def beetle_detail(request, beetle_id):
         .get(pk=beetle_id)
     )
 
+    # Fetch related images of the same specimen
+    related_specimens = []
+    # Only search if specimen ID exists and is not just whitespace
+    if beetle.depicts_specimen and beetle.depicts_specimen.strip():
+        related_specimens = (
+            Beetles.objects
+            .filter(depicts_specimen=beetle.depicts_specimen)
+            .exclude(pk=beetle.id)  # Exclude the current image
+            .only("id", "thumb_small", "depicts_specimen") # Optimize query
+        )
+
     # CSV-based enrichment for detail page (all fields) with "Unknown" fallback
     raw_vid = beetle.depicts_valid_name_id
     norm_vid = _normalize_valid_id_for_lookup(raw_vid)
@@ -954,7 +965,12 @@ def beetle_detail(request, beetle_id):
     return render(
         request,
         "beetles/detail.html",
-        {"beetle": beetle, "ref_species": ref_species, "ref_version": ref_version},
+        {
+            "beetle": beetle, 
+            "ref_species": ref_species, 
+            "ref_version": ref_version,
+            "related_specimens": related_specimens, # Add to context
+        },
     )
 
 
