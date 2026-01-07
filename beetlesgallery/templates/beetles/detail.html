@@ -46,7 +46,13 @@
 
       {% if related_specimens %}
       <section>
-        <h2 class="text-lg font-bold text-text mb-4 text-text/80 tracking-wide">More images of this specimen</h2>
+        <h2 class="text-lg font-bold text-text mb-3 text-text/80 tracking-wide">
+            {% if beetle.image_has_multiple_individuals %}
+                More images of this batch
+            {% else %}
+                More images of this specimen
+            {% endif %}
+        </h2>
         <div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-6 xl:grid-cols-8 gap-2">
           {% for rel in related_specimens %}
           <a href="{% url 'beetle_detail' beetle_id=rel.id %}" 
