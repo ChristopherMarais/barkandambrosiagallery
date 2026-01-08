@@ -1,8 +1,8 @@
 # --- 1. Security (CRITICAL) ---
 # Never commit environment variables or secrets
-# .env
-# .env.prod
-# .env.dev
+.env
+.env.prod
+.env.dev
 
 # --- 2. The Heavy Data (Your specific requirement) ---
 # We ignore the actual media folder so developers don't download 500GB of beetles.
