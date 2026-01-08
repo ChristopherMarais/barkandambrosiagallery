@@ -1,19 +1,21 @@
 services:
   web:
-    command: pixi run gunicorn
+    # This overrides the ${WEB_COMMAND} default
+    command: pixi run gunicorn --timeout 120
     restart: always
     volumes:
-      # ABSOLUTE PATH to external folder for media
+      # OVERRIDE the volume mount to point to external data
       - /root/barkandambrosia_data/media:/app/media
-      - pixi_cache:/app/.pixi
     env_file:
       - .env.prod
 
   db:
     restart: always
     volumes:
-      # ABSOLUTE PATH to external folder for database
+      # OVERRIDE the data location
       - /root/barkandambrosia_data/postgres:/var/lib/postgresql/data
-
-volumes:
-  pixi_cache:
+    env_file:
+      - .env.prod
+    # We don't need to list 'environment' here anymore!
+    # The base file will automatically pick up POSTGRES_PASSWORD from .env.prod
+    ports: []  # This closes the public port 5432 for security

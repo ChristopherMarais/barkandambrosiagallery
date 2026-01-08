@@ -25,7 +25,7 @@ jobs:
             
             # 3. Build and Start (pointing to the EXTERNAL data folder)
             # This uses the production config we created earlier
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+            docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d --build
             
             # 4. Cleanup old images to save space
             docker image prune -f
