@@ -1,16 +1,14 @@
+version: '3.8'
+
 services:
   web:
     build: .
-    command: pixi run start
+    # Use variable for command (Dev uses "start", Prod uses "gunicorn")
+    command: ${WEB_COMMAND:-pixi run start}
     volumes:
       - .:/app
-      - media_data:/app/media
-      # Keep pixi env cached but separate
-      - pixi_cache:/app/.pixi
     ports:
       - "8000:8000"
-    depends_on:
-      - db
     env_file:
       - .env
 
@@ -19,12 +17,15 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_DB=beetles_db
-      - POSTGRES_USER=beetles_user
-      - POSTGRES_PASSWORD=devpass
+      - POSTGRES_DB=${POSTGRES_DB:-beetles_db}
+      - POSTGRES_USER=${POSTGRES_USER:-beetles_user}
+      # THIS IS THE MAGIC FIX:
+      # In Dev: It sees no variable, so it uses "devpass".
+      # In Prod: It sees your .env.prod variable, so it uses that.
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-devpass}
     ports:
-      # Expose DB to localhost so you can access it from your local machine
-      - "5432:5432"
+      # Only expose ports if explicitly asked (Dev default: 5432, Prod: empty)
+      - "${DB_PORT:-5432}:5432"
 
 volumes:
   postgres_data:
