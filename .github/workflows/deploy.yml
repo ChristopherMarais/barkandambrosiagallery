@@ -1,0 +1,31 @@
+name: Deploy to Contabo
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # 1. Go to the project folder
+            cd /root/barkandambrosiagallery
+            
+            # 2. Get latest code
+            git fetch --all
+            git reset --hard origin/main
+            
+            # 3. Build and Start (pointing to the EXTERNAL data folder)
+            # This uses the production config we created earlier
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+            
+            # 4. Cleanup old images to save space
+            docker image prune -f

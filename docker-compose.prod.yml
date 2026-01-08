@@ -1,0 +1,19 @@
+services:
+  web:
+    command: pixi run gunicorn
+    restart: always
+    volumes:
+      # ABSOLUTE PATH to external folder for media
+      - /root/barkandambrosia_data/media:/app/media
+      - pixi_cache:/app/.pixi
+    env_file:
+      - .env.prod
+
+  db:
+    restart: always
+    volumes:
+      # ABSOLUTE PATH to external folder for database
+      - /root/barkandambrosia_data/postgres:/var/lib/postgresql/data
+
+volumes:
+  pixi_cache:
