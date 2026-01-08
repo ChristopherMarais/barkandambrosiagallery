@@ -23,9 +23,6 @@ services:
       # In Dev: It sees no variable, so it uses "devpass".
       # In Prod: It sees your .env.prod variable, so it uses that.
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-devpass}
-    ports:
-      # Only expose ports if explicitly asked (Dev default: 5432, Prod: empty)
-      - "${DB_PORT:-5432}:5432"
 
 volumes:
   postgres_data:
