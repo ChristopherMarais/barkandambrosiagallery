@@ -16,16 +16,23 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            # 1. Go to the project folder
             cd /root/barkandambrosiagallery
             
-            # 2. Get latest code
+            # 1. Get latest code
             git fetch --all
             git reset --hard origin/main
             
-            # 3. Build and Start (pointing to the EXTERNAL data folder)
-            # This uses the production config we created earlier
-            docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+            # --- NEW STEP: BACKUP DATABASE ---
+            # Dumps the DB to a file named with the current timestamp inside your data folder
+            # We use 'exec -T' to run the command inside the RUNNING db container
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_dump -U beetles_user beetles_db > /root/barkandambrosia_data/postgres/backup_$(date +%F_%H-%M).sql || echo "Backup failed or DB not running"
+
+            # 2. Build and Start
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
             
-            # 4. Cleanup old images to save space
+            # --- NEW STEP: RUN MIGRATIONS ---
+            # This applies changes to the database structure (like adding new tables)
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web python manage.py migrate
+            
+            # 3. Cleanup
             docker image prune -f

@@ -39,6 +39,7 @@ django-filter = "*"
 django-simple-history = "*"
 django-cleanup = "*"  # Optional but good for file management
 nodejs = "20.*"
+whitenoise = ">=6.11.0,<7"
 
 # --- Dependencies for LINUX/MAC ONLY (Server/Docker) ---
 # Gunicorn will be installed in Docker, but ignored on your Windows laptop.
