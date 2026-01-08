@@ -30,9 +30,9 @@ jobs:
             # 2. Build and Start
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
             
-            # RUN MIGRATIONS
-            # This applies changes to the database structure (like adding new tables)
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web pixi run migrate            
+            # 3. Setup (Migrations & Static Files)
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web pixi run migrate
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web pixi run collectstatic
             
-            # 3. Cleanup
+            # 4. Cleanup
             docker image prune -f
