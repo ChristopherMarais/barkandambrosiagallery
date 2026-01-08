@@ -22,7 +22,7 @@ jobs:
             git fetch --all
             git reset --hard origin/main
             
-            # --- NEW STEP: BACKUP DATABASE ---
+            # BACKUP DATABASE
             # Dumps the DB to a file named with the current timestamp inside your data folder
             # We use 'exec -T' to run the command inside the RUNNING db container
             docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_dump -U beetles_user beetles_db > /root/barkandambrosia_data/postgres/backup_$(date +%F_%H-%M).sql || echo "Backup failed or DB not running"
@@ -30,9 +30,9 @@ jobs:
             # 2. Build and Start
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
             
-            # --- NEW STEP: RUN MIGRATIONS ---
+            # RUN MIGRATIONS
             # This applies changes to the database structure (like adding new tables)
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web python manage.py migrate
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web pixi run migrate            
             
             # 3. Cleanup
             docker image prune -f
