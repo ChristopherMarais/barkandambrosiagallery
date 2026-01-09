@@ -178,3 +178,8 @@ VALID_SPECIES_PATH = "reference/valid_species.csv"
 VALID_SPECIES_VERSION_CACHE_KEY = "valid_species:version"
 VALID_SPECIES_VERSION_LABEL_CACHE_KEY = "valid_species:label"
 VALID_SPECIES_UPDATING_CACHE_KEY = "valid_species:updating"
+
+# If running locally, skip the "chmod" permission setting step.
+# This prevents the "FileNotFoundError" crash when uploading files on Windows/Docker.
+if DEBUG:
+    FILE_UPLOAD_PERMISSIONS = None
