@@ -3,6 +3,7 @@ services:
     volumes:
       - .:/app          # Hot-reloading for code
       - /app/.pixi      # The fix for Windows/Linux permission crash
+      - media_data:/app/media
 
   db:
     ports:
