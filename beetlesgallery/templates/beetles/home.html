@@ -263,8 +263,8 @@
             <div class="w-32 sm:w-36 shrink-0 flex flex-col justify-center p-3">
               <a href="{% url 'beetle_detail' beetle_id=b.id %}" 
                 class="flex items-center justify-center w-full h-32 bg-black/5 rounded-xl overflow-hidden border border-black/5 shadow-sm">
-                {% if b.thumb_small %}
-                  <img src="{{ b.thumb_small.url }}" alt="{{ b.ref_scientificName }}" loading="lazy" class="w-full h-full object-contain" />
+                {% if b.image_asset and b.image_asset.thumb_small %}
+                  <img src="{{ b.image_asset.thumb_small.url }}" alt="{{ b.ref_scientificName }}" loading="lazy" class="w-full h-full object-contain" />
                 {% else %}
                   <div class="text-text/20 text-xs text-center">No Image</div>
                 {% endif %}
@@ -305,8 +305,8 @@
                   {% if b.image_has_multiple_individuals is not None %}
                     <div class="truncate"><span class="font-semibold text-text/50">Multiple Individuals:</span> <span class="ml-1">{% if b.image_has_multiple_individuals %}Yes{% else %}No{% endif %}</span></div>
                   {% endif %}
-                  {% if b.image_size_bytes %}
-                    <div class="truncate"><span class="font-semibold text-text/50">Size:</span> <span class="ml-1">{{ b.image_size_bytes|filesizeformat }}</span></div>
+                  {% if Reportb.image_asset.image_size_bytes %}
+                    <div class="truncate"><span class="font-semibold text-text/50">Size:</span> <span class="ml-1">{{ Reportb.image_asset.image_size_bytes|filesizeformat }}</span></div>
                   {% endif %}
                   {% if b.collection_country %}
                     <div class="truncate"><span class="font-semibold text-text/50">Country:</span> <span class="ml-1">{{ b.collection_country }}</span></div>
@@ -314,10 +314,10 @@
                   {% if b.specimen_sex %}
                     <div class="truncate"><span class="font-semibold text-text/50">Sex:</span> <span class="ml-1">{{ b.specimen_sex|upper }}</span></div>
                   {% endif %}
-                  {% if b.image_institution %}
+                  {% if b.image_asset.image_institution %}
                     <div class="text-text/80 break-words">
                       <span class="font-semibold text-text/50">Institution:</span>
-                      <span class="ml-1">{{ b.image_institution }}</span>
+                      <span class="ml-1">{{ b.image_asset.image_institution }}</span>
                     </div>
                   {% endif %}
                 </div>

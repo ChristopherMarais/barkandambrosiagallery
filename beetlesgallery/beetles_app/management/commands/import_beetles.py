@@ -20,7 +20,8 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from beetlesgallery.beetles_app.models import Beetles, UploadBatch
+# Updated Imports: Include ImageAsset
+from beetlesgallery.beetles_app.models import Beetles, UploadBatch, ImageAsset
 
 try:
     import pandas as pd
@@ -162,8 +163,9 @@ class Command(BaseCommand):
         df = df.applymap(_none)
 
         created_beetles = 0
+        new_images = 0
 
-        # Field max lengths from your Beetles model
+        # Field max lengths
         MAXLEN = {
             "alternative_id": 255,
             "image_institution": 255,
@@ -200,13 +202,33 @@ class Command(BaseCommand):
                 # max-length checks for required char fields
                 _enforce_maxlen("depicts_valid_name_id", depicts_valid_name_id, MAXLEN["depicts_valid_name_id"], row_num)
 
-                # --- CharField group (no clipping, enforce maxlen) ---
-                char_fields = [
-                    ("alternative_id", MAXLEN["alternative_id"]),
+                # --- 1. SEPARATE FIELDS: ImageAsset vs Beetles ---
+
+                # A. Fields that belong to ImageAsset
+                image_fields_map = [
                     ("image_institution", MAXLEN["image_institution"]),
                     ("photographer", MAXLEN["photographer"]),
                     ("image_email", MAXLEN["image_email"]),
-                    ("aspect", MAXLEN["aspect"]),
+                ]
+                
+                image_defaults = {}
+                for field_name, maxlen in image_fields_map:
+                    val = _none(row.get(field_name))
+                    _enforce_maxlen(field_name, val, maxlen, row_num)
+                    image_defaults[field_name] = val
+
+                # Add non-char fields for ImageAsset
+                image_defaults["photo_usage_statement"] = _none(row.get("photo_usage_statement"))
+                image_defaults["resolution_in_ppmm"] = _to_decimal_12_4(row.get("resolution_in_ppmm"))
+                image_defaults["image_notes"] = _none(row.get("image_notes"))
+                image_defaults["image_date_taken"] = _to_date(row.get("image_date_taken"))
+                image_defaults["image_has_multiple_individuals"] = _to_bool(row.get("image_has_multiple_individuals"))
+
+
+                # B. Fields that belong to Beetles
+                beetle_fields_map = [
+                    ("alternative_id", MAXLEN["alternative_id"]),
+                    ("aspect", MAXLEN["aspect"]), # Kept on Beetles!
                     ("depicts_specimen", MAXLEN["depicts_specimen"]),
                     ("depicts_described_name_id", MAXLEN["depicts_described_name_id"]),
                     ("depicts_name_verbatim", MAXLEN["depicts_name_verbatim"]),
@@ -215,39 +237,44 @@ class Command(BaseCommand):
                     ("specimen_sex", MAXLEN["specimen_sex"]),
                     ("specimen_type_status", MAXLEN["specimen_type_status"]),
                 ]
-                values = {}
-                for field_name, maxlen in char_fields:
+
+                beetle_values = {}
+                for field_name, maxlen in beetle_fields_map:
                     val = _none(row.get(field_name))
                     _enforce_maxlen(field_name, val, maxlen, row_num)
-                    values[field_name] = val
+                    beetle_values[field_name] = val
+                
+                # Add non-char fields for Beetles
+                beetle_values["specimen_notes"] = _none(row.get("specimen_notes"))
 
-                # --- Non-CharField group ---
-                photo_usage_statement = _none(row.get("photo_usage_statement"))  # TextField
-                resolution_in_ppmm = _to_decimal_12_4(row.get("resolution_in_ppmm"))  # Decimal(12,4)
-                image_notes = _none(row.get("image_notes"))  # TextField
-                image_date_taken = _to_date(row.get("image_date_taken"))  # DateField
-                image_has_multiple_individuals = _to_bool(row.get("image_has_multiple_individuals"))  # BooleanField
-                specimen_notes = _none(row.get("specimen_notes"))  # TextField
 
-                # --- Optional provisional duplicate guard (disabled by default) ---
-                if RAISE_ON_DUP and Beetles.objects.filter(full_path_at_import=full_path_at_import).exists():
-                    raise CommandError(
-                        f"Row {row_num}: a record with this full_path_at_import already exists. "
-                        f"Refusing to overwrite (importer is create-only)."
+                # --- 2. GET OR CREATE THE IMAGE ASSET ---
+                # We use full_path_at_import as the unique key for the metadata import.
+                # If an image with this path already exists, we reuse it (and ignore differing metadata in this row).
+                # If it doesn't exist, we create it.
+                image_asset, img_created = ImageAsset.objects.get_or_create(
+                    full_path_at_import=full_path_at_import,
+                    defaults=image_defaults
+                )
+
+                if img_created:
+                    new_images += 1
+
+                # --- 3. DUPLICATE CHECK (Beetle Level) ---
+                # Check if this exact image already has a beetle record (if we are being strict)
+                # Note: We now filter through the relationship 'image_asset__full_path_at_import'
+                if RAISE_ON_DUP and Beetles.objects.filter(image_asset__full_path_at_import=full_path_at_import).exists():
+                     raise CommandError(
+                        f"Row {row_num}: a record for path '{full_path_at_import}' already exists. "
+                        f"Refusing to overwrite."
                     )
 
-                # --- Create row ---
+
+                # --- 4. CREATE THE BEETLE RECORD ---
                 obj = Beetles.objects.create(
-                    full_path_at_import=full_path_at_import,
+                    image_asset=image_asset,  # LINKED HERE
                     depicts_valid_name_id=depicts_valid_name_id,
-                    photo_usage_statement=photo_usage_statement,
-                    resolution_in_ppmm=resolution_in_ppmm,
-                    image_notes=image_notes,
-                    image_date_taken=image_date_taken,
-                    image_has_multiple_individuals=image_has_multiple_individuals,
-                    specimen_notes=specimen_notes,
-                    # image_sha256 will be set by the validation/import pipeline later
-                    **values,  # injects all CharField values we validated above
+                    **beetle_values
                 )
                 created_beetles += 1
 
@@ -264,5 +291,5 @@ class Command(BaseCommand):
                 raise transaction.TransactionManagementError("Rollback for DRY-RUN")
 
         self.stdout.write(
-            self.style.SUCCESS(f"Import complete. Beetles created: {created_beetles}")
-            )
+            self.style.SUCCESS(f"Import complete. Beetles created: {created_beetles} | New ImageAssets: {new_images}")
+        )

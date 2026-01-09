@@ -296,11 +296,11 @@ FIELD_MAP = {
 
     # Short text (icontains)
     "alternative id": "alternative_id",
-    "image institution": "image_institution",
-    "photographer": "photographer",
-    "email": "image_email",
-    "photo usage": "photo_usage_statement",
-    "aspect": "aspect",
+    "image institution": "image_asset__image_institution", # UPDATED
+    "photographer": "image_asset__photographer",           # UPDATED
+    "email": "image_asset__image_email",                   # UPDATED
+    "photo usage": "image_asset__photo_usage_statement",   # UPDATED
+    "aspect": "aspect",                                    # KEPT on Beetles
     "specimen": "depicts_specimen",
     "name (verbatim)": "depicts_name_verbatim",
     "country": "collection_country",
@@ -309,13 +309,13 @@ FIELD_MAP = {
     
     # New searchable fields
     "specimen notes": "specimen_notes",
-    "image notes": "image_notes",
+    "image notes": "image_asset__image_notes",             # UPDATED
 
     # Special handling fields
-    "sex": "specimen_sex",                                     # normalized m/f
-    "multiple individuals": "image_has_multiple_individuals",  # boolean yes/no
-    "image date": "image_date_taken",                          # YYYY / YYYY-MM / YYYY-MM-DD
-    "resolution": "resolution_in_ppmm",                        # numeric with operators
+    "sex": "specimen_sex",                                     
+    "multiple individuals": "image_asset__image_has_multiple_individuals",  # UPDATED
+    "image date": "image_asset__image_date_taken",                          # UPDATED
+    "resolution": "image_asset__resolution_in_ppmm",                        # UPDATED
 }
 
 # CSV-backed fields (reference lookups)
@@ -327,12 +327,22 @@ OPERATORS = set(OP_PRECEDENCE.keys())
 
 # Fields to search when user provides "free text" (not Field:Value)
 FREE_TEXT_FIELDS = [
-    "alternative_id", "image_institution", "photographer", "image_email", 
-    "photo_usage_statement", "image_notes", "depicts_specimen", 
-    "depicts_valid_name_id", "depicts_described_name_id", 
-    "depicts_name_verbatim", "collection_country", "collection_stateProvince", 
-    "specimen_type_status", "specimen_notes",
-    "aspect", "specimen_sex"
+    "alternative_id", 
+    "image_asset__image_institution", # UPDATED
+    "image_asset__photographer",      # UPDATED
+    "image_asset__image_email",       # UPDATED
+    "image_asset__photo_usage_statement", # UPDATED
+    "image_asset__image_notes",       # UPDATED
+    "depicts_specimen", 
+    "depicts_valid_name_id", 
+    "depicts_described_name_id", 
+    "depicts_name_verbatim", 
+    "collection_country", 
+    "collection_stateProvince", 
+    "specimen_type_status", 
+    "specimen_notes",
+    "aspect", 
+    "specimen_sex"
 ]
 
 
@@ -555,9 +565,10 @@ def _clause_to_q(field_label: str, value: str, ignored):
 
     # Handle "N/A" or empty values
     if value is None or value == "" or value.strip().upper() == "N/A":
-        if model_field == "image_date_taken":
+        # UPDATED: Check correct model field name
+        if model_field == "image_asset__image_date_taken":
             # Prevents: django.core.exceptions.ValidationError: ['“” value has an invalid date format.']
-            return Q(image_date_taken__isnull=True)
+            return Q(**{f"{model_field}__isnull": True})
         
         return (
             Q(**{f"{model_field}__isnull": True}) |
@@ -589,26 +600,29 @@ def _clause_to_q(field_label: str, value: str, ignored):
         return Q(specimen_sex__iexact=code)
 
     # Boolean
-    if model_field == "image_has_multiple_individuals":
+    # UPDATED: Check against new field name
+    if model_field == "image_asset__image_has_multiple_individuals":
         b = _normalize_bool(value)
         if b is None:
             ignored.append(f"invalid boolean '{value}' (use yes/no/true/false/1/0)")
             return None
-        return Q(image_has_multiple_individuals=b)
+        return Q(**{model_field: b})
 
     # Date prefixes
-    if model_field == "image_date_taken":
+    # UPDATED: Check against new field name
+    if model_field == "image_asset__image_date_taken":
         start, end = _parse_date_prefix(value)
         if start and end is None:
             # exact day
-            return Q(image_date_taken=start)
+            return Q(**{model_field: start})
         if start and end:
-            return Q(image_date_taken__gte=start, image_date_taken__lt=end)
+            return Q(**{f"{model_field}__gte": start, f"{model_field}__lt": end})
         ignored.append(f"invalid date '{value}' (YYYY or YYYY-MM or YYYY-MM-DD)")
         return None
 
     # Numeric with operators
-    if model_field == "resolution_in_ppmm":
+    # UPDATED: Check against new field name
+    if model_field == "image_asset__resolution_in_ppmm":
         op, num = _parse_numeric(value)
         if op is None:
             ignored.append(f"invalid numeric '{value}' (try >=10, < 5.5, =12)")
@@ -711,12 +725,17 @@ FILTERS_CONFIG = [
     {"category": "Collection", "param": "sex", "type": "db", "field": "specimen_sex", "label": "Sex"},
 
     # --- IMAGE DETAILS ---
-    {"category": "Image Details", "param": "institution", "type": "db", "field": "image_institution", "label": "Institution"},
-    {"category": "Image Details", "param": "photographer", "type": "db", "field": "photographer", "label": "Photographer"},
-    {"category": "Image Details", "param": "usage", "type": "db", "field": "photo_usage_statement", "label": "Photo Usage"},
+    # UPDATED FIELDS
+    {"category": "Image Details", "param": "institution", "type": "db", "field": "image_asset__image_institution", "label": "Institution"},
+    {"category": "Image Details", "param": "photographer", "type": "db", "field": "image_asset__photographer", "label": "Photographer"},
+    {"category": "Image Details", "param": "usage", "type": "db", "field": "image_asset__photo_usage_statement", "label": "Photo Usage"},
+    
+    # Aspect remains on Beetles
     {"category": "Image Details", "param": "aspect", "type": "db", "field": "aspect", "label": "Aspect"},
-    {"category": "Image Details", "param": "date_taken", "type": "db", "field": "image_date_taken", "label": "Image Date"},
-    {"category": "Image Details", "param": "multiple", "type": "bool", "field": "image_has_multiple_individuals", "label": "Multiple Individuals"},
+    
+    # UPDATED FIELDS
+    {"category": "Image Details", "param": "date_taken", "type": "db", "field": "image_asset__image_date_taken", "label": "Image Date"},
+    {"category": "Image Details", "param": "multiple", "type": "bool", "field": "image_asset__image_has_multiple_individuals", "label": "Multiple Individuals"},
 ]
 
 # In beetlesgallery/beetles_app/views.py
@@ -759,24 +778,24 @@ def gallery(request):
 
     # Helper: Apply filters (Updated for Lists)
     def apply_filters(qs, filters_dict, exclude_param=None):
-        # Apply Size Filter
+        # Apply Size Filter (now on image_asset)
         if size_min:
             try:
-                qs = qs.filter(image_size_bytes__gte=float(size_min) * 1024 * 1024)
+                qs = qs.filter(image_asset__image_size_bytes__gte=float(size_min) * 1024 * 1024)
             except ValueError: pass
         if size_max:
             try:
-                qs = qs.filter(image_size_bytes__lte=float(size_max) * 1024 * 1024)
+                qs = qs.filter(image_asset__image_size_bytes__lte=float(size_max) * 1024 * 1024)
             except ValueError: pass
 
-        # Apply Resolution Filter
+        # Apply Resolution Filter (now on image_asset)
         if res_min:
             try:
-                qs = qs.filter(resolution_in_ppmm__gte=float(res_min))
+                qs = qs.filter(image_asset__resolution_in_ppmm__gte=float(res_min))
             except ValueError: pass
         if res_max:
             try:
-                qs = qs.filter(resolution_in_ppmm__lte=float(res_max))
+                qs = qs.filter(image_asset__resolution_in_ppmm__lte=float(res_max))
             except ValueError: pass
 
         for param, vals in filters_dict.items():
@@ -795,7 +814,7 @@ def gallery(request):
                     q_part |= Q(**{f"{cfg['field']}__in": real_vals})
                 
                 if has_na:
-                    if cfg["field"] == "image_date_taken":
+                    if cfg["field"] == "image_asset__image_date_taken":
                         # Only use isnull for DateFields
                         q_part |= Q(**{f"{cfg['field']}__isnull": True})
                     else:
@@ -857,7 +876,7 @@ def gallery(request):
             opts_qs = ctx_qs.exclude(**{f"{cfg['field']}__isnull": True})
             
             # Date fields cannot be empty strings, so only exclude nulls for them
-            if cfg["field"] == "image_date_taken":
+            if cfg["field"] == "image_asset__image_date_taken":
                 options = list(opts_qs.values_list(cfg['field'], flat=True).distinct().order_by(cfg['field']))
                 # Use only isnull check for dates to avoid ValidationError
                 na_check = ctx_qs.filter(**{f"{cfg['field']}__isnull": True}).exists()
@@ -919,7 +938,8 @@ def gallery(request):
         b.ref_tribe = clean(ref.get("tribe"))
         b.ref_subtribe = clean(ref.get("subtribe"))
         b.ref_subspecies = clean(ref.get("subspecies"))
-        b.warn_large = (b.image_size_bytes or 0) >= WARN_IMAGE_SIZE_BYTES
+        # UPDATED: Use image_asset size
+        b.warn_large = (b.image_asset.image_size_bytes or 0) >= WARN_IMAGE_SIZE_BYTES if b.image_asset else False
 
     return render(
         request,
@@ -965,7 +985,7 @@ def beetle_detail(request, beetle_id):
             Beetles.objects
             .filter(depicts_specimen=beetle.depicts_specimen)
             .exclude(pk=beetle.id)  # Exclude the current image
-            .only("id", "thumb_small", "depicts_specimen") # Optimize query
+            .select_related("image_asset")
         )
 
     # CSV-based enrichment for detail page (all fields) with "Unknown" fallback
