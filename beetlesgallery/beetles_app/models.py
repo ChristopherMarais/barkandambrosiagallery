@@ -10,6 +10,69 @@ from simple_history.models import HistoricalRecords
 # -----------------------------
 # Unified Beetle record
 # -----------------------------
+class ImageAsset(models.Model):
+    """
+    Represents the physical image file and its technical/provenance metadata.
+    One ImageAsset can be linked to multiple Beetles (specimens).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    # --- Identification ---
+    # We use SHA256 as the primary logic for deduplication
+    image_sha256 = models.CharField(max_length=64, null=True, blank=True, db_index=True, unique=True)
+    full_path_at_import = models.TextField(help_text="Original path/filename of the first import of this image.")
+
+    # --- Provenance / Copyright ---
+    image_institution = models.CharField(max_length=255, null=True, blank=True)
+    photographer = models.CharField(max_length=255, null=True, blank=True)
+    image_email = models.EmailField(null=True, blank=True)
+    photo_usage_statement = models.TextField(null=True, blank=True)
+    image_date_taken = models.DateField(null=True, blank=True)
+    image_notes = models.TextField(null=True, blank=True)
+    
+    # --- Technical Metadata ---
+    image_has_multiple_individuals = models.BooleanField(null=True, blank=True)
+    # aspect = models.CharField(max_length=100, null=True, blank=True)
+    resolution_in_ppmm = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True)
+    image_size_bytes = models.BigIntegerField(null=True, blank=True, db_index=True)
+
+    # --- Files (Content-Addressed) ---
+    image_file = models.ImageField(upload_to="", blank=True, null=True, max_length=500)
+    thumb_small = models.ImageField(upload_to="", blank=True, null=True, max_length=500)
+
+    # --- Dimensions ---
+    image_width = models.PositiveIntegerField(null=True, blank=True)
+    image_height = models.PositiveIntegerField(null=True, blank=True)
+    thumb_width = models.PositiveIntegerField(null=True, blank=True)
+    thumb_height = models.PositiveIntegerField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Image {self.image_sha256[:8] if self.image_sha256 else 'NoSHA'} ({self.full_path_at_import})"
+
+    # --- Helpers moved from Beetles ---
+    @staticmethod
+    def shard_from_sha(sha256: str) -> tuple[str, str]:
+        s = (sha256 or "").lower()
+        return s[:2], s[2:4]
+
+    @staticmethod
+    def path_for_display(sha256: str) -> str:
+        a, b = ImageAsset.shard_from_sha(sha256)
+        return f"display/{a}/{b}/{sha256}.jpg"
+
+    @property
+    def display_url(self):
+        if not self.image_file:
+            return ""
+        name = self.image_file.name.lower()
+        if name.endswith(".tif") or name.endswith(".tiff"):
+            if self.image_sha256:
+                path = ImageAsset.path_for_display(self.image_sha256)
+                return self.image_file.storage.url(path)
+        return self.image_file.url
 
 class Beetles(models.Model):
     """
@@ -21,20 +84,15 @@ class Beetles(models.Model):
     # Stable internal primary key
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-    # --- Image / file provenance ---
-    full_path_at_import = models.TextField()  # REQUIRED
-    alternative_id = models.CharField(max_length=255, null=True, blank=True)
-    image_institution = models.CharField(max_length=255, null=True, blank=True)
-    photographer = models.CharField(max_length=255, null=True, blank=True)
-    image_email = models.EmailField(null=True, blank=True)
-    photo_usage_statement = models.TextField(null=True, blank=True)
+    image_asset = models.ForeignKey(
+        ImageAsset, 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True, 
+        related_name='specimens'
+    )
+
     aspect = models.CharField(max_length=100, null=True, blank=True)
-    resolution_in_ppmm = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True)
-    image_notes = models.TextField(null=True, blank=True)
-    image_date_taken = models.DateField(null=True, blank=True)
-    image_has_multiple_individuals = models.BooleanField(null=True, blank=True)
-    image_sha256 = models.CharField(max_length=64, null=True, blank=True, db_index=True, unique=True)
-    image_size_bytes = models.BigIntegerField(null=True, blank=True, db_index=True)  # correct?
 
     # --- What the image depicts ---
     depicts_specimen = models.CharField(max_length=255, null=True, blank=True)
@@ -49,15 +107,8 @@ class Beetles(models.Model):
     specimen_type_status = models.CharField(max_length=100, null=True, blank=True)
     specimen_notes = models.TextField(null=True, blank=True)
 
-    # --- Stored copies (content-addressed locations under MEDIA_ROOT) ---
-    image_file = models.ImageField(upload_to="", blank=True, null=True, max_length=500)
-    thumb_small = models.ImageField(upload_to="", blank=True, null=True, max_length=500)
-
-    # --- UI layout of thumbnails ---
-    image_width = models.PositiveIntegerField(null=True, blank=True)
-    image_height = models.PositiveIntegerField(null=True, blank=True)
-    thumb_width = models.PositiveIntegerField(null=True, blank=True)
-    thumb_height = models.PositiveIntegerField(null=True, blank=True)
+    # --- Alternative identifiers ---
+    alternative_id = models.CharField(max_length=255, null=True, blank=True)
 
     # --- Bulk update attribution & concurrency ---
     last_updated_by = models.ForeignKey(
@@ -104,41 +155,35 @@ class Beetles(models.Model):
 
     @property
     def display_url(self):
-        """
-        Returns the URL of the generated JPEG if the original is a TIFF,
-        otherwise returns the URL of the original file.
-        """
-        if not self.image_file:
-            return ""
-        
-        # Check if the original is a TIFF
-        name = self.image_file.name.lower()
-        if name.endswith(".tif") or name.endswith(".tiff"):
-            if self.image_sha256:
-                # Return the URL for the converted display JPEG
-                path = Beetles.path_for_display(self.image_sha256)
-                return self.image_file.storage.url(path)
-        
-        # Default to the original image
-        return self.image_file.url
+        """Delegates display URL generation to the linked ImageAsset."""
+        if self.image_asset: 
+            return self.image_asset.display_url
+        return ""
+
+    @property
+    def resolved_image_file(self):
+        """Access the underlying ImageField from the asset."""
+        if self.image_asset: 
+            return self.image_asset.image_file
+        return None
 
     @staticmethod
     def shard_from_sha(sha256: str) -> tuple[str, str]:
-        """
-        Returns ('aa', 'bb') from the sha256 'aabb...'.
-        """
-        s = (sha256 or "").lower()
-        return s[:2], s[2:4]
+        return ImageAsset.shard_from_sha(sha256)
+
+    @staticmethod
+    def path_for_display(sha256: str) -> str:
+        return ImageAsset.path_for_display(sha256)
 
     @staticmethod
     def path_for_original(sha256: str, ext: str) -> str:
-        a, b = Beetles.shard_from_sha(sha256)
+        a, b = ImageAsset.shard_from_sha(sha256)
         ext = (ext or "").lstrip(".").lower() or "bin"
         return f"originals/{a}/{b}/{sha256}.{ext}"
 
     @staticmethod
     def path_for_thumb96(sha256: str, webp: bool = True) -> str:
-        a, b = Beetles.shard_from_sha(sha256)
+        a, b = ImageAsset.shard_from_sha(sha256)
         suffix = "webp" if webp else "jpg"
         return f"thumbnails/{a}/{b}/{sha256}_96.{suffix}"
 
