@@ -1,4 +1,9 @@
 services:
+  web:
+    volumes:
+      - .:/app          # Hot-reloading for code
+      - /app/.pixi      # The fix for Windows/Linux permission crash
+
   db:
     ports:
       - "5432:5432"
