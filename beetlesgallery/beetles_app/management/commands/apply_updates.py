@@ -228,8 +228,8 @@ class Command(BaseCommand):
                     _enforce_len(fname, v)
 
                 # For most fields, None means "no change"; for depicts_valid_name_id, None means "clear"
-                if v is None and not include_even_if_none:
-                    continue
+                # if v is None and not include_even_if_none:
+                #     continue
 
                 proposed[fname] = v
 

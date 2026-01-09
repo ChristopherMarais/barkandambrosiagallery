@@ -22,7 +22,6 @@
           <!-- When | Filename | Status | Error | Upload ID -->
           <col class="w-40" />
           <col />              <!-- flexible -->
-          <col class="w-40" /> <!-- Status -->
           <col class="w-[28rem]" /> <!-- Error (wider for messages) -->
           <col class="w-72" /> <!-- Upload ID wider -->
         </colgroup>
@@ -32,7 +31,6 @@
             <th class="text-left py-2 px-3">When</th>
             <th class="text-left px-3">Filename</th>
             <th class="text-left px-3">Status</th>
-            <th class="text-left px-3">Report</th>
             <th class="text-left px-3">Upload ID</th>
           </tr>
         </thead>
@@ -42,7 +40,6 @@
           <tr class="border-t border-gray-200">
             <td class="py-2 px-3 whitespace-nowrap">{{ b.created_at|date:"Y-m-d H:i" }}</td>
             <td class="px-3">{{ b.original_filename }}</td>
-            <td class="px-3">{{ b.get_status_display }}</td>
 
             <!-- Report column -->
             <td class="px-3 text-sm">
@@ -254,7 +251,7 @@
             <th class="text-left px-3">Request</th>
             <th class="text-left px-3">Requested</th>
             <th class="text-left px-3">Status</th>
-            <th class="text-left px-3">Actions</th>
+            <th class="text-left px-3">Downloads</th>
             <th class="text-left px-3">Job ID</th>
           </tr>
         </thead>
@@ -312,10 +309,10 @@
 
             <td class="py-2 px-3 space-x-2 whitespace-nowrap">
               {% if j.tsv_file %}
-                <a href="{{ j.tsv_file.url }}" class="underline hover:no-underline">TSV</a>
+                <a href="{{ j.tsv_file.url }}" class="underline hover:no-underline">Metadata.tsv</a>
               {% endif %}
               {% if j.zip_file %}
-                <a href="{{ j.zip_file.url }}" class="underline hover:no-underline">ZIP</a>
+                <a href="{{ j.zip_file.url }}" class="underline hover:no-underline">Images.zip</a>
               {% endif %}
               {% if not j.tsv_file and not j.zip_file %}
                 <span class="text-text/60 text-xs">No files yet</span>
