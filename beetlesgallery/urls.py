@@ -26,6 +26,7 @@ urlpatterns = [
     path('beetles/', beetles_views.gallery, name='beetles_home'),
 
     path('beetles/<uuid:beetle_id>/', beetles_views.beetle_detail, name='beetle_detail'),
+    path("beetles/add_specimen/<uuid:image_id>/", beetles_views.create_specimen_for_image, name="create_specimen_for_image"),
 
     # --- Tools ---
     path('upload/', beetles_views.upload_file, name='upload'),

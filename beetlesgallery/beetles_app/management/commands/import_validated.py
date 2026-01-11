@@ -4,7 +4,7 @@ from django.db.utils import DataError
 from django.core.files.base import ContentFile
 # from django.utils import timezone
 
-from beetlesgallery.beetles_app.models import Beetles, UploadBatch
+from beetlesgallery.beetles_app.models import Beetles, UploadBatch, ImageAsset
 from beetlesgallery.beetles_app.schema import REQUIRED_COLS
 from beetlesgallery.beetles_app.utils import get_system_user
 
@@ -437,26 +437,51 @@ class Command(BaseCommand):
                         tw, th = saved["thumb_size"]
 
                         try:
-                            # Final create (create-only; validator already prevented dup hashes)
-                            new_obj = Beetles.objects.create(
+                            # 1. Prepare ImageAsset Defaults
+                            image_defaults = {
+                                'image_institution': values.get('image_institution'),
+                                'photographer': values.get('photographer'),
+                                'image_email': values.get('image_email'),
+                                'photo_usage_statement': photo_usage_statement,
+                                'image_date_taken': image_date_taken,
+                                'image_notes': image_notes,
+                                'image_has_multiple_individuals': image_has_multiple_individuals,
+                                'resolution_in_ppmm': resolution_in_ppmm,
+                                'image_sha256': image_sha256,
+                                'image_size_bytes': size_bytes,
+                                # Physical file fields
+                                'image_file': orig_rel,
+                                'thumb_small': thumb_rel,
+                                'image_width': img_w,
+                                'image_height': img_h,
+                                'thumb_width': tw,
+                                'thumb_height': th,
+                            }
+
+                            # 2. Get or Create ImageAsset
+                            # We use full_path_at_import as the unique key. 
+                            # If it exists, we link to it (and do NOT overwrite metadata).
+                            image_asset, created = ImageAsset.objects.get_or_create(
                                 full_path_at_import=full_path_at_import,
-                                depicts_valid_name_id=depicts_valid_name_id,
-                                photo_usage_statement=photo_usage_statement,
-                                resolution_in_ppmm=resolution_in_ppmm,
-                                image_notes=image_notes,
-                                image_date_taken=image_date_taken,
-                                image_has_multiple_individuals=image_has_multiple_individuals,
-                                specimen_notes=specimen_notes,
-                                image_sha256=image_sha256,
-                                image_file=orig_rel,         
-                                thumb_small=thumb_rel,       
-                                image_width=img_w,           
-                                image_height=img_h,          
-                                thumb_width=tw,              
-                                thumb_height=th, 
-                                image_size_bytes=size_bytes,            
-                                **values,
+                                defaults=image_defaults
                             )
+
+                            # 3. Create Beetle Record
+                            new_obj = Beetles.objects.create(
+                                image_asset=image_asset,
+                                depicts_valid_name_id=depicts_valid_name_id,
+                                depicts_described_name_id=values.get('depicts_described_name_id'),
+                                depicts_specimen=values.get('depicts_specimen'),
+                                depicts_name_verbatim=values.get('depicts_name_verbatim'),
+                                alternative_id=values.get('alternative_id'),
+                                aspect=values.get('aspect'),
+                                collection_country=values.get('collection_country'),
+                                collection_stateProvince=values.get('collection_stateProvince'),
+                                specimen_sex=values.get('specimen_sex'),
+                                specimen_type_status=values.get('specimen_type_status'),
+                                specimen_notes=specimen_notes,
+                            )
+                            
                             created_beetles += 1
 
                             # one per batch

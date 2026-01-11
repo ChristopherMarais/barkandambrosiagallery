@@ -5,7 +5,7 @@ import os
 import unicodedata
 
 from beetlesgallery.beetles_app import species_ref
-from beetlesgallery.beetles_app.models import Beetles, UploadBatch
+from beetlesgallery.beetles_app.models import Beetles, UploadBatch, ImageAsset
 from django.core.management.base import BaseCommand
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
@@ -353,7 +353,7 @@ class Command(BaseCommand):
         # Hashes are compared through single indexed look-up, not pairwise comparisons
         # Refuse to validate an upload that would create duplicate images (by content hash)
         existing = set(
-            Beetles.objects.filter(image_sha256__in=hashes).values_list("image_sha256", flat=True)
+            ImageAsset.objects.filter(image_sha256__in=hashes).values_list("image_sha256", flat=True)
         )
 
         if existing:

@@ -25,7 +25,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.files.storage import default_storage
 
 from . import species_ref
-from .models import Beetles, UploadBatch, DownloadJob, UpdateBatch
+from .models import Beetles, UploadBatch, DownloadJob, UpdateBatch, ImageAsset
 from .schema import REQUIRED_COLS, MAX_ROWS
 from .forms import TailwindUserCreationForm, ProfileForm, PasswordChangeFormStyled, ValidSpeciesUploadForm, UpdateBatchUploadForm
 
@@ -87,7 +87,7 @@ class PostOnlyLogoutView(LogoutView):
 
 def landing(request):
     # 1. Total number of images
-    total_images = Beetles.objects.count()
+    total_images = ImageAsset.objects.count()
 
     # 2. Get all distinct valid_name_ids associated with actual images
     # We need the actual list of IDs to look up taxonomy (Genera) in the CSV reference
@@ -296,11 +296,11 @@ FIELD_MAP = {
 
     # Short text (icontains)
     "alternative id": "alternative_id",
-    "image institution": "image_institution",
-    "photographer": "photographer",
-    "email": "image_email",
-    "photo usage": "photo_usage_statement",
-    "aspect": "aspect",
+    "image institution": "image_asset__image_institution", # UPDATED
+    "photographer": "image_asset__photographer",           # UPDATED
+    "email": "image_asset__image_email",                   # UPDATED
+    "photo usage": "image_asset__photo_usage_statement",   # UPDATED
+    "aspect": "aspect",                                    # KEPT on Beetles
     "specimen": "depicts_specimen",
     "name (verbatim)": "depicts_name_verbatim",
     "country": "collection_country",
@@ -309,13 +309,13 @@ FIELD_MAP = {
     
     # New searchable fields
     "specimen notes": "specimen_notes",
-    "image notes": "image_notes",
+    "image notes": "image_asset__image_notes",             # UPDATED
 
     # Special handling fields
-    "sex": "specimen_sex",                                     # normalized m/f
-    "multiple individuals": "image_has_multiple_individuals",  # boolean yes/no
-    "image date": "image_date_taken",                          # YYYY / YYYY-MM / YYYY-MM-DD
-    "resolution": "resolution_in_ppmm",                        # numeric with operators
+    "sex": "specimen_sex",                                     
+    "multiple individuals": "image_asset__image_has_multiple_individuals",  # UPDATED
+    "image date": "image_asset__image_date_taken",                          # UPDATED
+    "resolution": "image_asset__resolution_in_ppmm",                        # UPDATED
 }
 
 # CSV-backed fields (reference lookups)
@@ -327,12 +327,22 @@ OPERATORS = set(OP_PRECEDENCE.keys())
 
 # Fields to search when user provides "free text" (not Field:Value)
 FREE_TEXT_FIELDS = [
-    "alternative_id", "image_institution", "photographer", "image_email", 
-    "photo_usage_statement", "image_notes", "depicts_specimen", 
-    "depicts_valid_name_id", "depicts_described_name_id", 
-    "depicts_name_verbatim", "collection_country", "collection_stateProvince", 
-    "specimen_type_status", "specimen_notes",
-    "aspect", "specimen_sex"
+    "alternative_id", 
+    "image_asset__image_institution", # UPDATED
+    "image_asset__photographer",      # UPDATED
+    "image_asset__image_email",       # UPDATED
+    "image_asset__photo_usage_statement", # UPDATED
+    "image_asset__image_notes",       # UPDATED
+    "depicts_specimen", 
+    "depicts_valid_name_id", 
+    "depicts_described_name_id", 
+    "depicts_name_verbatim", 
+    "collection_country", 
+    "collection_stateProvince", 
+    "specimen_type_status", 
+    "specimen_notes",
+    "aspect", 
+    "specimen_sex"
 ]
 
 
@@ -555,9 +565,10 @@ def _clause_to_q(field_label: str, value: str, ignored):
 
     # Handle "N/A" or empty values
     if value is None or value == "" or value.strip().upper() == "N/A":
-        if model_field == "image_date_taken":
+        # UPDATED: Check correct model field name
+        if model_field == "image_asset__image_date_taken":
             # Prevents: django.core.exceptions.ValidationError: ['“” value has an invalid date format.']
-            return Q(image_date_taken__isnull=True)
+            return Q(**{f"{model_field}__isnull": True})
         
         return (
             Q(**{f"{model_field}__isnull": True}) |
@@ -589,26 +600,29 @@ def _clause_to_q(field_label: str, value: str, ignored):
         return Q(specimen_sex__iexact=code)
 
     # Boolean
-    if model_field == "image_has_multiple_individuals":
+    # UPDATED: Check against new field name
+    if model_field == "image_asset__image_has_multiple_individuals":
         b = _normalize_bool(value)
         if b is None:
             ignored.append(f"invalid boolean '{value}' (use yes/no/true/false/1/0)")
             return None
-        return Q(image_has_multiple_individuals=b)
+        return Q(**{model_field: b})
 
     # Date prefixes
-    if model_field == "image_date_taken":
+    # UPDATED: Check against new field name
+    if model_field == "image_asset__image_date_taken":
         start, end = _parse_date_prefix(value)
         if start and end is None:
             # exact day
-            return Q(image_date_taken=start)
+            return Q(**{model_field: start})
         if start and end:
-            return Q(image_date_taken__gte=start, image_date_taken__lt=end)
+            return Q(**{f"{model_field}__gte": start, f"{model_field}__lt": end})
         ignored.append(f"invalid date '{value}' (YYYY or YYYY-MM or YYYY-MM-DD)")
         return None
 
     # Numeric with operators
-    if model_field == "resolution_in_ppmm":
+    # UPDATED: Check against new field name
+    if model_field == "image_asset__resolution_in_ppmm":
         op, num = _parse_numeric(value)
         if op is None:
             ignored.append(f"invalid numeric '{value}' (try >=10, < 5.5, =12)")
@@ -711,12 +725,17 @@ FILTERS_CONFIG = [
     {"category": "Collection", "param": "sex", "type": "db", "field": "specimen_sex", "label": "Sex"},
 
     # --- IMAGE DETAILS ---
-    {"category": "Image Details", "param": "institution", "type": "db", "field": "image_institution", "label": "Institution"},
-    {"category": "Image Details", "param": "photographer", "type": "db", "field": "photographer", "label": "Photographer"},
-    {"category": "Image Details", "param": "usage", "type": "db", "field": "photo_usage_statement", "label": "Photo Usage"},
+    # UPDATED FIELDS
+    {"category": "Image Details", "param": "institution", "type": "db", "field": "image_asset__image_institution", "label": "Institution"},
+    {"category": "Image Details", "param": "photographer", "type": "db", "field": "image_asset__photographer", "label": "Photographer"},
+    {"category": "Image Details", "param": "usage", "type": "db", "field": "image_asset__photo_usage_statement", "label": "Photo Usage"},
+    
+    # Aspect remains on Beetles
     {"category": "Image Details", "param": "aspect", "type": "db", "field": "aspect", "label": "Aspect"},
-    {"category": "Image Details", "param": "date_taken", "type": "db", "field": "image_date_taken", "label": "Image Date"},
-    {"category": "Image Details", "param": "multiple", "type": "bool", "field": "image_has_multiple_individuals", "label": "Multiple Individuals"},
+    
+    # UPDATED FIELDS
+    {"category": "Image Details", "param": "date_taken", "type": "db", "field": "image_asset__image_date_taken", "label": "Image Date"},
+    {"category": "Image Details", "param": "multiple", "type": "bool", "field": "image_asset__image_has_multiple_individuals", "label": "Multiple Individuals"},
 ]
 
 # In beetlesgallery/beetles_app/views.py
@@ -759,24 +778,24 @@ def gallery(request):
 
     # Helper: Apply filters (Updated for Lists)
     def apply_filters(qs, filters_dict, exclude_param=None):
-        # Apply Size Filter
+        # Apply Size Filter (now on image_asset)
         if size_min:
             try:
-                qs = qs.filter(image_size_bytes__gte=float(size_min) * 1024 * 1024)
+                qs = qs.filter(image_asset__image_size_bytes__gte=float(size_min) * 1024 * 1024)
             except ValueError: pass
         if size_max:
             try:
-                qs = qs.filter(image_size_bytes__lte=float(size_max) * 1024 * 1024)
+                qs = qs.filter(image_asset__image_size_bytes__lte=float(size_max) * 1024 * 1024)
             except ValueError: pass
 
-        # Apply Resolution Filter
+        # Apply Resolution Filter (now on image_asset)
         if res_min:
             try:
-                qs = qs.filter(resolution_in_ppmm__gte=float(res_min))
+                qs = qs.filter(image_asset__resolution_in_ppmm__gte=float(res_min))
             except ValueError: pass
         if res_max:
             try:
-                qs = qs.filter(resolution_in_ppmm__lte=float(res_max))
+                qs = qs.filter(image_asset__resolution_in_ppmm__lte=float(res_max))
             except ValueError: pass
 
         for param, vals in filters_dict.items():
@@ -795,7 +814,7 @@ def gallery(request):
                     q_part |= Q(**{f"{cfg['field']}__in": real_vals})
                 
                 if has_na:
-                    if cfg["field"] == "image_date_taken":
+                    if cfg["field"] == "image_asset__image_date_taken":
                         # Only use isnull for DateFields
                         q_part |= Q(**{f"{cfg['field']}__isnull": True})
                     else:
@@ -857,7 +876,7 @@ def gallery(request):
             opts_qs = ctx_qs.exclude(**{f"{cfg['field']}__isnull": True})
             
             # Date fields cannot be empty strings, so only exclude nulls for them
-            if cfg["field"] == "image_date_taken":
+            if cfg["field"] == "image_asset__image_date_taken":
                 options = list(opts_qs.values_list(cfg['field'], flat=True).distinct().order_by(cfg['field']))
                 # Use only isnull check for dates to avoid ValidationError
                 na_check = ctx_qs.filter(**{f"{cfg['field']}__isnull": True}).exists()
@@ -898,6 +917,8 @@ def gallery(request):
             filter_context.append((cat, grouped_filters[cat]))
 
     # 5. Pagination
+    final_qs = final_qs.order_by("image_asset", "id").distinct("image_asset")
+    final_qs = final_qs.select_related("image_asset").prefetch_related("image_asset__specimens")
     paginator = Paginator(final_qs, page_size)
     page = request.GET.get("page", 1)
     try:
@@ -909,8 +930,10 @@ def gallery(request):
 
     # Enrichment
     for b in beetles_page.object_list:
+        # 1. Resolve Reference for the *representative* beetle
         raw_id = (str(b.depicts_valid_name_id).strip() if b.depicts_valid_name_id else None)
         ref = species_ref.resolve(raw_id)
+        
         def clean(val): return val if val and val.lower() != "unknown" else None
         b.ref_scientificName = clean(ref.get("scientificName"))
         b.ref_genus = clean(ref.get("genus"))
@@ -919,7 +942,54 @@ def gallery(request):
         b.ref_tribe = clean(ref.get("tribe"))
         b.ref_subtribe = clean(ref.get("subtribe"))
         b.ref_subspecies = clean(ref.get("subspecies"))
-        b.warn_large = (b.image_size_bytes or 0) >= WARN_IMAGE_SIZE_BYTES
+
+        # 2. Aggregation Logic
+        if b.image_asset:
+            siblings = b.image_asset.specimens.all()
+            b.siblings_count = len(siblings)
+            
+            # Helper: Check if there is more than 1 unique value (counting None as a value)
+            def check_multiple(attr):
+                values = {getattr(s, attr) for s in siblings}
+                return len(values) > 1
+
+            b.has_multiple_aspect = check_multiple("aspect")
+            b.has_multiple_country = check_multiple("collection_country")
+            b.has_multiple_sex = check_multiple("specimen_sex")
+            
+            # Taxonomy Aggregation
+            # Get all Valid IDs involved in this image
+            ids = {s.depicts_valid_name_id for s in siblings}
+            
+            # If we have >1 unique ID (e.g. "123" and None), we might have multiple ranks
+            if len(ids) > 1:
+                # Resolve all involved IDs to check ranks
+                refs = [species_ref.resolve(i) for i in ids]
+                
+                def check_rank(key):
+                    # collect unique values for this rank (e.g. "Platypus", "Crossotarsus")
+                    vals = {r.get(key) for r in refs}
+                    return len(vals) > 1
+                
+                b.has_multiple_subfamily = check_rank("subfamily")
+                b.has_multiple_tribe = check_rank("tribe")
+                b.has_multiple_subtribe = check_rank("subtribe")
+                b.has_multiple_genus = check_rank("genus")
+                b.has_multiple_species = check_rank("species")
+                b.has_multiple_subspecies = check_rank("subspecies")
+            else:
+                # All beetles have the same ID (or all None), so ranks are identical
+                b.has_multiple_subfamily = False
+                b.has_multiple_tribe = False
+                b.has_multiple_subtribe = False
+                b.has_multiple_genus = False
+                b.has_multiple_species = False
+                b.has_multiple_subspecies = False
+            
+            b.warn_large = (b.image_asset.image_size_bytes or 0) >= WARN_IMAGE_SIZE_BYTES
+        else:
+            b.siblings_count = 0
+            b.warn_large = False
 
     return render(
         request,
@@ -945,33 +1015,52 @@ def gallery(request):
 
 
 def beetle_detail(request, beetle_id):
-    # If user is not logged in, redirect to login with a message
     if not request.user.is_authenticated:
         login_url = reverse("login")
-        # Preserve the page they were trying to access
         return redirect(f"{login_url}?next={request.path}")
 
-    beetle = (
-        Beetles.objects
-        .all()
-        .get(pk=beetle_id)
-    )
+    # Fetch main object
+    beetle = get_object_or_404(Beetles, pk=beetle_id)
 
-    # Fetch related images of the same specimen
+    # 1. Siblings (Same Image, different specimen records) - For Pagination inside the card
+    siblings = []
+    if beetle.image_asset:
+        siblings = list(
+            beetle.image_asset.specimens.all()
+            .order_by("id") 
+        )
+
+    # Calculate pagination context
+    prev_sibling = None
+    next_sibling = None
+    current_index = 0
+    total_siblings = len(siblings)
+
+    if total_siblings > 1:
+        for i, s in enumerate(siblings):
+            if s.id == beetle.id:
+                current_index = i + 1
+                if i > 0:
+                    prev_sibling = siblings[i - 1]
+                if i < total_siblings - 1:
+                    next_sibling = siblings[i + 1]
+                break
+
+    # 2. Related Specimens (Same Specimen ID, different Images) - For "More images" section
     related_specimens = []
-    # Only search if specimen ID exists and is not just whitespace
     if beetle.depicts_specimen and beetle.depicts_specimen.strip():
         related_specimens = (
             Beetles.objects
             .filter(depicts_specimen=beetle.depicts_specimen)
-            .exclude(pk=beetle.id)  # Exclude the current image
-            .only("id", "thumb_small", "depicts_specimen") # Optimize query
+            .exclude(pk=beetle.id)  # Exclude current record
+            .order_by("image_asset", "id")
+            .distinct("image_asset") # One card per image
+            .select_related("image_asset")
         )
 
-    # CSV-based enrichment for detail page (all fields) with "Unknown" fallback
+    # CSV-based enrichment
     raw_vid = beetle.depicts_valid_name_id
     norm_vid = _normalize_valid_id_for_lookup(raw_vid)
-
     ref_species = species_ref.resolve(norm_vid) if norm_vid is not None else None
     ref_version = species_ref.get_version()
 
@@ -982,7 +1071,12 @@ def beetle_detail(request, beetle_id):
             "beetle": beetle, 
             "ref_species": ref_species, 
             "ref_version": ref_version,
-            "related_specimens": related_specimens, # Add to context
+            "siblings": siblings,
+            "total_siblings": total_siblings,
+            "current_sibling_index": current_index,
+            "prev_sibling": prev_sibling,
+            "next_sibling": next_sibling,
+            "related_specimens": related_specimens,
         },
     )
 
@@ -1518,3 +1612,107 @@ def update_single_beetle(request, beetle_id):
         messages.error(request, f"Failed to start update process: {e}")
 
     return redirect("beetle_detail", beetle_id=beetle_id)
+
+@login_required
+@staff_member_required
+@require_POST
+def update_single_beetle(request, beetle_id):
+    """
+    Receives individual field edits. Handles fields for both Beetles and ImageAsset.
+    """
+    beetle = get_object_or_404(Beetles, pk=beetle_id)
+    
+    row_data = {"record_id": str(beetle.id)}
+    
+    # Combined list of fields form detail.html
+    fields = [
+        "depicts_specimen", "depicts_valid_name_id", "depicts_described_name_id", 
+        "alternative_id", "depicts_name_verbatim", "image_institution", 
+        "photographer", "image_email", "photo_usage_statement", "aspect", 
+        "resolution_in_ppmm", "image_date_taken", "image_has_multiple_individuals", 
+        "collection_country", "collection_stateProvince", "specimen_sex", 
+        "specimen_type_status", "image_notes", "specimen_notes"
+    ]
+    
+    for f in fields:
+        val = request.POST.get(f)
+        if f == "image_has_multiple_individuals":
+            if val == "unknown": val = ""
+        row_data[f] = val
+
+    _run_update_batch(request, row_data, f"single_edit_{beetle.id}.xlsx")
+    messages.success(request, "Update queued successfully. Changes will appear shortly.")
+    return redirect("beetle_detail", beetle_id=beetle_id)
+
+
+@login_required
+@staff_member_required
+@require_POST
+def create_specimen_for_image(request, image_id):
+    """
+    Creates a NEW beetle record linked to an existing ImageAsset via 'Plus' button.
+    Forces 'image_has_multiple_individuals' to True.
+    """
+    image_asset = get_object_or_404(ImageAsset, pk=image_id)
+    
+    # 1. Update flag immediately on the image
+    if not image_asset.image_has_multiple_individuals:
+        image_asset.image_has_multiple_individuals = True
+        image_asset.save(update_fields=['image_has_multiple_individuals'])
+
+    # 2. Prepare payload for UpdateBatch (Special "NEW" mode)
+    row_data = {
+        "record_id": "NEW",
+        "link_image_uuid": str(image_asset.id),
+        # Ensure we send 'True' so the new record is consistent
+        "image_has_multiple_individuals": "True" 
+    }
+    
+    # Capture only Beetle-specific fields from the form
+    beetle_fields = [
+        "depicts_specimen", "depicts_valid_name_id", "depicts_described_name_id", 
+        "alternative_id", "depicts_name_verbatim", "aspect", 
+        "collection_country", "collection_stateProvince", "specimen_sex", 
+        "specimen_type_status", "specimen_notes"
+    ]
+    
+    for f in beetle_fields:
+        row_data[f] = request.POST.get(f)
+
+    _run_update_batch(request, row_data, f"add_specimen_{image_asset.id.hex[:8]}.xlsx")
+    
+    messages.success(request, "Update queued successfully. Changes will appear shortly.")
+    return redirect(request.META.get('HTTP_REFERER', 'home'))
+
+
+def _run_update_batch(request, row_data, filename):
+    """Helper to package row_data into an XLSX and spawn the processor."""
+    df = pd.DataFrame([row_data])
+    buffer = BytesIO()
+    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False)
+    buffer.seek(0)
+    
+    batch = UpdateBatch.objects.create(
+        uploaded_by=request.user,
+        original_filename=filename,
+        status=UpdateBatch.Status.STAGING,
+    )
+    
+    from django.core.files.base import ContentFile
+    batch.file.save(filename, ContentFile(buffer.read()), save=False)
+    batch.size_bytes = batch.file.size
+    batch.save()
+
+    # Trigger
+    manage_py = os.path.join(settings.BASE_DIR, "manage.py")
+    python = sys.executable or "python3"
+    try:
+        subprocess.Popen(
+            [python, manage_py, "process_single_update", "--id", str(batch.id)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            cwd=settings.BASE_DIR,
+        )
+    except Exception as e:
+        messages.error(request, f"Failed to start update process: {e}")
