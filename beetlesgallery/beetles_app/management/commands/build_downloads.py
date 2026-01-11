@@ -170,10 +170,10 @@ class Command(BaseCommand):
         """
         sampled = 0
         total_bytes = 0
-        for b in qs.only("image_file").iterator(chunk_size=500):
-            if not b.image_file:
+        for b in qs.select_related("image_asset").iterator(chunk_size=500):
+            if not (b.image_asset and b.image_asset.image_file):
                 continue
-            sz = self._storage_size(b.image_file)
+            sz = self._storage_size(b.image_asset.image_file)
             if sz:
                 total_bytes += sz
                 sampled += 1
@@ -201,10 +201,11 @@ class Command(BaseCommand):
 
         qs = (
             self._resolve_queryset(job)
+            .select_related("image_asset")
             .only(
                 "id", "depicts_valid_name_id", "depicts_specimen",
                 "collection_country", "specimen_sex", "specimen_type_status",
-                "image_file"
+                "image_asset",
             )
             .order_by("id")
         )
@@ -371,11 +372,13 @@ class Command(BaseCommand):
                 image_filename = ""
                 file_status = "missing"
 
-                if b.image_file:
-                    ext = os.path.splitext(b.image_file.name)[1].lstrip(".").lower() or "bin"
+                if b.image_asset and b.image_asset.image_file:
+                    f_obj = b.image_asset.image_file  # Helper variable
+                    
+                    ext = os.path.splitext(f_obj.name)[1].lstrip(".").lower() or "bin"
                     image_filename = f"{b.id}.{ext}"
                     try:
-                        src_path = b.image_file.path
+                        src_path = f_obj.path
                         if os.path.exists(src_path):
                             zf.write(src_path, arcname=image_filename)
                             file_status = "ok"; added += 1
@@ -383,7 +386,7 @@ class Command(BaseCommand):
                             raise FileNotFoundError
                     except Exception:
                         try:
-                            with b.image_file.storage.open(b.image_file.name, "rb") as sf, zf.open(image_filename, "w") as dest:
+                            with f_obj.storage.open(f_obj.name, "rb") as sf, zf.open(image_filename, "w") as dest:
                                 shutil.copyfileobj(sf, dest, length=1024 * 1024)
                             file_status = "ok"; added += 1
                         except Exception:
