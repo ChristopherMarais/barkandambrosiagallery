@@ -25,7 +25,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.files.storage import default_storage
 
 from . import species_ref
-from .models import Beetles, UploadBatch, DownloadJob, UpdateBatch
+from .models import Beetles, UploadBatch, DownloadJob, UpdateBatch, ImageAsset
 from .schema import REQUIRED_COLS, MAX_ROWS
 from .forms import TailwindUserCreationForm, ProfileForm, PasswordChangeFormStyled, ValidSpeciesUploadForm, UpdateBatchUploadForm
 
@@ -917,6 +917,7 @@ def gallery(request):
             filter_context.append((cat, grouped_filters[cat]))
 
     # 5. Pagination
+    final_qs = final_qs.select_related("image_asset").prefetch_related("image_asset__specimens")
     paginator = Paginator(final_qs, page_size)
     page = request.GET.get("page", 1)
     try:
@@ -928,8 +929,10 @@ def gallery(request):
 
     # Enrichment
     for b in beetles_page.object_list:
+        # 1. Resolve Reference
         raw_id = (str(b.depicts_valid_name_id).strip() if b.depicts_valid_name_id else None)
         ref = species_ref.resolve(raw_id)
+        
         def clean(val): return val if val and val.lower() != "unknown" else None
         b.ref_scientificName = clean(ref.get("scientificName"))
         b.ref_genus = clean(ref.get("genus"))
@@ -938,8 +941,31 @@ def gallery(request):
         b.ref_tribe = clean(ref.get("tribe"))
         b.ref_subtribe = clean(ref.get("subtribe"))
         b.ref_subspecies = clean(ref.get("subspecies"))
-        # UPDATED: Use image_asset size
-        b.warn_large = (b.image_asset.image_size_bytes or 0) >= WARN_IMAGE_SIZE_BYTES if b.image_asset else False
+        
+        # 2. Check for Multiple Values (Aggregation)
+        # We check siblings to see if values differ
+        if b.image_asset:
+            siblings = b.image_asset.specimens.all()
+            b.siblings_count = len(siblings)
+            
+            # Helper to check uniqueness
+            def check_multiple(attr):
+                values = {getattr(s, attr) for s in siblings if getattr(s, attr)}
+                return len(values) > 1
+
+            b.has_multiple_aspect = check_multiple("aspect")
+            b.has_multiple_country = check_multiple("collection_country")
+            b.has_multiple_sex = check_multiple("specimen_sex")
+            
+            # Check taxonomy multiplicity (based on valid_name_id)
+            # If IDs differ, then taxonomy differs
+            ids = {s.depicts_valid_name_id for s in siblings if s.depicts_valid_name_id}
+            b.has_multiple_taxonomy = len(ids) > 1
+            
+            b.warn_large = (b.image_asset.image_size_bytes or 0) >= WARN_IMAGE_SIZE_BYTES
+        else:
+            b.siblings_count = 0
+            b.warn_large = False
 
     return render(
         request,
@@ -971,27 +997,37 @@ def beetle_detail(request, beetle_id):
         # Preserve the page they were trying to access
         return redirect(f"{login_url}?next={request.path}")
 
-    beetle = (
-        Beetles.objects
-        .all()
-        .get(pk=beetle_id)
-    )
+    # Fetch main object
+    beetle = get_object_or_404(Beetles, pk=beetle_id)
 
-    # Fetch related images of the same specimen
-    related_specimens = []
-    # Only search if specimen ID exists and is not just whitespace
-    if beetle.depicts_specimen and beetle.depicts_specimen.strip():
-        related_specimens = (
-            Beetles.objects
-            .filter(depicts_specimen=beetle.depicts_specimen)
-            .exclude(pk=beetle.id)  # Exclude the current image
-            .select_related("image_asset")
+    # Fetch siblings (specimens sharing the same ImageAsset)
+    # We sort by ID to ensure stable pagination order
+    siblings = []
+    if beetle.image_asset:
+        siblings = list(
+            beetle.image_asset.specimens.all()
+            .order_by("id") # Ensure stable order
         )
 
-    # CSV-based enrichment for detail page (all fields) with "Unknown" fallback
+    # Calculate pagination context
+    prev_sibling = None
+    next_sibling = None
+    current_index = 0
+    total_siblings = len(siblings)
+
+    if total_siblings > 1:
+        for i, s in enumerate(siblings):
+            if s.id == beetle.id:
+                current_index = i + 1
+                if i > 0:
+                    prev_sibling = siblings[i - 1]
+                if i < total_siblings - 1:
+                    next_sibling = siblings[i + 1]
+                break
+
+    # CSV-based enrichment
     raw_vid = beetle.depicts_valid_name_id
     norm_vid = _normalize_valid_id_for_lookup(raw_vid)
-
     ref_species = species_ref.resolve(norm_vid) if norm_vid is not None else None
     ref_version = species_ref.get_version()
 
@@ -1002,7 +1038,11 @@ def beetle_detail(request, beetle_id):
             "beetle": beetle, 
             "ref_species": ref_species, 
             "ref_version": ref_version,
-            "related_specimens": related_specimens, # Add to context
+            "siblings": siblings,          # List of all siblings
+            "total_siblings": total_siblings,
+            "current_sibling_index": current_index,
+            "prev_sibling": prev_sibling,
+            "next_sibling": next_sibling,
         },
     )
 
@@ -1538,3 +1578,106 @@ def update_single_beetle(request, beetle_id):
         messages.error(request, f"Failed to start update process: {e}")
 
     return redirect("beetle_detail", beetle_id=beetle_id)
+
+@login_required
+@staff_member_required
+@require_POST
+def update_single_beetle(request, beetle_id):
+    """
+    Receives individual field edits. Handles fields for both Beetles and ImageAsset.
+    """
+    beetle = get_object_or_404(Beetles, pk=beetle_id)
+    
+    row_data = {"record_id": str(beetle.id)}
+    
+    # Combined list of fields form detail.html
+    fields = [
+        "depicts_specimen", "depicts_valid_name_id", "depicts_described_name_id", 
+        "alternative_id", "depicts_name_verbatim", "image_institution", 
+        "photographer", "image_email", "photo_usage_statement", "aspect", 
+        "resolution_in_ppmm", "image_date_taken", "image_has_multiple_individuals", 
+        "collection_country", "collection_stateProvince", "specimen_sex", 
+        "specimen_type_status", "image_notes", "specimen_notes"
+    ]
+    
+    for f in fields:
+        val = request.POST.get(f)
+        if f == "image_has_multiple_individuals":
+            if val == "unknown": val = ""
+        row_data[f] = val
+
+    _run_update_batch(request, row_data, f"single_edit_{beetle.id}.xlsx")
+    return redirect("beetle_detail", beetle_id=beetle_id)
+
+
+@login_required
+@staff_member_required
+@require_POST
+def create_specimen_for_image(request, image_id):
+    """
+    Creates a NEW beetle record linked to an existing ImageAsset via 'Plus' button.
+    Forces 'image_has_multiple_individuals' to True.
+    """
+    image_asset = get_object_or_404(ImageAsset, pk=image_id)
+    
+    # 1. Update flag immediately on the image
+    if not image_asset.image_has_multiple_individuals:
+        image_asset.image_has_multiple_individuals = True
+        image_asset.save(update_fields=['image_has_multiple_individuals'])
+
+    # 2. Prepare payload for UpdateBatch (Special "NEW" mode)
+    row_data = {
+        "record_id": "NEW",
+        "link_image_uuid": str(image_asset.id),
+        # Ensure we send 'True' so the new record is consistent
+        "image_has_multiple_individuals": "True" 
+    }
+    
+    # Capture only Beetle-specific fields from the form
+    beetle_fields = [
+        "depicts_specimen", "depicts_valid_name_id", "depicts_described_name_id", 
+        "alternative_id", "depicts_name_verbatim", "aspect", 
+        "collection_country", "collection_stateProvince", "specimen_sex", 
+        "specimen_type_status", "specimen_notes"
+    ]
+    
+    for f in beetle_fields:
+        row_data[f] = request.POST.get(f)
+
+    _run_update_batch(request, row_data, f"add_specimen_{image_asset.id.hex[:8]}.xlsx")
+    
+    messages.success(request, "New specimen queued for creation. It will appear shortly.")
+    return redirect(request.META.get('HTTP_REFERER', 'home'))
+
+
+def _run_update_batch(request, row_data, filename):
+    """Helper to package row_data into an XLSX and spawn the processor."""
+    df = pd.DataFrame([row_data])
+    buffer = BytesIO()
+    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False)
+    buffer.seek(0)
+    
+    batch = UpdateBatch.objects.create(
+        uploaded_by=request.user,
+        original_filename=filename,
+        status=UpdateBatch.Status.STAGING,
+    )
+    
+    from django.core.files.base import ContentFile
+    batch.file.save(filename, ContentFile(buffer.read()), save=False)
+    batch.size_bytes = batch.file.size
+    batch.save()
+
+    # Trigger
+    manage_py = os.path.join(settings.BASE_DIR, "manage.py")
+    python = sys.executable or "python3"
+    try:
+        subprocess.Popen(
+            [python, manage_py, "process_single_update", "--id", str(batch.id)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            cwd=settings.BASE_DIR,
+        )
+    except Exception as e:
+        messages.error(request, f"Failed to start update process: {e}")

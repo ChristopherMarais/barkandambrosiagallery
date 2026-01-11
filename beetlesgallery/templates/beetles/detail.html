@@ -80,230 +80,200 @@
         {% endif %}
       </div>
 
-      {# --- METADATA SIDEBAR (Editable) --- #}
+      {# --- RIGHT COLUMN: METADATA FORM --- #}
       <aside class="lg:col-span-4">
-        <div class="rounded-xl bg-primary2 p-4 ring-1 ring-text/10 sticky top-4">
-          
-          {# --- Image Details Header with Edit/Save/Cancel Buttons --- #}
-          <div class="flex items-center justify-between mb-4 h-8">
-              <h2 class="text-md font-semibold uppercase tracking-wider text-text/80">Image Details</h2>
-              {% if request.user.is_staff %}
-                  <div class="flex items-center gap-2">
-                      {# Edit Button (Pen Icon) #}
-                      <button type="button" id="edit-btn" onclick="toggleEditMode()" 
-                              class="text-gray-400 hover:text-blue-600 transition p-1 rounded hover:bg-black/5" 
-                              title="Edit Metadata">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                          </svg>
-                      </button>
+        
+        {# --- PAGINATION HEADER (Only if multiple siblings exist) --- #}
+        {% if total_siblings > 1 %}
+        <div class="mb-4 flex items-center justify-between bg-primary2 rounded-xl p-2 border border-text/10 shadow-sm">
+            <div class="text-xs font-bold text-text/50 uppercase tracking-wide px-2">
+                Specimen {{ current_sibling_index }} of {{ total_siblings }}
+            </div>
+            <div class="flex items-center gap-1">
+                {% if prev_sibling %}
+                    <a href="{% url 'beetle_detail' beetle_id=prev_sibling.id %}" class="p-1 rounded hover:bg-black/5 text-text/70 hover:text-black transition" title="Previous Specimen">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                    </a>
+                {% else %}
+                    <span class="p-1 text-text/20 cursor-not-allowed"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></span>
+                {% endif %}
 
-                      {# Save & Cancel Buttons (Hidden by default) #}
-                      <button type="button" id="cancel-btn" onclick="toggleEditMode()" 
-                              class="hidden rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold text-red-700 hover:bg-red-100 transition">
-                          Cancel
-                      </button>
-                      <button type="submit" id="save-btn" 
-                              class="hidden rounded-md border border-green-200 bg-green-50 px-3 py-1 text-xs font-bold text-green-700 hover:bg-green-100 transition">
-                          Save
-                      </button>
-                  </div>
-              {% endif %}
-          </div>
-
-          {# --- Identity --- #}
-          <h3 class="mt-2 mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Identity</h3>
-          <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
-            <dt class="col-span-1 text-text/60">Specimen ID</dt>
-            <dd class="col-span-2 text-text">
-                <span class="view-field">{{ beetle.depicts_specimen|default:"—" }}</span>
-                <input type="text" name="depicts_specimen" value="{{ beetle.depicts_specimen|default:'' }}" class="edit-field hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-            </dd>
-
-            <dt class="col-span-1 text-text/60">Valid name ID</dt>
-            <dd class="col-span-2 text-text">
-                <span class="view-field">{{ beetle.depicts_valid_name_id|default:"Unknown" }}</span>
-                <input type="text" name="depicts_valid_name_id" value="{{ beetle.depicts_valid_name_id|default:'' }}" class="edit-field hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-            </dd>
-
-            <dt class="col-span-1 text-text/60">Described name ID</dt>
-            <dd class="col-span-2 text-text">
-                <span class="view-field">{{ beetle.depicts_described_name_id|default:"—" }}</span>
-                <input type="text" name="depicts_described_name_id" value="{{ beetle.depicts_described_name_id|default:'' }}" class="edit-field hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-            </dd>
-
-            <dt class="col-span-1 text-text/60">Alternative ID</dt>
-            <dd class="col-span-2 text-text">
-                <span class="view-field">{{ beetle.alternative_id|default:"—" }}</span>
-                <input type="text" name="alternative_id" value="{{ beetle.alternative_id|default:'' }}" class="edit-field hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-            </dd>
-          </dl>
-
-          {# --- Taxonomy --- #}
-          <section class="mt-4">
-            <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Taxonomy</h3>
-            <p class="edit-field hidden text-xs text-orange-600 mb-2 italic">
-               Note: To update Scientific Name, Genus, etc., please update the <strong>Valid Name ID</strong> above.
-            </p>
-
-            {% if ref_species %}
-            <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
-              <dt class="col-span-1 text-text/60">Name (verbatim)</dt>
-              <dd class="col-span-2 text-text">
-                  <span class="view-field">{{ beetle.depicts_name_verbatim|default:"—" }}</span>
-                  <input type="text" name="depicts_name_verbatim" value="{{ beetle.depicts_name_verbatim|default:'' }}" class="edit-field hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-              </dd>
-
-              <dt class="col-span-1 text-text/60">Scientific Name</dt>
-              <dd class="col-span-2 text-text">{{ ref_species.scientificName|default:"—" }}</dd>
-
-              <dt class="col-span-1 text-text/60">Authority</dt>
-              <dd class="col-span-2 text-text">{{ ref_species.scientificNameAuthority|default:"—" }}</dd>
-
-              <dt class="col-span-1 text-text/60">Subfamily</dt>
-              <dd class="col-span-2 text-text">{{ ref_species.subfamily|default:"—" }}</dd>
-
-              <dt class="col-span-1 text-text/60">Tribe</dt>
-              <dd class="col-span-2 text-text">{{ ref_species.tribe|default:"—" }}</dd>
-
-              <dt class="col-span-1 text-text/60">Subtribe</dt>
-              <dd class="col-span-2 text-text">{{ ref_species.subtribe|default:"—" }}</dd>
-
-              <dt class="col-span-1 text-text/60">Genus</dt>
-              <dd class="col-span-2 text-text">{{ ref_species.genus|default:"—" }}</dd>
-
-              <dt class="col-span-1 text-text/60">Species</dt>
-              <dd class="col-span-2 text-text">{{ ref_species.species|default:"—" }}</dd>
-
-              <dt class="col-span-1 text-text/60">Subspecies</dt>
-              <dd class="col-span-2 text-text">{{ ref_species.subspecies|default:"—" }}</dd>
-
-              <dt class="col-span-1 text-text/60">Authority Year</dt>
-              <dd class="col-span-2 text-text">{{ ref_species.authorityYear|default:"—" }}</dd>
-
-              <dt class="col-span-1 text-text/60">Original Genus</dt>
-              <dd class="col-span-2 text-text">{{ ref_species.originalGenus|default:"—" }}</dd>
-            </dl>
-            {% else %}
-            <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
-              <dt class="col-span-1 text-text/60">Name (verbatim)</dt>
-              <dd class="col-span-2 text-text">
-                  <span class="view-field">{{ beetle.depicts_name_verbatim|default:"—" }}</span>
-                  <input type="text" name="depicts_name_verbatim" value="{{ beetle.depicts_name_verbatim|default:'' }}" class="edit-field hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-              </dd>
-            </dl>
-            <p class="text-text/70 text-sm">No matching reference data for this specimen.</p>
-            {% endif %}
-          </section>
-
-          {# --- Attribution --- #}
-          <h3 class="mt-4 mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Attribution</h3>
-          <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
-            <dt class="col-span-1 text-text/60">Institution</dt>
-            <dd class="col-span-2 text-text">
-                <span class="view-field">{{ beetle.image_asset.image_institution|default:"—" }}</span>
-                <input type="text" name="image_institution" value="{{ beetle.image_asset.image_institution|default:'' }}" class="edit-field hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-            </dd>
-
-            <dt class="col-span-1 text-text/60">Photographer</dt>
-            <dd class="col-span-2 text-text">
-                <span class="view-field">{{ beetle.image_asset.photographer|default:"—" }}</span>
-                <input type="text" name="photographer" value="{{ beetle.image_asset.photographer|default:'' }}" class="edit-field hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-            </dd>
-
-            <dt class="col-span-1 text-text/60">Image Email</dt>
-            <dd class="col-span-2 text-text">
-              <span class="view-field">
-                {% if beetle.image_asset.image_email %}
-                  <a class="underline hover:no-underline" href="mailto:{{ beetle.image_asset.image_email }}">{{ beetle.image_asset.image_email }}</a>
-                {% else %}—{% endif %}
-              </span>
-              <input type="email" name="image_email" value="{{ beetle.image_asset.image_email|default:'' }}" class="edit-field hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-            </dd>
-
-            <dt class="col-span-1 text-text/60">Usage License</dt>
-            <dd class="col-span-2 text-text">
-                <span class="view-field">{{ beetle.image_asset.photo_usage_statement|default:"—" }}</span>
-                <input type="text" name="photo_usage_statement" value="{{ beetle.image_asset.photo_usage_statement|default:'' }}" class="edit-field hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-            </dd>
-          </dl>
-
-          {# --- Image Technical --- #}
-          <h3 class="mt-4 mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Image Technical</h3>
-          <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
-            <dt class="col-span-1 text-text/60">Aspect</dt>
-            <dd class="col-span-2 text-text">
-                <span class="view-field">{{ beetle.aspect|default:"—" }}</span>
-                <input type="text" name="aspect" value="{{ beetle.aspect|default:'' }}" class="edit-field hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-            </dd>
-
-            <dt class="col-span-1 text-text/60">Resolution (px/mm)</dt>
-            <dd class="col-span-2 text-text">
-                <span class="view-field">{{ beetle.image_asset.resolution_in_ppmm|default_if_none:"—" }}</span>
-                <input type="number" step="any" name="resolution_in_ppmm" value="{{ beetle.image_asset.resolution_in_ppmm|default_if_none:'' }}" class="edit-field hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-            </dd>
-
-            <dt class="col-span-1 text-text/60">Image Date</dt>
-            <dd class="col-span-2 text-text">
-                <span class="view-field">{{ beetle.image_asset.image_date_taken|date:"Y-m-d"|default:"—" }}</span>
-                <input type="text" name="image_date_taken" placeholder="YYYY-MM-DD" value="{{ beetle.image_asset.image_date_taken|date:'Y-m-d'|default:'' }}" class="edit-field hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-            </dd>
-
-            <dt class="col-span-1 text-text/60">Multiple Individuals</dt>
-            <dd class="col-span-2 text-text">
-                <span class="view-field">{{ beetle.image_asset.image_has_multiple_individuals|yesno:"Yes,No,—" }}</span>
-                <select name="image_has_multiple_individuals" class="edit-field hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-                    <option value="unknown" {% if beetle.image_asset.image_has_multiple_individuals is None %}selected{% endif %}>—</option>
-                    <option value="True" {% if beetle.image_asset.image_has_multiple_individuals is True %}selected{% endif %}>Yes</option>
-                    <option value="False" {% if beetle.image_asset.image_has_multiple_individuals is False %}selected{% endif %}>No</option>
-                </select>
-            </dd>
-          </dl>
-
-          {# --- Collection / Specimen --- #}
-          <h3 class="mt-4 mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Collection / Specimen</h3>
-          <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
-            <dt class="col-span-1 text-text/60">Country</dt>
-            <dd class="col-span-2 text-text">
-                <span class="view-field">{{ beetle.collection_country|default:"—" }}</span>
-                <input type="text" name="collection_country" value="{{ beetle.collection_country|default:'' }}" class="edit-field hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-            </dd>
-
-            <dt class="col-span-1 text-text/60">State/Province</dt>
-            <dd class="col-span-2 text-text">
-                <span class="view-field">{{ beetle.collection_stateProvince|default:"—" }}</span>
-                <input type="text" name="collection_stateProvince" value="{{ beetle.collection_stateProvince|default:'' }}" class="edit-field hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-            </dd>
-
-            <dt class="col-span-1 text-text/60">Sex</dt>
-            <dd class="col-span-2 text-text">
-                <span class="view-field">{{ beetle.specimen_sex|default:"—" }}</span>
-                <input type="text" name="specimen_sex" value="{{ beetle.specimen_sex|default:'' }}" class="edit-field hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-            </dd>
-
-            <dt class="col-span-1 text-text/60">Type Status</dt>
-            <dd class="col-span-2 text-text">
-                <span class="view-field">{{ beetle.specimen_type_status|default:"—" }}</span>
-                <input type="text" name="specimen_type_status" value="{{ beetle.specimen_type_status|default:'' }}" class="edit-field hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-            </dd>
-          </dl>
-
-          {# --- Notes --- #}
-          <h3 class="mt-4 mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Notes</h3>
-          <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-start">
-            <dt class="col-span-1 text-text/60 pt-1">Image Notes</dt>
-            <dd class="col-span-2 text-text">
-                <span class="view-field whitespace-pre-line">{{ beetle.image_asset.image_notes|default:"—" }}</span>
-                <textarea name="image_notes" rows="3" class="edit-field hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">{{ beetle.image_asset.image_notes|default:'' }}</textarea>
-            </dd>
-
-            <dt class="col-span-1 text-text/60 pt-1">Specimen Notes</dt>
-            <dd class="col-span-2 text-text">
-                <span class="view-field whitespace-pre-line">{{ beetle.specimen_notes|default:"—" }}</span>
-                <textarea name="specimen_notes" rows="3" class="edit-field hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">{{ beetle.specimen_notes|default:'' }}</textarea>
-            </dd>
-          </dl>
+                {% if next_sibling %}
+                    <a href="{% url 'beetle_detail' beetle_id=next_sibling.id %}" class="p-1 rounded hover:bg-black/5 text-text/70 hover:text-black transition" title="Next Specimen">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </a>
+                {% else %}
+                    <span class="p-1 text-text/20 cursor-not-allowed"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></span>
+                {% endif %}
+            </div>
         </div>
+        {% endif %}
+
+        {# FORM START #}
+        <form id="metadata-form" method="POST" action="{% url 'update_single_beetle' beetle.id %}">
+          {% csrf_token %}
+          
+          <div class="rounded-xl bg-primary2 p-4 ring-1 ring-text/10 sticky top-4">
+            
+            {# TOOLBAR #}
+            <div class="flex items-center justify-between mb-4 h-8 border-b border-text/10 pb-2">
+                <h2 id="form-title" class="text-md font-semibold uppercase tracking-wider text-text/80">Image Details</h2>
+                
+                {% if request.user.is_staff %}
+                    <div class="flex items-center gap-2">
+                        {# EDIT BUTTON #}
+                        <button type="button" id="edit-btn" onclick="toggleEditMode()" 
+                                class="text-gray-400 hover:text-gray-600 transition p-1 rounded hover:bg-gray-50" 
+                                title="Edit Current Metadata">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        </button>
+
+                        {# ADD BUTTON (Plus Icon) #}
+                        <button type="button" id="add-btn" onclick="toggleAddMode()" 
+                                class="text-gray-400 hover:text-gray-600 transition p-1 rounded hover:bg-gray-50" 
+                                title="Add Another Specimen to Image">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        </button>
+
+                        {# CONTROLS (Hidden by default) #}
+                        <div id="edit-controls" class="hidden flex gap-2">
+                            <button type="button" onclick="cancelMode()" class="rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold text-red-700 hover:bg-red-100 transition">Cancel</button>
+                            <button type="submit" class="rounded-md border border-green-200 bg-green-50 px-3 py-1 text-xs font-bold text-green-700 hover:bg-green-100 transition">Save</button>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            {# NOTIFICATION (For Add Mode) #}
+            <div id="add-mode-notice" class="hidden mb-4 p-2 bg-gray-100 border border-gray-200 rounded text-xs text-gray-800">
+                <strong>Adding New Beetle Information:</strong><br>
+                Technical image details cannot be changed here. 'Multiple Individuals' will be set to Yes.
+            </div>
+
+            {# --- FIELDS --- #}
+            
+            {# IDENTITY (Editable in both modes) #}
+            <div class="group-section">
+                <h3 class="mt-2 mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Identity</h3>
+                <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
+                  
+                  {# Specimen ID #}
+                  <dt class="col-span-1 text-text/60">Specimen ID</dt>
+                  <dd class="col-span-2">
+                      <span class="view-val">{{ beetle.depicts_specimen|default:"—" }}</span>
+                      <input type="text" name="depicts_specimen" value="{{ beetle.depicts_specimen|default:'' }}" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
+                  </dd>
+
+                  {# Valid Name ID #}
+                  <dt class="col-span-1 text-text/60">Valid Name ID</dt>
+                  <dd class="col-span-2">
+                      <span class="view-val">{{ beetle.depicts_valid_name_id|default:"—" }}</span>
+                      <input type="text" name="depicts_valid_name_id" value="{{ beetle.depicts_valid_name_id|default:'' }}" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
+                  </dd>
+
+                  {# Alternative ID #}
+                  <dt class="col-span-1 text-text/60">Alternative ID</dt>
+                  <dd class="col-span-2">
+                      <span class="view-val">{{ beetle.alternative_id|default:"—" }}</span>
+                      <input type="text" name="alternative_id" value="{{ beetle.alternative_id|default:'' }}" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
+                  </dd>
+                </dl>
+            </div>
+
+            {# ATTRIBUTION (Read-only in Add Mode, Editable in Edit Mode) #}
+            {# Marked with 'image-only' class for JS targeting #}
+            <div class="group-section mt-4">
+                <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Attribution</h3>
+                <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
+                  <dt class="col-span-1 text-text/60">Institution</dt>
+                  <dd class="col-span-2">
+                      <span class="view-val">{{ beetle.image_asset.image_institution|default:"—" }}</span>
+                      <input type="text" name="image_institution" value="{{ beetle.image_asset.image_institution|default:'' }}" class="edit-input image-only hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
+                  </dd>
+                  <dt class="col-span-1 text-text/60">Photographer</dt>
+                  <dd class="col-span-2">
+                      <span class="view-val">{{ beetle.image_asset.photographer|default:"—" }}</span>
+                      <input type="text" name="photographer" value="{{ beetle.image_asset.photographer|default:'' }}" class="edit-input image-only hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
+                  </dd>
+                </dl>
+            </div>
+
+            {# TECHNICAL (Mixed) #}
+            <div class="group-section mt-4">
+                <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Technical</h3>
+                <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
+                  
+                  {# Aspect (Specimen-specific) #}
+                  <dt class="col-span-1 text-text/60">Aspect</dt>
+                  <dd class="col-span-2">
+                      <span class="view-val">{{ beetle.aspect|default:"—" }}</span>
+                      <input type="text" name="aspect" value="{{ beetle.aspect|default:'' }}" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
+                  </dd>
+
+                  {# Multiple Indiv (Special handling in Add Mode) #}
+                  <dt class="col-span-1 text-text/60">Multiple?</dt>
+                  <dd class="col-span-2">
+                      <span class="view-val">{% if beetle.image_asset.image_has_multiple_individuals %}Yes{% else %}No{% endif %}</span>
+                      {# Note: image-only class added so it gets disabled in Add Mode #}
+                      <select name="image_has_multiple_individuals" class="edit-input image-only hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
+                          <option value="unknown" {% if beetle.image_asset.image_has_multiple_individuals is None %}selected{% endif %}>Unknown</option>
+                          <option value="True" {% if beetle.image_asset.image_has_multiple_individuals is True %}selected{% endif %}>Yes</option>
+                          <option value="False" {% if beetle.image_asset.image_has_multiple_individuals is False %}selected{% endif %}>No</option>
+                      </select>
+                  </dd>
+
+                  {# Resolution (Image-only) #}
+                  <dt class="col-span-1 text-text/60">Res (ppmm)</dt>
+                  <dd class="col-span-2">
+                      <span class="view-val">{{ beetle.image_asset.resolution_in_ppmm|default:"—" }}</span>
+                      <input type="text" name="resolution_in_ppmm" value="{{ beetle.image_asset.resolution_in_ppmm|default:'' }}" class="edit-input image-only hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
+                  </dd>
+                </dl>
+            </div>
+
+            {# COLLECTION (Editable in both) #}
+            <div class="group-section mt-4">
+                <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Collection</h3>
+                <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
+                  <dt class="col-span-1 text-text/60">Country</dt>
+                  <dd class="col-span-2">
+                      <span class="view-val">{{ beetle.collection_country|default:"—" }}</span>
+                      <input type="text" name="collection_country" value="{{ beetle.collection_country|default:'' }}" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
+                  </dd>
+                  <dt class="col-span-1 text-text/60">State/Prov</dt>
+                  <dd class="col-span-2">
+                      <span class="view-val">{{ beetle.collection_stateProvince|default:"—" }}</span>
+                      <input type="text" name="collection_stateProvince" value="{{ beetle.collection_stateProvince|default:'' }}" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
+                  </dd>
+                  <dt class="col-span-1 text-text/60">Sex</dt>
+                  <dd class="col-span-2">
+                      <span class="view-val">{{ beetle.specimen_sex|default:"—" }}</span>
+                      <input type="text" name="specimen_sex" value="{{ beetle.specimen_sex|default:'' }}" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
+                  </dd>
+                  <dt class="col-span-1 text-text/60">Type Status</dt>
+                  <dd class="col-span-2">
+                      <span class="view-val">{{ beetle.specimen_type_status|default:"—" }}</span>
+                      <input type="text" name="specimen_type_status" value="{{ beetle.specimen_type_status|default:'' }}" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
+                  </dd>
+                </dl>
+            </div>
+
+            {# NOTES #}
+            <div class="group-section mt-4">
+                <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Notes</h3>
+                <div class="space-y-2">
+                    <div class="text-xs text-text/60">Image Notes (Shared)</div>
+                    <div class="view-val p-2 bg-black/5 rounded text-sm min-h-[2rem]">{{ beetle.image_asset.image_notes|default:"—" }}</div>
+                    <textarea name="image_notes" class="edit-input image-only hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">{{ beetle.image_asset.image_notes|default:'' }}</textarea>
+                    
+                    <div class="text-xs text-text/60 mt-2">Specimen Notes</div>
+                    <div class="view-val p-2 bg-black/5 rounded text-sm min-h-[2rem]">{{ beetle.specimen_notes|default:"—" }}</div>
+                    <textarea name="specimen_notes" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">{{ beetle.specimen_notes|default:'' }}</textarea>
+                </div>
+            </div>
+
+          </div>
+        </form>
       </aside>
     </div>
   </form>
@@ -312,44 +282,81 @@
 </section>
 
 <script>
-  // Toggle Logic for Edit Mode
-  function toggleEditMode() {
-      const viewFields = document.querySelectorAll('.view-field');
-      const editFields = document.querySelectorAll('.edit-field');
-      const editBtn = document.getElementById('edit-btn');
-      const saveBtn = document.getElementById('save-btn');
-      const cancelBtn = document.getElementById('cancel-btn');
-
-      // Toggle Visibility
-      viewFields.forEach(el => el.classList.toggle('hidden'));
-      editFields.forEach(el => el.classList.toggle('hidden'));
-      
-      // Toggle Buttons
-      if (editBtn) editBtn.classList.toggle('hidden');
-      if (saveBtn) saveBtn.classList.toggle('hidden');
-      if (cancelBtn) cancelBtn.classList.toggle('hidden');
-  }
+  const form = document.getElementById('metadata-form');
+  const viewVals = document.querySelectorAll('.view-val');
+  const editInputs = document.querySelectorAll('.edit-input');
+  // Fields specifically marked as "Image Only" (technical details)
+  const imageOnlyInputs = document.querySelectorAll('.image-only'); 
   
-  // Confirm Save Logic
-  document.getElementById('metadata-form').addEventListener('submit', function(e) {
-      if (!confirm('Are you sure you want to update the metadata for this record? This change will be tracked.')) {
-          e.preventDefault();
-      }
-  });
+  const editControls = document.getElementById('edit-controls');
+  const editBtn = document.getElementById('edit-btn');
+  const addBtn = document.getElementById('add-btn');
+  const notice = document.getElementById('add-mode-notice');
+  const title = document.getElementById('form-title');
 
-  // Existing Copy UUID logic
-  document.addEventListener('click', async (e) => {
-    const btn = e.target.closest('.copy-uuid');
-    if (!btn) return;
-    e.preventDefault(); e.stopPropagation();
-    const uuid = btn.getAttribute('data-uuid');
-    try {
-      await navigator.clipboard.writeText(uuid);
-      const originalHTML = btn.innerHTML;
-      btn.innerHTML = `<svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
-      setTimeout(() => { btn.innerHTML = originalHTML; }, 1500);
-    } catch (err) { console.error(err); }
-  });
+  // Store original values for cancel
+  let originals = {};
+  editInputs.forEach(el => originals[el.name] = el.value);
+
+  function toggleEditMode() {
+      // Show inputs, hide view
+      viewVals.forEach(v => v.classList.add('hidden'));
+      editInputs.forEach(i => i.classList.remove('hidden'));
+      
+      // Ensure all fields are enabled
+      editInputs.forEach(i => {
+          i.disabled = false;
+          i.classList.remove('bg-gray-100', 'text-gray-400');
+      });
+
+      // Show controls
+      editControls.classList.remove('hidden');
+      editBtn.classList.add('hidden');
+      addBtn.classList.add('hidden');
+      
+      // Set title and action
+      title.innerText = "Edit Details";
+      form.action = "{% url 'update_single_beetle' beetle.id %}";
+  }
+
+  function toggleAddMode() {
+      // Show inputs
+      viewVals.forEach(v => v.classList.add('hidden'));
+      editInputs.forEach(i => i.classList.remove('hidden'));
+
+      // Disable Image-Only fields (Attribution, Image Notes, Resolution)
+      imageOnlyInputs.forEach(i => {
+          i.disabled = true;
+          i.classList.add('bg-gray-100', 'text-gray-400');
+      });
+
+      // Show controls
+      editControls.classList.remove('hidden');
+      editBtn.classList.add('hidden');
+      addBtn.classList.add('hidden');
+      notice.classList.remove('hidden');
+      
+      title.innerText = "New Specimen";
+      // Set action to CREATE endpoint (requires ID of the *Image Asset*)
+      form.action = "{% url 'create_specimen_for_image' beetle.image_asset.id %}";
+  }
+
+  function cancelMode() {
+      // Reset visibility
+      viewVals.forEach(v => v.classList.remove('hidden'));
+      editInputs.forEach(i => {
+          i.classList.add('hidden');
+          i.value = originals[i.name]; // Restore original value
+          i.disabled = false;
+          i.classList.remove('bg-gray-100', 'text-gray-400');
+      });
+
+      editControls.classList.add('hidden');
+      editBtn.classList.remove('hidden');
+      addBtn.classList.remove('hidden');
+      notice.classList.add('hidden');
+      title.innerText = "Image Details";
+  }
 </script>
 
 {% endblock %}
