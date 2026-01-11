@@ -87,7 +87,7 @@ class PostOnlyLogoutView(LogoutView):
 
 def landing(request):
     # 1. Total number of images
-    total_images = Beetles.objects.count()
+    total_images = ImageAsset.objects.count()
 
     # 2. Get all distinct valid_name_ids associated with actual images
     # We need the actual list of IDs to look up taxonomy (Genera) in the CSV reference
@@ -917,6 +917,7 @@ def gallery(request):
             filter_context.append((cat, grouped_filters[cat]))
 
     # 5. Pagination
+    final_qs = final_qs.order_by("image_asset", "id").distinct("image_asset")
     final_qs = final_qs.select_related("image_asset").prefetch_related("image_asset__specimens")
     paginator = Paginator(final_qs, page_size)
     page = request.GET.get("page", 1)
@@ -929,7 +930,7 @@ def gallery(request):
 
     # Enrichment
     for b in beetles_page.object_list:
-        # 1. Resolve Reference
+        # 1. Resolve Reference for the *representative* beetle
         raw_id = (str(b.depicts_valid_name_id).strip() if b.depicts_valid_name_id else None)
         ref = species_ref.resolve(raw_id)
         
@@ -941,26 +942,49 @@ def gallery(request):
         b.ref_tribe = clean(ref.get("tribe"))
         b.ref_subtribe = clean(ref.get("subtribe"))
         b.ref_subspecies = clean(ref.get("subspecies"))
-        
-        # 2. Check for Multiple Values (Aggregation)
-        # We check siblings to see if values differ
+
+        # 2. Aggregation Logic
         if b.image_asset:
             siblings = b.image_asset.specimens.all()
             b.siblings_count = len(siblings)
             
-            # Helper to check uniqueness
+            # Helper: Check if there is more than 1 unique value (counting None as a value)
             def check_multiple(attr):
-                values = {getattr(s, attr) for s in siblings if getattr(s, attr)}
+                values = {getattr(s, attr) for s in siblings}
                 return len(values) > 1
 
             b.has_multiple_aspect = check_multiple("aspect")
             b.has_multiple_country = check_multiple("collection_country")
             b.has_multiple_sex = check_multiple("specimen_sex")
             
-            # Check taxonomy multiplicity (based on valid_name_id)
-            # If IDs differ, then taxonomy differs
-            ids = {s.depicts_valid_name_id for s in siblings if s.depicts_valid_name_id}
-            b.has_multiple_taxonomy = len(ids) > 1
+            # Taxonomy Aggregation
+            # Get all Valid IDs involved in this image
+            ids = {s.depicts_valid_name_id for s in siblings}
+            
+            # If we have >1 unique ID (e.g. "123" and None), we might have multiple ranks
+            if len(ids) > 1:
+                # Resolve all involved IDs to check ranks
+                refs = [species_ref.resolve(i) for i in ids]
+                
+                def check_rank(key):
+                    # collect unique values for this rank (e.g. "Platypus", "Crossotarsus")
+                    vals = {r.get(key) for r in refs}
+                    return len(vals) > 1
+                
+                b.has_multiple_subfamily = check_rank("subfamily")
+                b.has_multiple_tribe = check_rank("tribe")
+                b.has_multiple_subtribe = check_rank("subtribe")
+                b.has_multiple_genus = check_rank("genus")
+                b.has_multiple_species = check_rank("species")
+                b.has_multiple_subspecies = check_rank("subspecies")
+            else:
+                # All beetles have the same ID (or all None), so ranks are identical
+                b.has_multiple_subfamily = False
+                b.has_multiple_tribe = False
+                b.has_multiple_subtribe = False
+                b.has_multiple_genus = False
+                b.has_multiple_species = False
+                b.has_multiple_subspecies = False
             
             b.warn_large = (b.image_asset.image_size_bytes or 0) >= WARN_IMAGE_SIZE_BYTES
         else:
@@ -1028,7 +1052,9 @@ def beetle_detail(request, beetle_id):
         related_specimens = (
             Beetles.objects
             .filter(depicts_specimen=beetle.depicts_specimen)
-            .exclude(pk=beetle.id)  # Exclude current
+            .exclude(pk=beetle.id)  # Exclude current record
+            .order_by("image_asset", "id")
+            .distinct("image_asset") # One card per image
             .select_related("image_asset")
         )
 
@@ -1615,6 +1641,7 @@ def update_single_beetle(request, beetle_id):
         row_data[f] = val
 
     _run_update_batch(request, row_data, f"single_edit_{beetle.id}.xlsx")
+    messages.success(request, "Update queued successfully. Changes will appear shortly.")
     return redirect("beetle_detail", beetle_id=beetle_id)
 
 
@@ -1654,7 +1681,7 @@ def create_specimen_for_image(request, image_id):
 
     _run_update_batch(request, row_data, f"add_specimen_{image_asset.id.hex[:8]}.xlsx")
     
-    messages.success(request, "New specimen queued for creation. It will appear shortly.")
+    messages.success(request, "Update queued successfully. Changes will appear shortly.")
     return redirect(request.META.get('HTTP_REFERER', 'home'))
 
 

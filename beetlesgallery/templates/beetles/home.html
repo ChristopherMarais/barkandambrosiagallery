@@ -345,6 +345,8 @@
                      <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
                   {% elif b.ref_subfamily %}
                      <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <span class="ml-1">{{ b.ref_subfamily }}</span></div>
+                  {% elif not b.depicts_valid_name_id %}
+                     <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
                   {% endif %}
 
                   {# TRIBE #}
@@ -352,6 +354,8 @@
                      <div class="truncate"><span class="font-semibold text-text/50">Tribe:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
                   {% elif b.ref_tribe %}
                      <div class="truncate"><span class="font-semibold text-text/50">Tribe:</span> <span class="ml-1">{{ b.ref_tribe }}</span></div>
+                  {% elif not b.depicts_valid_name_id %}
+                     <div class="truncate"><span class="font-semibold text-text/50">Tribe:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
                   {% endif %}
 
                   {# SUBTRIBE #}
@@ -359,6 +363,8 @@
                      <div class="truncate"><span class="font-semibold text-text/50">Subtribe:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
                   {% elif b.ref_subtribe %}
                      <div class="truncate"><span class="font-semibold text-text/50">Subtribe:</span> <span class="ml-1">{{ b.ref_subtribe }}</span></div>
+                  {% elif not b.depicts_valid_name_id %}
+                     <div class="truncate"><span class="font-semibold text-text/50">Subtribe:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
                   {% endif %}
 
                   {# GENUS #}
@@ -366,6 +372,8 @@
                      <div class="truncate"><span class="font-semibold text-text/50">Genus:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
                   {% elif b.ref_genus %}
                      <div class="truncate"><span class="font-semibold text-text/50">Genus:</span> <span class="ml-1 italic">{{ b.ref_genus }}</span></div>
+                  {% elif not b.depicts_valid_name_id %}
+                     <div class="truncate"><span class="font-semibold text-text/50">Genus:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
                   {% endif %}
 
                   {# SPECIES #}
@@ -373,6 +381,8 @@
                      <div class="truncate"><span class="font-semibold text-text/50">Species:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
                   {% elif b.ref_species %}
                      <div class="truncate"><span class="font-semibold text-text/50">Species:</span> <span class="ml-1 italic">{{ b.ref_species }}</span></div>
+                  {% elif not b.depicts_valid_name_id %}
+                     <div class="truncate"><span class="font-semibold text-text/50">Species:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
                   {% endif %}
 
                   {# SUBSPECIES #}
@@ -380,11 +390,13 @@
                      <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
                   {% elif b.ref_subspecies %}
                      <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic">{{ b.ref_subspecies }}</span></div>
+                  {% elif not b.depicts_valid_name_id %}
+                     <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
                   {% endif %}
 
-                  {# TYPE STATUS #}
+                  {# TYPE STATUS (Hide if empty) #}
                   {% if b.specimen_type_status %}
-                    <div class="text-text/80 break-words">
+                    <div class="text-text/80 break-words mt-1">
                       <span class="font-semibold text-text/50">Type Status:</span>
                       <span class="ml-1">{{ b.specimen_type_status }}</span>
                     </div>
