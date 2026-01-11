@@ -185,7 +185,14 @@
               <dd class="col-span-2 text-text">{{ ref_species.originalGenus|default:"—" }}</dd>
             </dl>
             {% else %}
-              <p class="text-text/70 text-sm">No matching reference data for this specimen.</p>
+            <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
+              <dt class="col-span-1 text-text/60">Name (verbatim)</dt>
+              <dd class="col-span-2 text-text">
+                  <span class="view-field">{{ beetle.depicts_name_verbatim|default:"—" }}</span>
+                  <input type="text" name="depicts_name_verbatim" value="{{ beetle.depicts_name_verbatim|default:'' }}" class="edit-field hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
+              </dd>
+            </dl>
+            <p class="text-text/70 text-sm">No matching reference data for this specimen.</p>
             {% endif %}
           </section>
 
