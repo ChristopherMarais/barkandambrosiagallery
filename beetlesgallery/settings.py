@@ -165,7 +165,7 @@ LOGOUT_REDIRECT_URL = "home"
 # Upload Constraints
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024
 MAX_UPLOAD_SIZE_XLSX = 10 * 1024 * 1024
-MAX_UPLOAD_SIZE_ZIP = 1024 * 1024 * 1024
+MAX_UPLOAD_SIZE_ZIP = 5 * 1024 * 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 FILE_UPLOAD_TEMP_DIR = BASE_DIR / "tmp_uploads"
@@ -183,3 +183,10 @@ VALID_SPECIES_UPDATING_CACHE_KEY = "valid_species:updating"
 # This prevents the "FileNotFoundError" crash when uploading files on Windows/Docker.
 if DEBUG:
     FILE_UPLOAD_PERMISSIONS = None
+
+# --- Celery Configuration ---
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE

@@ -40,6 +40,8 @@ django-simple-history = "*"
 django-cleanup = "*"  # Optional but good for file management
 nodejs = "20.*"
 whitenoise = ">=6.11.0,<7"
+redis-py = ">=7.1.0,<8"
+celery = ">=5.5.3,<6"
 
 # --- Dependencies for LINUX/MAC ONLY (Server/Docker) ---
 # Gunicorn will be installed in Docker, but ignored on your Windows laptop.
