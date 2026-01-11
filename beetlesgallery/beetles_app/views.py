@@ -991,22 +991,19 @@ def gallery(request):
 
 
 def beetle_detail(request, beetle_id):
-    # If user is not logged in, redirect to login with a message
     if not request.user.is_authenticated:
         login_url = reverse("login")
-        # Preserve the page they were trying to access
         return redirect(f"{login_url}?next={request.path}")
 
     # Fetch main object
     beetle = get_object_or_404(Beetles, pk=beetle_id)
 
-    # Fetch siblings (specimens sharing the same ImageAsset)
-    # We sort by ID to ensure stable pagination order
+    # 1. Siblings (Same Image, different specimen records) - For Pagination inside the card
     siblings = []
     if beetle.image_asset:
         siblings = list(
             beetle.image_asset.specimens.all()
-            .order_by("id") # Ensure stable order
+            .order_by("id") 
         )
 
     # Calculate pagination context
@@ -1025,6 +1022,16 @@ def beetle_detail(request, beetle_id):
                     next_sibling = siblings[i + 1]
                 break
 
+    # 2. Related Specimens (Same Specimen ID, different Images) - For "More images" section
+    related_specimens = []
+    if beetle.depicts_specimen and beetle.depicts_specimen.strip():
+        related_specimens = (
+            Beetles.objects
+            .filter(depicts_specimen=beetle.depicts_specimen)
+            .exclude(pk=beetle.id)  # Exclude current
+            .select_related("image_asset")
+        )
+
     # CSV-based enrichment
     raw_vid = beetle.depicts_valid_name_id
     norm_vid = _normalize_valid_id_for_lookup(raw_vid)
@@ -1038,11 +1045,12 @@ def beetle_detail(request, beetle_id):
             "beetle": beetle, 
             "ref_species": ref_species, 
             "ref_version": ref_version,
-            "siblings": siblings,          # List of all siblings
+            "siblings": siblings,
             "total_siblings": total_siblings,
             "current_sibling_index": current_index,
             "prev_sibling": prev_sibling,
             "next_sibling": next_sibling,
+            "related_specimens": related_specimens,
         },
     )
 
