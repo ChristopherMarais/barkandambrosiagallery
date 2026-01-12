@@ -1,7 +1,7 @@
 services:
   web:
     build: .
-    command: pixi run gunicorn --workers 9 --timeout 600
+    command: pixi run gunicorn --workers 25 --timeout 600
     restart: always
     ports:
       - "8000:8000"
