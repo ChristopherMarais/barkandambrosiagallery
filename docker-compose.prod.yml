@@ -1,10 +1,10 @@
 services:
   web:
-    # ADDED: Tells Docker to build the app from the Dockerfile in the current folder
     build: .
-    # CHANGED: Increased timeout to 600s (10 mins) to prevent upload crashes
-    command: pixi run gunicorn --timeout 600
+    command: pixi run gunicorn --workers 25 --timeout 600
     restart: always
+    ports:
+      - "8000:8000"
     volumes:
       - /root/barkandambrosia_data/media:/app/media
     env_file:
@@ -14,28 +14,23 @@ services:
       - redis
 
   db:
-    # ADDED: Specifies the exact database version
     image: postgres:15
     restart: always
     volumes:
       - /root/barkandambrosia_data/postgres:/var/lib/postgresql/data
     env_file:
       - .env.prod
-    # No ports exposed for security (only internal access)
     ports: []
 
   redis:
-    # ADDED: Specifies the Redis version
     image: redis:7-alpine
     restart: always
 
   worker:
-    # ADDED: Tells Docker to build the worker from the same code
     build: .
     restart: always
     command: pixi run celery -A beetlesgallery worker -l info --concurrency=1
     volumes:
-      # Matches web volume so worker can process uploaded files
       - /root/barkandambrosia_data/media:/app/media
     env_file:
       - .env.prod
