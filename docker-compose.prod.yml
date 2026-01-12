@@ -4,7 +4,7 @@ services:
     command: pixi run gunicorn --workers 25 --timeout 600
     restart: always
     ports:
-      - "8000:8000"
+      - "80:8000"
     volumes:
       - /root/barkandambrosia_data/media:/app/media
     env_file:
