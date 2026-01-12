@@ -3,6 +3,10 @@ version: '3.8'
 services:
   web:
     build: .
+    volumes:
+      - .:/app                # Maps your code (so you can edit files)
+      - /app/.pixi            # Internal Linux environment
+      - media_data:/app/media # <--- NEW: Dedicated storage for uploads
     command: ${WEB_COMMAND:-pixi run start}
     ports:
       - "8000:8000"
@@ -26,26 +30,25 @@ services:
       timeout: 5s
       retries: 5
 
-# REDIS
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
 
-  # CELERY WORKER
   worker:
     build: .
+    volumes:
+      - .:/app                # Maps your code
+      - /app/.pixi            # Internal Linux environment
+      - media_data:/app/media # <--- NEW: Must match 'web' exactly
     command: pixi run celery -A beetlesgallery worker -l info
     env_file:
       - .env
     depends_on:
       - db
       - redis
-    volumes:
-      - .:/app          # Mounts your code (so you can edit files)
-      - /app/.pixi      # Protects the container's environment
 
 volumes:
   postgres_data:
-  media_data:
+  media_data:   # <--- Creates the volume
   pixi_cache:

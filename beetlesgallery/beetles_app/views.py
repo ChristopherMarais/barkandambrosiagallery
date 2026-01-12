@@ -221,7 +221,7 @@ def upload_file(request):
     # Saving will use your upload_to=staging_upload_path_xlsx/zip and name them <batch-id>.(xlsx|zip)
     batch.file.save(xlsx.name, xlsx, save=False)
     batch.zip_file.save(zipf.name, zipf, save=False)
-    batch.size_bytes = batch.file.size or 0
+    batch.size_bytes = xlsx.size or 0
     # Compute checksum of the XLSX (used by your existing admin display)
     try:
         batch.compute_sha256_from_disk()

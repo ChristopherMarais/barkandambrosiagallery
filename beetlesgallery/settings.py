@@ -134,7 +134,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # Enable WhiteNoise's compression and caching:
 STORAGES = {
     "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "BACKEND": "beetlesgallery.custom_storage.WindowsDockerStorage",
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
@@ -179,10 +179,9 @@ VALID_SPECIES_VERSION_CACHE_KEY = "valid_species:version"
 VALID_SPECIES_VERSION_LABEL_CACHE_KEY = "valid_species:label"
 VALID_SPECIES_UPDATING_CACHE_KEY = "valid_species:updating"
 
-# If running locally, skip the "chmod" permission setting step.
-# This prevents the "FileNotFoundError" crash when uploading files on Windows/Docker.
-if DEBUG:
-    FILE_UPLOAD_PERMISSIONS = None
+# Force explicit permissions to stabilize Docker on Windows file syncing
+FILE_UPLOAD_PERMISSIONS = None
+FILE_UPLOAD_DIRECTORY_PERMISSIONS = None
 
 # --- Celery Configuration ---
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
