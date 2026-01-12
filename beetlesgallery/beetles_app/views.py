@@ -28,6 +28,7 @@ from . import species_ref
 from .models import Beetles, UploadBatch, DownloadJob, UpdateBatch, ImageAsset
 from .schema import REQUIRED_COLS, MAX_ROWS
 from .forms import TailwindUserCreationForm, ProfileForm, PasswordChangeFormStyled, ValidSpeciesUploadForm, UpdateBatchUploadForm
+from .tasks import process_upload_task, process_update_task, build_downloads_task
 
 import pandas as pd
 from io import BytesIO
@@ -220,7 +221,7 @@ def upload_file(request):
     # Saving will use your upload_to=staging_upload_path_xlsx/zip and name them <batch-id>.(xlsx|zip)
     batch.file.save(xlsx.name, xlsx, save=False)
     batch.zip_file.save(zipf.name, zipf, save=False)
-    batch.size_bytes = batch.file.size or 0
+    batch.size_bytes = xlsx.size or 0
     # Compute checksum of the XLSX (used by your existing admin display)
     try:
         batch.compute_sha256_from_disk()
@@ -263,26 +264,8 @@ def upload_file(request):
 
     # Pass preflight; full validator will hash images, check 1:1 mapping, etc.
     # Kick off background processing for this batch (validate + import)
-    manage_py = os.path.join(settings.BASE_DIR, "manage.py")
-    try:
-        proc = subprocess.Popen(
-            [
-                sys.executable,  # use the same Python/venv as this Django process
-                manage_py,
-                "process_single_upload",
-                "--id",
-                str(batch.id),
-            ],
-            cwd=settings.BASE_DIR,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-         )
-    
-        print(f"Spawned process_single_upload PID={proc.pid} for batch {batch.id}", flush=True)
-
-    except Exception as e:
-        # Don't break the user request if worker fails to start; just log it.
-        print(f"ERROR: failed to start process_single_upload for batch {batch.id}: {e}", flush=True)
+    process_upload_task.delay(batch.id)
+    print(f"Queued process_single_upload for batch {batch.id}", flush=True)
 
     messages.success(request, "Files received and passed quick checks. Track upload status on My Files page under My Uploads. You may leave this page.")
     return redirect("upload")
@@ -1206,40 +1189,8 @@ def start_batch_download(request):
     if mode == "query" and (not q_str):
         messages.warning(request, "You requested a download of the entire database. This may be large.")
 
-    manage_py = os.path.join(settings.BASE_DIR, "manage.py")
-    try:
-        proc = subprocess.Popen(
-            [
-                sys.executable,      # use the same Python/venv as this Django process
-                manage_py,
-                "build_downloads",
-                "--job",
-                str(job.id),
-                "--limit",
-                "1",
-            ],
-            cwd=settings.BASE_DIR,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        print(
-            f"[start_batch_download] Spawned build_downloads for job {job.id} (PID={proc.pid})",
-            flush=True,
-        )
-    except Exception as e:
-        # Log the failure and mark the job as failed so the user sees it on My Files.
-        print(
-            f"[start_batch_download] ERROR spawning build_downloads for job {job.id}: {e}",
-            flush=True,
-        )
-        job.status = DownloadJob.Status.FAILED
-        job.error_message = "Internal error starting download build. Please try again later."
-        job.save(update_fields=["status", "error_message"])
-        messages.error(request, "There was a problem starting the download job. Please try again later.")
-        return redirect("my_uploads")
-
-    messages.success(request, "Batch download request created. You can track status on My Files -> My Downloads.")
-    return redirect("my_uploads")
+    build_downloads_task.delay(job.id)
+    print(f"[start_batch_download] Queued build_downloads for job {job.id}", flush=True)
     
 
 @login_required
@@ -1501,31 +1452,7 @@ def update_upload(request):
         return redirect("update_upload")
 
     # -- Starting background validate+apply for this update batch --
-    manage_py = os.path.join(settings.BASE_DIR, "manage.py")
-    python = sys.executable or "python3"
-    cmd = [python, manage_py, "process_single_update", "--id", str(batch.id)]
-
-    try:
-        subprocess.Popen(
-            cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            cwd=settings.BASE_DIR,
-        )
-    except Exception as e:
-        # If we can't start the worker, leave batch in STAGING and
-        # tell the user how to run it manually.
-        messages.warning(
-            request,
-            (
-                "Update file received and passed quick checks, but "
-                "background validation/apply could not be started "
-                f"(error: {e}). You can run the pipeline manually:\n"
-                f"  python manage.py validate_updates --id {batch.id}\n"
-                f"  python manage.py apply_updates --id {batch.id}"
-            ),
-        )
-        return redirect("update_upload")
+    process_update_task.delay(batch.id)
 
     messages.success(
         request,
@@ -1535,83 +1462,6 @@ def update_upload(request):
     )
     # Send them where they can see the batch status
     return redirect("my_uploads")
-
-@login_required
-@staff_member_required
-@require_POST
-def update_single_beetle(request, beetle_id):
-    """
-    Receives individual field edits from the detail page, packages them into 
-    an UpdateBatch (XLSX), and triggers the standard update pipeline.
-    """
-    beetle = get_object_or_404(Beetles, pk=beetle_id)
-    
-    # 1. Collect data from POST
-    # We map form field names to the columns expected by the update pipeline
-    # (See UPDATE_ALLOWED_FIELDS in views.py)
-    row_data = {"record_id": str(beetle.id)}
-    
-    # Define mapping from form inputs to DB/Update columns
-    # Form input name -> Update column name
-    # (Using the same names simplifies this)
-    fields = [
-        "depicts_specimen", "depicts_valid_name_id", "depicts_described_name_id", 
-        "alternative_id", "depicts_name_verbatim", "image_institution", 
-        "photographer", "image_email", "photo_usage_statement", "aspect", 
-        "resolution_in_ppmm", "image_date_taken", "image_has_multiple_individuals", 
-        "collection_country", "collection_stateProvince", "specimen_sex", 
-        "specimen_type_status", "image_notes", "specimen_notes"
-    ]
-    
-    for f in fields:
-        val = request.POST.get(f)
-        # Handle booleans specifically for the pipeline
-        if f == "image_has_multiple_individuals":
-            if val == "unknown": val = ""
-        
-        # Determine if value has changed. If not, we can technically omit it, 
-        # but including current values is safer for the "all-or-nothing" overwrite policy 
-        # unless you implemented partial updates. 
-        # The update pipeline typically overwrites allowed fields if present.
-        row_data[f] = val
-
-    # 2. Create DataFrame and XLSX
-    df = pd.DataFrame([row_data])
-    
-    # Create in-memory file
-    buffer = BytesIO()
-    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False)
-    buffer.seek(0)
-    
-    # 3. Create UpdateBatch
-    batch = UpdateBatch.objects.create(
-        uploaded_by=request.user,
-        original_filename=f"single_edit_{beetle.id}.xlsx",
-        status=UpdateBatch.Status.STAGING,
-    )
-    
-    # Save the file content
-    from django.core.files.base import ContentFile
-    batch.file.save(f"single_edit_{beetle.id}.xlsx", ContentFile(buffer.read()), save=False)
-    batch.size_bytes = batch.file.size
-    batch.save()
-
-    # 4. Trigger Background Process
-    manage_py = os.path.join(settings.BASE_DIR, "manage.py")
-    python = sys.executable or "python3"
-    try:
-        subprocess.Popen(
-            [python, manage_py, "process_single_update", "--id", str(batch.id)],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            cwd=settings.BASE_DIR,
-        )
-        messages.success(request, "Update queued successfully. Changes will appear shortly.")
-    except Exception as e:
-        messages.error(request, f"Failed to start update process: {e}")
-
-    return redirect("beetle_detail", beetle_id=beetle_id)
 
 @login_required
 @staff_member_required
@@ -1705,14 +1555,4 @@ def _run_update_batch(request, row_data, filename):
     batch.save()
 
     # Trigger
-    manage_py = os.path.join(settings.BASE_DIR, "manage.py")
-    python = sys.executable or "python3"
-    try:
-        subprocess.Popen(
-            [python, manage_py, "process_single_update", "--id", str(batch.id)],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            cwd=settings.BASE_DIR,
-        )
-    except Exception as e:
-        messages.error(request, f"Failed to start update process: {e}")
+    process_update_task.delay(batch.id)

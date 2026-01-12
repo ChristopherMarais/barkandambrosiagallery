@@ -1,13 +1,14 @@
 services:
   web:
-    # This overrides the ${WEB_COMMAND} default
     command: pixi run gunicorn --timeout 120
     restart: always
     volumes:
-      # OVERRIDE the volume mount to point to external data
       - /root/barkandambrosia_data/media:/app/media
     env_file:
       - .env.prod
+    depends_on:
+      - db
+      - redis
 
   db:
     restart: always
@@ -16,6 +17,22 @@ services:
       - /root/barkandambrosia_data/postgres:/var/lib/postgresql/data
     env_file:
       - .env.prod
-    # We don't need to list 'environment' here anymore!
-    # The base file will automatically pick up POSTGRES_PASSWORD from .env.prod
-    ports: []  # This closes the public port 5432 for security
+    ports: []
+
+  # REDIS
+  redis:
+    restart: always
+
+  # CELERY WORKER
+  worker:
+    restart: always
+    # Concurrency 1 is important for your server size
+    command: pixi run celery -A beetlesgallery worker -l info --concurrency=1
+    volumes:
+      # MUST match the web volumes so worker can see the files!
+      - /root/barkandambrosia_data/media:/app/media
+    env_file:
+      - .env.prod
+    depends_on:
+      - db
+      - redis
