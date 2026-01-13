@@ -3,6 +3,7 @@ import csv
 import uuid
 import shutil
 import zipfile
+import json
 from pathlib import Path
 from datetime import timedelta
 
@@ -14,8 +15,6 @@ from django.core.files import File
 
 from beetlesgallery.beetles_app import species_ref
 from beetlesgallery.beetles_app.models import Beetles, DownloadJob
-from beetlesgallery.beetles_app.views import build_query_q
-
 
 class Command(BaseCommand):
     help = "Build TSV + ZIP for pending DownloadJobs."
@@ -119,15 +118,48 @@ class Command(BaseCommand):
                 break
 
     def _resolve_queryset(self, job: DownloadJob):
+        from beetlesgallery.beetles_app.utils import build_query_q, filter_beetles_queryset
         """
         Return a queryset of Beetles for this job based on selection_mode.
         """
         if job.selection_mode == "ids":
             ids = job.get_ids()
             return Beetles.objects.filter(id__in=ids)
+            
         elif job.selection_mode == "query":
-            q_obj, _ignored = build_query_q(job.query_string or "")
-            return Beetles.objects.filter(q_obj)
+            # Check if query_string is JSON (new style) or plain text (legacy)
+            raw_q = job.query_string or ""
+            
+            try:
+                data = json.loads(raw_q)
+                # It's JSON: {"q": "...", "filters": {...}, "ranges": {...}}
+                qs = Beetles.objects.all()
+                
+                # 1. Apply Text Search
+                text_q = data.get("q", "").strip()
+                if text_q:
+                    q_obj, _ = build_query_q(text_q)
+                    qs = qs.filter(q_obj)
+                
+                # 2. Apply Filters & Ranges
+                filters = data.get("filters", {})
+                ranges = data.get("ranges", {})
+                
+                qs = filter_beetles_queryset(
+                    qs, 
+                    filters, 
+                    size_min=ranges.get("size_min"),
+                    size_max=ranges.get("size_max"),
+                    res_min=ranges.get("res_min"),
+                    res_max=ranges.get("res_max")
+                )
+                return qs
+
+            except (json.JSONDecodeError, TypeError):
+                # Fallback: Treat as plain text query (Legacy)
+                q_obj, _ = build_query_q(raw_q)
+                return Beetles.objects.filter(q_obj)
+
         else:
             return Beetles.objects.none()
 

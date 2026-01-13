@@ -9,6 +9,7 @@
 
 
   <!--- My Uploads --->
+  {% if request.user.is_staff %}
   <div class="mb-10">
     <h2 class="text-xl font-semibold mb-2">My Uploads</h2>
     <p class="text-sm text-text/70 mb-4">
@@ -99,6 +100,7 @@
       </table>
     </div>
   </div>
+  {% endif %}
 
 
   {% if request.user.is_staff %}
@@ -269,7 +271,7 @@
               {% else %}
                 <div class="text-text">All results (by query)</div>
                 <div class="text-text/70 text-xs break-all">
-                  <code>{{ j.query_string|default:"(no filter)" }}</code>
+                  <code>{{ j.get_readable_query }}</code>
                 </div>
               {% endif %}
             </td>
