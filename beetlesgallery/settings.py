@@ -195,3 +195,15 @@ CELERY_TIMEZONE = TIME_ZONE
 CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
 # Remove empty strings just in case
 CSRF_TRUSTED_ORIGINS = [origin for origin in CSRF_TRUSTED_ORIGINS if origin]
+
+# --- Cloudflare & Proxy Configuration ---
+# Trust the headers set by Cloudflare so Django knows the request is HTTPS
+# This is critical to prevent "CSRF Verification Failed" errors.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# --- Session & Cookie Sharing ---
+# Allow cookies to work across subdomains (e.g., .barkandambrosiagallery.org)
+# This allows a user logged into 'www' to stay logged in on 'direct'.
+# We read this from the environment so it doesn't break local development.
+SESSION_COOKIE_DOMAIN = os.environ.get('SESSION_COOKIE_DOMAIN', None)
+CSRF_COOKIE_DOMAIN = os.environ.get('SESSION_COOKIE_DOMAIN', None)
