@@ -309,7 +309,7 @@ class Command(BaseCommand):
             for k in extras_norm[:10]:
                 reps = basename_map.get(k, [])
                 preview_members.append(os.path.basename(reps[0]) if reps else k)
-            errors.append(f"ZIP contains extra images not referenced by sheet: {preview_members}...")
+            errors.append(f"ZIP contains extra images not referenced by sheet: {preview_members}")
 
         zf.close()
         return self._finalize(batch, errors, dry_run, manifest=manifest, zip_path=zip_path)

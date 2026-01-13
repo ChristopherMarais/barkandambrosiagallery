@@ -211,7 +211,7 @@
                     Download Selected (<span class="selected-count">0</span>)
                  </button>
 
-                 {% if request.user.is_staff and total_matches > 0 %}
+                 {% if request.user.is_authenticated and total_matches > 0 %}
                     <div class="h-4 w-px bg-text/20 mx-1"></div>
                     <button type="button" onclick="document.getElementById('download-all-form').submit()"
                             class="text-sm font-semibold text-gray-700 hover:text-black hover:underline">
@@ -427,7 +427,7 @@
                     Download Selected (<span class="selected-count">0</span>)
                  </button>
 
-                 {% if request.user.is_staff and total_matches > 0 %}
+                 {% if request.user.is_authenticated and total_matches > 0 %}
                     <div class="h-4 w-px bg-text/20 mx-1"></div>
                     <button type="button" onclick="document.getElementById('download-all-form').submit()"
                             class="text-sm font-semibold text-gray-700 hover:text-black hover:underline">
@@ -654,15 +654,15 @@
   const filtersDiv = document.getElementById('advanced-filters');
   const chevron = document.getElementById('chevron-icon');
 
-  const hasAdvancedFilters = Number("{{ selected_filters|length|default:0 }}") > 0 || 
-                             "{{ size_min }}" !== "" || "{{ size_max }}" !== "" ||
-                             "{{ res_min }}" !== "" || "{{ res_max }}" !== "";
+  // const hasAdvancedFilters = Number("{{ selected_filters|length|default:0 }}") > 0 || 
+  //                            "{{ size_min }}" !== "" || "{{ size_max }}" !== "" ||
+  //                            "{{ res_min }}" !== "" || "{{ res_max }}" !== "";
 
-  if (hasAdvancedFilters) {
-      filtersDiv.classList.remove('hidden');
-      toggleBtn.setAttribute('aria-expanded', 'true');
-      if(chevron) chevron.style.transform = 'rotate(180deg)';
-  }
+  // if (hasAdvancedFilters) {
+  //     filtersDiv.classList.remove('hidden');
+  //     toggleBtn.setAttribute('aria-expanded', 'true');
+  //     if(chevron) chevron.style.transform = 'rotate(180deg)';
+  // }
 
   toggleBtn.addEventListener('click', () => {
       const isHidden = filtersDiv.classList.contains('hidden');
