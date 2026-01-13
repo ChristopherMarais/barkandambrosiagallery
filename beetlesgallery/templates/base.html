@@ -75,13 +75,86 @@
 
     <div id="sidenavWrap" class="block sticky left-0 top-0 h-screen bg-gray-50 border-r border-gray-200">
 
-      <div class="lg:hidden flex items-center justify-between px-4 py-3 border-b">
-        <a href="{% url 'home' %}">
-          <img src="{% static 'img/IMG_5557.PNG' %}" alt="Logo" class="h-8" />
-        </a>
-        <button onclick="menuToggle()" class="p-2 rounded focus:bg-gray-200">
-          <i class="fi fi-rr-menu-burger text-2xl"></i>
-        </button>
+      <div id="mobileMenuWrap"> 
+        <div class="lg:hidden flex items-center justify-between px-4 py-3 border-b">
+          <button onclick="menuToggle()" class="p-4 rounded focus:bg-gray-200">
+            <i class="fi fi-rr-menu-burger text-2xl"></i>
+          </button>
+        </div>
+
+        <div id="mobile-menu" 
+             class="hidden absolute top-14 left-0 w-64 bg-gray-50 border-r border-b border-gray-200 shadow-xl z-50 transition-all duration-300 transform opacity-0 translate-y-10" 
+             data-open="false">
+          
+          <div class="flex flex-col gap-2 w-full p-2 mt-2">
+
+            <a href="{% url 'home' %}" 
+               class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'home' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+               <img src="{% static 'img/IMG_5557.PNG' %}" alt="Home" class="h-8 w-8 object-contain" />
+               <span class="font-medium text-gray-700 ml-3">Home</span>
+            </a>
+
+            <div class="h-px bg-gray-300 my-1 mx-2"></div>
+
+            <a href="{% url 'beetles_home' %}" 
+               class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'beetles_home' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+               <i class="fi fi-rr-bug text-xl text-gray-700 w-8 text-center"></i>
+               <span class="font-medium text-gray-700 ml-1">Image Browser</span>
+            </a>
+
+            {% if user.is_staff %}
+            <a href="{% url 'upload' %}" 
+               class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'upload' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+               <i class="fi fi-rr-upload text-xl text-gray-700 w-8 text-center"></i>
+               <span class="font-medium text-gray-700 ml-1">Upload Data</span>
+            </a>
+
+            <a href="{% url 'update_upload' %}" 
+               class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'update_upload' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+               <i class="fi fi-rr-refresh text-xl text-gray-700 w-8 text-center"></i>
+               <span class="font-medium text-gray-700 ml-1">Update Data</span>
+            </a>
+            {% endif %}
+
+            {% if user.is_authenticated %}
+            <a href="{% url 'my_account' %}" 
+               class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'my_account' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+               <i class="fi fi-rr-user text-xl text-gray-700 w-8 text-center"></i>
+               <span class="font-medium text-gray-700 ml-1">Account</span>
+            </a>
+
+            <a href="{% url 'my_uploads' %}" 
+               class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'my_uploads' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+               <i class="fi fi-rr-folder text-xl text-gray-700 w-8 text-center"></i>
+               <span class="font-medium text-gray-700 ml-1">My Files</span>
+            </a>
+
+            <div class="h-px bg-gray-300 my-1 mx-2"></div>
+
+            <form action="{% url 'logout' %}" method="post" class="w-full" onsubmit="return confirm('Are you sure you want to log out?');">
+               {% csrf_token %}
+               <button type="submit" class="flex items-center w-full min-h-[3.5rem] rounded-lg hover:bg-gray-200 px-5 transition-all whitespace-nowrap group">
+                  <i class="fi fi-rr-sign-out-alt text-xl text-gray-400 w-8 text-center"></i>
+                  <span class="font-medium text-gray-400 ml-1">Logout</span>
+               </button>
+            </form>
+
+            {% else %}
+            <a href="{% url 'login' %}" 
+               class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'login' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+               <i class="fi fi-rr-sign-in-alt text-xl text-gray-700 w-8 text-center"></i>
+               <span class="font-medium text-gray-700 ml-1">Login</span>
+            </a>
+
+            <a href="{% url 'signup' %}" 
+               class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'signup' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+               <i class="fi fi-rr-user-add text-xl text-gray-700 w-8 text-center"></i>
+               <span class="font-medium text-gray-700 ml-1">Sign Up</span>
+            </a>
+            {% endif %}
+
+          </div>
+        </div>
       </div>
 
       <aside id="sidenav"
