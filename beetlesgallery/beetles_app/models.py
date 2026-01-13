@@ -616,3 +616,45 @@ class DownloadJob(models.Model):
             return json.loads(self.selected_ids_json or "[]")
         except Exception:
             return []
+
+    def get_readable_query(self):
+        """
+        Parses the JSON query string to return a human-readable summary of filters
+        (e.g., 'Text: "bear"; Genus: Cyclommatus; Size >= 10MB').
+        """
+        qs = (self.query_string or "").strip()
+        if not qs:
+            return "—"
+            
+        # 1. Try parsing as JSON (New format used by start_batch_download)
+        if qs.startswith("{"):
+            try:
+                data = json.loads(qs)
+                parts = []
+                
+                # Text search
+                if text := data.get("q"):
+                    parts.append(f"Text: “{text}”")
+                    
+                # Facet filters
+                filters = data.get("filters", {})
+                for k, vals in filters.items():
+                    # format key nicely (e.g. 'subfamily' -> 'Subfamily')
+                    label = k.replace("_", " ").title()
+                    # format vals
+                    val_str = ", ".join(str(v) for v in vals)
+                    parts.append(f"{label}: {val_str}")
+                    
+                # Ranges
+                ranges = data.get("ranges", {})
+                if r := ranges.get("size_min"): parts.append(f"Size ≥ {r}MB")
+                if r := ranges.get("size_max"): parts.append(f"Size ≤ {r}MB")
+                if r := ranges.get("res_min"): parts.append(f"Res ≥ {r}")
+                if r := ranges.get("res_max"): parts.append(f"Res ≤ {r}")
+
+                return "; ".join(parts) if parts else "All records"
+            except json.JSONDecodeError:
+                pass # Fall through to legacy plain text
+
+        # 2. Legacy/Plain text (backwards compatibility)
+        return qs
