@@ -17,7 +17,7 @@ from django.utils.http import http_date
 from django.http import HttpResponseNotAllowed, FileResponse, HttpResponse, Http404
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth import login, update_session_auth_hash
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views.decorators.http import require_POST
 from django.contrib.auth.views import LoginView as DjangoLoginView, LogoutView
 from django.contrib.admin.views.decorators import staff_member_required
@@ -148,7 +148,7 @@ def _normalize_valid_id_for_lookup(v):
     # Non-integer floats (e.g. "123.5") stay as their original string
     return s
 
-@staff_member_required
+@login_required(login_url='login')
 def upload_file(request):
     print("DEBUG: entered upload_file view", flush=True)
     if request.method != "POST":
@@ -755,7 +755,7 @@ def download_taxonomy_ref(request):
 
     return resp
 
-@staff_member_required
+@login_required(login_url='login')
 def admin_valid_species(request):
     """
     Minimal admin page to publish a new valid_species.csv into default_storage
@@ -836,7 +836,7 @@ UPDATE_OPTIONAL_COLS = {"update_notes"}
 
 
 @login_required
-@staff_member_required
+@login_required(login_url='login')
 def update_upload(request):
     """
     Staff-only portal to submit an XLSX of metadata updates by Record ID (UUID).
@@ -938,7 +938,7 @@ def update_upload(request):
     return redirect("my_uploads")
 
 @login_required
-@staff_member_required
+@login_required(login_url='login')
 @require_POST
 def update_single_beetle(request, beetle_id):
     """
@@ -970,7 +970,7 @@ def update_single_beetle(request, beetle_id):
 
 
 @login_required
-@staff_member_required
+@login_required(login_url='login')
 @require_POST
 def create_specimen_for_image(request, image_id):
     """
