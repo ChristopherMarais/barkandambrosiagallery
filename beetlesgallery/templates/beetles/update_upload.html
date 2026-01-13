@@ -2,6 +2,26 @@
 {% load static %}
 
 {% block content %}
+<script>
+    // Configuration: The direct subdomain that bypasses Cloudflare
+    const DIRECT_HOST = "direct.barkandambrosiagallery.org";
+    const CURRENT_HOST = window.location.hostname;
+
+    // If we are not on localhost and not already on the direct subdomain...
+    if (CURRENT_HOST !== 'localhost' && CURRENT_HOST !== '127.0.0.1' && CURRENT_HOST !== DIRECT_HOST) {
+        
+        // Redirect to the direct subdomain.
+        // We use HTTP because you likely don't have an SSL cert for the raw "direct" subdomain yet.
+        // If you set up an Origin Cert later, change this to "https://".
+        window.location.href = "http://" + DIRECT_HOST + window.location.pathname;
+    }
+</script>
+
+<div class="mb-4 p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-md text-sm">
+    <i class="fi fi-rr-cloud-upload"></i> 
+    <strong>Large File Support:</strong> You are connected to the high-capacity upload server.
+</div>
+
 <section class="relative z-0">
   <h1 class="text-2xl sm:text-3xl font-semibold mb-8">Update Database</h1>
 </section>
