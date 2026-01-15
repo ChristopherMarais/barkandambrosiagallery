@@ -38,6 +38,7 @@ django-crispy-forms = "*"
 django-filter = "*"
 django-simple-history = "*"
 django-cleanup = "*"  # Optional but good for file management
+djangorestframework = "*"
 nodejs = "20.*"
 whitenoise = ">=6.11.0,<7"
 redis-py = ">=7.1.0,<8"
