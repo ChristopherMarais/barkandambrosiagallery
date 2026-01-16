@@ -172,48 +172,86 @@
           <span class="font-medium">Upload Files</span>
         </button>
 
+        <div id="progress-container" class="hidden mt-4">
+            <div class="w-full bg-gray-200 rounded-full h-4 dark:bg-gray-700">
+                <div id="progress-bar" class="bg-blue-600 h-4 rounded-full text-xs font-medium text-blue-100 text-center p-0.5 leading-none" style="width: 0%"> 0%</div>
+            </div>
+            <p id="progress-text" class="text-sm text-gray-500 mt-1 text-center">Starting upload...</p>
+        </div>
+
       </form>
     </div>
   </div>
 </section>
 
-<!-- <script>
-document.addEventListener("DOMContentLoaded", function () {
-    const form = document.getElementById("upload-form");
-    const overlay = document.getElementById("loading-overlay");
-    const bar = document.getElementById("loading-bar");
+<script>
+    const form = document.getElementById('upload-form');
 
-    if (!form) return;
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault(); 
 
-    form.addEventListener("submit", function () {
-        // Show the loading overlay
-        overlay.style.display = "block";
-
-        // Disable form fields to prevent second submission
-        Array.from(form.elements).forEach(el => el.disabled = true);
-
-        // Fake progress behavior
-        let progress = 0;
-
-        const interval = setInterval(function () {
-            // Fill quickly to ~90%
-            if (progress < 90) {
-                progress += Math.random() * 10;
-            } else {
-                // Slow approach to 100%
-                progress += Math.random() * 2;
+            const formData = new FormData(form);
+            const fileInput = form.querySelector('input[type="file"]');
+            
+            // Safety Check
+            if (!fileInput || fileInput.files.length === 0) {
+                alert("Please select a file first.");
+                return;
             }
 
-            if (progress >= 100) {
-                progress = 100;
-                clearInterval(interval);
-            }
+            // Show UI
+            const progressContainer = document.getElementById('progress-container');
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            const submitBtn = form.querySelector('button[type="submit"]');
 
-            bar.style.width = progress + "%";
+            progressContainer.classList.remove('hidden');
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Uploading...";
 
-        }, 300); // update every 0.3 sec
-    });
-});
-</script> -->
+            // AJAX Request
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', form.action, true);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+            // Track Progress
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    
+                    // 1. Move the blue bar
+                    progressBar.style.width = percent + '%';
+                    
+                    // 2. Update the text below the bar
+                    if (percent < 100) {
+                        progressText.innerText = `Uploading: ${percent}%`;
+                        progressBar.innerText = ""; 
+                    } else {
+                        progressText.innerText = "Upload complete! Processing...";
+                        progressBar.classList.add('animate-pulse');
+                    }
+                }
+            };
+
+            // Handle Success
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    // Redirect to "My Uploads"
+                    window.location.href = "/my-uploads/"; 
+                } else {
+                    // Handle Server Errors (e.g., 500 error)
+                    progressText.innerText = "Server Error: " + xhr.status;
+                    progressText.classList.add('text-red-600');
+                    submitBtn.disabled = false;
+                    progressBar.classList.remove('animate-pulse');
+                    progressBar.classList.add('bg-red-600');
+                }
+            };
+
+            xhr.send(formData);
+        });
+    }
+</script>
 
 {% endblock %}
