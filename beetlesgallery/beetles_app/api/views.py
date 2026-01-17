@@ -1,10 +1,11 @@
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.pagination import LimitOffsetPagination
 from django.http import FileResponse
 from beetlesgallery.beetles_app.models import ImageAsset, Beetles
 from beetlesgallery.beetles_app import species_ref
-from .serializers import ImageAssetSerializer, BeetlesSerializer
+from .serializers import ImageAssetSerializer, BeetlesSerializer, SpeciesSerializer
 
 
 class ImageAssetViewSet(viewsets.ReadOnlyModelViewSet):
@@ -59,10 +60,60 @@ class BeetlesViewSet(viewsets.ReadOnlyModelViewSet):
                     # Filter beetles by these IDs
                     queryset = queryset.filter(depicts_valid_name_id__in=matching_ids)
                 else:
-                    # No matches - return empty queryset
                     queryset = queryset.none()
             except Exception:
-                # If lookup fails, return empty queryset
                 queryset = queryset.none()
 
         return queryset
+
+
+class SpeciesViewSet(viewsets.ViewSet):
+    """
+    API endpoint for species from valid_species.csv.
+
+    Returns ALL species matching the filter (whether they have images or not).
+    For species with images, includes the image data nested under 'images' field.
+
+    Supports filtering by:
+    GET /api/v1/species/?subfamily=Platypodinae
+    GET /api/v1/species/?genus=Austroplatypus
+    GET /api/v1/species/?tribe=Platypodini
+    """
+    serializer_class = SpeciesSerializer
+
+    def list(self, request):
+        """
+        List all species from CSV, optionally filtered by taxonomy.
+        Returns all results without pagination.
+        """
+        # Get filter parameters
+        subfamily = request.query_params.get('subfamily')
+        genus = request.query_params.get('genus')
+        tribe = request.query_params.get('tribe')
+        species_param = request.query_params.get('species')
+
+        # Load all species from CSV
+        try:
+            all_rows = species_ref._load_all_rows()
+        except Exception as e:
+            return Response({'error': f'Failed to load species reference: {str(e)}'}, status=500)
+
+        # Filter rows based on query params
+        filtered_rows = all_rows
+
+        if subfamily:
+            filtered_rows = [r for r in filtered_rows if r.get('subfamily', '').lower() == subfamily.lower()]
+
+        if genus:
+            filtered_rows = [r for r in filtered_rows if r.get('genus', '').lower() == genus.lower()]
+
+        if tribe:
+            filtered_rows = [r for r in filtered_rows if r.get('tribe', '').lower() == tribe.lower()]
+
+        if species_param:
+            filtered_rows = [r for r in filtered_rows if r.get('species', '').lower() == species_param.lower()]
+
+        # Serialize and return all results
+        serializer = SpeciesSerializer(filtered_rows, many=True)
+
+        return Response(serializer.data)
