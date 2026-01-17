@@ -63,11 +63,12 @@
               {% elif b.status == "rejected" or b.status == "import_failed" %}
                 {% if b.error_report_file %}
                   <div class="flex flex-col gap-1">
-                    <a href="{{ b.error_report_file.url }}"
-                       class="inline-flex items-center gap-1 underline hover:no-underline text-red-700 text-sm">
+                    <button type="button" 
+                            onclick="viewErrorLog('{{ b.error_report_file.url }}')"
+                            class="inline-flex items-center gap-1 underline hover:no-underline text-red-700 text-sm bg-transparent border-0 cursor-pointer">
                       <i class="fi fi-rr-file text-xs"></i>
-                      <span>Error log</span>
-                    </a>
+                      <span>View Error Log</span>
+                    </button>
                   </div>
                 {% else %}
                   {# This should only happen for old batches or if logging failed #}
@@ -331,4 +332,67 @@
     </div>
   </div>
 </section>
+
+<div id="error-modal" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden">
+    
+    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-red-50">
+      <h3 class="text-lg font-semibold text-red-800 flex items-center gap-2">
+        <i class="fi fi-rr-exclamation"></i> Error Log
+      </h3>
+      <button onclick="closeErrorModal()" class="text-gray-500 hover:text-gray-800 transition">
+        <i class="fi fi-rr-cross"></i>
+      </button>
+    </div>
+
+    <div class="p-6 overflow-y-auto bg-gray-50">
+      <pre id="error-modal-text" class="whitespace-pre-wrap text-xs text-gray-700 font-mono bg-white p-4 rounded border border-gray-200 shadow-inner">
+        Loading...
+      </pre>
+    </div>
+
+    <div class="px-6 py-3 border-t border-gray-200 bg-white flex justify-end">
+      <button onclick="closeErrorModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium transition">
+        Close
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function viewErrorLog(fileUrl) {
+    const modal = document.getElementById('error-modal');
+    const contentArea = document.getElementById('error-modal-text');
+
+    // 1. Show the modal
+    modal.classList.remove('hidden');
+    contentArea.innerText = "Loading error log...";
+
+    // 2. Fetch the text file content
+    fetch(fileUrl)
+      .then(response => {
+        if (!response.ok) throw new Error("Could not load file");
+        return response.text();
+      })
+      .then(text => {
+        contentArea.innerText = text;
+      })
+      .catch(err => {
+        contentArea.innerText = "Error loading log file: " + err.message;
+        contentArea.classList.add('text-red-600');
+      });
+  }
+
+  function closeErrorModal() {
+    document.getElementById('error-modal').classList.add('hidden');
+  }
+
+  // Close modal if clicking outside the white box
+  document.getElementById('error-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+      closeErrorModal();
+    }
+  });
+</script>
+
 {% endblock %}
