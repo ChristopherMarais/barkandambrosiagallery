@@ -211,6 +211,5 @@ CSRF_COOKIE_DOMAIN = os.environ.get('SESSION_COOKIE_DOMAIN', None)
 
 # --- Django REST Framework Configuration ---
 REST_FRAMEWORK = {
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    'PAGE_SIZE': 1000,  # Default page size, for now
+    # No pagination for now
 }

@@ -13,6 +13,37 @@ class ImageAssetSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class SpeciesSerializer(serializers.Serializer):
+    """
+    Serializer for species from valid_species.csv with associated images.
+    Returns all taxonomy fields from CSV plus any beetle specimens that depict this species.
+    """
+    valid_species_id = serializers.CharField()
+    scientificName = serializers.CharField()
+    scientificNameAuthority = serializers.CharField(allow_blank=True)
+    subfamily = serializers.CharField(allow_blank=True)
+    tribe = serializers.CharField(allow_blank=True)
+    subtribe = serializers.CharField(allow_blank=True)
+    genus = serializers.CharField(allow_blank=True)
+    species = serializers.CharField(allow_blank=True)
+    subspecies = serializers.CharField(allow_blank=True)
+    authority = serializers.CharField(allow_blank=True)
+    authorityYear = serializers.CharField(allow_blank=True)
+    originalGenus = serializers.CharField(allow_blank=True)
+
+    # Images for this species
+    images = serializers.SerializerMethodField()
+
+    def get_images(self, obj):
+        """
+        Get all beetle specimens (with images) that depict this species.
+        Returns list of beetles with their associated image assets.
+        """
+        species_id = obj.get('valid_species_id')
+        beetles = Beetles.objects.filter(depicts_valid_name_id=species_id).select_related('image_asset')
+        return BeetlesSerializer(beetles, many=True).data
+
+
 class BeetlesSerializer(serializers.ModelSerializer):
     """
     Serializer for Beetles (specimen) model.
