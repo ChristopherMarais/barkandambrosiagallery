@@ -15,21 +15,16 @@ TAILWIND_INPUT = (
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = User
-        fields = ["first_name", "last_name", "email"]
+        fields = ["first_name", "last_name"]
         widgets = {
             "first_name": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "First name", "autocomplete": "given-name"}),
             "last_name": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "Last name", "autocomplete": "family-name"}),
-            "email": forms.EmailInput(attrs={"class": TAILWIND_INPUT, "placeholder": "name@example.com", "autocomplete": "email"}),
         }
 
 class TailwindUserCreationForm(UserCreationForm):
     # These fields ensure the widgets render with the correct Tailwind classes
     username = forms.CharField(
         widget=forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "Choose a username", "autocomplete": "username", "autofocus": "autofocus"})
-    )
-    email = forms.EmailField(
-        required=False,
-        widget=forms.EmailInput(attrs={"class": TAILWIND_INPUT, "placeholder": "Email (optional)", "autocomplete": "email"})
     )
     password1 = forms.CharField(
         widget=forms.PasswordInput(attrs={"class": TAILWIND_INPUT, "placeholder": "Password", "autocomplete": "new-password"})
@@ -40,7 +35,7 @@ class TailwindUserCreationForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ("username", "email")
+        fields = ("username",)
 
 class PasswordChangeFormStyled(PasswordChangeForm):
     """Same form as Django’s, but with visible, styled inputs."""
