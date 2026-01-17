@@ -4,7 +4,9 @@
   <h1 class="text-2xl sm:text-3xl font-semibold mb-8">My Files</h1>
   <p class="text-sm text-text/70 mb-6">
     <span class="font-semibold">About IDs:</span>
-    <span class="ml-1">“<span class="font-medium">Record ID</span>” uniquely identifies a single Beetles entry (and its image). “<span class="font-medium">Upload ID</span>” refers to an upload batch, “<span class="font-medium">Update ID</span>” to an update batch, and “<span class="font-medium">Job ID</span>” to a download job.</span>
+    <span class="ml-1">“<span class="font-medium">Record ID</span>” uniquely identifies a single Beetles entry (and its
+      image). “<span class="font-medium">Upload ID</span>” refers to an upload batch, “<span class="font-medium">Update
+        ID</span>” to an update batch, and “<span class="font-medium">Job ID</span>” to a download job.</span>
   </p>
 
 
@@ -14,7 +16,9 @@
     <h2 class="text-xl font-semibold mb-2">My Uploads</h2>
     <p class="text-sm text-text/70 mb-4">
       Your metadata + image uploads (new entries only). Status progresses from
-      <span class="font-medium">Staging</span> → <span class="font-medium">Validating</span> → <span class="font-medium">Validated</span> → <span class="font-medium">Imported</span> or <span class="font-medium">Validation failed</span>.
+      <span class="font-medium">Staging</span> → <span class="font-medium">Validating</span> → <span
+        class="font-medium">Validated</span> → <span class="font-medium">Imported</span> or <span
+        class="font-medium">Validation failed</span>.
     </p>
 
     <div class="rounded-xl border border-text/20 bg-primary2 overflow-x-auto">
@@ -22,7 +26,7 @@
         <colgroup>
           <!-- When | Filename | Status | Error | Upload ID -->
           <col class="w-40" />
-          <col />              <!-- flexible -->
+          <col /> <!-- flexible -->
           <col class="w-[28rem]" /> <!-- Error (wider for messages) -->
           <col class="w-72" /> <!-- Upload ID wider -->
         </colgroup>
@@ -46,56 +50,57 @@
             <td class="px-3 text-sm">
               {# Normal / pending states #}
               {% if b.status == "staging" %}
-                <span class="text-xs text-text/80">Awaiting validation</span>
+              <span class="text-xs text-text/80">Awaiting validation</span>
 
               {% elif b.status == "validating" %}
-                <span class="text-xs text-text/80">Validation in progress</span>
+              <span class="text-xs text-text/80">Validation in progress</span>
 
               {% elif b.status == "validated" %}
-                <span class="text-xs text-text/80">Validated; awaiting import</span>
+              <span class="text-xs text-text/80">Validated; awaiting import</span>
 
               {% elif b.status == "imported" %}
-                <span class="text-xs px-2 py-1 rounded bg-green-50 text-green-800">
-                  Import successful
-                </span>
+              <span class="text-xs px-2 py-1 rounded bg-green-50 text-green-800">
+                Import successful
+              </span>
 
               {# Any failure: validation failed (rejected) or import failed #}
               {% elif b.status == "rejected" or b.status == "import_failed" %}
-                {% if b.error_report_file %}
-                  <div class="flex flex-col gap-1">
-                    <button type="button" 
-                            onclick="viewLog('{{ b.error_report_file.url }}', 'Error Log')"
-                            class="inline-flex items-center gap-1 underline hover:no-underline text-red-700 text-sm bg-transparent border-0 cursor-pointer">
-                      <i class="fi fi-rr-file text-xs"></i>
-                      <span>View Error Log</span>
-                    </button>
-                  </div>
+              {% if b.error_report_file %}
+              <div class="flex flex-col gap-1">
+                <button type="button" onclick="viewLog('{{ b.error_report_file.url }}', 'Error Log')"
+                  class="inline-flex items-center gap-1 underline hover:no-underline text-red-700 text-sm bg-transparent border-0 cursor-pointer">
+                  <i class="fi fi-rr-file text-xs"></i>
+                  <span>View Error Log</span>
+                </button>
+              </div>
+              {% else %}
+              {# This should only happen for old batches or if logging failed #}
+              <div class="text-red-700 bg-red-50 border border-red-200 rounded p-2 leading-snug">
+                <div class="text-xs font-semibold mb-1">Error log not available</div>
+                {% if b.error_message %}
+                <div class="text-xs">
+                  {{ b.error_message|truncatechars:200 }}
+                </div>
                 {% else %}
-                  {# This should only happen for old batches or if logging failed #}
-                  <div class="text-red-700 bg-red-50 border border-red-200 rounded p-2 leading-snug">
-                    <div class="text-xs font-semibold mb-1">Error log not available</div>
-                    {% if b.error_message %}
-                      <div class="text-xs">
-                        {{ b.error_message|truncatechars:200 }}
-                      </div>
-                    {% else %}
-                      <div class="text-xs">
-                        A failure occurred, but no error log was generated.
-                      </div>
-                    {% endif %}
-                  </div>
+                <div class="text-xs">
+                  A failure occurred, but no error log was generated.
+                </div>
                 {% endif %}
+              </div>
+              {% endif %}
 
               {# Fallback for any unexpected status #}
               {% else %}
-                <span class="text-xs text-text/60">{{ b.get_status_display }}</span>
+              <span class="text-xs text-text/60">{{ b.get_status_display }}</span>
               {% endif %}
             </td>
 
             <td class="px-3 whitespace-nowrap"><code class="text-xs">{{ b.id }}</code></td>
           </tr>
           {% empty %}
-          <tr><td colspan="4" class="py-4 px-3 text-gray-500">No uploads yet.</td></tr>
+          <tr>
+            <td colspan="4" class="py-4 px-3 text-gray-500">No uploads yet.</td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
@@ -109,7 +114,8 @@
   <div class="mb-10">
     <h2 class="text-xl font-semibold mb-2">My Updates</h2>
     <p class="text-sm text-text/70 mb-6">
-      Your submitted updates to existing Beetles rows (by <span class="font-medium">Record ID</span>). Apply is all-or-nothing and requires that Name ID exists in taxonomy reference sheet.
+      Your submitted updates to existing Beetles rows (by <span class="font-medium">Record ID</span>). Apply is
+      all-or-nothing and requires that Name ID exists in taxonomy reference sheet.
       Updates move through the following states:
       <span class="font-medium">Staging</span> → <span class="font-medium">Validating</span> →
       <span class="font-medium">Validated</span> (ready to apply) or
@@ -122,12 +128,12 @@
         <colgroup>
           <!-- When | Filename | Status | Counts | Taxonomy Ref | Report | Update ID -->
           <col class="w-40" />
-          <col />                <!-- flexible -->
-          <col class="w-44" />   <!-- Status (narrower) -->
+          <col /> <!-- flexible -->
+          <col class="w-44" /> <!-- Status (narrower) -->
           <col class="w-40" />
           <col class="w-60" />
           <col class="w-28" />
-          <col class="w-72" />   <!-- Update ID (wider) -->
+          <col class="w-72" /> <!-- Update ID (wider) -->
         </colgroup>
 
         <thead>
@@ -143,83 +149,84 @@
         </thead>
         <tbody>
           {% for u in update_batches %}
-            <tr class="border-t border-gray-200">
-              <td class="py-2 px-3 whitespace-nowrap">{{ u.created_at|date:"Y-m-d H:i" }}</td>
-              <td class="px-3">{{ u.original_filename }}</td>
+          <tr class="border-t border-gray-200">
+            <td class="py-2 px-3 whitespace-nowrap">{{ u.created_at|date:"Y-m-d H:i" }}</td>
+            <td class="px-3">{{ u.original_filename }}</td>
 
-              <td class="py-2">
-                {% if u.status == "staging" %}
-                  <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs">Staging</span>
-                  <div class="text-xs text-text/70 mt-1">Awaiting validation</div>
+            <td class="py-2">
+              {% if u.status == "staging" %}
+              <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs">Staging</span>
+              <div class="text-xs text-text/70 mt-1">Awaiting validation</div>
 
-                {% elif u.status == "validating" %}
-                  <span class="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">Validating</span>
-                  <div class="text-xs text-text/70 mt-1">Checks in progress</div>
+              {% elif u.status == "validating" %}
+              <span class="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">Validating</span>
+              <div class="text-xs text-text/70 mt-1">Checks in progress</div>
 
-                {% elif u.status == "validated" %}
-                  <span class="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs">Validated</span>
-                  <div class="text-xs text-text/70 mt-1">Ready to apply</div>
+              {% elif u.status == "validated" %}
+              <span class="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs">Validated</span>
+              <div class="text-xs text-text/70 mt-1">Ready to apply</div>
 
-                {% elif u.status == "rejected" %}
-                  <span class="px-2 py-0.5 rounded bg-red-100 text-red-800 text-xs">Rejected</span>
-                  {% if u.error_message %}
-                    <div class="text-xs text-text/70 mt-1">{{ u.error_message }}</div>
-                  {% endif %}
+              {% elif u.status == "rejected" %}
+              <span class="px-2 py-0.5 rounded bg-red-100 text-red-800 text-xs">Rejected</span>
+              {% if u.error_message %}
+              <div class="text-xs text-text/70 mt-1">{{ u.error_message }}</div>
+              {% endif %}
 
-                {% elif u.status == "applied" %}
-                  <span class="px-2 py-0.5 rounded bg-green-200 text-green-900 text-xs">Applied</span>
-                  {% if u.applied_at %}
-                    <div class="text-xs text-text/70 mt-1">Applied {{ u.applied_at|date:"Y-m-d H:i" }}</div>
-                  {% endif %}
+              {% elif u.status == "applied" %}
+              <span class="px-2 py-0.5 rounded bg-green-200 text-green-900 text-xs">Applied</span>
+              {% if u.applied_at %}
+              <div class="text-xs text-text/70 mt-1">Applied {{ u.applied_at|date:"Y-m-d H:i" }}</div>
+              {% endif %}
 
-                {% elif u.status == "apply_failed" %}
-                  <span class="px-2 py-0.5 rounded bg-red-100 text-red-800 text-xs">Apply failed</span>
-                  {% if u.error_message %}
-                    <div class="text-xs text-text/70 mt-1">{{ u.error_message }}</div>
-                  {% endif %}
+              {% elif u.status == "apply_failed" %}
+              <span class="px-2 py-0.5 rounded bg-red-100 text-red-800 text-xs">Apply failed</span>
+              {% if u.error_message %}
+              <div class="text-xs text-text/70 mt-1">{{ u.error_message }}</div>
+              {% endif %}
 
-                {% else %}
-                  <span class="text-xs text-text/70">{{ u.get_status_display }}</span>
-                {% endif %}
-              </td>
+              {% else %}
+              <span class="text-xs text-text/70">{{ u.get_status_display }}</span>
+              {% endif %}
+            </td>
 
-              <td class="px-3 whitespace-nowrap">
-                <span title="matched / changed / unchanged / failed">
-                  {{ u.rows_matched }} / {{ u.rows_changed }} / {{ u.rows_unchanged }} / {{ u.rows_failed }}
-                </span>
-                {% if u.rows_total %}
-                  <div class="text-xs text-text/60">Total {{ u.rows_total }}</div>
-                {% endif %}
-              </td>
+            <td class="px-3 whitespace-nowrap">
+              <span title="matched / changed / unchanged / failed">
+                {{ u.rows_matched }} / {{ u.rows_changed }} / {{ u.rows_unchanged }} / {{ u.rows_failed }}
+              </span>
+              {% if u.rows_total %}
+              <div class="text-xs text-text/60">Total {{ u.rows_total }}</div>
+              {% endif %}
+            </td>
 
-              <td class="px-3">
-                {% if u.species_label_at_validation %}
-                  <span class="text-xs text-text/80">{{ u.species_label_at_validation }}</span>
-                {% elif u.species_version_at_validation %}
-                  <span class="text-xs text-text/60">{{ u.species_version_at_validation|slice:":8" }}…</span>
-                {% else %}
-                  <span class="text-xs text-text/60">—</span>
-                {% endif %}
-              </td>
+            <td class="px-3">
+              {% if u.species_label_at_validation %}
+              <span class="text-xs text-text/80">{{ u.species_label_at_validation }}</span>
+              {% elif u.species_version_at_validation %}
+              <span class="text-xs text-text/60">{{ u.species_version_at_validation|slice:":8" }}…</span>
+              {% else %}
+              <span class="text-xs text-text/60">—</span>
+              {% endif %}
+            </td>
 
-              <td class="px-3">
-                {% if u.report_file %}
-                  <button type="button" 
-                          onclick="viewLog('{{ u.report_file.url }}', 'Validation Report')"
-                          class="underline hover:no-underline text-sm bg-transparent border-0 cursor-pointer text-blue-700">
-                    Report
-                  </button>
-                {% else %}
-                  <span class="text-text/60 text-xs">—</span>
-                {% endif %}
-              </td>
+            <td class="px-3">
+              {% if u.report_file %}
+              <button type="button" onclick="viewLog('{{ u.report_file.url }}', 'Validation Report')"
+                class="underline hover:no-underline text-sm bg-transparent border-0 cursor-pointer text-blue-700">
+                Report
+              </button>
+              {% else %}
+              <span class="text-text/60 text-xs">—</span>
+              {% endif %}
+            </td>
 
-              <td class="px-3 whitespace-nowrap">
-                <code class="text-xs">{{ u.id }}</code>
-              </td>
-            </tr>
+            <td class="px-3 whitespace-nowrap">
+              <code class="text-xs">{{ u.id }}</code>
+            </td>
+          </tr>
           {% empty %}
-            <tr><td colspan="7" class="py-4 px-3 text-gray-500">No updates yet.</td></tr>
+          <tr>
+            <td colspan="7" class="py-4 px-3 text-gray-500">No updates yet.</td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
@@ -237,7 +244,9 @@
       → <span class="font-medium">Building</span>
       → <span class="font-medium">Ready</span>
       or <span class="font-medium">Failed</span>.
-      <span class="ml-1">Ready files may later become <span class="font-medium">Expired</span> after the retention period.</span> The TSV and ZIP filenames include the <span class="font-medium">Record ID</span> so you can match rows to images.
+      <span class="ml-1">Ready files may later become <span class="font-medium">Expired</span> after the retention
+        period.</span> The TSV and ZIP filenames include the <span class="font-medium">Record ID</span> so you can match
+      rows to images.
     </p>
 
     <div class="rounded-xl border border-text/20 bg-primary2 overflow-x-auto">
@@ -245,7 +254,7 @@
         <colgroup>
           <!-- When | Request | Requested | Status | Actions | Job ID -->
           <col class="w-40" />
-          <col />              <!-- flexible -->
+          <col /> <!-- flexible -->
           <col class="w-32" />
           <col class="w-40" />
           <col class="w-36" />
@@ -269,67 +278,69 @@
 
             <td class="py-2 px-3">
               {% if j.selection_mode == "ids" %}
-                <div class="text-text">Selected IDs</div>
-                <div class="text-text/70 text-xs">
-                  {{ j.get_ids|length }} IDs
-                </div>
+              <div class="text-text">Selected IDs</div>
+              <div class="text-text/70 text-xs">
+                {{ j.get_ids|length }} IDs
+              </div>
               {% else %}
-                <div class="text-text">All results (by query)</div>
-                <div class="text-text/70 text-xs break-all">
-                  <code>{{ j.get_readable_query }}</code>
-                </div>
+              <div class="text-text">All results (by query)</div>
+              <div class="text-text/70 text-xs break-all">
+                <code>{{ j.get_readable_query }}</code>
+              </div>
               {% endif %}
             </td>
 
             <td class="py-2 px-3">
               {% if j.selection_mode == "ids" %}
-                {{ j.total_requested }}
+              {{ j.total_requested }}
               {% else %}
-                {{ j.total_requested }} (estimated)
+              {{ j.total_requested }} (estimated)
               {% endif %}
             </td>
 
             <td class="py-2 px-3">
               {% if j.status == "ready" %}
-                <span class="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs">Ready</span>
-                {% if j.expires_at %}
-                  <div class="text-xs text-text/70 mt-1">
-                    Expires {{ j.expires_at|date:"Y-m-d H:i" }}
-                  </div>
-                {% endif %}
+              <span class="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs">Ready</span>
+              {% if j.expires_at %}
+              <div class="text-xs text-text/70 mt-1">
+                Expires {{ j.expires_at|date:"Y-m-d H:i" }}
+              </div>
+              {% endif %}
               {% elif j.status == "building" %}
-                <span class="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">Building</span>
+              <span class="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">Building</span>
               {% elif j.status == "pending" %}
-                <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs">Pending</span>
+              <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs">Pending</span>
               {% elif j.status == "failed" %}
-                <span class="px-2 py-0.5 rounded bg-red-100 text-red-800 text-xs">Failed</span>
-                {% if j.error_message %}
-                  <div class="text-xs text-text/70 mt-1">{{ j.error_message }}</div>
-                {% endif %}
+              <span class="px-2 py-0.5 rounded bg-red-100 text-red-800 text-xs">Failed</span>
+              {% if j.error_message %}
+              <div class="text-xs text-text/70 mt-1">{{ j.error_message }}</div>
+              {% endif %}
               {% elif j.status == "expired" %}
-                <span class="px-2 py-0.5 rounded bg-gray-200 text-gray-700 text-xs">Expired</span>
-                <div class="text-xs text-text/70 mt-1">Files removed after retention period.</div>
+              <span class="px-2 py-0.5 rounded bg-gray-200 text-gray-700 text-xs">Expired</span>
+              <div class="text-xs text-text/70 mt-1">Files removed after retention period.</div>
               {% else %}
-                <span class="text-xs text-text/70">{{ j.get_status_display }}</span>
+              <span class="text-xs text-text/70">{{ j.get_status_display }}</span>
               {% endif %}
             </td>
 
             <td class="py-2 px-3 space-x-2 whitespace-nowrap">
               {% if j.tsv_file %}
-                <a href="{{ j.tsv_file.url }}" class="underline hover:no-underline">Metadata.tsv</a>
+              <a href="{{ j.tsv_file.url }}" class="underline hover:no-underline">Metadata.tsv</a>
               {% endif %}
               {% if j.zip_file %}
-                <a href="{{ j.zip_file.url }}" class="underline hover:no-underline">Images.zip</a>
+              <a href="{{ j.zip_file.url }}" class="underline hover:no-underline">Images.zip</a>
               {% endif %}
               {% if not j.tsv_file and not j.zip_file %}
-                <span class="text-text/60 text-xs">No files yet</span>
+              <span class="text-text/60 text-xs">No files yet</span>
               {% endif %}
             </td>
 
             <td class="py-2 px-3 whitespace-nowrap"><code class="text-xs">{{ j.id }}</code></td>
           </tr>
           {% empty %}
-          <tr><td colspan="6" class="py-4 px-3 text-gray-500">No downloads yet.</td></tr>
+          <tr>
+            <td colspan="6" class="py-4 px-3 text-gray-500">No downloads yet.</td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
@@ -337,9 +348,10 @@
   </div>
 </section>
 
-<div id="error-modal" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+<div id="error-modal"
+  class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
   <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden">
-    
+
     <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-red-50">
       <h3 class="text-lg font-semibold text-red-800 flex items-center gap-2">
         <i class="fi fi-rr-exclamation"></i> Error Log
@@ -350,13 +362,16 @@
     </div>
 
     <div class="p-6 overflow-y-auto bg-gray-50">
-      <pre id="error-modal-text" class="whitespace-pre-wrap text-xs text-gray-700 font-mono bg-white p-4 rounded border border-gray-200 shadow-inner">
+      <pre id="error-modal-text"
+        class="whitespace-pre-wrap break-words text-xs text-gray-700 font-mono bg-white p-4 rounded border border-gray-200 shadow-inner"
+        style="white-space: pre-wrap;">
         Loading...
       </pre>
     </div>
 
     <div class="px-6 py-3 border-t border-gray-200 bg-white flex justify-end">
-      <button onclick="closeErrorModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium transition">
+      <button onclick="closeErrorModal()"
+        class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium transition">
         Close
       </button>
     </div>
@@ -365,23 +380,26 @@
 
 <div id="log-modal" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
   <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden">
-    
+
     <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
       <h3 id="log-modal-title" class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-        </h3>
+      </h3>
       <button onclick="closeLogModal()" class="text-gray-500 hover:text-gray-800 transition">
         <i class="fi fi-rr-cross"></i>
       </button>
     </div>
 
     <div class="p-6 overflow-y-auto bg-gray-50">
-      <pre id="log-modal-text" class="whitespace-pre-wrap text-xs text-gray-700 font-mono bg-white p-4 rounded border border-gray-200 shadow-inner">
+      <pre id="log-modal-text"
+        class="whitespace-pre-wrap break-words text-xs text-gray-700 font-mono bg-white p-4 rounded border border-gray-200 shadow-inner"
+        style="white-space: pre-wrap;">
         Loading...
       </pre>
     </div>
 
     <div class="px-6 py-3 border-t border-gray-200 bg-white flex justify-end">
-      <button onclick="closeLogModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium transition">
+      <button onclick="closeLogModal()"
+        class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium transition">
         Close
       </button>
     </div>
@@ -419,7 +437,7 @@
   }
 
   // Close if clicking outside
-  document.getElementById('log-modal').addEventListener('click', function(e) {
+  document.getElementById('log-modal').addEventListener('click', function (e) {
     if (e.target === this) {
       closeLogModal();
     }
