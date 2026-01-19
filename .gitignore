@@ -37,5 +37,6 @@ node_modules/
 .vscode/
 .idea/
 .DS_Store
-Thumbs.dbupload_pipeline.lock
+Thumbs.db
+upload_pipeline.lock
 
