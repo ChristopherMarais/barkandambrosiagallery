@@ -67,10 +67,26 @@
       /* Ensures the whole beetle fits */
     }
 
+    /* Fallback for missing Tailwind classes */
+    #layout-container {
+      display: flex;
+      flex-direction: column; /* Mobile default: Stacked */
+    }
+
+    #sidenavWrap {
+      position: sticky;
+      top: 0;
+      z-index: 50; /* Forces header above content on mobile */
+    }
+
     @media (min-width: 1024px) {
+      #layout-container {
+        flex-direction: row; 
+      }/* Large screens: Side by side */
       #sidenavWrap {
         width: 5rem;
-        z-index: 50;
+        height: 100vh;
+        flex-shrink: 0;
       }
 
       #sidenav {
@@ -108,9 +124,9 @@
 
 <body class="flex flex-col min-h-screen bg-white text-gray-800">
 
-  <div class="flex h-full min-h-screen w-full">
+  <div id="layout-container" class="flex flex-col lg:flex-row h-full min-h-screen w-full">
 
-    <div id="sidenavWrap" class="block sticky left-0 top-0 h-screen bg-gray-50 border-r border-gray-200">
+    <div id="sidenavWrap" class="block sticky left-0 top-0 z-40 w-full h-auto lg:h-screen lg:w-20 lg:shrink-0 bg-gray-50 border-b lg:border-b-0 lg:border-r border-gray-200">
 
       <div id="mobileMenuWrap">
         <div class="lg:hidden flex items-center justify-between px-4 py-3 border-b">
