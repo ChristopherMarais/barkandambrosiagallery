@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'crispy_forms',
     'django_filters',
     'rest_framework',
+    'rest_framework.authtoken',
 
     # Local App (Internal Module)
     'beetlesgallery.beetles_app',
@@ -212,4 +213,11 @@ CSRF_COOKIE_DOMAIN = os.environ.get('SESSION_COOKIE_DOMAIN', None)
 # --- Django REST Framework Configuration ---
 REST_FRAMEWORK = {
     # No pagination for now
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',  # For web users (existing login)
+        'rest_framework.authentication.TokenAuthentication',     # For API clients
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',  # Require authentication
+    ],
 }

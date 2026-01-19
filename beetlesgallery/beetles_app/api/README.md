@@ -12,6 +12,43 @@ In production, replace `localhost:8000` with your actual domain.
 
 ---
 
+## Authentication
+
+**All API endpoints require authentication using Token Authentication.**
+
+### Getting Your Token
+
+Contact the development team to receive your authentication token.
+
+### Using Your Token
+
+Include the token in the `Authorization` header of every request:
+
+```bash
+curl -H "Authorization: Token YOUR_TOKEN_HERE" \
+     http://localhost:8000/api/v1/species/?subfamily=Platypodinae
+```
+
+**Python example:**
+
+```python
+import requests
+
+API_TOKEN = "6b1b7f7b3e2eece863249518cfbd8f65c2df03f0"
+headers = {"Authorization": f"Token {API_TOKEN}"}
+
+response = requests.get(
+    "http://localhost:8000/api/v1/species/",
+    params={"subfamily": "Platypodinae"},
+    headers=headers
+)
+
+data = response.json()
+```
+
+
+---
+
 ## Endpoints Overview
 
 ### 1. Species (Taxonomy Reference)
