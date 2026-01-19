@@ -276,7 +276,7 @@
                <div class="min-w-0 flex-1">
                  <h3 class="font-bold text-base text-text leading-tight truncate">
                    <a href="{% url 'beetle_detail' beetle_id=b.id %}" class="hover:text-gray-600 hover:underline">
-                     {{ b.ref_scientificName|default:"Unknown Specimen" }}
+                     {{ b.ref_scientificName|default:"Unidentified" }}
                    </a>
                  </h3>
                  <div class="flex items-center gap-2 mt-1">
