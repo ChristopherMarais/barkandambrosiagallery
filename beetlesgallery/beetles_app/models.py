@@ -594,7 +594,7 @@ class DownloadJob(models.Model):
     expires_at = models.DateTimeField(null=True, blank=True)
 
     # Results (filled in when READY)
-    tsv_file = models.FileField(upload_to="downloads/results/%Y/%m", blank=True)
+    csv_file = models.FileField(upload_to="downloads/results/%Y/%m", blank=True)
     zip_file = models.FileField(upload_to="downloads/results/%Y/%m", blank=True)
 
     class Meta:
