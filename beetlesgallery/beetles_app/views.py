@@ -154,9 +154,17 @@ def upload_file(request):
     if request.method != "POST":
         return render(request, "beetles/upload.html")
 
+    # --- DEBUGGING LOGS  ---
+    print(f"DEBUG: POST keys: {list(request.POST.keys())}", flush=True)
+    print(f"DEBUG: FILES keys: {list(request.FILES.keys())}", flush=True)
+    # ------------------------
+
     # --- require both files present ---
-    csv_file = request.FILES.get("csv_file")
+    csv_file = request.FILES.get("csv_file") or request.FILES.get("csv")
     zipf = request.FILES.get("zip")
+
+    print(f"DEBUG: Resolved csv_file: {csv_file}, zipf: {zipf}", flush=True)
+
     if not csv_file or not zipf:
         messages.error(request, "Please attach both a .csv metadata file and a .zip of images.")
         return redirect("upload")
