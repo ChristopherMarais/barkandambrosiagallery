@@ -93,10 +93,10 @@ class Command(BaseCommand):
         batch.mark_validating()
 
         try:
-            df = pd.read_excel(batch.file.path)
+            df = pd.read_csv(batch.file.path)
             df.columns = [str(c).strip() for c in df.columns]
         except Exception as e:
-            self._fail(batch, f"Cannot read Excel: {e}")
+            self._fail(batch, f"Cannot read CSV: {e}")
             return
 
         # --- VALIDATION PHASE ---
