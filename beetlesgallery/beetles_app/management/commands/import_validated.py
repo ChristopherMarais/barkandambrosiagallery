@@ -518,7 +518,7 @@ class Command(BaseCommand):
                                 "alternative_id": ln(values.get("alternative_id")),
                             }
 
-                             raise CommandError(f"{batch.id}: Row {row_num} failed DB insert: {e}") from e
+                            raise CommandError(f"{batch.id}: Row {row_num} failed DB insert: {e}") from e
 
                         except IntegrityError as e:
                             # Most likely the UNIQUE(image_sha256) constraint fired
