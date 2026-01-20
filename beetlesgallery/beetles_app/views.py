@@ -31,7 +31,7 @@ from .forms import TailwindUserCreationForm, ProfileForm, PasswordChangeFormStyl
 from .tasks import process_upload_task, process_update_task, build_downloads_task
 
 import pandas as pd
-from io import BytesIO
+from io import BytesIO, StringIO
 
 
 @login_required
@@ -155,28 +155,28 @@ def upload_file(request):
         return render(request, "beetles/upload.html")
 
     # --- require both files present ---
-    xlsx = request.FILES.get("xlsx")
+    csv_file = request.FILES.get("csv_file")
     zipf = request.FILES.get("zip")
-    if not xlsx or not zipf:
-        messages.error(request, "Please attach both an .xlsx metadata file and a .zip of images.")
+    if not csv_file or not zipf:
+        messages.error(request, "Please attach both a .csv metadata file and a .zip of images.")
         return redirect("upload")
 
     # --- allowlist + size guard ---
-    ext_x = os.path.splitext(xlsx.name)[1].lower()
+    ext_x = os.path.splitext(csv_file.name)[1].lower()
     ext_z = os.path.splitext(zipf.name)[1].lower()
 
-    if ext_x != ".xlsx":
-        messages.error(request, "The metadata file must be a .xlsx.")
+    if ext_x != ".csv":
+        messages.error(request, "The metadata file must be a .csv.")
         return redirect("upload")
     if ext_z != ".zip":
         messages.error(request, "The images archive must be a .zip.")
         return redirect("upload")
 
-    XLSX_MAX = getattr(settings, "MAX_UPLOAD_SIZE_XLSX", 10 * 1024 * 1024)        # 10 MB
+    CSV_MAX = getattr(settings, "MAX_UPLOAD_SIZE_CSV", 10 * 1024 * 1024)        # 10 MB
     ZIP_MAX  = getattr(settings, "MAX_UPLOAD_SIZE_ZIP",  1024 * 1024 * 1024)      # 1 GB
 
-    if xlsx.size and xlsx.size > XLSX_MAX:
-        messages.error(request, f"Metadata .xlsx is too large (> {XLSX_MAX // (1024*1024)} MB).")
+    if csv_file.size and csv_file.size > CSV_MAX:
+        messages.error(request, f"Metadata .csv is too large (> {CSV_MAX // (1024*1024)} MB).")
         return redirect("upload")
 
     if zipf.size and zipf.size > ZIP_MAX:
@@ -203,15 +203,15 @@ def upload_file(request):
     # --- create batch row first (to get a UUID id for both file names) ---
     batch = UploadBatch.objects.create(
         uploaded_by=request.user,
-        original_filename=xlsx.name,     # keep XLSX name for display
+        original_filename=csv_file.name,     # keep CSV name for display
         status=UploadBatch.Status.STAGING,
     )
 
-    # Saving will use your upload_to=staging_upload_path_xlsx/zip and name them <batch-id>.(xlsx|zip)
-    batch.file.save(xlsx.name, xlsx, save=False)
+    # Saving will use your upload_to=staging_upload_path_csv/zip and name them <batch-id>.(csv|zip)
+    batch.file.save(csv_file.name, csv_file, save=False)
     batch.zip_file.save(zipf.name, zipf, save=False)
-    batch.size_bytes = xlsx.size or 0
-    # Compute checksum of the XLSX (used by your existing admin display)
+    batch.size_bytes = csv_file.size or 0
+    # Compute checksum of the CSV (used by your existing admin display)
     try:
         batch.compute_sha256_from_disk()
     except Exception:
@@ -227,11 +227,11 @@ def upload_file(request):
 
     errors = []
     try:
-        df = pd.read_excel(batch.file.path)
+        df = pd.read_csv(batch.file.path)
         df.columns = [c.strip() for c in df.columns]
     except Exception as e:
-        batch.mark_rejected_and_move(f"Cannot open workbook: {e}")
-        messages.error(request, "Upload rejected: cannot open workbook.")
+        batch.mark_rejected_and_move(f"Cannot open CSV: {e}")
+        messages.error(request, "Upload rejected: cannot open CSV.")
         return redirect("upload")
 
     # Required headers
@@ -839,38 +839,38 @@ UPDATE_OPTIONAL_COLS = {"update_notes"}
 @login_required(login_url='login')
 def update_upload(request):
     """
-    Staff-only portal to submit an XLSX of metadata updates by Record ID (UUID).
+    Staff-only portal to submit a CSV of metadata updates by Record ID (UUID).
     Quick preflight:
-      - .xlsx present and within size limit
+      - .csv present and within size limit
       - headers match exactly (required set + optional 'update_notes', no extras)
-      - pandas can open workbook
+      - pandas can open CSV
     Creates an UpdateBatch in 'staging'. Full validation/diff/apply comes next steps.
     """
     if request.method != "POST":
         return render(request, "beetles/update_upload.html")
 
-    xlsx = request.FILES.get("xlsx")
-    if not xlsx:
-        messages.error(request, "Please attach a .xlsx file.")
+    csv_file = request.FILES.get("csv_file")
+    if not csv_file:
+        messages.error(request, "Please attach a .csv file.")
         return redirect("update_upload")
 
-    ext = os.path.splitext(xlsx.name)[1].lower()
-    if ext != ".xlsx":
-        messages.error(request, "The update file must be a .xlsx.")
+    ext = os.path.splitext(csv_file.name)[1].lower()
+    if ext != ".csv":
+        messages.error(request, "The update file must be a .csv.")
         return redirect("update_upload")
 
-    XLSX_MAX = getattr(settings, "MAX_UPLOAD_SIZE_XLSX", 10 * 1024 * 1024)  # 10 MB default
-    if xlsx.size and xlsx.size > XLSX_MAX:
-        messages.error(request, f"Update .xlsx is too large (> {XLSX_MAX // (1024*1024)} MB).")
+    CSV_MAX = getattr(settings, "MAX_UPLOAD_SIZE_CSV", 10 * 1024 * 1024)  # 10 MB default
+    if csv_file.size and csv_file.size > CSV_MAX:
+        messages.error(request, f"Update .csv is too large (> {CSV_MAX // (1024*1024)} MB).")
         return redirect("update_upload")
 
     # Create the UpdateBatch row so we have an ID + on-disk path
     batch = UpdateBatch.objects.create(
         uploaded_by=request.user,
-        original_filename=xlsx.name,
+        original_filename=csv_file.name,
         status=UpdateBatch.Status.STAGING,
     )
-    batch.file.save(xlsx.name, xlsx, save=False)
+    batch.file.save(csv_file.name, csv_file, save=False)
     batch.size_bytes = batch.file.size or 0
     # Best-effort checksum for idempotency later
     try:
@@ -881,17 +881,17 @@ def update_upload(request):
 
     # Quick preflight with pandas (header checks only)
     if pd is None:
-        messages.warning(request, "File received. Note: server missing pandas; skipping quick XLSX checks. Full validation will run later.")
+        messages.warning(request, "File received. Note: server missing pandas; skipping quick checks.")
         return redirect("update_upload")
 
     errors = []
     try:
-        df = pd.read_excel(batch.file.path)
+        df = pd.read_csv(batch.file.path)
         # normalize headers (strip)
         df.columns = [str(c).strip() for c in df.columns]
     except Exception as e:
-        batch.mark_rejected_and_move(f"Cannot open workbook: {e}")
-        messages.error(request, "Update rejected: cannot open workbook.")
+        batch.mark_rejected_and_move(f"Cannot open CSV: {e}")
+        messages.error(request, "Update rejected: cannot open CSV.")
         return redirect("update_upload")
 
     # Header contract: exact match = required set + optional 'update_notes'; no extras, no missing.
@@ -964,7 +964,7 @@ def update_single_beetle(request, beetle_id):
             if val == "unknown": val = ""
         row_data[f] = val
 
-    _run_update_batch(request, row_data, f"single_edit_{beetle.id}.xlsx")
+    _run_update_batch(request, row_data, f"single_edit_{beetle.id}.csv")
     messages.success(request, "Update queued successfully. Changes will appear shortly.")
     return redirect("beetle_detail", beetle_id=beetle_id)
 
@@ -1003,7 +1003,7 @@ def create_specimen_for_image(request, image_id):
     for f in beetle_fields:
         row_data[f] = request.POST.get(f)
 
-    _run_update_batch(request, row_data, f"add_specimen_{image_asset.id.hex[:8]}.xlsx")
+    _run_update_batch(request, row_data, f"add_specimen_{image_asset.id.hex[:8]}.csv")
     
     messages.success(request, "Update queued successfully. Changes will appear shortly.")
     return redirect(request.META.get('HTTP_REFERER', 'home'))
@@ -1012,10 +1012,10 @@ def create_specimen_for_image(request, image_id):
 def _run_update_batch(request, row_data, filename):
     """Helper to package row_data into an XLSX and spawn the processor."""
     df = pd.DataFrame([row_data])
-    buffer = BytesIO()
-    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False)
-    buffer.seek(0)
+    
+    s_buf = StringIO()
+    df.to_csv(s_buf, index=False)
+    csv_content = s_buf.getvalue().encode('utf-8')
     
     batch = UpdateBatch.objects.create(
         uploaded_by=request.user,
@@ -1024,7 +1024,7 @@ def _run_update_batch(request, row_data, filename):
     )
     
     from django.core.files.base import ContentFile
-    batch.file.save(filename, ContentFile(buffer.read()), save=False)
+    batch.file.save(filename, ContentFile(csv_content), save=False)
     batch.size_bytes = batch.file.size
     batch.save()
 

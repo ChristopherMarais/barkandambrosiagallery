@@ -66,16 +66,16 @@ class ValidSpeciesUploadForm(forms.Form):
 
 class UpdateBatchUploadForm(forms.Form):
     file = forms.FileField(
-        label="Upload XLSX file",
+        label="Upload CSV file",
         help_text="Must include a header row. Blank cells mean 'no change'.",
-        widget=forms.ClearableFileInput(attrs={"class": TAILWIND_INPUT, "accept": ".xlsx"}),
+        widget=forms.ClearableFileInput(attrs={"class": TAILWIND_INPUT, "accept": ".csv"}),
     )
 
     def clean_file(self):
         f = self.cleaned_data["file"]
         name = (f.name or "").lower()
-        if not name.endswith(".xlsx"):
-            raise forms.ValidationError("Please upload an .xlsx workbook.")
+        if not name.endswith(".csv"):
+            raise forms.ValidationError("Please upload a .csv file.")
         # Optional: 10 MB size guard
         if getattr(f, "size", 0) > 10 * 1024 * 1024:
             raise forms.ValidationError("File is too large (max 10 MB).")
