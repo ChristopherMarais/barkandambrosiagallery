@@ -34,7 +34,7 @@
 
   <div class="rounded-xl border border-text/20 bg-primary2 p-6 mb-6">
     <p class="text-text/80 mb-3">
-      Download the Excel template, fill every column, and include the <span class="font-medium">Record ID</span> for each row you want to overwrite.
+      Download the csv template, fill every column, and include the <span class="font-medium">Record ID</span> for each row you want to overwrite.
       Updates are all-or-nothing per batch; images are not changed.
     </p>
     <ul class="text-xs text-text/70 list-disc pl-5 mb-4">
@@ -45,13 +45,13 @@
     </ul>
 
     <a
-      href="{% static 'downloads/beetles_update_template_v1.xlsx' %}"
-      download="beetles_update_template_v1.xlsx"
+      href="{% static 'downloads/beetles_update_template_v1.csv' %}"
+      download="beetles_update_template_v1.csv"
       class="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-text/20 bg-background hover:bg-secondary transition"
-      aria-label="Download Update Excel template"
+      aria-label="Download Update CSV template"
     >
       <i class="fi fi-rr-download text-lg"></i>
-      <span class="font-medium">Download Update Template (.xlsx)</span>
+      <span class="font-medium">Download Update Template (.csv)</span>
     </a>
   </div>
 
@@ -59,11 +59,11 @@
     <form method="post" action="{% url 'update_upload' %}" enctype="multipart/form-data" class="space-y-4">
       {% csrf_token %}
       <label class="block">
-        <span class="text-text font-medium">Update spreadsheet (.xlsx)</span>
+        <span class="text-text font-medium">Update spreadsheet (.csv)</span>
         <input
           type="file"
-          name="xlsx"
-          accept=".xlsx"
+          name="csv"
+          accept=".csv"
           required
           class="mt-2 block w-full text-sm text-text/80 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-spacepurple1/40 file:text-text hover:file:bg-spacepurple1/60"
         />
