@@ -843,8 +843,7 @@ UPDATE_REQUIRED_COLS = {"record_id"} | set(UPDATE_ALLOWED_FIELDS)
 UPDATE_OPTIONAL_COLS = {"update_notes"}
 
 
-@login_required
-@login_required(login_url='login')
+@staff_member_required
 def update_upload(request):
     """
     Staff-only portal to submit a CSV of metadata updates by Record ID (UUID).
@@ -945,8 +944,7 @@ def update_upload(request):
     # Send them where they can see the batch status
     return redirect("my_uploads")
 
-@login_required
-@login_required(login_url='login')
+@staff_member_required
 @require_POST
 def update_single_beetle(request, beetle_id):
     """
@@ -977,8 +975,7 @@ def update_single_beetle(request, beetle_id):
     return redirect("beetle_detail", beetle_id=beetle_id)
 
 
-@login_required
-@login_required(login_url='login')
+@staff_member_required
 @require_POST
 def create_specimen_for_image(request, image_id):
     """
