@@ -23,7 +23,7 @@ from .validate_uploads import _normalize_valid_id
 try:
     import pandas as pd
 except ImportError:
-    raise CommandError("Please install pandas and openpyxl: pip install pandas openpyxl")
+    raise CommandError("Please install pandas: pip install pandas")
 
 
 # -----------------------
@@ -99,7 +99,7 @@ def _enforce_maxlen(field_name: str, value, maxlen: int, row_num: int):
 
 
 class Command(BaseCommand):
-    help = "Import rows from VALIDATED UploadBatch XLSX + manifest.json into Beetles (create-only)."
+    help = "Import rows from VALIDATED UploadBatch CSV + manifest.json into Beetles (create-only)."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -217,14 +217,14 @@ class Command(BaseCommand):
         """
         For a single VALIDATED batch:
           - read manifest.json (row -> sha256, zip member, filename),
-          - read the XLSX,
+          - read the CSV,
           - create Beetles rows (create-only) and set image_sha256,
           - mark batch imported (unless dry-run).
         """
         base_dir = os.path.dirname(batch.file.path)
         manifest_path = os.path.join(base_dir, "manifest.json")
         if not os.path.exists(manifest_path):
-            raise CommandError(f"{batch.id}: manifest.json not found next to XLSX ({manifest_path}).")
+            raise CommandError(f"{batch.id}: manifest.json not found next to CSV ({manifest_path}).")
 
         # Read manifest
         try:
@@ -249,18 +249,18 @@ class Command(BaseCommand):
                 raise CommandError(f"{batch.id}: manifest has no 'rows' entries.")
 
             # Build index -> manifest entry map
-            by_index = {int(r["excel_index"]): r for r in rows if "excel_index" in r and "sha256" in r}
+            by_index = {int(r["csv_index"]): r for r in rows if "csv_index" in r and "sha256" in r}
 
-            # Read XLSX (single sheet)
+            # Read CSV (single sheet)
             try:
-                df = pd.read_excel(batch.file.path)
+                df = pd.read_csv(batch.file.path)
             except Exception as e:
-                raise CommandError(f"{batch.id}: cannot open XLSX: {e}")
+                raise CommandError(f"{batch.id}: cannot open CSV: {e}")
 
             df.columns = [c.strip() for c in df.columns]
             missing = REQUIRED_COLS - set(df.columns)
             if missing:
-                raise CommandError(f"{batch.id}: XLSX missing required columns: {sorted(missing)}")
+                raise CommandError(f"{batch.id}: CSV missing required columns: {sorted(missing)}")
 
             # Hard sanity checks: 1:1 row alignment with manifest
             n_manifest = len(by_index)
@@ -276,7 +276,7 @@ class Command(BaseCommand):
             missing_idx = expected_idx - set(by_index.keys())
             if missing_idx:
                 raise CommandError(
-                    f"{batch.id}: manifest missing excel_index entries for rows: "
+                    f"{batch.id}: manifest missing csv_index entries for rows: "
                     f"{sorted(list(missing_idx))[:10]}{'...' if len(missing_idx) > 10 else ''}"
                 )
 
@@ -320,7 +320,7 @@ class Command(BaseCommand):
             with transaction.atomic():
 
                 for i, row in df.iterrows():
-                    row_num = i + 2  # Excel-like
+                    row_num = i + 2  # +2 for 0-based index + header row
 
                     # Required
                     full_path_at_import = _none(row.get("full_path_at_import"))
@@ -518,10 +518,7 @@ class Command(BaseCommand):
                                 "alternative_id": ln(values.get("alternative_id")),
                             }
 
-                            raise CommandError(
-                                f"{batch.id}: Row {row_num} failed DB insert (likely field too long). "
-                                f"Observed lengths={lens}. Original error: {e}"
-                            ) from e
+                             raise CommandError(f"{batch.id}: Row {row_num} failed DB insert: {e}") from e
 
                         except IntegrityError as e:
                             # Most likely the UNIQUE(image_sha256) constraint fired
@@ -538,13 +535,13 @@ class Command(BaseCommand):
 
                 # End-of-import actions (only when not a dry run)
                 if not dry_run:
-                    # 1) Write archive.json NEXT TO the XLSX in validated/
+                    # 1) Write archive.json next to the CSV in validated/
                     batch.write_archive_json(
                         imported_count=created_beetles,
-                        records_summary=[],   # optionally include per-row summaries later
+                        records_summary=[], 
                         notes="initial import"
                     )
-                    # 2) Now move XLSX/ZIP + sidecars (manifest.json, archive.json) to archived/
+                    # 2) Now move CSV/ZIP + sidecars (manifest.json, archive.json) to archived/
                     batch.mark_imported_and_archive()
 
 
