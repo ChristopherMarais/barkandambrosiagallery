@@ -17,7 +17,7 @@ from beetlesgallery.beetles_app import species_ref
 from beetlesgallery.beetles_app.models import Beetles, DownloadJob
 
 class Command(BaseCommand):
-    help = "Build TSV + ZIP for pending DownloadJobs."
+    help = "Build CSV + ZIP for pending DownloadJobs."
 
     def add_arguments(self, parser):
         parser.add_argument("--job", type=str, help="Build only the given job UUID.")
@@ -65,8 +65,8 @@ class Command(BaseCommand):
         for job in expired_qs:
             # Best-effort file deletion; ignore if already missing
             try:
-                if job.tsv_file:
-                    job.tsv_file.delete(save=False)
+                if job.csv_file:
+                    job.csv_file.delete(save=False)
             except Exception:
                 pass
             try:
@@ -83,7 +83,7 @@ class Command(BaseCommand):
             if not job.finished_at:
                 job.finished_at = now
 
-            job.save(update_fields=["status", "error_message", "tsv_file", "zip_file", "finished_at"])
+            job.save(update_fields=["status", "error_message", "csv_file", "zip_file", "finished_at"])
 
         if expired_count:
             self.stdout.write(
@@ -329,7 +329,7 @@ class Command(BaseCommand):
 
         if dry:
             self.stdout.write(self.style.SUCCESS(
-                f"[{job.id}] DRY-RUN: would build TSV+ZIP for {total} rows"
+                f"[{job.id}] DRY-RUN: would build CSV+ZIP for {total} rows"
             ))
             return
 
@@ -354,12 +354,12 @@ class Command(BaseCommand):
         tmp_dir = media_root / "downloads" / "tmp" / str(job.id)
         tmp_dir.mkdir(parents=True, exist_ok=True)
 
-        tsv_filename = f"beetles_{job.id}.tsv"
+        csv_filename = f"beetles_{job.id}.csv"
         zip_filename = f"beetles_{job.id}.zip"
-        tsv_tmp_path = tmp_dir / tsv_filename
+        csv_tmp_path = tmp_dir / csv_filename
         zip_tmp_path = tmp_dir / zip_filename
 
-        # --- Write TSV (tab-separated) ---
+        # --- Write CSV (comma-separated) ---
         # Headers: use visible column names + the stable filename
         headers = [
             "ID",               # Beetles.id (public, used for filenames)
@@ -390,10 +390,10 @@ class Command(BaseCommand):
 
         rows_iter = qs.iterator(chunk_size=1000)
 
-        with tsv_tmp_path.open("w", encoding="utf-8", newline="") as fh_tsv, \
+        with csv_tmp_path.open("w", encoding="utf-8", newline="") as fh_csv, \
              zipfile.ZipFile(zip_tmp_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
 
-            writer = csv.writer(fh_tsv, dialect="excel-tab")
+            writer = csv.writer(fh_csv, dialect="excel")
             writer.writerow(headers)
 
             added = 0
@@ -424,7 +424,7 @@ class Command(BaseCommand):
                         except Exception:
                             missing += 1
 
-                # TSV row
+                # CSV row
                 # Use centralized resolver to guarantee "Unknown" fallbacks
                 vid = (str(b.depicts_valid_name_id).strip() if b.depicts_valid_name_id is not None else None)
                 ref = species_ref.resolve(vid)
@@ -456,11 +456,11 @@ class Command(BaseCommand):
                     ref_label,
                 ])
 
-        self.stdout.write(f"[{job.id}] Wrote TSV -> {tsv_tmp_path.name}; ZIP -> {zip_tmp_path.name} (ok={added}, missing={missing})")
+        self.stdout.write(f"[{job.id}] Wrote CSV -> {csv_tmp_path.name}; ZIP -> {zip_tmp_path.name} (ok={added}, missing={missing})")
 
         # --- Attach to FileFields (moves to final storage via storage backend) ---
-        with tsv_tmp_path.open("rb") as fh1, zip_tmp_path.open("rb") as fh2:
-            job.tsv_file.save(tsv_filename, File(fh1), save=False)
+        with csv_tmp_path.open("rb") as fh1, zip_tmp_path.open("rb") as fh2:
+            job.csv_file.save(csv_filename, File(fh1), save=False)
             job.zip_file.save(zip_filename, File(fh2), save=False)
 
         job.status = DownloadJob.Status.READY
@@ -472,15 +472,15 @@ class Command(BaseCommand):
             retention_days = 14
         job.expires_at = job.finished_at + timedelta(days=retention_days)
 
-        job.save(update_fields=["tsv_file", "zip_file", "status", "finished_at", "expires_at"])
+        job.save(update_fields=["csv_file", "zip_file", "status", "finished_at", "expires_at"])
 
         # Cleanup tmp files
         try:
-            tsv_tmp_path.unlink(missing_ok=True)
+            csv_tmp_path.unlink(missing_ok=True)
             zip_tmp_path.unlink(missing_ok=True)
             # remove the empty directory
             tmp_dir.rmdir()
         except Exception:
             pass
 
-        self.stdout.write(self.style.SUCCESS(f"[{job.id}] READY: {job.tsv_file.name}, {job.zip_file.name}"))
+        self.stdout.write(self.style.SUCCESS(f"[{job.id}] READY: {job.csv_file.name}, {job.zip_file.name}"))
