@@ -234,11 +234,6 @@ class Command(BaseCommand):
         qs = (
             self._resolve_queryset(job)
             .select_related("image_asset")
-            .only(
-                "id", "depicts_valid_name_id", "depicts_specimen",
-                "collection_country", "specimen_sex", "specimen_type_status",
-                "image_asset",
-            )
             .order_by("id")
         )
 
@@ -362,30 +357,27 @@ class Command(BaseCommand):
         # --- Write CSV (comma-separated) ---
         # Headers: use visible column names + the stable filename
         headers = [
-            "ID",               # Beetles.id (public, used for filenames)
-            "Name ID",          # depicts_valid_name_id
-            "Specimen",         # depicts_specimen
-            "Country",          # collection_country
-            "Sex",              # specimen_sex
-            "Type Status",      # specimen_type_status
-            "Image Filename",   # <id>.<ext> or empty if no image
-            "File Status",      # ok | missing
-
-            # --- Reference (valid_species) columns ---
-            "Scientific Name",
-            "Scientific Name Authority",
-            "Subfamily",
-            "Tribe",
-            "Subtribe",
-            "Genus",
-            "Species",
-            "Subspecies",
-            "Authority",
-            "Authority Year",
-            "Original Genus",
-
-            # Human-friendly provenance
-            "Reference Label",
+            "record_id",
+            "alternative_id",
+            "image_institution",
+            "photographer",
+            "image_email",
+            "photo_usage_statement",
+            "aspect",
+            "resolution_in_ppmm",
+            "image_notes",
+            "image_date_taken",
+            "image_has_multiple_individuals",
+            "depicts_specimen",
+            "depicts_valid_name_id",
+            "depicts_described_name_id",
+            "depicts_name_verbatim",
+            "collection_country",
+            "collection_stateProvince",
+            "specimen_sex",
+            "specimen_type_status",
+            "specimen_notes",
+            "update_notes"
         ]
 
         rows_iter = qs.iterator(chunk_size=1000)
@@ -400,63 +392,58 @@ class Command(BaseCommand):
             missing = 0
 
             for b in rows_iter:
-                # Determine image filename for ZIP
-                image_filename = ""
-                file_status = "missing"
-
+                # Add image to ZIP (Filename will be <uuid>.<ext>)
                 if b.image_asset and b.image_asset.image_file:
-                    f_obj = b.image_asset.image_file  # Helper variable
-                    
+                    f_obj = b.image_asset.image_file
                     ext = os.path.splitext(f_obj.name)[1].lstrip(".").lower() or "bin"
+
+                    # Use the Record ID as the filename in the ZIP
+                    # Instead of using the original filename (e.g., IMG_001.JPG), rename image inside ZIP to match Record ID 
                     image_filename = f"{b.id}.{ext}"
+                    
                     try:
                         src_path = f_obj.path
                         if os.path.exists(src_path):
                             zf.write(src_path, arcname=image_filename)
-                            file_status = "ok"; added += 1
+                            added += 1
                         else:
                             raise FileNotFoundError
                     except Exception:
                         try:
                             with f_obj.storage.open(f_obj.name, "rb") as sf, zf.open(image_filename, "w") as dest:
                                 shutil.copyfileobj(sf, dest, length=1024 * 1024)
-                            file_status = "ok"; added += 1
+                            added += 1
                         except Exception:
                             missing += 1
 
-                # CSV row
-                # Use centralized resolver to guarantee "Unknown" fallbacks
-                vid = (str(b.depicts_valid_name_id).strip() if b.depicts_valid_name_id is not None else None)
-                ref = species_ref.resolve(vid)
+                # Helpers for safe access
+                img = b.image_asset
 
                 writer.writerow([
-                    str(b.id),
-                    b.depicts_valid_name_id or "",
+                    str(b.id),                                      # record_id
+                    b.alternative_id or "",
+                    img.image_institution if img else "",
+                    img.photographer if img else "",
+                    img.image_email if img else "",
+                    img.photo_usage_statement if img else "",
+                    b.aspect or "",
+                    img.resolution_in_ppmm if img else "",
+                    img.image_notes if img else "",
+                    img.image_date_taken if img else "",
+                    img.image_has_multiple_individuals if img else "",
                     b.depicts_specimen or "",
+                    b.depicts_valid_name_id or "",
+                    b.depicts_described_name_id or "",
+                    b.depicts_name_verbatim or "",
                     b.collection_country or "",
+                    b.collection_stateProvince or "",
                     b.specimen_sex or "",
                     b.specimen_type_status or "",
-                    image_filename,
-                    file_status,
-
-                    # Reference columns (match order of headers above)
-                    ref.get("scientificName", "Unknown"),
-                    ref.get("scientificNameAuthority", "Unknown"),
-                    ref.get("subfamily", "Unknown"),
-                    ref.get("tribe", "Unknown"),
-                    ref.get("subtribe", "Unknown"),
-                    ref.get("genus", "Unknown"),
-                    ref.get("species", "Unknown"),
-                    ref.get("subspecies", "Unknown"),
-                    ref.get("authority", "Unknown"),
-                    ref.get("authorityYear", "Unknown"),
-                    ref.get("originalGenus", "Unknown"),
-
-                    # Human-friendly version label (e.g., "2025-10-14 16:22 UTC")
-                    ref_label,
+                    b.specimen_notes or "",
+                    ""                                              # update_notes (blank)
                 ])
 
-        self.stdout.write(f"[{job.id}] Wrote CSV -> {csv_tmp_path.name}; ZIP -> {zip_tmp_path.name} (ok={added}, missing={missing})")
+        self.stdout.write(f"[{job.id}] Wrote CSV -> {csv_tmp_path.name}; ZIP -> {zip_tmp_path.name}")
 
         # --- Attach to FileFields (moves to final storage via storage backend) ---
         with csv_tmp_path.open("rb") as fh1, zip_tmp_path.open("rb") as fh2:

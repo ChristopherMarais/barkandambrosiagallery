@@ -857,7 +857,7 @@ def update_upload(request):
     if request.method != "POST":
         return render(request, "beetles/update_upload.html")
 
-    csv_file = request.FILES.get("csv_file")
+    csv_file = request.FILES.get("csv_file") or request.FILES.get("csv")
     if not csv_file:
         messages.error(request, "Please attach a .csv file.")
         return redirect("update_upload")
