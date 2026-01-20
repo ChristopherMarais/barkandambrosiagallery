@@ -529,6 +529,12 @@ def beetle_detail(request, beetle_id):
 
 
 def signup(request):
+    # --- Security Check: Block non-staff users ---
+    if not request.user.is_staff:
+        messages.info(request, "Account creation is restricted. Please email to request an account.")
+        return redirect("login")
+    # ---------------------------------------------
+    
     if request.method == "POST":
         form = TailwindUserCreationForm(request.POST)
         if form.is_valid():
