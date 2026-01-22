@@ -7,6 +7,7 @@ import subprocess
 import sys
 import os
 import math
+import requests
 from datetime import date
 
 from django.db.models import Q, Count
@@ -33,6 +34,7 @@ from .tasks import process_upload_task, process_update_task, build_downloads_tas
 import pandas as pd
 from io import BytesIO, StringIO
 
+MODAL_API_URL = "https://christophermarais--ibbi-api-fastapi-app.modal.run/analyze"
 
 @login_required
 def my_account(request):
@@ -1035,3 +1037,52 @@ def _run_update_batch(request, row_data, filename):
 
     # Trigger
     process_update_task.delay(batch.id)
+
+
+@login_required
+def tool_classify(request):
+    """
+    Proxies image upload to Modal GPU API and renders results.
+    """
+    context = {}
+    
+    if request.method == 'POST' and request.FILES.get('image'):
+        try:
+            # 1. Prepare Data
+            image_file = request.FILES['image']
+            
+            # Extract form data
+            payload = {
+                'task': request.POST.get('task'),
+                'architecture': request.POST.get('architecture'),
+                'text_prompt': request.POST.get('text_prompt', ''),
+                'box_threshold': request.POST.get('box_threshold', 0.25),
+                'text_threshold': request.POST.get('text_threshold', 0.25),
+            }
+            
+            # Prepare file for upload
+            files = {
+                'image': (image_file.name, image_file.read(), image_file.content_type)
+            }
+
+            # 2. Call Modal API
+            # Timeout set to 60s to allow for cold start (GPU waking up)
+            response = requests.post(MODAL_API_URL, data=payload, files=files, timeout=60)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('status') == 'success':
+                    context['result_image'] = data.get('image_base64')
+                    context['model_used'] = data.get('model_used')
+                    context['success'] = True
+                else:
+                    context['error'] = data.get('message', 'Unknown error from AI service.')
+            else:
+                context['error'] = f"AI Service Error: {response.status_code}"
+
+        except requests.exceptions.Timeout:
+            context['error'] = "The AI model is waking up (Cold Start). Please try again in 10 seconds."
+        except Exception as e:
+            context['error'] = f"Processing failed: {str(e)}"
+
+    return render(request, 'beetles/tool_classify.html', context)

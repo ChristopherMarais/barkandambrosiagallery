@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+    <div class="mb-8 border-b border-gray-200 pb-4">
+        <h1 class="text-3xl font-bold text-gray-900">AI Species Classification</h1>
+        <p class="text-gray-600 mt-2">Powered by IBBI & Modal GPUs. Upload an image to detect and identify beetles.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-sm border border-gray-200 h-fit">
+            <form method="post" enctype="multipart/form-data" class="space-y-6" id="analysisForm">
+                {% csrf_token %}
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Task</label>
+                    <select name="task" id="taskSelect" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 p-2">
+                        <option value="Single-Class Detection">Single-Class Detection</option>
+                        <option value="Multi-Class Detection">Multi-Class Detection</option>
+                        <option value="Zero-Shot Detection">Zero-Shot Detection (Experimental)</option>
+                    </select>
+                </div>
+
+                <div id="archGroup">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Model Architecture</label>
+                    <select name="architecture" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 p-2">
+                        <option value="yolov10">YOLOv10 (Recommended)</option>
+                        <option value="yolov11">YOLOv11</option>
+                        <option value="yolov9">YOLOv9</option>
+                        <option value="yolov8">YOLOv8</option>
+                        <option value="rtdetr">RT-DETR</option>
+                    </select>
+                </div>
+
+                <div id="zeroShotGroup" class="hidden space-y-4 border-l-4 border-indigo-100 pl-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Text Prompt</label>
+                        <input type="text" name="text_prompt" placeholder="e.g. insect . leg" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2">
+                        <p class="text-xs text-gray-500 mt-1">Separate targets with dots (.)</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500">Box Thresh</label>
+                            <input type="number" step="0.05" name="box_threshold" value="0.25" class="w-full rounded-md border-gray-300 p-1 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500">Text Thresh</label>
+                            <input type="number" step="0.05" name="text_threshold" value="0.25" class="w-full rounded-md border-gray-300 p-1 text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Upload Image</label>
+                    <input type="file" name="image" accept="image/*" required 
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                </div>
+
+                <button type="submit" id="submitBtn" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                    Run Analysis
+                </button>
+                
+                <div id="loadingIndicator" class="hidden flex flex-col items-center justify-center p-4 bg-indigo-50 rounded-md">
+                    <svg class="animate-spin h-8 w-8 text-indigo-600 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span class="text-sm text-indigo-700 font-semibold">Processing on GPU...</span>
+                    <span class="text-xs text-indigo-500 mt-1">This may take ~20s if the server is waking up.</span>
+                </div>
+            </form>
+        </div>
+
+        <div class="lg:col-span-2 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center min-h-[500px] p-4 relative">
+            {% if result_image %}
+                <div class="bg-white p-2 rounded shadow-lg">
+                    <img src="data:image/jpeg;base64,{{ result_image }}" alt="Analysis Result" class="max-w-full max-h-[600px] object-contain">
+                </div>
+                <div class="mt-4 flex gap-2">
+                    <span class="bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full font-medium">
+                        Model: {{ model_used }}
+                    </span>
+                    <span class="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full font-medium">
+                        Success
+                    </span>
+                </div>
+            {% elif error %}
+                <div class="bg-red-50 text-red-700 p-6 rounded-md text-center border border-red-200">
+                    <svg class="w-12 h-12 mx-auto text-red-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <h3 class="font-bold text-lg mb-1">Analysis Failed</h3>
+                    <p>{{ error }}</p>
+                </div>
+            {% else %}
+                <div class="text-center text-gray-400">
+                    <svg class="mx-auto h-16 w-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    <p class="mt-4 text-lg font-medium">No Image Analyzed</p>
+                    <p class="text-sm">Upload an image on the left to see predictions here.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const taskSelect = document.getElementById('taskSelect');
+        const archGroup = document.getElementById('archGroup');
+        const zeroShotGroup = document.getElementById('zeroShotGroup');
+        const form = document.getElementById('analysisForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+
+        // Toggle visibility based on Task selection
+        taskSelect.addEventListener('change', (e) => {
+            if (e.target.value === 'Zero-Shot Detection') {
+                archGroup.classList.add('hidden');
+                zeroShotGroup.classList.remove('hidden');
+            } else {
+                archGroup.classList.remove('hidden');
+                zeroShotGroup.classList.add('hidden');
+            }
+        });
+
+        // Show loading spinner on submit
+        form.addEventListener('submit', () => {
+            submitBtn.classList.add('hidden');
+            loadingIndicator.classList.remove('hidden');
+        });
+    });
+</script>
+{% endblock %}
