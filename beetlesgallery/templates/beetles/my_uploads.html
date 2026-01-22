@@ -245,7 +245,7 @@
       → <span class="font-medium">Ready</span>
       or <span class="font-medium">Failed</span>.
       <span class="ml-1">Ready files may later become <span class="font-medium">Expired</span> after the retention
-        period.</span> The TSV and ZIP filenames include the <span class="font-medium">Record ID</span> so you can match
+        period.</span> The CSV and ZIP filenames include the <span class="font-medium">Record ID</span> so you can match
       rows to images.
     </p>
 
@@ -324,13 +324,13 @@
             </td>
 
             <td class="py-2 px-3 space-x-2 whitespace-nowrap">
-              {% if j.tsv_file %}
-              <a href="{{ j.tsv_file.url }}" class="underline hover:no-underline">Metadata.tsv</a>
+              {% if j.csv_file %}
+              <a href="{{ j.csv_file.url }}" class="underline hover:no-underline">Metadata.csv</a>
               {% endif %}
               {% if j.zip_file %}
               <a href="{{ j.zip_file.url }}" class="underline hover:no-underline">Images.zip</a>
               {% endif %}
-              {% if not j.tsv_file and not j.zip_file %}
+              {% if not j.csv_file and not j.zip_file %}
               <span class="text-text/60 text-xs">No files yet</span>
               {% endif %}
             </td>

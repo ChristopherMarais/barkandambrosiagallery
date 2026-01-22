@@ -71,18 +71,18 @@
         <h3 class="text-lg font-semibold">Download Metadata Template for Database Uploads</h3>
         <p class="text-text/80 mb-4">Use this template to upload metadata to the database.</p>
 
-        <a href="{% static 'downloads/beetles_upload_template_v2.xlsx' %}" download="beetles_upload_template_v2.xlsx"
+        <a href="{% static 'downloads/beetles_upload_template_v2.csv' %}" download="beetles_upload_template_v2.csv"
           class="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-text/20 bg-background hover:bg-secondary transition"
-          aria-label="Download Excel template">
+          aria-label="Download CSV template">
           <i class="fi fi-rr-download text-lg"></i>
-          <span class="font-medium">Download Template (.xlsx)</span>
+          <span class="font-medium">Download Template (.csv)</span>
         </a>
       </div>
 
       <!-- Download Taxonomy Reference -->
       <div class="rounded-xl border border-text/20 bg-primary2 p-6">
         <h3 class="text-lg font-semibold">Download Taxonomy Reference</h3>
-        <p class="mb-4 text-sm text-text/80"> Note: <code>depicts_valid_name_id</code> in xlsx file for upload must
+        <p class="mb-4 text-sm text-text/80"> Note: <code>depicts_valid_name_id</code> in CSV file for upload must
           contain item from <code>valid_species_id</code> field in this reference table or must be left blank</p>
         {% if species_ref_status.label %}
         <p class="text-sm text-text/70 mt-1">
@@ -137,8 +137,8 @@
       <form id="upload-form" method="post" action="{% url 'upload' %}" enctype="multipart/form-data" class="space-y-4">
         {% csrf_token %}
         <label class="block">
-          <span class="text-text font-medium">Metadata (.xlsx)</span>
-          <input type="file" name="xlsx" accept=".xlsx" required
+          <span class="text-text font-medium">Metadata (.csv)</span>
+          <input type="file" name="csv" accept=".csv" required
             class="mt-2 block w-full text-sm text-text/80 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-spacepurple1/40 file:text-text hover:file:bg-spacepurple1/60" />
         </label>
 

@@ -13,7 +13,7 @@ class DownloadJobAdmin(admin.ModelAdmin):
     readonly_fields = (
         "id", "created_at", "started_at", "finished_at", "expires_at",
         "selection_mode", "query_string", "selected_ids_json",
-        "total_requested", "status", "error_message", "tsv_file", "zip_file",
+        "total_requested", "status", "error_message", "csv_file", "zip_file",
         "requested_by",
     )
 

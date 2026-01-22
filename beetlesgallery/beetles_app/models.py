@@ -201,9 +201,12 @@ from django.utils import timezone
 
 User = get_user_model()
 
-def staging_upload_path_xlsx(instance, filename):
-    # uploads/staging/YYYY/MM/<batch-id>.xlsx
-    return f"uploads/staging/{timezone.now():%Y/%m}/{instance.id}.xlsx"
+def staging_upload_path_csv(instance, filename):
+    # uploads/staging/YYYY/MM/<batch-id>.csv
+    return f"uploads/staging/{timezone.now():%Y/%m}/{instance.id}.csv"
+
+# Alias for historical migrations
+staging_upload_path_xlsx = staging_upload_path_csv
 
 def staging_upload_path_zip(instance, filename):
     # uploads/staging/YYYY/MM/<batch-id>.zip
@@ -211,12 +214,12 @@ def staging_upload_path_zip(instance, filename):
 
 # # Back-compat: old migrations import this by name
 # def staging_upload_path(instance, filename):
-#     return staging_upload_path_xlsx(instance, filename)
+#     return staging_upload_path_csv(instance, filename)
 
 
 class UploadBatch(models.Model):
     """
-    A single DB row = pair of uploaded files (XLSX + ZIP).
+    A single DB row = pair of uploaded files (CSV + ZIP).
     This table gives you observability and control across the pipeline:
 
       Step 1 (upload):      status='staging'
@@ -241,8 +244,8 @@ class UploadBatch(models.Model):
     )
 
     # The actual file on disk (under MEDIA_ROOT). At upload time this will
-    # be in uploads/staging/... via staging_upload_path_xlsx().
-    file = models.FileField(upload_to=staging_upload_path_xlsx, max_length=500)
+    # be in uploads/staging/... via staging_upload_path_csv().
+    file = models.FileField(upload_to=staging_upload_path_csv, max_length=500)
     zip_file = models.FileField(upload_to=staging_upload_path_zip, max_length=500, blank=True)
 
     # Snapshot of what the user picked, but *not* used for storage.
@@ -308,7 +311,7 @@ class UploadBatch(models.Model):
         the FileFields' names so Django serves the new paths.
         """
         # Build destination path under MEDIA_ROOT preserving the existing filename.
-        # file.name is a *relative* path like 'uploads/staging/YYYY/MM/<uuid>.xlsx'
+        # file.name is a *relative* path like 'uploads/staging/YYYY/MM/<uuid>.csv'
         for f in (self.file, getattr(self, "zip_file", None)):
             if not f:
                 continue
@@ -347,7 +350,7 @@ class UploadBatch(models.Model):
 
     def mark_imported_and_archive(self) -> None:
         """
-        Move XLSX/ZIP and known sidecars (manifest.json, archive.json) from validated->archived,
+        Move CSV/ZIP and known sidecars (manifest.json, archive.json) from validated->archived,
         then mark the batch as IMPORTED.
         """
         with transaction.atomic():
@@ -359,7 +362,7 @@ class UploadBatch(models.Model):
 
             dst_dir_abs = os.path.dirname(self.file.path)
 
-            # best-effort move for known sidecars living alongside the XLSX
+            # best-effort move for known sidecars living alongside the CSV
             def _move_sidecar(fname: str):
                 if not fname:
                     return
@@ -391,12 +394,12 @@ class UploadBatch(models.Model):
         self.save(update_fields=["status", "error_message"])
 
     def _current_dir_abs(self) -> str:
-        """Return absolute directory containing the XLSX for this batch."""
+        """Return absolute directory containing the CSV for this batch."""
         return os.path.dirname(self.file.path)
 
     def write_archive_json(self, *, imported_count: int, records_summary: list[dict] | None = None, notes: str = "") -> str:
         """
-        Create/overwrite archive.json next to the XLSX that’s currently on disk.
+        Create/overwrite archive.json next to the CSV that’s currently on disk.
         Call this AFTER a successful import, BEFORE archiving.
         Returns the absolute path written.
         """
@@ -404,7 +407,7 @@ class UploadBatch(models.Model):
 
         payload = {
             "batch_id": str(self.id),
-            "xlsx": self.file.name,                             # storage-relative
+            "csv": self.file.name,                             # storage-relative
             "zip": self.zip_file.name if getattr(self, "zip_file", None) else None,
             "sha256": self.sha256,
             "imported_at": timezone.now().isoformat(),
@@ -424,9 +427,11 @@ class UploadBatch(models.Model):
 # UpdateBatch  (bulk metadata updates by UUID)
 # -----------------------------
 
-def updates_staging_path_xlsx(instance, filename):
-    # updates/staging/YYYY/MM/<batch-id>.xlsx
-    return f"updates/staging/{timezone.now():%Y/%m}/{instance.id}.xlsx"
+def updates_staging_path_csv(instance, filename):
+    return f"updates/staging/{timezone.now():%Y/%m}/{instance.id}.csv"
+
+# Alias for historical migrations
+updates_staging_path_xlsx = updates_staging_path_csv
 
 def updates_reports_path(instance, filename):
     # updates/reports/YYYY/MM/<batch-id>.csv (or .json)
@@ -434,7 +439,7 @@ def updates_reports_path(instance, filename):
 
 class UpdateBatch(models.Model):
     """
-    Staff-only XLSX-based update batches. Validates against current DB + valid_species,
+    Staff-only CSV-based update batches. Validates against current DB + valid_species,
     supports dry-run diffing, and applies all-or-nothing in a single transaction.
     """
 
@@ -454,8 +459,8 @@ class UpdateBatch(models.Model):
         related_name="update_batches"
     )
 
-    # XLSX uploaded by staff
-    file = models.FileField(upload_to=updates_staging_path_xlsx, max_length=500)
+    # CSV uploaded by staff
+    file = models.FileField(upload_to=updates_staging_path_csv, max_length=500)
     original_filename = models.CharField(max_length=300)
     size_bytes = models.BigIntegerField(default=0)
     sha256 = models.CharField(max_length=64, blank=True, db_index=True)
@@ -500,7 +505,7 @@ class UpdateBatch(models.Model):
     # ---------- Utilities ----------
     def compute_sha256_from_disk(self) -> str:
         """
-        Compute SHA-256 checksum of the stored XLSX (memory-safe).
+        Compute SHA-256 checksum of the stored CSV (memory-safe).
         """
         h = hashlib.sha256()
         with open(self.file.path, "rb") as fh:
@@ -512,11 +517,11 @@ class UpdateBatch(models.Model):
 
     def _relocate_file(self, target_subdir: str) -> None:
         """
-        Move the XLSX to a lifecycle folder and update the FileField name accordingly.
+        Move the CSV to a lifecycle folder and update the FileField name accordingly.
         """
         base_dir = os.path.join(target_subdir, timezone.now().strftime("%Y/%m"))
         src_abs = self.file.path
-        filename_only = os.path.basename(self.file.name)  # <uuid>.xlsx
+        filename_only = os.path.basename(self.file.name)  # <uuid>.csv
         dst_rel = os.path.join(base_dir, filename_only)
         dst_abs = self.file.storage.path(dst_rel)
 
@@ -594,7 +599,7 @@ class DownloadJob(models.Model):
     expires_at = models.DateTimeField(null=True, blank=True)
 
     # Results (filled in when READY)
-    tsv_file = models.FileField(upload_to="downloads/results/%Y/%m", blank=True)
+    csv_file = models.FileField(upload_to="downloads/results/%Y/%m", blank=True)
     zip_file = models.FileField(upload_to="downloads/results/%Y/%m", blank=True)
 
     class Meta:

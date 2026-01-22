@@ -88,7 +88,7 @@ def _is_os_cruft(path: str) -> bool:
     return False
 
 class Command(BaseCommand):
-    help = "Validate uploaded XLSX files in staging and promote to validated/rejected."
+    help = "Validate uploaded CSV files in staging and promote to validated/rejected."
 
     def add_arguments(self, parser):
         parser.add_argument("--id", help="Validate a specific UploadBatch UUID.")
@@ -120,20 +120,20 @@ class Command(BaseCommand):
             batch.mark_validating()
 
         errors = []
-        excel_path = batch.file.path
+        csv_path = batch.file.path
 
         # --- FIX: Wait for file to sync (Windows/Docker lag) ---
         retries = 5
-        while not os.path.exists(excel_path) and retries > 0:
-            self.stdout.write(f"Waiting for file sync: {excel_path}")
+        while not os.path.exists(csv_path) and retries > 0:
+            self.stdout.write(f"Waiting for file sync: {csv_path}")
             time.sleep(1)
             retries -= 1
         # -------------------------------------------------------
 
         try:
-            df = pd.read_excel(excel_path)
+            df = pd.read_csv(csv_path)
         except Exception as e:
-            errors.append(f"Cannot open workbook: {e}")
+            errors.append(f"Cannot open CSV: {e}")
             return self._finalize(batch, errors, dry_run)
 
         df.columns = [c.strip() for c in df.columns]
@@ -225,14 +225,14 @@ class Command(BaseCommand):
                 member = members[0]
             else:
                 # If duplicates exist (same filename in different folders), use full path to decide
-                # Normalize Excel path: replace backslash with forward slash for comparison
-                excel_norm_full = str(full_path).strip().replace("\\", "/").lower()
+                # Normalize CSV path: replace backslash with forward slash
+                csv_norm_full = str(full_path).strip().replace("\\", "/").lower()
                 
                 # Check for exact suffix matches (e.g. "folder/img.jpg" matches "root/folder/img.jpg")
                 matches = []
                 for m in members:
-                    # Check if the ZIP path ends with the Excel path (robust to relative root differences)
-                    if m.lower().endswith(excel_norm_full):
+                    # Check if the ZIP path ends with the CSV path (robust to relative root differences)
+                    if m.lower().endswith(csv_norm_full):
                         matches.append(m)
                 
                 if len(matches) == 1:
@@ -263,7 +263,7 @@ class Command(BaseCommand):
 
             manifest.append({
                 "row_num": row_num,
-                "excel_index": int(i),
+                "csv_index": int(i),
                 "filename": expected_name_raw,
                 "zip_member": member,
                 "sha256": sha,
@@ -348,7 +348,7 @@ class Command(BaseCommand):
                         with open(manifest_path, "w", encoding="utf-8") as fh:
                             json.dump({
                                     "batch_id": str(batch.id),
-                                    "xlsx": batch.file.name,
+                                    "csv": batch.file.name,
                                     "zip": os.path.basename(zip_path) if zip_path else None,
                                     "count": len(manifest),
                                     "manifest_version": MANIFEST_VERSION,
