@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     'simple_history',
     'crispy_forms',
     'django_filters',
+    'rest_framework',
+    'rest_framework.authtoken',
 
     # Local App (Internal Module)
     'beetlesgallery.beetles_app',
@@ -207,3 +209,14 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # We read this from the environment so it doesn't break local development.
 SESSION_COOKIE_DOMAIN = os.environ.get('SESSION_COOKIE_DOMAIN', None)
 CSRF_COOKIE_DOMAIN = os.environ.get('SESSION_COOKIE_DOMAIN', None)
+
+# --- Django REST Framework Configuration ---
+REST_FRAMEWORK = {
+    # No pagination for now
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',     # For API clients
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',  # Require authentication
+    ],
+}

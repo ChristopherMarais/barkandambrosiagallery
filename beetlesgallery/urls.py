@@ -1,8 +1,7 @@
 from django.contrib import admin
-from django.urls import path, re_path
+from django.urls import path, re_path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.urls import path
 from django.views.static import serve
 
 from beetlesgallery.beetles_app import views as beetles_views
@@ -35,7 +34,9 @@ urlpatterns = [
     path("updates/", beetles_views.update_upload, name="update_upload"),
     path("reference/download/", beetles_views.download_taxonomy_ref, name="download_taxonomy_ref"),
     path('update_single/<uuid:beetle_id>/', beetles_views.update_single_beetle, name='update_single_beetle'),
-    
+
+    # --- API ---
+    path('api/v1/', include('beetlesgallery.beetles_app.api.urls')),
 ]
 
 # Serve Media Files (User Uploads) manually since we don't have Nginx
