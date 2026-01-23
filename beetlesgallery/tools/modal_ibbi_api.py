@@ -7,7 +7,8 @@ from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import JSONResponse
 
 # --- Configuration ---
-CACHE_DIR = "/vol/cache"
+# CHANGED: Use a new path to avoid conflicts with system/build files
+CACHE_DIR = "/model_cache"
 
 # 1. Define the Container Environment
 image = (
@@ -31,8 +32,10 @@ image = (
         "einops"
     )
     .env({
+        # Directing AI model caches to our volume
         "HF_HOME": CACHE_DIR,
         "TORCH_HOME": CACHE_DIR,
+        # REMOVED XDG_CACHE_HOME to prevent pip from filling this dir during build
         "MPLCONFIGDIR": f"{CACHE_DIR}/matplotlib"
     })
 )
@@ -46,8 +49,9 @@ cache_volume = modal.Volume.from_name("ibbi-cache", create_if_missing=True)
 @app.cls(
     image=image,
     gpu="any",
-    scaledown_window=120,
+    scaledown_window=300,  # Keep warm for 5 mins
     timeout=600,
+    # Mount the volume to the clean custom path
     volumes={CACHE_DIR: cache_volume} 
 )
 class ModelService:
@@ -56,7 +60,9 @@ class ModelService:
         """Runs once when the container starts."""
         import ibbi
         self.ibbi = ibbi
-        print("✅ IBBI Package loaded from PyPI")
+        # In-Memory Cache: Keeps loaded models in GPU RAM
+        self.loaded_models = {} 
+        print("✅ IBBI Package loaded. Cache initialized.")
 
     def _get_model_name(self, task, architecture):
         """Maps UI selection to internal IBBI model names"""
@@ -91,23 +97,25 @@ class ModelService:
         print(f"Processing Task: {task} | Arch: {architecture}")
         
         try:
-            # Load Image
             img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
             
-            # Load Model
             model_name = self._get_model_name(task, architecture)
             if not model_name:
                 raise ValueError(f"Invalid model configuration: {task}/{architecture}")
 
-            print(f"Loading Model: {model_name}")
-            
-            # This will now look in /vol/cache (the Volume) because of the env vars
-            model = self.ibbi.create_model(model_name, pretrained=True)
+            # --- OPTIMIZATION: RAM Cache Check ---
+            if model_name in self.loaded_models:
+                print(f"⚡ Using cached model from RAM: {model_name}")
+                model = self.loaded_models[model_name]
+            else:
+                print(f"💾 Loading model from Disk/Vol: {model_name}")
+                # This loads from /model_cache (fast volume) or downloads if missing
+                model = self.ibbi.create_model(model_name, pretrained=True)
+                self.loaded_models[model_name] = model # Save to RAM
             
             # Inference
             if task in ["Single-Class Detection", "Multi-Class Detection"]:
                 results = model.predict(img)
-                # FIX: IBBI returns a dictionary, so we pass that directly
                 annotated_img = self._draw_yolo(img.copy(), results)
             else:
                 if not text_prompt:
@@ -115,7 +123,6 @@ class ModelService:
                 results = model.predict(img, text_prompt=text_prompt, box_threshold=float(box_threshold), text_threshold=float(text_threshold))
                 annotated_img = self._draw_dino(img.copy(), results)
 
-            # Return as Base64
             buffered = io.BytesIO()
             annotated_img.save(buffered, format="JPEG")
             img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
@@ -134,14 +141,10 @@ class ModelService:
 
     # --- Drawing Helpers ---
     def _draw_yolo(self, image, results):
-        """
-        Draws bounding boxes from IBBI dictionary output.
-        Format: {'boxes': [[x1,y1,x2,y2], ...], 'scores': [...], 'labels': [...]}
-        """
         from PIL import ImageDraw
         draw = ImageDraw.Draw(image)
         
-        # FIX: Check for dictionary keys, not list index
+        # Check for dictionary keys (IBBI format)
         if not results or "boxes" not in results or not results["boxes"]: 
             return image
         
@@ -150,15 +153,11 @@ class ModelService:
         labels = results.get("labels", [])
         
         for box, score, label in zip(boxes, scores, labels):
-            coords = box  # box is already [x1, y1, x2, y2]
-            
-            # Format Label
+            coords = box 
             label_text = f"{label} {score:.2f}"
             
-            # Draw Box
             draw.rectangle(coords, outline="red", width=3)
             
-            # Draw Label with Background
             text_pos = (coords[0], coords[1]-12 if coords[1]-12 > 0 else coords[1])
             text_bbox = draw.textbbox(text_pos, label_text)
             draw.rectangle(text_bbox, fill="red")
@@ -239,8 +238,6 @@ async def analyze(
 ):
     content = await image.read()
     service = ModelService()
-    
-    # Run on GPU
     result = service.process_image.remote(
         content, task, architecture, text_prompt, box_threshold, text_threshold
     )
