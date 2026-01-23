@@ -3,11 +3,16 @@
 {% block content %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<div class="max-w-7xl mx-auto px-4 py-8">
+<section class="relative z-0">
+    <div class="pt-8"> 
+        <h1 class="text-2xl sm:text-3xl font-semibold">Intelligent Bark Beetle Identifier (IBBI)</h1>
+    </div>
+</section>
+
+<div class="py-8">
     
-    <div class="pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="pb-6 flex flex-col md:flex-row md:items-center justify-between gap-2">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900 tracking-tight">Intelligent Bark Beetle Identifier (IBBI)</h1>
             <div class="mt-2 text-sm text-gray-600 space-y-1">
                 <p>
                     All models have been trained on <strong>~35,000 images</strong> to detect <strong>63 species</strong>. 
@@ -15,7 +20,7 @@
                 </p>
             </div>
             <div>
-                <p class="mt-2 text-gray-700 bg-gray-50 inline-block px-2 py-1 rounded border border-gray-200 text-xs">
+                <p class="mt-2 text-gray-700 bg-gray-100 inline-block px-2 py-1 rounded border border-gray-300 text-xs">
                     <i class="fi fi-rr-info text-base align-middle mr-1"></i>
                     <strong>Note:</strong> The analysis server sleeps when idle. The first image may take a moment to wake it up; subsequent uploads will process much faster.
                 </p>
