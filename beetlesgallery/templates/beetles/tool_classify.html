@@ -5,17 +5,27 @@
 
 <div class="max-w-7xl mx-auto px-4 py-8">
     
-    <div class="mb-8 border-b border-gray-200 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
             <h1 class="text-3xl font-bold text-gray-900 tracking-tight">Intelligent Bark Beetle Identifier (IBBI)</h1>
-            <p class="text-sm text-gray-500 mt-1">
-                Detects 63 species. See <a href="https://github.com/ChristopherMarais/IBBI" target="_blank" class="text-gray-600 hover:text-gray-800 underline">GitHub</a> for details.
-            </p>
+            <div class="mt-2 text-sm text-gray-600 space-y-1">
+                <p>
+                    All models have been trained on <strong>~35,000 images</strong> to detect <strong>63 species</strong>. 
+                    See the <a href="https://github.com/ChristopherMarais/IBBI" target="_blank" class="text-gray-600 hover:text-gray-800 underline">IBBI Python package</a> for more details on the latest models.
+                </p>
+            </div>
+            <div>
+                <p class="mt-2 text-gray-700 bg-gray-50 inline-block px-2 py-1 rounded border border-gray-200 text-xs">
+                    <i class="fi fi-rr-info text-base align-middle mr-1"></i>
+                    <strong>Note:</strong> The analysis server sleeps when idle. The first image may take a moment to wake it up; subsequent uploads will process much faster.
+                </p>
+            </div>
         </div>
+        
         <div id="globalStatus" class="hidden flex items-center gap-2 text-sm font-medium text-gray-800 bg-gray-300 px-3 py-1 rounded-full">
             <span class="relative flex h-2 w-2">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white"></span>
-              <span class="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
             </span>
             Processing...
         </div>
