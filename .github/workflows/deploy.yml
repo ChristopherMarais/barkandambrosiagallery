@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-  # Allows you to run this manually from the Actions tab (Useful for model downloads)
+  # Allows manual triggering (useful for the model download step)
   workflow_dispatch: 
 
 jobs:
@@ -39,7 +39,7 @@ jobs:
             # 4. Cleanup
             docker image prune -f
 
-  # JOB 2: Deploy AI Service to Modal (New)
+  # JOB 2: Deploy AI Service to Modal (Fixed Pixi Setup)
   deploy-modal:
     name: Deploy AI Service (Modal)
     runs-on: ubuntu-latest
@@ -47,11 +47,16 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # FIXED: Updated action version and removed old 'pixi-version' 
+      # to ensure it uses a modern version compatible with [workspace].
       - name: Setup Pixi
-        uses: prefix-dev/setup-pixi@v0.5.1
+        uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.18.0
+          pixi-version: v0.39.0  # Explicitly using a modern version
           cache: true
+          # Determine which environment to install. 
+          # Assuming 'default' contains the 'modal' package.
+          environments: default 
 
       - name: Deploy API Endpoint
         env:
@@ -61,7 +66,6 @@ jobs:
           pixi run modal deploy beetlesgallery/tools/modal_ibbi_api.py
 
       # This step only runs if you manually click "Run Workflow" in GitHub Actions.
-      # It prevents re-downloading 10GB of models on every code push.
       - name: Update Model Cache (Manual Trigger Only)
         if: github.event_name == 'workflow_dispatch'
         env:
