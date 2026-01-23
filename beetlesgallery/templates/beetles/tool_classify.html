@@ -268,15 +268,31 @@ document.addEventListener('DOMContentLoaded', () => {
     function draw() {
         const ctx = ui.canvas.getContext('2d');
         
-        // Sync Resolution
-        if (ui.canvas.width !== ui.previewImage.naturalWidth || ui.canvas.height !== ui.previewImage.naturalHeight) {
-            ui.canvas.width = ui.previewImage.naturalWidth;
-            ui.canvas.height = ui.previewImage.naturalHeight;
+        // 1. Sync Resolution
+        const imgW = ui.previewImage.naturalWidth;
+        const imgH = ui.previewImage.naturalHeight;
+
+        if (ui.canvas.width !== imgW || ui.canvas.height !== imgH) {
+            ui.canvas.width = imgW;
+            ui.canvas.height = imgH;
         }
         
         ctx.clearRect(0, 0, ui.canvas.width, ui.canvas.height);
 
         if (!state.detections.length) return;
+
+        // 2. Scale Factor
+        const refSize = 1000;
+        const scale = Math.max(Math.max(imgW, imgH) / refSize, 0.5);
+
+        // --- UPDATE: THINNER LINES ---
+        // Reduced from 4/7 to 2/4 for precision
+        const baseLineWidth = 2 * scale;
+        const activeLineWidth = 4 * scale;
+        
+        // Font settings
+        const fontSize = Math.round(24 * scale);
+        const padding = 8 * scale;
 
         state.detections.forEach((det, i) => {
             const [x1, y1, x2, y2] = det.box;
@@ -289,35 +305,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Draw Box
             ctx.beginPath();
-            // INCREASED LINE WIDTH
-            ctx.lineWidth = (isHovered || isSelected) ? 8 : 5;
+            ctx.lineWidth = (isHovered || isSelected) ? activeLineWidth : baseLineWidth;
             ctx.strokeStyle = color;
             ctx.rect(x1, y1, w, h);
             ctx.stroke();
 
-            // Fill (highlight on hover)
+            // Highlight & Label Logic
             if (isHovered || isSelected) {
                 ctx.fillStyle = getBoxColor(i, 0.15);
                 ctx.fill();
                 
-                // --- INCREASED FONT SIZE FOR HOVER LABEL ---
-                ctx.font = "bold 32px sans-serif"; 
+                // Text Setup
+                ctx.font = `bold ${fontSize}px sans-serif`; 
                 const label = `${det.label} ${Math.round(det.score * 100)}%`;
                 const textMetrics = ctx.measureText(label);
                 
-                // Increase background box size for larger text
-                const bgH = 42; 
-                const bgW = textMetrics.width + 20;
+                // Background Dimensions
+                const bgW = textMetrics.width + (padding * 2);
+                const bgH = fontSize + padding; 
                 
-                // Position label above box
+                // --- UPDATE: SMART LABEL POSITIONING ---
+                
+                // 1. Horizontal Clamp (Right Edge)
+                // Default to x1. If label extends past image width, pull it left.
+                let lx = x1;
+                if (lx + bgW > imgW) {
+                    lx = imgW - bgW;
+                }
+                // Safety: Don't let it go off the left edge
+                if (lx < 0) lx = 0;
+
+                // 2. Vertical Clamp (Top Edge)
+                // Default to above box (y1 - bgH). If that goes off top ( < 0 ), 
+                // move it "inside" the box (y1).
                 let ly = y1 - bgH;
-                if (ly < 0) ly = y1;
+                if (ly < 0) {
+                    ly = y1; 
+                }
                 
+                // Draw Label Background
                 ctx.fillStyle = color;
-                ctx.fillRect(x1, ly, bgW, bgH);
+                ctx.fillRect(lx, ly, bgW, bgH);
                 
+                // Draw Text
                 ctx.fillStyle = "#ffffff";
-                ctx.fillText(label, x1 + 10, ly + 32);
+                // Text aligns relative to lx/ly
+                ctx.fillText(label, lx + padding, ly + fontSize - (padding * 0.2));
             }
         });
     }
