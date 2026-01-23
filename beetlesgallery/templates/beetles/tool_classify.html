@@ -88,8 +88,9 @@
                     <p class="text-sm font-medium">No image loaded</p>
                 </div>
 
-                <div id="imageWrapper" class="relative hidden max-w-full max-h-full">
-                    <img id="previewImage" class="max-w-full max-h-[75vh] object-contain block opacity-0" alt="Preview"> <canvas id="detectionCanvas" class="absolute inset-0 cursor-crosshair touch-none"></canvas>
+                <div id="imageWrapper" class="relative hidden w-fit h-fit">
+                    <img id="previewImage" class="max-w-full max-h-[75vh] object-contain block opacity-0 transition-opacity duration-300" alt="Preview"> 
+                    <canvas id="detectionCanvas" class="absolute inset-0 cursor-crosshair touch-none"></canvas>
                 </div>
             </div>
 
@@ -141,7 +142,6 @@ document.addEventListener('DOMContentLoaded', () => {
         hoveredIndex: -1,
         selectedIndex: -1,
         chart: null,
-        imageScale: 1
     };
 
     // --- Chart.js Config (Horizontal) ---
@@ -149,13 +149,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (state.chart) state.chart.destroy();
         
         state.chart = new Chart(ui.chartCanvas, {
-            type: 'bar', // 'bar' with indexAxis: 'y' = horizontal bar
+            type: 'bar', 
             data: {
                 labels: [],
                 datasets: [{
                     label: 'Confidence',
                     data: [],
-                    backgroundColor: 'rgba(99, 102, 241, 0.6)', // Indigo-500
+                    backgroundColor: 'rgba(99, 102, 241, 0.6)', 
                     borderColor: 'rgba(79, 70, 229, 1)',
                     borderWidth: 1,
                     borderRadius: 4,
@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }]
             },
             options: {
-                indexAxis: 'y', // <--- This rotates the chart 90 degrees
+                indexAxis: 'y', // Horizontal bars
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
@@ -223,22 +223,31 @@ document.addEventListener('DOMContentLoaded', () => {
         return `hsla(${hue}, 70%, 50%, ${alpha})`;
     }
 
+    // Helper: Map Click/Mouse coordinates (Rendered Pixels) -> Image Coordinates (Natural Pixels)
+    function getNaturalCoords(clientX, clientY) {
+        const rect = ui.canvas.getBoundingClientRect();
+        
+        // Canvas is sized via CSS to match the image exactly.
+        // Internal resolution = naturalWidth.
+        // Display resolution = rect.width.
+        
+        const scaleX = ui.previewImage.naturalWidth / rect.width;
+        const scaleY = ui.previewImage.naturalHeight / rect.height;
+        
+        return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+        };
+    }
+
     function draw() {
         const ctx = ui.canvas.getContext('2d');
         
-        // 1. Setup Canvas Resolution (HiDPI)
-        // We match the displayed size of the image exactly
-        const rect = ui.previewImage.getBoundingClientRect();
-        
-        // Only resize if dimensions changed to avoid clearing unnecessarily,
-        // but we usually want to clear every frame in a render loop.
-        // For this simple app, we can just resize/clear.
-        ui.canvas.width = ui.previewImage.naturalWidth;
-        ui.canvas.height = ui.previewImage.naturalHeight;
-        
-        // Calculate scaling ratio between Natural Image Size vs Displayed Size
-        // NOTE: The canvas CSS sets it to overlay the image perfectly.
-        // We draw in "Natural" coordinates.
+        // 1. Sync Canvas Resolution to Image Resolution
+        if (ui.canvas.width !== ui.previewImage.naturalWidth || ui.canvas.height !== ui.previewImage.naturalHeight) {
+            ui.canvas.width = ui.previewImage.naturalWidth;
+            ui.canvas.height = ui.previewImage.naturalHeight;
+        }
         
         ctx.clearRect(0, 0, ui.canvas.width, ui.canvas.height);
 
@@ -267,14 +276,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 ctx.fill();
                 
                 // --- HOVER LABEL (Only shown when active) ---
-                // "Show name and percentage on hover"
                 ctx.font = "bold 24px sans-serif";
                 const label = `${det.label} ${Math.round(det.score * 100)}%`;
                 const textMetrics = ctx.measureText(label);
                 const bgH = 32;
                 const bgW = textMetrics.width + 16;
                 
-                // Position label above box, but flip down if near top edge
+                // Position label above box, flip down if near top edge
                 let ly = y1 - bgH;
                 if (ly < 0) ly = y1;
                 
@@ -289,17 +297,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Hit Testing
     ui.canvas.addEventListener('mousemove', (e) => {
-        const rect = ui.canvas.getBoundingClientRect();
-        
-        // Map Mouse Coordinates (Display) -> Canvas Coordinates (Natural)
-        const scaleX = ui.canvas.width / rect.width;
-        const scaleY = ui.canvas.height / rect.height;
-        
-        const mouseX = (e.clientX - rect.left) * scaleX;
-        const mouseY = (e.clientY - rect.top) * scaleY;
+        const coords = getNaturalCoords(e.clientX, e.clientY);
+        const mouseX = coords.x;
+        const mouseY = coords.y;
 
         let found = -1;
-        // Check in reverse order (draw order is bottom-up, we want top-most click)
+        // Check in reverse order (top-most box first)
         for (let i = state.detections.length - 1; i >= 0; i--) {
             const [x1, y1, x2, y2] = state.detections[i].box;
             if (mouseX >= x1 && mouseX <= x2 && mouseY >= y1 && mouseY <= y2) {
@@ -311,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (found !== state.hoveredIndex) {
             state.hoveredIndex = found;
             ui.canvas.style.cursor = found !== -1 ? 'pointer' : 'default';
-            requestAnimationFrame(draw); // Redraw only on change
+            requestAnimationFrame(draw); 
         }
     });
 
@@ -354,13 +357,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Hide previous results
             ui.analysisDetails.classList.add('hidden');
             
-            // Init empty canvas
+            // Ensure canvas is clear
             setTimeout(() => {
-                ui.canvas.width = ui.previewImage.naturalWidth;
-                ui.canvas.height = ui.previewImage.naturalHeight;
                 const ctx = ui.canvas.getContext('2d');
                 ctx.clearRect(0,0,ui.canvas.width, ui.canvas.height);
-            }, 100);
+            }, 50);
         };
         reader.readAsDataURL(file);
     }
@@ -432,7 +433,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         state.selectedIndex = i;
                         updateChartData(i);
                         draw(); // to update box highlight
-                        ui.canvas.scrollIntoView({behavior:'smooth', block:'center'});
+                        
+                        // Scroll to chart container, NOT inside the image
+                        ui.analysisDetails.scrollIntoView({behavior:'smooth', block:'start'});
                     };
                     ui.tagsContainer.appendChild(btn);
                 });

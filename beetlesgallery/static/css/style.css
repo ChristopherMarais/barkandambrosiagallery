@@ -930,6 +930,11 @@ video {
   height: auto;
 }
 
+.h-fit {
+  height: -moz-fit-content;
+  height: fit-content;
+}
+
 .h-full {
   height: 100%;
 }
@@ -956,10 +961,6 @@ video {
 
 .max-h-\[80vh\] {
   max-height: 80vh;
-}
-
-.max-h-full {
-  max-height: 100%;
 }
 
 .min-h-40 {
@@ -1060,6 +1061,11 @@ video {
 
 .w-auto {
   width: auto;
+}
+
+.w-fit {
+  width: -moz-fit-content;
+  width: fit-content;
 }
 
 .w-full {
@@ -1173,10 +1179,6 @@ video {
   -webkit-user-select: all;
      -moz-user-select: all;
           user-select: all;
-}
-
-.resize {
-  resize: both;
 }
 
 .list-disc {
