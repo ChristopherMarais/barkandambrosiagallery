@@ -15,7 +15,7 @@ from django.urls import reverse
 from django.conf import settings
 from django.contrib import messages
 from django.utils.http import http_date
-from django.http import HttpResponseNotAllowed, FileResponse, HttpResponse, Http404
+from django.http import HttpResponseNotAllowed, FileResponse, HttpResponse, Http404, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -1042,10 +1042,9 @@ def _run_update_batch(request, row_data, filename):
 @login_required
 def tool_classify(request):
     """
-    Proxies image upload to Modal GPU API and renders results.
+    Proxies image upload to Modal GPU API.
+    Returns JSON for AJAX requests, renders template for GET.
     """
-    context = {}
-    
     if request.method == 'POST' and request.FILES.get('image'):
         try:
             # 1. Prepare Data
@@ -1053,11 +1052,8 @@ def tool_classify(request):
             
             # Extract form data
             payload = {
-                'task': request.POST.get('task'),
-                'architecture': request.POST.get('architecture'),
-                'text_prompt': request.POST.get('text_prompt', ''),
+                'architecture': request.POST.get('architecture', 'rtdetr'),
                 'box_threshold': request.POST.get('box_threshold', 0.25),
-                'text_threshold': request.POST.get('text_threshold', 0.25),
             }
             
             # Prepare file for upload
@@ -1066,23 +1062,26 @@ def tool_classify(request):
             }
 
             # 2. Call Modal API
-            # Timeout set to 60s to allow for cold start (GPU waking up)
-            response = requests.post(MODAL_API_URL, data=payload, files=files, timeout=60)
+            response = requests.post(MODAL_API_URL, data=payload, files=files, timeout=300)
             
             if response.status_code == 200:
-                data = response.json()
-                if data.get('status') == 'success':
-                    context['result_image'] = data.get('image_base64')
-                    context['model_used'] = data.get('model_used')
-                    context['success'] = True
-                else:
-                    context['error'] = data.get('message', 'Unknown error from AI service.')
+                return JsonResponse(response.json())
             else:
-                context['error'] = f"AI Service Error: {response.status_code}"
+                return JsonResponse({
+                    "status": "error", 
+                    "message": f"AI Service Error: {response.status_code}"
+                }, status=500)
 
         except requests.exceptions.Timeout:
-            context['error'] = "The AI model is waking up (Cold Start). Please try again in 10 seconds."
+            return JsonResponse({
+                "status": "error", 
+                "message": "The AI model is waking up (Cold Start). Please try again in 1 minute."
+            }, status=504)
         except Exception as e:
-            context['error'] = f"Processing failed: {str(e)}"
+            return JsonResponse({
+                "status": "error", 
+                "message": f"Processing failed: {str(e)}"
+            }, status=500)
 
-    return render(request, 'beetles/tool_classify.html', context)
+    # GET request: Render the page
+    return render(request, 'beetles/tool_classify.html', {})

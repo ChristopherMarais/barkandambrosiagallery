@@ -1,134 +1,463 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto px-4 py-8">
-    <div class="mb-8 border-b border-gray-200 pb-4">
-        <h1 class="text-3xl font-bold text-gray-900">AI Species Classification</h1>
-        <p class="text-gray-600 mt-2">Powered by IBBI & Modal GPUs. Upload an image to detect and identify beetles.</p>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="max-w-7xl mx-auto px-4 py-8">
+    
+    <div class="mb-8 border-b border-gray-200 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 tracking-tight">AI Classifier</h1>
+            <p class="text-sm text-gray-500 mt-1">
+                Detects 63 species. See <a href="https://github.com/ChristopherMarais/IBBI" target="_blank" class="text-indigo-600 hover:text-indigo-800 underline">GitHub</a> for details.
+            </p>
+        </div>
+        <div id="globalStatus" class="hidden flex items-center gap-2 text-sm font-medium text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+            </span>
+            Processing...
+        </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-sm border border-gray-200 h-fit">
-            <form method="post" enctype="multipart/form-data" class="space-y-6" id="analysisForm">
+        <div class="lg:col-span-3 space-y-6">
+            <form id="classifyForm" class="space-y-5 bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
                 {% csrf_token %}
                 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Task</label>
-                    <select name="task" id="taskSelect" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 p-2">
-                        <option value="Single-Class Detection">Single-Class Detection</option>
-                        <option value="Multi-Class Detection">Multi-Class Detection</option>
-                        <option value="Zero-Shot Detection">Zero-Shot Detection (Experimental)</option>
-                    </select>
-                </div>
-
-                <div id="archGroup">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Model Architecture</label>
-                    <select name="architecture" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 p-2">
-                        <option value="yolov10">YOLOv10 (Recommended)</option>
-                        <option value="yolov11">YOLOv11</option>
-                        <option value="yolov9">YOLOv9</option>
-                        <option value="yolov8">YOLOv8</option>
-                        <option value="rtdetr">RT-DETR</option>
-                    </select>
-                </div>
-
-                <div id="zeroShotGroup" class="hidden space-y-4 border-l-4 border-indigo-100 pl-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Text Prompt</label>
-                        <input type="text" name="text_prompt" placeholder="e.g. insect . leg" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2">
-                        <p class="text-xs text-gray-500 mt-1">Separate targets with dots (.)</p>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500">Box Thresh</label>
-                            <input type="number" step="0.05" name="box_threshold" value="0.25" class="w-full rounded-md border-gray-300 p-1 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500">Text Thresh</label>
-                            <input type="number" step="0.05" name="text_threshold" value="0.25" class="w-full rounded-md border-gray-300 p-1 text-sm">
+                    <label for="modelSelect" class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Model</label>
+                    <div class="relative">
+                        <select name="architecture" id="modelSelect" class="block w-full pl-3 pr-8 py-2.5 text-sm border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer appearance-none">
+                            <option value="rtdetr" selected>RT-DETR (Recommended)</option>
+                            <option value="yolov12">YOLO v12</option>
+                            <option value="yolov11">YOLO v11</option>
+                            <option value="yolov10">YOLO v10</option>
+                            <option value="yolov9">YOLO v9</option>
+                            <option value="yolov8">YOLO v8</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                            <i class="fi fi-rr-angle-small-down text-lg"></i>
                         </div>
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Upload Image</label>
-                    <input type="file" name="image" accept="image/*" required 
-                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                    <div class="flex justify-between items-center mb-2">
+                        <label for="confRange" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Confidence</label>
+                        <span id="confValue" class="text-xs font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">25%</span>
+                    </div>
+                    <input type="range" id="confRange" name="box_threshold" min="0.05" max="0.95" step="0.05" value="0.25" 
+                           class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 hover:accent-indigo-700">
                 </div>
 
-                <button type="submit" id="submitBtn" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
-                    Run Analysis
-                </button>
-                
-                <div id="loadingIndicator" class="hidden flex flex-col items-center justify-center p-4 bg-indigo-50 rounded-md">
-                    <svg class="animate-spin h-8 w-8 text-indigo-600 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span class="text-sm text-indigo-700 font-semibold">Processing on GPU...</span>
-                    <span class="text-xs text-indigo-500 mt-1">This may take ~20s if the server is waking up.</span>
+                <div class="pt-2">
+                    <input id="fileInput" name="image" type="file" class="hidden" accept="image/*">
+                    <button type="button" id="uploadTrigger" class="w-full flex items-center justify-center gap-2 py-2.5 px-4 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-600 hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all group">
+                        <i class="fi fi-rr-upload group-hover:scale-110 transition-transform"></i>
+                        <span>Select Image</span>
+                    </button>
                 </div>
+
+                <button type="submit" id="submitBtn" disabled class="w-full py-3 px-4 rounded-lg shadow-sm text-sm font-bold text-white bg-gray-300 cursor-not-allowed transition-all flex justify-center items-center gap-2">
+                    Start Analysis
+                </button>
             </form>
+
+            <div id="loadingContainer" class="hidden p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div class="flex justify-between text-xs font-semibold text-gray-600 mb-1">
+                    <span id="loadingStatus">Initializing...</span>
+                    <span id="loadingPercent">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div id="progressBar" class="bg-indigo-600 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
         </div>
 
-        <div class="lg:col-span-2 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center min-h-[500px] p-4 relative">
-            {% if result_image %}
-                <div class="bg-white p-2 rounded shadow-lg">
-                    <img src="data:image/jpeg;base64,{{ result_image }}" alt="Analysis Result" class="max-w-full max-h-[600px] object-contain">
+        <div class="lg:col-span-9 flex flex-col gap-6">
+            
+            <div class="bg-gray-100 rounded-xl border border-gray-200 shadow-inner overflow-hidden relative min-h-[500px] flex items-center justify-center group" id="canvasContainer">
+                
+                <div id="placeholderState" class="text-center text-gray-400 p-8 pointer-events-none">
+                    <div class="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm">
+                        <i class="fi fi-rr-picture text-2xl text-gray-300"></i>
+                    </div>
+                    <p class="text-sm font-medium">No image loaded</p>
                 </div>
-                <div class="mt-4 flex gap-2">
-                    <span class="bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full font-medium">
-                        Model: {{ model_used }}
-                    </span>
-                    <span class="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full font-medium">
-                        Success
-                    </span>
+
+                <div id="imageWrapper" class="relative hidden max-w-full max-h-full">
+                    <img id="previewImage" class="max-w-full max-h-[75vh] object-contain block opacity-0" alt="Preview"> <canvas id="detectionCanvas" class="absolute inset-0 cursor-crosshair touch-none"></canvas>
                 </div>
-            {% elif error %}
-                <div class="bg-red-50 text-red-700 p-6 rounded-md text-center border border-red-200">
-                    <svg class="w-12 h-12 mx-auto text-red-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <h3 class="font-bold text-lg mb-1">Analysis Failed</h3>
-                    <p>{{ error }}</p>
+            </div>
+
+            <div id="analysisDetails" class="hidden bg-white p-6 rounded-xl border border-gray-200 shadow-sm transition-all">
+                <div class="flex items-center justify-between mb-4 border-b border-gray-100 pb-2">
+                    <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Probabilities</h3>
+                    <span id="chartLabel" class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded">Select a detection</span>
                 </div>
-            {% else %}
-                <div class="text-center text-gray-400">
-                    <svg class="mx-auto h-16 w-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                    <p class="mt-4 text-lg font-medium">No Image Analyzed</p>
-                    <p class="text-sm">Upload an image on the left to see predictions here.</p>
+                
+                <div class="relative h-64 w-full">
+                    <canvas id="probsChart"></canvas>
                 </div>
-            {% endif %}
+                
+                <div id="tagsContainer" class="mt-4 flex flex-wrap gap-2 pt-4 border-t border-gray-100"></div>
+            </div>
+
         </div>
     </div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const taskSelect = document.getElementById('taskSelect');
-        const archGroup = document.getElementById('archGroup');
-        const zeroShotGroup = document.getElementById('zeroShotGroup');
-        const form = document.getElementById('analysisForm');
-        const submitBtn = document.getElementById('submitBtn');
-        const loadingIndicator = document.getElementById('loadingIndicator');
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Elements ---
+    const ui = {
+        fileInput: document.getElementById('fileInput'),
+        uploadTrigger: document.getElementById('uploadTrigger'),
+        previewImage: document.getElementById('previewImage'),
+        imageWrapper: document.getElementById('imageWrapper'),
+        placeholder: document.getElementById('placeholderState'),
+        submitBtn: document.getElementById('submitBtn'),
+        form: document.getElementById('classifyForm'),
+        loadingContainer: document.getElementById('loadingContainer'),
+        progressBar: document.getElementById('progressBar'),
+        loadingStatus: document.getElementById('loadingStatus'),
+        loadingPercent: document.getElementById('loadingPercent'),
+        globalStatus: document.getElementById('globalStatus'),
+        canvas: document.getElementById('detectionCanvas'),
+        analysisDetails: document.getElementById('analysisDetails'),
+        tagsContainer: document.getElementById('tagsContainer'),
+        chartCanvas: document.getElementById('probsChart'),
+        chartLabel: document.getElementById('chartLabel'),
+        canvasContainer: document.getElementById('canvasContainer')
+    };
 
-        // Toggle visibility based on Task selection
-        taskSelect.addEventListener('change', (e) => {
-            if (e.target.value === 'Zero-Shot Detection') {
-                archGroup.classList.add('hidden');
-                zeroShotGroup.classList.remove('hidden');
-            } else {
-                archGroup.classList.remove('hidden');
-                zeroShotGroup.classList.add('hidden');
+    // --- State ---
+    let state = {
+        detections: [],
+        classNames: [],
+        hoveredIndex: -1,
+        selectedIndex: -1,
+        chart: null,
+        imageScale: 1
+    };
+
+    // --- Chart.js Config (Horizontal) ---
+    function initChart() {
+        if (state.chart) state.chart.destroy();
+        
+        state.chart = new Chart(ui.chartCanvas, {
+            type: 'bar', // 'bar' with indexAxis: 'y' = horizontal bar
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Confidence',
+                    data: [],
+                    backgroundColor: 'rgba(99, 102, 241, 0.6)', // Indigo-500
+                    borderColor: 'rgba(79, 70, 229, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    barPercentage: 0.6
+                }]
+            },
+            options: {
+                indexAxis: 'y', // <--- This rotates the chart 90 degrees
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => `${ctx.raw.toFixed(1)}%`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: '#f3f4f6' },
+                        ticks: { font: { size: 10 } }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { autoSkip: false, font: { size: 11, weight: '500' } }
+                    }
+                },
+                animation: { duration: 400 }
             }
         });
+    }
 
-        // Show loading spinner on submit
-        form.addEventListener('submit', () => {
-            submitBtn.classList.add('hidden');
-            loadingIndicator.classList.remove('hidden');
+    function updateChartData(index) {
+        if (index === -1 || !state.detections[index]) return;
+        
+        const det = state.detections[index];
+        const probs = det.probs;
+        
+        // Update Chart Label
+        ui.chartLabel.innerText = `${det.label} (${Math.round(det.score * 100)}%)`;
+        ui.chartLabel.className = "text-xs font-bold text-white px-2 py-1 rounded shadow-sm transition-colors";
+        ui.chartLabel.style.backgroundColor = getBoxColor(index);
+
+        // Sort Top 8 Predictions
+        const sorted = probs
+            .map((p, i) => ({ p, name: state.classNames[i] || `Class ${i}` }))
+            .sort((a, b) => b.p - a.p)
+            .slice(0, 8); // Show top 8
+
+        state.chart.data.labels = sorted.map(i => i.name);
+        state.chart.data.datasets[0].data = sorted.map(i => i.p * 100);
+        state.chart.data.datasets[0].backgroundColor = getBoxColor(index, 0.6);
+        state.chart.data.datasets[0].borderColor = getBoxColor(index, 1);
+        state.chart.update();
+    }
+
+    // --- Canvas & Interaction Logic ---
+    
+    function getBoxColor(index, alpha=1) {
+        // Generate consistent, distinct colors
+        const hue = (index * 137.508) % 360; 
+        return `hsla(${hue}, 70%, 50%, ${alpha})`;
+    }
+
+    function draw() {
+        const ctx = ui.canvas.getContext('2d');
+        
+        // 1. Setup Canvas Resolution (HiDPI)
+        // We match the displayed size of the image exactly
+        const rect = ui.previewImage.getBoundingClientRect();
+        
+        // Only resize if dimensions changed to avoid clearing unnecessarily,
+        // but we usually want to clear every frame in a render loop.
+        // For this simple app, we can just resize/clear.
+        ui.canvas.width = ui.previewImage.naturalWidth;
+        ui.canvas.height = ui.previewImage.naturalHeight;
+        
+        // Calculate scaling ratio between Natural Image Size vs Displayed Size
+        // NOTE: The canvas CSS sets it to overlay the image perfectly.
+        // We draw in "Natural" coordinates.
+        
+        ctx.clearRect(0, 0, ui.canvas.width, ui.canvas.height);
+
+        if (!state.detections.length) return;
+
+        // 2. Loop Detections
+        state.detections.forEach((det, i) => {
+            const [x1, y1, x2, y2] = det.box;
+            const w = x2 - x1;
+            const h = y2 - y1;
+            
+            const isHovered = (i === state.hoveredIndex);
+            const isSelected = (i === state.selectedIndex);
+            const color = getBoxColor(i);
+
+            // Draw Box
+            ctx.beginPath();
+            ctx.lineWidth = (isHovered || isSelected) ? 6 : 3;
+            ctx.strokeStyle = color;
+            ctx.rect(x1, y1, w, h);
+            ctx.stroke();
+
+            // Fill (highlight on hover)
+            if (isHovered || isSelected) {
+                ctx.fillStyle = getBoxColor(i, 0.15);
+                ctx.fill();
+                
+                // --- HOVER LABEL (Only shown when active) ---
+                // "Show name and percentage on hover"
+                ctx.font = "bold 24px sans-serif";
+                const label = `${det.label} ${Math.round(det.score * 100)}%`;
+                const textMetrics = ctx.measureText(label);
+                const bgH = 32;
+                const bgW = textMetrics.width + 16;
+                
+                // Position label above box, but flip down if near top edge
+                let ly = y1 - bgH;
+                if (ly < 0) ly = y1;
+                
+                ctx.fillStyle = color;
+                ctx.fillRect(x1, ly, bgW, bgH);
+                
+                ctx.fillStyle = "#ffffff";
+                ctx.fillText(label, x1 + 8, ly + 24);
+            }
         });
+    }
+
+    // Hit Testing
+    ui.canvas.addEventListener('mousemove', (e) => {
+        const rect = ui.canvas.getBoundingClientRect();
+        
+        // Map Mouse Coordinates (Display) -> Canvas Coordinates (Natural)
+        const scaleX = ui.canvas.width / rect.width;
+        const scaleY = ui.canvas.height / rect.height;
+        
+        const mouseX = (e.clientX - rect.left) * scaleX;
+        const mouseY = (e.clientY - rect.top) * scaleY;
+
+        let found = -1;
+        // Check in reverse order (draw order is bottom-up, we want top-most click)
+        for (let i = state.detections.length - 1; i >= 0; i--) {
+            const [x1, y1, x2, y2] = state.detections[i].box;
+            if (mouseX >= x1 && mouseX <= x2 && mouseY >= y1 && mouseY <= y2) {
+                found = i;
+                break;
+            }
+        }
+
+        if (found !== state.hoveredIndex) {
+            state.hoveredIndex = found;
+            ui.canvas.style.cursor = found !== -1 ? 'pointer' : 'default';
+            requestAnimationFrame(draw); // Redraw only on change
+        }
     });
+
+    ui.canvas.addEventListener('click', () => {
+        if (state.hoveredIndex !== -1) {
+            state.selectedIndex = state.hoveredIndex;
+            updateChartData(state.selectedIndex);
+            requestAnimationFrame(draw);
+        }
+    });
+
+    // --- File Handling & UI ---
+    
+    ui.uploadTrigger.addEventListener('click', () => ui.fileInput.click());
+
+    ui.fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) handleFile(e.target.files[0]);
+    });
+
+    function handleFile(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            ui.previewImage.src = e.target.result;
+            // Reset State
+            state.detections = [];
+            state.selectedIndex = -1;
+            state.hoveredIndex = -1;
+            
+            // Show Image Area
+            ui.placeholder.classList.add('hidden');
+            ui.imageWrapper.classList.remove('hidden');
+            ui.previewImage.classList.remove('opacity-0');
+            
+            // Prepare Button
+            ui.submitBtn.disabled = false;
+            ui.submitBtn.classList.remove('bg-gray-300', 'cursor-not-allowed');
+            ui.submitBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700', 'shadow-md');
+            ui.submitBtn.innerHTML = `Analyze <span class="font-normal opacity-80">(${file.name.substring(0, 12)}...)</span>`;
+            
+            // Hide previous results
+            ui.analysisDetails.classList.add('hidden');
+            
+            // Init empty canvas
+            setTimeout(() => {
+                ui.canvas.width = ui.previewImage.naturalWidth;
+                ui.canvas.height = ui.previewImage.naturalHeight;
+                const ctx = ui.canvas.getContext('2d');
+                ctx.clearRect(0,0,ui.canvas.width, ui.canvas.height);
+            }, 100);
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // --- Submission ---
+    
+    function setLoading(isLoading, statusText="") {
+        if (isLoading) {
+            ui.loadingContainer.classList.remove('hidden');
+            ui.loadingStatus.innerText = statusText;
+            ui.globalStatus.classList.remove('hidden');
+            ui.submitBtn.disabled = true;
+            ui.submitBtn.classList.add('opacity-75', 'cursor-wait');
+        } else {
+            ui.loadingContainer.classList.add('hidden');
+            ui.globalStatus.classList.add('hidden');
+            ui.submitBtn.disabled = false;
+            ui.submitBtn.classList.remove('opacity-75', 'cursor-wait');
+        }
+    }
+
+    function animateProgress() {
+        let w = 0;
+        const intv = setInterval(() => {
+            if (w < 90) {
+                w += Math.random() * 5;
+                ui.progressBar.style.width = `${Math.min(w, 90)}%`;
+                ui.loadingPercent.innerText = `${Math.round(Math.min(w, 90))}%`;
+            }
+        }, 300);
+        return intv;
+    }
+
+    ui.form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(ui.form);
+        
+        setLoading(true, "Preparing image...");
+        const pIntv = animateProgress();
+
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await response.json();
+            
+            clearInterval(pIntv);
+            ui.progressBar.style.width = '100%';
+            ui.loadingPercent.innerText = '100%';
+            
+            if (data.status === 'success') {
+                state.detections = data.detections;
+                state.classNames = data.class_names;
+                
+                // Show Results Area
+                ui.analysisDetails.classList.remove('hidden');
+                initChart(); // Setup chart instance
+                
+                // Render Tags
+                ui.tagsContainer.innerHTML = '';
+                state.detections.forEach((det, i) => {
+                    const btn = document.createElement('button');
+                    btn.className = "flex items-center gap-2 px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-medium transition-colors border border-transparent focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500";
+                    const color = getBoxColor(i);
+                    btn.innerHTML = `<span class="w-2.5 h-2.5 rounded-full" style="background-color:${color}"></span> ${det.label} <span class="text-gray-400">${Math.round(det.score*100)}%</span>`;
+                    btn.onclick = () => {
+                        state.selectedIndex = i;
+                        updateChartData(i);
+                        draw(); // to update box highlight
+                        ui.canvas.scrollIntoView({behavior:'smooth', block:'center'});
+                    };
+                    ui.tagsContainer.appendChild(btn);
+                });
+
+                // Auto-select first
+                if (state.detections.length > 0) {
+                    state.selectedIndex = 0;
+                    updateChartData(0);
+                } else {
+                    alert("No beetles detected above the confidence threshold.");
+                }
+
+                draw(); // Draw boxes
+                setLoading(false);
+                
+            } else {
+                setLoading(false);
+                alert("Error: " + data.message);
+            }
+        } catch (err) {
+            clearInterval(pIntv);
+            setLoading(false);
+            alert("Network Error: " + err.message);
+        }
+    });
+});
 </script>
 {% endblock %}

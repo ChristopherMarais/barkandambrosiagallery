@@ -7,7 +7,6 @@ from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import JSONResponse
 
 # --- Configuration ---
-# CHANGED: Use a new path to avoid conflicts with system/build files
 CACHE_DIR = "/model_cache"
 
 # 1. Define the Container Environment
@@ -32,10 +31,8 @@ image = (
         "einops"
     )
     .env({
-        # Directing AI model caches to our volume
         "HF_HOME": CACHE_DIR,
         "TORCH_HOME": CACHE_DIR,
-        # REMOVED XDG_CACHE_HOME to prevent pip from filling this dir during build
         "MPLCONFIGDIR": f"{CACHE_DIR}/matplotlib"
     })
 )
@@ -49,9 +46,8 @@ cache_volume = modal.Volume.from_name("ibbi-cache", create_if_missing=True)
 @app.cls(
     image=image,
     gpu="any",
-    scaledown_window=300,  # Keep warm for 5 mins
+    scaledown_window=300,
     timeout=600,
-    # Mount the volume to the clean custom path
     volumes={CACHE_DIR: cache_volume} 
 )
 class ModelService:
@@ -60,76 +56,72 @@ class ModelService:
         """Runs once when the container starts."""
         import ibbi
         self.ibbi = ibbi
-        # In-Memory Cache: Keeps loaded models in GPU RAM
         self.loaded_models = {} 
         print("✅ IBBI Package loaded. Cache initialized.")
 
-    def _get_model_name(self, task, architecture):
-        """Maps UI selection to internal IBBI model names"""
+    def _get_model_name(self, architecture):
+        """Maps UI selection to internal IBBI model names (Multi-Class Only)"""
         REGISTRY = {
-            "Single-Class Detection": {
-                "yolov10": "yolov10x_bb_detect_model",
-                "yolov11": "yolov11x_bb_detect_model",
-                "yolov9": "yolov9e_bb_detect_model",
-                "yolov8": "yolov8x_bb_detect_model",
-                "rtdetr": "rtdetrx_bb_detect_model",
-            },
-            "Multi-Class Detection": {
-                "yolov10": "yolov10x_bb_multi_class_detect_model",
-                "yolov11": "yolov11x_bb_multi_class_detect_model",
-                "yolov9": "yolov9e_bb_multi_class_detect_model",
-                "yolov8": "yolov8x_bb_multi_class_detect_model",
-                "rtdetr": "rtdetrx_bb_multi_class_detect_model",
-            },
-             "Zero-Shot Detection": {
-                "grounding_dino": "grounding_dino_detect_model"
-            }
+            "rtdetr": "rtdetrx_bb_multi_class_detect_model",
+            "yolov12": "yolov12x_bb_multi_class_detect_model",
+            "yolov11": "yolov11x_bb_multi_class_detect_model",
+            "yolov10": "yolov10x_bb_multi_class_detect_model",
+            "yolov9": "yolov9e_bb_multi_class_detect_model",
+            "yolov8": "yolov8x_bb_multi_class_detect_model",
         }
-        if task == "Zero-Shot Detection":
-            return "grounding_dino_detect_model"
-        return REGISTRY.get(task, {}).get(architecture)
+        return REGISTRY.get(architecture)
 
     @modal.method()
-    def process_image(self, image_bytes, task, architecture, text_prompt=None, box_threshold=0.25, text_threshold=0.25):
+    def process_image(self, image_bytes, architecture, box_threshold=0.25):
         from PIL import Image
         import io
 
-        print(f"Processing Task: {task} | Arch: {architecture}")
+        print(f"Processing Arch: {architecture}")
         
         try:
             img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
             
-            model_name = self._get_model_name(task, architecture)
+            model_name = self._get_model_name(architecture)
             if not model_name:
-                raise ValueError(f"Invalid model configuration: {task}/{architecture}")
+                raise ValueError(f"Invalid model architecture: {architecture}")
 
-            # --- OPTIMIZATION: RAM Cache Check ---
+            # --- RAM Cache Check ---
             if model_name in self.loaded_models:
                 print(f"⚡ Using cached model from RAM: {model_name}")
                 model = self.loaded_models[model_name]
             else:
                 print(f"💾 Loading model from Disk/Vol: {model_name}")
-                # This loads from /model_cache (fast volume) or downloads if missing
                 model = self.ibbi.create_model(model_name, pretrained=True)
-                self.loaded_models[model_name] = model # Save to RAM
+                self.loaded_models[model_name] = model
             
-            # Inference
-            if task in ["Single-Class Detection", "Multi-Class Detection"]:
-                results = model.predict(img)
-                annotated_img = self._draw_yolo(img.copy(), results)
-            else:
-                if not text_prompt:
-                    return {"status": "error", "message": "Text prompt required for Zero-Shot"}
-                results = model.predict(img, text_prompt=text_prompt, box_threshold=float(box_threshold), text_threshold=float(text_threshold))
-                annotated_img = self._draw_dino(img.copy(), results)
+            # Inference with Full Probabilities
+            # This is critical for the "Distribution Plot" feature
+            results = model.predict(img, include_full_probabilities=True)
+            
+            detections = []
+            class_names = results.get("class_names", [])
 
-            buffered = io.BytesIO()
-            annotated_img.save(buffered, format="JPEG")
-            img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-            
+            # Extract data from the IBBI 'full_results' list
+            # Format: [{'bbox': [], 'confidence': 0.9, 'class_probabilities': [...]}, ...]
+            if results and "full_results" in results:
+                full_res = results.get("full_results", [])
+                
+                for item in full_res:
+                    score = item.get("confidence", 0.0)
+                    if score < float(box_threshold): 
+                        continue
+                        
+                    detections.append({
+                        "box": item.get("bbox"),
+                        "score": float(score),
+                        "label": item.get("predicted_class"),
+                        "probs": item.get("class_probabilities", [])
+                    })
+
             return {
                 "status": "success",
-                "image_base64": img_str,
+                "detections": detections,
+                "class_names": class_names,
                 "model_used": model_name
             }
 
@@ -139,49 +131,7 @@ class ModelService:
             print(f"❌ Error: {str(e)}")
             return {"status": "error", "message": f"Server Error: {str(e)}"}
 
-    # --- Drawing Helpers ---
-    def _draw_yolo(self, image, results):
-        from PIL import ImageDraw
-        draw = ImageDraw.Draw(image)
-        
-        # Check for dictionary keys (IBBI format)
-        if not results or "boxes" not in results or not results["boxes"]: 
-            return image
-        
-        boxes = results.get("boxes", [])
-        scores = results.get("scores", [])
-        labels = results.get("labels", [])
-        
-        for box, score, label in zip(boxes, scores, labels):
-            coords = box 
-            label_text = f"{label} {score:.2f}"
-            
-            draw.rectangle(coords, outline="red", width=3)
-            
-            text_pos = (coords[0], coords[1]-12 if coords[1]-12 > 0 else coords[1])
-            text_bbox = draw.textbbox(text_pos, label_text)
-            draw.rectangle(text_bbox, fill="red")
-            draw.text(text_pos, label_text, fill="white")
-            
-        return image
-
-    def _draw_dino(self, image, results):
-        from PIL import ImageDraw
-        draw = ImageDraw.Draw(image)
-        if not results: return image
-        
-        boxes = results.get("boxes", [])
-        scores = results.get("scores", [])
-        labels = results.get("text_labels", [])
-        
-        for box, score, label in zip(boxes, scores, labels):
-            coords = box.tolist()
-            text = f"{label} {score:.2f}"
-            draw.rectangle(coords, outline="green", width=3)
-            draw.text((coords[0], coords[1]-10), text, fill="green")
-        return image
-
-# 3. Batch Download Function (Run Manually Once)
+# 3. Batch Download Function (All Multi-Class Models)
 @app.function(
     image=image,
     volumes={CACHE_DIR: cache_volume}, 
@@ -189,24 +139,18 @@ class ModelService:
 )
 def download_all_models():
     """
-    RUN THIS MANUALLY to pre-populate the persistent volume cache.
-    Command: pixi run modal run beetlesgallery/tools/modal_ibbi_api.py::download_all_models
+    RUN MANUALLY: pixi run modal run beetlesgallery/tools/modal_ibbi_api.py::download_all_models
     """
     import ibbi
-    print(f"⬇️ Starting bulk download of all models to {CACHE_DIR}...")
+    print(f"⬇️ Starting bulk download of all CLASSIFIER models to {CACHE_DIR}...")
     
     all_models = [
-        "yolov10x_bb_detect_model",
-        "yolov11x_bb_detect_model",
-        "yolov9e_bb_detect_model",
-        "yolov8x_bb_detect_model",
-        "rtdetrx_bb_detect_model",
-        "yolov10x_bb_multi_class_detect_model",
+        "rtdetrx_bb_multi_class_detect_model",
+        "yolov12x_bb_multi_class_detect_model",
         "yolov11x_bb_multi_class_detect_model",
+        "yolov10x_bb_multi_class_detect_model",
         "yolov9e_bb_multi_class_detect_model",
         "yolov8x_bb_multi_class_detect_model",
-        "rtdetrx_bb_multi_class_detect_model",
-        "grounding_dino_detect_model"
     ]
 
     for model_name in all_models:
@@ -217,7 +161,7 @@ def download_all_models():
         except Exception as e:
             print(f"❌ Failed to download {model_name}: {e}")
     
-    print("🎉 All models downloaded to 'ibbi-cache' volume!")
+    print("🎉 All classifier models downloaded to 'ibbi-cache' volume!")
 
 # 4. Web Endpoint
 web_app = FastAPI()
@@ -229,16 +173,13 @@ def fastapi_app():
 
 @web_app.post("/analyze")
 async def analyze(
-    task: str = Form(...),
     architecture: str = Form(...),
-    text_prompt: str = Form(None),
     box_threshold: float = Form(0.25),
-    text_threshold: float = Form(0.25),
     image: UploadFile = File(...)
 ):
     content = await image.read()
     service = ModelService()
     result = service.process_image.remote(
-        content, task, architecture, text_prompt, box_threshold, text_threshold
+        content, architecture, box_threshold
     )
     return result
