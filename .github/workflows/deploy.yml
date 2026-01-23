@@ -31,12 +31,18 @@ jobs:
 
             # 2. Build and Start
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+            # 3. Install Node modules (Tailwind) inside the running container
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web pixi run install-js
             
-            # 3. Setup (Migrations & Static Files)
+            # 4. Build CSS once (WITHOUT --watch) so the script can continue
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web pixi run build-css
+            
+            # 5. Setup (Migrations & Static Files)
             docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web pixi run migrate
             docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web pixi run collectstatic
             
-            # 4. Cleanup
+            # 6. Cleanup
             docker image prune -f
 
   # JOB 2: Deploy AI Service to Modal (Fixed Pixi Setup)
