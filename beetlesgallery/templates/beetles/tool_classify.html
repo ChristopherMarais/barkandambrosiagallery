@@ -7,15 +7,15 @@
     
     <div class="mb-8 border-b border-gray-200 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900 tracking-tight">AI Classifier</h1>
+            <h1 class="text-3xl font-bold text-gray-900 tracking-tight">Intelligent Bark Beetle Identifier (IBBI)</h1>
             <p class="text-sm text-gray-500 mt-1">
-                Detects 63 species. See <a href="https://github.com/ChristopherMarais/IBBI" target="_blank" class="text-indigo-600 hover:text-indigo-800 underline">GitHub</a> for details.
+                Detects 63 species. See <a href="https://github.com/ChristopherMarais/IBBI" target="_blank" class="text-gray-600 hover:text-gray-800 underline">GitHub</a> for details.
             </p>
         </div>
-        <div id="globalStatus" class="hidden flex items-center gap-2 text-sm font-medium text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
+        <div id="globalStatus" class="hidden flex items-center gap-2 text-sm font-medium text-gray-800 bg-gray-300 px-3 py-1 rounded-full">
             <span class="relative flex h-2 w-2">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
             </span>
             Processing...
         </div>
@@ -30,7 +30,7 @@
                 <div>
                     <label for="modelSelect" class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Model</label>
                     <div class="relative">
-                        <select name="architecture" id="modelSelect" class="block w-full pl-3 pr-8 py-2.5 text-sm border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer appearance-none">
+                        <select name="architecture" id="modelSelect" class="block w-full pl-3 pr-8 py-2.5 text-sm border-gray-300 focus:outline-none focus:ring-gray-500 focus:border-gray-500 rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer appearance-none">
                             <option value="rtdetr" selected>RT-DETR (Recommended)</option>
                             <option value="yolov12">YOLO v12</option>
                             <option value="yolov11">YOLO v11</option>
@@ -47,22 +47,18 @@
                 <div>
                     <div class="flex justify-between items-center mb-2">
                         <label for="confRange" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Confidence</label>
-                        <span id="confValue" class="text-xs font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">25%</span>
+                        <span id="confValue" class="text-xs font-mono text-gray-600 bg-gray-50 px-1.5 py-0.5 rounded">25%</span>
                     </div>
-                    <input type="range" id="confRange" name="box_threshold" min="0.05" max="0.95" step="0.05" value="0.25" 
-                           class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 hover:accent-indigo-700">
+                    <input type="range" id="confRange" name="box_threshold" min="0.01" max="0.99" step="0.01" value="0.25" 
+                        class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-500 hover:accent-gray-700">
                 </div>
 
-                <div class="pt-2">
-                    <input id="fileInput" name="image" type="file" class="hidden" accept="image/*">
-                    <button type="button" id="uploadTrigger" class="w-full flex items-center justify-center gap-2 py-2.5 px-4 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-600 hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all group">
-                        <i class="fi fi-rr-upload group-hover:scale-110 transition-transform"></i>
-                        <span>Select Image</span>
-                    </button>
-                </div>
+                <input id="fileInput" name="image" type="file" class="hidden" accept="image/*">
 
-                <button type="submit" id="submitBtn" disabled class="w-full py-3 px-4 rounded-lg shadow-sm text-sm font-bold text-white bg-gray-300 cursor-not-allowed transition-all flex justify-center items-center gap-2">
-                    Start Analysis
+                <button type="submit" id="submitBtn" disabled 
+                    class="hidden flex items-center justify-center gap-2 w-full px-5 py-3 rounded-lg border border-gray-300 bg-gray-200 text-gray-800 text-sm font-bold hover:bg-gray-300 hover:text-black transition shadow-sm tracking-wide cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-gray-200">
+                    <i class="fi fi-rr-sparkles text-lg"></i>
+                    <span>Classify Image</span>
                 </button>
             </form>
 
@@ -72,35 +68,56 @@
                     <span id="loadingPercent">0%</span>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                    <div id="progressBar" class="bg-indigo-600 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                    <div id="progressBar" class="bg-gray-600 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
                 </div>
             </div>
         </div>
 
         <div class="lg:col-span-9 flex flex-col gap-6">
             
-            <div class="bg-gray-100 rounded-xl border border-gray-200 shadow-inner overflow-hidden relative min-h-[500px] flex items-center justify-center group" id="canvasContainer">
+            <div class="bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 shadow-sm overflow-hidden relative min-h-[500px] flex items-center justify-center group hover:border-gray-400 hover:bg-gray-100 transition-all cursor-pointer" id="canvasContainer">
                 
-                <div id="placeholderState" class="text-center text-gray-400 p-8 pointer-events-none">
-                    <div class="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm">
-                        <i class="fi fi-rr-picture text-2xl text-gray-300"></i>
+                <div id="placeholderState" class="text-center p-8 w-full h-full flex flex-col items-center justify-center transition-opacity duration-300">
+                    <div class="bg-white w-24 h-24 rounded-full flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 group-hover:shadow-md transition-all duration-300">
+                        <i class="fi fi-rr-picture text-4xl text-gray-500"></i>
                     </div>
-                    <p class="text-sm font-medium">No image loaded</p>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Upload Image to Classify</h3>
+                    <p class="text-sm text-gray-500 mb-6">Click to browse or drag & drop a file here</p>
+                    
+                    <button type="button" id="cameraBtn" class="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-300 rounded-full shadow-sm text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-600 hover:border-gray-300 transition-all z-10">
+                        <i class="fi fi-rr-camera"></i> Use Camera
+                    </button>
                 </div>
 
-                <div id="imageWrapper" class="relative hidden w-fit h-fit">
+                <div id="cameraInterface" class="hidden absolute inset-0 bg-black flex flex-col items-center justify-center z-20 cursor-default">
+                    <video id="cameraStream" autoplay playsinline class="w-full h-full object-contain"></video>
+                    <div class="absolute bottom-8 flex gap-6 z-30">
+                        <button type="button" id="cancelCameraBtn" class="px-6 py-2 bg-gray-800/80 text-white rounded-full text-sm font-medium hover:bg-gray-700 backdrop-blur-sm transition-colors border border-gray-600">
+                            Cancel
+                        </button>
+                        <button type="button" id="captureBtn" class="w-16 h-16 bg-white rounded-full border-4 border-gray-300 hover:border-gray-500 flex items-center justify-center shadow-lg transition-colors ring-4 ring-black/20">
+                            <div class="w-12 h-12 bg-gray-900 rounded-full"></div>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="imageWrapper" class="relative hidden inline-block cursor-default" style="line-height: 0;">
                     <img id="previewImage" class="max-w-full max-h-[75vh] object-contain block opacity-0 transition-opacity duration-300" alt="Preview"> 
-                    <canvas id="detectionCanvas" class="absolute inset-0 cursor-crosshair touch-none"></canvas>
+                    <canvas id="detectionCanvas" class="absolute inset-0 cursor-crosshair touch-none w-full h-full"></canvas>
+                    
+                    <button type="button" id="clearBtn" class="absolute top-4 right-4 bg-white/90 p-2 rounded-full hover:bg-red-50 hover:text-red-600 text-gray-600 shadow-md z-10 transition-all border border-gray-200" title="Clear Image">
+                        <i class="fi fi-rr-cross-small text-xl leading-none"></i>
+                    </button>
                 </div>
             </div>
 
             <div id="analysisDetails" class="hidden bg-white p-6 rounded-xl border border-gray-200 shadow-sm transition-all">
                 <div class="flex items-center justify-between mb-4 border-b border-gray-100 pb-2">
-                    <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Probabilities</h3>
+                    <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Top 10 Predictions</h3>
                     <span id="chartLabel" class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded">Select a detection</span>
                 </div>
                 
-                <div class="relative h-64 w-full">
+                <div class="relative w-full" id="chartWrapper" style="height: 400px;">
                     <canvas id="probsChart"></canvas>
                 </div>
                 
@@ -116,7 +133,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Elements ---
     const ui = {
         fileInput: document.getElementById('fileInput'),
-        uploadTrigger: document.getElementById('uploadTrigger'),
+        confRange: document.getElementById('confRange'),
+        confValue: document.getElementById('confValue'),
         previewImage: document.getElementById('previewImage'),
         imageWrapper: document.getElementById('imageWrapper'),
         placeholder: document.getElementById('placeholderState'),
@@ -132,7 +150,14 @@ document.addEventListener('DOMContentLoaded', () => {
         tagsContainer: document.getElementById('tagsContainer'),
         chartCanvas: document.getElementById('probsChart'),
         chartLabel: document.getElementById('chartLabel'),
-        canvasContainer: document.getElementById('canvasContainer')
+        canvasContainer: document.getElementById('canvasContainer'),
+        cameraBtn: document.getElementById('cameraBtn'),
+        cameraInterface: document.getElementById('cameraInterface'),
+        cameraStream: document.getElementById('cameraStream'),
+        captureBtn: document.getElementById('captureBtn'),
+        cancelCameraBtn: document.getElementById('cancelCameraBtn'),
+        clearBtn: document.getElementById('clearBtn'),
+        chartWrapper: document.getElementById('chartWrapper')
     };
 
     // --- State ---
@@ -142,6 +167,8 @@ document.addEventListener('DOMContentLoaded', () => {
         hoveredIndex: -1,
         selectedIndex: -1,
         chart: null,
+        currentFile: null, // Tracks the actual file object to upload
+        cameraStreamObj: null
     };
 
     // --- Chart.js Config (Horizontal) ---
@@ -159,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     borderColor: 'rgba(79, 70, 229, 1)',
                     borderWidth: 1,
                     borderRadius: 4,
-                    barPercentage: 0.6
+                    barPercentage: 0.7
                 }]
             },
             options: {
@@ -170,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     legend: { display: false },
                     tooltip: {
                         callbacks: {
-                            label: (ctx) => `${ctx.raw.toFixed(1)}%`
+                            label: (ctx) => `${ctx.raw.toFixed(4)}%`
                         }
                     }
                 },
@@ -183,10 +210,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     },
                     y: {
                         grid: { display: false },
-                        ticks: { autoSkip: false, font: { size: 11, weight: '500' } }
+                        ticks: { autoSkip: false, font: { size: 11, weight: '600' } }
                     }
                 },
-                animation: { duration: 400 }
+                animation: { duration: 300 }
             }
         });
     }
@@ -202,38 +229,36 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.chartLabel.className = "text-xs font-bold text-white px-2 py-1 rounded shadow-sm transition-colors";
         ui.chartLabel.style.backgroundColor = getBoxColor(index);
 
-        // Sort Top 8 Predictions
+        // Sort and Filter: Show top 10 probabilities > 0
         const sorted = probs
             .map((p, i) => ({ p, name: state.classNames[i] || `Class ${i}` }))
+            .filter(item => item.p > 0)
             .sort((a, b) => b.p - a.p)
-            .slice(0, 8); // Show top 8
+            .slice(0, 10); // LIMIT TOP 10
 
         state.chart.data.labels = sorted.map(i => i.name);
         state.chart.data.datasets[0].data = sorted.map(i => i.p * 100);
         state.chart.data.datasets[0].backgroundColor = getBoxColor(index, 0.6);
         state.chart.data.datasets[0].borderColor = getBoxColor(index, 1);
+        
+        // Adjust chart height dynamically (approx 30px per bar)
+        const newHeight = Math.max(300, sorted.length * 35);
+        ui.chartWrapper.style.height = `${newHeight}px`;
+        
         state.chart.update();
     }
 
     // --- Canvas & Interaction Logic ---
     
     function getBoxColor(index, alpha=1) {
-        // Generate consistent, distinct colors
         const hue = (index * 137.508) % 360; 
         return `hsla(${hue}, 70%, 50%, ${alpha})`;
     }
 
-    // Helper: Map Click/Mouse coordinates (Rendered Pixels) -> Image Coordinates (Natural Pixels)
     function getNaturalCoords(clientX, clientY) {
         const rect = ui.canvas.getBoundingClientRect();
-        
-        // Canvas is sized via CSS to match the image exactly.
-        // Internal resolution = naturalWidth.
-        // Display resolution = rect.width.
-        
         const scaleX = ui.previewImage.naturalWidth / rect.width;
         const scaleY = ui.previewImage.naturalHeight / rect.height;
-        
         return {
             x: (clientX - rect.left) * scaleX,
             y: (clientY - rect.top) * scaleY
@@ -243,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function draw() {
         const ctx = ui.canvas.getContext('2d');
         
-        // 1. Sync Canvas Resolution to Image Resolution
+        // Sync Resolution
         if (ui.canvas.width !== ui.previewImage.naturalWidth || ui.canvas.height !== ui.previewImage.naturalHeight) {
             ui.canvas.width = ui.previewImage.naturalWidth;
             ui.canvas.height = ui.previewImage.naturalHeight;
@@ -253,7 +278,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!state.detections.length) return;
 
-        // 2. Loop Detections
         state.detections.forEach((det, i) => {
             const [x1, y1, x2, y2] = det.box;
             const w = x2 - x1;
@@ -265,7 +289,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Draw Box
             ctx.beginPath();
-            ctx.lineWidth = (isHovered || isSelected) ? 6 : 3;
+            // INCREASED LINE WIDTH
+            ctx.lineWidth = (isHovered || isSelected) ? 8 : 5;
             ctx.strokeStyle = color;
             ctx.rect(x1, y1, w, h);
             ctx.stroke();
@@ -275,14 +300,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 ctx.fillStyle = getBoxColor(i, 0.15);
                 ctx.fill();
                 
-                // --- HOVER LABEL (Only shown when active) ---
-                ctx.font = "bold 24px sans-serif";
+                // --- INCREASED FONT SIZE FOR HOVER LABEL ---
+                ctx.font = "bold 32px sans-serif"; 
                 const label = `${det.label} ${Math.round(det.score * 100)}%`;
                 const textMetrics = ctx.measureText(label);
-                const bgH = 32;
-                const bgW = textMetrics.width + 16;
                 
-                // Position label above box, flip down if near top edge
+                // Increase background box size for larger text
+                const bgH = 42; 
+                const bgW = textMetrics.width + 20;
+                
+                // Position label above box
                 let ly = y1 - bgH;
                 if (ly < 0) ly = y1;
                 
@@ -290,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ctx.fillRect(x1, ly, bgW, bgH);
                 
                 ctx.fillStyle = "#ffffff";
-                ctx.fillText(label, x1 + 8, ly + 24);
+                ctx.fillText(label, x1 + 10, ly + 32);
             }
         });
     }
@@ -302,7 +329,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const mouseY = coords.y;
 
         let found = -1;
-        // Check in reverse order (top-most box first)
         for (let i = state.detections.length - 1; i >= 0; i--) {
             const [x1, y1, x2, y2] = state.detections[i].box;
             if (mouseX >= x1 && mouseX <= x2 && mouseY >= y1 && mouseY <= y2) {
@@ -326,38 +352,75 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- File Handling & UI ---
+    // --- Interaction Logic ---
+
+    // Update the % text when the slider moves
+    ui.confRange.addEventListener('input', (e) => {
+        // value is 0.01 - 0.95, so multiply by 100 to get percentage
+        const percent = Math.round(e.target.value * 100);
+        ui.confValue.innerText = `${percent}%`;
+    });
+
+    // --- File Handling (Drag & Drop + Input) ---
     
-    ui.uploadTrigger.addEventListener('click', () => ui.fileInput.click());
+    // Clicking the container triggers file input (unless clicking a specific button)
+    ui.canvasContainer.addEventListener('click', (e) => {
+        // Don't trigger if clicking existing image/buttons
+        if (e.target.closest('#imageWrapper') || e.target.closest('button')) return;
+        ui.fileInput.click();
+    });
 
     ui.fileInput.addEventListener('change', (e) => {
         if (e.target.files.length) handleFile(e.target.files[0]);
     });
 
+    // Drag & Drop events on the CONTAINER
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        ui.canvasContainer.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+    });
+
+    ui.canvasContainer.addEventListener('dragover', () => {
+        ui.canvasContainer.classList.add('bg-gray-50', 'border-gray-500');
+    });
+    
+    ui.canvasContainer.addEventListener('dragleave', () => {
+        ui.canvasContainer.classList.remove('bg-gray-50', 'border-gray-500');
+    });
+
+    ui.canvasContainer.addEventListener('drop', (e) => {
+        ui.canvasContainer.classList.remove('bg-gray-50', 'border-gray-500');
+        if (e.dataTransfer.files.length) {
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
     function handleFile(file) {
+        state.currentFile = file;
+        
         const reader = new FileReader();
         reader.onload = (e) => {
             ui.previewImage.src = e.target.result;
-            // Reset State
+            
+            // Reset state
             state.detections = [];
             state.selectedIndex = -1;
             state.hoveredIndex = -1;
             
-            // Show Image Area
+            // Toggle UI elements
             ui.placeholder.classList.add('hidden');
             ui.imageWrapper.classList.remove('hidden');
             ui.previewImage.classList.remove('opacity-0');
-            
-            // Prepare Button
-            ui.submitBtn.disabled = false;
-            ui.submitBtn.classList.remove('bg-gray-300', 'cursor-not-allowed');
-            ui.submitBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700', 'shadow-md');
-            ui.submitBtn.innerHTML = `Analyze <span class="font-normal opacity-80">(${file.name.substring(0, 12)}...)</span>`;
-            
-            // Hide previous results
             ui.analysisDetails.classList.add('hidden');
             
-            // Ensure canvas is clear
+            // --- NEW LOGIC: SHOW BUTTON ---
+            ui.submitBtn.disabled = false;     // Ensure it's enabled
+            ui.submitBtn.classList.remove('hidden'); // Show the button
+            // -----------------------------
+            
+            // Clear canvas
             setTimeout(() => {
                 const ctx = ui.canvas.getContext('2d');
                 ctx.clearRect(0,0,ui.canvas.width, ui.canvas.height);
@@ -365,6 +428,81 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         reader.readAsDataURL(file);
     }
+
+    // --- Camera Logic ---
+    
+    ui.cameraBtn.addEventListener('click', async (e) => {
+        e.stopPropagation(); // Don't trigger background file upload
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'environment' } 
+            });
+            state.cameraStreamObj = stream;
+            ui.cameraStream.srcObject = stream;
+            
+            ui.placeholder.classList.add('hidden');
+            ui.cameraInterface.classList.remove('hidden');
+        } catch (err) {
+            alert("Camera access denied or unavailable.");
+        }
+    });
+
+    function closeCamera() {
+        if (state.cameraStreamObj) {
+            state.cameraStreamObj.getTracks().forEach(track => track.stop());
+            state.cameraStreamObj = null;
+        }
+        ui.cameraInterface.classList.add('hidden');
+        if (!state.currentFile) {
+            ui.placeholder.classList.remove('hidden');
+        } else {
+            // If we had an image loaded before, show it again? 
+            // Simplified: just show placeholder if canceling
+            ui.placeholder.classList.remove('hidden');
+        }
+    }
+
+    ui.cancelCameraBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeCamera();
+    });
+
+    ui.captureBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        
+        // Capture frame to canvas
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = ui.cameraStream.videoWidth;
+        tempCanvas.height = ui.cameraStream.videoHeight;
+        const ctx = tempCanvas.getContext('2d');
+        ctx.drawImage(ui.cameraStream, 0, 0);
+        
+        // Convert to blob
+        tempCanvas.toBlob((blob) => {
+            // Create a File object
+            const file = new File([blob], "camera_capture.jpg", { type: "image/jpeg" });
+            handleFile(file);
+            closeCamera();
+            // Ensure image wrapper is shown (handleFile does this, but closeCamera might revert)
+            ui.imageWrapper.classList.remove('hidden');
+            ui.placeholder.classList.add('hidden');
+        }, 'image/jpeg', 0.95);
+    });
+
+    ui.clearBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.currentFile = null;
+        state.detections = [];
+        ui.fileInput.value = ''; 
+        
+        ui.imageWrapper.classList.add('hidden');
+        ui.placeholder.classList.remove('hidden');
+        ui.analysisDetails.classList.add('hidden');
+        
+        // --- NEW LOGIC: HIDE BUTTON ---
+        ui.submitBtn.classList.add('hidden'); // Hide the button
+        // -----------------------------
+    });
 
     // --- Submission ---
     
@@ -397,9 +535,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     ui.form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData(ui.form);
         
-        setLoading(true, "Preparing image...");
+        if (!state.currentFile) return;
+
+        // Construct FormData manually to include the correct file (drag/cam/input)
+        const formData = new FormData(ui.form);
+        formData.set('image', state.currentFile);
+        
+        setLoading(true, "Processing image...");
         const pIntv = animateProgress();
 
         try {
@@ -418,29 +561,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 state.detections = data.detections;
                 state.classNames = data.class_names;
                 
-                // Show Results Area
                 ui.analysisDetails.classList.remove('hidden');
-                initChart(); // Setup chart instance
+                initChart();
                 
-                // Render Tags
+                // Tags
                 ui.tagsContainer.innerHTML = '';
                 state.detections.forEach((det, i) => {
                     const btn = document.createElement('button');
-                    btn.className = "flex items-center gap-2 px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-medium transition-colors border border-transparent focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500";
+                    btn.className = "flex items-center gap-2 px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-medium transition-colors border border-transparent focus:border-gray-500 focus:ring-1 focus:ring-gray-500";
                     const color = getBoxColor(i);
                     btn.innerHTML = `<span class="w-2.5 h-2.5 rounded-full" style="background-color:${color}"></span> ${det.label} <span class="text-gray-400">${Math.round(det.score*100)}%</span>`;
                     btn.onclick = () => {
                         state.selectedIndex = i;
                         updateChartData(i);
-                        draw(); // to update box highlight
-                        
-                        // Scroll to chart container, NOT inside the image
-                        ui.analysisDetails.scrollIntoView({behavior:'smooth', block:'start'});
+                        draw(); 
                     };
                     ui.tagsContainer.appendChild(btn);
                 });
 
-                // Auto-select first
                 if (state.detections.length > 0) {
                     state.selectedIndex = 0;
                     updateChartData(0);
@@ -448,7 +586,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     alert("No beetles detected above the confidence threshold.");
                 }
 
-                draw(); // Draw boxes
+                draw();
                 setLoading(false);
                 
             } else {
