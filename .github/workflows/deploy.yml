@@ -1,12 +1,16 @@
-name: Deploy to Contabo
+name: Deploy App
 
 on:
   push:
     branches:
       - main
+  # Allows you to run this manually from the Actions tab (Useful for model downloads)
+  workflow_dispatch: 
 
 jobs:
-  deploy:
+  # JOB 1: Deploy Django Web App to Contabo (Existing)
+  deploy-web:
+    name: Deploy Web App (Contabo)
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to Server via SSH
@@ -23,8 +27,6 @@ jobs:
             git reset --hard origin/main
             
             # BACKUP DATABASE
-            # Dumps the DB to a file named with the current timestamp inside your data folder
-            # We use 'exec -T' to run the command inside the RUNNING db container
             docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_dump -U beetles_user beetles_db > /root/barkandambrosia_data/postgres/backup_$(date +%F_%H-%M).sql || echo "Backup failed or DB not running"
 
             # 2. Build and Start
@@ -36,3 +38,34 @@ jobs:
             
             # 4. Cleanup
             docker image prune -f
+
+  # JOB 2: Deploy AI Service to Modal (New)
+  deploy-modal:
+    name: Deploy AI Service (Modal)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.5.1
+        with:
+          pixi-version: v0.18.0
+          cache: true
+
+      - name: Deploy API Endpoint
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          pixi run modal deploy beetlesgallery/tools/modal_ibbi_api.py
+
+      # This step only runs if you manually click "Run Workflow" in GitHub Actions.
+      # It prevents re-downloading 10GB of models on every code push.
+      - name: Update Model Cache (Manual Trigger Only)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          pixi run modal run beetlesgallery/tools/modal_ibbi_api.py::download_all_models

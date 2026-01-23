@@ -33,7 +33,7 @@ python-dotenv = "*"
 pandas = "*"
 openpyxl = "*"       # For reading Excel files
 xlsxwriter = "*"     # For writing Excel files (downloads)
-pillow = "*"         # For ImageFields
+pillow = "<12.0.0"         # For ImageFields
 django-crispy-forms = "*"
 django-filter = "*"
 django-simple-history = "*"
@@ -43,6 +43,7 @@ nodejs = "20.*"
 whitenoise = ">=6.11.0,<7"
 redis-py = ">=7.1.0,<8"
 celery = ">=5.5.3,<6"
+python-multipart = ">=0.0.21,<0.0.22"
 
 # --- Dependencies for LINUX/MAC ONLY (Server/Docker) ---
 # Gunicorn will be installed in Docker, but ignored on your Windows laptop.
@@ -57,3 +58,7 @@ gunicorn = "*"
 
 [pypi-dependencies]
 pytailwindcss = ">=0.3.0, <0.4"
+modal = ">=1.3.1, <2"
+fastapi = "*"
+uvicorn = "*"
+requests = "*"

@@ -7,6 +7,7 @@ import subprocess
 import sys
 import os
 import math
+import requests
 from datetime import date
 
 from django.db.models import Q, Count
@@ -14,7 +15,7 @@ from django.urls import reverse
 from django.conf import settings
 from django.contrib import messages
 from django.utils.http import http_date
-from django.http import HttpResponseNotAllowed, FileResponse, HttpResponse, Http404
+from django.http import HttpResponseNotAllowed, FileResponse, HttpResponse, Http404, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -33,6 +34,7 @@ from .tasks import process_upload_task, process_update_task, build_downloads_tas
 import pandas as pd
 from io import BytesIO, StringIO
 
+MODAL_API_URL = "https://christophermarais--ibbi-api-fastapi-app.modal.run/analyze"
 
 @login_required
 def my_account(request):
@@ -1035,3 +1037,51 @@ def _run_update_batch(request, row_data, filename):
 
     # Trigger
     process_update_task.delay(batch.id)
+
+
+@login_required
+def tool_classify(request):
+    """
+    Proxies image upload to Modal GPU API.
+    Returns JSON for AJAX requests, renders template for GET.
+    """
+    if request.method == 'POST' and request.FILES.get('image'):
+        try:
+            # 1. Prepare Data
+            image_file = request.FILES['image']
+            
+            # Extract form data
+            payload = {
+                'architecture': request.POST.get('architecture', 'rtdetr'),
+                'box_threshold': request.POST.get('box_threshold', 0.25),
+            }
+            
+            # Prepare file for upload
+            files = {
+                'image': (image_file.name, image_file.read(), image_file.content_type)
+            }
+
+            # 2. Call Modal API
+            response = requests.post(MODAL_API_URL, data=payload, files=files, timeout=300)
+            
+            if response.status_code == 200:
+                return JsonResponse(response.json())
+            else:
+                return JsonResponse({
+                    "status": "error", 
+                    "message": f"AI Service Error: {response.status_code}"
+                }, status=500)
+
+        except requests.exceptions.Timeout:
+            return JsonResponse({
+                "status": "error", 
+                "message": "The AI model is waking up (Cold Start). Please try again in 1 minute."
+            }, status=504)
+        except Exception as e:
+            return JsonResponse({
+                "status": "error", 
+                "message": f"Processing failed: {str(e)}"
+            }, status=500)
+
+    # GET request: Render the page
+    return render(request, 'beetles/tool_classify.html', {})
