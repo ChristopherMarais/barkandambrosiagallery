@@ -325,7 +325,7 @@
                   {% if b.has_multiple_sex %}
                      <div class="truncate"><span class="font-semibold text-text/50">Sex:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
                   {% elif b.specimen_sex %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Sex:</span> <span class="ml-1">{{ b.specimen_sex|upper }}</span></div>
+                     <div class="truncate"><span class="font-semibold text-text/50">Sex:</span> <span class="ml-1">{{ b.specimen_sex|lower }}</span></div>
                   {% endif %}
 
                   {# --- INSTITUTION --- #}
