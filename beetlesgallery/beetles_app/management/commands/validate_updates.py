@@ -100,7 +100,8 @@ def _normalize_sex(v):
         return "m"
     if s in {"f", "female"}:
         return "f"
-    return None
+    # Reject anything else
+    raise ValueError(f"Invalid sex '{v}'. Allowed: M, Male, F, Female.")
 
 def _to_bool(v):
     v = _none(v)

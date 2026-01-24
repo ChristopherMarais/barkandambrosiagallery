@@ -85,6 +85,18 @@ def _to_date(v):
     except Exception:
         return None
 
+def _normalize_sex(v, row_num):
+    v = _none(v)
+    if v is None:
+        return None
+    s = str(v).strip().lower()
+    if s in {"m", "male"}:
+        return "m"
+    if s in {"f", "female"}:
+        return "f"
+    # Reject anything else
+    raise CommandError(f"Row {row_num}: Invalid sex '{v}'. Allowed: M, Male, F, Female.")
+
 def _enforce_maxlen(field_name: str, value, maxlen: int, row_num: int):
     """Fail-fast (no clipping) if a non-null value exceeds maxlen."""
     val = _none(value)
@@ -371,6 +383,8 @@ class Command(BaseCommand):
                     values = {}
                     for fname, maxlen in char_fields:
                         val = _none(row.get(fname))
+                        if fname == "specimen_sex":
+                            val = _normalize_sex(val, row_num)
                         _enforce_maxlen(fname, val, maxlen, row_num)
                         values[fname] = val
 

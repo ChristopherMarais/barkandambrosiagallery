@@ -81,13 +81,17 @@ def _to_date(v):
     try: return v.date() 
     except Exception: return None
 
-def _normalize_sex(v):
+def _normalize_sex(v, row_num="?"):
     v = _none(v)
-    if v is None: return None
+    if v is None:
+        return None
     s = str(v).strip().lower()
-    if s in {"m", "male"}: return "m"
-    if s in {"f", "female"}: return "f"
-    return None
+    if s in {"m", "male"}:
+        return "m"
+    if s in {"f", "female"}:
+        return "f"
+    # Reject anything else
+    raise ValueError(f"Row {row_num}: Invalid sex '{v}'. Allowed: M, Male, F, Female.")
 
 def _to_bool(v):
     v = _none(v)
@@ -183,7 +187,7 @@ class Command(BaseCommand):
                 raw = row.get(fname)
                 if fname == "resolution_in_ppmm": v = _to_decimal_12_4(raw)
                 elif fname == "image_date_taken": v = _to_date(raw)
-                elif fname == "specimen_sex": v = _normalize_sex(raw)
+                elif fname == "specimen_sex": v = _normalize_sex(raw, excel_row)
                 elif fname == "image_has_multiple_individuals": v = _to_bool(raw)
                 elif fname == "depicts_valid_name_id":
                     if _is_blank(raw): v = None
