@@ -4,30 +4,24 @@
 {% block content %}
 <section class="relative z-0">
 
-  {# --- Header & User Notes --- #}
-  <h1 class="text-2xl sm:text-3xl font-semibold mb-8">Data Management</h1>
-  <p class="text-sm text-text/70 mb-6">
-    <span class="font-semibold">About IDs:</span>
-    <span class="ml-1">“<span class="font-medium">Record ID</span>” uniquely identifies a single Beetles entry (and its
-      image). “<span class="font-medium">Upload ID</span>” refers to an upload batch, “<span class="font-medium">Update
-        ID</span>” to an update batch, and “<span class="font-medium">Job ID</span>” to a download job.</span>
-  </p>
+  {# --- Page Header --- #}
+  <h1 class="text-3xl sm:text-4xl font-semibold mb-8 text-gray-900">Data Management</h1>
 
   {# --- SECTION 1: DATA ACTIONS --- #}
-  <div class="mb-12 bg-gray-50 rounded-xl p-6 border border-gray-200">
-    <h2 class="text-xl font-semibold mb-4 text-gray-800">Data Actions</h2>
+  <div class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm">
+    <h2 class="text-2xl font-bold mb-6 text-gray-800">Data Actions</h2>
     <div class="flex flex-wrap gap-4">
         
         {# Staff Only: Upload & Update Buttons #}
         {% if request.user.is_staff %}
             <button onclick="openModal('modal-upload-new')" 
-               class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-3 text-sm font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+               class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition">
                 <i class="fi fi-rr-upload"></i>
                 <span>Upload New Data</span>
             </button>
 
             <button onclick="openModal('modal-update-existing')" 
-               class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-3 text-sm font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+               class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition">
                 <i class="fi fi-rr-refresh"></i>
                 <span>Update Metadata</span>
             </button>
@@ -43,355 +37,207 @@
   </div>
 
   {# --- SECTION 2: ACTIVITY LOGS --- #}
-  <div class="space-y-12">
+  <div class="bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm">
 
-{# --- My Downloads Table --- #}
-    <div class="mb-10">
-      <h2 class="text-xl font-semibold mb-2">My Downloads</h2>
-      <p class="text-sm text-text/70 mb-4">
-        Exports you requested. Status progresses from
-        <span class="font-medium">Pending</span>
-        → <span class="font-medium">Building</span>
-        → <span class="font-medium">Ready</span>
-        or <span class="font-medium">Failed</span>.
-        <span class="ml-1">Ready files may later become <span class="font-medium">Expired</span> after the retention
-          period.</span> The CSV and ZIP filenames include the <span class="font-medium">Record ID</span> so you can match
-        rows to images.
-      </p>
+    <div class="mb-8 border-b border-gray-200 pb-4">
+      <h2 class="text-2xl font-bold mb-2 text-gray-800">Activity Logs</h2>
+        <!-- <p class="text-sm text-text/70 mb-6">
+          <span class="font-semibold">About IDs:</span>
+          <span class="ml-1">“<span class="font-medium">Record ID</span>” uniquely identifies a single Beetles entry (and its
+            image). “<span class="font-medium">Upload ID</span>” refers to an upload batch, “<span class="font-medium">Update
+              ID</span>” to an update batch, and “<span class="font-medium">Job ID</span>” to a download job.</span>
+        </p> -->
 
-      <div class="rounded-xl border border-text/20 bg-primary2 overflow-x-auto">
-        <table class="w-full min-w-[1000px] md:min-w-0 text-sm">
-          <colgroup>
-            <col class="w-40" />
-            <col /> <col class="w-32" />
-            <col class="w-40" />
-            <col class="w-36" />
-            <col class="w-72" /> </colgroup>
+        <p class="text-sm text-gray-600">
+            <span class="font-semibold">About IDs:</span>
+            <span class="ml-1">“<span class="font-medium">Record ID</span>” uniquely identifies a single Beetles entry. “<span class="font-medium">Upload/Update ID</span>” refers to batch operations.</span>
+        </p>
+    </div>
 
-          <thead>
-            <tr class="border-b border-text/10">
-              <th class="text-left py-2 px-3">When</th>
-              <th class="text-left px-3">Request</th>
-              <th class="text-left px-3">Requested</th>
-              <th class="text-left px-3">Status</th>
-              <th class="text-left px-3">Downloads</th>
-              <th class="text-left px-3">Job ID</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for job in download_jobs %}
-            <tr class="border-t border-gray-200 align-top">
-              
-              {# 1. When #}
-              <td class="py-2 px-3 whitespace-nowrap">
-                {{ job.created_at|date:"Y-m-d H:i" }}
-              </td>
+    <div class="space-y-12">
 
-              {# 2. Request #}
-              <td class="py-2 px-3">
-                {% if job.selection_mode == "ids" %}
-                <div class="text-text">Selected IDs</div>
-                <div class="text-text/70 text-xs">
-                  {{ job.get_ids|length }} IDs
-                </div>
-                {% else %}
-                <div class="text-text">All results (by query)</div>
-                <div class="text-text/70 text-xs break-all">
-                  <code>{{ job.get_readable_query }}</code>
-                </div>
-                {% endif %}
-              </td>
+        {# --- TABLE 1: MY DOWNLOADS --- #}
+        <div>
+          <h3 class="text-xl font-semibold mb-3 text-gray-800">My Downloads</h3>
+          <p class="text-sm text-gray-500 mb-4">
+            Exports you requested. Ready files are removed after the retention period.
+          </p>
 
-              {# 3. Requested #}
-              <td class="py-2 px-3">
-                {% if job.selection_mode == "ids" %}
-                {{ job.total_requested }}
-                {% else %}
-                {{ job.total_requested }} (estimated)
-                {% endif %}
-              </td>
+          <div class="rounded-lg border border-gray-200 bg-white overflow-x-auto">
+            <table class="w-full text-sm text-left">
+              <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
+                <tr>
+                  <th class="px-4 py-3">When</th>
+                  <th class="px-4 py-3">Request</th>
+                  <th class="px-4 py-3">Status</th>
+                  <th class="px-4 py-3">Downloads</th>
+                  <th class="px-4 py-3">Job ID</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                {% for job in download_jobs %}
+                <tr class="hover:bg-gray-50 transition">
+                  <td class="px-4 py-3 whitespace-nowrap text-gray-600">{{ job.created_at|date:"M d, H:i" }}</td>
+                  
+                  <td class="px-4 py-3">
+                    {% if job.selection_mode == "ids" %}
+                        <div class="font-medium text-gray-800">Selected IDs</div>
+                        <div class="text-xs text-gray-500">{{ job.get_ids|length }} records</div>
+                    {% else %}
+                        <div class="font-medium text-gray-800">Search Query</div>
+                        <div class="text-xs text-gray-500 break-words max-w-[200px]">{{ job.get_readable_query }}</div>
+                    {% endif %}
+                  </td>
 
-              {# 4. Status #}
-              <td class="py-2 px-3">
-                {% if job.status == "ready" %}
-                <span class="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs">Ready</span>
-                {% if job.expires_at %}
-                <div class="text-xs text-text/70 mt-1">
-                  Expires {{ job.expires_at|date:"Y-m-d H:i" }}
-                </div>
-                {% endif %}
-                {% elif job.status == "building" %}
-                <span class="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">Building</span>
-                {% elif job.status == "pending" %}
-                <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs">Pending</span>
-                {% elif job.status == "failed" %}
-                <span class="px-2 py-0.5 rounded bg-red-100 text-red-800 text-xs">Failed</span>
-                {% if job.error_message %}
-                <div class="text-xs text-text/70 mt-1">{{ job.error_message }}</div>
-                {% endif %}
-                {% elif job.status == "expired" %}
-                <span class="px-2 py-0.5 rounded bg-gray-200 text-gray-700 text-xs">Expired</span>
-                <div class="text-xs text-text/70 mt-1">Files removed after retention period.</div>
-                {% else %}
-                <span class="text-xs text-text/70">{{ job.get_status_display }}</span>
-                {% endif %}
-              </td>
+                  <td class="px-4 py-3">
+                    {% if job.status == "ready" %}
+                        <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Ready</span>
+                        {% if job.expires_at %}<div class="text-[10px] text-gray-400 mt-1">Exp: {{ job.expires_at|date:"m/d" }}</div>{% endif %}
+                    {% elif job.status == "failed" %}
+                        <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Failed</span>
+                    {% elif job.status == "expired" %}
+                        <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">Expired</span>
+                    {% else %}
+                        <span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 animate-pulse">{{ job.get_status_display }}</span>
+                    {% endif %}
+                  </td>
 
-              {# 5. Downloads #}
-              <td class="py-2 px-3 space-x-2 whitespace-nowrap">
-                {% if job.csv_file %}
-                <a href="{{ job.csv_file.url }}" class="underline hover:no-underline font-semibold text-gray-600">Metadata.csv</a>
-                {% endif %}
-                
-                {% if job.zip_file %}
-                <a href="{{ job.zip_file.url }}" class="underline hover:no-underline font-bold text-blue-600">Images.zip</a>
-                {% endif %}
-                
-                {% if not job.csv_file and not job.zip_file %}
-                <span class="text-text/60 text-xs">No files yet</span>
-                {% endif %}
-              </td>
+                  <td class="px-4 py-3 space-x-2">
+                    {% if job.status == 'ready' %}
+                        {% if job.csv_file %}<a href="{{ job.csv_file.url }}" class="text-xs font-bold text-gray-600 hover:text-blue-600 hover:underline">CSV</a>{% endif %}
+                        {% if job.zip_file %}<a href="{{ job.zip_file.url }}" class="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline">ZIP</a>{% endif %}
+                    {% else %}
+                        <span class="text-gray-300 text-xs">—</span>
+                    {% endif %}
+                  </td>
 
-              {# 6. Job ID #}
-              <td class="py-2 px-3 whitespace-nowrap">
-                <code class="text-xs select-all">{{ job.id }}</code>
-              </td>
+                  <td class="px-4 py-3 whitespace-nowrap">
+                    <button onclick="copyToClipboard('{{ job.id }}', this)" 
+                      class="text-xs font-bold text-gray-500 bg-white border border-gray-200 px-2 py-1 rounded shadow-sm hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition">
+                      Copy ID
+                    </button>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="px-4 py-6 text-center text-gray-500 italic">No download jobs found.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="6" class="py-4 px-3 text-gray-500">No download jobs found. Go to the Image Browser to select and download specimens.</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+        {# --- STAFF TABLES (Uploads & Updates) --- #}
+        {% if request.user.is_staff %}
+        
+        {# TABLE 2: MY UPLOADS #}
+        <div class="mt-16 pt-8 border-t-2 border-gray-300">
+            <h3 class="text-xl font-semibold mb-3 text-gray-800">My Uploads</h3>
+            <p class="text-sm text-gray-500 mb-4">Metadata + image uploads (new entries).</p>
 
-  {# --- Staff-Only Tables --- #}
-  {% if request.user.is_staff %}
+            <div class="rounded-lg border border-gray-200 bg-white overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
+                <tr>
+                    <th class="px-4 py-3">When</th>
+                    <th class="px-4 py-3">Filename</th>
+                    <th class="px-4 py-3">Status</th>
+                    <th class="px-4 py-3">Upload ID</th>
+                </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                {% for b in batches %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-4 py-3 whitespace-nowrap text-gray-600">{{ b.created_at|date:"M d, H:i" }}</td>
+                    <td class="px-4 py-3 font-medium text-gray-800 break-all max-w-[200px]">{{ b.original_filename }}</td>
+                    
+                    <td class="px-4 py-3">
+                        {% if b.status == "imported" %}
+                            <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Imported</span>
+                        {% elif b.status == "validated" %}
+                            <span class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">Validated</span>
+                        {% elif b.status == "rejected" or b.status == "import_failed" %}
+                            <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Error</span>
+                            {% if b.error_report_file %}
+                            <button onclick="viewLog('{{ b.error_report_file.url }}', 'Error Log')" class="ml-2 text-xs text-red-600 underline hover:no-underline">Log</button>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-xs text-gray-500">{{ b.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    
+                    <td class="px-4 py-3 whitespace-nowrap">
+                      <button onclick="copyToClipboard('{{ b.id }}', this)" 
+                        class="text-xs font-bold text-gray-500 bg-white border border-gray-200 px-2 py-1 rounded shadow-sm hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition">
+                        Copy ID
+                      </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="px-4 py-6 text-center text-gray-500 italic">No uploads found.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </div>
 
-  {# My Uploads Table #}
-  <div class="mb-10">
-    <h2 class="text-xl font-semibold mb-2">My Uploads</h2>
-    <p class="text-sm text-text/70 mb-4">
-      Your metadata + image uploads (new entries only). Status progresses from
-      <span class="font-medium">Staging</span> → <span class="font-medium">Validating</span> → <span
-        class="font-medium">Validated</span> → <span class="font-medium">Imported</span> or <span
-        class="font-medium">Validation failed</span>.
-    </p>
+        {# TABLE 3: MY UPDATES #}
+        <div class="mt-16 pt-8 border-t-2 border-gray-300">
+            <h3 class="text-xl font-semibold mb-3 text-gray-800">My Updates</h3>
+            <p class="text-sm text-gray-500 mb-4">Metadata updates to existing records.</p>
 
-    <div class="rounded-xl border border-text/20 bg-primary2 overflow-x-auto">
-      <table class="w-full min-w-[1000px] md:min-w-0 text-sm">
-        <colgroup>
-          <!-- When | Filename | Status | Error | Upload ID -->
-          <col class="w-40" />
-          <col /> <!-- flexible -->
-          <col class="w-[28rem]" /> <!-- Error (wider for messages) -->
-          <col class="w-72" /> <!-- Upload ID wider -->
-        </colgroup>
+            <div class="rounded-lg border border-gray-200 bg-white overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
+                <tr>
+                    <th class="px-4 py-3">When</th>
+                    <th class="px-4 py-3">Filename</th>
+                    <th class="px-4 py-3">Status</th>
+                    <th class="px-4 py-3">Report</th>
+                    <th class="px-4 py-3">Update ID</th>
+                </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                {% for u in update_batches %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-4 py-3 whitespace-nowrap text-gray-600">{{ u.created_at|date:"M d, H:i" }}</td>
+                    <td class="px-4 py-3 font-medium text-gray-800 break-all max-w-[200px]">{{ u.original_filename }}</td>
+                    
+                    <td class="px-4 py-3">
+                        {% if u.status == "applied" %}
+                            <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Applied</span>
+                        {% elif u.status == "validated" %}
+                            <span class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">Validated</span>
+                        {% elif u.status == "rejected" or u.status == "apply_failed" %}
+                            <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Failed</span>
+                        {% else %}
+                            <span class="text-xs text-gray-500">{{ u.get_status_display }}</span>
+                        {% endif %}
+                    </td>
 
-        <thead>
-          <tr class="border-b border-text/10">
-            <th class="text-left py-2 px-3">When</th>
-            <th class="text-left px-3">Filename</th>
-            <th class="text-left px-3">Status</th>
-            <th class="text-left px-3">Upload ID</th>
-          </tr>
-        </thead>
+                    <td class="px-4 py-3">
+                        {% if u.report_file %}
+                        <button onclick="viewLog('{{ u.report_file.url }}', 'Report')" class="text-xs font-bold text-blue-600 hover:underline">View</button>
+                        {% else %}<span class="text-gray-300 text-xs">—</span>{% endif %}
+                    </td>
 
-        <tbody>
-          {% for b in batches %}
-          <tr class="border-t border-gray-200">
-            <td class="py-2 px-3 whitespace-nowrap">{{ b.created_at|date:"Y-m-d H:i" }}</td>
-            <td class="px-3">{{ b.original_filename }}</td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                      <button onclick="copyToClipboard('{{ u.id }}', this)" 
+                        class="text-xs font-bold text-gray-500 bg-white border border-gray-200 px-2 py-1 rounded shadow-sm hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition">
+                        Copy ID
+                      </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="px-4 py-6 text-center text-gray-500 italic">No updates found.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </div>
+        {% endif %}
 
-            <!-- Report column -->
-            <td class="px-3 text-sm">
-              {# Normal / pending states #}
-              {% if b.status == "staging" %}
-              <span class="text-xs text-text/80">Awaiting validation</span>
-
-              {% elif b.status == "validating" %}
-              <span class="text-xs text-text/80">Validation in progress</span>
-
-              {% elif b.status == "validated" %}
-              <span class="text-xs text-text/80">Validated; awaiting import</span>
-
-              {% elif b.status == "imported" %}
-              <span class="text-xs px-2 py-1 rounded bg-green-50 text-green-800">
-                Import successful
-              </span>
-
-              {# Any failure: validation failed (rejected) or import failed #}
-              {% elif b.status == "rejected" or b.status == "import_failed" %}
-              {% if b.error_report_file %}
-              <div class="flex flex-col gap-1">
-                <button type="button" onclick="viewLog('{{ b.error_report_file.url }}', 'Error Log')"
-                  class="inline-flex items-center gap-1 underline hover:no-underline text-red-700 text-sm bg-transparent border-0 cursor-pointer">
-                  <i class="fi fi-rr-file text-xs"></i>
-                  <span>View Error Log</span>
-                </button>
-              </div>
-              {% else %}
-              {# This should only happen for old batches or if logging failed #}
-              <div class="text-red-700 bg-red-50 border border-red-200 rounded p-2 leading-snug">
-                <div class="text-xs font-semibold mb-1">Error log not available</div>
-                {% if b.error_message %}
-                <div class="text-xs">
-                  {{ b.error_message|truncatechars:200 }}
-                </div>
-                {% else %}
-                <div class="text-xs">
-                  A failure occurred, but no error log was generated.
-                </div>
-                {% endif %}
-              </div>
-              {% endif %}
-
-              {# Fallback for any unexpected status #}
-              {% else %}
-              <span class="text-xs text-text/60">{{ b.get_status_display }}</span>
-              {% endif %}
-            </td>
-
-            <td class="px-3 whitespace-nowrap"><code class="text-xs">{{ b.id }}</code></td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="4" class="py-4 px-3 text-gray-500">No uploads found.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
     </div>
   </div>
-  {% endif %}
-
-
-  {% if request.user.is_staff %}
-  <!--- My Updates --->
-  <div class="mb-10">
-    <h2 class="text-xl font-semibold mb-2">My Updates</h2>
-    <p class="text-sm text-text/70 mb-6">
-      Your submitted updates to existing Beetles rows (by <span class="font-medium">Record ID</span>). Apply is
-      all-or-nothing and requires that Name ID exists in taxonomy reference sheet.
-      Updates move through the following states:
-      <span class="font-medium">Staging</span> → <span class="font-medium">Validating</span> →
-      <span class="font-medium">Validated</span> (ready to apply) or
-      <span class="font-medium">Rejected</span>. After applying, batches become
-      <span class="font-medium">Applied</span> or <span class="font-medium">Apply failed</span>.
-    </p>
-
-    <div class="rounded-xl border border-text/20 bg-primary2 overflow-x-auto">
-      <table class="w-full min-w-[1000px] md:min-w-0 text-sm">
-        <colgroup>
-          <!-- When | Filename | Status | Counts | Taxonomy Ref | Report | Update ID -->
-          <col class="w-40" />
-          <col /> <!-- flexible -->
-          <col class="w-44" /> <!-- Status (narrower) -->
-          <col class="w-40" />
-          <col class="w-60" />
-          <col class="w-28" />
-          <col class="w-72" /> <!-- Update ID (wider) -->
-        </colgroup>
-
-        <thead>
-          <tr class="border-b border-text/10">
-            <th class="text-left py-2 px-3">When</th>
-            <th class="text-left px-3">Filename</th>
-            <th class="text-left px-3">Status</th>
-            <th class="text-left px-3">Counts</th>
-            <th class="text-left px-3">Taxonomy&nbsp;Reference&nbsp;Version</th>
-            <th class="text-left px-3">Report</th>
-            <th class="text-left px-3">Update ID</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for u in update_batches %}
-          <tr class="border-t border-gray-200">
-            <td class="py-2 px-3 whitespace-nowrap">{{ u.created_at|date:"Y-m-d H:i" }}</td>
-            <td class="px-3">{{ u.original_filename }}</td>
-
-            <td class="py-2">
-              {% if u.status == "staging" %}
-              <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs">Staging</span>
-              <div class="text-xs text-text/70 mt-1">Awaiting validation</div>
-
-              {% elif u.status == "validating" %}
-              <span class="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">Validating</span>
-              <div class="text-xs text-text/70 mt-1">Checks in progress</div>
-
-              {% elif u.status == "validated" %}
-              <span class="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs">Validated</span>
-              <div class="text-xs text-text/70 mt-1">Ready to apply</div>
-
-              {% elif u.status == "rejected" %}
-              <span class="px-2 py-0.5 rounded bg-red-100 text-red-800 text-xs">Rejected</span>
-              {% if u.error_message %}
-              <div class="text-xs text-text/70 mt-1">{{ u.error_message }}</div>
-              {% endif %}
-
-              {% elif u.status == "applied" %}
-              <span class="px-2 py-0.5 rounded bg-green-200 text-green-900 text-xs">Applied</span>
-              {% if u.applied_at %}
-              <div class="text-xs text-text/70 mt-1">Applied {{ u.applied_at|date:"Y-m-d H:i" }}</div>
-              {% endif %}
-
-              {% elif u.status == "apply_failed" %}
-              <span class="px-2 py-0.5 rounded bg-red-100 text-red-800 text-xs">Apply failed</span>
-              {% if u.error_message %}
-              <div class="text-xs text-text/70 mt-1">{{ u.error_message }}</div>
-              {% endif %}
-
-              {% else %}
-              <span class="text-xs text-text/70">{{ u.get_status_display }}</span>
-              {% endif %}
-            </td>
-
-            <td class="px-3 whitespace-nowrap">
-              <span title="matched / changed / unchanged / failed">
-                {{ u.rows_matched }} / {{ u.rows_changed }} / {{ u.rows_unchanged }} / {{ u.rows_failed }}
-              </span>
-              {% if u.rows_total %}
-              <div class="text-xs text-text/60">Total {{ u.rows_total }}</div>
-              {% endif %}
-            </td>
-
-            <td class="px-3">
-              {% if u.species_label_at_validation %}
-              <span class="text-xs text-text/80">{{ u.species_label_at_validation }}</span>
-              {% elif u.species_version_at_validation %}
-              <span class="text-xs text-text/60">{{ u.species_version_at_validation|slice:":8" }}…</span>
-              {% else %}
-              <span class="text-xs text-text/60">—</span>
-              {% endif %}
-            </td>
-
-            <td class="px-3">
-              {% if u.report_file %}
-              <button type="button" onclick="viewLog('{{ u.report_file.url }}', 'Validation Report')"
-                class="underline hover:no-underline text-sm bg-transparent border-0 cursor-pointer text-blue-700">
-                Report
-              </button>
-              {% else %}
-              <span class="text-text/60 text-xs">—</span>
-              {% endif %}
-            </td>
-
-            <td class="px-3 whitespace-nowrap">
-              <code class="text-xs">{{ u.id }}</code>
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="7" class="py-4 px-3 text-gray-500">No updates found.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  {% endif %}
-
 </section>
 
 {# --- MODAL 1: UPLOAD NEW DATA --- #}
@@ -570,6 +416,25 @@
       closeLogModal();
     }
   });
+
+  // Helper to copy text and give visual feedback
+  function copyToClipboard(text, btnElement) {
+    navigator.clipboard.writeText(text).then(() => {
+      // Temporary visual feedback
+      const originalText = btnElement.innerText;
+      btnElement.innerText = "Copied!";
+      btnElement.classList.add("text-green-600", "border-green-200", "bg-green-50");
+      
+      // Reset after 2 seconds
+      setTimeout(() => {
+        btnElement.innerText = originalText;
+        btnElement.classList.remove("text-green-600", "border-green-200", "bg-green-50");
+      }, 2000);
+    }).catch(err => {
+      console.error('Failed to copy:', err);
+      alert("Failed to copy ID.");
+    });
+  }
 </script>
 
 {% endblock %}
