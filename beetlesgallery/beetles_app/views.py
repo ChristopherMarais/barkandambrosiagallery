@@ -765,7 +765,7 @@ def download_taxonomy_ref(request):
 
     return resp
 
-@login_required(login_url='login')
+@staff_member_required
 def admin_valid_species(request):
     """
     Minimal admin page to publish a new valid_species.csv into default_storage
