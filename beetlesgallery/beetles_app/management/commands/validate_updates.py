@@ -343,6 +343,11 @@ class Command(BaseCommand):
             w.writerow([r.get("excel_row",""), r.get("record_id",""), r.get("status",""), r.get("changed_fields",""), r.get("error_message","")])
         report_bytes = report_buf.getvalue().encode("utf-8")
 
+        if not dry_run:
+            # We save=True here to ensure the file path is committed to the DB
+            # before we potentially mark it as rejected in _finalize
+            batch.report_file.save(f"{batch.id}_report.csv", ContentFile(report_bytes), save=True)
+
         if rows_failed > 0:
             errors.append(f"{rows_failed} row(s) failed validation. See report.")
             return self._finalize(batch, errors, dry_run)
