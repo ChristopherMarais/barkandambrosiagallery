@@ -1,6 +1,10 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
 <section class="relative z-0">
+
+  {# --- Header & User Notes --- #}
   <h1 class="text-2xl sm:text-3xl font-semibold mb-8">Data Management</h1>
   <p class="text-sm text-text/70 mb-6">
     <span class="font-semibold">About IDs:</span>
@@ -9,9 +13,163 @@
         ID</span>” to an update batch, and “<span class="font-medium">Job ID</span>” to a download job.</span>
   </p>
 
+  {# --- SECTION 1: DATA ACTIONS --- #}
+  <div class="mb-12 bg-gray-50 rounded-xl p-6 border border-gray-200">
+    <h2 class="text-xl font-semibold mb-4 text-gray-800">Data Actions</h2>
+    <div class="flex flex-wrap gap-4">
+        
+        {# Staff Only: Upload & Update Buttons #}
+        {% if request.user.is_staff %}
+            <button onclick="openModal('modal-upload-new')" 
+               class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-3 text-sm font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+                <i class="fi fi-rr-upload"></i>
+                <span>Upload New Data</span>
+            </button>
 
-  <!--- My Uploads --->
+            <button onclick="openModal('modal-update-existing')" 
+               class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-3 text-sm font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+                <i class="fi fi-rr-refresh"></i>
+                <span>Update Metadata</span>
+            </button>
+        {% endif %}
+
+        {# All Users: Download Link #}
+        <a href="{% url 'beetles_home' %}" 
+           class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-3 text-sm font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+            <i class="fi fi-rr-search-alt"></i>
+            <span>Browse Gallery to Download</span>
+        </a>
+    </div>
+  </div>
+
+  {# --- SECTION 2: ACTIVITY LOGS --- #}
+  <div class="space-y-12">
+
+{# --- My Downloads Table --- #}
+    <div class="mb-10">
+      <h2 class="text-xl font-semibold mb-2">My Downloads</h2>
+      <p class="text-sm text-text/70 mb-4">
+        Exports you requested. Status progresses from
+        <span class="font-medium">Pending</span>
+        → <span class="font-medium">Building</span>
+        → <span class="font-medium">Ready</span>
+        or <span class="font-medium">Failed</span>.
+        <span class="ml-1">Ready files may later become <span class="font-medium">Expired</span> after the retention
+          period.</span> The CSV and ZIP filenames include the <span class="font-medium">Record ID</span> so you can match
+        rows to images.
+      </p>
+
+      <div class="rounded-xl border border-text/20 bg-primary2 overflow-x-auto">
+        <table class="w-full min-w-[1000px] md:min-w-0 text-sm">
+          <colgroup>
+            <col class="w-40" />
+            <col /> <col class="w-32" />
+            <col class="w-40" />
+            <col class="w-36" />
+            <col class="w-72" /> </colgroup>
+
+          <thead>
+            <tr class="border-b border-text/10">
+              <th class="text-left py-2 px-3">When</th>
+              <th class="text-left px-3">Request</th>
+              <th class="text-left px-3">Requested</th>
+              <th class="text-left px-3">Status</th>
+              <th class="text-left px-3">Downloads</th>
+              <th class="text-left px-3">Job ID</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for job in download_jobs %}
+            <tr class="border-t border-gray-200 align-top">
+              
+              {# 1. When #}
+              <td class="py-2 px-3 whitespace-nowrap">
+                {{ job.created_at|date:"Y-m-d H:i" }}
+              </td>
+
+              {# 2. Request #}
+              <td class="py-2 px-3">
+                {% if job.selection_mode == "ids" %}
+                <div class="text-text">Selected IDs</div>
+                <div class="text-text/70 text-xs">
+                  {{ job.get_ids|length }} IDs
+                </div>
+                {% else %}
+                <div class="text-text">All results (by query)</div>
+                <div class="text-text/70 text-xs break-all">
+                  <code>{{ job.get_readable_query }}</code>
+                </div>
+                {% endif %}
+              </td>
+
+              {# 3. Requested #}
+              <td class="py-2 px-3">
+                {% if job.selection_mode == "ids" %}
+                {{ job.total_requested }}
+                {% else %}
+                {{ job.total_requested }} (estimated)
+                {% endif %}
+              </td>
+
+              {# 4. Status #}
+              <td class="py-2 px-3">
+                {% if job.status == "ready" %}
+                <span class="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs">Ready</span>
+                {% if job.expires_at %}
+                <div class="text-xs text-text/70 mt-1">
+                  Expires {{ job.expires_at|date:"Y-m-d H:i" }}
+                </div>
+                {% endif %}
+                {% elif job.status == "building" %}
+                <span class="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">Building</span>
+                {% elif job.status == "pending" %}
+                <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs">Pending</span>
+                {% elif job.status == "failed" %}
+                <span class="px-2 py-0.5 rounded bg-red-100 text-red-800 text-xs">Failed</span>
+                {% if job.error_message %}
+                <div class="text-xs text-text/70 mt-1">{{ job.error_message }}</div>
+                {% endif %}
+                {% elif job.status == "expired" %}
+                <span class="px-2 py-0.5 rounded bg-gray-200 text-gray-700 text-xs">Expired</span>
+                <div class="text-xs text-text/70 mt-1">Files removed after retention period.</div>
+                {% else %}
+                <span class="text-xs text-text/70">{{ job.get_status_display }}</span>
+                {% endif %}
+              </td>
+
+              {# 5. Downloads #}
+              <td class="py-2 px-3 space-x-2 whitespace-nowrap">
+                {% if job.csv_file %}
+                <a href="{{ job.csv_file.url }}" class="underline hover:no-underline font-semibold text-gray-600">Metadata.csv</a>
+                {% endif %}
+                
+                {% if job.zip_file %}
+                <a href="{{ job.zip_file.url }}" class="underline hover:no-underline font-bold text-blue-600">Images.zip</a>
+                {% endif %}
+                
+                {% if not job.csv_file and not job.zip_file %}
+                <span class="text-text/60 text-xs">No files yet</span>
+                {% endif %}
+              </td>
+
+              {# 6. Job ID #}
+              <td class="py-2 px-3 whitespace-nowrap">
+                <code class="text-xs select-all">{{ job.id }}</code>
+              </td>
+
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="py-4 px-3 text-gray-500">No download jobs found. Go to the Image Browser to select and download specimens.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+  {# --- Staff-Only Tables --- #}
   {% if request.user.is_staff %}
+
+  {# My Uploads Table #}
   <div class="mb-10">
     <h2 class="text-xl font-semibold mb-2">My Uploads</h2>
     <p class="text-sm text-text/70 mb-4">
@@ -99,7 +257,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="4" class="py-4 px-3 text-gray-500">No uploads yet.</td>
+            <td colspan="4" class="py-4 px-3 text-gray-500">No uploads found.</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -225,7 +383,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="7" class="py-4 px-3 text-gray-500">No updates yet.</td>
+            <td colspan="7" class="py-4 px-3 text-gray-500">No updates found.</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -234,157 +392,104 @@
   </div>
   {% endif %}
 
-
-  <!--- My Downloads --->
-  <div>
-    <h2 class="text-xl font-semibold mb-2">My Downloads</h2>
-    <p class="text-sm text-text/70 mb-4">
-      Exports you requested. Status progresses from
-      <span class="font-medium">Pending</span>
-      → <span class="font-medium">Building</span>
-      → <span class="font-medium">Ready</span>
-      or <span class="font-medium">Failed</span>.
-      <span class="ml-1">Ready files may later become <span class="font-medium">Expired</span> after the retention
-        period.</span> The CSV and ZIP filenames include the <span class="font-medium">Record ID</span> so you can match
-      rows to images.
-    </p>
-
-    <div class="rounded-xl border border-text/20 bg-primary2 overflow-x-auto">
-      <table class="w-full min-w-[1000px] md:min-w-0 text-sm">
-        <colgroup>
-          <!-- When | Request | Requested | Status | Actions | Job ID -->
-          <col class="w-40" />
-          <col /> <!-- flexible -->
-          <col class="w-32" />
-          <col class="w-40" />
-          <col class="w-36" />
-          <col class="w-72" /> <!-- Job ID wider -->
-        </colgroup>
-
-        <thead>
-          <tr class="border-b border-text/10">
-            <th class="text-left py-2 px-3">When</th>
-            <th class="text-left px-3">Request</th>
-            <th class="text-left px-3">Requested</th>
-            <th class="text-left px-3">Status</th>
-            <th class="text-left px-3">Downloads</th>
-            <th class="text-left px-3">Job ID</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for j in download_jobs %}
-          <tr class="border-t border-gray-200 align-top">
-            <td class="py-2 px-3 whitespace-nowrap">{{ j.created_at|date:"Y-m-d H:i" }}</td>
-
-            <td class="py-2 px-3">
-              {% if j.selection_mode == "ids" %}
-              <div class="text-text">Selected IDs</div>
-              <div class="text-text/70 text-xs">
-                {{ j.get_ids|length }} IDs
-              </div>
-              {% else %}
-              <div class="text-text">All results (by query)</div>
-              <div class="text-text/70 text-xs break-all">
-                <code>{{ j.get_readable_query }}</code>
-              </div>
-              {% endif %}
-            </td>
-
-            <td class="py-2 px-3">
-              {% if j.selection_mode == "ids" %}
-              {{ j.total_requested }}
-              {% else %}
-              {{ j.total_requested }} (estimated)
-              {% endif %}
-            </td>
-
-            <td class="py-2 px-3">
-              {% if j.status == "ready" %}
-              <span class="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs">Ready</span>
-              {% if j.expires_at %}
-              <div class="text-xs text-text/70 mt-1">
-                Expires {{ j.expires_at|date:"Y-m-d H:i" }}
-              </div>
-              {% endif %}
-              {% elif j.status == "building" %}
-              <span class="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">Building</span>
-              {% elif j.status == "pending" %}
-              <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs">Pending</span>
-              {% elif j.status == "failed" %}
-              <span class="px-2 py-0.5 rounded bg-red-100 text-red-800 text-xs">Failed</span>
-              {% if j.error_message %}
-              <div class="text-xs text-text/70 mt-1">{{ j.error_message }}</div>
-              {% endif %}
-              {% elif j.status == "expired" %}
-              <span class="px-2 py-0.5 rounded bg-gray-200 text-gray-700 text-xs">Expired</span>
-              <div class="text-xs text-text/70 mt-1">Files removed after retention period.</div>
-              {% else %}
-              <span class="text-xs text-text/70">{{ j.get_status_display }}</span>
-              {% endif %}
-            </td>
-
-            <td class="py-2 px-3 space-x-2 whitespace-nowrap">
-              {% if j.csv_file %}
-              <a href="{{ j.csv_file.url }}" class="underline hover:no-underline">Metadata.csv</a>
-              {% endif %}
-              {% if j.zip_file %}
-              <a href="{{ j.zip_file.url }}" class="underline hover:no-underline">Images.zip</a>
-              {% endif %}
-              {% if not j.csv_file and not j.zip_file %}
-              <span class="text-text/60 text-xs">No files yet</span>
-              {% endif %}
-            </td>
-
-            <td class="py-2 px-3 whitespace-nowrap"><code class="text-xs">{{ j.id }}</code></td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="6" class="py-4 px-3 text-gray-500">No downloads yet.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
 </section>
 
-<div id="error-modal"
-  class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-  <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden">
+{# --- MODAL 1: UPLOAD NEW DATA --- #}
+<div id="modal-upload-new" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+  <div class="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeModal('modal-upload-new')"></div>
+    <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
 
-    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-red-50">
-      <h3 class="text-lg font-semibold text-red-800 flex items-center gap-2">
-        <i class="fi fi-rr-exclamation"></i> Error Log
-      </h3>
-      <button onclick="closeErrorModal()" class="text-gray-500 hover:text-gray-800 transition">
-        <i class="fi fi-rr-cross"></i>
-      </button>
-    </div>
+    <div class="relative inline-block transform overflow-hidden rounded-lg bg-white text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:align-middle">
+      <form action="{% url 'upload' %}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+          <div class="sm:flex sm:items-start">
+            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+              <i class="fi fi-rr-upload text-blue-600 text-lg"></i>
+            </div>
+            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+              <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Upload New Dataset</h3>
+              <div class="mt-2 text-sm text-gray-500">
+                <p class="mb-4">Select a CSV metadata file and a ZIP of images. <a href="{% static 'downloads/beetles_upload_template_v2.csv' %}" class="text-blue-600 hover:underline">Download Template</a></p>
+                
+                <div class="mb-4">
+                    <label class="block mb-1 font-semibold text-gray-700">Metadata (.csv)</label>
+                    <input type="file" name="csv_file" accept=".csv" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                </div>
 
-    <div class="p-6 overflow-y-auto bg-gray-50">
-      <pre id="error-modal-text"
-        class="whitespace-pre-wrap break-words text-xs text-gray-700 font-mono bg-white p-4 rounded border border-gray-200 shadow-inner"
-        style="white-space: pre-wrap;">
-        Loading...
-      </pre>
-    </div>
-
-    <div class="px-6 py-3 border-t border-gray-200 bg-white flex justify-end">
-      <button onclick="closeErrorModal()"
-        class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium transition">
-        Close
-      </button>
+                <div class="mb-2">
+                    <label class="block mb-1 font-semibold text-gray-700">Images (.zip)</label>
+                    <input type="file" name="zip" accept=".zip" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 gap-2">
+          <button type="submit" class="inline-flex w-full justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+            Start Upload
+          </button>
+          <button type="button" onclick="closeModal('modal-upload-new')" class="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+            Cancel
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
 
-<div id="log-modal" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+{# --- MODAL 2: UPDATE METADATA --- #}
+<div id="modal-update-existing" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title-update" role="dialog" aria-modal="true">
+  <div class="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeModal('modal-update-existing')"></div>
+    <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
+
+    <div class="relative inline-block transform overflow-hidden rounded-lg bg-white text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:align-middle">
+      <form action="{% url 'update_upload' %}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+          <div class="sm:flex sm:items-start">
+            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-green-100 sm:mx-0 sm:h-10 sm:w-10">
+              <i class="fi fi-rr-refresh text-green-600 text-lg"></i>
+            </div>
+            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+              <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title-update">Update Metadata</h3>
+              <div class="mt-2 text-sm text-gray-500">
+                <p class="mb-4">Upload a CSV containing Record IDs to update specific fields. <a href="{% static 'downloads/beetles_update_template_v1.csv' %}" class="text-green-600 hover:underline">Download Template</a></p>
+                
+                <div class="mb-4">
+                    <label class="block mb-1 font-semibold text-gray-700">Update File (.csv)</label>
+                    <input type="file" name="csv_file" accept=".csv" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"/>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 gap-2">
+          <button type="submit" class="inline-flex w-full justify-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+            Run Update
+          </button>
+          <button type="button" onclick="closeModal('modal-update-existing')" class="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# --- Log Modal & Script --- #}
+<div id="log-modal" 
+     onclick="if(event.target === this) closeModal('log-modal')"
+     class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+  
   <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden">
 
     <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
       <h3 id="log-modal-title" class="text-lg font-semibold text-gray-800 flex items-center gap-2">
       </h3>
-      <button onclick="closeLogModal()" class="text-gray-500 hover:text-gray-800 transition">
+      <button onclick="closeModal('log-modal')" class="text-gray-500 hover:text-gray-800 transition">
         <i class="fi fi-rr-cross"></i>
       </button>
     </div>
@@ -398,7 +503,7 @@
     </div>
 
     <div class="px-6 py-3 border-t border-gray-200 bg-white flex justify-end">
-      <button onclick="closeLogModal()"
+      <button onclick="closeModal('log-modal')"
         class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium transition">
         Close
       </button>
@@ -407,17 +512,40 @@
 </div>
 
 <script>
+    // Modal Toggles
+  function openModal(modalId) {
+      document.getElementById(modalId).classList.remove('hidden');
+  }
+  function closeModal(modalId) {
+      document.getElementById(modalId).classList.add('hidden');
+  }
+
+  // Log Viewer Logic
   function viewLog(fileUrl, title) {
     const modal = document.getElementById('log-modal');
     const contentArea = document.getElementById('log-modal-text');
     const titleArea = document.getElementById('log-modal-title');
+    const header = modal.querySelector('div.border-b');
 
-    // 1. Set the Title and Show Modal
-    titleArea.innerHTML = `<i class="fi fi-rr-file-alt"></i> ${title}`;
+    // 1. Reset Styles (Default to Gray)
+    header.className = "px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50";
+    titleArea.className = "text-lg font-semibold text-gray-800 flex items-center gap-2";
+
+    // 2. Apply Red Styles if it's an Error
+    if (title.toLowerCase().includes('error')) {
+        header.className = "px-6 py-4 border-b border-red-200 flex justify-between items-center bg-red-50";
+        titleArea.className = "text-lg font-semibold text-red-800 flex items-center gap-2";
+        titleArea.innerHTML = `<i class="fi fi-rr-exclamation-triangle"></i> ${title}`;
+    } else {
+        // Normal Icon
+        titleArea.innerHTML = `<i class="fi fi-rr-file-alt"></i> ${title}`;
+    }
+
+    // 3. Show Modal
     modal.classList.remove('hidden');
     contentArea.innerText = "Loading file...";
 
-    // 2. Fetch the content
+    // 4. Fetch the content
     fetch(fileUrl)
       .then(response => {
         if (!response.ok) throw new Error("Could not load file");
