@@ -557,8 +557,8 @@ def signup(request):
                 user.save(update_fields=["email"])
             
             # Do not log them in automatically; send them to login page with a message
-            messages.success(request, "Username created successfully. Please log in.")
-            return redirect("login")
+            messages.success(request, "Username created successfully.")
+            return redirect("signup")
     else:
         form = TailwindUserCreationForm()
     return render(request, "accounts/signup.html", {"form": form})
