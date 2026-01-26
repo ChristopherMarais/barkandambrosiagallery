@@ -150,7 +150,7 @@ def _normalize_valid_id_for_lookup(v):
     # Non-integer floats (e.g. "123.5") stay as their original string
     return s
 
-@login_required(login_url='login')
+@staff_member_required
 def upload_file(request):
     print("DEBUG: entered upload_file view", flush=True)
     if request.method != "POST":
@@ -765,7 +765,7 @@ def download_taxonomy_ref(request):
 
     return resp
 
-@login_required(login_url='login')
+@staff_member_required
 def admin_valid_species(request):
     """
     Minimal admin page to publish a new valid_species.csv into default_storage
