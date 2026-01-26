@@ -8,14 +8,16 @@ import sys
 import os
 import math
 import requests
-from datetime import date
+import time
+from datetime import date, timedelta
 
 from django.db.models import Q, Count
+from django.utils import timezone
 from django.urls import reverse
 from django.conf import settings
 from django.contrib import messages
 from django.utils.http import http_date
-from django.http import HttpResponseNotAllowed, FileResponse, HttpResponse, Http404, JsonResponse
+from django.http import HttpResponseNotAllowed, FileResponse, HttpResponse, Http404, JsonResponse, StreamingHttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -1084,3 +1086,87 @@ def tool_classify(request):
 
     # GET request: Render the page
     return render(request, 'beetles/tool_classify.html', {})
+
+@login_required
+def stream_updates(request):
+    """
+    Server-Sent Events (SSE) stream.
+    Optimized to only fetch active jobs + those that finished in the last 10 seconds.
+    """
+    def event_stream():
+        # 1. Define final states
+        # Matches models choices for UploadBatch, UpdateBatch, and DownloadJob
+        FINAL_STATES = {
+            'imported', 'rejected', 'import_failed', 
+            'applied', 'apply_failed', 
+            'ready', 'failed', 'expired'
+        }
+
+        while True:
+            data = {}
+            has_updates = False
+
+            # 2. Define "Recently" 
+            # Keep fetching finished jobs for 10s so the UI has time to update to Green/Red.
+            now = timezone.now()
+            recent_cutoff = now - timedelta(seconds=10)
+
+            # --- A. DOWNLOAD JOBS ---
+            # Logic: Fetch if (Status is NOT Final) OR (Finished recently)
+            # Note: DownloadJob uses 'finished_at'
+            downloads = DownloadJob.objects.filter(requested_by=request.user).filter(
+                ~Q(status__in=FINAL_STATES) | 
+                Q(finished_at__gte=recent_cutoff)
+            ).order_by('-created_at')
+
+            for job in downloads:
+                data[f"download_{job.id}"] = {
+                    "status": job.status,
+                    "status_display": job.get_status_display(),
+                    "csv_url": job.csv_file.url if job.csv_file else None,
+                    "zip_url": job.zip_file.url if job.zip_file else None,
+                }
+                has_updates = True
+
+            # --- B. UPLOAD BATCHES ---
+            # Logic: Fetch if (Status is NOT Final) OR (Updated recently)
+            # UploadBatch has 'updated_at'
+            uploads = UploadBatch.objects.filter(uploaded_by=request.user).filter(
+                ~Q(status__in=FINAL_STATES) | 
+                Q(updated_at__gte=recent_cutoff)
+            ).order_by('-created_at')
+
+            for batch in uploads:
+                data[f"upload_{batch.id}"] = {
+                    "status": batch.status,
+                    "status_display": batch.get_status_display(),
+                    "error_log_url": batch.error_report_file.url if batch.error_report_file else None,
+                }
+                has_updates = True
+
+            # --- C. UPDATE BATCHES ---
+            # Logic: Fetch if (Status is NOT Final) OR (Updated recently)
+            # UpdateBatch has 'updated_at'
+            if request.user.is_staff:
+                updates = UpdateBatch.objects.filter(uploaded_by=request.user).filter(
+                    ~Q(status__in=FINAL_STATES) | 
+                    Q(updated_at__gte=recent_cutoff)
+                ).order_by('-created_at')
+
+                for batch in updates:
+                    data[f"update_{batch.id}"] = {
+                        "status": batch.status,
+                        "status_display": batch.get_status_display(),
+                        "report_url": batch.report_file.url if batch.report_file else None,
+                    }
+                    has_updates = True
+
+            if has_updates:
+                yield f"data: {json.dumps(data)}\n\n"
+
+            time.sleep(3)
+
+    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'
+    return response

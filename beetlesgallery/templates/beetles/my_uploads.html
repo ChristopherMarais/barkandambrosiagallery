@@ -77,38 +77,26 @@
               <tbody class="divide-y divide-gray-100">
                 {% for job in download_jobs %}
                 <tr class="hover:bg-gray-50 transition">
-                  <td class="px-4 py-3 whitespace-nowrap text-gray-600">{{ job.created_at|date:"M d, H:i" }}</td>
-                  
-                  <td class="px-4 py-3">
-                    {% if job.selection_mode == "ids" %}
-                        <div class="font-medium text-gray-800">Selected IDs</div>
-                        <div class="text-xs text-gray-500">{{ job.get_ids|length }} records</div>
-                    {% else %}
-                        <div class="font-medium text-gray-800">Search Query</div>
-                        <div class="text-xs text-gray-500 break-words max-w-[200px]">{{ job.get_readable_query }}</div>
-                    {% endif %}
+                  <td class="px-4 py-3" id="status-download-{{ job.id }}">
+                      {% if job.status == "ready" %}
+                          <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Ready</span>
+                          {% if job.expires_at %}<div class="text-[10px] text-gray-400 mt-1">Exp: {{ job.expires_at|date:"m/d" }}</div>{% endif %}
+                      {% elif job.status == "failed" %}
+                          <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Failed</span>
+                      {% elif job.status == "expired" %}
+                          <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">Expired</span>
+                      {% else %}
+                          <span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 animate-pulse">{{ job.get_status_display }}</span>
+                      {% endif %}
                   </td>
 
-                  <td class="px-4 py-3">
-                    {% if job.status == "ready" %}
-                        <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Ready</span>
-                        {% if job.expires_at %}<div class="text-[10px] text-gray-400 mt-1">Exp: {{ job.expires_at|date:"m/d" }}</div>{% endif %}
-                    {% elif job.status == "failed" %}
-                        <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Failed</span>
-                    {% elif job.status == "expired" %}
-                        <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">Expired</span>
-                    {% else %}
-                        <span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 animate-pulse">{{ job.get_status_display }}</span>
-                    {% endif %}
-                  </td>
-
-                  <td class="px-4 py-3 space-x-2">
-                    {% if job.status == 'ready' %}
-                        {% if job.csv_file %}<a href="{{ job.csv_file.url }}" class="text-xs font-bold text-gray-600 hover:text-blue-600 hover:underline">CSV</a>{% endif %}
-                        {% if job.zip_file %}<a href="{{ job.zip_file.url }}" class="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline">ZIP</a>{% endif %}
-                    {% else %}
-                        <span class="text-gray-300 text-xs">—</span>
-                    {% endif %}
+                  <td class="px-4 py-3 space-x-2" id="action-download-{{ job.id }}">
+                      {% if job.status == 'ready' %}
+                          {% if job.csv_file %}<a href="{{ job.csv_file.url }}" class="text-xs font-bold text-gray-600 hover:text-blue-600 hover:underline">CSV</a>{% endif %}
+                          {% if job.zip_file %}<a href="{{ job.zip_file.url }}" class="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline">ZIP</a>{% endif %}
+                      {% else %}
+                          <span class="text-gray-300 text-xs">—</span>
+                      {% endif %}
                   </td>
 
                   <td class="px-4 py-3 whitespace-nowrap">
@@ -152,7 +140,7 @@
                     <td class="px-4 py-3 whitespace-nowrap text-gray-600">{{ b.created_at|date:"M d, H:i" }}</td>
                     <td class="px-4 py-3 font-medium text-gray-800 break-all max-w-[200px]">{{ b.original_filename }}</td>
                     
-                    <td class="px-4 py-3">
+                    <td class="px-4 py-3" id="status-upload-{{ b.id }}">
                         {% if b.status == "imported" %}
                             <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Imported</span>
                         {% elif b.status == "validated" %}
@@ -206,7 +194,7 @@
                     <td class="px-4 py-3 whitespace-nowrap text-gray-600">{{ u.created_at|date:"M d, H:i" }}</td>
                     <td class="px-4 py-3 font-medium text-gray-800 break-all max-w-[200px]">{{ u.original_filename }}</td>
                     
-                    <td class="px-4 py-3">
+                    <td class="px-4 py-3" id="status-update-{{ u.id }}">
                         {% if u.status == "applied" %}
                             <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Applied</span>
                         {% elif u.status == "validated" %}
@@ -438,6 +426,94 @@
       console.error('Failed to copy:', err);
       alert("Failed to copy ID.");
     });
+  }
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // 1. Connect to the stream
+    const eventSource = new EventSource("{% url 'stream_updates' %}");
+
+    eventSource.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        
+        // The data object looks like: { "download_123": {status: "ready", ...}, "upload_456": {...} }
+        for (const [key, info] of Object.entries(data)) {
+            
+            // --- HANDLE DOWNLOAD JOBS ---
+            if (key.startsWith('download_')) {
+                const id = key.replace('download_', '');
+                updateDownloadRow(id, info);
+            }
+            
+            // --- HANDLE UPLOAD BATCHES ---
+            if (key.startsWith('upload_')) {
+                const id = key.replace('upload_', '');
+                updateStatusCell(`status-upload-${id}`, info.status, info.status_display, info.error_log_url, 'Error Log');
+            }
+
+            // --- HANDLE UPDATE BATCHES ---
+            if (key.startsWith('update_')) {
+                const id = key.replace('update_', '');
+                updateStatusCell(`status-update-${id}`, info.status, info.status_display, info.report_url, 'Report');
+            }
+        }
+    };
+
+    eventSource.onerror = function() {
+        // If connection dies, wait 5s and reload (simple recovery)
+        eventSource.close();
+        setTimeout(() => { window.location.reload(); }, 5000);
+    };
+  });
+
+  // Helper to update the Badge color/text
+  function updateStatusCell(elementId, status, label, fileUrl, linkText) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+
+      let badgeClass = "bg-gray-100 text-gray-600"; // default
+      let icon = "";
+
+      // Logic to match your Django template colors
+      const s = status.toLowerCase();
+      if (['imported', 'validated', 'applied', 'ready'].includes(s)) {
+          badgeClass = "bg-green-100 text-green-800";
+      } else if (['validating', 'building', 'staging'].includes(s)) {
+          badgeClass = "bg-blue-100 text-blue-800 animate-pulse";
+      } else if (['rejected', 'failed', 'import_failed', 'apply_failed'].includes(s)) {
+          badgeClass = "bg-red-100 text-red-800";
+      }
+
+      let html = `<span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeClass}">${label}</span>`;
+      
+      // If there is a log file (error log or report), append the link
+      if (fileUrl) {
+          html += `<button onclick="viewLog('${fileUrl}', '${linkText}')" class="ml-2 text-xs text-blue-600 underline hover:no-underline">${linkText}</button>`;
+      }
+      
+      // Only update DOM if it actually changed to prevent flickering
+      if (el.innerHTML.trim() !== html) {
+          el.innerHTML = html;
+      }
+  }
+
+  // Helper specifically for Downloads (because it needs to update the Action links column too)
+  function updateDownloadRow(id, info) {
+      // 1. Update Status Badge
+      updateStatusCell(`status-download-${id}`, info.status, info.status_display);
+
+      // 2. Update Download Links (CSV / ZIP)
+      const actionEl = document.getElementById(`action-download-${id}`);
+      if (actionEl && info.status === 'ready') {
+          let linksHtml = '';
+          if (info.csv_url) linksHtml += `<a href="${info.csv_url}" class="text-xs font-bold text-gray-600 hover:text-blue-600 hover:underline mr-2">CSV</a>`;
+          if (info.zip_url) linksHtml += `<a href="${info.zip_url}" class="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline">ZIP</a>`;
+          
+          if (actionEl.innerHTML !== linksHtml) {
+              actionEl.innerHTML = linksHtml;
+          }
+      }
   }
 </script>
 
