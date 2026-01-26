@@ -6,7 +6,7 @@ services:
     ports:
       - "80:8000"
     volumes:
-      - /root/barkandambrosia_data/media:/app/media
+      - /opt/barkandambrosia_data/media:/app/media
     env_file:
       - .env.prod
     depends_on:
@@ -17,7 +17,7 @@ services:
     image: postgres:15
     restart: always
     volumes:
-      - /root/barkandambrosia_data/postgres:/var/lib/postgresql/data
+      - /opt/barkandambrosia_data/postgres:/var/lib/postgresql/data
     env_file:
       - .env.prod
     ports: []
@@ -31,7 +31,7 @@ services:
     restart: always
     command: pixi run celery -A beetlesgallery worker -l info --concurrency=1
     volumes:
-      - /root/barkandambrosia_data/media:/app/media
+      - /opt/barkandambrosia_data/media:/app/media
     env_file:
       - .env.prod
     depends_on:
