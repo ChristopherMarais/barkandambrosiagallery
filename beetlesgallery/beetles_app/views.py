@@ -267,7 +267,7 @@ def upload_file(request):
     process_upload_task.delay(batch.id)
     print(f"Queued process_single_upload for batch {batch.id}", flush=True)
 
-    messages.success(request, "Files received and passed quick checks. Track upload status on My Files page under My Uploads. You may leave this page.")
+    messages.success(request, "Files received. Track the upload status below in the Activity Logs.")
     return redirect("my_uploads")
 
 def gallery(request):
@@ -674,7 +674,7 @@ def start_batch_download(request):
 
 
     build_downloads_task.delay(job.id)
-    messages.success(request, "Download started. Track progress in My Files.")
+    messages.success(request, "Download started. Track progress below in the Activity Logs.")
     return redirect("my_uploads")
     
 
@@ -940,9 +940,8 @@ def update_upload(request):
 
     messages.success(
         request,
-        "Update file received and passed quick checks. "
-        "Full validation and apply will now run in the background; "
-        "you can track status on My Files → My Updates."
+        "Update file received. Full validation will run in the background; "
+        "track the status below in the Activity Logs."
     )
     # Send them where they can see the batch status
     return redirect("my_uploads")
