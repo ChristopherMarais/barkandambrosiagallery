@@ -200,10 +200,10 @@ def upload_file(request):
             names = z.namelist()
             if not names:
                 messages.error(request, "The images ZIP is empty.")
-                return redirect("upload")
+                return redirect("my_uploads")
     except zipfile.BadZipFile:
         messages.error(request, "The images ZIP is corrupt or not a valid ZIP.")
-        return redirect("upload")
+        return redirect("my_uploads")
 
     # Reset pointer
     try:
@@ -234,7 +234,7 @@ def upload_file(request):
     if pd is None:
         print("DEBUG: pd is None; returning early (no worker spawned)", flush=True)
         messages.warning(request, "Uploaded. Note: server missing pandas; skipping quick XLSX checks.")
-        return redirect("upload")
+        return redirect("my_upload")
 
     errors = []
     try:
@@ -243,7 +243,7 @@ def upload_file(request):
     except Exception as e:
         batch.mark_rejected_and_move(f"Cannot open CSV: {e}")
         messages.error(request, "Upload rejected: cannot open CSV.")
-        return redirect("upload")
+        return redirect("my_upload")
 
     # Required headers
     missing = REQUIRED_COLS - set(df.columns)
@@ -260,7 +260,7 @@ def upload_file(request):
         reason = "; ".join(map(str, errors))[:2000]
         batch.mark_rejected_and_move(reason)
         messages.error(request, "Upload rejected: " + reason)
-        return redirect("upload")
+        return redirect("my_upload")
 
     # Pass preflight; full validator will hash images, check 1:1 mapping, etc.
     # Kick off background processing for this batch (validate + import)
@@ -940,8 +940,8 @@ def update_upload(request):
 
     messages.success(
         request,
-        "Update file received. Full validation will run in the background; "
-        "track the status below in the Activity Logs."
+            "Update file received. Full validation will run in the background; "
+            "track the status below in the Activity Logs."
     )
     # Send them where they can see the batch status
     return redirect("my_uploads")
