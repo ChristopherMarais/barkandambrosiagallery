@@ -65,52 +65,95 @@
 
           <div class="rounded-lg border border-gray-200 bg-white overflow-x-auto">
             <table class="w-full text-sm text-left">
-              <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
-                <tr>
-                  <th class="px-4 py-3">When</th>
-                  <th class="px-4 py-3">Request</th>
-                  <th class="px-4 py-3">Status</th>
-                  <th class="px-4 py-3">Downloads</th>
-                  <th class="px-4 py-3">Job ID</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100">
-                {% for job in download_jobs %}
-                <tr class="hover:bg-gray-50 transition">
-                  <td class="px-4 py-3" id="status-download-{{ job.id }}">
-                      {% if job.status == "ready" %}
-                          <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Ready</span>
-                          {% if job.expires_at %}<div class="text-[10px] text-gray-400 mt-1">Exp: {{ job.expires_at|date:"m/d" }}</div>{% endif %}
-                      {% elif job.status == "failed" %}
-                          <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Failed</span>
-                      {% elif job.status == "expired" %}
-                          <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">Expired</span>
-                      {% else %}
-                          <span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 animate-pulse">{{ job.get_status_display }}</span>
-                      {% endif %}
-                  </td>
+                  <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
+                    <tr>
+                      <th class="px-4 py-3">When</th>
+                      <th class="px-4 py-3">Request</th>
+                      <th class="px-4 py-3">Status</th>
+                      <th class="px-4 py-3">Downloads</th>
+                      <th class="px-4 py-3">Job ID</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100">
+                    {% for job in download_jobs %}
+                    <tr class="hover:bg-gray-50 transition" id="download_{{ job.id }}">
+                      
+                      <td class="px-4 py-3 whitespace-nowrap text-gray-600">
+                        {{ job.created_at|date:"M d, H:i" }}
+                      </td>
 
-                  <td class="px-4 py-3 space-x-2" id="action-download-{{ job.id }}">
-                      {% if job.status == 'ready' %}
-                          {% if job.csv_file %}<a href="{{ job.csv_file.url }}" class="text-xs font-bold text-gray-600 hover:text-blue-600 hover:underline">CSV</a>{% endif %}
-                          {% if job.zip_file %}<a href="{{ job.zip_file.url }}" class="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline">ZIP</a>{% endif %}
-                      {% else %}
-                          <span class="text-gray-300 text-xs">—</span>
-                      {% endif %}
-                  </td>
+                      <td class="px-4 py-3 font-medium text-gray-800">
+                        <div class="flex flex-col gap-0.5">
+                          {% if job.selection_mode == 'ids' %}
+                            <span class="text-gray-500 text-xs font-normal">{{ job.total_requested }} Record(s)</span>
+                          {% else %}
+                            <span>Search Query</span>
+                            <span class="text-gray-500 text-xs italic font-normal">
+                              {{ job.get_readable_query|default:"All records"|truncatechars:40 }}
+                            </span>
+                          {% endif %}
+                        </div>
+                      </td>
 
-                  <td class="px-4 py-3 whitespace-nowrap">
-                    <button onclick="copyToClipboard('{{ job.id }}', this)" 
-                      class="text-xs font-bold text-gray-500 bg-white border border-gray-200 px-2 py-1 rounded shadow-sm hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition">
-                      Copy ID
-                    </button>
-                  </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="5" class="px-4 py-6 text-center text-gray-500 italic">No download jobs found.</td></tr>
-                {% endfor %}
-              </tbody>
-            </table>
+                      <td class="px-4 py-3" id="status-download-{{ job.id }}">
+                        {% if job.status == 'ready' %}
+                          <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                            Ready
+                          </span>
+                        {% elif job.status == 'failed' %}
+                          <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800" title="{{ job.error_message }}">
+                            Failed
+                          </span>
+                        {% elif job.status == 'expired' %}
+                          <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                            Expired
+                          </span>
+                        {% else %}
+                          <span class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 animate-pulse">
+                            {{ job.get_status_display }}
+                          </span>
+                        {% endif %}
+                      </td>
+
+                      <td class="px-4 py-3" id="action-download-{{ job.id }}">
+                        {% if job.status == 'ready' %}
+                          <div class="flex items-center gap-2">
+                            {% if job.csv_file %}
+                              <a href="{{ job.csv_file.url }}" class="text-xs font-bold text-gray-600 hover:text-blue-600 hover:underline mr-1">
+                                CSV
+                              </a>
+                            {% endif %}
+                            
+                            {% if job.zip_file %}
+                              <a href="{{ job.zip_file.url }}" class="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline">
+                                ZIP
+                              </a>
+                            {% endif %}
+                          </div>
+                        {% elif job.status == 'expired' %}
+                          <span class="text-xs text-gray-400">Files removed</span>
+                        {% else %}
+                           <span class="text-gray-300 text-xs">—</span>
+                        {% endif %}
+                      </td>
+
+                      <td class="px-4 py-3 whitespace-nowrap">
+                        <button onclick="copyToClipboard('{{ job.id }}', this)" 
+                          class="text-xs font-bold text-gray-500 bg-white border border-gray-200 px-2 py-1 rounded shadow-sm hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition">
+                          Copy ID
+                        </button>
+                      </td>
+
+                    </tr>
+                    {% empty %}
+                    <tr>
+                      <td colspan="5" class="px-4 py-6 text-center text-gray-500 italic">
+                        No downloads requested yet.
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+              </table>
           </div>
         </div>
 
