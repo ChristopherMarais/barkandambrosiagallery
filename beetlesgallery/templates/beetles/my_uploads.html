@@ -277,11 +277,9 @@
 
 {# --- MODAL 1: UPLOAD NEW DATA --- #}
 <div id="modal-upload-new" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-  <div class="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeModal('modal-upload-new')"></div>
-    <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
-
-    <div class="relative inline-block transform overflow-hidden rounded-lg bg-white text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:align-middle">
+  <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeModal('modal-upload-new')"></div>
+  <div class="flex min-h-screen items-center justify-center p-4 text-center">
+    <div class="relative w-full max-w-md transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all">
       <form action="{% url 'upload' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
@@ -329,17 +327,15 @@
 
 {# --- MODAL 2: UPDATE METADATA --- #}
 <div id="modal-update-existing" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title-update" role="dialog" aria-modal="true">
-  <div class="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeModal('modal-update-existing')"></div>
-    <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
-
-    <div class="relative inline-block transform overflow-hidden rounded-lg bg-white text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:align-middle">
+  <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeModal('modal-update-existing')"></div>
+  <div class="flex min-h-screen items-center justify-center p-4 text-center">
+    <div class="relative w-full max-w-md transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all">
       <form action="{% url 'update_upload' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
           <div class="sm:flex sm:items-start">
-            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-green-100 sm:mx-0 sm:h-10 sm:w-10">
-              <i class="fi fi-rr-refresh text-green-600 text-lg"></i>
+            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+              <i class="fi fi-rr-refresh text-blue-600 text-lg"></i>
             </div>
             <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
               <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title-update">Update Metadata</h3>
@@ -348,21 +344,21 @@
                 <p class="mb-3">Upload a CSV containing Record IDs to update specific fields.</p>
                 
                 <a href="{% static 'downloads/beetles_update_template_v1.csv' %}" 
-                   class="mb-6 w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm font-bold text-green-600 hover:bg-green-50 hover:border-green-300 transition">
+                   class="mb-6 w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm font-bold text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition">
                     <i class="fi fi-rr-download"></i>
                     <span>Download CSV Template</span>
                 </a>
 
                 <div class="mb-4">
                     <label class="block mb-1 font-semibold text-gray-700">Update File (.csv)</label>
-                    <input type="file" name="csv_file" accept=".csv" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"/>
+                    <input type="file" name="csv_file" accept=".csv" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
                 </div>
               </div>
             </div>
           </div>
         </div>
         <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 gap-2">
-          <button type="submit" class="inline-flex w-full justify-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-green-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+          <button type="submit" class="inline-flex w-full justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
             Submit Update
           </button>
           <button type="button" onclick="closeModal('modal-update-existing')" class="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
