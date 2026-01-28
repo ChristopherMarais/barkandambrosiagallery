@@ -64,6 +64,17 @@ class ValidSpeciesUploadForm(forms.Form):
         help_text='Shown to users (e.g., "2025-10-14 18:58 UTC"). Leave blank to use file mtime.'
     )
 
+class DescribedNamesUploadForm(forms.Form):
+    csv_file = forms.FileField(
+        label="described_names.csv",
+        help_text="UTF-8 CSV with required headers."
+    )
+    label = forms.CharField(
+        label="Reference label",
+        required=False,
+        help_text='Shown to users (e.g., "2025-10-14 18:58 UTC"). Leave blank to use file mtime.'
+    )
+
 class UpdateBatchUploadForm(forms.Form):
     file = forms.FileField(
         label="Upload CSV file",

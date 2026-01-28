@@ -25,10 +25,10 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.files.storage import default_storage
 
-from . import species_ref
+from . import species_ref, described_names_ref
 from .models import Beetles, UploadBatch, DownloadJob, UpdateBatch, ImageAsset
 from .schema import REQUIRED_COLS, MAX_ROWS
-from .forms import TailwindUserCreationForm, ProfileForm, PasswordChangeFormStyled, ValidSpeciesUploadForm, UpdateBatchUploadForm
+from .forms import TailwindUserCreationForm, ProfileForm, PasswordChangeFormStyled, ValidSpeciesUploadForm, DescribedNamesUploadForm, UpdateBatchUploadForm
 from .tasks import process_upload_task, process_update_task, build_downloads_task
 
 import pandas as pd
@@ -811,6 +811,55 @@ def admin_valid_species(request):
     return render(
         request,
         "admin/tools_valid_species.html",
+        {"form": form, "status": current_status},
+    )
+
+@staff_member_required
+def admin_described_names(request):
+    """
+    Minimal admin page to publish a new described_names.csv into default_storage
+    and set the user-facing label.
+    """
+    current_status = described_names_ref.status()
+    if request.method == "POST":
+        form = DescribedNamesUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            f = form.cleaned_data["csv_file"]
+            label = form.cleaned_data.get("label") or None
+
+            # Save the upload to a temp file, then call the publisher helper
+            from pathlib import Path
+            import tempfile
+
+            # use a real temp file (container-/OS-friendly)
+            with tempfile.NamedTemporaryFile(delete=False) as tmp:
+                for chunk in f.chunks():
+                    tmp.write(chunk)
+                tmp_path = tmp.name
+
+            try:
+                rows, version = described_names_ref.publish_from_file(tmp_path, label=label)
+                messages.success(
+                    request,
+                    f"Published described_names.csv ({rows} rows)."
+                )
+                # After publish, refresh status for display
+                current_status = described_names_ref.status()
+            except Exception as e:
+                messages.error(request, f"Publish failed: {e}")
+            finally:
+                try:
+                    os.unlink(tmp_path)
+                except Exception:
+                    pass
+
+            return redirect("admin_described_names")
+    else:
+        form = DescribedNamesUploadForm()
+
+    return render(
+        request,
+        "admin/tools_described_names.html",
         {"form": form, "status": current_status},
     )
 

@@ -9,6 +9,7 @@ from beetlesgallery.beetles_app.views import LoginViewWithRedirectMessage, PostO
 
 urlpatterns = [
     path("admin/tools/valid-species/", beetles_views.admin_valid_species, name="admin_valid_species"),
+    path("admin/tools/described-names/", beetles_views.admin_described_names, name="admin_described_names"),
     path('admin/', admin.site.urls),
     
     # --- Auth ---
