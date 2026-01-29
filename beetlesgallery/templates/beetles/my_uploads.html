@@ -89,6 +89,11 @@
                           <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
                             Ready
                           </span>
+                          {% if job.expires_at %}
+                            <div class="mt-1 text-xs text-gray-500">
+                              Expires {{ job.expires_at|date:"M d, H:i" }}
+                            </div>
+                          {% endif %}
                         {% elif job.status == 'failed' %}
                           <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800" title="{{ job.error_message }}">
                             Failed
