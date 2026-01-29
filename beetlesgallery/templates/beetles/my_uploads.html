@@ -93,6 +93,9 @@
                           <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800" title="{{ job.error_message }}">
                             Failed
                           </span>
+                          {% if job.error_message %}
+                            <button onclick="viewText('{{ job.error_message|escapejs }}', 'Download Error')" class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
+                          {% endif %}
                         {% elif job.status == 'expired' %}
                           <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
                             Expired
@@ -132,7 +135,7 @@
                       <td class="px-4 py-3 whitespace-nowrap">
                         <div class="flex items-center gap-2">
                             <span class="font-mono text-xs text-gray-500 select-all">{{ job.id|stringformat:"s" }}</span>
-                            <button type="button" class="copy-uuid shrink-0 text-gray-400 hover:text-gray-800 transition" data-uuid="{{ job.id }}" title="Copy Job ID">
+                            <button type="button" class="copy-uuid shrink-0 text-gray-400 hover:text-gray-800 transition" data-uuid="{{ job.id }}" title="Copy Download ID">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                             </button>
                         </div>
@@ -221,7 +224,6 @@
                     <th class="px-4 py-3">Date/Time</th>
                     <th class="px-4 py-3">Filename</th>
                     <th class="px-4 py-3">Status</th>
-                    {# Removed Report Column Header #}
                     <th class="px-4 py-3">Update ID</th>
                 </tr>
                 </thead>
@@ -238,6 +240,11 @@
                             <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">Validated</span>
                         {% elif u.status == "rejected" or u.status == "apply_failed" %}
                             <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">{{ u.get_status_display }}</span>
+                            {% if u.report_file %}
+                                <button onclick="viewLog('{{ u.report_file.url }}', 'Details')" class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
+                            {% elif u.error_message %}
+                                <button onclick="viewText('{{ u.error_message|escapejs }}', 'Details')" class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
+                            {% endif %}
                         {% else %}
                             <span class="text-xs text-gray-500">{{ u.get_status_display }}</span>
                         {% endif %}
@@ -426,7 +433,7 @@
 </div>
 
 <script>
-    // Modal Toggles
+  // Modal Toggles
   function openModal(modalId) {
       document.getElementById(modalId).classList.remove('hidden');
   }
@@ -434,18 +441,18 @@
       document.getElementById(modalId).classList.add('hidden');
   }
 
-  // Log Viewer Logic
+  // --- 1. Log Viewer (File based) ---
   function viewLog(fileUrl, title) {
     const modal = document.getElementById('log-modal');
     const contentArea = document.getElementById('log-modal-text');
     const titleArea = document.getElementById('log-modal-title');
     const header = modal.querySelector('div.border-b');
 
-    // 1. Reset Styles (Default to Gray)
+    // Reset Styles (Default to Gray)
     header.className = "px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50";
     titleArea.className = "text-lg font-semibold text-gray-800 flex items-center gap-2";
 
-    // 2. Apply Red Styles if it's an Error
+    // Apply Red Styles if it's an Error
     if (title.toLowerCase().includes('error')) {
         header.className = "px-6 py-4 border-b border-red-200 flex justify-between items-center bg-red-50";
         titleArea.className = "text-lg font-semibold text-red-800 flex items-center gap-2";
@@ -455,11 +462,12 @@
         titleArea.innerHTML = `<i class="fi fi-rr-file-alt"></i> ${title}`;
     }
 
-    // 3. Show Modal
+    // Show Modal
     modal.classList.remove('hidden');
     contentArea.innerText = "Loading file...";
+    contentArea.classList.remove('text-red-600'); // Reset error text color if present
 
-    // 4. Fetch the content
+    // Fetch the content
     fetch(fileUrl)
       .then(response => {
         if (!response.ok) throw new Error("Could not load file");
@@ -472,6 +480,25 @@
         contentArea.innerText = "Error loading file: " + err.message;
         contentArea.classList.add('text-red-600');
       });
+  }
+
+  // --- 2. Text Viewer (String based) ---
+  // MOVED OUTSIDE of viewLog
+  function viewText(content, title) {
+    const modal = document.getElementById('log-modal');
+    const contentArea = document.getElementById('log-modal-text');
+    const titleArea = document.getElementById('log-modal-title');
+    const header = modal.querySelector('div.border-b');
+
+    // Force Error Styles (Red)
+    header.className = "px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50";
+    titleArea.className = "text-lg font-semibold text-gray-800 flex items-center gap-2";
+    titleArea.innerHTML = `<i class="fi fi-rr-exclamation-triangle"></i> ${title}`;
+
+    // Show Modal & Set Text
+    modal.classList.remove('hidden');
+    contentArea.innerText = content || "No details available.";
+    contentArea.classList.remove('text-red-600'); 
   }
 
   function closeLogModal() {
@@ -632,13 +659,15 @@
             // --- HANDLE UPLOAD BATCHES ---
             if (key.startsWith('upload_')) {
                 const id = key.replace('upload_', '');
-                updateStatusCell(`status-upload-${id}`, info.status, info.status_display, info.error_log_url, 'Details');
+                // Pass info.error_message (4th arg)
+                updateStatusCell(`status-upload-${id}`, info.status, info.status_display, info.error_log_url, info.error_message, 'Details');
             }
 
             // --- HANDLE UPDATE BATCHES ---
             if (key.startsWith('update_')) {
                 const id = key.replace('update_', '');
-                updateStatusCell(`status-update-${id}`, info.status, info.status_display, info.report_url, 'Report');
+                // Pass info.error_message (4th arg)
+                updateStatusCell(`status-update-${id}`, info.status, info.status_display, info.report_url, info.error_message, 'Details');
             }
         }
     };
@@ -651,7 +680,8 @@
   });
 
   // Helper to update the Badge color/text
-  function updateStatusCell(elementId, status, label, fileUrl, linkText) {
+  // Now accepts errorMessage argument
+  function updateStatusCell(elementId, status, label, fileUrl, errorMessage, linkText) {
       const el = document.getElementById(elementId);
       if (!el) return;
 
@@ -672,9 +702,15 @@
 
       let html = `<span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeClass}">${label}</span>`;
       
-      // If there is a log file (error log or report), append the link
+      // 1. Try File URL first
       if (fileUrl) {
           html += `<button onclick="viewLog('${fileUrl}', '${linkText}')" class="ml-2 text-xs ${linkClass} underline hover:no-underline">${linkText}</button>`;
+      } 
+      // 2. Fallback to Text Error
+      else if (errorMessage) {
+          // Escape quotes/newlines for safe inline JS
+          const safeMsg = errorMessage.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n');
+          html += `<button onclick="viewText('${safeMsg}', '${linkText}')" class="ml-2 text-xs ${linkClass} underline hover:no-underline">${linkText}</button>`;
       }
       
       // Only update DOM if it actually changed to prevent flickering
@@ -685,8 +721,8 @@
 
   // Helper specifically for Downloads
   function updateDownloadRow(id, info) {
-      // 1. Update Status Badge
-      updateStatusCell(`status-download-${id}`, info.status, info.status_display);
+      // 1. Update Status Badge - pass error_message
+      updateStatusCell(`status-download-${id}`, info.status, info.status_display, null, info.error_message, 'Details');
 
       // 2. Update Download Links (Pills)
       const actionEl = document.getElementById(`action-download-${id}`);

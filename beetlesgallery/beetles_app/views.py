@@ -1118,7 +1118,6 @@ def stream_updates(request):
 
             # --- A. DOWNLOAD JOBS ---
             # Logic: Fetch if (Status is NOT Final) OR (Finished recently)
-            # Note: DownloadJob uses 'finished_at'
             downloads = DownloadJob.objects.filter(requested_by=request.user).filter(
                 ~Q(status__in=FINAL_STATES) | 
                 Q(finished_at__gte=recent_cutoff)
@@ -1130,12 +1129,12 @@ def stream_updates(request):
                     "status_display": job.get_status_display(),
                     "csv_url": job.csv_file.url if job.csv_file else None,
                     "zip_url": job.zip_file.url if job.zip_file else None,
+                    "error_message": job.error_message,
                 }
                 has_updates = True
 
             # --- B. UPLOAD BATCHES ---
             # Logic: Fetch if (Status is NOT Final) OR (Updated recently)
-            # UploadBatch has 'updated_at'
             uploads = UploadBatch.objects.filter(uploaded_by=request.user).filter(
                 ~Q(status__in=FINAL_STATES) | 
                 Q(updated_at__gte=recent_cutoff)
@@ -1146,12 +1145,11 @@ def stream_updates(request):
                     "status": batch.status,
                     "status_display": batch.get_status_display(),
                     "error_log_url": batch.error_report_file.url if batch.error_report_file else None,
+                    "error_message": batch.error_message,
                 }
                 has_updates = True
 
             # --- C. UPDATE BATCHES ---
-            # Logic: Fetch if (Status is NOT Final) OR (Updated recently)
-            # UpdateBatch has 'updated_at'
             if request.user.is_staff:
                 updates = UpdateBatch.objects.filter(uploaded_by=request.user).filter(
                     ~Q(status__in=FINAL_STATES) | 
@@ -1163,6 +1161,7 @@ def stream_updates(request):
                         "status": batch.status,
                         "status_display": batch.get_status_display(),
                         "report_url": batch.report_file.url if batch.report_file else None,
+                        "error_message": batch.error_message,
                     }
                     has_updates = True
 
