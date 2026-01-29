@@ -8,14 +8,16 @@ import sys
 import os
 import math
 import requests
-from datetime import date
+import time
+from datetime import date, timedelta
 
 from django.db.models import Q, Count
+from django.utils import timezone
 from django.urls import reverse
 from django.conf import settings
 from django.contrib import messages
 from django.utils.http import http_date
-from django.http import HttpResponseNotAllowed, FileResponse, HttpResponse, Http404, JsonResponse
+from django.http import HttpResponseNotAllowed, FileResponse, HttpResponse, Http404, JsonResponse, StreamingHttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -154,7 +156,7 @@ def _normalize_valid_id_for_lookup(v):
 def upload_file(request):
     print("DEBUG: entered upload_file view", flush=True)
     if request.method != "POST":
-        return render(request, "beetles/upload.html")
+        return redirect("my_uploads")
 
     # --- DEBUGGING LOGS  ---
     print(f"DEBUG: POST keys: {list(request.POST.keys())}", flush=True)
@@ -169,7 +171,7 @@ def upload_file(request):
 
     if not csv_file or not zipf:
         messages.error(request, "Please attach both a .csv metadata file and a .zip of images.")
-        return redirect("upload")
+        return redirect("my_uploads")
 
     # --- allowlist + size guard ---
     ext_x = os.path.splitext(csv_file.name)[1].lower()
@@ -177,32 +179,31 @@ def upload_file(request):
 
     if ext_x != ".csv":
         messages.error(request, "The metadata file must be a .csv.")
-        return redirect("upload")
+        return redirect("my_uploads")
     if ext_z != ".zip":
         messages.error(request, "The images archive must be a .zip.")
-        return redirect("upload")
+        return redirect("my_uploads")
 
     CSV_MAX = getattr(settings, "MAX_UPLOAD_SIZE_CSV", 10 * 1024 * 1024)        # 10 MB
     ZIP_MAX  = getattr(settings, "MAX_UPLOAD_SIZE_ZIP",  1024 * 1024 * 1024)      # 1 GB
 
     if csv_file.size and csv_file.size > CSV_MAX:
         messages.error(request, f"Metadata .csv is too large (> {CSV_MAX // (1024*1024)} MB).")
-        return redirect("upload")
+        return redirect("my_uploads")
 
     if zipf.size and zipf.size > ZIP_MAX:
         messages.error(request, f"Images .zip is too large (> {ZIP_MAX // (1024*1024)} MB).")
-        return redirect("upload")
-
+        return redirect("my_uploads")
     # --- Quick check that ZIP is valid and contains at least one entry ---
     try:
         with zipfile.ZipFile(zipf) as z:
             names = z.namelist()
             if not names:
                 messages.error(request, "The images ZIP is empty.")
-                return redirect("upload")
+                return redirect("my_uploads")
     except zipfile.BadZipFile:
         messages.error(request, "The images ZIP is corrupt or not a valid ZIP.")
-        return redirect("upload")
+        return redirect("my_uploads")
 
     # Reset pointer
     try:
@@ -233,7 +234,7 @@ def upload_file(request):
     if pd is None:
         print("DEBUG: pd is None; returning early (no worker spawned)", flush=True)
         messages.warning(request, "Uploaded. Note: server missing pandas; skipping quick XLSX checks.")
-        return redirect("upload")
+        return redirect("my_upload")
 
     errors = []
     try:
@@ -242,7 +243,7 @@ def upload_file(request):
     except Exception as e:
         batch.mark_rejected_and_move(f"Cannot open CSV: {e}")
         messages.error(request, "Upload rejected: cannot open CSV.")
-        return redirect("upload")
+        return redirect("my_upload")
 
     # Required headers
     missing = REQUIRED_COLS - set(df.columns)
@@ -259,15 +260,15 @@ def upload_file(request):
         reason = "; ".join(map(str, errors))[:2000]
         batch.mark_rejected_and_move(reason)
         messages.error(request, "Upload rejected: " + reason)
-        return redirect("upload")
+        return redirect("my_upload")
 
     # Pass preflight; full validator will hash images, check 1:1 mapping, etc.
     # Kick off background processing for this batch (validate + import)
     process_upload_task.delay(batch.id)
     print(f"Queued process_single_upload for batch {batch.id}", flush=True)
 
-    messages.success(request, "Files received and passed quick checks. Track upload status on My Files page under My Uploads. You may leave this page.")
-    return redirect("upload")
+    messages.success(request, "Files received. Track the upload status below in the Activity Logs.")
+    return redirect("my_uploads")
 
 def gallery(request):
     from .utils import build_query_q, filter_beetles_queryset, FILTERS_CONFIG
@@ -539,6 +540,12 @@ def beetle_detail(request, beetle_id):
 
 
 def signup(request):
+    # --- Security Check: Block non-staff users ---
+    if not request.user.is_staff:
+        messages.error(request, "Please email Jiri Hulcr at hulcr@ufl.edu to request an account.")
+        return redirect("beetles_home")
+    # ---------------------------------------------
+    
     if request.method == "POST":
         form = TailwindUserCreationForm(request.POST)
         if form.is_valid():
@@ -550,8 +557,8 @@ def signup(request):
                 user.save(update_fields=["email"])
             
             # Do not log them in automatically; send them to login page with a message
-            messages.success(request, "Username created successfully. Please log in.")
-            return redirect("login")
+            messages.success(request, "Username created successfully.")
+            return redirect("signup")
     else:
         form = TailwindUserCreationForm()
     return render(request, "accounts/signup.html", {"form": form})
@@ -673,7 +680,7 @@ def start_batch_download(request):
 
 
     build_downloads_task.delay(job.id)
-    messages.success(request, "Download started. Track progress in My Files.")
+    messages.success(request, "Download started. Track progress below in the Activity Logs.")
     return redirect("my_uploads")
     
 
@@ -856,22 +863,22 @@ def update_upload(request):
     Creates an UpdateBatch in 'staging'. Full validation/diff/apply comes next steps.
     """
     if request.method != "POST":
-        return render(request, "beetles/update_upload.html")
+        return redirect("my_uploads")
 
     csv_file = request.FILES.get("csv_file") or request.FILES.get("csv")
     if not csv_file:
         messages.error(request, "Please attach a .csv file.")
-        return redirect("update_upload")
+        return redirect("my_uploads")
 
     ext = os.path.splitext(csv_file.name)[1].lower()
     if ext != ".csv":
         messages.error(request, "The update file must be a .csv.")
-        return redirect("update_upload")
+        return redirect("my_uploads")
 
     CSV_MAX = getattr(settings, "MAX_UPLOAD_SIZE_CSV", 10 * 1024 * 1024)  # 10 MB default
     if csv_file.size and csv_file.size > CSV_MAX:
         messages.error(request, f"Update .csv is too large (> {CSV_MAX // (1024*1024)} MB).")
-        return redirect("update_upload")
+        return redirect("my_uploads")
 
     # Create the UpdateBatch row so we have an ID + on-disk path
     batch = UpdateBatch.objects.create(
@@ -891,7 +898,7 @@ def update_upload(request):
     # Quick preflight with pandas (header checks only)
     if pd is None:
         messages.warning(request, "File received. Note: server missing pandas; skipping quick checks.")
-        return redirect("update_upload")
+        return redirect("my_uploads")
 
     errors = []
     try:
@@ -901,7 +908,7 @@ def update_upload(request):
     except Exception as e:
         batch.mark_rejected_and_move(f"Cannot open CSV: {e}")
         messages.error(request, "Update rejected: cannot open CSV.")
-        return redirect("update_upload")
+        return redirect("my_uploads")
 
     # Header contract: exact match = required set + optional 'update_notes'; no extras, no missing.
     cols = set(df.columns)
@@ -932,16 +939,15 @@ def update_upload(request):
         reason = "; ".join(map(str, errors))[:2000]
         batch.mark_rejected_and_move(reason)
         messages.error(request, "Update rejected: " + reason)
-        return redirect("update_upload")
+        return redirect("my_uploads")
 
     # -- Starting background validate+apply for this update batch --
     process_update_task.delay(batch.id)
 
     messages.success(
         request,
-        "Update file received and passed quick checks. "
-        "Full validation and apply will now run in the background; "
-        "you can track status on My Files → My Updates."
+            "Update file received. Full validation will run in the background; "
+            "track the status below in the Activity Logs."
     )
     # Send them where they can see the batch status
     return redirect("my_uploads")
@@ -1039,7 +1045,7 @@ def _run_update_batch(request, row_data, filename):
     process_update_task.delay(batch.id)
 
 
-@login_required
+# @login_required
 def tool_classify(request):
     """
     Proxies image upload to Modal GPU API.
@@ -1085,3 +1091,86 @@ def tool_classify(request):
 
     # GET request: Render the page
     return render(request, 'beetles/tool_classify.html', {})
+
+@login_required
+def stream_updates(request):
+    """
+    Server-Sent Events (SSE) stream.
+    Optimized to only fetch active jobs + those that finished in the last 10 seconds.
+    """
+    def event_stream():
+        # 1. Define final states
+        # Matches models choices for UploadBatch, UpdateBatch, and DownloadJob
+        FINAL_STATES = {
+            'imported', 'rejected', 'import_failed', 
+            'applied', 'apply_failed', 
+            'ready', 'failed', 'expired'
+        }
+
+        while True:
+            data = {}
+            has_updates = False
+
+            # 2. Define "Recently" 
+            # Keep fetching finished jobs for 10s so the UI has time to update to Green/Red.
+            now = timezone.now()
+            recent_cutoff = now - timedelta(seconds=10)
+
+            # --- A. DOWNLOAD JOBS ---
+            # Logic: Fetch if (Status is NOT Final) OR (Finished recently)
+            downloads = DownloadJob.objects.filter(requested_by=request.user).filter(
+                ~Q(status__in=FINAL_STATES) | 
+                Q(finished_at__gte=recent_cutoff)
+            ).order_by('-created_at')
+
+            for job in downloads:
+                data[f"download_{job.id}"] = {
+                    "status": job.status,
+                    "status_display": job.get_status_display(),
+                    "csv_url": job.csv_file.url if job.csv_file else None,
+                    "zip_url": job.zip_file.url if job.zip_file else None,
+                    "error_message": job.error_message,
+                }
+                has_updates = True
+
+            # --- B. UPLOAD BATCHES ---
+            # Logic: Fetch if (Status is NOT Final) OR (Updated recently)
+            uploads = UploadBatch.objects.filter(uploaded_by=request.user).filter(
+                ~Q(status__in=FINAL_STATES) | 
+                Q(updated_at__gte=recent_cutoff)
+            ).order_by('-created_at')
+
+            for batch in uploads:
+                data[f"upload_{batch.id}"] = {
+                    "status": batch.status,
+                    "status_display": batch.get_status_display(),
+                    "error_log_url": batch.error_report_file.url if batch.error_report_file else None,
+                    "error_message": batch.error_message,
+                }
+                has_updates = True
+
+            # --- C. UPDATE BATCHES ---
+            if request.user.is_staff:
+                updates = UpdateBatch.objects.filter(uploaded_by=request.user).filter(
+                    ~Q(status__in=FINAL_STATES) | 
+                    Q(updated_at__gte=recent_cutoff)
+                ).order_by('-created_at')
+
+                for batch in updates:
+                    data[f"update_{batch.id}"] = {
+                        "status": batch.status,
+                        "status_display": batch.get_status_display(),
+                        "report_url": batch.report_file.url if batch.report_file else None,
+                        "error_message": batch.error_message,
+                    }
+                    has_updates = True
+
+            if has_updates:
+                yield f"data: {json.dumps(data)}\n\n"
+
+            time.sleep(3)
+
+    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'
+    return response

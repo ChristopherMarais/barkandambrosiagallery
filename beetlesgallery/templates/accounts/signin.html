@@ -7,6 +7,11 @@
 
     <div class="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
       <div class="w-full p-4 sm:p-12.5">
+        <p class="mb-6 block font-medium text-black">
+          Please email Jiri Hulcr at 
+          <a href="mailto:hulcr@ufl.edu" class="font-bold underline hover:text-blue-900">hulcr@ufl.edu</a> 
+          to request an account.
+        </p>
         <form method="POST" action="{% url 'login' %}">
           {% csrf_token %}
 
@@ -40,14 +45,7 @@
             <input type="submit" value="Sign In" class="w-full cursor-pointer rounded-lg border border-gray-900 bg-white p-4
                           font-medium text-black transition hover:bg-gray-50" />
           </div>
-
-          <div class="mt-6 text-center">
-            <p class="font-medium">
-              Don't have an account?
-              <a href="{% url 'signup' %}" class="text-gray-600 underline hover:text-gray-900">Sign up</a>
-            </p>
-          </div>
-
+          
         </form>
       </div>
     </div>
