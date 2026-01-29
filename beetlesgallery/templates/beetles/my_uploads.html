@@ -41,10 +41,6 @@
 
     <div class="mb-8 border-b border-gray-200 pb-4">
       <h2 class="text-2xl font-bold mb-2 text-gray-800">Activity Logs</h2>
-      <p class="text-sm text-gray-600">
-            <span class="font-semibold">About IDs:</span>
-            <span class="ml-1">“<span class="font-medium">Record ID</span>” uniquely identifies a single Beetles entry. “<span class="font-medium">Upload/Update ID</span>” refers to batch operations.</span>
-      </p>
     </div>
 
     <div class="space-y-12">
@@ -53,7 +49,7 @@
         <div>
           <h3 class="text-xl font-semibold mb-3 text-gray-800">My Downloads</h3>
           <p class="text-sm text-gray-500 mb-4">
-            Exports you requested. Ready files are removed after the retention period.
+            NOTE: Files are downloadable for 14 days after creation.
           </p>
 
           <div class="rounded-lg border border-gray-200 bg-white overflow-x-auto">
@@ -102,7 +98,7 @@
                             Expired
                           </span>
                         {% else %}
-                          <span class="inline-flex items-center rounded-full bg-grey-100 px-2 py-0.5 text-xs font-medium text-grey-800 animate-pulse">
+                          <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800 animate-pulse">
                             {{ job.get_status_display }}
                           </span>
                         {% endif %}
@@ -112,13 +108,13 @@
                         {% if job.status == 'ready' %}
                           <div class="flex items-center gap-2">
                             {% if job.csv_file %}
-                              <a href="{{ job.csv_file.url }}" class="text-xs font-bold text-gray-600 hover:text-grey-600 hover:underline mr-1">
+                              <a href="{{ job.csv_file.url }}" class="text-xs font-bold text-gray-600 hover:text-gray-600 hover:underline mr-1">
                                 Metadata.csv
                               </a>
                             {% endif %}
                             
                             {% if job.zip_file %}
-                              <a href="{{ job.zip_file.url }}" class="text-xs font-bold text-grey-600 hover:text-grey-600 hover:underline">
+                              <a href="{{ job.zip_file.url }}" class="text-xs font-bold text-gray-600 hover:text-gray-600 hover:underline">
                                 Images.zip
                               </a>
                             {% endif %}
@@ -132,7 +128,7 @@
 
                       <td class="px-4 py-3 whitespace-nowrap">
                         <button onclick="copyToClipboard('{{ job.id }}', this)" 
-                          class="text-xs font-bold text-gray-500 bg-white border border-gray-200 px-2 py-1 rounded shadow-sm hover:bg-gray-50 hover:text-grey-600 hover:border-grey-200 transition">
+                          class="text-xs font-bold text-gray-500 bg-white border border-gray-200 px-2 py-1 rounded shadow-sm hover:bg-gray-50 hover:text-gray-600 hover:border-gray-200 transition">
                           Copy ID
                         </button>
                       </td>
@@ -158,7 +154,6 @@
             <div class="border-t border-gray-200 mb-8"></div>
             
             <h3 class="text-xl font-semibold mb-3 text-gray-800">My Uploads</h3>
-            <p class="text-sm text-gray-500 mb-4">Metadata + image uploads (new entries).</p>
 
             <div class="rounded-lg border border-gray-200 bg-white overflow-x-auto">
             <table class="w-full text-sm text-left">
@@ -180,7 +175,7 @@
                         {% if b.status == "imported" %}
                             <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Imported</span>
                         {% elif b.status == "validated" %}
-                            <span class="inline-flex items-center rounded-full bg-grey-100 px-2 py-0.5 text-xs font-medium text-grey-800">Validated</span>
+                            <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">Validated</span>
                         {% elif b.status == "rejected" or b.status == "import_failed" %}
                             <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Error</span>
                             {% if b.error_report_file %}
@@ -193,7 +188,7 @@
                     
                     <td class="px-4 py-3 whitespace-nowrap">
                       <button onclick="copyToClipboard('{{ b.id }}', this)" 
-                        class="text-xs font-bold text-gray-500 bg-white border border-gray-200 px-2 py-1 rounded shadow-sm hover:bg-gray-50 hover:text-grey-600 hover:border-grey-200 transition">
+                        class="text-xs font-bold text-gray-500 bg-white border border-gray-200 px-2 py-1 rounded shadow-sm hover:bg-gray-50 hover:text-gray-600 hover:border-gray-200 transition">
                         Copy ID
                       </button>
                     </td>
@@ -211,8 +206,6 @@
             <div class="border-t border-gray-200 mb-8"></div>
 
             <h3 class="text-xl font-semibold mb-3 text-gray-800">My Updates</h3>
-            <p class="text-sm text-gray-500 mb-4">Metadata updates to existing records.</p>
-
             <div class="rounded-lg border border-gray-200 bg-white overflow-x-auto">
             <table class="w-full text-sm text-left">
                 <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
@@ -234,7 +227,7 @@
                         {% if u.status == "applied" %}
                             <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Applied</span>
                         {% elif u.status == "validated" %}
-                            <span class="inline-flex items-center rounded-full bg-grey-100 px-2 py-0.5 text-xs font-medium text-grey-800">Validated</span>
+                            <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">Validated</span>
                         {% elif u.status == "rejected" or u.status == "apply_failed" %}
                             <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Failed</span>
                         {% else %}
@@ -244,13 +237,13 @@
 
                     <td class="px-4 py-3">
                         {% if u.report_file %}
-                        <button onclick="viewLog('{{ u.report_file.url }}', 'Report')" class="text-xs font-bold text-grey-600 hover:underline">View</button>
+                        <button onclick="viewLog('{{ u.report_file.url }}', 'Report')" class="text-xs font-bold text-gray-600 hover:underline">View</button>
                         {% else %}<span class="text-gray-300 text-xs">—</span>{% endif %}
                     </td>
 
                     <td class="px-4 py-3 whitespace-nowrap">
                       <button onclick="copyToClipboard('{{ u.id }}', this)" 
-                        class="text-xs font-bold text-gray-500 bg-white border border-gray-200 px-2 py-1 rounded shadow-sm hover:bg-gray-50 hover:text-grey-600 hover:border-grey-200 transition">
+                        class="text-xs font-bold text-gray-500 bg-white border border-gray-200 px-2 py-1 rounded shadow-sm hover:bg-gray-50 hover:text-gray-600 hover:border-gray-200 transition">
                         Copy ID
                       </button>
                     </td>
@@ -291,7 +284,7 @@
                 <p class="mb-3">Select a CSV metadata file and a ZIP file of images.</p>
                 
                 <a href="{% static 'downloads/beetles_upload_template_v2.csv' %}" 
-                   class="mb-6 w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm font-bold text-grey-600 hover:bg-grey-50 hover:border-grey-300 transition">
+                   class="mb-6 w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition">
                     <i class="fi fi-rr-download"></i>
                     <span>Download CSV Template</span>
                 </a>
@@ -358,7 +351,7 @@
                 <p class="mb-3">Upload a CSV containing Record IDs to update specific fields.</p>
                 
                 <a href="{% static 'downloads/beetles_update_template_v1.csv' %}" 
-                   class="mb-6 w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm font-bold text-grey-600 hover:bg-grey-50 hover:border-grey-300 transition">
+                   class="mb-6 w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition">
                     <i class="fi fi-rr-download"></i>
                     <span>Download CSV Template</span>
                 </a>
@@ -577,7 +570,7 @@
                   progressText.classList.remove('text-gray-400'); 
                   progressText.classList.add('text-red-600');
                   
-                  // Fix: Remove the dark grey class (bg-gray-800) and animation
+                  // Fix: Remove the dark gray class (bg-gray-800) and animation
                   progressBar.classList.remove('bg-gray-800', 'animate-pulse');
                   progressBar.classList.add('bg-red-600');
                   
@@ -664,6 +657,7 @@
       if (!el) return;
 
       let badgeClass = "bg-gray-100 text-gray-600"; // default
+      let linkClass = "text-gray-600";
       let icon = "";
 
       // Logic to match your Django template colors
@@ -674,13 +668,14 @@
           badgeClass = "bg-blue-100 text-blue-800 animate-pulse";
       } else if (['rejected', 'failed', 'import_failed', 'apply_failed'].includes(s)) {
           badgeClass = "bg-red-100 text-red-800";
+          linkClass = "text-red-600";
       }
 
       let html = `<span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeClass}">${label}</span>`;
       
       // If there is a log file (error log or report), append the link
       if (fileUrl) {
-          html += `<button onclick="viewLog('${fileUrl}', '${linkText}')" class="ml-2 text-xs text-grey-600 underline hover:no-underline">${linkText}</button>`;
+          html += `<button onclick="viewLog('${fileUrl}', '${linkText}')" class="ml-2 text-xs ${linkClass} underline hover:no-underline">${linkText}</button>`;
       }
       
       // Only update DOM if it actually changed to prevent flickering
@@ -698,8 +693,8 @@
       const actionEl = document.getElementById(`action-download-${id}`);
       if (actionEl && info.status === 'ready') {
           let linksHtml = '';
-          if (info.csv_url) linksHtml += `<a href="${info.csv_url}" class="text-xs font-bold text-gray-600 hover:text-grey-600 hover:underline mr-2">Metadata.csv</a>`;
-          if (info.zip_url) linksHtml += `<a href="${info.zip_url}" class="text-xs font-bold text-gray-600 hover:text-grey-600 hover:underline">Images.zip</a>`;
+          if (info.csv_url) linksHtml += `<a href="${info.csv_url}" class="text-xs font-bold text-gray-600 hover:text-gray-600 hover:underline mr-2">Metadata.csv</a>`;
+          if (info.zip_url) linksHtml += `<a href="${info.zip_url}" class="text-xs font-bold text-gray-600 hover:text-gray-600 hover:underline">Images.zip</a>`;
           
           if (actionEl.innerHTML !== linksHtml) {
               actionEl.innerHTML = linksHtml;
