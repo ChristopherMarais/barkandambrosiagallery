@@ -1045,7 +1045,7 @@ def _run_update_batch(request, row_data, filename):
     process_update_task.delay(batch.id)
 
 
-@login_required
+# @login_required
 def tool_classify(request):
     """
     Proxies image upload to Modal GPU API.
