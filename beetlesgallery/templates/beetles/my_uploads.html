@@ -15,13 +15,13 @@
         {# Staff Only: Upload & Update Buttons #}
         {% if request.user.is_staff %}
             <button onclick="openModal('modal-upload-new')" 
-               class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-grey-50 hover:text-grey-700 hover:border-grey-200 transition">
+               class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
                 <i class="fi fi-rr-upload"></i>
                 <span>Upload New Data</span>
             </button>
 
             <button onclick="openModal('modal-update-existing')" 
-               class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-grey-50 hover:text-grey-700 hover:border-grey-200 transition">
+               class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
                 <i class="fi fi-rr-refresh"></i>
                 <span>Update Metadata</span>
             </button>
@@ -146,7 +146,7 @@
                     </tr>
                     {% endfor %}
                   </tbody>
-              </table>
+            </table>
           </div>
         </div>
 
@@ -278,8 +278,9 @@
         {% csrf_token %}
         <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
           <div class="sm:flex sm:items-start">
-            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-grey-100 sm:mx-0 sm:h-10 sm:w-10">
-              <i class="fi fi-rr-upload text-grey-600 text-lg"></i>
+            {# --- UPDATED ICON: Dark Grey BG + White Icon --- #}
+            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gray-600 sm:mx-0 sm:h-10 sm:w-10">
+              <i class="fi fi-rr-upload text-white text-lg"></i>
             </div>
             <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
               <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Upload New Dataset</h3>
@@ -293,20 +294,24 @@
                     <span>Download CSV Template</span>
                 </a>
 
+                {# --- UPDATED FILE INPUT --- #}
                 <div class="mb-4">
                     <label class="block mb-1 font-semibold text-gray-700">Metadata (.csv)</label>
-                    <input type="file" name="csv_file" accept=".csv" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-grey-50 file:text-grey-700 hover:file:bg-grey-100"/>
+                    <input type="file" name="csv_file" accept=".csv" required 
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border file:border-gray-300 file:text-sm file:font-bold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-black transition"/>
                 </div>
 
+                {# --- UPDATED FILE INPUT --- #}
                 <div class="mb-2">
                     <label class="block mb-1 font-semibold text-gray-700">Images (.zip)</label>
-                    <input type="file" name="zip" accept=".zip" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-grey-50 file:text-grey-700 hover:file:bg-grey-100"/>
+                    <input type="file" name="zip" accept=".zip" required 
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border file:border-gray-300 file:text-sm file:font-bold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-black transition"/>
                 </div>
 
-                {# --- Progress Bar Area (Initially Hidden) --- #}
+                {# --- UPDATED PROGRESS BAR: Slim, Borderless --- #}
                 <div id="progress-container-new" class="hidden mt-4">
-                  <div class="w-full bg-white border border-gray-300 rounded-full h-2.5">
-                    <div id="progress-bar-new" class="bg-gray-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div id="progress-bar-new" class="bg-gray-600 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
                   </div>
                   <p id="progress-text-new" class="text-sm text-gray-500 mt-2 text-center">Starting upload...</p>
                 </div>
@@ -338,8 +343,9 @@
         {% csrf_token %}
         <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
           <div class="sm:flex sm:items-start">
-            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-grey-100 sm:mx-0 sm:h-10 sm:w-10">
-              <i class="fi fi-rr-refresh text-grey-600 text-lg"></i>
+            {# --- UPDATED ICON --- #}
+            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gray-600 sm:mx-0 sm:h-10 sm:w-10">
+              <i class="fi fi-rr-refresh text-white text-lg"></i>
             </div>
             <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
               <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title-update">Update Metadata</h3>
@@ -353,15 +359,17 @@
                     <span>Download CSV Template</span>
                 </a>
 
+                {# --- UPDATED FILE INPUT --- #}
                 <div class="mb-4">
                     <label class="block mb-1 font-semibold text-gray-700">Update File (.csv)</label>
-                    <input type="file" name="csv_file" accept=".csv" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-grey-50 file:text-grey-700 hover:file:bg-grey-100"/>
+                    <input type="file" name="csv_file" accept=".csv" required 
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border file:border-gray-300 file:text-sm file:font-bold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-black transition"/>
                 </div>
 
-                {# --- Progress Bar Area (Initially Hidden) --- #}
+                {# --- UPDATED PROGRESS BAR --- #}
                 <div id="progress-container-update" class="hidden mt-4">
-                  <div class="w-full bg-white border border-gray-300 rounded-full h-2.5">
-                    <div id="progress-bar-update" class="bg-gray-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div id="progress-bar-update" class="bg-gray-600 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
                   </div>
                   <p id="progress-text-update" class="text-sm text-gray-500 mt-2 text-center">Starting update...</p>
                 </div>
