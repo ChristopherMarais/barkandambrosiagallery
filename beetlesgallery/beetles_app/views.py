@@ -542,7 +542,7 @@ def beetle_detail(request, beetle_id):
 def signup(request):
     # --- Security Check: Block non-staff users ---
     if not request.user.is_staff:
-        messages.error(request, "Account creation is restricted. Please email Jiri Hulcr at hulcr@ufl.edu to request an account.")
+        messages.error(request, "Please email Jiri Hulcr at hulcr@ufl.edu to request an account.")
         return redirect("beetles_home")
     # ---------------------------------------------
     
