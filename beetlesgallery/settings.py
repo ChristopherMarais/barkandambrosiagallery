@@ -133,10 +133,13 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Enable WhiteNoise's compression and caching:
+# Check if we are in production (Debug is False)
+IS_PRODUCTION = os.environ.get('DJANGO_DEBUG', 'False') == 'False'
+
 STORAGES = {
     "default": {
-        "BACKEND": "beetlesgallery.custom_storage.WindowsDockerStorage",
+        # In PROD, use standard storage. LOCALLY, use the Windows fix.
+        "BACKEND": "django.core.files.storage.FileSystemStorage" if IS_PRODUCTION else "beetlesgallery.custom_storage.WindowsDockerStorage",
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
