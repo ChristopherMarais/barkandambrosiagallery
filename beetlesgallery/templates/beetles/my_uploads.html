@@ -108,14 +108,16 @@
                         {% if job.status == 'ready' %}
                           <div class="flex items-center gap-2">
                             {% if job.csv_file %}
-                              <a href="{{ job.csv_file.url }}" class="text-xs font-bold text-gray-600 hover:text-gray-600 hover:underline mr-1">
-                                Metadata.csv
+                              <a href="{{ job.csv_file.url }}" class="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-200 transition" title="Download Metadata">
+                                <i class="fi fi-rr-download"></i>
+                                Metadata
                               </a>
                             {% endif %}
                             
                             {% if job.zip_file %}
-                              <a href="{{ job.zip_file.url }}" class="text-xs font-bold text-gray-600 hover:text-gray-600 hover:underline">
-                                Images.zip
+                              <a href="{{ job.zip_file.url }}" class="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-200 transition" title="Download Images">
+                                <i class="fi fi-rr-download"></i>
+                                Images
                               </a>
                             {% endif %}
                           </div>
@@ -684,17 +686,27 @@
       }
   }
 
-  // Helper specifically for Downloads (because it needs to update the Action links column too)
+  // Helper specifically for Downloads
   function updateDownloadRow(id, info) {
       // 1. Update Status Badge
       updateStatusCell(`status-download-${id}`, info.status, info.status_display);
 
-      // 2. Update Download Links (CSV / ZIP)
+      // 2. Update Download Links (Pills)
       const actionEl = document.getElementById(`action-download-${id}`);
       if (actionEl && info.status === 'ready') {
-          let linksHtml = '';
-          if (info.csv_url) linksHtml += `<a href="${info.csv_url}" class="text-xs font-bold text-gray-600 hover:text-gray-600 hover:underline mr-2">Metadata.csv</a>`;
-          if (info.zip_url) linksHtml += `<a href="${info.zip_url}" class="text-xs font-bold text-gray-600 hover:text-gray-600 hover:underline">Images.zip</a>`;
+          // Pill styling class
+          const pillClass = "inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-200 transition";
+          
+          let linksHtml = '<div class="flex items-center gap-2">';
+          
+          if (info.csv_url) {
+              linksHtml += `<a href="${info.csv_url}" class="${pillClass}"><i class="fi fi-rr-download"></i>Metadata</a>`;
+          }
+          if (info.zip_url) {
+              linksHtml += `<a href="${info.zip_url}" class="${pillClass}"><i class="fi fi-rr-download"></i>Images</a>`;
+          }
+          
+          linksHtml += '</div>';
           
           if (actionEl.innerHTML !== linksHtml) {
               actionEl.innerHTML = linksHtml;
