@@ -308,11 +308,11 @@
         <span>Download Reference</span>
       </a>
 
-      <a id="manage-btn" href="{% url 'admin_valid_species' %}"
+      <button id="upload-taxonomy-btn" onclick="openTaxonomyUploadModal()"
         class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
-        <i class="fi fi-rr-settings"></i>
-        <span>Manage Reference</span>
-      </a>
+        <i class="fi fi-rr-upload"></i>
+        <span>Upload New Reference</span>
+      </button>
     </div>
   </div>
   {% endif %}
@@ -440,6 +440,64 @@
 
           <button type="submit" id="btn-submit-update" class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:text-sm">
             Submit Update
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# --- MODAL 3: UPLOAD TAXONOMY REFERENCE --- #}
+<div id="modal-upload-taxonomy" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title-taxonomy" role="dialog" aria-modal="true">
+  <div class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity" onclick="closeModal('modal-upload-taxonomy')"></div>
+  <div class="flex min-h-screen items-center justify-center p-4 text-center">
+    <div class="relative w-full max-w-md transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all">
+      <form id="form-upload-taxonomy" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+          <div class="block">
+
+            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gray-600 mb-4">
+              <i class="fi fi-rr-upload text-white text-lg"></i>
+            </div>
+
+            <div class="mt-3 text-center w-full">
+              <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title-taxonomy">Upload Taxonomy Reference</h3>
+
+              <div class="mt-4 text-sm text-gray-500">
+                <p class="mb-3" id="taxonomy-modal-description">Select a CSV file for the taxonomy reference.</p>
+
+                <div class="mb-4 text-left">
+                    <label class="block mb-1 font-semibold text-gray-700">CSV File</label>
+                    <input type="file" name="csv_file" accept=".csv" required
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:px-5 file:py-2.5 file:rounded-full file:border file:border-solid file:border-gray-300 file:text-sm file:font-semibold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-gray-600 hover:file:border-gray-300 transition"/>
+                </div>
+
+                <div class="mb-4 text-left">
+                    <label class="block mb-1 font-semibold text-gray-700">Version Label (Optional)</label>
+                    <input type="text" name="label" placeholder="e.g., 2025-01-27 update"
+                           class="block w-full text-sm px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"/>
+                    <p class="text-xs text-gray-500 mt-1">Leave blank to use current timestamp</p>
+                </div>
+
+                <div id="progress-container-taxonomy" class="hidden mt-4">
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div id="progress-bar-taxonomy" class="bg-gray-600 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                  </div>
+                  <p id="progress-text-taxonomy" class="text-sm text-gray-500 mt-2 text-center">Starting upload...</p>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
+          <button type="button" onclick="closeModal('modal-upload-taxonomy')" class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none sm:text-sm">
+            Cancel
+          </button>
+
+          <button type="submit" id="btn-submit-taxonomy" class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:text-sm">
+            Upload Reference
           </button>
         </div>
       </form>
@@ -800,7 +858,6 @@
   const taxonomySelector = document.getElementById('taxonomy-selector');
   if (taxonomySelector) {
     const downloadBtn = document.getElementById('download-btn');
-    const manageBtn = document.getElementById('manage-btn');
     const versionLabel = document.getElementById('version-label');
     const filenamePreview = document.getElementById('filename-preview');
 
@@ -808,27 +865,26 @@
     const references = {
       valid_species: {
         download_url: "{% url 'download_taxonomy_ref' %}",
-        manage_url: "{% url 'admin_valid_species' %}",
+        upload_url: "{% url 'admin_valid_species' %}",
         version: "{{ species_ref_status.label|default:'unavailable' }}",
         filename: "taxonomy_ref_YYYY-MM-DD_HH-MM_UTC.csv"
       },
       described_names: {
         download_url: "{% url 'download_described_names_ref' %}",
-        manage_url: "{% url 'admin_described_names' %}",
+        upload_url: "{% url 'admin_described_names' %}",
         version: "{{ described_names_ref_status.label|default:'unavailable' }}",
         filename: "described_names_ref_YYYY-MM-DD_HH-MM_UTC.csv"
       }
     };
 
+    let currentSelection = 'valid_species';
+
     function updateTaxonomyReference() {
-      const selected = taxonomySelector.value;
-      const ref = references[selected];
+      currentSelection = taxonomySelector.value;
+      const ref = references[currentSelection];
 
       // Update download button
       downloadBtn.href = ref.download_url;
-
-      // Update manage button
-      manageBtn.href = ref.manage_url;
 
       // Update version info
       versionLabel.textContent = ref.version;
@@ -840,6 +896,33 @@
 
     // Initialize on page load
     updateTaxonomyReference();
+
+    // Function to open taxonomy upload modal
+    window.openTaxonomyUploadModal = function() {
+      const modal = document.getElementById('modal-upload-taxonomy');
+      const form = document.getElementById('form-upload-taxonomy');
+      const ref = references[currentSelection];
+
+      // Set form action based on current selection
+      form.action = ref.upload_url;
+
+      // Update modal title
+      const refName = currentSelection === 'valid_species' ? 'Valid Species' : 'Described Names';
+      document.getElementById('modal-title-taxonomy').textContent = `Upload ${refName} Reference`;
+      document.getElementById('taxonomy-modal-description').textContent = `Select a CSV file for the ${refName.toLowerCase()} reference.`;
+
+      // Show modal
+      openModal('modal-upload-taxonomy');
+    };
+
+    // Attach upload handler for taxonomy form
+    attachUploadHandler(
+      'form-upload-taxonomy',
+      'progress-container-taxonomy',
+      'progress-bar-taxonomy',
+      'progress-text-taxonomy',
+      'btn-submit-taxonomy'
+    );
   }
 </script>
 
