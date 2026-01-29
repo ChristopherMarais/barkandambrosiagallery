@@ -59,7 +59,7 @@
       {% if related_specimens %}
         <section>
           <h2 class="text-lg font-bold text-text mb-3 text-text/80 tracking-wide">
-              More images of this specimen
+              More images of the same specimen(s)
           </h2>
           <div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
             {% for rel in related_specimens %}
@@ -308,11 +308,11 @@
               <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Notes</h3>
               <div class="space-y-2">
                   <div class="text-xs text-text/60">Image Notes</div>
-                  <div class="view-val p-2 bg-black/5 rounded text-sm min-h-[2rem]">{{ beetle.image_asset.image_notes|default:"—" }}</div>
+                  <div class="view-val p-2 bg-black/5 rounded text-sm min-h-[2rem] break-words whitespace-pre-wrap">{{ beetle.image_asset.image_notes|default:"—" }}</div>
                   <textarea name="image_notes" class="edit-input image-only hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">{{ beetle.image_asset.image_notes|default:'' }}</textarea>
                   
                   <div class="text-xs text-text/60 mt-2">Specimen Notes</div>
-                  <div class="view-val p-2 bg-black/5 rounded text-sm min-h-[2rem]">{{ beetle.specimen_notes|default:"—" }}</div>
+                  <div class="view-val p-2 bg-black/5 rounded text-sm min-h-[2rem] break-words whitespace-pre-wrap">{{ beetle.specimen_notes|default:"—" }}</div>
                   <textarea name="specimen_notes" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">{{ beetle.specimen_notes|default:'' }}</textarea>
               </div>
           </div>

@@ -1,390 +1,421 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
 <section class="relative z-0">
-  <h1 class="text-2xl sm:text-3xl font-semibold mb-8">My Files</h1>
-  <p class="text-sm text-text/70 mb-6">
-    <span class="font-semibold">About IDs:</span>
-    <span class="ml-1">“<span class="font-medium">Record ID</span>” uniquely identifies a single Beetles entry (and its
-      image). “<span class="font-medium">Upload ID</span>” refers to an upload batch, “<span class="font-medium">Update
-        ID</span>” to an update batch, and “<span class="font-medium">Job ID</span>” to a download job.</span>
-  </p>
 
+  {# --- Page Header --- #}
+  <h1 class="text-3xl sm:text-4xl font-semibold mb-8 text-gray-900">Data Management</h1>
 
-  <!--- My Uploads --->
-  {% if request.user.is_staff %}
-  <div class="mb-10">
-    <h2 class="text-xl font-semibold mb-2">My Uploads</h2>
-    <p class="text-sm text-text/70 mb-4">
-      Your metadata + image uploads (new entries only). Status progresses from
-      <span class="font-medium">Staging</span> → <span class="font-medium">Validating</span> → <span
-        class="font-medium">Validated</span> → <span class="font-medium">Imported</span> or <span
-        class="font-medium">Validation failed</span>.
-    </p>
+  {# --- SECTION 1: DATA ACTIONS --- #}
+  <div class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm">
+    <h2 class="text-2xl font-bold mb-6 text-gray-800">Data Actions</h2>
+    <div class="flex flex-wrap gap-4">
+        
+        {# Staff Only: Upload & Update Buttons #}
+        {% if request.user.is_staff %}
+            <button onclick="openModal('modal-upload-new')" 
+               class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+                <i class="fi fi-rr-upload"></i>
+                <span>Upload New Data</span>
+            </button>
 
-    <div class="rounded-xl border border-text/20 bg-primary2 overflow-x-auto">
-      <table class="w-full min-w-[1000px] md:min-w-0 text-sm">
-        <colgroup>
-          <!-- When | Filename | Status | Error | Upload ID -->
-          <col class="w-40" />
-          <col /> <!-- flexible -->
-          <col class="w-[28rem]" /> <!-- Error (wider for messages) -->
-          <col class="w-72" /> <!-- Upload ID wider -->
-        </colgroup>
+            <button onclick="openModal('modal-update-existing')" 
+               class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+                <i class="fi fi-rr-refresh"></i>
+                <span>Update Metadata</span>
+            </button>
+        {% endif %}
 
-        <thead>
-          <tr class="border-b border-text/10">
-            <th class="text-left py-2 px-3">When</th>
-            <th class="text-left px-3">Filename</th>
-            <th class="text-left px-3">Status</th>
-            <th class="text-left px-3">Upload ID</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {% for b in batches %}
-          <tr class="border-t border-gray-200">
-            <td class="py-2 px-3 whitespace-nowrap">{{ b.created_at|date:"Y-m-d H:i" }}</td>
-            <td class="px-3">{{ b.original_filename }}</td>
-
-            <!-- Report column -->
-            <td class="px-3 text-sm">
-              {# Normal / pending states #}
-              {% if b.status == "staging" %}
-              <span class="text-xs text-text/80">Awaiting validation</span>
-
-              {% elif b.status == "validating" %}
-              <span class="text-xs text-text/80">Validation in progress</span>
-
-              {% elif b.status == "validated" %}
-              <span class="text-xs text-text/80">Validated; awaiting import</span>
-
-              {% elif b.status == "imported" %}
-              <span class="text-xs px-2 py-1 rounded bg-green-50 text-green-800">
-                Import successful
-              </span>
-
-              {# Any failure: validation failed (rejected) or import failed #}
-              {% elif b.status == "rejected" or b.status == "import_failed" %}
-              {% if b.error_report_file %}
-              <div class="flex flex-col gap-1">
-                <button type="button" onclick="viewLog('{{ b.error_report_file.url }}', 'Error Log')"
-                  class="inline-flex items-center gap-1 underline hover:no-underline text-red-700 text-sm bg-transparent border-0 cursor-pointer">
-                  <i class="fi fi-rr-file text-xs"></i>
-                  <span>View Error Log</span>
-                </button>
-              </div>
-              {% else %}
-              {# This should only happen for old batches or if logging failed #}
-              <div class="text-red-700 bg-red-50 border border-red-200 rounded p-2 leading-snug">
-                <div class="text-xs font-semibold mb-1">Error log not available</div>
-                {% if b.error_message %}
-                <div class="text-xs">
-                  {{ b.error_message|truncatechars:200 }}
-                </div>
-                {% else %}
-                <div class="text-xs">
-                  A failure occurred, but no error log was generated.
-                </div>
-                {% endif %}
-              </div>
-              {% endif %}
-
-              {# Fallback for any unexpected status #}
-              {% else %}
-              <span class="text-xs text-text/60">{{ b.get_status_display }}</span>
-              {% endif %}
-            </td>
-
-            <td class="px-3 whitespace-nowrap"><code class="text-xs">{{ b.id }}</code></td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="4" class="py-4 px-3 text-gray-500">No uploads yet.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+        {# All Users: Download Link #}
+        <a href="{% url 'beetles_home' %}" 
+            class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+            <i class="fi fi-rr-search-alt"></i> 
+            <span>Browse Gallery to Download</span>
+        </a>
     </div>
   </div>
-  {% endif %}
 
+  {# --- SECTION 2: ACTIVITY LOGS --- #}
+  <div class="bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm">
 
-  {% if request.user.is_staff %}
-  <!--- My Updates --->
-  <div class="mb-10">
-    <h2 class="text-xl font-semibold mb-2">My Updates</h2>
-    <p class="text-sm text-text/70 mb-6">
-      Your submitted updates to existing Beetles rows (by <span class="font-medium">Record ID</span>). Apply is
-      all-or-nothing and requires that Name ID exists in taxonomy reference sheet.
-      Updates move through the following states:
-      <span class="font-medium">Staging</span> → <span class="font-medium">Validating</span> →
-      <span class="font-medium">Validated</span> (ready to apply) or
-      <span class="font-medium">Rejected</span>. After applying, batches become
-      <span class="font-medium">Applied</span> or <span class="font-medium">Apply failed</span>.
-    </p>
-
-    <div class="rounded-xl border border-text/20 bg-primary2 overflow-x-auto">
-      <table class="w-full min-w-[1000px] md:min-w-0 text-sm">
-        <colgroup>
-          <!-- When | Filename | Status | Counts | Taxonomy Ref | Report | Update ID -->
-          <col class="w-40" />
-          <col /> <!-- flexible -->
-          <col class="w-44" /> <!-- Status (narrower) -->
-          <col class="w-40" />
-          <col class="w-60" />
-          <col class="w-28" />
-          <col class="w-72" /> <!-- Update ID (wider) -->
-        </colgroup>
-
-        <thead>
-          <tr class="border-b border-text/10">
-            <th class="text-left py-2 px-3">When</th>
-            <th class="text-left px-3">Filename</th>
-            <th class="text-left px-3">Status</th>
-            <th class="text-left px-3">Counts</th>
-            <th class="text-left px-3">Taxonomy&nbsp;Reference&nbsp;Version</th>
-            <th class="text-left px-3">Report</th>
-            <th class="text-left px-3">Update ID</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for u in update_batches %}
-          <tr class="border-t border-gray-200">
-            <td class="py-2 px-3 whitespace-nowrap">{{ u.created_at|date:"Y-m-d H:i" }}</td>
-            <td class="px-3">{{ u.original_filename }}</td>
-
-            <td class="py-2">
-              {% if u.status == "staging" %}
-              <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs">Staging</span>
-              <div class="text-xs text-text/70 mt-1">Awaiting validation</div>
-
-              {% elif u.status == "validating" %}
-              <span class="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">Validating</span>
-              <div class="text-xs text-text/70 mt-1">Checks in progress</div>
-
-              {% elif u.status == "validated" %}
-              <span class="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs">Validated</span>
-              <div class="text-xs text-text/70 mt-1">Ready to apply</div>
-
-              {% elif u.status == "rejected" %}
-              <span class="px-2 py-0.5 rounded bg-red-100 text-red-800 text-xs">Rejected</span>
-              {% if u.error_message %}
-              <div class="text-xs text-text/70 mt-1">{{ u.error_message }}</div>
-              {% endif %}
-
-              {% elif u.status == "applied" %}
-              <span class="px-2 py-0.5 rounded bg-green-200 text-green-900 text-xs">Applied</span>
-              {% if u.applied_at %}
-              <div class="text-xs text-text/70 mt-1">Applied {{ u.applied_at|date:"Y-m-d H:i" }}</div>
-              {% endif %}
-
-              {% elif u.status == "apply_failed" %}
-              <span class="px-2 py-0.5 rounded bg-red-100 text-red-800 text-xs">Apply failed</span>
-              {% if u.error_message %}
-              <div class="text-xs text-text/70 mt-1">{{ u.error_message }}</div>
-              {% endif %}
-
-              {% else %}
-              <span class="text-xs text-text/70">{{ u.get_status_display }}</span>
-              {% endif %}
-            </td>
-
-            <td class="px-3 whitespace-nowrap">
-              <span title="matched / changed / unchanged / failed">
-                {{ u.rows_matched }} / {{ u.rows_changed }} / {{ u.rows_unchanged }} / {{ u.rows_failed }}
-              </span>
-              {% if u.rows_total %}
-              <div class="text-xs text-text/60">Total {{ u.rows_total }}</div>
-              {% endif %}
-            </td>
-
-            <td class="px-3">
-              {% if u.species_label_at_validation %}
-              <span class="text-xs text-text/80">{{ u.species_label_at_validation }}</span>
-              {% elif u.species_version_at_validation %}
-              <span class="text-xs text-text/60">{{ u.species_version_at_validation|slice:":8" }}…</span>
-              {% else %}
-              <span class="text-xs text-text/60">—</span>
-              {% endif %}
-            </td>
-
-            <td class="px-3">
-              {% if u.report_file %}
-              <button type="button" onclick="viewLog('{{ u.report_file.url }}', 'Validation Report')"
-                class="underline hover:no-underline text-sm bg-transparent border-0 cursor-pointer text-blue-700">
-                Report
-              </button>
-              {% else %}
-              <span class="text-text/60 text-xs">—</span>
-              {% endif %}
-            </td>
-
-            <td class="px-3 whitespace-nowrap">
-              <code class="text-xs">{{ u.id }}</code>
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="7" class="py-4 px-3 text-gray-500">No updates yet.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div class="mb-8 border-b border-gray-200 pb-4">
+      <h2 class="text-2xl font-bold mb-2 text-gray-800">Activity Logs</h2>
     </div>
-  </div>
-  {% endif %}
 
+    <div class="space-y-12">
 
-  <!--- My Downloads --->
-  <div>
-    <h2 class="text-xl font-semibold mb-2">My Downloads</h2>
-    <p class="text-sm text-text/70 mb-4">
-      Exports you requested. Status progresses from
-      <span class="font-medium">Pending</span>
-      → <span class="font-medium">Building</span>
-      → <span class="font-medium">Ready</span>
-      or <span class="font-medium">Failed</span>.
-      <span class="ml-1">Ready files may later become <span class="font-medium">Expired</span> after the retention
-        period.</span> The CSV and ZIP filenames include the <span class="font-medium">Record ID</span> so you can match
-      rows to images.
-    </p>
+        {# --- TABLE 1: MY DOWNLOADS --- #}
+        <div>
+          <h3 class="text-xl font-semibold mb-3 text-gray-800">My Downloads</h3>
+          <p class="text-sm text-gray-500 mb-4">
+            NOTE: Files are downloadable for 14 days after creation.
+          </p>
 
-    <div class="rounded-xl border border-text/20 bg-primary2 overflow-x-auto">
-      <table class="w-full min-w-[1000px] md:min-w-0 text-sm">
-        <colgroup>
-          <!-- When | Request | Requested | Status | Actions | Job ID -->
-          <col class="w-40" />
-          <col /> <!-- flexible -->
-          <col class="w-32" />
-          <col class="w-40" />
-          <col class="w-36" />
-          <col class="w-72" /> <!-- Job ID wider -->
-        </colgroup>
+          <div class="rounded-lg border border-gray-200 bg-white overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                  <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
+                    <tr>
+                      <th class="px-4 py-3">Date/Time</th>
+                      <th class="px-4 py-3">Request</th>
+                      <th class="px-4 py-3">Status</th>
+                      <th class="px-4 py-3">Download Files</th>
+                      <th class="px-4 py-3">Download ID</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100">
+                    {% for job in download_jobs %}
+                    <tr class="hover:bg-gray-50 transition" id="download_{{ job.id }}">
+                      
+                      <td class="px-4 py-3 whitespace-nowrap text-gray-600">
+                        {{ job.created_at|date:"M d, H:i" }}
+                      </td>
 
-        <thead>
-          <tr class="border-b border-text/10">
-            <th class="text-left py-2 px-3">When</th>
-            <th class="text-left px-3">Request</th>
-            <th class="text-left px-3">Requested</th>
-            <th class="text-left px-3">Status</th>
-            <th class="text-left px-3">Downloads</th>
-            <th class="text-left px-3">Job ID</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for j in download_jobs %}
-          <tr class="border-t border-gray-200 align-top">
-            <td class="py-2 px-3 whitespace-nowrap">{{ j.created_at|date:"Y-m-d H:i" }}</td>
+                      <td class="px-4 py-3 font-medium text-gray-800">
+                        <div class="flex flex-col gap-0.5">
+                          {% if job.selection_mode == 'ids' %}
+                            <span class="text-gray-500 text-xs font-normal">{{ job.total_requested }} Record(s)</span>
+                          {% else %}
+                            <span>Search Query</span>
+                            <span class="text-gray-500 text-xs italic font-normal">
+                              {{ job.get_readable_query|default:"All records"|truncatechars:40 }}
+                            </span>
+                          {% endif %}
+                        </div>
+                      </td>
 
-            <td class="py-2 px-3">
-              {% if j.selection_mode == "ids" %}
-              <div class="text-text">Selected IDs</div>
-              <div class="text-text/70 text-xs">
-                {{ j.get_ids|length }} IDs
-              </div>
-              {% else %}
-              <div class="text-text">All results (by query)</div>
-              <div class="text-text/70 text-xs break-all">
-                <code>{{ j.get_readable_query }}</code>
-              </div>
-              {% endif %}
-            </td>
+                      <td class="px-4 py-3" id="status-download-{{ job.id }}">
+                        {% if job.status == 'ready' %}
+                          <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                            Ready
+                          </span>
+                          {% if job.expires_at %}
+                            <div class="mt-1 text-xs text-gray-500">
+                              Expires {{ job.expires_at|date:"M d, H:i" }}
+                            </div>
+                          {% endif %}
+                        {% elif job.status == 'failed' %}
+                          <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800" title="{{ job.error_message }}">
+                            Failed
+                          </span>
+                          {% if job.error_message %}
+                            <button onclick="viewText('{{ job.error_message|escapejs }}', 'Download Error')" class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
+                          {% endif %}
+                        {% elif job.status == 'expired' %}
+                          <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                            Expired
+                          </span>
+                        {% else %}
+                          <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800 animate-pulse">
+                            {{ job.get_status_display }}
+                          </span>
+                        {% endif %}
+                      </td>
 
-            <td class="py-2 px-3">
-              {% if j.selection_mode == "ids" %}
-              {{ j.total_requested }}
-              {% else %}
-              {{ j.total_requested }} (estimated)
-              {% endif %}
-            </td>
+                      <td class="px-4 py-3" id="action-download-{{ job.id }}">
+                        {% if job.status == 'ready' %}
+                          <div class="flex items-center gap-2">
+                            {% if job.csv_file %}
+                              <a href="{{ job.csv_file.url }}" class="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-200 transition" title="Download Metadata">
+                                <i class="fi fi-rr-download"></i>
+                                Metadata
+                              </a>
+                            {% endif %}
+                            
+                            {% if job.zip_file %}
+                              <a href="{{ job.zip_file.url }}" class="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-200 transition" title="Download Images">
+                                <i class="fi fi-rr-download"></i>
+                                Images
+                              </a>
+                            {% endif %}
+                          </div>
+                        {% elif job.status == 'expired' %}
+                          <span class="text-xs text-gray-400">Files removed</span>
+                        {% else %}
+                           <span class="text-gray-300 text-xs">—</span>
+                        {% endif %}
+                      </td>
 
-            <td class="py-2 px-3">
-              {% if j.status == "ready" %}
-              <span class="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs">Ready</span>
-              {% if j.expires_at %}
-              <div class="text-xs text-text/70 mt-1">
-                Expires {{ j.expires_at|date:"Y-m-d H:i" }}
-              </div>
-              {% endif %}
-              {% elif j.status == "building" %}
-              <span class="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">Building</span>
-              {% elif j.status == "pending" %}
-              <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs">Pending</span>
-              {% elif j.status == "failed" %}
-              <span class="px-2 py-0.5 rounded bg-red-100 text-red-800 text-xs">Failed</span>
-              {% if j.error_message %}
-              <div class="text-xs text-text/70 mt-1">{{ j.error_message }}</div>
-              {% endif %}
-              {% elif j.status == "expired" %}
-              <span class="px-2 py-0.5 rounded bg-gray-200 text-gray-700 text-xs">Expired</span>
-              <div class="text-xs text-text/70 mt-1">Files removed after retention period.</div>
-              {% else %}
-              <span class="text-xs text-text/70">{{ j.get_status_display }}</span>
-              {% endif %}
-            </td>
+                      {# --- UPDATED ID COLUMN --- #}
+                      <td class="px-4 py-3 whitespace-nowrap">
+                        <div class="flex items-center gap-2">
+                            <span class="font-mono text-xs text-gray-500 select-all">{{ job.id|stringformat:"s" }}</span>
+                            <button type="button" class="copy-uuid shrink-0 text-gray-400 hover:text-gray-800 transition" data-uuid="{{ job.id }}" title="Copy Download ID">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            </button>
+                        </div>
+                      </td>
 
-            <td class="py-2 px-3 space-x-2 whitespace-nowrap">
-              {% if j.csv_file %}
-              <a href="{{ j.csv_file.url }}" class="underline hover:no-underline">Metadata.csv</a>
-              {% endif %}
-              {% if j.zip_file %}
-              <a href="{{ j.zip_file.url }}" class="underline hover:no-underline">Images.zip</a>
-              {% endif %}
-              {% if not j.csv_file and not j.zip_file %}
-              <span class="text-text/60 text-xs">No files yet</span>
-              {% endif %}
-            </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                      <td colspan="5" class="px-4 py-6 text-center text-gray-500 italic">
+                        No downloads requested yet.
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+            </table>
+          </div>
+        </div>
 
-            <td class="py-2 px-3 whitespace-nowrap"><code class="text-xs">{{ j.id }}</code></td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="6" class="py-4 px-3 text-gray-500">No downloads yet.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+        {# --- STAFF TABLES (Uploads & Updates) --- #}
+        {% if request.user.is_staff %}
+        
+        {# TABLE 2: MY UPLOADS #}
+        <div>
+            <div class="border-t border-gray-200 mb-8"></div>
+            
+            <h3 class="text-xl font-semibold mb-3 text-gray-800">My Uploads</h3>
+
+            <div class="rounded-lg border border-gray-200 bg-white overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
+                <tr>
+                    <th class="px-4 py-3">Date/Time</th>
+                    <th class="px-4 py-3">Filename</th>
+                    <th class="px-4 py-3">Status</th>
+                    <th class="px-4 py-3">Upload ID</th>
+                </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                {% for b in batches %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-4 py-3 whitespace-nowrap text-gray-600">{{ b.created_at|date:"M d, H:i" }}</td>
+                    <td class="px-4 py-3 font-medium text-gray-800 break-all max-w-[200px]">{{ b.original_filename }}</td>
+                    
+                    <td class="px-4 py-3" id="status-upload-{{ b.id }}">
+                        {% if b.status == "imported" %}
+                            <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Imported</span>
+                        {% elif b.status == "validated" %}
+                            <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">Validated</span>
+                        {% elif b.status == "rejected" or b.status == "import_failed" %}
+                            <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">{{ b.get_status_display }}</span>
+                            {% if b.error_report_file %}
+                            <button onclick="viewLog('{{ b.error_report_file.url }}', 'Details')" class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-xs text-gray-500">{{ b.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    
+                    {# --- UPDATED ID COLUMN --- #}
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <div class="flex items-center gap-2">
+                            <span class="font-mono text-xs text-gray-500 select-all">{{ b.id|stringformat:"s" }}</span>
+                            <button type="button" class="copy-uuid shrink-0 text-gray-400 hover:text-gray-800 transition" data-uuid="{{ b.id }}" title="Copy Upload ID">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="px-4 py-6 text-center text-gray-500 italic">No uploads found.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </div>
+
+        {# TABLE 3: MY UPDATES #}
+        <div>
+            <div class="border-t border-gray-200 mb-8"></div>
+
+            <h3 class="text-xl font-semibold mb-3 text-gray-800">My Updates</h3>
+            <div class="rounded-lg border border-gray-200 bg-white overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
+                <tr>
+                    <th class="px-4 py-3">Date/Time</th>
+                    <th class="px-4 py-3">Filename</th>
+                    <th class="px-4 py-3">Status</th>
+                    <th class="px-4 py-3">Update ID</th>
+                </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                {% for u in update_batches %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-4 py-3 whitespace-nowrap text-gray-600">{{ u.created_at|date:"M d, H:i" }}</td>
+                    <td class="px-4 py-3 font-medium text-gray-800 break-all max-w-[200px]">{{ u.original_filename }}</td>
+                    
+                    <td class="px-4 py-3" id="status-update-{{ u.id }}">
+                        {% if u.status == "applied" %}
+                            <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Applied</span>
+                        {% elif u.status == "validated" %}
+                            <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">Validated</span>
+                        {% elif u.status == "rejected" or u.status == "apply_failed" %}
+                            <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">{{ u.get_status_display }}</span>
+                            {% if u.report_file %}
+                                <button onclick="viewLog('{{ u.report_file.url }}', 'Details')" class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
+                            {% elif u.error_message %}
+                                <button onclick="viewText('{{ u.error_message|escapejs }}', 'Details')" class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-xs text-gray-500">{{ u.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <div class="flex items-center gap-2">
+                            <span class="font-mono text-xs text-gray-500 select-all">{{ u.id|stringformat:"s" }}</span>
+                            <button type="button" class="copy-uuid shrink-0 text-gray-400 hover:text-gray-800 transition" data-uuid="{{ u.id }}" title="Copy Update ID">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="px-4 py-6 text-center text-gray-500 italic">No updates found.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </div>
+        {% endif %}
+
     </div>
   </div>
 </section>
 
-<div id="error-modal"
-  class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-  <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden">
+{# --- MODAL 1: UPLOAD NEW DATA --- #}
+<div id="modal-upload-new" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+  <div class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity" onclick="closeModal('modal-upload-new')"></div>
+  <div class="flex min-h-screen items-center justify-center p-4 text-center">
+    <div class="relative w-full max-w-md transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all">
+      {# Added ID to form for JS targeting #}
+      <form id="form-upload-new" action="{% url 'upload' %}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+          <div class="block">
+            
+            {# --- UPDATED ICON: Centered above text --- #}
+            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gray-600 mb-4">
+              <i class="fi fi-rr-upload text-white text-lg"></i>
+            </div>
+            
+            <div class="mt-3 text-center w-full">
+              <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Upload New Dataset</h3>
+              
+              <div class="mt-4 text-sm text-gray-500">
+                <p class="mb-3">Select a CSV metadata file and a ZIP file of images.</p>
+                
+                <a href="{% static 'downloads/beetles_upload_template_v2.csv' %}" 
+                   class="mb-6 w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition">
+                    <i class="fi fi-rr-download"></i>
+                    <span>Download CSV Template</span>
+                </a>
 
-    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-red-50">
-      <h3 class="text-lg font-semibold text-red-800 flex items-center gap-2">
-        <i class="fi fi-rr-exclamation"></i> Error Log
-      </h3>
-      <button onclick="closeErrorModal()" class="text-gray-500 hover:text-gray-800 transition">
-        <i class="fi fi-rr-cross"></i>
-      </button>
-    </div>
+                <div class="mb-4 text-left">
+                    <label class="block mb-1 font-semibold text-gray-700">Metadata (.csv)</label>
+                    <input type="file" name="csv_file" accept=".csv" required 
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:px-5 file:py-2.5 file:rounded-full file:border file:border-solid file:border-gray-300 file:text-sm file:font-semibold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-gray-600 hover:file:border-gray-300 transition"/>
+                </div>
 
-    <div class="p-6 overflow-y-auto bg-gray-50">
-      <pre id="error-modal-text"
-        class="whitespace-pre-wrap break-words text-xs text-gray-700 font-mono bg-white p-4 rounded border border-gray-200 shadow-inner"
-        style="white-space: pre-wrap;">
-        Loading...
-      </pre>
-    </div>
+                {# --- UPDATED FILE INPUT --- #}
+                <div class="mb-2 text-left">
+                    <label class="block mb-1 font-semibold text-gray-700">Images (.zip)</label>
+                    <input type="file" name="zip" accept=".zip" required 
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:px-5 file:py-2.5 file:rounded-full file:border file:border-solid file:border-gray-300 file:text-sm file:font-semibold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-gray-600 hover:file:border-gray-300 transition"/>
+                </div>
 
-    <div class="px-6 py-3 border-t border-gray-200 bg-white flex justify-end">
-      <button onclick="closeErrorModal()"
-        class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium transition">
-        Close
-      </button>
+                {# --- PROGRESS BAR --- #}
+                <div id="progress-container-new" class="hidden mt-4">
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div id="progress-bar-new" class="bg-gray-600 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                  </div>
+                  <p id="progress-text-new" class="text-sm text-gray-500 mt-2 text-center">Starting upload...</p>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
+          <button type="button" onclick="closeModal('modal-upload-new')" class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none sm:text-sm">
+            Cancel
+          </button>
+
+          <button type="submit" id="btn-submit-new" class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:text-sm">
+            Submit Upload
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
 
-<div id="log-modal" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+{# --- MODAL 2: UPDATE METADATA --- #}
+<div id="modal-update-existing" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title-update" role="dialog" aria-modal="true">
+  <div class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity" onclick="closeModal('modal-update-existing')"></div>
+  <div class="flex min-h-screen items-center justify-center p-4 text-center">
+    <div class="relative w-full max-w-md transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all">
+      {# Added ID to form for JS targeting #}
+      <form id="form-update-existing" action="{% url 'update_upload' %}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+          <div class="block">
+            
+            {# --- UPDATED ICON: Centered above text --- #}
+            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gray-600 mb-4">
+              <i class="fi fi-rr-refresh text-white text-lg"></i>
+            </div>
+            
+            <div class="mt-3 text-center w-full">
+              <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title-update">Update Metadata</h3>
+              
+              <div class="mt-4 text-sm text-gray-500">
+                <p class="mb-3">Upload a CSV containing Record IDs to update specific fields.</p>
+                
+                <a href="{% static 'downloads/beetles_update_template_v1.csv' %}" 
+                   class="mb-6 w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition">
+                    <i class="fi fi-rr-download"></i>
+                    <span>Download CSV Template</span>
+                </a>
+
+                {# --- UPDATED FILE INPUT --- #}
+                <div class="mb-4 text-left">
+                    <label class="block mb-1 font-semibold text-gray-700">Update File (.csv)</label>
+                    <input type="file" name="csv_file" accept=".csv" required 
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:px-5 file:py-2.5 file:rounded-full file:border file:border-solid file:border-gray-300 file:text-sm file:font-semibold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-gray-600 hover:file:border-gray-300 transition"/>
+                </div>
+
+                {# --- PROGRESS BAR --- #}
+                <div id="progress-container-update" class="hidden mt-4">
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div id="progress-bar-update" class="bg-gray-600 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                  </div>
+                  <p id="progress-text-update" class="text-sm text-gray-500 mt-2 text-center">Starting update...</p>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
+          <button type="button" onclick="closeModal('modal-update-existing')" class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none sm:text-sm">
+            Cancel
+          </button>
+
+          <button type="submit" id="btn-submit-update" class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:text-sm">
+            Submit Update
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# --- Log Modal & Script --- #}
+<div id="log-modal" 
+     onclick="if(event.target === this) closeModal('log-modal')"
+     class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+  
   <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden">
 
     <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
       <h3 id="log-modal-title" class="text-lg font-semibold text-gray-800 flex items-center gap-2">
       </h3>
-      <button onclick="closeLogModal()" class="text-gray-500 hover:text-gray-800 transition">
+      <button onclick="closeModal('log-modal')" class="text-gray-500 hover:text-gray-800 transition">
         <i class="fi fi-rr-cross"></i>
       </button>
     </div>
@@ -398,7 +429,7 @@
     </div>
 
     <div class="px-6 py-3 border-t border-gray-200 bg-white flex justify-end">
-      <button onclick="closeLogModal()"
+      <button onclick="closeModal('log-modal')"
         class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium transition">
         Close
       </button>
@@ -407,17 +438,41 @@
 </div>
 
 <script>
+  // Modal Toggles
+  function openModal(modalId) {
+      document.getElementById(modalId).classList.remove('hidden');
+  }
+  function closeModal(modalId) {
+      document.getElementById(modalId).classList.add('hidden');
+  }
+
+  // --- 1. Log Viewer (File based) ---
   function viewLog(fileUrl, title) {
     const modal = document.getElementById('log-modal');
     const contentArea = document.getElementById('log-modal-text');
     const titleArea = document.getElementById('log-modal-title');
+    const header = modal.querySelector('div.border-b');
 
-    // 1. Set the Title and Show Modal
-    titleArea.innerHTML = `<i class="fi fi-rr-file-alt"></i> ${title}`;
+    // Reset Styles (Default to Gray)
+    header.className = "px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50";
+    titleArea.className = "text-lg font-semibold text-gray-800 flex items-center gap-2";
+
+    // Apply Red Styles if it's an Error
+    if (title.toLowerCase().includes('error')) {
+        header.className = "px-6 py-4 border-b border-red-200 flex justify-between items-center bg-red-50";
+        titleArea.className = "text-lg font-semibold text-red-800 flex items-center gap-2";
+        titleArea.innerHTML = `<i class="fi fi-rr-exclamation-triangle"></i> ${title}`;
+    } else {
+        // Normal Icon
+        titleArea.innerHTML = `<i class="fi fi-rr-file-alt"></i> ${title}`;
+    }
+
+    // Show Modal
     modal.classList.remove('hidden');
     contentArea.innerText = "Loading file...";
+    contentArea.classList.remove('text-red-600'); // Reset error text color if present
 
-    // 2. Fetch the content
+    // Fetch the content
     fetch(fileUrl)
       .then(response => {
         if (!response.ok) throw new Error("Could not load file");
@@ -432,6 +487,25 @@
       });
   }
 
+  // --- 2. Text Viewer (String based) ---
+  // MOVED OUTSIDE of viewLog
+  function viewText(content, title) {
+    const modal = document.getElementById('log-modal');
+    const contentArea = document.getElementById('log-modal-text');
+    const titleArea = document.getElementById('log-modal-title');
+    const header = modal.querySelector('div.border-b');
+
+    // Force Error Styles (Red)
+    header.className = "px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50";
+    titleArea.className = "text-lg font-semibold text-gray-800 flex items-center gap-2";
+    titleArea.innerHTML = `<i class="fi fi-rr-exclamation-triangle"></i> ${title}`;
+
+    // Show Modal & Set Text
+    modal.classList.remove('hidden');
+    contentArea.innerText = content || "No details available.";
+    contentArea.classList.remove('text-red-600'); 
+  }
+
   function closeLogModal() {
     document.getElementById('log-modal').classList.add('hidden');
   }
@@ -442,6 +516,241 @@
       closeLogModal();
     }
   });
+
+  // Updated Copy Logic with Icon Feedback
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.copy-uuid');
+    if (!btn) return;
+    e.preventDefault(); e.stopPropagation();
+    const uuid = btn.getAttribute('data-uuid');
+    try {
+      await navigator.clipboard.writeText(uuid);
+      const originalHTML = btn.innerHTML;
+      btn.innerHTML = `<svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+      setTimeout(() => { btn.innerHTML = originalHTML; }, 1500);
+    } catch (err) { console.error(err); }
+  });
+</script>
+
+<script>
+  // --- UPLOAD PROGRESS HANDLERS ---
+
+  /**
+   * Generic function to handle form submission with progress bar
+   */
+  function attachUploadHandler(formId, progressContainerId, progressBarId, progressTextId, submitBtnId) {
+      const form = document.getElementById(formId);
+      if (!form) return;
+
+      form.addEventListener('submit', function (e) {
+          e.preventDefault();
+
+          const formData = new FormData(form);
+          const fileInput = form.querySelector('input[type="file"]');
+          
+          if (!fileInput || fileInput.files.length === 0) {
+              alert("Please select a file first.");
+              return;
+          }
+
+          // UI Elements
+          const progressContainer = document.getElementById(progressContainerId);
+          const progressBar = document.getElementById(progressBarId);
+          const progressText = document.getElementById(progressTextId);
+          const submitBtn = document.getElementById(submitBtnId);
+
+          // Show Progress UI
+          progressContainer.classList.remove('hidden');
+          submitBtn.disabled = true;
+          submitBtn.innerText = "Uploading...";
+
+          // AJAX Request
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', form.action, true);
+          xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+          // Progress Event
+          xhr.upload.onprogress = function (e) {
+              if (e.lengthComputable) {
+                  const percent = Math.round((e.loaded / e.total) * 100);
+                  
+                  // Update Bar Width
+                  progressBar.style.width = percent + '%';
+                  
+                  // Update Text
+                  if (percent < 100) {
+                      progressText.innerText = `Uploading: ${percent}%`;
+                  } else {
+                      // Fix: Stay at 100% explicitly
+                      progressText.innerText = "100%";
+                      progressBar.classList.add('animate-pulse');
+                  }
+              }
+          };
+
+          // Completion Handler
+          xhr.onload = function () {
+              if (xhr.status === 200) {
+                  // Success: Reload page to show new data
+                  window.location.reload();
+              } else {
+                  // Error
+                  progressText.innerText = "Server Error: " + xhr.status;
+                  
+                  // Update text color for error
+                  progressText.classList.remove('text-gray-400'); 
+                  progressText.classList.add('text-red-600');
+                  
+                  // Fix: Remove the dark gray class (bg-gray-800) and animation
+                  progressBar.classList.remove('bg-gray-800', 'animate-pulse');
+                  progressBar.classList.add('bg-red-600');
+                  
+                  submitBtn.disabled = false;
+                  submitBtn.innerText = "Retry";
+              }
+          };
+
+          xhr.onerror = function () {
+              progressText.innerText = "Network Error";
+              progressText.classList.remove('text-gray-400');
+              progressText.classList.add('text-red-600');
+              submitBtn.disabled = false;
+              submitBtn.innerText = "Retry";
+          };
+
+          xhr.send(formData);
+      });
+  }
+
+  // Attach handlers when DOM is ready
+  document.addEventListener('DOMContentLoaded', function() {
+      // 1. New Upload Form
+      attachUploadHandler(
+          'form-upload-new', 
+          'progress-container-new', 
+          'progress-bar-new', 
+          'progress-text-new', 
+          'btn-submit-new'
+      );
+
+      // 2. Update Form
+      attachUploadHandler(
+          'form-update-existing', 
+          'progress-container-update', 
+          'progress-bar-update', 
+          'progress-text-update', 
+          'btn-submit-update'
+      );
+  });
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // 1. Connect to the stream
+    const eventSource = new EventSource("{% url 'stream_updates' %}");
+
+    eventSource.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        
+        // The data object looks like: { "download_123": {status: "ready", ...}, "upload_456": {...} }
+        for (const [key, info] of Object.entries(data)) {
+            
+            // --- HANDLE DOWNLOAD JOBS ---
+            if (key.startsWith('download_')) {
+                const id = key.replace('download_', '');
+                updateDownloadRow(id, info);
+            }
+            
+            // --- HANDLE UPLOAD BATCHES ---
+            if (key.startsWith('upload_')) {
+                const id = key.replace('upload_', '');
+                // Pass info.error_message (4th arg)
+                updateStatusCell(`status-upload-${id}`, info.status, info.status_display, info.error_log_url, info.error_message, 'Details');
+            }
+
+            // --- HANDLE UPDATE BATCHES ---
+            if (key.startsWith('update_')) {
+                const id = key.replace('update_', '');
+                // Pass info.error_message (4th arg)
+                updateStatusCell(`status-update-${id}`, info.status, info.status_display, info.report_url, info.error_message, 'Details');
+            }
+        }
+    };
+
+    eventSource.onerror = function() {
+        // If connection dies, wait 5s and reload (simple recovery)
+        eventSource.close();
+        setTimeout(() => { window.location.reload(); }, 5000);
+    };
+  });
+
+  // Helper to update the Badge color/text
+  // Now accepts errorMessage argument
+  function updateStatusCell(elementId, status, label, fileUrl, errorMessage, linkText) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+
+      let badgeClass = "bg-gray-100 text-gray-600"; // default
+      let linkClass = "text-gray-600";
+      let icon = "";
+
+      // Logic to match your Django template colors
+      const s = status.toLowerCase();
+      if (['imported', 'validated', 'applied', 'ready'].includes(s)) {
+          badgeClass = "bg-green-100 text-green-800";
+      } else if (['validating', 'building', 'staging'].includes(s)) {
+          badgeClass = "bg-blue-100 text-blue-800 animate-pulse";
+      } else if (['rejected', 'failed', 'import_failed', 'apply_failed'].includes(s)) {
+          badgeClass = "bg-red-100 text-red-800";
+          linkClass = "text-red-600";
+      }
+
+      let html = `<span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeClass}">${label}</span>`;
+      
+      // 1. Try File URL first
+      if (fileUrl) {
+          html += `<button onclick="viewLog('${fileUrl}', '${linkText}')" class="ml-2 text-xs ${linkClass} underline hover:no-underline">${linkText}</button>`;
+      } 
+      // 2. Fallback to Text Error
+      else if (errorMessage) {
+          // Escape quotes/newlines for safe inline JS
+          const safeMsg = errorMessage.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n');
+          html += `<button onclick="viewText('${safeMsg}', '${linkText}')" class="ml-2 text-xs ${linkClass} underline hover:no-underline">${linkText}</button>`;
+      }
+      
+      // Only update DOM if it actually changed to prevent flickering
+      if (el.innerHTML.trim() !== html) {
+          el.innerHTML = html;
+      }
+  }
+
+  // Helper specifically for Downloads
+  function updateDownloadRow(id, info) {
+      // 1. Update Status Badge - pass error_message
+      updateStatusCell(`status-download-${id}`, info.status, info.status_display, null, info.error_message, 'Details');
+
+      // 2. Update Download Links (Pills)
+      const actionEl = document.getElementById(`action-download-${id}`);
+      if (actionEl && info.status === 'ready') {
+          // Pill styling class
+          const pillClass = "inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-200 transition";
+          
+          let linksHtml = '<div class="flex items-center gap-2">';
+          
+          if (info.csv_url) {
+              linksHtml += `<a href="${info.csv_url}" class="${pillClass}"><i class="fi fi-rr-download"></i>Metadata</a>`;
+          }
+          if (info.zip_url) {
+              linksHtml += `<a href="${info.zip_url}" class="${pillClass}"><i class="fi fi-rr-download"></i>Images</a>`;
+          }
+          
+          linksHtml += '</div>';
+          
+          if (actionEl.innerHTML !== linksHtml) {
+              actionEl.innerHTML = linksHtml;
+          }
+      }
+  }
 </script>
 
 {% endblock %}

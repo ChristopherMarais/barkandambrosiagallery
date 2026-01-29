@@ -161,31 +161,17 @@
               <span class="font-medium text-gray-700 ml-1">AI Classifier</span>
             </a>
 
-            {% if user.is_staff %}
-            <a href="{% url 'upload' %}"
-              class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'upload' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
-              <i class="fi fi-rr-upload text-xl text-gray-700 w-8 text-center"></i>
-              <span class="font-medium text-gray-700 ml-1">Upload Data</span>
+            <a href="{% url 'my_uploads' %}"
+              class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'my_uploads' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+              <i class="fi fi-rr-folder text-xl text-gray-700 w-8 text-center"></i>
+              <span class="font-medium text-gray-700 ml-1">Data Management</span>
             </a>
-
-            <a href="{% url 'update_upload' %}"
-              class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'update_upload' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
-              <i class="fi fi-rr-refresh text-xl text-gray-700 w-8 text-center"></i>
-              <span class="font-medium text-gray-700 ml-1">Update Data</span>
-            </a>
-            {% endif %}
 
             {% if user.is_authenticated %}
             <a href="{% url 'my_account' %}"
               class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'my_account' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
               <i class="fi fi-rr-user text-xl text-gray-700 w-8 text-center"></i>
               <span class="font-medium text-gray-700 ml-1">Account</span>
-            </a>
-
-            <a href="{% url 'my_uploads' %}"
-              class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'my_uploads' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
-              <i class="fi fi-rr-folder text-xl text-gray-700 w-8 text-center"></i>
-              <span class="font-medium text-gray-700 ml-1">My Files</span>
             </a>
 
             <div class="h-px bg-gray-300 my-1 mx-2"></div>
@@ -205,12 +191,6 @@
               class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'login' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
               <i class="fi fi-rr-sign-in-alt text-xl text-gray-700 w-8 text-center"></i>
               <span class="font-medium text-gray-700 ml-1">Login</span>
-            </a>
-
-            <a href="{% url 'signup' %}"
-              class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'signup' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
-              <i class="fi fi-rr-user-add text-xl text-gray-700 w-8 text-center"></i>
-              <span class="font-medium text-gray-700 ml-1">Sign Up</span>
             </a>
             {% endif %}
 
@@ -245,23 +225,13 @@
             </span>
           </a>
 
-          {% if user.is_staff %}
-          <a href="{% url 'upload' %}"
-            class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'upload' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
-            <i class="fi fi-rr-upload text-xl text-gray-700 w-8 text-center"></i>
+          <a href="{% url 'my_uploads' %}"
+            class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'my_uploads' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+            <i class="fi fi-rr-folder text-xl text-gray-700 w-8 text-center"></i>
             <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
-              Upload Data
+              Data Management
             </span>
           </a>
-
-          <a href="{% url 'update_upload' %}"
-            class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'update_upload' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
-            <i class="fi fi-rr-refresh text-xl text-gray-700 w-8 text-center"></i>
-            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
-              Update Data
-            </span>
-          </a>
-          {% endif %}
 
           {% if user.is_authenticated %}
           <a href="{% url 'my_account' %}"
@@ -269,14 +239,6 @@
             <i class="fi fi-rr-user text-xl text-gray-700 w-8 text-center"></i>
             <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
               Account
-            </span>
-          </a>
-
-          <a href="{% url 'my_uploads' %}"
-            class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'my_uploads' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
-            <i class="fi fi-rr-folder text-xl text-gray-700 w-8 text-center"></i>
-            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
-              My Files
             </span>
           </a>
 
@@ -299,14 +261,6 @@
             <i class="fi fi-rr-sign-in-alt text-xl text-gray-700 w-8 text-center"></i>
             <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
               Sign In
-            </span>
-          </a>
-
-          <a href="{% url 'signup' %}"
-            class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'signup' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
-            <i class="fi fi-rr-user-add text-xl text-gray-700 w-8 text-center"></i>
-            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
-              Sign Up
             </span>
           </a>
           {% endif %}
