@@ -42,24 +42,48 @@ MODAL_API_URL = "https://christophermarais--ibbi-api-fastapi-app.modal.run/analy
 def my_account(request):
     user = request.user
 
+    # Default: Initialize empty forms
+    password_form = PasswordChangeFormStyled(user=user)
+    create_user_form = TailwindUserCreationForm()
+    
+    active_modal = None
+
     if request.method == "POST":
-        # Only password change is supported now
-        if "password_submit" in request.POST:
-            cform = PasswordChangeFormStyled(user=user, data=request.POST)
-            if cform.is_valid():
-                user = cform.save()
-                update_session_auth_hash(request, user)  # keep them logged in
-                messages.success(request, "Password changed.")
+        # --- CASE 1: Change Password ---
+        if "action_change_password" in request.POST:
+            password_form = PasswordChangeFormStyled(user=user, data=request.POST)
+            if password_form.is_valid():
+                user = password_form.save()
+                update_session_auth_hash(request, user)  # Keep user logged in
+                messages.success(request, "Password changed successfully.")
                 return redirect("my_account")
-        else:
-            cform = PasswordChangeFormStyled(user=user)
-    else:
-        cform = PasswordChangeFormStyled(user=user)
+            else:
+                active_modal = "modal-password"
+                messages.error(request, "Please correct the errors in the password form.")
+
+        # --- CASE 2: Create User (Staff Only) ---
+        elif "action_create_user" in request.POST:
+            if not user.is_staff:
+                messages.error(request, "You do not have permission to create users.")
+                return redirect("my_account")
+
+            create_user_form = TailwindUserCreationForm(request.POST)
+            if create_user_form.is_valid():
+                new_user = create_user_form.save()
+                messages.success(request, f"User '{new_user.username}' created successfully.")
+                return redirect("my_account")
+            else:
+                active_modal = "modal-create-user"
+                messages.error(request, "Please correct the errors in the user creation form.")
 
     return render(
         request,
         "accounts/my_account.html",
-        {"password_form": cform},
+        {
+            "password_form": password_form,
+            "create_user_form": create_user_form,
+            "active_modal": active_modal,
+        },
     )
 
 class LoginViewWithRedirectMessage(DjangoLoginView):

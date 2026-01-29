@@ -1,39 +1,160 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="relative z-0">
-  <h1 class="text-2xl sm:text-3xl font-semibold mb-8">My Account</h1>
+
+{# --- Page Header --- #}
+  <h1 class="text-3xl sm:text-4xl font-semibold mb-8 text-gray-900">Account Management</h1>
+
+  {# --- SECTION 1: ACCOUNT ACTIONS --- #}
+  <div class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm">
+    <h2 class="text-2xl font-bold mb-6 text-gray-800">Account Actions</h2>
+    <div class="flex flex-wrap gap-4">
+        
+        {# Action 1: Change Password (All Users) #}
+        <button onclick="openModal('modal-password')" 
+           class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+            <i class="fi fi-rr-lock"></i>
+            <span>Change Password</span>
+        </button>
+
+        {# Action 2: Create User (Staff Only) #}
+        {% if request.user.is_staff %}
+            <button onclick="openModal('modal-create-user')" 
+               class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+                <i class="fi fi-rr-user-add"></i>
+                <span>Create New User</span>
+            </button>
+        {% endif %}
+
+    </div>
+  </div>
+
+  {# --- SECTION 2: Placeholder for User List (Future) --- #}
+
 </section>
 
-<main>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10 space-y-8">
+{# --- MODAL 1: CHANGE PASSWORD --- #}
+<div id="modal-password" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title-pw" role="dialog" aria-modal="true">
+  <div class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity" onclick="closeModal('modal-password')"></div>
+  <div class="flex min-h-screen items-center justify-center p-4 text-center">
+    <div class="relative w-full max-w-md transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all">
+      
+      <form action="" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action_change_password" value="1">
+        
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+          <div class="block">
+            {# Icon #}
+            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gray-600 mb-4">
+              <i class="fi fi-rr-lock text-white text-lg"></i>
+            </div>
+            
+            <div class="mt-3 text-center w-full">
+              <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title-pw">Change Password</h3>
+              
+              <div class="mt-6 text-left space-y-4">
+                {# Display Form Errors (if any) #}
+                {% if password_form.non_field_errors %}
+                  <div class="p-3 bg-red-50 text-red-600 text-sm rounded border border-red-200">
+                    {{ password_form.non_field_errors }}
+                  </div>
+                {% endif %}
 
-    <!-- Password card -->
-    <div class="rounded-sm border border-stroke bg-white shadow-default">
-      <div class="w-full p-4 sm:p-8">
-        <h3 class="text-lg font-semibold text-black mb-4">Change password</h3>
-        <form method="post" action="">
-          {% csrf_token %}
-          {{ password_form.non_field_errors }}
-
-          {% include "accounts/field.html" with field=password_form.old_password  label="Current password" %}
-          {% include "accounts/field.html" with field=password_form.new_password1 label="New password" %}
-          {% include "accounts/field.html" with field=password_form.new_password2 label="Re-type new password" %}
-
-          <div class="mt-5">
-            <button 
-              name="password_submit" 
-              type="submit"
-              class="inline-flex items-center justify-center px-4 py-2 rounded-lg
-                     border border-gray-300 bg-white text-black
-                     hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Change password
-            </button>
+                {# Render Fields #}
+                {% include "accounts/field.html" with field=password_form.old_password label="Current Password" %}
+                {% include "accounts/field.html" with field=password_form.new_password1 label="New Password" %}
+                {% include "accounts/field.html" with field=password_form.new_password2 label="Confirm New Password" %}
+              </div>
+            </div>
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
 
+        <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
+          <button type="button" onclick="closeModal('modal-password')" class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none sm:text-sm">
+            Cancel
+          </button>
+          <button type="submit" class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:text-sm">
+            Save Password
+          </button>
+        </div>
+      </form>
+
+    </div>
   </div>
-</main>
+</div>
+
+{# --- MODAL 2: CREATE USER (Staff Only) --- #}
+{% if request.user.is_staff %}
+<div id="modal-create-user" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title-create" role="dialog" aria-modal="true">
+  <div class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity" onclick="closeModal('modal-create-user')"></div>
+  <div class="flex min-h-screen items-center justify-center p-4 text-center">
+    <div class="relative w-full max-w-md transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all">
+      
+      <form action="" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action_create_user" value="1">
+        
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+          <div class="block">
+            {# Icon #}
+            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gray-600 mb-4">
+              <i class="fi fi-rr-user-add text-white text-lg"></i>
+            </div>
+            
+            <div class="mt-3 text-center w-full">
+              <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title-create">Create New User</h3>
+              <p class="text-sm text-gray-500 mt-2">Create a username and password for a new user.</p>
+
+              <div class="mt-6 text-left space-y-4">
+                {# Display Form Errors (if any) #}
+                {% if create_user_form.non_field_errors %}
+                  <div class="p-3 bg-red-50 text-red-600 text-sm rounded border border-red-200">
+                    {{ create_user_form.non_field_errors }}
+                  </div>
+                {% endif %}
+
+                {# Render Fields using your helper template #}
+                {% include "accounts/field.html" with field=create_user_form.username label="Username" %}
+                {% include "accounts/field.html" with field=create_user_form.password1 label="Password" %}
+                {% include "accounts/field.html" with field=create_user_form.password2 label="Confirm Password" %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
+          <button type="button" onclick="closeModal('modal-create-user')" class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none sm:text-sm">
+            Cancel
+          </button>
+          <button type="submit" class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:text-sm">
+            Create User
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<script>
+  // Standard Modal Logic
+  function openModal(modalId) {
+      const el = document.getElementById(modalId);
+      if(el) el.classList.remove('hidden');
+  }
+  function closeModal(modalId) {
+      const el = document.getElementById(modalId);
+      if(el) el.classList.add('hidden');
+  }
+
+  // Auto-open modal if there were errors (server-side flag)
+  document.addEventListener('DOMContentLoaded', function() {
+      const activeModal = "{{ active_modal|default:'' }}";
+      if (activeModal) {
+          openModal(activeModal);
+      }
+  });
+</script>
+
 {% endblock %}
