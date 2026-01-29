@@ -19,7 +19,7 @@ from django.contrib import messages
 from django.utils.http import http_date
 from django.http import HttpResponseNotAllowed, FileResponse, HttpResponse, Http404, JsonResponse, StreamingHttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth import login, update_session_auth_hash
+from django.contrib.auth import login, update_session_auth_hash, get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views.decorators.http import require_POST
 from django.contrib.auth.views import LoginView as DjangoLoginView, LogoutView
@@ -45,7 +45,6 @@ def my_account(request):
     # Default: Initialize empty forms
     password_form = PasswordChangeFormStyled(user=user)
     create_user_form = TailwindUserCreationForm()
-    
     active_modal = None
 
     if request.method == "POST":
@@ -76,6 +75,12 @@ def my_account(request):
                 active_modal = "modal-create-user"
                 messages.error(request, "Please correct the errors in the user creation form.")
 
+    # --- Fetch User List (Staff Only) ---
+    users_list = []
+    if user.is_staff:
+        User = get_user_model()
+        users_list = User.objects.all().order_by('-date_joined')
+
     return render(
         request,
         "accounts/my_account.html",
@@ -83,6 +88,7 @@ def my_account(request):
             "password_form": password_form,
             "create_user_form": create_user_form,
             "active_modal": active_modal,
+            "users_list": users_list,
         },
     )
 

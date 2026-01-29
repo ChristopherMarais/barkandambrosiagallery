@@ -28,7 +28,100 @@
     </div>
   </div>
 
-  {# --- SECTION 2: Placeholder for User List (Future) --- #}
+  {# --- SECTION 2: USER LIST (Staff Only) --- #}
+  {% if request.user.is_staff %}
+  <div class="bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm">
+
+    <div class="mb-8 border-b border-gray-200 pb-4">
+      <h2 class="text-2xl font-bold mb-2 text-gray-800">User Directory</h2>
+      <p class="text-sm text-gray-500">
+        Overview of all registered accounts.
+      </p>
+    </div>
+
+    <div class="rounded-lg border border-gray-200 bg-white overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
+          <tr>
+            <th class="px-4 py-3">Username</th>
+            <th class="px-4 py-3">Role</th>
+            <th class="px-4 py-3">Date Joined</th>
+            <th class="px-4 py-3">Last Login</th>
+            <th class="px-4 py-3 text-right">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for u in users_list %}
+          <tr class="hover:bg-gray-50 transition">
+            
+            {# Column 1: Username #}
+            <td class="px-4 py-3 font-medium text-gray-800">
+              <div class="flex flex-col">
+                <span class="text-base">{{ u.username }}</span>
+              </div>
+            </td>
+
+            {# Column 2: Role Badges #}
+            <td class="px-4 py-3">
+              <div class="flex gap-2">
+                {% if u.is_superuser %}
+                  <span class="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">
+                    Superuser
+                  </span>
+                {% elif u.is_staff %}
+                  <span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                    Staff
+                  </span>
+                {% else %}
+                  <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                    Standard
+                  </span>
+                {% endif %}
+              </div>
+            </td>
+
+            {# Column 3: Date Joined #}
+            <td class="px-4 py-3 text-gray-600 whitespace-nowrap">
+              {{ u.date_joined|date:"M d, Y" }}
+            </td>
+
+            {# Column 4: Last Login #}
+            <td class="px-4 py-3 text-gray-600 whitespace-nowrap">
+              {% if u.last_login %}
+                {{ u.last_login|date:"M d, H:i" }}
+              {% else %}
+                <span class="text-gray-400 italic">Never</span>
+              {% endif %}
+            </td>
+
+            {# Column 5: Active Status (Green Dot) #}
+            <td class="px-4 py-3 text-right">
+              {% if u.is_active %}
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 border border-green-100">
+                  <span class="h-1.5 w-1.5 rounded-full bg-green-600"></span>
+                  Active
+                </span>
+              {% else %}
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2 py-1 text-xs font-medium text-red-700 border border-red-100">
+                  <span class="h-1.5 w-1.5 rounded-full bg-red-600"></span>
+                  Inactive
+                </span>
+              {% endif %}
+            </td>
+
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="px-4 py-6 text-center text-gray-500 italic">
+              No users found.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
 
 </section>
 
