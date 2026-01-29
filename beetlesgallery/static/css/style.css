@@ -2262,6 +2262,10 @@ video {
   border-width: 0px;
 }
 
+.file\:border-solid::file-selector-button {
+  border-style: solid;
+}
+
 .file\:border-gray-300::file-selector-button {
   --tw-border-opacity: 1;
   border-color: rgb(209 213 219 / var(--tw-border-opacity, 1));
@@ -2604,20 +2608,8 @@ video {
     grid-column: span 2 / span 2;
   }
 
-  .sm\:mt-0 {
-    margin-top: 0px;
-  }
-
-  .sm\:flex {
-    display: flex;
-  }
-
   .sm\:w-36 {
     width: 9rem;
-  }
-
-  .sm\:w-auto {
-    width: auto;
   }
 
   .sm\:grid-cols-2 {
@@ -2626,10 +2618,6 @@ video {
 
   .sm\:grid-cols-5 {
     grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-
-  .sm\:flex-row-reverse {
-    flex-direction: row-reverse;
   }
 
   .sm\:p-4 {

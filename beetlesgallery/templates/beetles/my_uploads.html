@@ -299,14 +299,14 @@
                 <div class="mb-4 text-left">
                     <label class="block mb-1 font-semibold text-gray-700">Metadata (.csv)</label>
                     <input type="file" name="csv_file" accept=".csv" required 
-                           class="block w-full text-sm text-gray-500 file:mr-4 file:px-5 file:py-2.5 file:rounded-full file:border file:border-gray-300 file:text-sm file:font-semibold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-gray-600 hover:file:border-gray-300 transition"/>
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:px-5 file:py-2.5 file:rounded-full file:border file:border-solid file:border-gray-300 file:text-sm file:font-semibold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-gray-600 hover:file:border-gray-300 transition"/>
                 </div>
 
                 {# --- UPDATED FILE INPUT --- #}
                 <div class="mb-2 text-left">
                     <label class="block mb-1 font-semibold text-gray-700">Images (.zip)</label>
                     <input type="file" name="zip" accept=".zip" required 
-                           class="block w-full text-sm text-gray-500 file:mr-4 file:px-5 file:py-2.5 file:rounded-full file:border file:border-gray-300 file:text-sm file:font-semibold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-gray-600 hover:file:border-gray-300 transition"/>
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:px-5 file:py-2.5 file:rounded-full file:border file:border-solid file:border-gray-300 file:text-sm file:font-semibold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-gray-600 hover:file:border-gray-300 transition"/>
                 </div>
 
                 {# --- PROGRESS BAR --- #}
@@ -321,12 +321,13 @@
             </div>
           </div>
         </div>
-        <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 gap-2">
-          <button type="submit" id="btn-submit-new" class="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:w-auto sm:text-sm">
-            Submit Upload
-          </button>
-          <button type="button" onclick="closeModal('modal-upload-new')" class="mt-3 inline-flex w-full justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm">
+        <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
+          <button type="button" onclick="closeModal('modal-upload-new')" class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none sm:text-sm">
             Cancel
+          </button>
+
+          <button type="submit" id="btn-submit-new" class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:text-sm">
+            Submit Upload
           </button>
         </div>
       </form>
@@ -366,7 +367,7 @@
                 <div class="mb-4 text-left">
                     <label class="block mb-1 font-semibold text-gray-700">Update File (.csv)</label>
                     <input type="file" name="csv_file" accept=".csv" required 
-                           class="block w-full text-sm text-gray-500 file:mr-4 file:px-5 file:py-2.5 file:rounded-full file:border file:border-gray-300 file:text-sm file:font-semibold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-gray-600 hover:file:border-gray-300 transition"/>
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:px-5 file:py-2.5 file:rounded-full file:border file:border-solid file:border-gray-300 file:text-sm file:font-semibold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-gray-600 hover:file:border-gray-300 transition"/>
                 </div>
 
                 {# --- PROGRESS BAR --- #}
@@ -381,12 +382,13 @@
             </div>
           </div>
         </div>
-        <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 gap-2">
-          <button type="submit" id="btn-submit-update" class="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:w-auto sm:text-sm">
-            Submit Update
-          </button>
-          <button type="button" onclick="closeModal('modal-update-existing')" class="mt-3 inline-flex w-full justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm">
+        <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
+          <button type="button" onclick="closeModal('modal-update-existing')" class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none sm:text-sm">
             Cancel
+          </button>
+
+          <button type="submit" id="btn-submit-update" class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:text-sm">
+            Submit Update
           </button>
         </div>
       </form>
