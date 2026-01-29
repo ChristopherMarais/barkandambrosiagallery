@@ -492,3 +492,39 @@ def find_ids_matching_text(text: str) -> set[str]:
                 break # one match in this row is enough to include the ID
 
     return matches
+
+def list_archived_versions():
+    """
+    List all archived versions of described_names.csv.
+    Returns list of dicts with 'filename', 'timestamp', 'path' sorted newest first.
+    """
+    archive_dir = "reference/archive/described_names/"
+    archived = []
+
+    try:
+        # List files in archive directory
+        dirs, files = default_storage.listdir(archive_dir)
+
+        for filename in files:
+            if filename.endswith('.csv'):
+                file_path = f"{archive_dir}{filename}"
+                try:
+                    # Get modified time
+                    mtime = default_storage.get_modified_time(file_path)
+                    archived.append({
+                        'filename': filename,
+                        'timestamp': mtime,
+                        'path': file_path
+                    })
+                except Exception:
+                    # If we can't get mtime, skip this file
+                    pass
+
+        # Sort by timestamp, newest first
+        archived.sort(key=lambda x: x['timestamp'], reverse=True)
+
+    except Exception:
+        # Archive directory doesn't exist or can't be read
+        pass
+
+    return archived
