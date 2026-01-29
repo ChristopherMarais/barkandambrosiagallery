@@ -75,6 +75,31 @@ def my_account(request):
                 active_modal = "modal-create-user"
                 messages.error(request, "Please correct the errors in the user creation form.")
 
+        # --- CASE 3: Deactivate Users (Safe "Soft Delete") ---
+        elif "action_deactivate_users" in request.POST:
+            if not user.is_staff:
+                messages.error(request, "Permission denied.")
+                return redirect("my_account")
+            
+            selected_ids = request.POST.getlist("selected_users")
+            
+            if selected_ids:
+                User = get_user_model()
+                # Filter for selected users, exclude self
+                users_to_modify = User.objects.filter(id__in=selected_ids).exclude(id=user.id)
+                count = users_to_modify.count()
+                
+                if count > 0:
+                    # SAFETY: This disables login but KEEPS the data.
+                    users_to_modify.update(is_active=False)
+                    messages.success(request, f"Successfully deactivated {count} user(s). Their data is preserved.")
+                else:
+                    messages.warning(request, "No valid users selected (you cannot deactivate yourself).")
+            else:
+                messages.warning(request, "No users selected.")
+                
+            return redirect("my_account")
+        
     # --- Fetch User List (Staff Only) ---
     users_list = []
     if user.is_staff:

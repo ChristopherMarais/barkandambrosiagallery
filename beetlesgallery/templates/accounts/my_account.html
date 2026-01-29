@@ -32,94 +32,97 @@
   {% if request.user.is_staff %}
   <div class="bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm">
 
-    <div class="mb-8 border-b border-gray-200 pb-4">
-      <h2 class="text-2xl font-bold mb-2 text-gray-800">User Directory</h2>
-      <p class="text-sm text-gray-500">
-        Overview of all registered accounts.
-      </p>
-    </div>
+    {# Change form ID and hidden input value #}
+    <form id="form-deactivate-users" method="post" action="">
+      {% csrf_token %}
+      {# NAME CHANGED to match view #}
+      <input type="hidden" name="action_deactivate_users" value="1">
 
-    <div class="rounded-lg border border-gray-200 bg-white overflow-x-auto">
-      <table class="w-full text-sm text-left">
-        <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
-          <tr>
-            <th class="px-4 py-3">Username</th>
-            <th class="px-4 py-3">Role</th>
-            <th class="px-4 py-3">Date Joined</th>
-            <th class="px-4 py-3">Last Login</th>
-            <th class="px-4 py-3 text-right">Status</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100">
-          {% for u in users_list %}
-          <tr class="hover:bg-gray-50 transition">
-            
-            {# Column 1: Username #}
-            <td class="px-4 py-3 font-medium text-gray-800">
-              <div class="flex flex-col">
-                <span class="text-base">{{ u.username }}</span>
-              </div>
-            </td>
+      <div class="mb-8 border-b border-gray-200 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-bold mb-2 text-gray-800">User Directory</h2>
+          <p class="text-sm text-gray-500">Overview of all registered accounts.</p>
+        </div>
 
-            {# Column 2: Role Badges #}
-            <td class="px-4 py-3">
-              <div class="flex gap-2">
-                {% if u.is_superuser %}
-                  <span class="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">
-                    Superuser
-                  </span>
-                {% elif u.is_staff %}
-                  <span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
-                    Staff
-                  </span>
+        {# Button text/color changed to Orange/Amber for "Suspend" instead of Red for "Destroy" #}
+        <button type="button" id="btn-deactivate-trigger" onclick="openDeactivateModal()" disabled
+          class="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700 shadow-sm transition hover:bg-amber-100 disabled:opacity-50 disabled:cursor-not-allowed">
+          <i class="fi fi-rr-ban"></i>
+          <span>Deactivate Selected</span>
+        </button>
+      </div>
+
+      <div class="rounded-lg border border-gray-200 bg-white overflow-x-auto">
+        <table class="w-full text-sm text-left">
+          <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
+            <tr>
+              {# NEW: Checkbox Column Header #}
+              <th class="px-4 py-3 w-10">
+                <input type="checkbox" id="select-all-users" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+              </th>
+              <th class="px-4 py-3">Username</th>
+              <th class="px-4 py-3">Role</th>
+              <th class="px-4 py-3">Date Joined</th>
+              <th class="px-4 py-3">Last Login</th>
+              <th class="px-4 py-3 text-right">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for u in users_list %}
+            <tr class="hover:bg-gray-50 transition">
+              
+              {# NEW: Checkbox Column Body #}
+              <td class="px-4 py-3">
+                {# Disable checkbox if it is the current user #}
+                {% if u.id != request.user.id %}
+                  <input type="checkbox" name="selected_users" value="{{ u.id }}" 
+                         class="user-checkbox rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                 {% else %}
-                  <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-                    Standard
-                  </span>
+                  <input type="checkbox" disabled class="rounded border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed" title="You cannot delete yourself">
                 {% endif %}
-              </div>
-            </td>
+              </td>
 
-            {# Column 3: Date Joined #}
-            <td class="px-4 py-3 text-gray-600 whitespace-nowrap">
-              {{ u.date_joined|date:"M d, Y" }}
-            </td>
+              <td class="px-4 py-3 font-medium text-gray-800">
+                 {# ... existing username code ... #}
+                 <div class="flex flex-col">
+                    <span class="text-base">{{ u.username }}</span>
+                    {% if u.email %}
+                      <span class="text-xs text-gray-400 font-normal">{{ u.email }}</span>
+                    {% endif %}
+                  </div>
+              </td>
+              {# ... existing columns (Role, Date Joined, Last Login, Status) ... #}
+              <td class="px-4 py-3">
+                  <div class="flex gap-2">
+                    {% if u.is_superuser %}
+                      <span class="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">Superuser</span>
+                    {% elif u.is_staff %}
+                      <span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">Staff</span>
+                    {% else %}
+                      <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">Standard</span>
+                    {% endif %}
+                  </div>
+              </td>
+              <td class="px-4 py-3 text-gray-600 whitespace-nowrap">{{ u.date_joined|date:"M d, Y" }}</td>
+              <td class="px-4 py-3 text-gray-600 whitespace-nowrap">
+                  {% if u.last_login %}{{ u.last_login|date:"M d, H:i" }}{% else %}<span class="text-gray-400 italic">Never</span>{% endif %}
+              </td>
+              <td class="px-4 py-3 text-right">
+                  {% if u.is_active %}
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 border border-green-100"><span class="h-1.5 w-1.5 rounded-full bg-green-600"></span>Active</span>
+                  {% else %}
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2 py-1 text-xs font-medium text-red-700 border border-red-100"><span class="h-1.5 w-1.5 rounded-full bg-red-600"></span>Inactive</span>
+                  {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="px-4 py-6 text-center text-gray-500 italic">No users found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </form> {# END WRAPPER FORM #}
 
-            {# Column 4: Last Login #}
-            <td class="px-4 py-3 text-gray-600 whitespace-nowrap">
-              {% if u.last_login %}
-                {{ u.last_login|date:"M d, H:i" }}
-              {% else %}
-                <span class="text-gray-400 italic">Never</span>
-              {% endif %}
-            </td>
-
-            {# Column 5: Active Status (Green Dot) #}
-            <td class="px-4 py-3 text-right">
-              {% if u.is_active %}
-                <span class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 border border-green-100">
-                  <span class="h-1.5 w-1.5 rounded-full bg-green-600"></span>
-                  Active
-                </span>
-              {% else %}
-                <span class="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2 py-1 text-xs font-medium text-red-700 border border-red-100">
-                  <span class="h-1.5 w-1.5 rounded-full bg-red-600"></span>
-                  Inactive
-                </span>
-              {% endif %}
-            </td>
-
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="5" class="px-4 py-6 text-center text-gray-500 italic">
-              No users found.
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
   </div>
   {% endif %}
 
@@ -230,23 +233,110 @@
 </div>
 {% endif %}
 
+{# --- MODAL 3: DEACTIVATE CONFIRMATION --- #}
+<div id="modal-deactivate-users" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title-deact" role="dialog" aria-modal="true">
+  <div class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity" onclick="closeModal('modal-deactivate-users')"></div>
+  <div class="flex min-h-screen items-center justify-center p-4 text-center">
+    <div class="relative w-full max-w-md transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all">
+      
+      <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <div class="sm:flex sm:items-start">
+          <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 sm:mx-0 sm:h-10 sm:w-10">
+            <i class="fi fi-rr-ban text-amber-600"></i>
+          </div>
+          <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+            <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title-deact">Deactivate Users</h3>
+            <div class="mt-2">
+              <p class="text-sm text-gray-500">
+                Are you sure you want to deactivate <span id="deactivate-count-target" class="font-bold text-gray-900">0</span> user(s)? 
+                <br><br>
+                <strong>They will no longer be able to log in</strong>, but their uploaded data will remain safe.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-gray-50 px-4 py-3 flex w-full flex-row-reverse gap-2 sm:px-6">
+        <button type="button" onclick="submitDeactivateForm()" 
+          class="inline-flex w-full justify-center rounded-md border border-transparent bg-amber-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-amber-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+          Deactivate
+        </button>
+        <button type="button" onclick="closeModal('modal-deactivate-users')" 
+          class="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+          Cancel
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <script>
-  // Standard Modal Logic
+  // --- 1. Global Functions (Accessible by HTML onclick="") ---
+  
   function openModal(modalId) {
       const el = document.getElementById(modalId);
       if(el) el.classList.remove('hidden');
   }
+
   function closeModal(modalId) {
       const el = document.getElementById(modalId);
       if(el) el.classList.add('hidden');
   }
 
-  // Auto-open modal if there were errors (server-side flag)
+  // UPDATED: Renamed from 'Delete' to 'Deactivate' to match your button's onclick
+  function openDeactivateModal() {
+      // Logic to count checked boxes and show modal
+      const count = document.querySelectorAll('.user-checkbox:checked').length;
+      if (count === 0) return;
+      
+      // Update text in modal
+      document.getElementById('deactivate-count-target').innerText = count;
+      openModal('modal-deactivate-users');
+  }
+
+  // UPDATED: Renamed from 'Delete' to 'Deactivate'
+  function submitDeactivateForm() {
+      // Submit the form
+      document.getElementById('form-deactivate-users').submit();
+  }
+
+
+  // --- 2. DOM Ready Logic (Event Listeners) ---
   document.addEventListener('DOMContentLoaded', function() {
+      
+      // A. Auto-open modal if there were errors (server-side flag)
       const activeModal = "{{ active_modal|default:'' }}";
       if (activeModal) {
           openModal(activeModal);
       }
+
+      // B. Checkbox Logic for User List
+      const selectAll = document.getElementById('select-all-users');
+      const checkboxes = document.querySelectorAll('.user-checkbox');
+      const deactBtn = document.getElementById('btn-deactivate-trigger');
+
+      function updateDeactivateButton() {
+          if(!deactBtn) return;
+          const checkedCount = document.querySelectorAll('.user-checkbox:checked').length;
+          deactBtn.disabled = checkedCount === 0;
+      }
+
+      // "Select All" Header Checkbox
+      if (selectAll) {
+          selectAll.addEventListener('change', function() {
+              checkboxes.forEach(cb => {
+                  if(!cb.disabled) cb.checked = selectAll.checked;
+              });
+              updateDeactivateButton();
+          });
+      }
+
+      // Individual Row Checkboxes
+      checkboxes.forEach(cb => {
+          cb.addEventListener('change', updateDeactivateButton);
+      });
   });
 </script>
 
