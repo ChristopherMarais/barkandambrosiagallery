@@ -113,13 +113,13 @@
                           <div class="flex items-center gap-2">
                             {% if job.csv_file %}
                               <a href="{{ job.csv_file.url }}" class="text-xs font-bold text-gray-600 hover:text-grey-600 hover:underline mr-1">
-                                CSV
+                                Metadata.csv
                               </a>
                             {% endif %}
                             
                             {% if job.zip_file %}
-                              <a href="{{ job.zip_file.url }}" class="text-xs font-bold text-grey-600 hover:text-grey-800 hover:underline">
-                                ZIP
+                              <a href="{{ job.zip_file.url }}" class="text-xs font-bold text-grey-600 hover:text-grey-600 hover:underline">
+                                Images.zip
                               </a>
                             {% endif %}
                           </div>
@@ -184,7 +184,7 @@
                         {% elif b.status == "rejected" or b.status == "import_failed" %}
                             <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Error</span>
                             {% if b.error_report_file %}
-                            <button onclick="viewLog('{{ b.error_report_file.url }}', 'Error Log')" class="ml-2 text-xs text-red-600 underline hover:no-underline">Log</button>
+                            <button onclick="viewLog('{{ b.error_report_file.url }}', 'Details')" class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
                             {% endif %}
                         {% else %}
                             <span class="text-xs text-gray-500">{{ b.get_status_display }}</span>
@@ -277,16 +277,18 @@
       <form id="form-upload-new" action="{% url 'upload' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-          <div class="sm:flex sm:items-start">
-            {# --- UPDATED ICON: Dark Grey BG + White Icon --- #}
-            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gray-600 sm:mx-0 sm:h-10 sm:w-10">
+          <div class="block">
+            
+            {# --- UPDATED ICON: Centered above text --- #}
+            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gray-600 mb-4">
               <i class="fi fi-rr-upload text-white text-lg"></i>
             </div>
-            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+            
+            <div class="mt-3 text-center w-full">
               <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Upload New Dataset</h3>
               
               <div class="mt-4 text-sm text-gray-500">
-                <p class="mb-3">Select a CSV metadata file and a ZIP of images.</p>
+                <p class="mb-3">Select a CSV metadata file and a ZIP file of images.</p>
                 
                 <a href="{% static 'downloads/beetles_upload_template_v2.csv' %}" 
                    class="mb-6 w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm font-bold text-grey-600 hover:bg-grey-50 hover:border-grey-300 transition">
@@ -294,21 +296,20 @@
                     <span>Download CSV Template</span>
                 </a>
 
-                {# --- UPDATED FILE INPUT --- #}
-                <div class="mb-4">
+                <div class="mb-4 text-left">
                     <label class="block mb-1 font-semibold text-gray-700">Metadata (.csv)</label>
                     <input type="file" name="csv_file" accept=".csv" required 
-                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border file:border-gray-300 file:text-sm file:font-bold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-black transition"/>
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:px-5 file:py-2.5 file:rounded-full file:border file:border-gray-300 file:text-sm file:font-semibold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-gray-600 hover:file:border-gray-300 transition"/>
                 </div>
 
                 {# --- UPDATED FILE INPUT --- #}
-                <div class="mb-2">
+                <div class="mb-2 text-left">
                     <label class="block mb-1 font-semibold text-gray-700">Images (.zip)</label>
                     <input type="file" name="zip" accept=".zip" required 
-                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border file:border-gray-300 file:text-sm file:font-bold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-black transition"/>
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:px-5 file:py-2.5 file:rounded-full file:border file:border-gray-300 file:text-sm file:font-semibold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-gray-600 hover:file:border-gray-300 transition"/>
                 </div>
 
-                {# --- UPDATED PROGRESS BAR: Slim, Borderless --- #}
+                {# --- PROGRESS BAR --- #}
                 <div id="progress-container-new" class="hidden mt-4">
                   <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
                     <div id="progress-bar-new" class="bg-gray-600 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
@@ -321,10 +322,10 @@
           </div>
         </div>
         <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 gap-2">
-          <button type="submit" id="btn-submit-new" class="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+          <button type="submit" id="btn-submit-new" class="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:w-auto sm:text-sm">
             Submit Upload
           </button>
-          <button type="button" onclick="closeModal('modal-upload-new')" class="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+          <button type="button" onclick="closeModal('modal-upload-new')" class="mt-3 inline-flex w-full justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm">
             Cancel
           </button>
         </div>
@@ -342,12 +343,14 @@
       <form id="form-update-existing" action="{% url 'update_upload' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-          <div class="sm:flex sm:items-start">
-            {# --- UPDATED ICON --- #}
-            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gray-600 sm:mx-0 sm:h-10 sm:w-10">
+          <div class="block">
+            
+            {# --- UPDATED ICON: Centered above text --- #}
+            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gray-600 mb-4">
               <i class="fi fi-rr-refresh text-white text-lg"></i>
             </div>
-            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+            
+            <div class="mt-3 text-center w-full">
               <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title-update">Update Metadata</h3>
               
               <div class="mt-4 text-sm text-gray-500">
@@ -360,13 +363,13 @@
                 </a>
 
                 {# --- UPDATED FILE INPUT --- #}
-                <div class="mb-4">
+                <div class="mb-4 text-left">
                     <label class="block mb-1 font-semibold text-gray-700">Update File (.csv)</label>
                     <input type="file" name="csv_file" accept=".csv" required 
-                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border file:border-gray-300 file:text-sm file:font-bold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-black transition"/>
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:px-5 file:py-2.5 file:rounded-full file:border file:border-gray-300 file:text-sm file:font-semibold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-gray-600 hover:file:border-gray-300 transition"/>
                 </div>
 
-                {# --- UPDATED PROGRESS BAR --- #}
+                {# --- PROGRESS BAR --- #}
                 <div id="progress-container-update" class="hidden mt-4">
                   <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
                     <div id="progress-bar-update" class="bg-gray-600 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
@@ -379,10 +382,10 @@
           </div>
         </div>
         <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 gap-2">
-          <button type="submit" id="btn-submit-update" class="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+          <button type="submit" id="btn-submit-update" class="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:w-auto sm:text-sm">
             Submit Update
           </button>
-          <button type="button" onclick="closeModal('modal-update-existing')" class="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+          <button type="button" onclick="closeModal('modal-update-existing')" class="mt-3 inline-flex w-full justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm">
             Cancel
           </button>
         </div>
@@ -635,7 +638,7 @@
             // --- HANDLE UPLOAD BATCHES ---
             if (key.startsWith('upload_')) {
                 const id = key.replace('upload_', '');
-                updateStatusCell(`status-upload-${id}`, info.status, info.status_display, info.error_log_url, 'Error Log');
+                updateStatusCell(`status-upload-${id}`, info.status, info.status_display, info.error_log_url, 'Details');
             }
 
             // --- HANDLE UPDATE BATCHES ---
@@ -666,7 +669,7 @@
       if (['imported', 'validated', 'applied', 'ready'].includes(s)) {
           badgeClass = "bg-green-100 text-green-800";
       } else if (['validating', 'building', 'staging'].includes(s)) {
-          badgeClass = "bg-grey-100 text-grey-800 animate-pulse";
+          badgeClass = "bg-blue-100 text-blue-800 animate-pulse";
       } else if (['rejected', 'failed', 'import_failed', 'apply_failed'].includes(s)) {
           badgeClass = "bg-red-100 text-red-800";
       }
@@ -693,8 +696,8 @@
       const actionEl = document.getElementById(`action-download-${id}`);
       if (actionEl && info.status === 'ready') {
           let linksHtml = '';
-          if (info.csv_url) linksHtml += `<a href="${info.csv_url}" class="text-xs font-bold text-gray-600 hover:text-grey-600 hover:underline mr-2">CSV</a>`;
-          if (info.zip_url) linksHtml += `<a href="${info.zip_url}" class="text-xs font-bold text-grey-600 hover:text-grey-800 hover:underline">ZIP</a>`;
+          if (info.csv_url) linksHtml += `<a href="${info.csv_url}" class="text-xs font-bold text-gray-600 hover:text-grey-600 hover:underline mr-2">Metadata.csv</a>`;
+          if (info.zip_url) linksHtml += `<a href="${info.zip_url}" class="text-xs font-bold text-gray-600 hover:text-grey-600 hover:underline">Images.zip</a>`;
           
           if (actionEl.innerHTML !== linksHtml) {
               actionEl.innerHTML = linksHtml;
