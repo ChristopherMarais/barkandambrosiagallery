@@ -56,11 +56,11 @@
             <table class="w-full text-sm text-left">
                   <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
                     <tr>
-                      <th class="px-4 py-3">When</th>
+                      <th class="px-4 py-3">Date/Time</th>
                       <th class="px-4 py-3">Request</th>
                       <th class="px-4 py-3">Status</th>
-                      <th class="px-4 py-3">Downloads</th>
-                      <th class="px-4 py-3">Job ID</th>
+                      <th class="px-4 py-3">Download Files</th>
+                      <th class="px-4 py-3">Download ID</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-gray-100">
@@ -128,11 +128,14 @@
                         {% endif %}
                       </td>
 
+                      {# --- UPDATED ID COLUMN --- #}
                       <td class="px-4 py-3 whitespace-nowrap">
-                        <button onclick="copyToClipboard('{{ job.id }}', this)" 
-                          class="text-xs font-bold text-gray-500 bg-white border border-gray-200 px-2 py-1 rounded shadow-sm hover:bg-gray-50 hover:text-gray-600 hover:border-gray-200 transition">
-                          Copy ID
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <span class="font-mono text-xs text-gray-500 select-all">{{ job.id|stringformat:"s" }}</span>
+                            <button type="button" class="copy-uuid shrink-0 text-gray-400 hover:text-gray-800 transition" data-uuid="{{ job.id }}" title="Copy Job ID">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            </button>
+                        </div>
                       </td>
 
                     </tr>
@@ -161,7 +164,7 @@
             <table class="w-full text-sm text-left">
                 <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
                 <tr>
-                    <th class="px-4 py-3">When</th>
+                    <th class="px-4 py-3">Date/Time</th>
                     <th class="px-4 py-3">Filename</th>
                     <th class="px-4 py-3">Status</th>
                     <th class="px-4 py-3">Upload ID</th>
@@ -188,11 +191,14 @@
                         {% endif %}
                     </td>
                     
+                    {# --- UPDATED ID COLUMN --- #}
                     <td class="px-4 py-3 whitespace-nowrap">
-                      <button onclick="copyToClipboard('{{ b.id }}', this)" 
-                        class="text-xs font-bold text-gray-500 bg-white border border-gray-200 px-2 py-1 rounded shadow-sm hover:bg-gray-50 hover:text-gray-600 hover:border-gray-200 transition">
-                        Copy ID
-                      </button>
+                        <div class="flex items-center gap-2">
+                            <span class="font-mono text-xs text-gray-500 select-all">{{ b.id|stringformat:"s" }}</span>
+                            <button type="button" class="copy-uuid shrink-0 text-gray-400 hover:text-gray-800 transition" data-uuid="{{ b.id }}" title="Copy Upload ID">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 {% empty %}
@@ -212,10 +218,10 @@
             <table class="w-full text-sm text-left">
                 <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
                 <tr>
-                    <th class="px-4 py-3">When</th>
+                    <th class="px-4 py-3">Date/Time</th>
                     <th class="px-4 py-3">Filename</th>
                     <th class="px-4 py-3">Status</th>
-                    <th class="px-4 py-3">Report</th>
+                    {# Removed Report Column Header #}
                     <th class="px-4 py-3">Update ID</th>
                 </tr>
                 </thead>
@@ -237,21 +243,17 @@
                         {% endif %}
                     </td>
 
-                    <td class="px-4 py-3">
-                        {% if u.report_file %}
-                        <button onclick="viewLog('{{ u.report_file.url }}', 'Report')" class="text-xs font-bold text-gray-600 hover:underline">View</button>
-                        {% else %}<span class="text-gray-300 text-xs">—</span>{% endif %}
-                    </td>
-
                     <td class="px-4 py-3 whitespace-nowrap">
-                      <button onclick="copyToClipboard('{{ u.id }}', this)" 
-                        class="text-xs font-bold text-gray-500 bg-white border border-gray-200 px-2 py-1 rounded shadow-sm hover:bg-gray-50 hover:text-gray-600 hover:border-gray-200 transition">
-                        Copy ID
-                      </button>
+                        <div class="flex items-center gap-2">
+                            <span class="font-mono text-xs text-gray-500 select-all">{{ u.id|stringformat:"s" }}</span>
+                            <button type="button" class="copy-uuid shrink-0 text-gray-400 hover:text-gray-800 transition" data-uuid="{{ u.id }}" title="Copy Update ID">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="5" class="px-4 py-6 text-center text-gray-500 italic">No updates found.</td></tr>
+                <tr><td colspan="4" class="px-4 py-6 text-center text-gray-500 italic">No updates found.</td></tr>
                 {% endfor %}
                 </tbody>
             </table>
@@ -483,24 +485,19 @@
     }
   });
 
-  // Helper to copy text and give visual feedback
-  function copyToClipboard(text, btnElement) {
-    navigator.clipboard.writeText(text).then(() => {
-      // Temporary visual feedback
-      const originalText = btnElement.innerText;
-      btnElement.innerText = "Copied!";
-      btnElement.classList.add("text-green-600", "border-green-200", "bg-green-50");
-      
-      // Reset after 2 seconds
-      setTimeout(() => {
-        btnElement.innerText = originalText;
-        btnElement.classList.remove("text-green-600", "border-green-200", "bg-green-50");
-      }, 2000);
-    }).catch(err => {
-      console.error('Failed to copy:', err);
-      alert("Failed to copy ID.");
-    });
-  }
+  // Updated Copy Logic with Icon Feedback
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.copy-uuid');
+    if (!btn) return;
+    e.preventDefault(); e.stopPropagation();
+    const uuid = btn.getAttribute('data-uuid');
+    try {
+      await navigator.clipboard.writeText(uuid);
+      const originalHTML = btn.innerHTML;
+      btn.innerHTML = `<svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+      setTimeout(() => { btn.innerHTML = originalHTML; }, 1500);
+    } catch (err) { console.error(err); }
+  });
 </script>
 
 <script>
