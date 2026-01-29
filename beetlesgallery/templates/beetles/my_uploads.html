@@ -41,17 +41,10 @@
 
     <div class="mb-8 border-b border-gray-200 pb-4">
       <h2 class="text-2xl font-bold mb-2 text-gray-800">Activity Logs</h2>
-        <!-- <p class="text-sm text-text/70 mb-6">
-          <span class="font-semibold">About IDs:</span>
-          <span class="ml-1">“<span class="font-medium">Record ID</span>” uniquely identifies a single Beetles entry (and its
-            image). “<span class="font-medium">Upload ID</span>” refers to an upload batch, “<span class="font-medium">Update
-              ID</span>” to an update batch, and “<span class="font-medium">Job ID</span>” to a download job.</span>
-        </p> -->
-
-        <p class="text-sm text-gray-600">
+      <p class="text-sm text-gray-600">
             <span class="font-semibold">About IDs:</span>
             <span class="ml-1">“<span class="font-medium">Record ID</span>” uniquely identifies a single Beetles entry. “<span class="font-medium">Upload/Update ID</span>” refers to batch operations.</span>
-        </p>
+      </p>
     </div>
 
     <div class="space-y-12">
@@ -277,10 +270,11 @@
 
 {# --- MODAL 1: UPLOAD NEW DATA --- #}
 <div id="modal-upload-new" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-  <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeModal('modal-upload-new')"></div>
+  <div class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity" onclick="closeModal('modal-upload-new')"></div>
   <div class="flex min-h-screen items-center justify-center p-4 text-center">
     <div class="relative w-full max-w-md transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all">
-      <form action="{% url 'upload' %}" method="post" enctype="multipart/form-data">
+      {# Added ID to form for JS targeting #}
+      <form id="form-upload-new" action="{% url 'upload' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
           <div class="sm:flex sm:items-start">
@@ -308,12 +302,21 @@
                     <label class="block mb-1 font-semibold text-gray-700">Images (.zip)</label>
                     <input type="file" name="zip" accept=".zip" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
                 </div>
+
+                {# --- Progress Bar Area (Initially Hidden) --- #}
+                <div id="progress-container-new" class="hidden mt-4">
+                  <div class="w-full bg-white border border-gray-300 rounded-full h-2.5">
+                    <div id="progress-bar-new" class="bg-gray-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                  </div>
+                  <p id="progress-text-new" class="text-sm text-gray-500 mt-2 text-center">Starting upload...</p>
+                </div>
+
               </div>
             </div>
           </div>
         </div>
         <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 gap-2">
-          <button type="submit" class="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+          <button type="submit" id="btn-submit-new" class="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
             Submit Upload
           </button>
           <button type="button" onclick="closeModal('modal-upload-new')" class="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
@@ -327,10 +330,11 @@
 
 {# --- MODAL 2: UPDATE METADATA --- #}
 <div id="modal-update-existing" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title-update" role="dialog" aria-modal="true">
-  <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeModal('modal-update-existing')"></div>
+  <div class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity" onclick="closeModal('modal-update-existing')"></div>
   <div class="flex min-h-screen items-center justify-center p-4 text-center">
     <div class="relative w-full max-w-md transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all">
-      <form action="{% url 'update_upload' %}" method="post" enctype="multipart/form-data">
+      {# Added ID to form for JS targeting #}
+      <form id="form-update-existing" action="{% url 'update_upload' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
           <div class="sm:flex sm:items-start">
@@ -353,12 +357,21 @@
                     <label class="block mb-1 font-semibold text-gray-700">Update File (.csv)</label>
                     <input type="file" name="csv_file" accept=".csv" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
                 </div>
+
+                {# --- Progress Bar Area (Initially Hidden) --- #}
+                <div id="progress-container-update" class="hidden mt-4">
+                  <div class="w-full bg-white border border-gray-300 rounded-full h-2.5">
+                    <div id="progress-bar-update" class="bg-gray-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                  </div>
+                  <p id="progress-text-update" class="text-sm text-gray-500 mt-2 text-center">Starting update...</p>
+                </div>
+
               </div>
             </div>
           </div>
         </div>
         <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 gap-2">
-          <button type="submit" class="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+          <button type="submit" id="btn-submit-update" class="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
             Submit Update
           </button>
           <button type="button" onclick="closeModal('modal-update-existing')" class="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
@@ -480,6 +493,118 @@
       alert("Failed to copy ID.");
     });
   }
+</script>
+
+<script>
+  // --- UPLOAD PROGRESS HANDLERS ---
+
+  /**
+   * Generic function to handle form submission with progress bar
+   */
+  function attachUploadHandler(formId, progressContainerId, progressBarId, progressTextId, submitBtnId) {
+      const form = document.getElementById(formId);
+      if (!form) return;
+
+      form.addEventListener('submit', function (e) {
+          e.preventDefault();
+
+          const formData = new FormData(form);
+          const fileInput = form.querySelector('input[type="file"]');
+          
+          if (!fileInput || fileInput.files.length === 0) {
+              alert("Please select a file first.");
+              return;
+          }
+
+          // UI Elements
+          const progressContainer = document.getElementById(progressContainerId);
+          const progressBar = document.getElementById(progressBarId);
+          const progressText = document.getElementById(progressTextId);
+          const submitBtn = document.getElementById(submitBtnId);
+
+          // Show Progress UI
+          progressContainer.classList.remove('hidden');
+          submitBtn.disabled = true;
+          submitBtn.innerText = "Uploading...";
+
+          // AJAX Request
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', form.action, true);
+          xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+          // Progress Event
+          xhr.upload.onprogress = function (e) {
+              if (e.lengthComputable) {
+                  const percent = Math.round((e.loaded / e.total) * 100);
+                  
+                  // Update Bar Width
+                  progressBar.style.width = percent + '%';
+                  
+                  // Update Text
+                  if (percent < 100) {
+                      progressText.innerText = `Uploading: ${percent}%`;
+                  } else {
+                      // Fix: Stay at 100% explicitly
+                      progressText.innerText = "100%";
+                      progressBar.classList.add('animate-pulse');
+                  }
+              }
+          };
+
+          // Completion Handler
+          xhr.onload = function () {
+              if (xhr.status === 200) {
+                  // Success: Reload page to show new data
+                  window.location.reload();
+              } else {
+                  // Error
+                  progressText.innerText = "Server Error: " + xhr.status;
+                  
+                  // Update text color for error
+                  progressText.classList.remove('text-gray-400'); 
+                  progressText.classList.add('text-red-600');
+                  
+                  // Fix: Remove the dark grey class (bg-gray-800) and animation
+                  progressBar.classList.remove('bg-gray-800', 'animate-pulse');
+                  progressBar.classList.add('bg-red-600');
+                  
+                  submitBtn.disabled = false;
+                  submitBtn.innerText = "Retry";
+              }
+          };
+
+          xhr.onerror = function () {
+              progressText.innerText = "Network Error";
+              progressText.classList.remove('text-gray-400');
+              progressText.classList.add('text-red-600');
+              submitBtn.disabled = false;
+              submitBtn.innerText = "Retry";
+          };
+
+          xhr.send(formData);
+      });
+  }
+
+  // Attach handlers when DOM is ready
+  document.addEventListener('DOMContentLoaded', function() {
+      // 1. New Upload Form
+      attachUploadHandler(
+          'form-upload-new', 
+          'progress-container-new', 
+          'progress-bar-new', 
+          'progress-text-new', 
+          'btn-submit-new'
+      );
+
+      // 2. Update Form
+      attachUploadHandler(
+          'form-update-existing', 
+          'progress-container-update', 
+          'progress-bar-update', 
+          'progress-text-update', 
+          'btn-submit-update'
+      );
+  });
 </script>
 
 <script>
