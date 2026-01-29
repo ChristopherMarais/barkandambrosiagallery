@@ -179,7 +179,7 @@
                         {% elif b.status == "validated" %}
                             <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">Validated</span>
                         {% elif b.status == "rejected" or b.status == "import_failed" %}
-                            <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Error</span>
+                            <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">{{ b.get_status_display }}</span>
                             {% if b.error_report_file %}
                             <button onclick="viewLog('{{ b.error_report_file.url }}', 'Details')" class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
                             {% endif %}
@@ -231,7 +231,7 @@
                         {% elif u.status == "validated" %}
                             <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">Validated</span>
                         {% elif u.status == "rejected" or u.status == "apply_failed" %}
-                            <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Failed</span>
+                            <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">{{ u.get_status_display }}</span>
                         {% else %}
                             <span class="text-xs text-gray-500">{{ u.get_status_display }}</span>
                         {% endif %}
