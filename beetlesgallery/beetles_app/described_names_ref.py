@@ -342,6 +342,30 @@ def publish_from_file(src_path: str, label: Optional[str] = None) -> tuple[int, 
 
         with default_storage.open(tmp_key, "wb") as out:
             out.write(data)
+
+        # Archive old version before replacing (if it exists)
+        if default_storage.exists(_PATH):
+            try:
+                # Create archive path with timestamp in subfolder
+                from django.utils import timezone
+                timestamp = timezone.now().strftime("%Y-%m-%d_%H-%M_UTC")
+                archive_path = f"reference/archive/described_names/described_names_{timestamp}.csv"
+
+                # Ensure archive folder exists (for local storage)
+                try:
+                    archive_full_path = default_storage.path(archive_path)
+                    os.makedirs(os.path.dirname(archive_full_path), exist_ok=True)
+                except NotImplementedError:
+                    pass
+
+                # Copy current file to archive
+                with default_storage.open(_PATH, "rb") as old_file:
+                    with default_storage.open(archive_path, "wb") as archive_file:
+                        archive_file.write(old_file.read())
+            except Exception as e:
+                # Log but don't fail the upload if archiving fails
+                print(f"Warning: Failed to archive old described_names.csv: {e}")
+
         # Move/replace tmp -> final (some storages don't have rename; fall back to copy+delete)
         try:
             default_storage.delete(_PATH)  # ignore errors if it doesn't exist
