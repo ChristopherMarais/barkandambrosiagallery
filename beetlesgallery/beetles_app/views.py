@@ -75,29 +75,47 @@ def my_account(request):
                 active_modal = "modal-create-user"
                 messages.error(request, "Please correct the errors in the user creation form.")
 
-        # --- CASE 3: Deactivate Users (Safe "Soft Delete") ---
-        elif "action_deactivate_users" in request.POST:
+        # --- CASE 3: Edit User (Staff Only) ---
+        elif "action_edit_user" in request.POST:
             if not user.is_staff:
                 messages.error(request, "Permission denied.")
                 return redirect("my_account")
             
-            selected_ids = request.POST.getlist("selected_users")
+            target_id = request.POST.get("user_id")
+            target_user = get_object_or_404(get_user_model(), pk=target_id)
             
-            if selected_ids:
-                User = get_user_model()
-                # Filter for selected users, exclude self
-                users_to_modify = User.objects.filter(id__in=selected_ids).exclude(id=user.id)
-                count = users_to_modify.count()
-                
-                if count > 0:
-                    # SAFETY: This disables login but KEEPS the data.
-                    users_to_modify.update(is_active=False)
-                    messages.success(request, f"Successfully deactivated {count} user(s). Their data is preserved.")
-                else:
-                    messages.warning(request, "No valid users selected (you cannot deactivate yourself).")
-            else:
-                messages.warning(request, "No users selected.")
-                
+            # 1. Update Username
+            new_username = request.POST.get("username", "").strip()
+            if new_username and new_username != target_user.username:
+                if get_user_model().objects.filter(username=new_username).exists():
+                    messages.error(request, f"Username '{new_username}' is already taken.")
+                    return redirect("my_account")
+                target_user.username = new_username
+
+            # 2. Update Role
+            role = request.POST.get("role")
+            if role == "superuser":
+                target_user.is_staff = True
+                target_user.is_superuser = True
+            elif role == "staff":
+                target_user.is_staff = True
+                target_user.is_superuser = False
+            else: # standard
+                target_user.is_staff = False
+                target_user.is_superuser = False
+
+            # 3. Update Status (Active/Inactive)
+            # Checkbox sends 'on' if checked; if unchecked, it sends nothing (None)
+            target_user.is_active = (request.POST.get("is_active") == "on")
+
+            # 4. Update Password (Optional)
+            new_pw = request.POST.get("new_password", "").strip()
+            if new_pw:
+                target_user.set_password(new_pw)
+                messages.info(request, f"Password for {target_user.username} has been reset.")
+
+            target_user.save()
+            messages.success(request, f"User '{target_user.username}' updated successfully.")
             return redirect("my_account")
         
     # --- Fetch User List (Staff Only) ---

@@ -31,59 +31,31 @@
   {# --- SECTION 2: USER LIST (Staff Only) --- #}
   {% if request.user.is_staff %}
   <div class="bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm">
-
-    {# Change form ID and hidden input value #}
-    <form id="form-deactivate-users" method="post" action="">
-      {% csrf_token %}
-      {# NAME CHANGED to match view #}
-      <input type="hidden" name="action_deactivate_users" value="1">
-
-      <div class="mb-8 border-b border-gray-200 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 class="text-2xl font-bold mb-2 text-gray-800">User Directory</h2>
-          <p class="text-sm text-gray-500">Overview of all registered accounts.</p>
-        </div>
-
-        {# Button text/color changed to Orange/Amber for "Suspend" instead of Red for "Destroy" #}
-        <button type="button" id="btn-deactivate-trigger" onclick="openDeactivateModal()" disabled
-          class="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700 shadow-sm transition hover:bg-amber-100 disabled:opacity-50 disabled:cursor-not-allowed">
-          <i class="fi fi-rr-ban"></i>
-          <span>Deactivate Selected</span>
-        </button>
-      </div>
+    <div class="mb-8 border-b border-gray-200 pb-4">
+      <h2 class="text-2xl font-bold mb-2 text-gray-800">User Directory</h2>
+      <p class="text-sm text-gray-500">
+        Overview of all registered accounts.
+      </p>
+    </div>
 
       <div class="rounded-lg border border-gray-200 bg-white overflow-x-auto">
         <table class="w-full text-sm text-left">
           <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
             <tr>
-              {# NEW: Checkbox Column Header #}
-              <th class="px-4 py-3 w-10">
-                <input type="checkbox" id="select-all-users" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-              </th>
               <th class="px-4 py-3">Username</th>
               <th class="px-4 py-3">Role</th>
               <th class="px-4 py-3">Date Joined</th>
               <th class="px-4 py-3">Last Login</th>
               <th class="px-4 py-3 text-right">Status</th>
+              <th class="px-4 py-3 text-right">Edit User</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
             {% for u in users_list %}
             <tr class="hover:bg-gray-50 transition">
-              
-              {# NEW: Checkbox Column Body #}
-              <td class="px-4 py-3">
-                {# Disable checkbox if it is the current user #}
-                {% if u.id != request.user.id %}
-                  <input type="checkbox" name="selected_users" value="{{ u.id }}" 
-                         class="user-checkbox rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                {% else %}
-                  <input type="checkbox" disabled class="rounded border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed" title="You cannot delete yourself">
-                {% endif %}
-              </td>
 
               <td class="px-4 py-3 font-medium text-gray-800">
-                 {# ... existing username code ... #}
+                 {# Username code #}
                  <div class="flex flex-col">
                     <span class="text-base">{{ u.username }}</span>
                     {% if u.email %}
@@ -91,7 +63,7 @@
                     {% endif %}
                   </div>
               </td>
-              {# ... existing columns (Role, Date Joined, Last Login, Status) ... #}
+              {# Role, Date Joined, Last Login, Status #}
               <td class="px-4 py-3">
                   <div class="flex gap-2">
                     {% if u.is_superuser %}
@@ -114,6 +86,21 @@
                     <span class="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2 py-1 text-xs font-medium text-red-700 border border-red-100"><span class="h-1.5 w-1.5 rounded-full bg-red-600"></span>Inactive</span>
                   {% endif %}
               </td>
+
+              {# Actions Cell #}
+              <td class="px-4 py-3 text-right">
+                <button type="button" 
+                   onclick="openEditUserModal(
+                     '{{ u.id }}', 
+                     '{{ u.username|escapejs }}', 
+                     '{% if u.is_superuser %}superuser{% elif u.is_staff %}staff{% else %}standard{% endif %}',
+                     '{{ u.is_active|lower }}'
+                   )"
+                   class="text-gray-500 hover:text-blue-600 transition p-1 rounded-md hover:bg-gray-100"
+                   title="Edit User">
+                   <i class="fi fi-rr-edit"></i>
+                </button>
+              </td>
             </tr>
             {% empty %}
             <tr><td colspan="6" class="px-4 py-6 text-center text-gray-500 italic">No users found.</td></tr>
@@ -121,8 +108,7 @@
           </tbody>
         </table>
       </div>
-    </form> {# END WRAPPER FORM #}
-
+    </form>
   </div>
   {% endif %}
 
@@ -233,47 +219,77 @@
 </div>
 {% endif %}
 
-{# --- MODAL 3: DEACTIVATE CONFIRMATION --- #}
-<div id="modal-deactivate-users" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title-deact" role="dialog" aria-modal="true">
-  <div class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity" onclick="closeModal('modal-deactivate-users')"></div>
+{# --- MODAL 3: EDIT USER --- #}
+<div id="modal-edit-user" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title-edit" role="dialog" aria-modal="true">
+  <div class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity" onclick="closeModal('modal-edit-user')"></div>
   <div class="flex min-h-screen items-center justify-center p-4 text-center">
     <div class="relative w-full max-w-md transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all">
       
-      <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-        <div class="sm:flex sm:items-start">
-          <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 sm:mx-0 sm:h-10 sm:w-10">
-            <i class="fi fi-rr-ban text-amber-600"></i>
-          </div>
-          <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-            <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title-deact">Deactivate Users</h3>
-            <div class="mt-2">
-              <p class="text-sm text-gray-500">
-                Are you sure you want to deactivate <span id="deactivate-count-target" class="font-bold text-gray-900">0</span> user(s)? 
-                <br><br>
-                <strong>They will no longer be able to log in</strong>, but their uploaded data will remain safe.
-              </p>
+      <form action="" method="post" id="form-edit-user">
+        {% csrf_token %}
+        <input type="hidden" name="action_edit_user" value="1">
+        <input type="hidden" name="user_id" id="edit-user-id">
+
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+            <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4" id="modal-title-edit">Edit User Details</h3>
+            
+            <div class="space-y-4">
+                
+                {# 1. Status Toggle #}
+                <div class="flex items-center justify-between border rounded-md p-3 bg-gray-50">
+                    <div class="flex flex-col">
+                        <span class="text-sm font-medium text-gray-900">Active Account</span>
+                        <span class="text-xs text-gray-500">Uncheck to disable login (Deactivate).</span>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="is_active" id="edit-is-active" class="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                {# 2. Username #}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Username</label>
+                    <input type="text" name="username" id="edit-username" required
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border p-2">
+                </div>
+
+                {# 3. Role Dropdown #}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Role</label>
+                    <select name="role" id="edit-role" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border p-2 bg-white">
+                        <option value="standard">Standard User</option>
+                        <option value="staff">Staff (Admin Access)</option>
+                        <option value="superuser">Superuser (Full Control)</option>
+                    </select>
+                </div>
+
+                {# 4. Password Reset (Optional) #}
+                <div class="border-t border-gray-200 pt-4 mt-2">
+                    <label class="block text-sm font-medium text-gray-700">Set New Password (Optional)</label>
+                    <input type="text" name="new_password" placeholder="Leave blank to keep current password"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border p-2">
+                    <p class="text-xs text-gray-500 mt-1">Existing passwords cannot be viewed, only overwritten.</p>
+                </div>
+
             </div>
-          </div>
         </div>
-      </div>
-      
-      <div class="bg-gray-50 px-4 py-3 flex w-full flex-row-reverse gap-2 sm:px-6">
-        <button type="button" onclick="submitDeactivateForm()" 
-          class="inline-flex w-full justify-center rounded-md border border-transparent bg-amber-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-amber-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
-          Deactivate
-        </button>
-        <button type="button" onclick="closeModal('modal-deactivate-users')" 
-          class="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-          Cancel
-        </button>
-      </div>
+
+        <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
+          <button type="button" onclick="closeModal('modal-edit-user')" class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:text-sm">
+            Cancel
+          </button>
+          <button type="submit" class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:text-sm">
+            Save Changes
+          </button>
+        </div>
+      </form>
 
     </div>
   </div>
 </div>
 
 <script>
-  // --- 1. Global Functions (Accessible by HTML onclick="") ---
+  // --- 1. Global Functions ---
   
   function openModal(modalId) {
       const el = document.getElementById(modalId);
@@ -285,58 +301,30 @@
       if(el) el.classList.add('hidden');
   }
 
-  // UPDATED: Renamed from 'Delete' to 'Deactivate' to match your button's onclick
-  function openDeactivateModal() {
-      // Logic to count checked boxes and show modal
-      const count = document.querySelectorAll('.user-checkbox:checked').length;
-      if (count === 0) return;
+  // --- Edit User Modal Logic ---
+  function openEditUserModal(id, username, role, isActive) {
+      // 1. Populate the form fields with data from the row
+      document.getElementById('edit-user-id').value = id;
+      document.getElementById('edit-username').value = username;
+      document.getElementById('edit-role').value = role;
       
-      // Update text in modal
-      document.getElementById('deactivate-count-target').innerText = count;
-      openModal('modal-deactivate-users');
+      // isActive comes in as string "true" or "false"
+      document.getElementById('edit-is-active').checked = (isActive === 'true');
+      
+      // 2. Clear the password field (security)
+      document.getElementsByName('new_password')[0].value = "";
+
+      // 3. Show Modal
+      openModal('modal-edit-user');
   }
 
-  // UPDATED: Renamed from 'Delete' to 'Deactivate'
-  function submitDeactivateForm() {
-      // Submit the form
-      document.getElementById('form-deactivate-users').submit();
-  }
-
-
-  // --- 2. DOM Ready Logic (Event Listeners) ---
+  // --- 2. DOM Ready Logic ---
   document.addEventListener('DOMContentLoaded', function() {
-      
-      // A. Auto-open modal if there were errors (server-side flag)
+      // Auto-open modal if there were errors (server-side flag)
       const activeModal = "{{ active_modal|default:'' }}";
       if (activeModal) {
           openModal(activeModal);
       }
-
-      // B. Checkbox Logic for User List
-      const selectAll = document.getElementById('select-all-users');
-      const checkboxes = document.querySelectorAll('.user-checkbox');
-      const deactBtn = document.getElementById('btn-deactivate-trigger');
-
-      function updateDeactivateButton() {
-          if(!deactBtn) return;
-          const checkedCount = document.querySelectorAll('.user-checkbox:checked').length;
-          deactBtn.disabled = checkedCount === 0;
-      }
-
-      // "Select All" Header Checkbox
-      if (selectAll) {
-          selectAll.addEventListener('change', function() {
-              checkboxes.forEach(cb => {
-                  if(!cb.disabled) cb.checked = selectAll.checked;
-              });
-              updateDeactivateButton();
-          });
-      }
-
-      // Individual Row Checkboxes
-      checkboxes.forEach(cb => {
-          cb.addEventListener('change', updateDeactivateButton);
-      });
   });
 </script>
 
