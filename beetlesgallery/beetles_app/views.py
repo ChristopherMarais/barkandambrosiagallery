@@ -38,6 +38,18 @@ from io import BytesIO, StringIO
 
 MODAL_API_URL = "https://christophermarais--ibbi-api-fastapi-app.modal.run/analyze"
 
+# Custom decorator for superuser-only views
+def superuser_required(view_func):
+    """
+    Decorator that requires the user to be a superuser.
+    Redirects to login if not authenticated, raises 403 if not superuser.
+    """
+    decorated_view = user_passes_test(
+        lambda u: u.is_superuser,
+        login_url='login'
+    )(view_func)
+    return decorated_view
+
 @login_required
 def my_account(request):
     user = request.user
@@ -817,7 +829,7 @@ def download_described_names_ref(request):
 
     return resp
 
-@staff_member_required
+@superuser_required
 def admin_valid_species(request):
     """
     Minimal admin page to publish a new valid_species.csv into default_storage
@@ -866,7 +878,7 @@ def admin_valid_species(request):
         {"form": form, "status": current_status},
     )
 
-@staff_member_required
+@superuser_required
 def admin_described_names(request):
     """
     Minimal admin page to publish a new described_names.csv into default_storage
