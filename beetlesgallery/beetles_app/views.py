@@ -27,10 +27,10 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.files.storage import default_storage
 
-from . import species_ref
+from . import species_ref, described_names_ref
 from .models import Beetles, UploadBatch, DownloadJob, UpdateBatch, ImageAsset
 from .schema import REQUIRED_COLS, MAX_ROWS
-from .forms import TailwindUserCreationForm, ProfileForm, PasswordChangeFormStyled, ValidSpeciesUploadForm, UpdateBatchUploadForm
+from .forms import TailwindUserCreationForm, ProfileForm, PasswordChangeFormStyled, ValidSpeciesUploadForm, DescribedNamesUploadForm, UpdateBatchUploadForm
 from .tasks import process_upload_task, process_update_task, build_downloads_task
 
 import pandas as pd
@@ -772,6 +772,51 @@ def download_taxonomy_ref(request):
 
     return resp
 
+@login_required(login_url='login')
+def download_described_names_ref(request):
+    """
+    Stream the latest described_names.csv to a logged-in user with a stable, UTC-stamped filename.
+    """
+    storage_key = getattr(settings, "DESCRIBED_NAMES_PATH", "reference/described_names.csv")
+
+    try:
+        f = default_storage.open(storage_key, "rb")
+    except Exception:
+        raise Http404("Described names reference file is not available.")
+
+    filename = described_names_ref.build_download_filename()
+    etag = described_names_ref.get_version()
+    quoted_etag = f'"{etag}"' if etag else None
+
+    inm = request.META.get("HTTP_IF_NONE_MATCH", "")
+    if quoted_etag and quoted_etag in inm:
+        try:
+            f.close()
+        except Exception:
+            pass
+        resp = HttpResponse(status=304)
+        resp["ETag"] = quoted_etag
+        resp["Cache-Control"] = "public, max-age=0, must-revalidate"
+        try:
+            lm = default_storage.get_modified_time(storage_key)
+            resp["Last-Modified"] = http_date(lm.timestamp())
+        except Exception:
+            pass
+        return resp
+
+    resp = FileResponse(f, content_type="text/csv")
+    resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+    if quoted_etag:
+        resp["ETag"] = quoted_etag
+    resp["Cache-Control"] = "public, max-age=0, must-revalidate"
+    try:
+        lm = default_storage.get_modified_time(storage_key)
+        resp["Last-Modified"] = http_date(lm.timestamp())
+    except Exception:
+        pass
+
+    return resp
+
 @staff_member_required
 def admin_valid_species(request):
     """
@@ -818,6 +863,55 @@ def admin_valid_species(request):
     return render(
         request,
         "admin/tools_valid_species.html",
+        {"form": form, "status": current_status},
+    )
+
+@staff_member_required
+def admin_described_names(request):
+    """
+    Minimal admin page to publish a new described_names.csv into default_storage
+    and set the user-facing label.
+    """
+    current_status = described_names_ref.status()
+    if request.method == "POST":
+        form = DescribedNamesUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            f = form.cleaned_data["csv_file"]
+            label = form.cleaned_data.get("label") or None
+
+            # Save the upload to a temp file, then call the publisher helper
+            from pathlib import Path
+            import tempfile
+
+            # use a real temp file (container-/OS-friendly)
+            with tempfile.NamedTemporaryFile(delete=False) as tmp:
+                for chunk in f.chunks():
+                    tmp.write(chunk)
+                tmp_path = tmp.name
+
+            try:
+                rows, version = described_names_ref.publish_from_file(tmp_path, label=label)
+                messages.success(
+                    request,
+                    f"Published described_names.csv ({rows} rows)."
+                )
+                # After publish, refresh status for display
+                current_status = described_names_ref.status()
+            except Exception as e:
+                messages.error(request, f"Publish failed: {e}")
+            finally:
+                try:
+                    os.unlink(tmp_path)
+                except Exception:
+                    pass
+
+            return redirect("admin_described_names")
+    else:
+        form = DescribedNamesUploadForm()
+
+    return render(
+        request,
+        "admin/tools_described_names.html",
         {"form": form, "status": current_status},
     )
 

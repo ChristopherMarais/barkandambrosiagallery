@@ -2,7 +2,7 @@
 from django.conf import settings
 from django.core.cache import cache
 
-from . import species_ref
+from . import species_ref, described_names_ref
 
 def species_ref_status(request):
     """
@@ -13,4 +13,7 @@ def species_ref_status(request):
       "updating": <bool>
     }
     """
-    return {"species_ref_status": species_ref.status()}
+    return {
+        "species_ref_status": species_ref.status(),
+        "described_names_ref_status": described_names_ref.status(),
+    }
