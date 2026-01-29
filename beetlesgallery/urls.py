@@ -34,6 +34,7 @@ urlpatterns = [
     path("downloads/start/", beetles_views.start_batch_download, name="start_batch_download"),
     path("updates/", beetles_views.update_upload, name="update_upload"),
     path("reference/download/", beetles_views.download_taxonomy_ref, name="download_taxonomy_ref"),
+    path("reference/download-described-names/", beetles_views.download_described_names_ref, name="download_described_names_ref"),
     path('update_single/<uuid:beetle_id>/', beetles_views.update_single_beetle, name='update_single_beetle'),
     path('tools/classify/', beetles_views.tool_classify, name='tool_classify'),
 

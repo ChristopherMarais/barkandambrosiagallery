@@ -765,6 +765,51 @@ def download_taxonomy_ref(request):
 
     return resp
 
+@login_required(login_url='login')
+def download_described_names_ref(request):
+    """
+    Stream the latest described_names.csv to a logged-in user with a stable, UTC-stamped filename.
+    """
+    storage_key = getattr(settings, "DESCRIBED_NAMES_PATH", "reference/described_names.csv")
+
+    try:
+        f = default_storage.open(storage_key, "rb")
+    except Exception:
+        raise Http404("Described names reference file is not available.")
+
+    filename = described_names_ref.build_download_filename()
+    etag = described_names_ref.get_version()
+    quoted_etag = f'"{etag}"' if etag else None
+
+    inm = request.META.get("HTTP_IF_NONE_MATCH", "")
+    if quoted_etag and quoted_etag in inm:
+        try:
+            f.close()
+        except Exception:
+            pass
+        resp = HttpResponse(status=304)
+        resp["ETag"] = quoted_etag
+        resp["Cache-Control"] = "public, max-age=0, must-revalidate"
+        try:
+            lm = default_storage.get_modified_time(storage_key)
+            resp["Last-Modified"] = http_date(lm.timestamp())
+        except Exception:
+            pass
+        return resp
+
+    resp = FileResponse(f, content_type="text/csv")
+    resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+    if quoted_etag:
+        resp["ETag"] = quoted_etag
+    resp["Cache-Control"] = "public, max-age=0, must-revalidate"
+    try:
+        lm = default_storage.get_modified_time(storage_key)
+        resp["Last-Modified"] = http_date(lm.timestamp())
+    except Exception:
+        pass
+
+    return resp
+
 @staff_member_required
 def admin_valid_species(request):
     """
