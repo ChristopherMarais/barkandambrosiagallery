@@ -38,6 +38,18 @@ from io import BytesIO, StringIO
 
 MODAL_API_URL = "https://christophermarais--ibbi-api-fastapi-app.modal.run/analyze"
 
+# Custom decorator for superuser-only views
+def superuser_required(view_func):
+    """
+    Decorator that requires the user to be a superuser.
+    Redirects to login if not authenticated, raises 403 if not superuser.
+    """
+    decorated_view = user_passes_test(
+        lambda u: u.is_superuser,
+        login_url='login'
+    )(view_func)
+    return decorated_view
+
 @login_required
 def my_account(request):
     user = request.user
@@ -781,13 +793,58 @@ def my_uploads(request):
     else:
         update_batches = []
 
+    # Superuser-only taxonomy archives
+    valid_species_archives_json = "[]"
+    described_names_archives_json = "[]"
+    current_valid_species_json = "null"
+    current_described_names_json = "null"
+    if request.user.is_superuser:
+        import json
+        from django.core.serializers.json import DjangoJSONEncoder
+
+        valid_species_archives = species_ref.list_archived_versions()
+        described_names_archives = described_names_ref.list_archived_versions()
+
+        # Get current version info
+        valid_species_path = getattr(settings, "VALID_SPECIES_PATH", "reference/valid_species.csv")
+        described_names_path = getattr(settings, "DESCRIBED_NAMES_PATH", "reference/described_names.csv")
+
+        current_valid_species = None
+        current_described_names = None
+
+        if default_storage.exists(valid_species_path):
+            mtime = default_storage.get_modified_time(valid_species_path)
+            current_valid_species = {
+                'filename': 'valid_species.csv',
+                'timestamp': mtime,
+                'label': species_ref.status().get('label', 'Current version')
+            }
+
+        if default_storage.exists(described_names_path):
+            mtime = default_storage.get_modified_time(described_names_path)
+            current_described_names = {
+                'filename': 'described_names.csv',
+                'timestamp': mtime,
+                'label': described_names_ref.status().get('label', 'Current version')
+            }
+
+        # Convert to JSON-serializable format
+        valid_species_archives_json = json.dumps(valid_species_archives, cls=DjangoJSONEncoder)
+        described_names_archives_json = json.dumps(described_names_archives, cls=DjangoJSONEncoder)
+        current_valid_species_json = json.dumps(current_valid_species, cls=DjangoJSONEncoder)
+        current_described_names_json = json.dumps(current_described_names, cls=DjangoJSONEncoder)
+
     return render(
-        request, 
-        "beetles/my_uploads.html", 
+        request,
+        "beetles/my_uploads.html",
         {
-        "batches": batches, 
+        "batches": batches,
         "download_jobs": download_jobs,
-        "update_batches": update_batches
+        "update_batches": update_batches,
+        "valid_species_archives": valid_species_archives_json,
+        "described_names_archives": described_names_archives_json,
+        "current_valid_species": current_valid_species_json,
+        "current_described_names": current_described_names_json
         }
     )
 
@@ -890,7 +947,40 @@ def download_described_names_ref(request):
 
     return resp
 
-@staff_member_required
+@superuser_required
+def download_taxonomy_archive(request, ref_type, filename):
+    """
+    Download an archived version of a taxonomy reference CSV.
+    ref_type: 'valid_species' or 'described_names'
+    filename: the archived filename
+    """
+    # Validate ref_type
+    if ref_type not in ['valid_species', 'described_names']:
+        raise Http404("Invalid reference type")
+
+    # Construct path
+    archive_path = f"reference/archive/{ref_type}/{filename}"
+
+    # Security: ensure filename doesn't contain path traversal
+    if '..' in filename or '/' in filename:
+        raise Http404("Invalid filename")
+
+    # Ensure file exists
+    if not default_storage.exists(archive_path):
+        raise Http404("Archive file not found")
+
+    # Open and stream the file
+    try:
+        f = default_storage.open(archive_path, "rb")
+    except Exception:
+        raise Http404("Could not open archive file")
+
+    resp = FileResponse(f, content_type="text/csv")
+    resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    return resp
+
+@superuser_required
 def admin_valid_species(request):
     """
     Minimal admin page to publish a new valid_species.csv into default_storage
@@ -915,14 +1005,22 @@ def admin_valid_species(request):
 
             try:
                 rows, version = species_ref.publish_from_file(tmp_path, label=label)
-                messages.success(
-                    request,
-                    f"Published valid_species.csv ({rows} rows)."
-                )
+                success_msg = f"Published valid_species.csv ({rows} rows)."
+                messages.success(request, success_msg)
+
+                # If AJAX request, return JSON
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': True, 'message': success_msg})
+
                 # After publish, refresh status for display
                 current_status = species_ref.status()
             except Exception as e:
-                messages.error(request, f"Publish failed: {e}")
+                error_msg = f"Publish failed: {e}"
+                messages.error(request, error_msg)
+
+                # If AJAX request, return JSON error
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': error_msg}, status=400)
             finally:
                 try:
                     os.unlink(tmp_path)
@@ -939,7 +1037,7 @@ def admin_valid_species(request):
         {"form": form, "status": current_status},
     )
 
-@staff_member_required
+@superuser_required
 def admin_described_names(request):
     """
     Minimal admin page to publish a new described_names.csv into default_storage
@@ -964,14 +1062,22 @@ def admin_described_names(request):
 
             try:
                 rows, version = described_names_ref.publish_from_file(tmp_path, label=label)
-                messages.success(
-                    request,
-                    f"Published described_names.csv ({rows} rows)."
-                )
+                success_msg = f"Published described_names.csv ({rows} rows)."
+                messages.success(request, success_msg)
+
+                # If AJAX request, return JSON
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': True, 'message': success_msg})
+
                 # After publish, refresh status for display
                 current_status = described_names_ref.status()
             except Exception as e:
-                messages.error(request, f"Publish failed: {e}")
+                error_msg = f"Publish failed: {e}"
+                messages.error(request, error_msg)
+
+                # If AJAX request, return JSON error
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': error_msg}, status=400)
             finally:
                 try:
                     os.unlink(tmp_path)

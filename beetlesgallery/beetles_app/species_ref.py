@@ -326,6 +326,30 @@ def publish_from_file(src_path: str, label: Optional[str] = None) -> tuple[int, 
 
         with default_storage.open(tmp_key, "wb") as out:
             out.write(data)
+
+        # Archive old version before replacing (if it exists)
+        if default_storage.exists(_PATH):
+            try:
+                # Create archive path with timestamp in subfolder
+                from django.utils import timezone
+                timestamp = timezone.now().strftime("%Y-%m-%d_%H-%M_UTC")
+                archive_path = f"reference/archive/valid_species/valid_species_{timestamp}.csv"
+
+                # Ensure archive folder exists (for local storage)
+                try:
+                    archive_full_path = default_storage.path(archive_path)
+                    os.makedirs(os.path.dirname(archive_full_path), exist_ok=True)
+                except NotImplementedError:
+                    pass
+
+                # Copy current file to archive
+                with default_storage.open(_PATH, "rb") as old_file:
+                    with default_storage.open(archive_path, "wb") as archive_file:
+                        archive_file.write(old_file.read())
+            except Exception as e:
+                # Log but don't fail the upload if archiving fails
+                print(f"Warning: Failed to archive old valid_species.csv: {e}")
+
         # Move/replace tmp -> final (some storages don't have rename; fall back to copy+delete)
         try:
             default_storage.delete(_PATH)  # ignore errors if it doesn't exist
@@ -457,5 +481,41 @@ def find_ids_matching_text(text: str) -> set[str]:
             if val and query in val.lower():
                 matches.add(vid)
                 break # one match in this row is enough to include the ID
-                
+
     return matches
+
+def list_archived_versions():
+    """
+    List all archived versions of valid_species.csv.
+    Returns list of dicts with 'filename', 'timestamp', 'path' sorted newest first.
+    """
+    archive_dir = "reference/archive/valid_species/"
+    archived = []
+
+    try:
+        # List files in archive directory
+        dirs, files = default_storage.listdir(archive_dir)
+
+        for filename in files:
+            if filename.endswith('.csv'):
+                file_path = f"{archive_dir}{filename}"
+                try:
+                    # Get modified time
+                    mtime = default_storage.get_modified_time(file_path)
+                    archived.append({
+                        'filename': filename,
+                        'timestamp': mtime,
+                        'path': file_path
+                    })
+                except Exception:
+                    # If we can't get mtime, skip this file
+                    pass
+
+        # Sort by timestamp, newest first
+        archived.sort(key=lambda x: x['timestamp'], reverse=True)
+
+    except Exception:
+        # Archive directory doesn't exist or can't be read
+        pass
+
+    return archived
