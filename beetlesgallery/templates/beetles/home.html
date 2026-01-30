@@ -208,15 +208,16 @@
              <div class="flex items-center gap-2">
 
               {# --- Staff Download Options --- #}
-                 {% if request.user.is_staff %}
-                 <div class="flex items-center gap-2 border-r border-text/20 pr-4 mr-2">
-                    <label class="flex items-center gap-2 cursor-pointer select-none text-sm text-text/80 font-medium hover:text-text">
+              {% if request.user.is_staff %}
+              <div class="flex items-center gap-2">
+                    <label class="flex items-center gap-2 cursor-pointer select-none text-sm font-semibold text-text/80 font-medium hover:text-text">
                         <input type="checkbox" id="staff-dl-images-toggle" checked 
                                class="rounded border-gray-300 text-gray-800 focus:ring-gray-400 cursor-pointer"
                                onchange="updateDownloadForms(this.checked)">
                         <span>Include Images</span>
                     </label>
                  </div>
+                 <div class="h-4 w-px bg-text/20 mx-1"></div>
                  {% endif %}
 
                  <button type="submit" form="download-selected-form" disabled
