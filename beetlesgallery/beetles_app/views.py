@@ -19,7 +19,7 @@ from django.contrib import messages
 from django.utils.http import http_date
 from django.http import HttpResponseNotAllowed, FileResponse, HttpResponse, Http404, JsonResponse, StreamingHttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth import login, update_session_auth_hash
+from django.contrib.auth import login, update_session_auth_hash, get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views.decorators.http import require_POST
 from django.contrib.auth.views import LoginView as DjangoLoginView, LogoutView
@@ -42,24 +42,97 @@ MODAL_API_URL = "https://christophermarais--ibbi-api-fastapi-app.modal.run/analy
 def my_account(request):
     user = request.user
 
+    # Default: Initialize empty forms
+    password_form = PasswordChangeFormStyled(user=user)
+    create_user_form = TailwindUserCreationForm()
+    active_modal = None
+
     if request.method == "POST":
-        # Only password change is supported now
-        if "password_submit" in request.POST:
-            cform = PasswordChangeFormStyled(user=user, data=request.POST)
-            if cform.is_valid():
-                user = cform.save()
-                update_session_auth_hash(request, user)  # keep them logged in
-                messages.success(request, "Password changed.")
+        # --- CASE 1: Change Password ---
+        if "action_change_password" in request.POST:
+            password_form = PasswordChangeFormStyled(user=user, data=request.POST)
+            if password_form.is_valid():
+                user = password_form.save()
+                update_session_auth_hash(request, user)  # Keep user logged in
+                messages.success(request, "Password changed successfully.")
                 return redirect("my_account")
-        else:
-            cform = PasswordChangeFormStyled(user=user)
-    else:
-        cform = PasswordChangeFormStyled(user=user)
+            else:
+                active_modal = "modal-password"
+                messages.error(request, "Please correct the errors in the password form.")
+
+        # --- CASE 2: Create User (Staff Only) ---
+        elif "action_create_user" in request.POST:
+            if not user.is_staff:
+                messages.error(request, "You do not have permission to create users.")
+                return redirect("my_account")
+
+            create_user_form = TailwindUserCreationForm(request.POST)
+            if create_user_form.is_valid():
+                new_user = create_user_form.save()
+                messages.success(request, f"User '{new_user.username}' created successfully.")
+                return redirect("my_account")
+            else:
+                active_modal = "modal-create-user"
+                messages.error(request, "Please correct the errors in the user creation form.")
+
+        # --- CASE 3: Edit User (Staff Only) ---
+        elif "action_edit_user" in request.POST:
+            if not user.is_staff:
+                messages.error(request, "Permission denied.")
+                return redirect("my_account")
+            
+            target_id = request.POST.get("user_id")
+            target_user = get_object_or_404(get_user_model(), pk=target_id)
+            
+            # 1. Update Username
+            new_username = request.POST.get("username", "").strip()
+            if new_username and new_username != target_user.username:
+                if get_user_model().objects.filter(username=new_username).exists():
+                    messages.error(request, f"Username '{new_username}' is already taken.")
+                    return redirect("my_account")
+                target_user.username = new_username
+
+            # 2. Update Role
+            role = request.POST.get("role")
+            if role == "superuser":
+                target_user.is_staff = True
+                target_user.is_superuser = True
+            elif role == "staff":
+                target_user.is_staff = True
+                target_user.is_superuser = False
+            else: # standard
+                target_user.is_staff = False
+                target_user.is_superuser = False
+
+            # 3. Update Status (Active/Inactive)
+            # Checkbox sends 'on' if checked; if unchecked, it sends nothing (None)
+            target_user.is_active = (request.POST.get("is_active") == "on")
+
+            # 4. Update Password (Optional)
+            new_pw = request.POST.get("new_password", "").strip()
+            if new_pw:
+                target_user.set_password(new_pw)
+                messages.info(request, f"Password for {target_user.username} has been reset.")
+
+            target_user.save()
+            messages.success(request, f"User '{target_user.username}' updated successfully.")
+            return redirect("my_account")
+        
+    # --- Fetch User List (Staff Only) ---
+    users_list = []
+    if user.is_staff:
+        User = get_user_model()
+        users_list = User.objects.all().order_by('-date_joined')
 
     return render(
         request,
         "accounts/my_account.html",
-        {"password_form": cform},
+        {
+            "password_form": password_form,
+            "create_user_form": create_user_form,
+            "active_modal": active_modal,
+            "users_list": users_list,
+        },
     )
 
 class LoginViewWithRedirectMessage(DjangoLoginView):
@@ -542,8 +615,8 @@ def beetle_detail(request, beetle_id):
 def signup(request):
     # --- Security Check: Block non-staff users ---
     if not request.user.is_staff:
-        messages.error(request, "Please email Jiri Hulcr at hulcr@ufl.edu to request an account.")
-        return redirect("beetles_home")
+        messages.info(request, "Account creation is restricted. Please email to request an account.")
+        return redirect("login")
     # ---------------------------------------------
     
     if request.method == "POST":
