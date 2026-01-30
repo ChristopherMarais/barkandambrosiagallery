@@ -655,7 +655,7 @@ def start_batch_download(request):
         # If a user arrives here via GET (e.g. after logging in), 
         # redirect them to the gallery to try again.
         messages.info(request, "Please select items to download.")
-        return redirect("home")
+        return redirect("beetles_home")
     # ----------------------------------------------------------------------
 
     from .utils import FILTERS_CONFIG
@@ -684,7 +684,7 @@ def start_batch_download(request):
 
     if mode not in ("ids", "query"):
         messages.error(request, "Invalid selection mode.")
-        return redirect("home")
+        return redirect("beetles_home")
 
     # If query mode, we need to capture ALL filters, not just 'q'.
     # We will serialize them into query_string as JSON.
