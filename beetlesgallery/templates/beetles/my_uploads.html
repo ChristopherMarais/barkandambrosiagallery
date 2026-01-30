@@ -138,7 +138,6 @@
                           {% if job.selection_mode == 'ids' %}
                             <span class="text-gray-500 text-xs font-normal">{{ job.total_requested }} Record(s)</span>
                           {% else %}
-                            <span>Search Query</span>
                             <span class="text-gray-500 text-xs italic font-normal">
                               {{ job.get_readable_query|default:"All records"|truncatechars:40 }}
                             </span>

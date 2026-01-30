@@ -649,8 +649,15 @@ def signup(request):
     return render(request, "accounts/signup.html", {"form": form})
 
 @login_required
-@require_POST
 def start_batch_download(request):
+    # --- Handle GET requests gracefully (Fixes Login Redirect 405) ---
+    if request.method != "POST":
+        # If a user arrives here via GET (e.g. after logging in), 
+        # redirect them to the gallery to try again.
+        messages.info(request, "Please select items to download.")
+        return redirect("home")
+    # ----------------------------------------------------------------------
+
     from .utils import FILTERS_CONFIG
 
     """
