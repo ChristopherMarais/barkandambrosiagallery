@@ -661,6 +661,14 @@ def start_batch_download(request):
     """
     mode = (request.POST.get("selection_mode") or "").strip()
     q_str = (request.POST.get("q") or "").strip()
+
+    include_images = True
+    # Only staff can opt-out of images
+    if request.user.is_staff:
+        # Front-end will send value="metadata_only" if the checkbox is unchecked
+        if request.POST.get("download_type") == "metadata_only":
+            include_images = False
+
     total = request.POST.get("total_matches")
     try:
         total = int(total) if total is not None else 0
@@ -706,6 +714,7 @@ def start_batch_download(request):
         query_string=final_query_string if mode == "query" else "",
         total_requested=total if mode == "query" else 0,
         status=DownloadJob.Status.PENDING,
+        include_images=include_images,
     )
 
     if mode == "ids":
