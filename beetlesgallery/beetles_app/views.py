@@ -1301,7 +1301,7 @@ def _run_update_batch(request, row_data, filename):
     
     s_buf = StringIO()
     df.to_csv(s_buf, index=False)
-    csv_content = s_buf.getvalue().encode('utf-8')
+    csv_content = s_buf.getvalue().encode('utf-8-sig')
     
     batch = UpdateBatch.objects.create(
         uploaded_by=request.user,

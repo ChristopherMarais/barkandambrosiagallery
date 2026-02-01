@@ -382,7 +382,7 @@ class Command(BaseCommand):
 
         rows_iter = qs.iterator(chunk_size=1000)
 
-        with csv_tmp_path.open("w", encoding="utf-8", newline="") as fh_csv, \
+        with csv_tmp_path.open("w", encoding="utf-8-sig", newline="") as fh_csv, \
              zipfile.ZipFile(zip_tmp_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
 
             writer = csv.writer(fh_csv, dialect="excel")
