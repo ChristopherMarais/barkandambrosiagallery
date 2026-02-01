@@ -335,6 +335,15 @@
                       <span class="ml-1">{{ b.image_asset.image_institution }}</span>
                     </div>
                   {% endif %}
+
+                  {# --- PHOTOGRAPHER --- #}
+                  {% if b.image_asset.photographer %}
+                    <div class="text-text/80 break-words">
+                      <span class="font-semibold text-text/50">Photographer:</span>
+                      <span class="ml-1">{{ b.image_asset.photographer }}</span>
+                    </div>
+                  {% endif %}
+
                 </div>
 
                 <div class="space-y-1">
