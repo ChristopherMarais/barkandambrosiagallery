@@ -340,8 +340,10 @@ def publish_from_file(src_path: str, label: Optional[str] = None) -> tuple[int, 
             # Cloud storage (S3/Azure) doesn't need folder creation; ignore
             pass
 
+        final_data = text.encode("utf-8-sig")
+
         with default_storage.open(tmp_key, "wb") as out:
-            out.write(data)
+            out.write(final_data)
 
         # Archive old version before replacing (if it exists)
         if default_storage.exists(_PATH):
