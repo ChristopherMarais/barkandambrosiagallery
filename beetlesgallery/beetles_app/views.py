@@ -1463,3 +1463,10 @@ def stream_updates(request):
     response['Cache-Control'] = 'no-cache'
     response['X-Accel-Buffering'] = 'no'
     return response
+
+@login_required
+def taxonomy_browser(request):
+    """
+    Display the taxonomy browser page.
+    """
+    return render(request, 'beetles/taxonomy_browser.html')

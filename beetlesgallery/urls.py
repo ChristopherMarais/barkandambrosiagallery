@@ -25,6 +25,9 @@ urlpatterns = [
     # 2. /beetles/ -> Gallery View (Sidebar "Beetles" links here)
     path('beetles/', beetles_views.gallery, name='beetles_home'),
 
+    # 3. /taxonomy/ -> Taxonomy Browser (Sidebar "Taxonomy Browser" links here)
+    path('taxonomy/', beetles_views.taxonomy_browser, name='taxonomy_browser'),
+
     path('beetles/<uuid:beetle_id>/', beetles_views.beetle_detail, name='beetle_detail'),
     path("beetles/add_specimen/<uuid:image_id>/", beetles_views.create_specimen_for_image, name="create_specimen_for_image"),
 
