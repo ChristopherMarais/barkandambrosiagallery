@@ -360,6 +360,38 @@ class Command(BaseCommand):
 
         csv_filename = f"beetles_{job.id}.csv"
         csv_tmp_path = tmp_dir / csv_filename
+        zip_tmp_path = tmp_dir / zip_filename
+
+        # --- Write CSV (comma-separated) ---
+        # Headers: use visible column names + the stable filename
+        headers = [
+            "record_id",
+            "alternative_id",
+            "image_institution",
+            "photographer",
+            "image_email",
+            "photo_usage_statement",
+            "aspect",
+            "resolution_in_ppmm",
+            "image_notes",
+            "image_date_taken",
+            "image_has_multiple_individuals",
+            "depicts_specimen",
+            "depicts_valid_name_id",
+            "depicts_described_name_id",
+            "depicts_name_verbatim",
+            "collection_country",
+            "collection_stateProvince",
+            "specimen_sex",
+            "specimen_type_status",
+            "specimen_notes",
+            "update_notes"
+        ]
+
+        rows_iter = qs.iterator(chunk_size=1000)
+
+        with csv_tmp_path.open("w", encoding="utf-8-sig", newline="") as fh_csv, \
+             zipfile.ZipFile(zip_tmp_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
 
         # Only setup ZIP path if needed
         zip_filename = f"beetles_{job.id}.zip"

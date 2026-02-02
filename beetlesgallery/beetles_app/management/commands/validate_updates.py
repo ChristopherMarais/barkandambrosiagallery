@@ -342,7 +342,7 @@ class Command(BaseCommand):
         w.writerow(["excel_row", "record_id", "status", "changed_fields", "error_message"])
         for r in per_row:
             w.writerow([r.get("excel_row",""), r.get("record_id",""), r.get("status",""), r.get("changed_fields",""), r.get("error_message","")])
-        report_bytes = report_buf.getvalue().encode("utf-8")
+        report_bytes = report_buf.getvalue().encode("utf-8-sig")
 
         if not dry_run:
             # We save=True here to ensure the file path is committed to the DB
