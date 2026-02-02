@@ -586,6 +586,9 @@ class DownloadJob(models.Model):
     selection_mode = models.CharField(
         max_length=8, choices=[("ids", "IDs"), ("query", "Query")], db_index=True
     )
+
+    include_images = models.BooleanField(default=True, help_text="If False, generate CSV only (no ZIP).")
+    
     query_string = models.TextField(blank=True)        # when selection_mode='query'
     selected_ids_json = models.TextField(blank=True)   # when selection_mode='ids' (JSON list of UUID strings)
     total_requested = models.PositiveIntegerField(default=0)

@@ -649,8 +649,15 @@ def signup(request):
     return render(request, "accounts/signup.html", {"form": form})
 
 @login_required
-@require_POST
 def start_batch_download(request):
+    # --- Handle GET requests gracefully (Fixes Login Redirect 405) ---
+    if request.method != "POST":
+        # If a user arrives here via GET (e.g. after logging in), 
+        # redirect them to the gallery to try again.
+        messages.info(request, "Please select items to download.")
+        return redirect("beetles_home")
+    # ----------------------------------------------------------------------
+
     from .utils import FILTERS_CONFIG
 
     """
@@ -661,6 +668,14 @@ def start_batch_download(request):
     """
     mode = (request.POST.get("selection_mode") or "").strip()
     q_str = (request.POST.get("q") or "").strip()
+
+    include_images = True
+    # Only staff can opt-out of images
+    if request.user.is_staff:
+        # Front-end will send value="metadata_only" if the checkbox is unchecked
+        if request.POST.get("download_type") == "metadata_only":
+            include_images = False
+
     total = request.POST.get("total_matches")
     try:
         total = int(total) if total is not None else 0
@@ -669,7 +684,7 @@ def start_batch_download(request):
 
     if mode not in ("ids", "query"):
         messages.error(request, "Invalid selection mode.")
-        return redirect("home")
+        return redirect("beetles_home")
 
     # If query mode, we need to capture ALL filters, not just 'q'.
     # We will serialize them into query_string as JSON.
@@ -706,6 +721,7 @@ def start_batch_download(request):
         query_string=final_query_string if mode == "query" else "",
         total_requested=total if mode == "query" else 0,
         status=DownloadJob.Status.PENDING,
+        include_images=include_images,
     )
 
     if mode == "ids":
