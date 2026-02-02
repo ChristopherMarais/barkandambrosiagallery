@@ -91,7 +91,7 @@ WSGI_APPLICATION = 'beetlesgallery.wsgi.application'
 DATABASES = {
     'default': dj_database_url.config(
         default=f"postgres://{os.environ.get('POSTGRES_USER', 'beetles_user')}:{os.environ.get('POSTGRES_PASSWORD', 'devpass')}@{os.environ.get('POSTGRES_HOST', 'db')}:{os.environ.get('POSTGRES_PORT', '5432')}/{os.environ.get('POSTGRES_DB', 'beetles_db')}",
-        conn_max_age=600
+        conn_max_age=0
     )
 }
 

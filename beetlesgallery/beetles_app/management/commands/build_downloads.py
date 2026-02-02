@@ -3,6 +3,7 @@ import csv
 import uuid
 import shutil
 import zipfile
+import contextlib
 import json
 from pathlib import Path
 from datetime import timedelta
@@ -258,7 +259,9 @@ class Command(BaseCommand):
 
         # --- Preflight: count limit ---
         max_records = getattr(settings, "DOWNLOAD_MAX_RECORDS", 50_000)
-        if total > max_records:
+        
+        # Metadata-only downloads are allowed to exceed this limit.
+        if job.include_images and total > max_records:
             if dry:
                 self.stdout.write(self.style.WARNING(
                     f"[{job.id}] DRY-RUN: would fail preflight: {total} records > limit {max_records}."
@@ -272,50 +275,56 @@ class Command(BaseCommand):
             return
 
         # --- Preflight: size estimate + free space check ---
-        est_bytes, sampled, avg = self._estimate_total_bytes(qs)
-        headroom = 1.2
-        max_bytes = getattr(settings, "DOWNLOAD_MAX_BYTES", 20 * 1024**3)  # 20 GB
-        need_bytes = int(est_bytes * headroom)
+        if job.include_images:
+            # Only check disk space/size limits if we are actually building a ZIP
+            est_bytes, sampled, avg = self._estimate_total_bytes(qs)
+            headroom = 1.2
+            max_bytes = getattr(settings, "DOWNLOAD_MAX_BYTES", 20 * 1024**3)  # 20 GB
+            need_bytes = int(est_bytes * headroom)
 
-        if need_bytes > max_bytes:
-            if dry:
-                self.stdout.write(self.style.WARNING(
-                    f"[{job.id}] DRY-RUN: would fail preflight: estimated ~{need_bytes/1024**3:.1f} GB "
-                    f"> max {max_bytes/1024**3:.1f} GB (sampled {sampled}, avg ~{avg/1024**2:.2f} MB)."
-                ))
+            if need_bytes > max_bytes:
+                if dry:
+                    self.stdout.write(self.style.WARNING(
+                        f"[{job.id}] DRY-RUN: would fail preflight: estimated ~{need_bytes/1024**3:.1f} GB "
+                        f"> max {max_bytes/1024**3:.1f} GB (sampled {sampled}, avg ~{avg/1024**2:.2f} MB)."
+                    ))
+                    return
+                
+                job.status = DownloadJob.Status.FAILED
+                job.error_message = (
+                    f"Estimated dataset too large (~{need_bytes/1024**3:.1f} GB) > max "
+                    f"{max_bytes/1024**3:.1f} GB. Sampled {sampled} images, avg size ~{avg/1024**2:.2f} MB."
+                )
+                job.finished_at = timezone.now()
+                job.save(update_fields=["status", "error_message", "finished_at"])
+                self.stderr.write(self.style.ERROR(f"[{job.id}] FAILED preflight: estimated size too big"))
                 return
-            job.status = DownloadJob.Status.FAILED
-            job.error_message = (
-                f"Estimated dataset too large (~{need_bytes/1024**3:.1f} GB) > max "
-                f"{max_bytes/1024**3:.1f} GB. Sampled {sampled} images, avg size ~{avg/1024**2:.2f} MB."
-            )
-            job.finished_at = timezone.now()
-            job.save(update_fields=["status", "error_message", "finished_at"])
-            self.stderr.write(self.style.ERROR(f"[{job.id}] FAILED preflight: estimated size too big"))
-            return
 
-        # Ensure local temp area has enough free space
-        media_root = Path(settings.MEDIA_ROOT or ".")
-        tmp_parent = media_root / "downloads" / "tmp"
-        tmp_parent.mkdir(parents=True, exist_ok=True)
-        free = self._free_bytes_at(tmp_parent)
-        min_free = 512 * 1024**2  # 512 MB minimum breathing room
-        if free is not None and free < max(min_free, need_bytes):
-            if dry:
-                self.stdout.write(self.style.WARNING(
-                    f"[{job.id}] DRY-RUN: would fail preflight: insufficient disk space. "
-                    f"Need ~{need_bytes/1024**3:.1f} GB, free {free/1024**3:.1f} GB."
-                ))
+            # Ensure local temp area has enough free space
+            media_root = Path(settings.MEDIA_ROOT or ".")
+            tmp_parent = media_root / "downloads" / "tmp"
+            tmp_parent.mkdir(parents=True, exist_ok=True)
+            free = self._free_bytes_at(tmp_parent)
+            min_free = 512 * 1024**2  # 512 MB minimum breathing room
+            if free is not None and free < max(min_free, need_bytes):
+                if dry:
+                    self.stdout.write(self.style.WARNING(
+                        f"[{job.id}] DRY-RUN: would fail preflight: insufficient disk space. "
+                        f"Need ~{need_bytes/1024**3:.1f} GB, free {free/1024**3:.1f} GB."
+                    ))
+                    return
+                job.status = DownloadJob.Status.FAILED
+                job.error_message = (
+                    f"Insufficient disk space for temp files. Need ~{need_bytes/1024**3:.1f} GB, "
+                    f"free {free/1024**3:.1f} GB."
+                )
+                job.finished_at = timezone.now()
+                job.save(update_fields=["status", "error_message", "finished_at"])
+                self.stderr.write(self.style.ERROR(f"[{job.id}] FAILED preflight: not enough disk"))
                 return
-            job.status = DownloadJob.Status.FAILED
-            job.error_message = (
-                f"Insufficient disk space for temp files. Need ~{need_bytes/1024**3:.1f} GB, "
-                f"free {free/1024**3:.1f} GB."
-            )
-            job.finished_at = timezone.now()
-            job.save(update_fields=["status", "error_message", "finished_at"])
-            self.stderr.write(self.style.ERROR(f"[{job.id}] FAILED preflight: not enough disk"))
-            return
+            
+        else:
+            self.stdout.write(f"[{job.id}] Metadata only request; skipping image size checks.")
 
         # keep total_requested up-to-date (read-only in dry-run)
         if not dry and job.total_requested != total:
@@ -350,7 +359,6 @@ class Command(BaseCommand):
         tmp_dir.mkdir(parents=True, exist_ok=True)
 
         csv_filename = f"beetles_{job.id}.csv"
-        zip_filename = f"beetles_{job.id}.zip"
         csv_tmp_path = tmp_dir / csv_filename
         zip_tmp_path = tmp_dir / zip_filename
 
@@ -385,39 +393,66 @@ class Command(BaseCommand):
         with csv_tmp_path.open("w", encoding="utf-8-sig", newline="") as fh_csv, \
              zipfile.ZipFile(zip_tmp_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
 
+        # Only setup ZIP path if needed
+        zip_filename = f"beetles_{job.id}.zip"
+        zip_tmp_path = tmp_dir / zip_filename if job.include_images else None
+
+        # --- Write CSV (and optionally ZIP) ---
+        # Open CSV normally. Open ZIP only if needed, otherwise use a nullcontext
+        ctx_zip = zipfile.ZipFile(zip_tmp_path, "w", compression=zipfile.ZIP_DEFLATED) if job.include_images else contextlib.nullcontext()
+
+        with csv_tmp_path.open("w", encoding="utf-8", newline="") as fh_csv, ctx_zip as zf:
+
+            # --- Write CSV (comma-separated) ---
             writer = csv.writer(fh_csv, dialect="excel")
+            # Headers: use visible column names + the stable filename
+            headers = [
+                "record_id",
+                "alternative_id",
+                "image_institution",
+                "photographer",
+                "image_email",
+                "photo_usage_statement",
+                "aspect",
+                "resolution_in_ppmm",
+                "image_notes",
+                "image_date_taken",
+                "image_has_multiple_individuals",
+                "depicts_specimen",
+                "depicts_valid_name_id",
+                "depicts_described_name_id",
+                "depicts_name_verbatim",
+                "collection_country",
+                "collection_stateProvince",
+                "specimen_sex",
+                "specimen_type_status",
+                "specimen_notes",
+                "update_notes"
+            ]
             writer.writerow(headers)
 
-            added = 0
-            missing = 0
+            rows_iter = qs.iterator(chunk_size=1000)
 
             for b in rows_iter:
-                # Add image to ZIP (Filename will be <uuid>.<ext>)
-                if b.image_asset and b.image_asset.image_file:
-                    f_obj = b.image_asset.image_file
-                    ext = os.path.splitext(f_obj.name)[1].lstrip(".").lower() or "bin"
+                img = b.image_asset 
 
-                    # Use the Record ID as the filename in the ZIP
-                    # Instead of using the original filename (e.g., IMG_001.JPG), rename image inside ZIP to match Record ID 
+                if job.include_images and zf and img and img.image_file:
+                    f_obj = img.image_file
+                    ext = os.path.splitext(f_obj.name)[1].lstrip(".").lower() or "bin"
                     image_filename = f"{b.id}.{ext}"
                     
                     try:
                         src_path = f_obj.path
                         if os.path.exists(src_path):
                             zf.write(src_path, arcname=image_filename)
-                            added += 1
                         else:
                             raise FileNotFoundError
                     except Exception:
                         try:
                             with f_obj.storage.open(f_obj.name, "rb") as sf, zf.open(image_filename, "w") as dest:
                                 shutil.copyfileobj(sf, dest, length=1024 * 1024)
-                            added += 1
                         except Exception:
-                            missing += 1
-
-                # Helpers for safe access
-                img = b.image_asset
+                            pass
 
                 writer.writerow([
                     str(b.id),                                      # record_id
@@ -443,12 +478,19 @@ class Command(BaseCommand):
                     ""                                              # update_notes (blank)
                 ])
 
-        self.stdout.write(f"[{job.id}] Wrote CSV -> {csv_tmp_path.name}; ZIP -> {zip_tmp_path.name}")
+        self.stdout.write(f"[{job.id}] Wrote CSV -> {csv_tmp_path.name}")
+        if job.include_images:
+             self.stdout.write(f"[{job.id}] Wrote ZIP -> {zip_tmp_path.name}")
 
-        # --- Attach to FileFields (moves to final storage via storage backend) ---
-        with csv_tmp_path.open("rb") as fh1, zip_tmp_path.open("rb") as fh2:
+        # --- Attach to FileFields (moves to final storage) ---
+        # 1. Always save CSV
+        with csv_tmp_path.open("rb") as fh1:
             job.csv_file.save(csv_filename, File(fh1), save=False)
-            job.zip_file.save(zip_filename, File(fh2), save=False)
+        
+        # 2. Conditionally save ZIP
+        if job.include_images and zip_tmp_path:
+            with zip_tmp_path.open("rb") as fh2:
+                job.zip_file.save(zip_filename, File(fh2), save=False)
 
         job.status = DownloadJob.Status.READY
         job.finished_at = timezone.now()
@@ -464,10 +506,11 @@ class Command(BaseCommand):
         # Cleanup tmp files
         try:
             csv_tmp_path.unlink(missing_ok=True)
-            zip_tmp_path.unlink(missing_ok=True)
+            if zip_tmp_path:
+                zip_tmp_path.unlink(missing_ok=True)
             # remove the empty directory
             tmp_dir.rmdir()
         except Exception:
             pass
 
-        self.stdout.write(self.style.SUCCESS(f"[{job.id}] READY: {job.csv_file.name}, {job.zip_file.name}"))
+        self.stdout.write(self.style.SUCCESS(f"[{job.id}] READY."))

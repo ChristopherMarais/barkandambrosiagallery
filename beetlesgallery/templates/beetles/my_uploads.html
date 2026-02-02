@@ -138,7 +138,6 @@
                           {% if job.selection_mode == 'ids' %}
                             <span class="text-gray-500 text-xs font-normal">{{ job.total_requested }} Record(s)</span>
                           {% else %}
-                            <span>Search Query</span>
                             <span class="text-gray-500 text-xs italic font-normal">
                               {{ job.get_readable_query|default:"All records"|truncatechars:40 }}
                             </span>
@@ -167,8 +166,12 @@
                           <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
                             Expired
                           </span>
+                        {% elif job.status == 'building' or job.status == 'pending' %}
+                          <span class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 animate-pulse">
+                            {{ job.get_status_display }}
+                          </span>
                         {% else %}
-                          <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800 animate-pulse">
+                          <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">
                             {{ job.get_status_display }}
                           </span>
                         {% endif %}
@@ -849,7 +852,7 @@
           linkClass = "text-red-600";
       }
 
-      let html = `<span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeClass}">${label}</span>`;
+      let html = `<span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${badgeClass}">${label}</span>`;
       
       // 1. Try File URL first
       if (fileUrl) {
