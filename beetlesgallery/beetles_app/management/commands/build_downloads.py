@@ -259,7 +259,9 @@ class Command(BaseCommand):
 
         # --- Preflight: count limit ---
         max_records = getattr(settings, "DOWNLOAD_MAX_RECORDS", 50_000)
-        if total > max_records:
+        
+        # Metadata-only downloads are allowed to exceed this limit.
+        if job.include_images and total > max_records:
             if dry:
                 self.stdout.write(self.style.WARNING(
                     f"[{job.id}] DRY-RUN: would fail preflight: {total} records > limit {max_records}."

@@ -119,10 +119,10 @@
                         <div class="flex items-center justify-between px-1 border-b border-text/5 pb-2">
                              <button type="button" class="text-xs font-bold text-gray-500 hover:text-gray-500 hover:underline tracking-wide" onclick="selectVisibleOptions(this)">
                                 Select All
-                            </button>
-                            <button type="button" class="text-xs font-bold text-gray-500 hover:text-gray-500 hover:underline tracking-wide" onclick="clearFilterSelection(this)">
+                             </button>
+                             <button type="button" class="text-xs font-bold text-gray-500 hover:text-gray-500 hover:underline tracking-wide" onclick="clearFilterSelection(this)">
                                 Clear All
-                            </button>
+                             </button>
                         </div>
 
                         {# Scrollable Options #}
@@ -205,35 +205,96 @@
                Found <span class="font-bold text-text">{{ total_matches }}</span> image{{ total_matches|pluralize }}.
              </div>
              
-             <div class="flex items-center gap-2">
+             <div class="flex items-center gap-4">
+                
+                {# --- 1. DOWNLOAD SELECTED --- #}
+                {% if request.user.is_staff %}
+                    {# STAFF: Dropdown Menu #}
+                    <div class="relative inline-block text-left">
+                        <button type="button" 
+                                onclick="toggleDownloadMenu(this.nextElementSibling)" 
+                                disabled
+                                class="download-selected-btn group inline-flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-black disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span>Download Selected (<span class="selected-count">0</span>)</span>
+                            <svg class="w-4 h-4 text-gray-500 group-hover:text-black transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
 
-              {# --- Staff Download Options --- #}
-              {% if request.user.is_staff %}
-              <div class="flex items-center gap-2">
-                    <label class="flex items-center gap-2 cursor-pointer select-none text-sm font-semibold text-text/80 font-medium hover:text-text">
-                        <input type="checkbox" id="staff-dl-images-toggle" checked 
-                               class="rounded border-gray-300 text-gray-800 focus:ring-gray-400 cursor-pointer"
-                               onchange="updateDownloadForms(this.checked)">
-                        <span>Include Images</span>
-                    </label>
-                 </div>
-                 <div class="h-4 w-px bg-text/20 mx-1"></div>
-                 {% endif %}
+                        <div class="hidden absolute right-0 z-50 mt-2 w-64 origin-top-right rounded-lg bg-white shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none flex flex-col py-1 download-menu">
+                            <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Select Format</div>
+                            
+                            <button type="submit" form="download-selected-form" name="download_type" value="package"
+                                    class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full">
+                                <span class="font-bold block text-gray-900">Standard Package</span>
+                                <span class="text-xs text-gray-500">Images + Metadata (.zip)</span>
+                            </button>
 
-                 <button type="submit" form="download-selected-form" disabled
-                         class="download-selected-btn text-sm font-semibold text-gray-700 hover:text-black hover:underline disabled:opacity-60 disabled:cursor-not-allowed">
-                    Download Selected (<span class="selected-count">0</span>)
-                 </button>
+                            <button type="submit" form="download-selected-form" name="download_type" value="metadata_only"
+                                    class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full border-t border-gray-100">
+                                <span class="font-bold block text-gray-900">Metadata Only</span>
+                                <span class="text-xs text-gray-500">CSV Spreadsheet (.csv)</span>
+                            </button>
+                        </div>
+                    </div>
 
-                 {% if request.user.is_authenticated and total_matches > 0 %}
-                    <div class="h-4 w-px bg-text/20 mx-1"></div>
-                    <button type="button" onclick="document.getElementById('download-all-form').submit()"
-                            class="text-sm font-semibold text-gray-700 hover:text-black hover:underline">
-                      Download All ({{ total_matches }})
+                {% else %}
+                    {# NORMAL USER: Single Button (Forces Package) #}
+                    <button type="submit" 
+                            form="download-selected-form" 
+                            name="download_type" 
+                            value="package"
+                            disabled
+                            class="download-selected-btn text-sm font-bold text-gray-700 hover:text-black hover:underline disabled:opacity-50 disabled:cursor-not-allowed">
+                        Download Selected (<span class="selected-count">0</span>)
                     </button>
-                 {% endif %}
+                {% endif %}
+
+                {# Divider #}
+                {% if total_matches > 0 and request.user.is_authenticated %}
+                    <div class="h-4 w-px bg-text/20"></div>
+                {% endif %}
+
+                {# --- 2. DOWNLOAD ALL --- #}
+                {% if total_matches > 0 and request.user.is_authenticated %}
+                    {% if request.user.is_staff %}
+                        {# STAFF: Dropdown Menu for ALL #}
+                        <div class="relative inline-block text-left">
+                            <button type="button" 
+                                    onclick="toggleDownloadMenu(this.nextElementSibling)" 
+                                    class="group inline-flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-black">
+                                <span>Download All ({{ total_matches }})</span>
+                                <svg class="w-4 h-4 text-gray-500 group-hover:text-black transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+
+                            <div class="hidden absolute right-0 z-50 mt-2 w-64 origin-top-right rounded-lg bg-white shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none flex flex-col py-1 download-menu">
+                                <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Select Format</div>
+                                
+                                <button type="submit" form="download-all-form" name="download_type" value="package"
+                                        class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full">
+                                    <span class="font-bold block text-gray-900">Standard Package</span>
+                                    <span class="text-xs text-gray-500">Images + Metadata (.zip)</span>
+                                </button>
+
+                                <button type="submit" form="download-all-form" name="download_type" value="metadata_only"
+                                        class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full border-t border-gray-100">
+                                    <span class="font-bold block text-gray-900">Metadata Only</span>
+                                    <span class="text-xs text-gray-500">CSV Spreadsheet (.csv)</span>
+                                </button>
+                            </div>
+                        </div>
+
+                    {% else %}
+                        {# NORMAL USER: Single Button for ALL #}
+                        <button type="submit" 
+                                form="download-all-form" 
+                                name="download_type" 
+                                value="package"
+                                class="text-sm font-bold text-gray-700 hover:text-black hover:underline">
+                            Download All ({{ total_matches }})
+                        </button>
+                    {% endif %}
+                {% endif %}
+
              </div>
-             
              <button type="button" id="clear-selection-btn" class="hidden text-sm text-gray-600 hover:underline">
                  × Deselect all (<span id="global-selection-count">0</span>)
              </button>
@@ -318,9 +379,9 @@
 
                   {# --- ASPECT --- #}
                   {% if b.has_multiple_aspect %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Aspect:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Aspect:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
                   {% elif b.aspect %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Aspect:</span> <span class="ml-1">{{ b.aspect }}</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Aspect:</span> <span class="ml-1">{{ b.aspect }}</span></div>
                   {% endif %}
 
                   {# --- MULTIPLE INDIVIDUALS --- #}
@@ -330,16 +391,16 @@
                   
                   {# --- COUNTRY --- #}
                   {% if b.has_multiple_country %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Country:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Country:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
                   {% elif b.collection_country %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Country:</span> <span class="ml-1">{{ b.collection_country }}</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Country:</span> <span class="ml-1">{{ b.collection_country }}</span></div>
                   {% endif %}
 
                   {# --- SEX --- #}
                   {% if b.has_multiple_sex %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Sex:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Sex:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
                   {% elif b.specimen_sex %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Sex:</span> <span class="ml-1">{{ b.specimen_sex|lower }}</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Sex:</span> <span class="ml-1">{{ b.specimen_sex|lower }}</span></div>
                   {% endif %}
 
                   {# --- INSTITUTION --- #}
@@ -356,56 +417,56 @@
                   
                   {# SUBFAMILY #}
                   {% if b.has_multiple_subfamily %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
                   {% elif b.ref_subfamily %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <span class="ml-1">{{ b.ref_subfamily }}</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <span class="ml-1">{{ b.ref_subfamily }}</span></div>
                   {% elif not b.depicts_valid_name_id %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
                   {% endif %}
 
                   {# TRIBE #}
                   {% if b.has_multiple_tribe %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Tribe:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Tribe:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
                   {% elif b.ref_tribe %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Tribe:</span> <span class="ml-1">{{ b.ref_tribe }}</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Tribe:</span> <span class="ml-1">{{ b.ref_tribe }}</span></div>
                   {% elif not b.depicts_valid_name_id %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Tribe:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Tribe:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
                   {% endif %}
 
                   {# SUBTRIBE #}
                   {% if b.has_multiple_subtribe %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Subtribe:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Subtribe:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
                   {% elif b.ref_subtribe %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Subtribe:</span> <span class="ml-1">{{ b.ref_subtribe }}</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Subtribe:</span> <span class="ml-1">{{ b.ref_subtribe }}</span></div>
                   {% elif not b.depicts_valid_name_id %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Subtribe:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Subtribe:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
                   {% endif %}
 
                   {# GENUS #}
                   {% if b.has_multiple_genus %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Genus:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Genus:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
                   {% elif b.ref_genus %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Genus:</span> <span class="ml-1 italic">{{ b.ref_genus }}</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Genus:</span> <span class="ml-1 italic">{{ b.ref_genus }}</span></div>
                   {% elif not b.depicts_valid_name_id %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Genus:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Genus:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
                   {% endif %}
 
                   {# SPECIES #}
                   {% if b.has_multiple_species %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Species:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Species:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
                   {% elif b.ref_species %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Species:</span> <span class="ml-1 italic">{{ b.ref_species }}</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Species:</span> <span class="ml-1 italic">{{ b.ref_species }}</span></div>
                   {% elif not b.depicts_valid_name_id %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Species:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Species:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
                   {% endif %}
 
                   {# SUBSPECIES #}
                   {% if b.has_multiple_subspecies %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
                   {% elif b.ref_subspecies %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic">{{ b.ref_subspecies }}</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic">{{ b.ref_subspecies }}</span></div>
                   {% elif not b.depicts_valid_name_id %}
-                     <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Subspecies:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
                   {% endif %}
 
                   {# TYPE STATUS (Hide if empty) #}
@@ -435,22 +496,97 @@
                Found <span class="font-bold text-text">{{ total_matches }}</span> image{{ total_matches|pluralize }}.
              </div>
              
-             <div class="flex items-center gap-2">
-                 <button type="submit" form="download-selected-form" disabled
-                         class="download-selected-btn text-sm font-semibold text-gray-700 hover:text-black hover:underline disabled:opacity-60 disabled:cursor-not-allowed">
-                    Download Selected (<span class="selected-count">0</span>)
-                 </button>
+             <div class="flex items-center gap-4">
+                
+                {# --- 1. DOWNLOAD SELECTED --- #}
+                {% if request.user.is_staff %}
+                    {# STAFF: Dropdown Menu #}
+                    <div class="relative inline-block text-left">
+                        <button type="button" 
+                                onclick="toggleDownloadMenu(this.nextElementSibling)" 
+                                disabled
+                                class="download-selected-btn group inline-flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-black disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span>Download Selected (<span class="selected-count">0</span>)</span>
+                            <svg class="w-4 h-4 text-gray-500 group-hover:text-black transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
 
-                 {% if request.user.is_authenticated and total_matches > 0 %}
-                    <div class="h-4 w-px bg-text/20 mx-1"></div>
-                    <button type="button" onclick="document.getElementById('download-all-form').submit()"
-                            class="text-sm font-semibold text-gray-700 hover:text-black hover:underline">
-                      Download All ({{ total_matches }})
+                        <div class="hidden absolute bottom-full mb-2 right-0 z-50 w-64 origin-bottom-right rounded-lg bg-white shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none flex flex-col py-1 download-menu">
+                            <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Select Format</div>
+                            
+                            <button type="submit" form="download-selected-form" name="download_type" value="package"
+                                    class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full">
+                                <span class="font-bold block text-gray-900">Standard Package</span>
+                                <span class="text-xs text-gray-500">Images + Metadata (.zip)</span>
+                            </button>
+
+                            <button type="submit" form="download-selected-form" name="download_type" value="metadata_only"
+                                    class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full border-t border-gray-100">
+                                <span class="font-bold block text-gray-900">Metadata Only</span>
+                                <span class="text-xs text-gray-500">CSV Spreadsheet (.csv)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                {% else %}
+                    {# NORMAL USER: Single Button (Forces Package) #}
+                    <button type="submit" 
+                            form="download-selected-form" 
+                            name="download_type" 
+                            value="package"
+                            disabled
+                            class="download-selected-btn text-sm font-bold text-gray-700 hover:text-black hover:underline disabled:opacity-50 disabled:cursor-not-allowed">
+                        Download Selected (<span class="selected-count">0</span>)
                     </button>
-                 {% endif %}
+                {% endif %}
+
+                {# Divider #}
+                {% if total_matches > 0 and request.user.is_authenticated %}
+                    <div class="h-4 w-px bg-text/20"></div>
+                {% endif %}
+
+                {# --- 2. DOWNLOAD ALL --- #}
+                {% if total_matches > 0 and request.user.is_authenticated %}
+                    {% if request.user.is_staff %}
+                        {# STAFF: Dropdown Menu for ALL #}
+                        <div class="relative inline-block text-left">
+                            <button type="button" 
+                                    onclick="toggleDownloadMenu(this.nextElementSibling)" 
+                                    class="group inline-flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-black">
+                                <span>Download All ({{ total_matches }})</span>
+                                <svg class="w-4 h-4 text-gray-500 group-hover:text-black transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+
+                            <div class="hidden absolute bottom-full mb-2 right-0 z-50 w-64 origin-bottom-right rounded-lg bg-white shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none flex flex-col py-1 download-menu">
+                                <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Select Format</div>
+                                
+                                <button type="submit" form="download-all-form" name="download_type" value="package"
+                                        class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full">
+                                    <span class="font-bold block text-gray-900">Standard Package</span>
+                                    <span class="text-xs text-gray-500">Images + Metadata (.zip)</span>
+                                </button>
+
+                                <button type="submit" form="download-all-form" name="download_type" value="metadata_only"
+                                        class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full border-t border-gray-100">
+                                    <span class="font-bold block text-gray-900">Metadata Only</span>
+                                    <span class="text-xs text-gray-500">CSV Spreadsheet (.csv)</span>
+                                </button>
+                            </div>
+                        </div>
+
+                    {% else %}
+                        {# NORMAL USER: Single Button for ALL #}
+                        <button type="submit" 
+                                form="download-all-form" 
+                                name="download_type" 
+                                value="package"
+                                class="text-sm font-bold text-gray-700 hover:text-black hover:underline">
+                            Download All ({{ total_matches }})
+                        </button>
+                    {% endif %}
+                {% endif %}
+
              </div>
-             
-         </div>
+             </div>
 
          {% if is_paginated %}
             <nav class="flex items-center gap-2">
@@ -487,13 +623,11 @@
     {% csrf_token %}
     <input type="hidden" name="selection_mode" value="ids">
     <input type="hidden" name="selected_ids" value="">
-    <input type="hidden" name="download_type" id="dl-type-selected" value="package">
-  </form>
+    </form>
 
   <form id="download-all-form" method="post" action="{% url 'start_batch_download' %}" class="hidden">
     {% csrf_token %}
     <input type="hidden" name="selection_mode" value="query">
-    <input type="hidden" name="download_type" id="dl-type-all" value="package">
     <input type="hidden" name="q" value="{{ q|default:'' }}">
     <input type="hidden" name="total_matches" value="{{ total_matches|default:0 }}">
     
@@ -670,16 +804,6 @@
   const filtersDiv = document.getElementById('advanced-filters');
   const chevron = document.getElementById('chevron-icon');
 
-  // const hasAdvancedFilters = Number("{{ selected_filters|length|default:0 }}") > 0 || 
-  //                            "{{ size_min }}" !== "" || "{{ size_max }}" !== "" ||
-  //                            "{{ res_min }}" !== "" || "{{ res_max }}" !== "";
-
-  // if (hasAdvancedFilters) {
-  //     filtersDiv.classList.remove('hidden');
-  //     toggleBtn.setAttribute('aria-expanded', 'true');
-  //     if(chevron) chevron.style.transform = 'rotate(180deg)';
-  // }
-
   toggleBtn.addEventListener('click', () => {
       const isHidden = filtersDiv.classList.contains('hidden');
       if (isHidden) {
@@ -723,7 +847,13 @@
     rowCheckboxes.forEach(cb => { cb.checked = selectedIds.has(cb.value); });
     countSpans.forEach(span => span.textContent = count);
     if (globalCountSpan) globalCountSpan.textContent = count;
-    dlBtns.forEach(btn => btn.disabled = count === 0);
+    
+    // Updated: We now toggle the 'disabled' property on the BUTTON inside the group for staff
+    // or the single button for users.
+    dlBtns.forEach(btn => {
+        btn.disabled = count === 0;
+    });
+
     if (clearBtn) {
         if (count > 0) clearBtn.classList.remove('hidden');
         else clearBtn.classList.add('hidden');
@@ -770,16 +900,28 @@
     } catch (err) { console.error(err); }
   });
 
-  // --- Staff Download Toggle Logic ---
-  function updateDownloadForms(includeImages) {
-      // If checked, value is 'package', if unchecked, value is 'metadata_only'
-      const val = includeImages ? 'package' : 'metadata_only';
+  // --- 6. Download Dropdown Logic (New) ---
+  function toggleDownloadMenu(menuElement) {
+      const isHidden = menuElement.classList.contains('hidden');
       
-      const inputSelected = document.getElementById('dl-type-selected');
-      const inputAll = document.getElementById('dl-type-all');
-      
-      if (inputSelected) inputSelected.value = val;
-      if (inputAll) inputAll.value = val;
+      // 1. Close all other open download menus first
+      document.querySelectorAll('.download-menu').forEach(el => el.classList.add('hidden'));
+
+      // 2. Toggle the requested one
+      if (isHidden) {
+          menuElement.classList.remove('hidden');
+      }
   }
+
+  // Close menus when clicking outside
+  document.addEventListener('click', function(e) {
+      const isButton = e.target.closest('button[onclick^="toggleDownloadMenu"]');
+      const isMenu = e.target.closest('.download-menu');
+
+      if (!isButton && !isMenu) {
+          document.querySelectorAll('.download-menu').forEach(el => el.classList.add('hidden'));
+      }
+  });
+
 </script>
 {% endblock %}
