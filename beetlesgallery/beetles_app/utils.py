@@ -1,5 +1,6 @@
 import re
 import shlex
+import uuid
 import math
 from datetime import date
 from django.db.models import Q
@@ -271,6 +272,17 @@ def _clause_to_q(field_label: str, value: str, ignored):
 def build_query_q(user_qs: str):
     from . import species_ref
     parts = _tokenize_query(user_qs or "")
+
+    # Exact Record ID (UUID) Check
+    # If valid UUID, return exact match on 'id' immediately.
+    clean_q = (user_qs or "").strip()
+    try:
+        uuid_val = uuid.UUID(clean_q)
+        return Q(id=uuid_val), []
+    except (ValueError, TypeError):
+        # Not a valid UUID, proceed to standard tokenization logic
+        pass
+
     ignored = []
     rpn = _to_rpn(parts)
     stack = []
