@@ -398,6 +398,13 @@ def publish_from_file(src_path: str, label: Optional[str] = None) -> tuple[int, 
         _rev_index = None
         _rev_index_version = None
 
+        # Regenerate the taxonomy browser tree (best-effort; must not block publish)
+        try:
+            from . import taxonomy_tree
+            taxonomy_tree.rebuild()
+        except Exception as e:
+            print(f"Warning: taxonomy_tree rebuild after described_names update failed: {e}")
+
         return rows, final_sha
 
     finally:
