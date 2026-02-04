@@ -41,7 +41,6 @@
   <div class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm">
     <h2 class="text-2xl font-bold mb-6 text-gray-800">Taxonomy Reference Management</h2>
 
-    <!-- Dropdown to select reference type -->
     <div class="mb-4 max-w-xs">
       <label for="taxonomy-selector" class="block text-sm font-semibold text-gray-700 mb-2">Select Reference:</label>
       <select id="taxonomy-selector"
@@ -51,7 +50,6 @@
       </select>
     </div>
 
-    <!-- Version info (dynamically updated) -->
     <div id="version-info" class="mb-4">
       <p class="text-sm text-gray-600">
         Version: <span id="version-label" class="font-semibold text-gray-800">{{ species_ref_status.label|default:"unavailable" }}</span>
@@ -79,19 +77,68 @@
     <div class="mt-6" id="archive-history">
       <h3 class="text-lg font-semibold mb-3 text-gray-800">Version History</h3>
 
-      <div class="rounded-lg border border-gray-200 bg-white overflow-x-auto">
+      <div id="table-history" data-restriction="max-h-28" class="rounded-lg border border-gray-200 bg-white overflow-hidden max-h-28 transition-all duration-500 ease-in-out relative">
         <table class="w-full text-sm text-left">
-          <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
+          <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200 sticky top-0 z-10 shadow-sm">
             <tr>
-              <th class="px-4 py-3">Archived Date</th>
-              <th class="px-4 py-3">Filename</th>
-              <th class="px-4 py-3">Download</th>
+              <th class="px-4 py-3 bg-gray-100">Archived Date</th>
+              <th class="px-4 py-3 bg-gray-100">Filename</th>
+              <th class="px-4 py-3 bg-gray-100">Download</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100" id="archive-tbody">
-            {# Dynamically populated by JavaScript #}
+            {# --- Server-Side Initial Render (Prevents Layout Shift) --- #}
+            
+            {# 1. Current Version Row #}
+            {% if initial_current %}
+            <tr class="hover:bg-gray-50 transition">
+                <td class="px-4 py-3 whitespace-nowrap text-gray-600">
+                    {{ initial_current.timestamp|date:"M j, Y, g:i:s A" }}
+                </td>
+                <td class="px-4 py-3 font-medium text-gray-800 break-all">
+                    {{ initial_current.filename }}
+                    <span class="ml-2 inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800">Latest</span>
+                </td>
+                <td class="px-4 py-3">
+                    <a href="{% url 'download_taxonomy_ref' %}" class="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-200 transition">
+                        <i class="fi fi-rr-download"></i>
+                        Download
+                    </a>
+                </td>
+            </tr>
+            {% endif %}
+
+            {# 2. Archived Versions #}
+            {% for archive in initial_archives %}
+            <tr class="hover:bg-gray-50 transition">
+                <td class="px-4 py-3 whitespace-nowrap text-gray-600">
+                    {{ archive.timestamp|date:"M j, Y, g:i:s A" }}
+                </td>
+                <td class="px-4 py-3 font-medium text-gray-800 break-all">
+                    {{ archive.filename }}
+                </td>
+                <td class="px-4 py-3">
+                    <a href="{% url 'download_taxonomy_archive' 'valid_species' archive.filename %}" class="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-200 transition">
+                        <i class="fi fi-rr-download"></i>
+                        Download
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+                {# 3. Empty State (only if current is also missing) #}
+                {% if not initial_current %}
+                <tr><td colspan="3" class="px-4 py-6 text-center text-gray-500 italic">No versions found.</td></tr>
+                {% endif %}
+            {% endfor %}
           </tbody>
         </table>
+      </div>
+      
+      <div class="mt-2 flex justify-center">
+        <button id="btn-history" onclick="toggleTable('table-history', 'btn-history')" class="text-xs font-bold text-gray-500 hover:text-gray-800 flex items-center gap-1 transition">
+            <span>Show All</span>
+            <i class="fi fi-rr-angle-small-down"></i>
+        </button>
       </div>
     </div>
 
@@ -111,18 +158,18 @@
         <div>
           <h3 class="text-xl font-semibold mb-3 text-gray-800">My Downloads</h3>
           <p class="text-sm text-gray-500 mb-4">
-            NOTE: Files are downloadable for 14 days after creation.
+            NOTE: Files are available for 14 days after creation.
           </p>
 
-          <div class="rounded-lg border border-gray-200 bg-white overflow-x-auto">
+          <div id="table-downloads" data-restriction="max-h-80" class="rounded-lg border border-gray-200 bg-white overflow-hidden max-h-80 transition-all duration-500 ease-in-out relative">
             <table class="w-full text-sm text-left">
-                  <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
+                  <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200 sticky top-0 z-10 shadow-sm">
                     <tr>
-                      <th class="px-4 py-3">Date/Time</th>
-                      <th class="px-4 py-3">Request</th>
-                      <th class="px-4 py-3">Status</th>
-                      <th class="px-4 py-3">Download Files</th>
-                      <th class="px-4 py-3">Download ID</th>
+                      <th class="px-4 py-3 bg-gray-100">Date/Time</th>
+                      <th class="px-4 py-3 bg-gray-100">Request</th>
+                      <th class="px-4 py-3 bg-gray-100">Status</th>
+                      <th class="px-4 py-3 bg-gray-100">Download Files</th>
+                      <th class="px-4 py-3 bg-gray-100">Download ID</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-gray-100">
@@ -147,7 +194,7 @@
 
                       <td class="px-4 py-3" id="status-download-{{ job.id }}">
                         {% if job.status == 'ready' %}
-                          <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                          <span class="inline-flex items-center justify-center w-28 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
                             Ready
                           </span>
                           {% if job.expires_at %}
@@ -156,22 +203,22 @@
                             </div>
                           {% endif %}
                         {% elif job.status == 'failed' %}
-                          <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800" title="{{ job.error_message }}">
+                          <span class="inline-flex items-center justify-center w-28 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800" title="{{ job.error_message }}">
                             Failed
                           </span>
                           {% if job.error_message %}
                             <button onclick="viewText('{{ job.error_message|escapejs }}', 'Download Error')" class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
                           {% endif %}
                         {% elif job.status == 'expired' %}
-                          <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                          <span class="inline-flex items-center justify-center w-28 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
                             Expired
                           </span>
                         {% elif job.status == 'building' or job.status == 'pending' %}
-                          <span class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 animate-pulse">
+                          <span class="inline-flex items-center justify-center w-28 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 animate-pulse">
                             {{ job.get_status_display }}
                           </span>
                         {% else %}
-                          <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">
+                          <span class="inline-flex items-center justify-center w-28 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">
                             {{ job.get_status_display }}
                           </span>
                         {% endif %}
@@ -222,6 +269,13 @@
                   </tbody>
             </table>
           </div>
+
+          <div class="mt-2 flex justify-center">
+            <button id="btn-downloads" onclick="toggleTable('table-downloads', 'btn-downloads')" class="text-xs font-bold text-gray-500 hover:text-gray-800 flex items-center gap-1 transition">
+                <span>Show All</span>
+                <i class="fi fi-rr-angle-small-down"></i>
+            </button>
+          </div>
         </div>
 
         {# --- STAFF TABLES (Uploads & Updates) --- #}
@@ -233,14 +287,14 @@
             
             <h3 class="text-xl font-semibold mb-3 text-gray-800">My Uploads</h3>
 
-            <div class="rounded-lg border border-gray-200 bg-white overflow-x-auto">
+            <div id="table-uploads" data-restriction="max-h-80" class="rounded-lg border border-gray-200 bg-white overflow-hidden max-h-80 transition-all duration-500 ease-in-out relative">
             <table class="w-full text-sm text-left">
-                <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
+                <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200 sticky top-0 z-10 shadow-sm">
                 <tr>
-                    <th class="px-4 py-3">Date/Time</th>
-                    <th class="px-4 py-3">Filename</th>
-                    <th class="px-4 py-3">Status</th>
-                    <th class="px-4 py-3">Upload ID</th>
+                    <th class="px-4 py-3 bg-gray-100">Date/Time</th>
+                    <th class="px-4 py-3 bg-gray-100">Filename</th>
+                    <th class="px-4 py-3 bg-gray-100">Status</th>
+                    <th class="px-4 py-3 bg-gray-100">Upload ID</th>
                 </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
@@ -251,16 +305,16 @@
                     
                     <td class="px-4 py-3" id="status-upload-{{ b.id }}">
                         {% if b.status == "imported" %}
-                            <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Imported</span>
+                            <span class="inline-flex items-center justify-center w-28 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Imported</span>
                         {% elif b.status == "validated" %}
-                            <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">Validated</span>
+                            <span class="inline-flex items-center justify-center w-28 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">Validated</span>
                         {% elif b.status == "rejected" or b.status == "import_failed" %}
-                            <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">{{ b.get_status_display }}</span>
+                            <span class="inline-flex items-center justify-center w-28 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">{{ b.get_status_display }}</span>
                             {% if b.error_report_file %}
                             <button onclick="viewLog('{{ b.error_report_file.url }}', 'Details')" class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
                             {% endif %}
                         {% else %}
-                            <span class="text-xs text-gray-500">{{ b.get_status_display }}</span>
+                            <span class="inline-flex items-center justify-center w-28 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 animate-pulse">{{ b.get_status_display }}</span>
                         {% endif %}
                     </td>
                     
@@ -280,6 +334,13 @@
                 </tbody>
             </table>
             </div>
+
+            <div class="mt-2 flex justify-center">
+                <button id="btn-uploads" onclick="toggleTable('table-uploads', 'btn-uploads')" class="text-xs font-bold text-gray-500 hover:text-gray-800 flex items-center gap-1 transition">
+                    <span>Show All</span>
+                    <i class="fi fi-rr-angle-small-down"></i>
+                </button>
+            </div>
         </div>
 
         {# TABLE 3: MY UPDATES #}
@@ -287,14 +348,15 @@
             <div class="border-t border-gray-200 mb-8"></div>
 
             <h3 class="text-xl font-semibold mb-3 text-gray-800">My Updates</h3>
-            <div class="rounded-lg border border-gray-200 bg-white overflow-x-auto">
+            
+            <div id="table-updates" data-restriction="max-h-80" class="rounded-lg border border-gray-200 bg-white overflow-hidden max-h-80 transition-all duration-500 ease-in-out relative">
             <table class="w-full text-sm text-left">
-                <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
+                <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200 sticky top-0 z-10 shadow-sm">
                 <tr>
-                    <th class="px-4 py-3">Date/Time</th>
-                    <th class="px-4 py-3">Filename</th>
-                    <th class="px-4 py-3">Status</th>
-                    <th class="px-4 py-3">Update ID</th>
+                    <th class="px-4 py-3 bg-gray-100">Date/Time</th>
+                    <th class="px-4 py-3 bg-gray-100">Filename</th>
+                    <th class="px-4 py-3 bg-gray-100">Status</th>
+                    <th class="px-4 py-3 bg-gray-100">Update ID</th>
                 </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
@@ -305,18 +367,18 @@
                     
                     <td class="px-4 py-3" id="status-update-{{ u.id }}">
                         {% if u.status == "applied" %}
-                            <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Applied</span>
+                            <span class="inline-flex items-center justify-center w-28 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Applied</span>
                         {% elif u.status == "validated" %}
-                            <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">Validated</span>
+                            <span class="inline-flex items-center justify-center w-28 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">Validated</span>
                         {% elif u.status == "rejected" or u.status == "apply_failed" %}
-                            <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">{{ u.get_status_display }}</span>
+                            <span class="inline-flex items-center justify-center w-28 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">{{ u.get_status_display }}</span>
                             {% if u.report_file %}
                                 <button onclick="viewLog('{{ u.report_file.url }}', 'Details')" class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
                             {% elif u.error_message %}
                                 <button onclick="viewText('{{ u.error_message|escapejs }}', 'Details')" class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
                             {% endif %}
                         {% else %}
-                            <span class="text-xs text-gray-500">{{ u.get_status_display }}</span>
+                            <span class="inline-flex items-center justify-center w-28 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 animate-pulse">{{ u.get_status_display }}</span>
                         {% endif %}
                     </td>
 
@@ -334,6 +396,13 @@
                 {% endfor %}
                 </tbody>
             </table>
+            </div>
+
+            <div class="mt-2 flex justify-center">
+                <button id="btn-updates" onclick="toggleTable('table-updates', 'btn-updates')" class="text-xs font-bold text-gray-500 hover:text-gray-800 flex items-center gap-1 transition">
+                    <span>Show All</span>
+                    <i class="fi fi-rr-angle-small-down"></i>
+                </button>
             </div>
         </div>
         {% endif %}
@@ -845,14 +914,15 @@
       const s = status.toLowerCase();
       if (['imported', 'validated', 'applied', 'ready'].includes(s)) {
           badgeClass = "bg-green-100 text-green-800";
-      } else if (['validating', 'building', 'staging'].includes(s)) {
+      } else if (['validating', 'building', 'staging', 'pending'].includes(s)) {
           badgeClass = "bg-blue-100 text-blue-800 animate-pulse";
       } else if (['rejected', 'failed', 'import_failed', 'apply_failed'].includes(s)) {
           badgeClass = "bg-red-100 text-red-800";
           linkClass = "text-red-600";
       }
 
-      let html = `<span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${badgeClass}">${label}</span>`;
+      // Updated: Fixed width pill (w-28)
+      let html = `<span class="inline-flex items-center justify-center w-28 rounded-full px-2 py-0.5 text-xs font-medium ${badgeClass}">${label}</span>`;
       
       // 1. Try File URL first
       if (fileUrl) {
@@ -992,21 +1062,6 @@
       tbody.innerHTML = html;
     }
 
-    function updateTaxonomyReference() {
-      currentSelection = taxonomySelector.value;
-      const ref = references[currentSelection];
-
-      // Update download button
-      downloadBtn.href = ref.download_url;
-
-      // Update version info
-      versionLabel.textContent = ref.version;
-      filenamePreview.textContent = ref.filename;
-
-      // Update archive history
-      updateArchiveHistory();
-    }
-
     // Listen for dropdown changes
     taxonomySelector.addEventListener('change', updateTaxonomyReference);
 
@@ -1056,6 +1111,34 @@
       'progress-text-taxonomy',
       'btn-submit-taxonomy'
     );
+  }
+</script>
+
+<script>
+  function toggleTable(containerId, btnId) {
+    const container = document.getElementById(containerId);
+    const btn = document.getElementById(btnId);
+    const icon = btn.querySelector('i');
+    const text = btn.querySelector('span');
+
+    // Check if we are currently expanded (we check for the presence of the restriction class)
+    // We use a data-attribute to store the original restriction class (e.g., 'max-h-96')
+    const restrictionClass = container.getAttribute('data-restriction');
+
+    if (container.classList.contains(restrictionClass)) {
+      // EXPAND: Remove restriction
+      container.classList.remove(restrictionClass);
+      text.innerText = "Show Less";
+      icon.className = "fi fi-rr-angle-small-up";
+    } else {
+      // COLLAPSE: Add restriction back
+      container.classList.add(restrictionClass);
+      text.innerText = "Show All";
+      icon.className = "fi fi-rr-angle-small-down";
+      
+      // Optional: Scroll back to top of container
+      container.scrollTop = 0;
+    }
   }
 </script>
 
