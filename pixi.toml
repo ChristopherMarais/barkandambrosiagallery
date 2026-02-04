@@ -42,6 +42,7 @@ djangorestframework = "*"
 nodejs = "20.*"
 whitenoise = ">=6.11.0,<7"
 redis-py = ">=7.1.0,<8"
+django-redis = "*"
 celery = ">=5.5.3,<6"
 python-multipart = ">=0.0.21,<0.0.22"
 

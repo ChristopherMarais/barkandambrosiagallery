@@ -814,9 +814,17 @@ def my_uploads(request):
     described_names_archives_json = "[]"
     current_valid_species_json = "null"
     current_described_names_json = "null"
+    species_ref_status = {}
+    described_names_ref_status = {}
+    initial_archives = []
+    initial_current = None
+
     if request.user.is_superuser:
         import json
         from django.core.serializers.json import DjangoJSONEncoder
+
+        species_ref_status = species_ref.status()
+        described_names_ref_status = described_names_ref.status()
 
         valid_species_archives = species_ref.list_archived_versions()
         described_names_archives = described_names_ref.list_archived_versions()
@@ -844,6 +852,9 @@ def my_uploads(request):
                 'label': described_names_ref.status().get('label', 'Current version')
             }
 
+        initial_archives = valid_species_archives
+        initial_current = current_valid_species
+
         # Convert to JSON-serializable format
         valid_species_archives_json = json.dumps(valid_species_archives, cls=DjangoJSONEncoder)
         described_names_archives_json = json.dumps(described_names_archives, cls=DjangoJSONEncoder)
@@ -860,7 +871,11 @@ def my_uploads(request):
         "valid_species_archives": valid_species_archives_json,
         "described_names_archives": described_names_archives_json,
         "current_valid_species": current_valid_species_json,
-        "current_described_names": current_described_names_json
+        "current_described_names": current_described_names_json,
+        "species_ref_status": species_ref_status,
+        "described_names_ref_status": described_names_ref_status,
+        "initial_archives": initial_archives,
+        "initial_current": initial_current,
         }
     )
 

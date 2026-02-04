@@ -1062,6 +1062,24 @@
       tbody.innerHTML = html;
     }
 
+    function updateTaxonomyReference() {
+      // 1. Get current selection
+      currentSelection = taxonomySelector.value;
+      const ref = references[currentSelection];
+
+      // 2. Update Header Info (Version Label, Filename, Download Link)
+      const versionLabel = document.getElementById('version-label');
+      const filenamePreview = document.getElementById('filename-preview');
+      const downloadBtn = document.getElementById('download-btn');
+
+      if (versionLabel) versionLabel.textContent = ref.version;
+      if (filenamePreview) filenamePreview.textContent = ref.filename;
+      if (downloadBtn) downloadBtn.href = ref.download_url;
+
+      // 3. Update the History Table
+      updateArchiveHistory();
+    }
+
     // Listen for dropdown changes
     taxonomySelector.addEventListener('change', updateTaxonomyReference);
 
