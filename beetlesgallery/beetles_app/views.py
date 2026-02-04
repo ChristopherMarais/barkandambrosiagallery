@@ -1516,3 +1516,40 @@ def described_names_for_species(request):
     # Return as a list, adding name_id back into each row for the frontend
     names = [{"name_id": nid, **fields} for nid, fields in rows.items()]
     return JsonResponse({"names": names})
+
+
+def species_images(request):
+    """
+    AJAX endpoint: return thumbnail URLs for all images tagged to a species.
+    GET /taxonomy/species-images/?species_id=<valid_species_id>
+    Returns: { "images": [ { "beetle_id", "thumb_url", "detail_url" }, … ] }
+    """
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    species_id = (request.GET.get("species_id") or "").strip()
+    if not species_id:
+        return JsonResponse({"error": "species_id is required"}, status=400)
+
+    # Same dedup pattern as the gallery: one row per unique ImageAsset
+    beetles = (
+        Beetles.objects
+        .filter(depicts_valid_name_id=species_id)
+        .select_related("image_asset")
+        .order_by("image_asset", "id")
+        .distinct("image_asset")
+    )
+
+    images = []
+    for b in beetles:
+        asset = b.image_asset
+        if not asset:
+            continue
+        thumb_url = asset.thumb_small.url if asset.thumb_small else None
+        images.append({
+            "beetle_id": str(b.id),
+            "thumb_url": thumb_url,
+            "detail_url": reverse("beetle_detail", kwargs={"beetle_id": b.id}),
+        })
+
+    return JsonResponse({"images": images})

@@ -183,9 +183,9 @@
       var name = n.describedScientificName || "—";
       return '<div style="border:1px solid #e5e7eb; border-radius:6px; padding:10px 12px; margin-bottom:8px; background:#f9fafb;">' +
         '<p style="font-size:0.9rem; font-weight:600; color:#1f2937; font-style:italic; margin:0 0 6px 0;">' + escapeHtml(name) + '</p>' +
-        fieldRow("Authority",  n.describedScientificNameAuthority) +
         fieldRow("Genus",      n.name_genus) +
         fieldRow("Species",    n.name_species) +
+        fieldRow("Authority",  n.describedScientificNameAuthority) +
         fieldRow("Subspecies", n.name_subspecies) +
         fieldRow("Year",       n.name_year) +
       '</div>';
@@ -195,17 +195,21 @@
       '<h2 style="font-size:1.25rem; font-weight:600; color:#1f2937; margin:0 0 4px 0; font-style:italic;">' + escapeHtml(scientificName) + '</h2>' +
       '<p style="font-size:0.8rem; color:#6b7280; margin:0 0 16px 0;">valid_species_id: <code style="background:#f3f4f6; padding:2px 6px; border-radius:4px;">' + escapeHtml(node.species_id) + '</code></p>' +
       '<div style="margin-bottom:16px;">' +
-        fieldRow("Authority",        ref.scientificNameAuthority) +
         fieldRow("Subfamily",        ref.subfamily) +
         fieldRow("Tribe",            ref.tribe) +
         fieldRow("Subtribe",         ref.subtribe) +
         fieldRow("Genus",            ref.genus) +
         fieldRow("Species",          ref.species) +
+        fieldRow("Authority",        ref.scientificNameAuthority) +
         fieldRow("Subspecies",       ref.subspecies) +
         fieldRow("Original Genus",   ref.originalGenus) +
       '</div>' +
       '<div id="synonyms-section">' +
         '<h3 style="font-size:0.85rem; font-weight:600; color:#4b5563; margin:0 0 8px 0;">Described Names / Synonyms</h3>' +
+        '<p style="font-size:0.85rem; color:#9ca3af; font-style:italic;">Loading…</p>' +
+      '</div>' +
+      '<div id="images-section" style="margin-top:20px;">' +
+        '<h3 style="font-size:0.85rem; font-weight:600; color:#4b5563; margin:0 0 8px 0;">Images</h3>' +
         '<p style="font-size:0.85rem; color:#9ca3af; font-style:italic;">Loading…</p>' +
       '</div>';
 
@@ -234,6 +238,44 @@
           container.innerHTML =
             '<h3 style="font-size:0.85rem; font-weight:600; color:#4b5563; margin:0 0 8px 0;">Described Names / Synonyms</h3>' +
             '<p style="font-size:0.85rem; color:#ef4444; font-style:italic;">Failed to load synonyms</p>';
+        }
+      });
+
+    // Fetch images via AJAX
+    fetch("/taxonomy/species-images/?species_id=" + encodeURIComponent(node.species_id))
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        var container = document.getElementById("images-section");
+        if (!container) return;
+
+        var images = data.images || [];
+        if (images.length === 0) {
+          container.innerHTML =
+            '<h3 style="font-size:0.85rem; font-weight:600; color:#4b5563; margin:0 0 8px 0;">Images</h3>' +
+            '<p style="font-size:0.85rem; color:#9ca3af; font-style:italic;">No images recorded</p>';
+          return;
+        }
+
+        var thumbsHtml = images.map(function (img) {
+          var src = img.thumb_url || "";
+          return '<a href="' + escapeHtml(img.detail_url) + '" class="species-thumb-link" target="_blank" rel="noopener">' +
+            (src
+              ? '<img src="' + escapeHtml(src) + '" alt="Beetle ' + escapeHtml(img.beetle_id) + '" class="species-thumb-img" />'
+              : '<div class="species-thumb-placeholder">No image</div>'
+            ) +
+          '</a>';
+        }).join("");
+
+        container.innerHTML =
+          '<h3 style="font-size:0.85rem; font-weight:600; color:#4b5563; margin:0 0 8px 0;">Images <span style="font-weight:400; color:#9ca3af;">(' + images.length + ')</span></h3>' +
+          '<div class="species-thumb-grid">' + thumbsHtml + '</div>';
+      })
+      .catch(function () {
+        var container = document.getElementById("images-section");
+        if (container) {
+          container.innerHTML =
+            '<h3 style="font-size:0.85rem; font-weight:600; color:#4b5563; margin:0 0 8px 0;">Images</h3>' +
+            '<p style="font-size:0.85rem; color:#ef4444; font-style:italic;">Failed to load images</p>';
         }
       });
   }
@@ -392,6 +434,46 @@
     background-color: #dbeafe; /* blue-100 */
     color: #1e40af;
     font-weight: 600;
+  }
+
+  /* ---------- species image thumbnails ---------- */
+  .species-thumb-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .species-thumb-link {
+    display: block;
+    width: 96px;
+    height: 96px;
+    border: 1px solid #e5e7eb;       /* gray-200 */
+    border-radius: 0.375rem;
+    overflow: hidden;
+    background: #f3f4f6;            /* gray-100 */
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .species-thumb-link:hover {
+    border-color: #3b82f6;          /* blue-500 */
+    box-shadow: 0 0 0 2px #bfdbfe;  /* blue-200 ring */
+  }
+
+  .species-thumb-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .species-thumb-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    color: #9ca3af;
+    text-align: center;
   }
 </style>
 {% endif %}

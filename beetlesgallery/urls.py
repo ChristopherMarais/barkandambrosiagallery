@@ -28,6 +28,7 @@ urlpatterns = [
     # 3. /taxonomy/ -> Taxonomy Browser (Sidebar "Taxonomy Browser" links here)
     path('taxonomy/', beetles_views.taxonomy_browser, name='taxonomy_browser'),
     path('taxonomy/described-names/', beetles_views.described_names_for_species, name='described_names_for_species'),
+    path('taxonomy/species-images/', beetles_views.species_images, name='species_images'),
 
     path('beetles/<uuid:beetle_id>/', beetles_views.beetle_detail, name='beetle_detail'),
     path("beetles/add_specimen/<uuid:image_id>/", beetles_views.create_specimen_for_image, name="create_specimen_for_image"),
