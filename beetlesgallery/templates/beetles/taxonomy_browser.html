@@ -1,7 +1,335 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block content %}
 <section class="relative z-0">
-  <h1 class="text-2xl sm:text-3xl font-semibold mb-8">Taxonomy Browser</h1>
+  <h1 class="text-2xl sm:text-3xl font-semibold mb-6">Taxonomy Browser</h1>
+
+  {% if not taxonomy_tree_json or taxonomy_tree_json == "[]" %}
+    <div class="rounded-lg border border-gray-200 bg-gray-50 p-6 text-gray-600">
+      The taxonomy tree has not been generated yet. An administrator can run
+      <code class="bg-gray-200 px-1.5 py-0.5 rounded text-sm">python manage.py build_taxonomy_tree</code>
+      inside the container to generate it.
+    </div>
+  {% else %}
+
+  <div style="display: flex; flex-wrap: wrap; gap: 1.5rem;">
+
+    {# ----------------------------------------------------------------- #}
+    {# LEFT: scrollable collapsible tree                                  #}
+    {# ----------------------------------------------------------------- #}
+    <div style="flex: 0 0 30%; max-width: 30%; min-width: 250px;">
+      <div class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
+        <div class="border-b border-gray-200 bg-gray-50 px-4 py-2.5 flex items-center justify-between">
+          <span class="text-sm font-semibold text-gray-700">Taxonomy Tree</span>
+          <div class="flex gap-2">
+            <button type="button" id="expand-all-btn"
+              class="text-xs px-2.5 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 text-gray-600 transition">
+              Expand All
+            </button>
+            <button type="button" id="collapse-all-btn"
+              class="text-xs px-2.5 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 text-gray-600 transition">
+              Collapse All
+            </button>
+          </div>
+        </div>
+
+        {# The tree is rendered by JS into this container #}
+        <div id="taxonomy-tree-root" class="overflow-y-auto p-3" style="max-height: 70vh;"></div>
+      </div>
+    </div>
+
+    {# ----------------------------------------------------------------- #}
+    {# RIGHT: species detail panel                                        #}
+    {# ----------------------------------------------------------------- #}
+    <div style="flex: 1 1 0; min-width: 0;">
+      <div class="border border-gray-200 rounded-lg bg-white shadow-sm h-full">
+
+        {# placeholder shown until a species is clicked #}
+        <div id="species-detail-placeholder" class="flex flex-col items-center justify-center text-gray-400 p-12 h-full">
+          <svg class="w-12 h-12 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+          <p class="text-sm">Select a species from the tree to view details</p>
+        </div>
+
+        {# populated by JS when a species leaf is clicked #}
+        <div id="species-detail-panel" class="hidden p-6"></div>
+      </div>
+    </div>
+
+  </div>
+
+  {% endif %}
 </section>
+
+{# ---------------------------------------------------------- #}
+{# Inline script – only present when tree data is available   #}
+{# ---------------------------------------------------------- #}
+{% if taxonomy_tree_json and taxonomy_tree_json != "[]" %}
+<script>
+(function () {
+  "use strict";
+
+  // ---------- data ----------
+  const TREE       = {{ taxonomy_tree_json|safe }};
+  const SPECIES_MAP = {{ species_map_json|safe }};
+
+  // ---------- DOM refs ----------
+  const rootEl      = document.getElementById("taxonomy-tree-root");
+  const detailPanel = document.getElementById("species-detail-panel");
+  const detailPlaceholder = document.getElementById("species-detail-placeholder");
+
+  // ---------- helpers ----------
+
+  /**
+   * Build a single collapsible <li> for a non-leaf node (subfamily / tribe / genus).
+   */
+  function buildBranchNode(node) {
+    const li = document.createElement("li");
+    li.className = "tree-branch";
+
+    // toggle button [+] / [-]
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tree-toggle";
+    btn.setAttribute("aria-expanded", "false");
+    btn.innerHTML =
+      '<span class="tree-toggle-icon">+</span>' +
+      '<span class="tree-label">' +
+        escapeHtml(node.name) +
+        ' <span class="tree-count">(' + node.speciesCount + ' species)</span>' +
+      '</span>';
+
+    li.appendChild(btn);
+
+    // children <ul> – starts hidden
+    const ul = document.createElement("ul");
+    ul.className = "tree-children";
+    ul.setAttribute("aria-hidden", "true");
+
+    node.children.forEach(function (child) {
+      ul.appendChild(child.level === "species" ? buildLeafNode(child) : buildBranchNode(child));
+    });
+
+    li.appendChild(ul);
+
+    // toggle open/close
+    btn.addEventListener("click", function () {
+      const open = btn.getAttribute("aria-expanded") === "true";
+      btn.setAttribute("aria-expanded", String(!open));
+      btn.querySelector(".tree-toggle-icon").textContent = open ? "+" : "−";
+      ul.setAttribute("aria-hidden", String(open));
+      ul.classList.toggle("tree-children--open", !open);
+    });
+
+    // store refs for expand/collapse all
+    li.dataset.branch = "true";
+
+    return li;
+  }
+
+  /**
+   * Build a leaf <li> for a species.
+   */
+  function buildLeafNode(node) {
+    const li = document.createElement("li");
+    li.className = "tree-leaf";
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tree-species-btn";
+    btn.dataset.speciesId = node.species_id;
+    btn.textContent = node.name;
+    btn.setAttribute("aria-label", "View details for " + node.scientific_name);
+
+    btn.addEventListener("click", function () {
+      // highlight
+      document.querySelectorAll(".tree-species-btn--active").forEach(function (el) {
+        el.classList.remove("tree-species-btn--active");
+      });
+      btn.classList.add("tree-species-btn--active");
+
+      showSpeciesDetail(node);
+    });
+
+    li.appendChild(btn);
+    return li;
+  }
+
+  /**
+   * Populate the right-hand detail panel for the clicked species.
+   */
+  function showSpeciesDetail(node) {
+    const ref = SPECIES_MAP[node.species_id] || {};
+
+    const scientificName = ref.scientificName || node.scientific_name || "—";
+
+    detailPlaceholder.classList.add("hidden");
+    detailPanel.classList.remove("hidden");
+
+    detailPanel.innerHTML =
+      '<h2 class="text-xl font-semibold text-gray-800 mb-1 italic">' + escapeHtml(scientificName) + '</h2>' +
+      '<p class="text-sm text-gray-500 mb-4">valid_species_id: <code class="bg-gray-100 px-1.5 py-0.5 rounded">' + escapeHtml(node.species_id) + '</code></p>';
+  }
+
+  /**
+   * Expand or collapse every branch in the tree.
+   */
+  function setAllBranches(open) {
+    rootEl.querySelectorAll(".tree-branch").forEach(function (li) {
+      const btn = li.querySelector(":scope > .tree-toggle");
+      const ul  = li.querySelector(":scope > .tree-children");
+      if (!btn || !ul) return;
+
+      btn.setAttribute("aria-expanded", String(open));
+      btn.querySelector(".tree-toggle-icon").textContent = open ? "−" : "+";
+      ul.setAttribute("aria-hidden", String(!open));
+      ul.classList.toggle("tree-children--open", open);
+    });
+  }
+
+  // ---------- render ----------
+  const rootUl = document.createElement("ul");
+  rootUl.className = "tree-root";
+  TREE.forEach(function (subfamily) {
+    rootUl.appendChild(buildBranchNode(subfamily));
+  });
+  rootEl.appendChild(rootUl);
+
+  // ---------- expand / collapse all ----------
+  document.getElementById("expand-all-btn").addEventListener("click", function () { setAllBranches(true); });
+  document.getElementById("collapse-all-btn").addEventListener("click", function () { setAllBranches(false); });
+
+  // ---------- tiny helper ----------
+  function escapeHtml(s) {
+    var d = document.createElement("div");
+    d.textContent = s;
+    return d.innerHTML;
+  }
+})();
+</script>
+
+<style>
+  /* --------------------------------------------------------
+     Taxonomy tree styles
+     -------------------------------------------------------- */
+
+  /* Root list – no bullets, no default padding */
+  .tree-root,
+  .tree-children {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Hidden children */
+  .tree-children {
+    display: none;
+    padding-left: 0;
+  }
+  .tree-children--open {
+    display: block;
+  }
+
+  /* ---------- branch (non-leaf) ---------- */
+  .tree-branch {
+    position: relative;
+  }
+
+  /* The toggle button itself */
+  .tree-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    width: 100%;
+    padding: 0.35rem 0.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    border-radius: 0.375rem;   /* rounded-md */
+    transition: background-color 0.15s;
+  }
+  .tree-toggle:hover {
+    background-color: #f3f4f6; /* gray-100 */
+  }
+
+  /* [+] / [−] icon box – mimics the screenshot's small square toggle */
+  .tree-toggle-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.1rem;
+    height: 1.1rem;
+    min-width: 1.1rem;
+    font-size: 0.75rem;
+    line-height: 1;
+    border: 1px solid #9ca3af;     /* gray-400 */
+    border-radius: 0.2rem;
+    background: #fff;
+    color: #374151;               /* gray-700 */
+    user-select: none;
+  }
+
+  /* Label text */
+  .tree-label {
+    font-size: 0.9rem;
+    color: #374151;
+    font-weight: 500;
+  }
+  .tree-count {
+    color: #6b7280;    /* gray-500 */
+    font-weight: 400;
+  }
+
+  /* ---------- connector lines ---------- */
+  /* Vertical line down the left of each branch's children */
+  .tree-branch > .tree-children--open {
+    position: relative;
+    padding-left: 1.55rem;   /* room for the line + icon */
+  }
+  .tree-branch > .tree-children--open::before {
+    content: "";
+    position: absolute;
+    left: 0.85rem;
+    top: 0;
+    bottom: 0.35rem;
+    width: 1px;
+    background: #d1d5db;     /* gray-300 */
+  }
+
+  /* Horizontal tick from the vertical line to each child – removed */
+
+  /* ---------- leaf (species) ---------- */
+  .tree-leaf {
+    position: relative;
+  }
+  .tree-species-btn {
+    display: block;
+    width: 100%;
+    padding: 0.3rem 0.5rem;
+    padding-left: 1.1rem;    /* indent past where the toggle icon would be */
+    background: none;
+    border: none;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    text-align: left;
+    font-size: 0.9rem;
+    color: #1d4ed8;          /* blue-700 – clickable feel */
+    transition: background-color 0.15s, color 0.15s;
+  }
+  .tree-species-btn:hover {
+    background-color: #eff6ff; /* blue-50 */
+    color: #1e40af;            /* blue-800 */
+  }
+  .tree-species-btn--active {
+    background-color: #dbeafe; /* blue-100 */
+    color: #1e40af;
+    font-weight: 600;
+  }
+</style>
+{% endif %}
+
 {% endblock %}

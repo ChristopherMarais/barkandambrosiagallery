@@ -1468,5 +1468,25 @@ def stream_updates(request):
 def taxonomy_browser(request):
     """
     Display the taxonomy browser page.
+    Passes the pre-built taxonomy tree JSON and a flat lookup of
+    valid_species rows (keyed by valid_species_id) so the frontend
+    can show species details without a round-trip.
     """
-    return render(request, 'beetles/taxonomy_browser.html')
+    from . import taxonomy_tree
+
+    tree = taxonomy_tree.get_tree() or []
+
+    # Build a flat map: valid_species_id -> taxonomy fields
+    # Only load once; species_ref keeps it in memory after first call.
+    species_map = {}
+    try:
+        species_ref._ensure_loaded()
+        if species_ref._MAP:
+            species_map = species_ref._MAP
+    except Exception:
+        pass
+
+    return render(request, 'beetles/taxonomy_browser.html', {
+        'taxonomy_tree_json': json.dumps(tree, ensure_ascii=False),
+        'species_map_json': json.dumps(species_map, ensure_ascii=False),
+    })
