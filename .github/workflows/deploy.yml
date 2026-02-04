@@ -1,14 +1,12 @@
 name: Deploy App
 
 on:
-  push:
-    branches:
-      - main
-  # Allows manual triggering (useful for the model download step)
+  release:
+    types: [published] # Trigger only when a release is published
   workflow_dispatch: 
 
 jobs:
-  # JOB 1: Deploy Django Web App to Contabo (Existing)
+  # JOB 1: Deploy Django Web App to Contabo
   deploy-web:
     name: Deploy Web App (Contabo)
     runs-on: ubuntu-latest
@@ -20,32 +18,36 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /root/barkandambrosiagallery
+            # Navigate to the /opt directory
+            cd /opt/barkandambrosiagallery
             
             # 1. Get latest code
             git fetch --all
             git reset --hard origin/main
             
-            # BACKUP DATABASE
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_dump -U beetles_user beetles_db > /root/barkandambrosia_data/postgres/backup_$(date +%F_%H-%M).sql || echo "Backup failed or DB not running"
+            # 2. Capture the release version tag for the app to display
+            echo "APP_VERSION=${{ github.event.release.tag_name }}" > .env.version
 
-            # 2. Build and Start
+            # 3. BACKUP DATABASE (Updated path to /opt)
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_dump -U beetles_user beetles_db > /opt/barkandambrosia_data/postgres/backup_$(date +%F_%H-%M).sql || echo "Backup failed or DB not running"
+
+            # 4. Build and Start
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
-            # 3. Install Node modules (Tailwind) inside the running container
+            # 5. Install Node modules (Tailwind) inside the running container
             docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web pixi run install-js
             
-            # 4. Build CSS once (WITHOUT --watch) so the script can continue
+            # 6. Build CSS once (WITHOUT --watch) so the script can continue
             docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web pixi run build-css
             
-            # 5. Setup (Migrations & Static Files)
+            # 7. Setup (Migrations & Static Files)
             docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web pixi run migrate
             docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web pixi run collectstatic
             
-            # 6. Cleanup
+            # 8. Cleanup
             docker image prune -f
 
-  # JOB 2: Deploy AI Service to Modal (Fixed Pixi Setup)
+  # JOB 2: Deploy AI Service to Modal
   deploy-modal:
     name: Deploy AI Service (Modal)
     runs-on: ubuntu-latest
@@ -53,15 +55,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # FIXED: Updated action version and removed old 'pixi-version' 
-      # to ensure it uses a modern version compatible with [workspace].
       - name: Setup Pixi
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.39.0  # Explicitly using a modern version
+          pixi-version: v0.39.0
           cache: true
-          # Determine which environment to install. 
-          # Assuming 'default' contains the 'modal' package.
           environments: default 
 
       - name: Deploy API Endpoint
@@ -71,7 +69,6 @@ jobs:
         run: |
           pixi run modal deploy beetlesgallery/tools/modal_ibbi_api.py
 
-      # This step only runs if you manually click "Run Workflow" in GitHub Actions.
       - name: Update Model Cache (Manual Trigger Only)
         if: github.event_name == 'workflow_dispatch'
         env:

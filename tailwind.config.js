@@ -7,6 +7,10 @@ module.exports = {
         './beetlesgallery/**/*.js',
         './beetlesgallery/static/**/*.js',
     ],
+    safelist: [
+        'max-h-28',
+        'max-h-80',
+    ],
     darkMode: false,
     theme: {
         extend: {

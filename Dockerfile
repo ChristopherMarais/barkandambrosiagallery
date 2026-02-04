@@ -7,7 +7,7 @@ ENV PYTHONUNBUFFERED=1
 
 # Install dependencies for Pixi + Postgres drivers
 RUN apt-get update && apt-get install -y \
-    curl ca-certificates libglib2.0-0 libpq-dev \
+    curl ca-certificates libglib2.0-0 libpq-dev git \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
