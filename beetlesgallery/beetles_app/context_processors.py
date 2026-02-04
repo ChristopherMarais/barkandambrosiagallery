@@ -16,4 +16,6 @@ def species_ref_status(request):
     return {
         "species_ref_status": species_ref.status(),
         "described_names_ref_status": described_names_ref.status(),
+        "app_version": settings.APP_VERSION,
+        "debug": settings.DEBUG,
     }

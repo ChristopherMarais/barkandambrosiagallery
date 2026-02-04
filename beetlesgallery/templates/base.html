@@ -195,12 +195,18 @@
             {% endif %}
 
           </div>
+          <div class="mt-4 px-5 pb-2 text-[10px] font-mono text-gray-400 flex items-center">
+            <div class="w-8 shrink-0"></div>
+            <span>
+              {% if debug %}<span class="text-yellow-600/70">DEV:</span>{% endif %} {{ app_version }}
+            </span>
+          </div>
         </div>
       </div>
 
       <aside id="sidenav"
-        class="hidden lg:flex flex-col h-full bg-gray-50 border-r border-gray-200 overflow-hidden shadow-lg">
-        <div id="sideItems" class="flex flex-col gap-2 w-full p-2 mt-4">
+        class="hidden lg:flex flex-col h-full bg-gray-50 border-r border-gray-200 overflow-hidden shadow-lg group">
+        <div id="sideItems" class="flex flex-col h-full gap-2 w-full p-2 mt-4">
 
           <a href="{% url 'home' %}"
             class="flex items-center p-4 rounded-lg group overflow-hidden whitespace-nowrap justify-center relative {% if request.resolver_match.url_name == 'home' %}bg-gray-200{% else %}hover:bg-gray-200{% endif %}">
@@ -264,6 +270,13 @@
             </span>
           </a>
           {% endif %}
+
+          <div class="mt-auto px-5 pb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center">
+            <div class="w-8 shrink-0"></div>
+            <span class="text-[10px] font-mono text-gray-400 whitespace-nowrap">
+              {% if debug %}<span class="text-yellow-600/70">DEV:</span>{% endif %} {{ app_version }}
+            </span>
+          </div>
 
         </div>
       </aside>
