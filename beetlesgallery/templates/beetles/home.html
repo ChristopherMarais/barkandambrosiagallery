@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load humanize %}
+{% load beetle_tags %}
 
 {% block content %}
 <section class="relative z-0">
@@ -32,13 +33,13 @@
             
             {% for param, vals in selected_filters.items %}
                 {% for val in vals %}
-                <button type="button" 
-                        onclick="removeFilter('{{ param }}', '{{ val|escapejs }}')"
-                        class="group inline-flex items-center gap-1 rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-800 capitalize border border-gray-300 hover:bg-gray-300 hover:text-gray-900 hover:border-gray-200 transition cursor-pointer"
-                        title="Click to remove filter">
+                {# Use the custom tag to generate a link that removes just this specific filter value #}
+                <a href="?{% remove_filter param val %}"
+                  class="group inline-flex items-center gap-1 rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-800 capitalize border border-gray-300 hover:bg-gray-300 hover:text-gray-900 hover:border-gray-200 transition cursor-pointer no-underline"
+                  title="Click to remove filter">
                     {{ param|title }}: {{ val }}
                     <span class="ml-1 text-text/50 group-hover:text-gray-700">×</span>
-                </button>
+                </a>
                 {% endfor %}
             {% endfor %}
 
