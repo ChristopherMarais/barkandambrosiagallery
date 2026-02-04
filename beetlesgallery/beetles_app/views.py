@@ -1490,3 +1490,29 @@ def taxonomy_browser(request):
         'taxonomy_tree_json': json.dumps(tree, ensure_ascii=False),
         'species_map_json': json.dumps(species_map, ensure_ascii=False),
     })
+
+
+def described_names_for_species(request):
+    """
+    AJAX endpoint: return all described (synonym) names for a given valid_species_id.
+    GET /taxonomy/described-names/?species_id=<valid_species_id>
+    Returns: { "names": [ { ...row fields... }, … ] }
+    """
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    species_id = (request.GET.get("species_id") or "").strip()
+    if not species_id:
+        return JsonResponse({"error": "species_id is required"}, status=400)
+
+    # Use the reverse index to find all name_ids linked to this valid_species_id
+    name_ids = described_names_ref.ids_for("valid species id", species_id)
+    if not name_ids:
+        return JsonResponse({"names": []})
+
+    # Bulk-fetch the rows
+    rows = described_names_ref.bulk_lookup(name_ids)
+
+    # Return as a list, adding name_id back into each row for the frontend
+    names = [{"name_id": nid, **fields} for nid, fields in rows.items()]
+    return JsonResponse({"names": names})

@@ -169,9 +169,73 @@
     detailPlaceholder.classList.add("hidden");
     detailPanel.classList.remove("hidden");
 
+    // Helper: one label/value row, hidden when value is empty
+    function fieldRow(label, value) {
+      if (!value) return "";
+      return '<div style="display:flex; padding:5px 0; border-bottom:1px solid #f3f4f6;">' +
+        '<span style="width:140px; min-width:140px; font-size:0.85rem; font-weight:500; color:#6b7280;">' + label + '</span>' +
+        '<span style="font-size:0.85rem; color:#1f2937;">' + escapeHtml(value) + '</span>' +
+        '</div>';
+    }
+
+    // Synonym card using the same label/value rows for consistency
+    function synonymCard(n) {
+      var name = n.describedScientificName || "—";
+      return '<div style="border:1px solid #e5e7eb; border-radius:6px; padding:10px 12px; margin-bottom:8px; background:#f9fafb;">' +
+        '<p style="font-size:0.9rem; font-weight:600; color:#1f2937; font-style:italic; margin:0 0 6px 0;">' + escapeHtml(name) + '</p>' +
+        fieldRow("Authority",  n.describedScientificNameAuthority) +
+        fieldRow("Genus",      n.name_genus) +
+        fieldRow("Species",    n.name_species) +
+        fieldRow("Subspecies", n.name_subspecies) +
+        fieldRow("Year",       n.name_year) +
+      '</div>';
+    }
+
     detailPanel.innerHTML =
-      '<h2 class="text-xl font-semibold text-gray-800 mb-1 italic">' + escapeHtml(scientificName) + '</h2>' +
-      '<p class="text-sm text-gray-500 mb-4">valid_species_id: <code class="bg-gray-100 px-1.5 py-0.5 rounded">' + escapeHtml(node.species_id) + '</code></p>';
+      '<h2 style="font-size:1.25rem; font-weight:600; color:#1f2937; margin:0 0 4px 0; font-style:italic;">' + escapeHtml(scientificName) + '</h2>' +
+      '<p style="font-size:0.8rem; color:#6b7280; margin:0 0 16px 0;">valid_species_id: <code style="background:#f3f4f6; padding:2px 6px; border-radius:4px;">' + escapeHtml(node.species_id) + '</code></p>' +
+      '<div style="margin-bottom:16px;">' +
+        fieldRow("Authority",        ref.scientificNameAuthority) +
+        fieldRow("Subfamily",        ref.subfamily) +
+        fieldRow("Tribe",            ref.tribe) +
+        fieldRow("Subtribe",         ref.subtribe) +
+        fieldRow("Genus",            ref.genus) +
+        fieldRow("Species",          ref.species) +
+        fieldRow("Subspecies",       ref.subspecies) +
+        fieldRow("Original Genus",   ref.originalGenus) +
+      '</div>' +
+      '<div id="synonyms-section">' +
+        '<h3 style="font-size:0.85rem; font-weight:600; color:#4b5563; margin:0 0 8px 0;">Described Names / Synonyms</h3>' +
+        '<p style="font-size:0.85rem; color:#9ca3af; font-style:italic;">Loading…</p>' +
+      '</div>';
+
+    // Fetch synonyms via AJAX
+    fetch("/taxonomy/described-names/?species_id=" + encodeURIComponent(node.species_id))
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        var container = document.getElementById("synonyms-section");
+        if (!container) return; // panel was replaced before response arrived
+
+        var names = data.names || [];
+        if (names.length === 0) {
+          container.innerHTML =
+            '<h3 style="font-size:0.85rem; font-weight:600; color:#4b5563; margin:0 0 8px 0;">Described Names / Synonyms</h3>' +
+            '<p style="font-size:0.85rem; color:#9ca3af; font-style:italic;">None recorded</p>';
+          return;
+        }
+
+        container.innerHTML =
+          '<h3 style="font-size:0.85rem; font-weight:600; color:#4b5563; margin:0 0 8px 0;">Described Names / Synonyms <span style="font-weight:400; color:#9ca3af;">(' + names.length + ')</span></h3>' +
+          names.map(synonymCard).join("");
+      })
+      .catch(function () {
+        var container = document.getElementById("synonyms-section");
+        if (container) {
+          container.innerHTML =
+            '<h3 style="font-size:0.85rem; font-weight:600; color:#4b5563; margin:0 0 8px 0;">Described Names / Synonyms</h3>' +
+            '<p style="font-size:0.85rem; color:#ef4444; font-style:italic;">Failed to load synonyms</p>';
+        }
+      });
   }
 
   /**
