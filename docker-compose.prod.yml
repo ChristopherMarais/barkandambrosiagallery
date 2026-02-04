@@ -29,7 +29,7 @@ services:
   worker:
     build: .
     restart: always
-    command: pixi run celery -A beetlesgallery worker -l info --concurrency=1
+    command: pixi run celery -A beetlesgallery worker -l info --concurrency=2
     volumes:
       - /opt/barkandambrosia_data/media:/app/media
     env_file:

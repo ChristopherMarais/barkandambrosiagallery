@@ -111,7 +111,7 @@
         <div>
           <h3 class="text-xl font-semibold mb-3 text-gray-800">My Downloads</h3>
           <p class="text-sm text-gray-500 mb-4">
-            NOTE: Files are downloadable for 14 days after creation.
+            NOTE: Files are available for 14 days after creation.
           </p>
 
           <div class="rounded-lg border border-gray-200 bg-white overflow-x-auto">
@@ -845,7 +845,7 @@
       const s = status.toLowerCase();
       if (['imported', 'validated', 'applied', 'ready'].includes(s)) {
           badgeClass = "bg-green-100 text-green-800";
-      } else if (['validating', 'building', 'staging'].includes(s)) {
+      } else if (['validating', 'building', 'staging', 'pending'].includes(s)) {
           badgeClass = "bg-blue-100 text-blue-800 animate-pulse";
       } else if (['rejected', 'failed', 'import_failed', 'apply_failed'].includes(s)) {
           badgeClass = "bg-red-100 text-red-800";
