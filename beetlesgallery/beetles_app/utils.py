@@ -340,6 +340,7 @@ FILTERS_CONFIG = [
     {"category": "Collection", "param": "country", "type": "db", "field": "collection_country", "label": "Country"},
     {"category": "Collection", "param": "state", "type": "db", "field": "collection_stateProvince", "label": "State/Province"},
     {"category": "Collection", "param": "sex", "type": "db", "field": "specimen_sex", "label": "Sex"},
+    {"category": "Collection", "param": "type_status", "type": "db", "field": "specimen_type_status", "label": "Type Status"},
     {"category": "Image Details", "param": "institution", "type": "db", "field": "image_asset__image_institution", "label": "Institution"},
     {"category": "Image Details", "param": "photographer", "type": "db", "field": "image_asset__photographer", "label": "Photographer"},
     {"category": "Image Details", "param": "usage", "type": "db", "field": "image_asset__photo_usage_statement", "label": "Photo Usage"},
