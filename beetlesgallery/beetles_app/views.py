@@ -1553,3 +1553,64 @@ def species_images(request):
         })
 
     return JsonResponse({"images": images})
+
+
+def taxonomy_search(request):
+    """
+    AJAX endpoint: search by original genus or described scientific name.
+    GET /taxonomy/search/?field=<original_genus|described_name>&query=<term>
+    Returns: { "species_ids": [...], "matches": [...] }
+    """
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    field = (request.GET.get("field") or "").strip()
+    query = (request.GET.get("query") or "").strip()
+
+    if not field or not query:
+        return JsonResponse({"error": "field and query are required"}, status=400)
+
+    from . import species_ref, described_names_ref
+
+    species_ids = set()
+    matches = []
+
+    if field == "original_genus":
+        # Search originalGenus in species_ref (case-insensitive substring)
+        species_ref._ensure_reverse_index()
+        idx = species_ref._rev_index.get("originalGenus", {})
+        q_lower = query.lower()
+
+        for genus_lower, ids in idx.items():
+            if q_lower in genus_lower:
+                species_ids.update(ids)
+                matches.append(genus_lower.capitalize())
+
+    elif field == "described_name":
+        # Search describedScientificName in described_names_ref (case-insensitive substring)
+        described_names_ref._ensure_reverse_index()
+        idx = described_names_ref._rev_index.get("describedScientificName", {})
+        q_lower = query.lower()
+
+        name_ids_found = set()
+        for name_lower, nids in idx.items():
+            if q_lower in name_lower:
+                name_ids_found.update(nids)
+                matches.append(name_lower)
+
+        # Map name_ids → valid_species_ids
+        rows = described_names_ref._load_all_rows()
+        for row in rows:
+            nid = str(row.get("name_id", "")).strip()
+            if nid in name_ids_found:
+                vid = str(row.get("name_valid_species_id", "")).strip()
+                if vid:
+                    species_ids.add(vid)
+
+    else:
+        return JsonResponse({"error": "invalid field"}, status=400)
+
+    return JsonResponse({
+        "species_ids": sorted(species_ids),
+        "matches": sorted(set(matches))[:20]  # limit autocomplete suggestions
+    })

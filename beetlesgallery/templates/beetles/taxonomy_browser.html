@@ -41,6 +41,8 @@
               <option value="tribe">Tribe</option>
               <option value="genus" selected>Genus</option>
               <option value="species">Species</option>
+              <option value="original_genus">Original Genus</option>
+              <option value="described_name">Described Name</option>
             </select>
             <div style="position: relative; flex: 1 1 0; min-width: 0;">
               <input type="text" id="taxonomy-filter-input"
@@ -354,6 +356,36 @@
   // ---------- search / filter ----------
 
   /**
+   * Filter tree by a list of valid_species_id strings.
+   * Returns a new array (never mutates TREE).
+   */
+  function filterTreeByIds(nodes, speciesIds) {
+    var idSet = new Set(speciesIds);
+    var result = [];
+
+    nodes.forEach(function (node) {
+      if (node.level === "species") {
+        if (idSet.has(node.species_id)) {
+          result.push(node);
+        }
+      } else {
+        var filteredChildren = filterTreeByIds(node.children, speciesIds);
+        if (filteredChildren.length > 0) {
+          result.push({
+            id: node.id,
+            name: node.name,
+            level: node.level,
+            speciesCount: node.speciesCount,
+            children: filteredChildren
+          });
+        }
+      }
+    });
+
+    return result;
+  }
+
+  /**
    * Recursively prune the tree to only branches that contain a match for the given field.
    * Returns a new array (never mutates TREE).
    */
@@ -435,17 +467,51 @@
   var suggestionsEl = document.getElementById("taxonomy-suggestions");
   var filterTimer = null;
   var selectedSuggestionIndex = -1;
+  var ajaxAbortController = null;
 
   function applyFilter() {
     var field = filterFieldEl.value;
     var query = filterInputEl.value.trim();
-    var filtered = filterTree(TREE, field, query);
-    renderTree(filtered, !!query);
+
+    // Abort any pending AJAX request
+    if (ajaxAbortController) {
+      ajaxAbortController.abort();
+      ajaxAbortController = null;
+    }
+
+    // AJAX-based search for original_genus and described_name
+    if (field === "original_genus" || field === "described_name") {
+      if (!query) {
+        renderTree(TREE, false);
+        return;
+      }
+
+      ajaxAbortController = new AbortController();
+      fetch("/taxonomy/search/?field=" + encodeURIComponent(field) + "&query=" + encodeURIComponent(query), {
+        signal: ajaxAbortController.signal
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          ajaxAbortController = null;
+          var speciesIds = data.species_ids || [];
+          var filtered = filterTreeByIds(TREE, speciesIds);
+          renderTree(filtered, true);
+        })
+        .catch(function (err) {
+          if (err.name !== "AbortError") {
+            console.error("Taxonomy search failed:", err);
+          }
+        });
+    } else {
+      // Client-side filtering for tribe/genus/species
+      var filtered = filterTree(TREE, field, query);
+      renderTree(filtered, !!query);
+    }
   }
 
   function showSuggestions() {
     var field = filterFieldEl.value;
-    var query = filterInputEl.value.trim().toLowerCase();
+    var query = filterInputEl.value.trim();
 
     if (!query) {
       suggestionsEl.innerHTML = "";
@@ -453,10 +519,38 @@
       return;
     }
 
+    // AJAX autocomplete for original_genus and described_name
+    if (field === "original_genus" || field === "described_name") {
+      fetch("/taxonomy/search/?field=" + encodeURIComponent(field) + "&query=" + encodeURIComponent(query))
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          var matches = data.matches || [];
+          if (matches.length === 0) {
+            suggestionsEl.innerHTML = "";
+            suggestionsEl.style.display = "none";
+            return;
+          }
+
+          selectedSuggestionIndex = -1;
+          suggestionsEl.innerHTML = matches.slice(0, 10).map(function (name, i) {
+            return '<div class="taxonomy-suggestion-item" data-index="' + i + '">' + escapeHtml(name) + '</div>';
+          }).join("");
+          suggestionsEl.style.display = "block";
+
+          wireUpSuggestionHandlers();
+        })
+        .catch(function (err) {
+          console.error("Autocomplete failed:", err);
+        });
+      return;
+    }
+
+    // Client-side autocomplete for tribe/genus/species
+    var q_lower = query.toLowerCase();
     var candidates = autocompleteData[field] || [];
     var matches = candidates.filter(function (name) {
-      return name.toLowerCase().indexOf(query) !== -1;
-    }).slice(0, 10); // limit to 10 suggestions
+      return name.toLowerCase().indexOf(q_lower) !== -1;
+    }).slice(0, 10);
 
     if (matches.length === 0) {
       suggestionsEl.innerHTML = "";
@@ -470,7 +564,10 @@
     }).join("");
     suggestionsEl.style.display = "block";
 
-    // wire up click handlers
+    wireUpSuggestionHandlers();
+  }
+
+  function wireUpSuggestionHandlers() {
     suggestionsEl.querySelectorAll(".taxonomy-suggestion-item").forEach(function (el) {
       el.addEventListener("click", function () {
         filterInputEl.value = el.textContent;
