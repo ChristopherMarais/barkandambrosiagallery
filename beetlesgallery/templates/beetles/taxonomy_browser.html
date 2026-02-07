@@ -34,6 +34,21 @@
           </div>
         </div>
 
+        {# Search bar #}
+        <div class="px-3 pt-4 pb-3">
+          <div class="taxonomy-filter-row">
+            <select id="taxonomy-filter-field" class="taxonomy-filter-select">
+              <option value="tribe">Tribe</option>
+              <option value="genus" selected>Genus</option>
+              <option value="species">Species</option>
+            </select>
+            <input type="text" id="taxonomy-filter-input"
+              class="taxonomy-filter-input"
+              placeholder="Enter search term…"
+              autocomplete="off" />
+          </div>
+        </div>
+
         {# The tree is rendered by JS into this container #}
         <div id="taxonomy-tree-root" class="overflow-y-auto p-3" style="max-height: 70vh;"></div>
       </div>
@@ -296,13 +311,104 @@
     });
   }
 
-  // ---------- render ----------
-  const rootUl = document.createElement("ul");
-  rootUl.className = "tree-root";
-  TREE.forEach(function (subfamily) {
-    rootUl.appendChild(buildBranchNode(subfamily));
+  // ---------- search / filter ----------
+
+  /**
+   * Recursively prune the tree to only branches that contain a match for the given field.
+   * Returns a new array (never mutates TREE).
+   */
+  function filterTree(nodes, field, query) {
+    if (!query) return nodes;
+
+    var q = query.toLowerCase();
+    var result = [];
+
+    nodes.forEach(function (node) {
+      if (node.level === "species") {
+        // Leaf node - only match if filtering by species
+        if (field === "species") {
+          var haystack = (node.name + " " + (node.scientific_name || "")).toLowerCase();
+          if (haystack.indexOf(q) !== -1) {
+            result.push(node);
+          }
+        } else {
+          // When filtering by tribe/genus, species pass through
+          // (we only get here if an ancestor matched)
+          result.push(node);
+        }
+      } else {
+        // Branch node (subfamily, tribe, genus)
+        var ownMatch = (field === node.level && node.name.toLowerCase().indexOf(q) !== -1);
+
+        if (ownMatch) {
+          // This branch matches the filter → include entire subtree as-is
+          result.push(node);
+        } else if (field !== node.level) {
+          // Filter doesn't apply to this level → recurse to children
+          var filteredChildren = filterTree(node.children, field, query);
+          if (filteredChildren.length > 0) {
+            result.push({
+              id: node.id,
+              name: node.name,
+              level: node.level,
+              speciesCount: node.speciesCount,
+              children: filteredChildren
+            });
+          }
+        }
+        // else: this level matches the filter field but node doesn't match query → exclude
+      }
+    });
+
+    return result;
+  }
+
+  /**
+   * Render a (possibly filtered) tree into rootEl, optionally expanding all branches.
+   */
+  function renderTree(nodes, expandAll) {
+    rootEl.innerHTML = "";
+
+    if (nodes.length === 0) {
+      rootEl.innerHTML = '<p style="font-size:0.85rem; color:#9ca3af; font-style:italic; padding:8px 0;">No matches</p>';
+      return;
+    }
+
+    var ul = document.createElement("ul");
+    ul.className = "tree-root";
+    nodes.forEach(function (node) {
+      ul.appendChild(node.level === "species" ? buildLeafNode(node) : buildBranchNode(node));
+    });
+    rootEl.appendChild(ul);
+
+    if (expandAll) {
+      setAllBranches(true);
+    }
+  }
+
+  // ---------- render (initial) ----------
+  renderTree(TREE, false);
+
+  // ---------- filter controls ----------
+  var filterFieldEl = document.getElementById("taxonomy-filter-field");
+  var filterInputEl = document.getElementById("taxonomy-filter-input");
+  var filterTimer = null;
+
+  function applyFilter() {
+    var field = filterFieldEl.value;
+    var query = filterInputEl.value.trim();
+    var filtered = filterTree(TREE, field, query);
+    renderTree(filtered, !!query);
+  }
+
+  filterInputEl.addEventListener("input", function () {
+    clearTimeout(filterTimer);
+    filterTimer = setTimeout(applyFilter, 250);
   });
-  rootEl.appendChild(rootUl);
+
+  filterFieldEl.addEventListener("change", function () {
+    applyFilter();
+  });
 
   // ---------- expand / collapse all ----------
   document.getElementById("expand-all-btn").addEventListener("click", function () { setAllBranches(true); });
@@ -434,6 +540,50 @@
     background-color: #dbeafe; /* blue-100 */
     color: #1e40af;
     font-weight: 600;
+  }
+
+  /* ---------- search / filter ---------- */
+  .taxonomy-filter-row {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+  }
+
+  .taxonomy-filter-select {
+    flex: 0 0 auto;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.85rem;
+    border: 1px solid #d1d5db;          /* gray-300 */
+    border-radius: 0.375rem;
+    background: #fff;
+    color: #1f2937;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .taxonomy-filter-select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px #bfdbfe;
+  }
+
+  .taxonomy-filter-input {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.85rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    background: #fff;
+    color: #1f2937;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .taxonomy-filter-input::placeholder {
+    color: #9ca3af;
+  }
+  .taxonomy-filter-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px #bfdbfe;
   }
 
   /* ---------- species image thumbnails ---------- */
