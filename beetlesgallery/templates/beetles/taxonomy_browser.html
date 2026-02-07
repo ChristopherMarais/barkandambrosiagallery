@@ -42,10 +42,13 @@
               <option value="genus" selected>Genus</option>
               <option value="species">Species</option>
             </select>
-            <input type="text" id="taxonomy-filter-input"
-              class="taxonomy-filter-input"
-              placeholder="Enter search term…"
-              autocomplete="off" />
+            <div style="position: relative; flex: 1 1 0; min-width: 0;">
+              <input type="text" id="taxonomy-filter-input"
+                class="taxonomy-filter-input"
+                placeholder="Enter search term…"
+                autocomplete="off" />
+              <div id="taxonomy-suggestions" class="taxonomy-suggestions"></div>
+            </div>
           </div>
         </div>
 
@@ -90,6 +93,43 @@
   // ---------- data ----------
   const TREE       = {{ taxonomy_tree_json|safe }};
   const SPECIES_MAP = {{ species_map_json|safe }};
+
+  // ---------- autocomplete data ----------
+  var autocompleteData = {
+    tribe: [],
+    genus: [],
+    species: []
+  };
+
+  function buildAutocompleteData() {
+    var tribes = new Set();
+    var genera = new Set();
+    var species = new Set();
+
+    function walk(nodes) {
+      nodes.forEach(function (node) {
+        if (node.level === "tribe") {
+          tribes.add(node.name);
+        } else if (node.level === "genus") {
+          genera.add(node.name);
+        } else if (node.level === "species") {
+          species.add(node.scientific_name || node.name);
+        }
+
+        if (node.children) {
+          walk(node.children);
+        }
+      });
+    }
+
+    walk(TREE);
+
+    autocompleteData.tribe = Array.from(tribes).sort();
+    autocompleteData.genus = Array.from(genera).sort();
+    autocompleteData.species = Array.from(species).sort();
+  }
+
+  buildAutocompleteData();
 
   // ---------- DOM refs ----------
   const rootEl      = document.getElementById("taxonomy-tree-root");
@@ -389,10 +429,12 @@
   // ---------- render (initial) ----------
   renderTree(TREE, false);
 
-  // ---------- filter controls ----------
+  // ---------- filter controls with autocomplete ----------
   var filterFieldEl = document.getElementById("taxonomy-filter-field");
   var filterInputEl = document.getElementById("taxonomy-filter-input");
+  var suggestionsEl = document.getElementById("taxonomy-suggestions");
   var filterTimer = null;
+  var selectedSuggestionIndex = -1;
 
   function applyFilter() {
     var field = filterFieldEl.value;
@@ -401,12 +443,98 @@
     renderTree(filtered, !!query);
   }
 
+  function showSuggestions() {
+    var field = filterFieldEl.value;
+    var query = filterInputEl.value.trim().toLowerCase();
+
+    if (!query) {
+      suggestionsEl.innerHTML = "";
+      suggestionsEl.style.display = "none";
+      return;
+    }
+
+    var candidates = autocompleteData[field] || [];
+    var matches = candidates.filter(function (name) {
+      return name.toLowerCase().indexOf(query) !== -1;
+    }).slice(0, 10); // limit to 10 suggestions
+
+    if (matches.length === 0) {
+      suggestionsEl.innerHTML = "";
+      suggestionsEl.style.display = "none";
+      return;
+    }
+
+    selectedSuggestionIndex = -1;
+    suggestionsEl.innerHTML = matches.map(function (name, i) {
+      return '<div class="taxonomy-suggestion-item" data-index="' + i + '">' + escapeHtml(name) + '</div>';
+    }).join("");
+    suggestionsEl.style.display = "block";
+
+    // wire up click handlers
+    suggestionsEl.querySelectorAll(".taxonomy-suggestion-item").forEach(function (el) {
+      el.addEventListener("click", function () {
+        filterInputEl.value = el.textContent;
+        suggestionsEl.innerHTML = "";
+        suggestionsEl.style.display = "none";
+        applyFilter();
+      });
+    });
+  }
+
+  function selectSuggestion(index) {
+    var items = suggestionsEl.querySelectorAll(".taxonomy-suggestion-item");
+    items.forEach(function (el) { el.classList.remove("taxonomy-suggestion-item--selected"); });
+    if (index >= 0 && index < items.length) {
+      items[index].classList.add("taxonomy-suggestion-item--selected");
+      selectedSuggestionIndex = index;
+    }
+  }
+
   filterInputEl.addEventListener("input", function () {
     clearTimeout(filterTimer);
+    showSuggestions();
     filterTimer = setTimeout(applyFilter, 250);
   });
 
+  filterInputEl.addEventListener("keydown", function (e) {
+    var items = suggestionsEl.querySelectorAll(".taxonomy-suggestion-item");
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (items.length > 0) {
+        selectSuggestion((selectedSuggestionIndex + 1) % items.length);
+      }
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (items.length > 0) {
+        selectSuggestion((selectedSuggestionIndex - 1 + items.length) % items.length);
+      }
+    } else if (e.key === "Enter") {
+      if (selectedSuggestionIndex >= 0 && items.length > 0) {
+        e.preventDefault();
+        filterInputEl.value = items[selectedSuggestionIndex].textContent;
+        suggestionsEl.innerHTML = "";
+        suggestionsEl.style.display = "none";
+        applyFilter();
+      }
+    } else if (e.key === "Escape") {
+      suggestionsEl.innerHTML = "";
+      suggestionsEl.style.display = "none";
+      selectedSuggestionIndex = -1;
+    }
+  });
+
+  filterInputEl.addEventListener("blur", function () {
+    // delay to allow click on suggestion to register
+    setTimeout(function () {
+      suggestionsEl.innerHTML = "";
+      suggestionsEl.style.display = "none";
+    }, 200);
+  });
+
   filterFieldEl.addEventListener("change", function () {
+    suggestionsEl.innerHTML = "";
+    suggestionsEl.style.display = "none";
     applyFilter();
   });
 
@@ -584,6 +712,40 @@
   .taxonomy-filter-input:focus {
     border-color: #3b82f6;
     box-shadow: 0 0 0 2px #bfdbfe;
+  }
+
+  /* Autocomplete suggestions */
+  .taxonomy-suggestions {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 0.25rem;
+    max-height: 200px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    z-index: 50;
+  }
+
+  .taxonomy-suggestion-item {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    color: #1f2937;
+    cursor: pointer;
+    transition: background-color 0.1s;
+  }
+
+  .taxonomy-suggestion-item:hover,
+  .taxonomy-suggestion-item--selected {
+    background-color: #eff6ff;  /* blue-50 */
+  }
+
+  .taxonomy-suggestion-item:not(:last-child) {
+    border-bottom: 1px solid #f3f4f6;
   }
 
   /* ---------- species image thumbnails ---------- */
