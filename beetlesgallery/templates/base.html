@@ -30,6 +30,7 @@
           "/upload",
           "/updates",
           "/accounts",
+          "/my-uploads",
           "/admin"
         ];
 
@@ -70,19 +71,23 @@
     /* Fallback for missing Tailwind classes */
     #layout-container {
       display: flex;
-      flex-direction: column; /* Mobile default: Stacked */
+      flex-direction: column;
+      /* Mobile default: Stacked */
     }
 
     #sidenavWrap {
       position: sticky;
       top: 0;
-      z-index: 50; /* Forces header above content on mobile */
+      z-index: 50;
+      /* Forces header above content on mobile */
     }
 
     @media (min-width: 1024px) {
       #layout-container {
-        flex-direction: row; 
-      }/* Large screens: Side by side */
+        flex-direction: row;
+      }
+
+      /* Large screens: Side by side */
       #sidenavWrap {
         width: 5rem;
         height: 100vh;
@@ -126,7 +131,8 @@
 
   <div id="layout-container" class="flex flex-col lg:flex-row h-full min-h-screen w-full">
 
-    <div id="sidenavWrap" class="block sticky left-0 top-0 z-40 w-full h-auto lg:h-screen lg:w-20 lg:shrink-0 bg-gray-50 border-b lg:border-b-0 lg:border-r border-gray-200">
+    <div id="sidenavWrap"
+      class="block sticky left-0 top-0 z-40 w-full h-auto lg:h-screen lg:w-20 lg:shrink-0 bg-gray-50 border-b lg:border-b-0 lg:border-r border-gray-200">
 
       <div id="mobileMenuWrap">
         <div class="lg:hidden flex items-center justify-between px-4 py-3 border-b">
@@ -271,7 +277,8 @@
           </a>
           {% endif %}
 
-          <div class="mt-auto px-5 pb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center">
+          <div
+            class="mt-auto px-5 pb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center">
             <div class="w-8 shrink-0"></div>
             <span class="text-[10px] font-mono text-gray-400 whitespace-nowrap">
               {% if debug %}<span class="text-yellow-600/70">DEV:</span>{% endif %} {{ app_version }}
