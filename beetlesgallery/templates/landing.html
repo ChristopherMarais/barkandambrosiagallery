@@ -10,8 +10,16 @@
     </h1>
     <p class="text-base mt-4 md:text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed text-balance">
       Welcome to the Bark & Ambrosia Beetle Gallery. The world's largest collection of bark and ambrosia beetle images and specimen data. 
+      
+    <span class="block mt-6 text-sm md:text-base font-medium text-gray-400">
+        Image Attribution
+        <span class="block text-gray-600 font-normal mt-1">
+          Images in this database were contributed by the global community of entomologists and museum curators. Their names and institutions are listed with each respective file and will be acknowledged in an upcoming publication.
+        </span>
+      </span>
+
       <span class="block mt-6 text-sm md:text-base font-medium text-gray-400">Maintained by the 
-        <a href="https://pitchtube.org/" class="block text-gray-600 hover:underline">
+        <a href="https://pitchtube.org/" target="_blank" class="block text-gray-600 hover:underline">
           University of Florida Forest Entomology Lab.
         </a>
       </span>
@@ -30,7 +38,7 @@
     </div>
 
     <div class="lg:col-span-5 flex flex-col gap-4 w-full max-w-md mx-auto order-2 lg:order-2">
-      
+
       <a href="{% url 'beetles_home' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-gray-100 hover:bg-gray-50/50 transition-all duration-300">
         <div class="p-3 bg-gray-100 text-gray-600 rounded-xl group-hover:scale-110 transition-transform">
           <i class="fi fi-rr-bug text-xl"></i>
@@ -38,6 +46,16 @@
         <div>
           <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-700">Browse Images</h3>
           <p class="text-sm text-gray-500">Explore the images and specimen data.</p>
+        </div>
+      </a>
+
+      <a href="{% url 'taxonomy_browser' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-gray-100 hover:bg-gray-50/50 transition-all duration-300">
+        <div class="p-3 bg-gray-100 text-gray-600 rounded-xl group-hover:scale-110 transition-transform">
+          <i class="fi fi-rr-chart-tree text-xl"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-700">Taxonomy Browser</h3>
+          <p class="text-sm text-gray-500">Browse species by taxonomic hierarchy.</p>
         </div>
       </a>
 
@@ -66,19 +84,19 @@
   <div class="border-t border-gray-100 bg-gray-50/50 py-8 mt-auto">
     <div class="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 max-w-5xl mx-auto px-4">
       <div class="flex flex-col items-center text-center">
-        <span class="text-2xl md:text-4xl font-black text-gray-800">{{ total_images|default:"0" }}</span>
+        <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ total_images|default:"0" }}</span>
         <span class="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Images</span>
       </div>
       <div class="flex flex-col items-center text-center">
-        <span class="text-2xl md:text-4xl font-black text-gray-800">{{ total_genera|default:"0" }}</span>
+        <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ total_genera|default:"0" }}</span>
         <span class="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Genera</span>
       </div>
       <div class="flex flex-col items-center text-center">
-        <span class="text-2xl md:text-4xl font-black text-gray-800">{{ total_species|default:"0" }}</span>
+        <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ total_species|default:"0" }}</span>
         <span class="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Species</span>
       </div>
       <div class="flex flex-col items-center text-center">
-        <span class="text-2xl md:text-4xl font-black text-gray-800">{{ type_status_count|default:"0" }}</span>
+        <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ type_status_count|default:"0" }}</span>
         <span class="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Type Specimens</span>
       </div>
     </div>
@@ -221,13 +239,28 @@
       </div>
 
     </div>
+  {# GitHub Discussions Link #}
+  <div class="w-full max-w-4xl mx-auto border-t border-gray-100 my-12"></div>
+  <div class="text-center pt-16 pb-12 max-w-2xl mx-auto">
+    <p class="text-gray-500 mb-4 leading-relaxed">
+      Have a question about the data, a feature request, or want to report a bug?
+      <br />
+      Connect with our team on GitHub.
+    </p>
+    <a href="https://github.com/ChristopherMarais/barkandambrosiagallery/discussions" target="_blank" class="inline-flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 text-gray-600 rounded-full font-medium hover:text-gray-900 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300 shadow-sm hover:shadow-md">
+      <i class="fi fi-brands-github text-lg mt-0.5"></i>
+      <span>Visit GitHub Discussions</span>
+    </a>
+  </div>
 
   <footer class="py-6 flex flex-col items-center justify-center gap-3 border-t border-gray-200">
     <div class="flex gap-6 opacity-40 hover:opacity-100 transition-opacity duration-300">
       <img src="{% static 'img/NSF_4-Color_bitmap_Logo_RGB.png' %}" class="h-10 w-auto grayscale" alt="NSF">
       <img src="{% static 'img/PngItem_2222864.png' %}" class="h-10 w-auto grayscale" alt="USDA">
+      <img src="{% static 'img/forest-service-usda-logos.png' %}" class="h-10 w-auto grayscale" alt="USDA">
+      <img src="{% static 'img/Florida-Forest-Service-Logo-Vector.jpg' %}" class="h-10 w-auto grayscale" alt="USDA">
     </div>
-    <p class="text-[10px] text-gray-400 italic">Sponsored by the National Science Foundation (NSF) and the United States Department of Agriculture (USDA) Animal and Plant Health Inspection Service (APHIS)</p>
+    <p class="text-[10px] text-gray-400 italic">Sponsored by the National Science Foundation (NSF), the United States Department of Agriculture (USDA) Animal and Plant Health Inspection Service (APHIS), the USDA Forest Service, and the Florida Forest Service.</p>
   </footer>
 
 </div>

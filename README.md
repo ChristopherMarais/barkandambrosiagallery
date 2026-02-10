@@ -178,6 +178,7 @@ git push origin main
 | **Rebuild Container** | `docker compose build` |
 | **Run Arbitrary Command** | `docker compose run --rm web pixi run python manage.py <command>` |
 | **Rebuild CSS** | `docker compose run --rm web pixi run npx tailwindcss -i ./beetlesgallery/static/css/input.css -o ./beetlesgallery/static/css/style.css --watch` |
+| **Rebuild Taxonomy Tree** | `docker compose run --rm web pixi run python manage.py build_taxonomy_tree` |
 
 
 # Server & Deployment Guide (Contabo)

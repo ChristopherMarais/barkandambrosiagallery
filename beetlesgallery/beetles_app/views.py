@@ -1478,3 +1478,154 @@ def stream_updates(request):
     response['Cache-Control'] = 'no-cache'
     response['X-Accel-Buffering'] = 'no'
     return response
+
+@login_required
+def taxonomy_browser(request):
+    """
+    Display the taxonomy browser page.
+    Passes the pre-built taxonomy tree JSON and a flat lookup of
+    valid_species rows (keyed by valid_species_id) so the frontend
+    can show species details without a round-trip.
+    """
+    from . import taxonomy_tree
+
+    tree = taxonomy_tree.get_tree() or []
+
+    # Build a flat map: valid_species_id -> taxonomy fields
+    # Only load once; species_ref keeps it in memory after first call.
+    species_map = {}
+    try:
+        species_ref._ensure_loaded()
+        if species_ref._MAP:
+            species_map = species_ref._MAP
+    except Exception:
+        pass
+
+    return render(request, 'beetles/taxonomy_browser.html', {
+        'taxonomy_tree_json': json.dumps(tree, ensure_ascii=False),
+        'species_map_json': json.dumps(species_map, ensure_ascii=False),
+    })
+
+
+def described_names_for_species(request):
+    """
+    AJAX endpoint: return all described (synonym) names for a given valid_species_id.
+    GET /taxonomy/described-names/?species_id=<valid_species_id>
+    Returns: { "names": [ { ...row fields... }, … ] }
+    """
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    species_id = (request.GET.get("species_id") or "").strip()
+    if not species_id:
+        return JsonResponse({"error": "species_id is required"}, status=400)
+
+    # Use the reverse index to find all name_ids linked to this valid_species_id
+    name_ids = described_names_ref.ids_for("valid species id", species_id)
+    if not name_ids:
+        return JsonResponse({"names": []})
+
+    # Bulk-fetch the rows
+    rows = described_names_ref.bulk_lookup(name_ids)
+
+    # Return as a list, adding name_id back into each row for the frontend
+    names = [{"name_id": nid, **fields} for nid, fields in rows.items()]
+    return JsonResponse({"names": names})
+
+
+def species_images(request):
+    """
+    AJAX endpoint: return thumbnail URLs for all images tagged to a species.
+    GET /taxonomy/species-images/?species_id=<valid_species_id>
+    Returns: { "images": [ { "beetle_id", "thumb_url", "detail_url" }, … ] }
+    """
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    species_id = (request.GET.get("species_id") or "").strip()
+    if not species_id:
+        return JsonResponse({"error": "species_id is required"}, status=400)
+
+    # Same dedup pattern as the gallery: one row per unique ImageAsset
+    beetles = (
+        Beetles.objects
+        .filter(depicts_valid_name_id=species_id)
+        .select_related("image_asset")
+        .order_by("image_asset", "id")
+        .distinct("image_asset")
+    )
+
+    images = []
+    for b in beetles:
+        asset = b.image_asset
+        if not asset:
+            continue
+        thumb_url = asset.thumb_small.url if asset.thumb_small else None
+        images.append({
+            "beetle_id": str(b.id),
+            "thumb_url": thumb_url,
+            "detail_url": reverse("beetle_detail", kwargs={"beetle_id": b.id}),
+        })
+
+    return JsonResponse({"images": images})
+
+
+def taxonomy_search(request):
+    """
+    AJAX endpoint: search by original genus or described scientific name.
+    GET /taxonomy/search/?field=<original_genus|described_name>&query=<term>
+    Returns: { "species_ids": [...], "matches": [...] }
+    """
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    field = (request.GET.get("field") or "").strip()
+    query = (request.GET.get("query") or "").strip()
+
+    if not field or not query:
+        return JsonResponse({"error": "field and query are required"}, status=400)
+
+    from . import species_ref, described_names_ref
+
+    species_ids = set()
+    matches = []
+
+    if field == "original_genus":
+        # Search originalGenus in species_ref (case-insensitive substring)
+        species_ref._ensure_reverse_index()
+        idx = species_ref._rev_index.get("originalGenus", {})
+        q_lower = query.lower()
+
+        for genus_lower, ids in idx.items():
+            if q_lower in genus_lower:
+                species_ids.update(ids)
+                matches.append(genus_lower.capitalize())
+
+    elif field == "described_name":
+        # Search describedScientificName in described_names_ref (case-insensitive substring)
+        described_names_ref._ensure_reverse_index()
+        idx = described_names_ref._rev_index.get("describedScientificName", {})
+        q_lower = query.lower()
+
+        name_ids_found = set()
+        for name_lower, nids in idx.items():
+            if q_lower in name_lower:
+                name_ids_found.update(nids)
+                matches.append(name_lower)
+
+        # Map name_ids → valid_species_ids
+        rows = described_names_ref._load_all_rows()
+        for row in rows:
+            nid = str(row.get("name_id", "")).strip()
+            if nid in name_ids_found:
+                vid = str(row.get("name_valid_species_id", "")).strip()
+                if vid:
+                    species_ids.add(vid)
+
+    else:
+        return JsonResponse({"error": "invalid field"}, status=400)
+
+    return JsonResponse({
+        "species_ids": sorted(species_ids),
+        "matches": sorted(set(matches))[:20]  # limit autocomplete suggestions
+    })
