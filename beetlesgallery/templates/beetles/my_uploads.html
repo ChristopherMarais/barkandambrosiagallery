@@ -1094,14 +1094,13 @@
 
     // Archive data from Django
     const archiveData = {
-      valid_species: {{ valid_species_archives| safe
-  }},
-  described_names: { { described_names_archives | safe } }
+      valid_species: {{ valid_species_archives|safe }},
+      described_names: {{ described_names_archives|safe }}
     };
 
-  const currentVersionData = {
-    valid_species: {{ current_valid_species| safe }},
-  described_names: { { current_described_names | safe } }
+    const currentVersionData = {
+      valid_species: {{ current_valid_species|safe }},
+      described_names: {{ current_described_names|safe }}
     };
 
   function updateArchiveHistory() {
