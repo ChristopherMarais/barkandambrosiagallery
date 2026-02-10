@@ -57,10 +57,13 @@ jobs:
             docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web pixi run collectstatic --no-input
             docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web pixi run migrate
             
-            # 6. Restart to apply changes
+            # 6. Build Taxonomy Tree
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web pixi run build-tree
+
+            # 7. Restart to apply changes
             docker compose -f docker-compose.yml -f docker-compose.prod.yml restart web
 
-            # 7. Cleanup
+            # 8. Cleanup
             docker image prune -f
 
   # JOB 2: Deploy AI Service (Modal)
