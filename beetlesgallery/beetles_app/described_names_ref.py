@@ -53,14 +53,26 @@ def _load_all_rows():
     """
     Load entire described_names CSV as a list of dict rows.
     Uses default_storage so it works locally and with S3.
+    Tries multiple encodings to handle accented taxonomy names
+    (mirrors the fallback logic in _load_map_from_storage).
     """
-    # open binary, then wrap to control encoding/newline
     with default_storage.open(_PATH, "rb") as fb:
-        with io.TextIOWrapper(fb, encoding="utf-8-sig", newline="") as fh:
-            reader = csv.DictReader(fh)
-            # normalize headers by stripping whitespace (BOM handled by utf-8-sig)
-            reader.fieldnames = [h.strip() for h in (reader.fieldnames or [])]
-            return [{k.strip(): (v or "").strip() for k, v in row.items()} for row in reader]
+        data = fb.read()
+
+    text = None
+    for encoding in ["utf-8-sig", "utf-8", "latin-1", "cp1252"]:
+        try:
+            text = data.decode(encoding)
+            break
+        except (UnicodeDecodeError, LookupError):
+            continue
+
+    if text is None:
+        raise ValueError("Could not decode described_names CSV with any common encoding")
+
+    reader = csv.DictReader(io.StringIO(text))
+    reader.fieldnames = [h.strip() for h in (reader.fieldnames or [])]
+    return [{k.strip(): (v or "").strip() for k, v in row.items()} for row in reader]
 
 def _ensure_reverse_index():
     global _rev_index, _rev_index_version
@@ -397,6 +409,13 @@ def publish_from_file(src_path: str, label: Optional[str] = None) -> tuple[int, 
         _VERSION = None
         _rev_index = None
         _rev_index_version = None
+
+        # Regenerate the taxonomy browser tree (best-effort; must not block publish)
+        try:
+            from . import taxonomy_tree
+            taxonomy_tree.rebuild()
+        except Exception as e:
+            print(f"Warning: taxonomy_tree rebuild after described_names update failed: {e}")
 
         return rows, final_sha
 

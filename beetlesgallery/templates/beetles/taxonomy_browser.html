@@ -1,0 +1,890 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<section class="relative z-0">
+  <h1 class="text-2xl sm:text-3xl font-semibold mb-6">Taxonomy Browser</h1>
+
+  {% if not taxonomy_tree_json or taxonomy_tree_json == "[]" %}
+    <div class="rounded-lg border border-gray-200 bg-gray-50 p-6 text-gray-600">
+      The taxonomy tree has not been generated yet. An administrator can run
+      <code class="bg-gray-200 px-1.5 py-0.5 rounded text-sm">python manage.py build_taxonomy_tree</code>
+      inside the container to generate it.
+    </div>
+  {% else %}
+
+  <div style="display: flex; flex-wrap: wrap; gap: 1.5rem;">
+
+    {# ----------------------------------------------------------------- #}
+    {# LEFT: scrollable collapsible tree                                  #}
+    {# ----------------------------------------------------------------- #}
+    <div style="flex: 0 0 30%; max-width: 30%; min-width: 250px;">
+      <div class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
+        <div class="border-b border-gray-200 bg-gray-50 px-4 py-2.5 flex items-center justify-between">
+          <span class="text-sm font-semibold text-gray-700">Taxonomy Tree</span>
+          <div class="flex gap-2">
+            <button type="button" id="expand-all-btn"
+              class="text-xs px-2.5 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 text-gray-600 transition">
+              Expand All
+            </button>
+            <button type="button" id="collapse-all-btn"
+              class="text-xs px-2.5 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 text-gray-600 transition">
+              Collapse All
+            </button>
+          </div>
+        </div>
+
+        {# Search bar #}
+        <div class="px-3 pt-4 pb-3">
+          <div class="taxonomy-filter-row">
+            <select id="taxonomy-filter-field" class="taxonomy-filter-select">
+              <option value="tribe">Tribe</option>
+              <option value="genus" selected>Genus</option>
+              <option value="species">Species</option>
+              <option value="original_genus">Original Genus</option>
+              <option value="described_name">Described Name</option>
+            </select>
+            <div style="position: relative; flex: 1 1 0; min-width: 0;">
+              <input type="text" id="taxonomy-filter-input"
+                class="taxonomy-filter-input"
+                placeholder="Enter search term…"
+                autocomplete="off" />
+              <div id="taxonomy-suggestions" class="taxonomy-suggestions"></div>
+            </div>
+          </div>
+        </div>
+
+        {# The tree is rendered by JS into this container #}
+        <div id="taxonomy-tree-root" class="overflow-y-auto p-3" style="max-height: 70vh;"></div>
+      </div>
+    </div>
+
+    {# ----------------------------------------------------------------- #}
+    {# RIGHT: species detail panel                                        #}
+    {# ----------------------------------------------------------------- #}
+    <div style="flex: 1 1 0; min-width: 0;">
+      <div class="border border-gray-200 rounded-lg bg-white shadow-sm h-full">
+
+        {# placeholder shown until a species is clicked #}
+        <div id="species-detail-placeholder" class="flex flex-col items-center justify-center text-gray-400 p-12 h-full">
+          <svg class="w-12 h-12 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+          <p class="text-sm">Select a species from the tree to view details</p>
+        </div>
+
+        {# populated by JS when a species leaf is clicked #}
+        <div id="species-detail-panel" class="hidden p-6"></div>
+      </div>
+    </div>
+
+  </div>
+
+  {% endif %}
+</section>
+
+{# ---------------------------------------------------------- #}
+{# Inline script – only present when tree data is available   #}
+{# ---------------------------------------------------------- #}
+{% if taxonomy_tree_json and taxonomy_tree_json != "[]" %}
+<script>
+(function () {
+  "use strict";
+
+  // ---------- data ----------
+  const TREE       = {{ taxonomy_tree_json|safe }};
+  const SPECIES_MAP = {{ species_map_json|safe }};
+
+  // ---------- autocomplete data ----------
+  var autocompleteData = {
+    tribe: [],
+    genus: [],
+    species: []
+  };
+
+  function buildAutocompleteData() {
+    var tribes = new Set();
+    var genera = new Set();
+    var species = new Set();
+
+    function walk(nodes) {
+      nodes.forEach(function (node) {
+        if (node.level === "tribe") {
+          tribes.add(node.name);
+        } else if (node.level === "genus") {
+          genera.add(node.name);
+        } else if (node.level === "species") {
+          species.add(node.scientific_name || node.name);
+        }
+
+        if (node.children) {
+          walk(node.children);
+        }
+      });
+    }
+
+    walk(TREE);
+
+    autocompleteData.tribe = Array.from(tribes).sort();
+    autocompleteData.genus = Array.from(genera).sort();
+    autocompleteData.species = Array.from(species).sort();
+  }
+
+  buildAutocompleteData();
+
+  // ---------- DOM refs ----------
+  const rootEl      = document.getElementById("taxonomy-tree-root");
+  const detailPanel = document.getElementById("species-detail-panel");
+  const detailPlaceholder = document.getElementById("species-detail-placeholder");
+
+  // ---------- helpers ----------
+
+  /**
+   * Build a single collapsible <li> for a non-leaf node (subfamily / tribe / genus).
+   */
+  function buildBranchNode(node) {
+    const li = document.createElement("li");
+    li.className = "tree-branch";
+
+    // toggle button [+] / [-]
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tree-toggle";
+    btn.setAttribute("aria-expanded", "false");
+    btn.innerHTML =
+      '<span class="tree-toggle-icon">+</span>' +
+      '<span class="tree-label">' +
+        escapeHtml(node.name) +
+        ' <span class="tree-count">(' + node.speciesCount + ' species)</span>' +
+      '</span>';
+
+    li.appendChild(btn);
+
+    // children <ul> – starts hidden
+    const ul = document.createElement("ul");
+    ul.className = "tree-children";
+    ul.setAttribute("aria-hidden", "true");
+
+    node.children.forEach(function (child) {
+      ul.appendChild(child.level === "species" ? buildLeafNode(child) : buildBranchNode(child));
+    });
+
+    li.appendChild(ul);
+
+    // toggle open/close
+    btn.addEventListener("click", function () {
+      const open = btn.getAttribute("aria-expanded") === "true";
+      btn.setAttribute("aria-expanded", String(!open));
+      btn.querySelector(".tree-toggle-icon").textContent = open ? "+" : "−";
+      ul.setAttribute("aria-hidden", String(open));
+      ul.classList.toggle("tree-children--open", !open);
+    });
+
+    // store refs for expand/collapse all
+    li.dataset.branch = "true";
+
+    return li;
+  }
+
+  /**
+   * Build a leaf <li> for a species.
+   */
+  function buildLeafNode(node) {
+    const li = document.createElement("li");
+    li.className = "tree-leaf";
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tree-species-btn";
+    btn.dataset.speciesId = node.species_id;
+    btn.textContent = node.name;
+    btn.setAttribute("aria-label", "View details for " + node.scientific_name);
+
+    btn.addEventListener("click", function () {
+      // highlight
+      document.querySelectorAll(".tree-species-btn--active").forEach(function (el) {
+        el.classList.remove("tree-species-btn--active");
+      });
+      btn.classList.add("tree-species-btn--active");
+
+      showSpeciesDetail(node);
+    });
+
+    li.appendChild(btn);
+    return li;
+  }
+
+  /**
+   * Populate the right-hand detail panel for the clicked species.
+   */
+  function showSpeciesDetail(node) {
+    const ref = SPECIES_MAP[node.species_id] || {};
+
+    const scientificName = ref.scientificName || node.scientific_name || "—";
+
+    detailPlaceholder.classList.add("hidden");
+    detailPanel.classList.remove("hidden");
+
+    // Helper: one label/value row, hidden when value is empty
+    function fieldRow(label, value) {
+      if (!value) return "";
+      return '<div style="display:flex; padding:5px 0; border-bottom:1px solid #f3f4f6;">' +
+        '<span style="width:140px; min-width:140px; font-size:0.85rem; font-weight:500; color:#6b7280;">' + label + '</span>' +
+        '<span style="font-size:0.85rem; color:#1f2937;">' + escapeHtml(value) + '</span>' +
+        '</div>';
+    }
+
+    // Synonym card using the same label/value rows for consistency
+    function synonymCard(n) {
+      var name = n.describedScientificName || "—";
+      return '<div style="border:1px solid #e5e7eb; border-radius:6px; padding:10px 12px; margin-bottom:8px; background:#f9fafb;">' +
+        '<p style="font-size:0.9rem; font-weight:600; color:#1f2937; font-style:italic; margin:0 0 6px 0;">' + escapeHtml(name) + '</p>' +
+        fieldRow("Genus",      n.name_genus) +
+        fieldRow("Species",    n.name_species) +
+        fieldRow("Authority",  n.describedScientificNameAuthority) +
+        fieldRow("Subspecies", n.name_subspecies) +
+        fieldRow("Year",       n.name_year) +
+      '</div>';
+    }
+
+    detailPanel.innerHTML =
+      '<h2 style="font-size:1.25rem; font-weight:600; color:#1f2937; margin:0 0 4px 0; font-style:italic;">' + escapeHtml(scientificName) + '</h2>' +
+      '<p style="font-size:0.8rem; color:#6b7280; margin:0 0 16px 0;">valid_species_id: <code style="background:#f3f4f6; padding:2px 6px; border-radius:4px;">' + escapeHtml(node.species_id) + '</code></p>' +
+      '<div style="margin-bottom:16px;">' +
+        fieldRow("Subfamily",        ref.subfamily) +
+        fieldRow("Tribe",            ref.tribe) +
+        fieldRow("Subtribe",         ref.subtribe) +
+        fieldRow("Genus",            ref.genus) +
+        fieldRow("Species",          ref.species) +
+        fieldRow("Authority",        ref.scientificNameAuthority) +
+        fieldRow("Subspecies",       ref.subspecies) +
+        fieldRow("Original Genus",   ref.originalGenus) +
+      '</div>' +
+      '<div id="synonyms-section">' +
+        '<h3 style="font-size:0.85rem; font-weight:600; color:#4b5563; margin:0 0 8px 0;">Described Names / Synonyms</h3>' +
+        '<p style="font-size:0.85rem; color:#9ca3af; font-style:italic;">Loading…</p>' +
+      '</div>' +
+      '<div id="images-section" style="margin-top:20px;">' +
+        '<h3 style="font-size:0.85rem; font-weight:600; color:#4b5563; margin:0 0 8px 0;">Images</h3>' +
+        '<p style="font-size:0.85rem; color:#9ca3af; font-style:italic;">Loading…</p>' +
+      '</div>';
+
+    // Fetch synonyms via AJAX
+    fetch("/taxonomy/described-names/?species_id=" + encodeURIComponent(node.species_id))
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        var container = document.getElementById("synonyms-section");
+        if (!container) return; // panel was replaced before response arrived
+
+        var names = data.names || [];
+        if (names.length === 0) {
+          container.innerHTML =
+            '<h3 style="font-size:0.85rem; font-weight:600; color:#4b5563; margin:0 0 8px 0;">Described Names / Synonyms</h3>' +
+            '<p style="font-size:0.85rem; color:#9ca3af; font-style:italic;">None recorded</p>';
+          return;
+        }
+
+        container.innerHTML =
+          '<h3 style="font-size:0.85rem; font-weight:600; color:#4b5563; margin:0 0 8px 0;">Described Names / Synonyms <span style="font-weight:400; color:#9ca3af;">(' + names.length + ')</span></h3>' +
+          names.map(synonymCard).join("");
+      })
+      .catch(function () {
+        var container = document.getElementById("synonyms-section");
+        if (container) {
+          container.innerHTML =
+            '<h3 style="font-size:0.85rem; font-weight:600; color:#4b5563; margin:0 0 8px 0;">Described Names / Synonyms</h3>' +
+            '<p style="font-size:0.85rem; color:#ef4444; font-style:italic;">Failed to load synonyms</p>';
+        }
+      });
+
+    // Fetch images via AJAX
+    fetch("/taxonomy/species-images/?species_id=" + encodeURIComponent(node.species_id))
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        var container = document.getElementById("images-section");
+        if (!container) return;
+
+        var images = data.images || [];
+        if (images.length === 0) {
+          container.innerHTML =
+            '<h3 style="font-size:0.85rem; font-weight:600; color:#4b5563; margin:0 0 8px 0;">Images</h3>' +
+            '<p style="font-size:0.85rem; color:#9ca3af; font-style:italic;">No images recorded</p>';
+          return;
+        }
+
+        var thumbsHtml = images.map(function (img) {
+          var src = img.thumb_url || "";
+          return '<a href="' + escapeHtml(img.detail_url) + '" class="species-thumb-link" target="_blank" rel="noopener">' +
+            (src
+              ? '<img src="' + escapeHtml(src) + '" alt="Beetle ' + escapeHtml(img.beetle_id) + '" class="species-thumb-img" />'
+              : '<div class="species-thumb-placeholder">No image</div>'
+            ) +
+          '</a>';
+        }).join("");
+
+        container.innerHTML =
+          '<h3 style="font-size:0.85rem; font-weight:600; color:#4b5563; margin:0 0 8px 0;">Images <span style="font-weight:400; color:#9ca3af;">(' + images.length + ')</span></h3>' +
+          '<div class="species-thumb-grid">' + thumbsHtml + '</div>';
+      })
+      .catch(function () {
+        var container = document.getElementById("images-section");
+        if (container) {
+          container.innerHTML =
+            '<h3 style="font-size:0.85rem; font-weight:600; color:#4b5563; margin:0 0 8px 0;">Images</h3>' +
+            '<p style="font-size:0.85rem; color:#ef4444; font-style:italic;">Failed to load images</p>';
+        }
+      });
+  }
+
+  /**
+   * Expand or collapse every branch in the tree.
+   */
+  function setAllBranches(open) {
+    rootEl.querySelectorAll(".tree-branch").forEach(function (li) {
+      const btn = li.querySelector(":scope > .tree-toggle");
+      const ul  = li.querySelector(":scope > .tree-children");
+      if (!btn || !ul) return;
+
+      btn.setAttribute("aria-expanded", String(open));
+      btn.querySelector(".tree-toggle-icon").textContent = open ? "−" : "+";
+      ul.setAttribute("aria-hidden", String(!open));
+      ul.classList.toggle("tree-children--open", open);
+    });
+  }
+
+  // ---------- search / filter ----------
+
+  /**
+   * Filter tree by a list of valid_species_id strings.
+   * Returns a new array (never mutates TREE).
+   */
+  function filterTreeByIds(nodes, speciesIds) {
+    var idSet = new Set(speciesIds);
+    var result = [];
+
+    nodes.forEach(function (node) {
+      if (node.level === "species") {
+        if (idSet.has(node.species_id)) {
+          result.push(node);
+        }
+      } else {
+        var filteredChildren = filterTreeByIds(node.children, speciesIds);
+        if (filteredChildren.length > 0) {
+          result.push({
+            id: node.id,
+            name: node.name,
+            level: node.level,
+            speciesCount: node.speciesCount,
+            children: filteredChildren
+          });
+        }
+      }
+    });
+
+    return result;
+  }
+
+  /**
+   * Recursively prune the tree to only branches that contain a match for the given field.
+   * Returns a new array (never mutates TREE).
+   */
+  function filterTree(nodes, field, query) {
+    if (!query) return nodes;
+
+    var q = query.toLowerCase();
+    var result = [];
+
+    nodes.forEach(function (node) {
+      if (node.level === "species") {
+        // Leaf node - only match if filtering by species
+        if (field === "species") {
+          var haystack = (node.name + " " + (node.scientific_name || "")).toLowerCase();
+          if (haystack.indexOf(q) !== -1) {
+            result.push(node);
+          }
+        } else {
+          // When filtering by tribe/genus, species pass through
+          // (we only get here if an ancestor matched)
+          result.push(node);
+        }
+      } else {
+        // Branch node (subfamily, tribe, genus)
+        var ownMatch = (field === node.level && node.name.toLowerCase().indexOf(q) !== -1);
+
+        if (ownMatch) {
+          // This branch matches the filter → include entire subtree as-is
+          result.push(node);
+        } else if (field !== node.level) {
+          // Filter doesn't apply to this level → recurse to children
+          var filteredChildren = filterTree(node.children, field, query);
+          if (filteredChildren.length > 0) {
+            result.push({
+              id: node.id,
+              name: node.name,
+              level: node.level,
+              speciesCount: node.speciesCount,
+              children: filteredChildren
+            });
+          }
+        }
+        // else: this level matches the filter field but node doesn't match query → exclude
+      }
+    });
+
+    return result;
+  }
+
+  /**
+   * Render a (possibly filtered) tree into rootEl, optionally expanding all branches.
+   */
+  function renderTree(nodes, expandAll) {
+    rootEl.innerHTML = "";
+
+    if (nodes.length === 0) {
+      rootEl.innerHTML = '<p style="font-size:0.85rem; color:#9ca3af; font-style:italic; padding:8px 0;">No matches</p>';
+      return;
+    }
+
+    var ul = document.createElement("ul");
+    ul.className = "tree-root";
+    nodes.forEach(function (node) {
+      ul.appendChild(node.level === "species" ? buildLeafNode(node) : buildBranchNode(node));
+    });
+    rootEl.appendChild(ul);
+
+    if (expandAll) {
+      setAllBranches(true);
+    }
+  }
+
+  // ---------- render (initial) ----------
+  renderTree(TREE, false);
+
+  // ---------- filter controls with autocomplete ----------
+  var filterFieldEl = document.getElementById("taxonomy-filter-field");
+  var filterInputEl = document.getElementById("taxonomy-filter-input");
+  var suggestionsEl = document.getElementById("taxonomy-suggestions");
+  var filterTimer = null;
+  var selectedSuggestionIndex = -1;
+  var ajaxAbortController = null;
+
+  function applyFilter() {
+    var field = filterFieldEl.value;
+    var query = filterInputEl.value.trim();
+
+    // Abort any pending AJAX request
+    if (ajaxAbortController) {
+      ajaxAbortController.abort();
+      ajaxAbortController = null;
+    }
+
+    // AJAX-based search for original_genus and described_name
+    if (field === "original_genus" || field === "described_name") {
+      if (!query) {
+        renderTree(TREE, false);
+        return;
+      }
+
+      ajaxAbortController = new AbortController();
+      fetch("/taxonomy/search/?field=" + encodeURIComponent(field) + "&query=" + encodeURIComponent(query), {
+        signal: ajaxAbortController.signal
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          ajaxAbortController = null;
+          var speciesIds = data.species_ids || [];
+          var filtered = filterTreeByIds(TREE, speciesIds);
+          renderTree(filtered, true);
+        })
+        .catch(function (err) {
+          if (err.name !== "AbortError") {
+            console.error("Taxonomy search failed:", err);
+          }
+        });
+    } else {
+      // Client-side filtering for tribe/genus/species
+      var filtered = filterTree(TREE, field, query);
+      renderTree(filtered, !!query);
+    }
+  }
+
+  function showSuggestions() {
+    var field = filterFieldEl.value;
+    var query = filterInputEl.value.trim();
+
+    if (!query) {
+      suggestionsEl.innerHTML = "";
+      suggestionsEl.style.display = "none";
+      return;
+    }
+
+    // AJAX autocomplete for original_genus and described_name
+    if (field === "original_genus" || field === "described_name") {
+      fetch("/taxonomy/search/?field=" + encodeURIComponent(field) + "&query=" + encodeURIComponent(query))
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          var matches = data.matches || [];
+          if (matches.length === 0) {
+            suggestionsEl.innerHTML = "";
+            suggestionsEl.style.display = "none";
+            return;
+          }
+
+          selectedSuggestionIndex = -1;
+          suggestionsEl.innerHTML = matches.slice(0, 10).map(function (name, i) {
+            return '<div class="taxonomy-suggestion-item" data-index="' + i + '">' + escapeHtml(name) + '</div>';
+          }).join("");
+          suggestionsEl.style.display = "block";
+
+          wireUpSuggestionHandlers();
+        })
+        .catch(function (err) {
+          console.error("Autocomplete failed:", err);
+        });
+      return;
+    }
+
+    // Client-side autocomplete for tribe/genus/species
+    var q_lower = query.toLowerCase();
+    var candidates = autocompleteData[field] || [];
+    var matches = candidates.filter(function (name) {
+      return name.toLowerCase().indexOf(q_lower) !== -1;
+    }).slice(0, 10);
+
+    if (matches.length === 0) {
+      suggestionsEl.innerHTML = "";
+      suggestionsEl.style.display = "none";
+      return;
+    }
+
+    selectedSuggestionIndex = -1;
+    suggestionsEl.innerHTML = matches.map(function (name, i) {
+      return '<div class="taxonomy-suggestion-item" data-index="' + i + '">' + escapeHtml(name) + '</div>';
+    }).join("");
+    suggestionsEl.style.display = "block";
+
+    wireUpSuggestionHandlers();
+  }
+
+  function wireUpSuggestionHandlers() {
+    suggestionsEl.querySelectorAll(".taxonomy-suggestion-item").forEach(function (el) {
+      el.addEventListener("click", function () {
+        filterInputEl.value = el.textContent;
+        suggestionsEl.innerHTML = "";
+        suggestionsEl.style.display = "none";
+        applyFilter();
+      });
+    });
+  }
+
+  function selectSuggestion(index) {
+    var items = suggestionsEl.querySelectorAll(".taxonomy-suggestion-item");
+    items.forEach(function (el) { el.classList.remove("taxonomy-suggestion-item--selected"); });
+    if (index >= 0 && index < items.length) {
+      items[index].classList.add("taxonomy-suggestion-item--selected");
+      selectedSuggestionIndex = index;
+    }
+  }
+
+  filterInputEl.addEventListener("input", function () {
+    clearTimeout(filterTimer);
+    showSuggestions();
+    filterTimer = setTimeout(applyFilter, 250);
+  });
+
+  filterInputEl.addEventListener("keydown", function (e) {
+    var items = suggestionsEl.querySelectorAll(".taxonomy-suggestion-item");
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (items.length > 0) {
+        selectSuggestion((selectedSuggestionIndex + 1) % items.length);
+      }
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (items.length > 0) {
+        selectSuggestion((selectedSuggestionIndex - 1 + items.length) % items.length);
+      }
+    } else if (e.key === "Enter") {
+      if (selectedSuggestionIndex >= 0 && items.length > 0) {
+        e.preventDefault();
+        filterInputEl.value = items[selectedSuggestionIndex].textContent;
+        suggestionsEl.innerHTML = "";
+        suggestionsEl.style.display = "none";
+        applyFilter();
+      }
+    } else if (e.key === "Escape") {
+      suggestionsEl.innerHTML = "";
+      suggestionsEl.style.display = "none";
+      selectedSuggestionIndex = -1;
+    }
+  });
+
+  filterInputEl.addEventListener("blur", function () {
+    // delay to allow click on suggestion to register
+    setTimeout(function () {
+      suggestionsEl.innerHTML = "";
+      suggestionsEl.style.display = "none";
+    }, 200);
+  });
+
+  filterFieldEl.addEventListener("change", function () {
+    suggestionsEl.innerHTML = "";
+    suggestionsEl.style.display = "none";
+    applyFilter();
+  });
+
+  // ---------- expand / collapse all ----------
+  document.getElementById("expand-all-btn").addEventListener("click", function () { setAllBranches(true); });
+  document.getElementById("collapse-all-btn").addEventListener("click", function () { setAllBranches(false); });
+
+  // ---------- tiny helper ----------
+  function escapeHtml(s) {
+    var d = document.createElement("div");
+    d.textContent = s;
+    return d.innerHTML;
+  }
+})();
+</script>
+
+<style>
+  /* --------------------------------------------------------
+     Taxonomy tree styles
+     -------------------------------------------------------- */
+
+  /* Root list – no bullets, no default padding */
+  .tree-root,
+  .tree-children {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Hidden children */
+  .tree-children {
+    display: none;
+    padding-left: 0;
+  }
+  .tree-children--open {
+    display: block;
+  }
+
+  /* ---------- branch (non-leaf) ---------- */
+  .tree-branch {
+    position: relative;
+  }
+
+  /* The toggle button itself */
+  .tree-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    width: 100%;
+    padding: 0.35rem 0.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    border-radius: 0.375rem;   /* rounded-md */
+    transition: background-color 0.15s;
+  }
+  .tree-toggle:hover {
+    background-color: #f3f4f6; /* gray-100 */
+  }
+
+  /* [+] / [−] icon box – mimics the screenshot's small square toggle */
+  .tree-toggle-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.1rem;
+    height: 1.1rem;
+    min-width: 1.1rem;
+    font-size: 0.75rem;
+    line-height: 1;
+    border: 1px solid #9ca3af;     /* gray-400 */
+    border-radius: 0.2rem;
+    background: #fff;
+    color: #374151;               /* gray-700 */
+    user-select: none;
+  }
+
+  /* Label text */
+  .tree-label {
+    font-size: 0.9rem;
+    color: #374151;
+    font-weight: 500;
+  }
+  .tree-count {
+    color: #6b7280;    /* gray-500 */
+    font-weight: 400;
+  }
+
+  /* ---------- connector lines ---------- */
+  /* Vertical line down the left of each branch's children */
+  .tree-branch > .tree-children--open {
+    position: relative;
+    padding-left: 1.55rem;   /* room for the line + icon */
+  }
+  .tree-branch > .tree-children--open::before {
+    content: "";
+    position: absolute;
+    left: 0.85rem;
+    top: 0;
+    bottom: 0.35rem;
+    width: 1px;
+    background: #d1d5db;     /* gray-300 */
+  }
+
+  /* Horizontal tick from the vertical line to each child – removed */
+
+  /* ---------- leaf (species) ---------- */
+  .tree-leaf {
+    position: relative;
+  }
+  .tree-species-btn {
+    display: block;
+    width: 100%;
+    padding: 0.3rem 0.5rem;
+    padding-left: 1.1rem;    /* indent past where the toggle icon would be */
+    background: none;
+    border: none;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    text-align: left;
+    font-size: 0.9rem;
+    color: #1d4ed8;          /* blue-700 – clickable feel */
+    transition: background-color 0.15s, color 0.15s;
+  }
+  .tree-species-btn:hover {
+    background-color: #eff6ff; /* blue-50 */
+    color: #1e40af;            /* blue-800 */
+  }
+  .tree-species-btn--active {
+    background-color: #dbeafe; /* blue-100 */
+    color: #1e40af;
+    font-weight: 600;
+  }
+
+  /* ---------- search / filter ---------- */
+  .taxonomy-filter-row {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+  }
+
+  .taxonomy-filter-select {
+    flex: 0 0 auto;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.85rem;
+    border: 1px solid #d1d5db;          /* gray-300 */
+    border-radius: 0.375rem;
+    background: #fff;
+    color: #1f2937;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .taxonomy-filter-select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px #bfdbfe;
+  }
+
+  .taxonomy-filter-input {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.85rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    background: #fff;
+    color: #1f2937;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .taxonomy-filter-input::placeholder {
+    color: #9ca3af;
+  }
+  .taxonomy-filter-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px #bfdbfe;
+  }
+
+  /* Autocomplete suggestions */
+  .taxonomy-suggestions {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 0.25rem;
+    max-height: 200px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    z-index: 50;
+  }
+
+  .taxonomy-suggestion-item {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    color: #1f2937;
+    cursor: pointer;
+    transition: background-color 0.1s;
+  }
+
+  .taxonomy-suggestion-item:hover,
+  .taxonomy-suggestion-item--selected {
+    background-color: #eff6ff;  /* blue-50 */
+  }
+
+  .taxonomy-suggestion-item:not(:last-child) {
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  /* ---------- species image thumbnails ---------- */
+  .species-thumb-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .species-thumb-link {
+    display: block;
+    width: 96px;
+    height: 96px;
+    border: 1px solid #e5e7eb;       /* gray-200 */
+    border-radius: 0.375rem;
+    overflow: hidden;
+    background: #f3f4f6;            /* gray-100 */
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .species-thumb-link:hover {
+    border-color: #3b82f6;          /* blue-500 */
+    box-shadow: 0 0 0 2px #bfdbfe;  /* blue-200 ring */
+  }
+
+  .species-thumb-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .species-thumb-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    color: #9ca3af;
+    text-align: center;
+  }
+</style>
+{% endif %}
+
+{% endblock %}
