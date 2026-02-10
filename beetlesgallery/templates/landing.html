@@ -2,267 +2,309 @@
 {% load static %}
 
 {% block content %}
-<div class="flex flex-col min-h-[calc(100vh-6rem)] w-full max-w-7xl mx-auto">
+<div class="h-screen w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar">
 
-  <header class="text-center py-6 md:py-10 space-y-4 px-4">
-    <h1 class="text-3xl md:text-5xl font-black text-gray-900 tracking-tight leading-tight">
-      Bark & Ambrosia Beetle<br class="hidden md:block" /> Gallery
-    </h1>
-    <p class="text-base mt-4 md:text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed text-balance">
-      Welcome to the Bark & Ambrosia Beetle Gallery. The world's largest collection of bark and ambrosia beetle images and specimen data. 
-      
-    <span class="block mt-6 text-sm md:text-base font-medium text-gray-400">
-        Image Attribution
-        <span class="block text-gray-600 font-normal mt-1">
-          Images in this database were contributed by the global community of entomologists and museum curators. Their names and institutions are listed with each respective file and will be acknowledged in an upcoming publication.
+  <section id="landing-section" class="snap-start relative flex flex-col min-h-screen w-full bg-white">
+    
+    <div class="flex-1 flex flex-col w-full max-w-7xl mx-auto">
+      <header class="text-center py-6 md:py-10 space-y-4 px-4">
+        <h1 class="text-3xl md:text-5xl font-black text-gray-900 tracking-tight leading-tight">
+          Bark & Ambrosia Beetle<br class="hidden md:block" /> Gallery
+        </h1>
+        <p class="text-base mt-6 md:text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed text-balance">
+          Welcome to the Bark & Ambrosia Beetle Gallery. The world's largest collection of bark and ambrosia beetle images and specimen data. 
+          
+        <span class="block mt-6 text-sm md:text-base font-medium text-gray-400">
+          Image Attribution
+          <span class="block text-gray-600 font-normal mt-1">
+            Images in this database were contributed by the global community of entomologists and museum curators. Their names and institutions are listed with each respective file and will be acknowledged in an upcoming publication.
+          </span>
         </span>
-      </span>
 
-      <span class="block mt-6 text-sm md:text-base font-medium text-gray-400">Maintained by the 
-        <a href="https://pitchtube.org/" target="_blank" class="block text-gray-600 hover:underline">
-          University of Florida Forest Entomology Lab.
-        </a>
-      </span>
-    </p>
-  </header>
+          <span class="block mt-6 text-sm md:text-base font-medium text-gray-400">Maintained by the 
+            <a href="https://pitchtube.org/" target="_blank" class="block text-gray-600 hover:underline">
+              University of Florida Forest Entomology Lab.
+            </a>
+          </span>
+        </p>
+      </header>
 
-  <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-16 items-center px-4 pb-12">
-    
-    <div class="lg:col-span-7 flex justify-center order-1 lg:order-1">
-      <div class="relative w-full max-w-md lg:max-w-full aspect-square lg:aspect-video flex items-center justify-center">
-        <div class="absolute inset-0 bg-gray-50 rounded-full blur-3xl opacity-30 animate-pulse"></div>
-        <img src="{% static 'img/IMG_5557.PNG' %}" 
-             alt="Beetles DB specimen"
-             class="relative z-10 w-auto h-auto max-h-[400px] lg:max-h-[500px] object-contain drop-shadow-xl hover:scale-105 transition-transform duration-500" />
-      </div>
-    </div>
-
-    <div class="lg:col-span-5 flex flex-col gap-4 w-full max-w-md mx-auto order-2 lg:order-2">
-
-      <a href="{% url 'beetles_home' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-gray-100 hover:bg-gray-50/50 transition-all duration-300">
-        <div class="p-3 bg-gray-100 text-gray-600 rounded-xl group-hover:scale-110 transition-transform">
-          <i class="fi fi-rr-bug text-xl"></i>
-        </div>
-        <div>
-          <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-700">Browse Images</h3>
-          <p class="text-sm text-gray-500">Explore the images and specimen data.</p>
-        </div>
-      </a>
-
-      <a href="{% url 'taxonomy_browser' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-gray-100 hover:bg-gray-50/50 transition-all duration-300">
-        <div class="p-3 bg-gray-100 text-gray-600 rounded-xl group-hover:scale-110 transition-transform">
-          <i class="fi fi-rr-chart-tree text-xl"></i>
-        </div>
-        <div>
-          <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-700">Taxonomy Browser</h3>
-          <p class="text-sm text-gray-500">Browse species by taxonomic hierarchy.</p>
-        </div>
-      </a>
-
-      <a href="{% url 'tool_classify' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-gray-100 hover:bg-gray-50/50 transition-all duration-300">
-        <div class="p-3 bg-gray-100 text-gray-600 rounded-xl group-hover:scale-110 transition-transform">
-          <i class="fi fi-rr-sparkles text-xl"></i>
-        </div>
-        <div>
-          <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-700">AI Classifier</h3>
-          <p class="text-sm text-gray-500">Identify species using AI.</p>
-        </div>
-      </a>
-
-      <a href="{% url 'my_uploads' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-gray-100 hover:bg-gray-50/50 transition-all duration-300">
-        <div class="p-3 bg-gray-100 text-gray-600 rounded-xl group-hover:scale-110 transition-transform">
-          <i class="fi fi-rr-folder text-xl"></i>
-        </div>
-        <div>
-          <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-700">Data Management</h3>
-          <p class="text-sm text-gray-500">Manage your contributions and/or exports.</p>
-        </div>
-      </a>
-    </div>
-  </div>
-
-  <div class="border-t border-gray-100 bg-gray-50/50 py-8 mt-auto">
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 max-w-5xl mx-auto px-4">
-      <div class="flex flex-col items-center text-center">
-        <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ total_images|default:"0" }}</span>
-        <span class="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Images</span>
-      </div>
-      <div class="flex flex-col items-center text-center">
-        <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ total_genera|default:"0" }}</span>
-        <span class="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Genera</span>
-      </div>
-      <div class="flex flex-col items-center text-center">
-        <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ total_species|default:"0" }}</span>
-        <span class="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Species</span>
-      </div>
-      <div class="flex flex-col items-center text-center">
-        <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ type_status_count|default:"0" }}</span>
-        <span class="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Type Specimens</span>
-      </div>
-    </div>
-  </div>
-
-{# Team Info #}
-<div class="bg-white py-12 border-t border-gray-100">
-  <div class="max-w-7xl mx-auto px-4">
-
-    <div class="grid grid-cols-3 gap-6 text-center max-w-6xl mx-auto items-start">
-
-      <div class="flex flex-col gap-10 min-w-0">
-        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 mx-auto w-24">
-          Taxonomy Team
-        </h3>
-
-        <div class="group">
-          <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Andrew Johnson</h3>
-          <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
-              Lead Taxonomist & Data Curator
-              <span class="block text-xs text-gray-400 font-normal mt-1">Photo Management & Taxonomic Quality Control</span>
-          </p>
-          <a href="https://pitchtube.org/researchers-lab-andrew/" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors" title="Lab Webpage">
-            <i class="fi fi-rr-bug text-l text-base w-4 text-center"></i>
-            <span>UF Forest Entomology Lab</span>
-          </a>
-        </div>
-
-        <div class="h-6 w-full"></div>
-
-        <div class="group">
-          <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Jiri Hulcr</h3>
-          <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
-              Principal Investigator
-              <span class="block text-xs text-gray-400 font-normal mt-1">Project Conception, Scientific Direction & Oversight</span>
-          </p>
-          <a href="https://pitchtube.org/researchers-lab-jiri/" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors" title="Lab Webpage">
-            <i class="fi fi-rr-bug text-l text-base w-4 text-center"></i>
-            <span>UF Forest Entomology Lab</span>
-          </a>
-        </div>
-      </div>
-
-      <div class="flex flex-col gap-10 min-w-0">
-        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 mx-auto w-24">
-          Development Team
-        </h3>
+      <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-16 items-center px-4 pb-12">
         
-        <div class="group">
-          <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Christopher Marais</h3>
-          <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
-              Co-Lead Full Stack Developer
-              <span class="block text-xs text-gray-400 font-normal mt-1">DevOps and MLOps</span>
-          </p>
-          <a href="https://github.com/ChristopherMarais" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors" title="GitHub">
-            <i class="fi fi-brands-github text-base"></i>
-          </a>
-          <span class="text-gray-300 text-xs">|</span>
-          <a href="https://www.linkedin.com/in/christopher-marais/" target="_blank" class="text-gray-400 hover:text-black transition-colors" title="LinkedIn">
-            <i class="fi fi-brands-linkedin text-base"></i>
-          </a>
+        <div class="lg:col-span-7 flex justify-center order-1 lg:order-1">
+          <div class="relative w-full max-w-md lg:max-w-full aspect-square lg:aspect-video flex items-center justify-center">
+            <div class="absolute inset-0 bg-gray-50 rounded-full blur-3xl opacity-30 animate-pulse"></div>
+            <img src="{% static 'img/IMG_5557.PNG' %}" 
+                alt="Beetles DB specimen"
+                class="relative z-10 w-auto h-auto max-h-[400px] lg:max-h-[500px] object-contain drop-shadow-xl hover:scale-105 transition-transform duration-500" />
+          </div>
         </div>
 
-        <div class="h-6 w-full"></div>
+        <div class="lg:col-span-5 flex flex-col gap-4 w-full max-w-md mx-auto order-2 lg:order-2">
 
-        <div class="group">
-          <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Layla Schuster</h3>
-          <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
-              Co-Lead Full Stack Developer
-              <span class="block text-xs text-gray-400 font-normal mt-1">Frontend, Backend & Database Architecture</span>
-          </p>
-              <a href="https://github.com/laylaaschuster" target="_blank" class="text-gray-400 hover:text-black transition-colors" title="GitHub">
-                <i class="fi fi-brands-github text-base"></i>
-              </a>
-              <span class="text-gray-300 text-xs">|</span>
-              <a href="https://www.linkedin.com/in/layla-schuster-350712233/" target="_blank" class="text-gray-400 hover:text-black transition-colors" title="LinkedIn">
-                <i class="fi fi-brands-linkedin text-base"></i>
-              </a>
-        </div>
-
-        <div class="h-6 w-full"></div>
-
-        <div class="group">
-          <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Eric Kuo</h3>
-          <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
-              Full Stack Developer
-              <span class="block text-xs text-gray-400 font-normal mt-1">Backend & Database Architecture</span>
-          </p>
-          <a href="https://github.com/Ekuo79" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors" title="GitHub">
-            <i class="fi fi-brands-github text-base"></i>
+          <a href="{% url 'beetles_home' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-gray-100 hover:bg-gray-50/50 transition-all duration-300">
+            <div class="p-3 bg-gray-100 text-gray-600 rounded-xl group-hover:scale-110 transition-transform">
+              <i class="fi fi-rr-bug text-xl"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-700">Browse Images</h3>
+              <p class="text-sm text-gray-500">Explore the images and specimen data.</p>
+            </div>
           </a>
-          <span class="text-gray-300 text-xs">|</span>
-            <a href="https://www.linkedin.com/in/eric-kuo79/" target="_blank" class="text-gray-400 hover:text-black transition-colors" title="LinkedIn">
-              <i class="fi fi-brands-linkedin text-base"></i>
-            </a>
-        </div>
-      </div>
 
-      <div class="flex flex-col gap-10 min-w-0">
-        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 mx-auto w-24">
-          Support Team
-        </h3>
-
-        <div class="group">
-          <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Raquel Dias</h3>
-          <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
-            Technical Director
-            <span class="block text-xs text-gray-400 font-normal mt-1">Project Oversight & Digital Architecture</span>
-          </p>
-            <a href="https://github.com/Dias-Lab" target="_blank" class="text-gray-400 hover:text-black transition-colors" title="GitHub">
-              <i class="fi fi-brands-github text-base"></i>
-            <span class="text-gray-300 text-xs">|</span>
-            </a>
-            <a href="https://microcell.ufl.edu/people/raquel-dias/" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors" title="Lab Webpage">
-              <i class="fi fi-rr-brain-circuit text-base w-4 text-center"></i>
-              <span>Dias Lab</span>
-            </a>
-        </div>
-
-        <div class="h-6 w-full"></div>
-
-        <div class="group">
-          <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Cleydson Silva</h3>
-          <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
-              Technical Consultant
-              <span class="block text-xs text-gray-400 font-normal mt-1">General Support & Assistance</span>
-          </p>
-          <a href="https://github.com/jcleydsonsilva" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors" title="GitHub">
-            <i class="fi fi-brands-github text-base"></i>
+          <a href="{% url 'taxonomy_browser' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-gray-100 hover:bg-gray-50/50 transition-all duration-300">
+            <div class="p-3 bg-gray-100 text-gray-600 rounded-xl group-hover:scale-110 transition-transform">
+              <i class="fi fi-rr-chart-tree text-xl"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-700">Taxonomy Browser</h3>
+              <p class="text-sm text-gray-500">Browse species by taxonomic hierarchy.</p>
+            </div>
           </a>
-          <span class="text-gray-300 text-xs">|</span>
-          <a href="https://www.linkedin.com/in/jose-cleydson-ferreira-silva-a790b617b/" target="_blank" class="text-gray-400 hover:text-black transition-colors" title="LinkedIn">
-            <i class="fi fi-brands-linkedin text-base"></i>
+
+          <a href="{% url 'tool_classify' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-gray-100 hover:bg-gray-50/50 transition-all duration-300">
+            <div class="p-3 bg-gray-100 text-gray-600 rounded-xl group-hover:scale-110 transition-transform">
+              <i class="fi fi-rr-sparkles text-xl"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-700">AI Classifier</h3>
+              <p class="text-sm text-gray-500">Identify species using AI.</p>
+            </div>
+          </a>
+
+          <a href="{% url 'my_uploads' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-gray-100 hover:bg-gray-50/50 transition-all duration-300">
+            <div class="p-3 bg-gray-100 text-gray-600 rounded-xl group-hover:scale-110 transition-transform">
+              <i class="fi fi-rr-folder text-xl"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-700">Data Management</h3>
+              <p class="text-sm text-gray-500">Manage your contributions and/or exports.</p>
+            </div>
           </a>
         </div>
       </div>
     </div>
-  </div>
 
-  {# GitHub Discussions Link #}
-  <div class="w-full mt-2 max-w-4xl mx-auto my-12"></div>
-  <div class="text-center pt-16 pb-12 max-w-2xl mx-auto">
-    <p class="text-gray-500 mb-2 leading-relaxed">
-      Have a question about the data, a feature request, or want to report a bug?
-      <br />
-      Connect with our team on GitHub.
-    </p>
-    <a href="https://github.com/ChristopherMarais/barkandambrosiagallery/discussions" target="_blank" class="inline-flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 text-gray-600 rounded-full font-medium hover:text-gray-900 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300 shadow-sm hover:shadow-md">
-      <i class="fi fi-brands-github text-lg mt-1"></i>
-      <span>Visit GitHub Discussions</span>
-    </a>
-  </div>
+    <div class="border-t border-b border-gray-100 bg-gray-50/50 py-8 mt-auto w-full">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 max-w-5xl mx-auto px-4">
+        <div class="flex flex-col items-center text-center">
+          <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ total_images|default:"0" }}</span>
+          <span class="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Images</span>
+        </div>
+        <div class="flex flex-col items-center text-center">
+          <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ total_genera|default:"0" }}</span>
+          <span class="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Genera</span>
+        </div>
+        <div class="flex flex-col items-center text-center">
+          <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ total_species|default:"0" }}</span>
+          <span class="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Species</span>
+        </div>
+        <div class="flex flex-col items-center text-center">
+          <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ type_status_count|default:"0" }}</span>
+          <span class="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Type Specimens</span>
+        </div>
+      </div>
+    </div>
 
-  <footer class="py-6 flex flex-col items-center justify-center gap-3 mt-12">
+    <button onclick="document.getElementById('team-section').scrollIntoView({ behavior: 'smooth' });" 
+            class="w-full bg-gray-50/50 pb-4 mt-8 mb-2 flex justify-center items-center opacity-40 hover:opacity-100 transition-opacity duration-300 cursor-pointer outline-none">
+        <div class="flex flex-col items-center animate-bounce">
+            <span class="text-[16px] text-gray-400 font-bold uppercase tracking-widest mb-1">Team and Sponsors</span>
+            <i class="fi fi-rr-angle-double-small-down text-xl text-gray-400"></i>
+        </div>
+    </button>
+  </section>
+
+
+  <section id="team-section" class="snap-start relative min-h-screen w-full bg-white flex flex-col">
     
-    <div class="flex gap-6 opacity-40 hover:opacity-100 transition-opacity duration-300">
-      <img src="{% static 'img/NSF_4-Color_bitmap_Logo_RGB.png' %}" class="h-10 w-auto grayscale" alt="NSF">
-      <img src="{% static 'img/PngItem_2222864.png' %}" class="h-10 w-auto grayscale" alt="USDA">
-      <img src="{% static 'img/forest-service-usda-logos.png' %}" class="h-10 w-auto grayscale" alt="USDA">
-      <img src="{% static 'img/Florida-Forest-Service-Logo-Vector.jpg' %}" class="h-10 w-auto grayscale" alt="USDA">
+    <button onclick="document.getElementById('landing-section').scrollIntoView({ behavior: 'smooth' });" 
+            class="w-full pt-6 pb-2 mt-4 flex justify-center items-center opacity-40 hover:opacity-100 transition-opacity duration-300 cursor-pointer outline-none z-10">
+        <div class="flex flex-col items-center animate-bounce">
+            <i class="fi fi-rr-angle-double-small-up text-xl text-gray-400"></i>
+            <span class="text-[16px] text-gray-400 font-bold uppercase tracking-widest mb-4">Top</span>
+        </div>
+    </button>
+
+    <div class="flex-1 flex flex-col justify-center py-6">
+
+      <h1 class="text-3xl md:text-3xl font-black text-gray-900 mb-6 tracking-tight text-center leading-tight">
+          Created by:
+      </h1>
+
+        <div class="max-w-7xl mx-auto px-4 w-full">
+
+        <div class="grid grid-cols-3 gap-6 text-center max-w-6xl mx-auto items-start">
+
+            <div class="flex flex-col gap-6 min-w-0">
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 mx-auto w-24">
+                Taxonomy Team
+            </h3>
+
+            <div class="group">
+                <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Andrew Johnson</h3>
+                <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
+                    Lead Taxonomist & Data Curator
+                    <span class="block text-xs text-gray-400 font-normal mt-1">Photo Management & Taxonomic Quality Control</span>
+                </p>
+                <a href="https://pitchtube.org/researchers-lab-andrew/" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors" title="Lab Webpage">
+                <i class="fi fi-rr-bugs text-l text-base w-4 text-center"></i>
+                <span>UF Forest Entomology Lab</span>
+                </a>
+            </div>
+
+            <div class="h-6 w-full"></div>
+
+            <div class="group">
+                <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Jiri Hulcr</h3>
+                <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
+                    Principal Investigator
+                    <span class="block text-xs text-gray-400 font-normal mt-1">Project Conception, Scientific Direction & Oversight</span>
+                </p>
+                <a href="https://pitchtube.org/researchers-lab-jiri/" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors" title="Lab Webpage">
+                <i class="fi fi-rr-bugs text-l text-base w-4 text-center"></i>
+                <span>UF Forest Entomology Lab</span>
+                </a>
+            </div>
+            </div>
+
+            <div class="flex flex-col gap-6 min-w-0">
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 mx-auto w-24">
+                Development Team
+            </h3>
+            
+            <div class="group">
+                <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Christopher Marais</h3>
+                <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
+                    Co-Lead Full Stack Developer
+                    <span class="block text-xs text-gray-400 font-normal mt-1">DevOps and MLOps</span>
+                </p>
+                <a href="https://github.com/ChristopherMarais" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors" title="GitHub">
+                <i class="fi fi-brands-github text-base"></i>
+                </a>
+                <span class="text-gray-300 text-xs">|</span>
+                <a href="https://www.linkedin.com/in/christopher-marais/" target="_blank" class="text-gray-400 hover:text-black transition-colors" title="LinkedIn">
+                <i class="fi fi-brands-linkedin text-base"></i>
+                </a>
+            </div>
+
+            <div class="h-6 w-full"></div>
+
+            <div class="group">
+                <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Layla Schuster</h3>
+                <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
+                    Co-Lead Full Stack Developer
+                    <span class="block text-xs text-gray-400 font-normal mt-1">Frontend, Backend & Database Architecture</span>
+                </p>
+                    <a href="https://github.com/laylaaschuster" target="_blank" class="text-gray-400 hover:text-black transition-colors" title="GitHub">
+                    <i class="fi fi-brands-github text-base"></i>
+                    </a>
+                    <span class="text-gray-300 text-xs">|</span>
+                    <a href="https://www.linkedin.com/in/layla-schuster-350712233/" target="_blank" class="text-gray-400 hover:text-black transition-colors" title="LinkedIn">
+                    <i class="fi fi-brands-linkedin text-base"></i>
+                    </a>
+            </div>
+
+            <div class="h-6 w-full"></div>
+
+            <div class="group">
+                <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Eric Kuo</h3>
+                <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
+                    Full Stack Developer
+                    <span class="block text-xs text-gray-400 font-normal mt-1">Backend & Database Architecture</span>
+                </p>
+                <a href="https://github.com/Ekuo79" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors" title="GitHub">
+                <i class="fi fi-brands-github text-base"></i>
+                </a>
+                <span class="text-gray-300 text-xs">|</span>
+                <a href="https://www.linkedin.com/in/eric-kuo79/" target="_blank" class="text-gray-400 hover:text-black transition-colors" title="LinkedIn">
+                    <i class="fi fi-brands-linkedin text-base"></i>
+                </a>
+            </div>
+            </div>
+
+            <div class="flex flex-col gap-6 min-w-0">
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 mx-auto w-24">
+                Support Team
+            </h3>
+
+            <div class="group">
+                <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Raquel Dias</h3>
+                <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
+                Technical Director
+                <span class="block text-xs text-gray-400 font-normal mt-1">Project Oversight & Digital Architecture</span>
+                </p>
+                <a href="https://github.com/Dias-Lab" target="_blank" class="text-gray-400 hover:text-black transition-colors" title="GitHub">
+                    <i class="fi fi-brands-github text-base"></i>
+                <span class="text-gray-300 text-xs">|</span>
+                </a>
+                <a href="https://microcell.ufl.edu/people/raquel-dias/" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors" title="Lab Webpage">
+                    <i class="fi fi-rr-brain-circuit text-base w-4 text-center"></i>
+                    <span>Dias Lab</span>
+                </a>
+            </div>
+
+            <div class="h-6 w-full"></div>
+
+            <div class="group">
+                <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Cleydson Silva</h3>
+                <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
+                    Technical Consultant
+                    <span class="block text-xs text-gray-400 font-normal mt-1">General Support & Assistance</span>
+                </p>
+                <a href="https://github.com/jcleydsonsilva" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors" title="GitHub">
+                <i class="fi fi-brands-github text-base"></i>
+                </a>
+                <span class="text-gray-300 text-xs">|</span>
+                <a href="https://www.linkedin.com/in/jose-cleydson-ferreira-silva-a790b617b/" target="_blank" class="text-gray-400 hover:text-black transition-colors" title="LinkedIn">
+                <i class="fi fi-brands-linkedin text-base"></i>
+                </a>
+            </div>
+            </div>
+        </div>
+        </div>
+
+        {# GitHub Discussions Link #}
+        <div class="w-full mt-2 max-w-4xl mx-auto my-12"></div>
+        <div class="text-center pt-8 pb-12 max-w-2xl mx-auto">
+        <p class="text-gray-500 mb-2 leading-relaxed">
+            Have a question about the data, a feature request, or want to report a bug?
+            <br />
+            Connect with our team on GitHub.
+        </p>
+        <a href="https://github.com/ChristopherMarais/barkandambrosiagallery/discussions" target="_blank" class="inline-flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 text-gray-600 rounded-full font-medium hover:text-gray-900 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300 shadow-sm hover:shadow-md">
+            <i class="fi fi-brands-github text-lg mt-1"></i>
+            <span>Visit GitHub Discussions</span>
+        </a>
+        </div>
     </div>
-    <p class="text-[10px] text-gray-400 italic text-center">The National Science Foundation (NSF)<br>
-      The United States Department of Agriculture (USDA) Animal and Plant Health Inspection Service (APHIS)<br>
-      The United States Department of Agriculture (USDA) Forest Service<br>
-      The Florida Forest Service</p>
-  </footer>
+
+    <footer class="py-6 flex flex-col items-center justify-center gap-3 border-t border-gray-200 mt-auto">
+        <div class="flex gap-6 opacity-40 hover:opacity-100 transition-opacity duration-300">
+        <img src="{% static 'img/NSF_4-Color_bitmap_Logo_RGB.png' %}" class="h-10 w-auto grayscale" alt="NSF">
+        <img src="{% static 'img/PngItem_2222864.png' %}" class="h-10 w-auto grayscale" alt="USDA">
+        <img src="{% static 'img/forest-service-usda-logos.png' %}" class="h-10 w-auto grayscale" alt="USDA">
+        <img src="{% static 'img/Florida-Forest-Service-Logo-Vector.jpg' %}" class="h-10 w-auto grayscale" alt="USDA">
+        </div>
+        <p class="text-[10px] text-gray-400 italic text-center">The National Science Foundation (NSF)<br>
+        The United States Department of Agriculture (USDA) Animal and Plant Health Inspection Service (APHIS)<br>
+        The United States Department of Agriculture (USDA) Forest Service<br>
+        The Florida Forest Service</p>
+    </footer>
+
+  </section>
 
 </div>
+
+<style>
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+      display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+      -ms-overflow-style: none;  /* IE and Edge */
+      scrollbar-width: none;  /* Firefox */
+  }
+</style>
 {% endblock %}
