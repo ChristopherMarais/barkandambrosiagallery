@@ -1629,3 +1629,10 @@ def taxonomy_search(request):
         "species_ids": sorted(species_ids),
         "matches": sorted(set(matches))[:20]  # limit autocomplete suggestions
     })
+
+
+def tool_annotate(request):
+    """
+    Data annotation tool page.
+    """
+    return render(request, 'beetles/tool_annotate.html', {})

@@ -45,6 +45,7 @@ urlpatterns = [
     path("reference/archive/<str:ref_type>/<str:filename>/", beetles_views.download_taxonomy_archive, name="download_taxonomy_archive"),
     path('update_single/<uuid:beetle_id>/', beetles_views.update_single_beetle, name='update_single_beetle'),
     path('tools/classify/', beetles_views.tool_classify, name='tool_classify'),
+    path('tools/annotate/', beetles_views.tool_annotate, name='tool_annotate'),
 
     # --- API ---
     path('api/v1/', include('beetlesgallery.beetles_app.api.urls')),
