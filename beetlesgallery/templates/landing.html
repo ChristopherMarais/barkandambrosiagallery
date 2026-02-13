@@ -105,7 +105,26 @@
         </div>
       </div>
     </div>
+      <button onclick="document.getElementById('team-section').scrollIntoView({ behavior: 'smooth' });" 
+            class="w-full pt-6 pb-2 mt-4 justify-center hidden lg:flex items-center opacity-40 hover:opacity-100 transition-opacity duration-300 cursor-pointer outline-none z-10">
+        <div class="flex flex-col items-center animate-bounce">
+            <span class="text-[16px] text-gray-400 font-bold uppercase tracking-widest mb-1">Team and Sponsors</span>
+            <i class="fi fi-rr-angle-double-small-down text-xl text-gray-400 mb-4"></i>
+        </div>
+    </button>
+  </section>
 
+
+  <section id="team-section" class="lg:snap-start relative flex flex-col min-h-screen w-full bg-white">
+    
+    <button onclick="document.getElementById('landing-section').scrollIntoView({ behavior: 'smooth' });" 
+            class="w-full pt-6 pb-2 mt-4 justify-center hidden lg:flex items-center opacity-40 hover:opacity-100 transition-opacity duration-300 cursor-pointer outline-none z-10">
+        <div class="flex flex-col items-center animate-bounce">
+            <i class="fi fi-rr-angle-double-small-up text-xl text-gray-400"></i>
+            <span class="text-[16px] text-gray-400 font-bold uppercase tracking-widest mb-4">Top</span>
+        </div>
+    </button>
+        
     <div class="flex-1 flex flex-col justify-center py-6">
 
       <h1 class="text-3xl md:text-3xl font-black text-gray-900 mb-6 tracking-tight text-center leading-tight">
