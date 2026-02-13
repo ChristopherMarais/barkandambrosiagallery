@@ -358,10 +358,8 @@
           </div>
 
           <!-- Canvas Wrapper (for panning and zooming) -->
-          <div id="canvas-wrapper" class="hidden absolute inset-0 overflow-auto">
-            <div id="canvas-content" class="relative inline-block">
-              <canvas id="annotation-canvas" class="block" style="cursor: grab;"></canvas>
-            </div>
+          <div id="canvas-wrapper" class="hidden absolute inset-0" style="overflow: scroll; -webkit-overflow-scrolling: touch;">
+            <canvas id="annotation-canvas" style="display: block; cursor: grab;"></canvas>
           </div>
         </div>
 
@@ -715,14 +713,20 @@ function initCanvas() {
   canvas = document.getElementById('annotation-canvas');
   ctx = canvas.getContext('2d');
 
+  setupCanvasInteractions();
+}
+
+// Setup canvas interaction handlers
+function setupCanvasInteractions() {
   // Add mouse wheel zoom listener to canvas wrapper
   const canvasWrapper = document.getElementById('canvas-wrapper');
   canvasWrapper.addEventListener('wheel', handleMouseWheel, { passive: false });
 
   // Add pan event listeners to canvas element
   canvas.addEventListener('mousedown', handlePanStart);
-  document.addEventListener('mousemove', handlePanMove);
-  document.addEventListener('mouseup', handlePanEnd);
+  canvas.addEventListener('mousemove', handlePanMove);
+  canvas.addEventListener('mouseup', handlePanEnd);
+  canvas.addEventListener('mouseleave', handlePanEnd);
 }
 
 // Load image and bounding boxes on canvas
@@ -1004,21 +1008,37 @@ function fitToScreen() {
 
   zoomLevel = scale;
   applyZoom();
+
+  // Center the canvas in the viewport
+  centerCanvas();
+}
+
+// Center canvas in viewport
+function centerCanvas() {
+  const canvasWrapper = document.getElementById('canvas-wrapper');
+
+  // Center by setting scroll position to show middle of canvas
+  const scrollMaxX = canvasWrapper.scrollWidth - canvasWrapper.clientWidth;
+  const scrollMaxY = canvasWrapper.scrollHeight - canvasWrapper.clientHeight;
+
+  canvasWrapper.scrollLeft = scrollMaxX / 2;
+  canvasWrapper.scrollTop = scrollMaxY / 2;
 }
 
 // Reset zoom to 100%
 function resetZoom() {
   zoomLevel = 1.0;
   applyZoom();
+  centerCanvas();
 }
 
 // Apply zoom level
 function applyZoom() {
   if (!canvas) return;
 
-  const canvasContent = document.getElementById('canvas-content');
-  canvasContent.style.transform = `scale(${zoomLevel})`;
-  canvasContent.style.transformOrigin = 'top left';
+  // Scale canvas using CSS width/height
+  canvas.style.width = (canvas.width * zoomLevel) + 'px';
+  canvas.style.height = (canvas.height * zoomLevel) + 'px';
 
   // Update footer
   document.getElementById('footer-zoom').textContent = Math.round(zoomLevel * 100) + '%';
@@ -1026,14 +1046,34 @@ function applyZoom() {
 
 // Zoom in by 25%
 function zoomIn() {
+  const canvasWrapper = document.getElementById('canvas-wrapper');
+  const centerX = canvasWrapper.scrollLeft + canvasWrapper.clientWidth / 2;
+  const centerY = canvasWrapper.scrollTop + canvasWrapper.clientHeight / 2;
+
+  const oldZoom = zoomLevel;
   zoomLevel = Math.min(zoomLevel * 1.25, 5); // Max 500%
   applyZoom();
+
+  // Adjust scroll to keep center point in same position
+  const zoomRatio = zoomLevel / oldZoom;
+  canvasWrapper.scrollLeft = centerX * zoomRatio - canvasWrapper.clientWidth / 2;
+  canvasWrapper.scrollTop = centerY * zoomRatio - canvasWrapper.clientHeight / 2;
 }
 
 // Zoom out by 25%
 function zoomOut() {
+  const canvasWrapper = document.getElementById('canvas-wrapper');
+  const centerX = canvasWrapper.scrollLeft + canvasWrapper.clientWidth / 2;
+  const centerY = canvasWrapper.scrollTop + canvasWrapper.clientHeight / 2;
+
+  const oldZoom = zoomLevel;
   zoomLevel = Math.max(zoomLevel / 1.25, 0.1); // Min 10%
   applyZoom();
+
+  // Adjust scroll to keep center point in same position
+  const zoomRatio = zoomLevel / oldZoom;
+  canvasWrapper.scrollLeft = centerX * zoomRatio - canvasWrapper.clientWidth / 2;
+  canvasWrapper.scrollTop = centerY * zoomRatio - canvasWrapper.clientHeight / 2;
 }
 
 // Handle mouse wheel zoom at cursor position
@@ -1088,9 +1128,10 @@ function handlePanStart(e) {
   scrollStartX = canvasWrapper.scrollLeft;
   scrollStartY = canvasWrapper.scrollTop;
 
-  canvas.style.cursor = 'grabbing';
+  if (canvas) {
+    canvas.style.cursor = 'grabbing';
+  }
   e.preventDefault();
-  e.stopPropagation();
 }
 
 // Handle pan move
@@ -1112,7 +1153,9 @@ function handlePanMove(e) {
 function handlePanEnd(e) {
   if (!isPanning) return;
 
-  canvas.style.cursor = 'grab';
+  if (canvas) {
+    canvas.style.cursor = 'grab';
+  }
   isPanning = false;
 }
 
