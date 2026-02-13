@@ -2,9 +2,9 @@
 {% load static %}
 
 {% block content %}
-<div class="h-screen w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar">
+<div class="h-auto w-full lg:h-screen lg:overflow-y-scroll lg:snap-y lg:snap-mandatory scroll-smooth no-scrollbar">
 
-  <section id="landing-section" class="snap-start relative flex flex-col min-h-screen w-full bg-white">
+  <section id="landing-section" class="lg:snap-start relative flex flex-col min-h-screen w-full bg-white">
     
     <div class="flex-1 flex flex-col w-full max-w-7xl mx-auto">
       <header class="text-center py-6 md:py-10 space-y-4 px-4">
@@ -106,26 +106,6 @@
       </div>
     </div>
 
-    <button onclick="document.getElementById('team-section').scrollIntoView({ behavior: 'smooth' });" 
-            class="w-full bg-gray-50/50 pb-4 mt-8 mb-2 flex justify-center items-center opacity-40 hover:opacity-100 transition-opacity duration-300 cursor-pointer outline-none">
-        <div class="flex flex-col items-center animate-bounce">
-            <span class="text-[16px] text-gray-400 font-bold uppercase tracking-widest mb-1">Team and Sponsors</span>
-            <i class="fi fi-rr-angle-double-small-down text-xl text-gray-400"></i>
-        </div>
-    </button>
-  </section>
-
-
-  <section id="team-section" class="snap-start relative min-h-screen w-full bg-white flex flex-col">
-    
-    <button onclick="document.getElementById('landing-section').scrollIntoView({ behavior: 'smooth' });" 
-            class="w-full pt-6 pb-2 mt-4 flex justify-center items-center opacity-40 hover:opacity-100 transition-opacity duration-300 cursor-pointer outline-none z-10">
-        <div class="flex flex-col items-center animate-bounce">
-            <i class="fi fi-rr-angle-double-small-up text-xl text-gray-400"></i>
-            <span class="text-[16px] text-gray-400 font-bold uppercase tracking-widest mb-4">Top</span>
-        </div>
-    </button>
-
     <div class="flex-1 flex flex-col justify-center py-6">
 
       <h1 class="text-3xl md:text-3xl font-black text-gray-900 mb-6 tracking-tight text-center leading-tight">
@@ -134,7 +114,7 @@
 
         <div class="max-w-7xl mx-auto px-4 w-full">
 
-        <div class="grid grid-cols-3 gap-6 text-center max-w-6xl mx-auto items-start">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-y-16 lg:gap-6 text-center max-w-6xl mx-auto items-start">
 
             <div class="flex flex-col gap-6 min-w-0">
             <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 mx-auto w-24">
@@ -153,7 +133,7 @@
                 </a>
             </div>
 
-            <div class="h-6 w-full"></div>
+            <div class="hidden"></div>
 
             <div class="group">
                 <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Jiri Hulcr</h3>
@@ -188,7 +168,7 @@
                 </a>
             </div>
 
-            <div class="h-6 w-full"></div>
+            <div class="hidden"></div>
 
             <div class="group">
                 <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Layla Schuster</h3>
@@ -205,7 +185,7 @@
                     </a>
             </div>
 
-            <div class="h-6 w-full"></div>
+            <div class="hidden"></div>
 
             <div class="group">
                 <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Eric Kuo</h3>
@@ -244,7 +224,7 @@
                 </a>
             </div>
 
-            <div class="h-6 w-full"></div>
+            <div class="hidden"></div>
 
             <div class="group">
                 <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Cleydson Silva</h3>
@@ -320,20 +300,20 @@
             Connect with our team on GitHub.
         </p>
         <a href="https://github.com/ChristopherMarais/barkandambrosiagallery/discussions" target="_blank" class="inline-flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 text-gray-600 rounded-full font-medium hover:text-gray-900 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300 shadow-sm hover:shadow-md">
-            <i class="fi fi-brands-github text-lg mt-1"></i>
+            <i class="fi fi-brands-github text-lg mt-2"></i>
             <span>Visit GitHub Discussions</span>
         </a>
         </div>
     </div>
 
     <footer class="py-6 flex flex-col items-center justify-center gap-3 border-t border-gray-200 mt-auto">
-        <div class="flex gap-6 opacity-40 hover:opacity-100 transition-opacity duration-300">
+      <div class="flex gap-6 opacity-40 hover:opacity-100 transition-opacity duration-300">
         <img src="{% static 'img/NSF_4-Color_bitmap_Logo_RGB.png' %}" class="h-16 w-auto grayscale" alt="NSF">
         <img src="{% static 'img/PngItem_2222864.png' %}" class="h-16 w-auto grayscale" alt="USDA">
         <img src="{% static 'img/forest-service-usda-logos.png' %}" class="h-16 w-auto grayscale" alt="USDA">
         <img src="{% static 'img/Florida-Forest-Service-Logo-Vector.jpg' %}" class="h-16 w-auto grayscale" alt="USDA">
-        </div>
-        <p class="text-[10px] text-gray-400 italic text-center">The National Science Foundation (NSF)<br>
+      </div>
+      <p class="text-[10px] text-gray-400 italic text-center">The National Science Foundation (NSF)<br>
         The United States Department of Agriculture (USDA) Animal and Plant Health Inspection Service (APHIS)<br>
         The United States Department of Agriculture (USDA) Forest Service<br>
         The Florida Forest Service</p>
