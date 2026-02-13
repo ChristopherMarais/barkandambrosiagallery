@@ -5,12 +5,12 @@
 <div class="h-full">
   <h1 class="text-3xl font-bold text-gray-900 mb-6">Data Annotation Tool</h1>
 
-  <div class="flex gap-6 h-[calc(100vh-12rem)]">
+  <div class="flex gap-6" style="height: calc(100vh - 12rem);">
     <!-- Left Sidebar: Upload Panel -->
-    <div class="w-80 flex-shrink-0 space-y-4 overflow-y-auto">
+    <div class="space-y-4 overflow-y-auto" style="min-width: 400px; max-width: 400px; height: 100%;">
 
       <!-- Import Annotations Card (Collapsible) -->
-      <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
+      <div class="bg-white border border-gray-200 rounded-lg shadow-sm flex-shrink-0">
         <button
           type="button"
           onclick="toggleSection('import-section')"
@@ -23,7 +23,7 @@
           <i id="import-section-icon" class="fi fi-rr-angle-down text-gray-500 transition-transform"></i>
         </button>
 
-        <div id="import-section-content" class="border-t border-gray-200">
+        <div id="import-section-content" class="border-t border-gray-200 overflow-y-auto" style="max-height: 600px;">
           <div class="p-4 space-y-4">
           <!-- Format Selection -->
           <div>
@@ -221,7 +221,7 @@
       </div>
 
       <!-- Image Browser Card (Collapsible) -->
-      <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
+      <div class="bg-white border border-gray-200 rounded-lg shadow-sm flex-shrink-0">
         <button
           type="button"
           onclick="toggleSection('browser-section')"
@@ -234,9 +234,49 @@
           <i id="browser-section-icon" class="fi fi-rr-angle-down text-gray-500 transition-transform"></i>
         </button>
 
-        <div id="browser-section-content" class="hidden border-t border-gray-200">
-          <div class="p-4">
-            <p class="text-sm text-gray-500">Image browser coming soon...</p>
+        <div id="browser-section-content" class="hidden border-t border-gray-200 overflow-y-auto" style="max-height: 600px;">
+          <div class="p-4 space-y-3">
+            <!-- Search Box -->
+            <div class="relative">
+              <input
+                type="text"
+                id="image-search"
+                placeholder="Search images..."
+                oninput="filterImages(this.value)"
+                class="w-full px-3 py-2 pl-9 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+              <i class="fi fi-rr-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+            </div>
+
+            <!-- Folder Organization Controls -->
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-medium text-gray-700">Group by:</span>
+              <select
+                id="group-by-select"
+                onchange="organizeImages()"
+                class="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="none">No Grouping</option>
+                <option value="date">Date Added</option>
+                <option value="count">Annotation Count</option>
+              </select>
+            </div>
+
+            <!-- Loading State -->
+            <div id="browser-loading" class="text-center py-8">
+              <i class="fi fi-rr-spinner animate-spin text-2xl text-gray-400"></i>
+              <p class="text-sm text-gray-500 mt-2">Loading images...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="browser-empty" class="hidden text-center py-8">
+              <i class="fi fi-rr-picture text-3xl text-gray-300"></i>
+              <p class="text-sm text-gray-500 mt-2">No annotated images found</p>
+              <p class="text-xs text-gray-400 mt-1">Import annotations to see images here</p>
+            </div>
+
+            <!-- Image List -->
+            <div id="image-list" class="space-y-1"></div>
           </div>
         </div>
       </div>
@@ -244,8 +284,8 @@
     </div>
 
     <!-- Right Panel: Image Viewer & Annotation Area (Reserved) -->
-    <div class="flex-1 bg-white border border-gray-200 rounded-lg shadow-sm">
-      <div class="h-full flex items-center justify-center text-gray-400">
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden" style="flex: 1; min-width: 0; height: 100%;">
+      <div class="w-full h-full flex items-center justify-center text-gray-400">
         <div class="text-center">
           <i class="fi fi-rr-picture text-6xl mb-4"></i>
           <p class="text-lg font-medium">Annotation Canvas</p>
@@ -257,6 +297,11 @@
 </div>
 
 <script>
+// Global state
+let allImages = [];
+let filteredImages = [];
+let selectedImageId = null;
+
 // Toggle collapsible sections
 function toggleSection(sectionId) {
   const content = document.getElementById(`${sectionId}-content`);
@@ -265,10 +310,284 @@ function toggleSection(sectionId) {
   if (content.classList.contains('hidden')) {
     content.classList.remove('hidden');
     icon.classList.add('rotate-180');
+
+    // Load images when browser section is opened for the first time
+    if (sectionId === 'browser-section' && allImages.length === 0) {
+      loadAnnotatedImages();
+    }
   } else {
     content.classList.add('hidden');
     icon.classList.remove('rotate-180');
   }
+}
+
+// Load images with annotations from API
+async function loadAnnotatedImages() {
+  const loadingEl = document.getElementById('browser-loading');
+  const emptyEl = document.getElementById('browser-empty');
+  const listEl = document.getElementById('image-list');
+
+  loadingEl.classList.remove('hidden');
+  emptyEl.classList.add('hidden');
+  listEl.innerHTML = '';
+
+  try {
+    const response = await fetch('/api/v1/bounding-boxes/images-with-annotations/', {
+      headers: {
+        'X-CSRFToken': csrftoken
+      }
+    });
+
+    const data = await response.json();
+    allImages = data.images || [];
+    filteredImages = [...allImages];
+
+    loadingEl.classList.add('hidden');
+
+    if (allImages.length === 0) {
+      emptyEl.classList.remove('hidden');
+    } else {
+      organizeImages();
+    }
+  } catch (error) {
+    console.error('Failed to load images:', error);
+    loadingEl.classList.add('hidden');
+    emptyEl.classList.remove('hidden');
+  }
+}
+
+// Filter images by search term
+function filterImages(searchTerm) {
+  const term = searchTerm.toLowerCase();
+
+  if (!term) {
+    filteredImages = [...allImages];
+  } else {
+    filteredImages = allImages.filter(img =>
+      img.filename.toLowerCase().includes(term) ||
+      img.beetle_id.toLowerCase().includes(term)
+    );
+  }
+
+  organizeImages();
+}
+
+// Organize images into folders
+function organizeImages() {
+  const groupBy = document.getElementById('group-by-select').value;
+  const listEl = document.getElementById('image-list');
+  listEl.innerHTML = '';
+
+  if (filteredImages.length === 0) {
+    listEl.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">No matching images</p>';
+    return;
+  }
+
+  if (groupBy === 'none') {
+    // Flat list
+    renderFlatList(filteredImages);
+  } else if (groupBy === 'date') {
+    // Group by date
+    const groups = groupImagesByDate(filteredImages);
+    renderGroupedList(groups);
+  } else if (groupBy === 'count') {
+    // Group by annotation count ranges
+    const groups = groupImagesByCount(filteredImages);
+    renderGroupedList(groups);
+  }
+}
+
+// Render flat list of images
+function renderFlatList(images) {
+  const listEl = document.getElementById('image-list');
+
+  images.forEach(img => {
+    const item = createImageListItem(img);
+    listEl.appendChild(item);
+  });
+}
+
+// Render grouped list with folders
+function renderGroupedList(groups) {
+  const listEl = document.getElementById('image-list');
+
+  Object.keys(groups).sort().reverse().forEach(groupName => {
+    const folder = createFolderItem(groupName, groups[groupName]);
+    listEl.appendChild(folder);
+  });
+}
+
+// Group images by date
+function groupImagesByDate(images) {
+  const groups = {};
+
+  images.forEach(img => {
+    if (!img.created_at) {
+      const key = 'Unknown Date';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(img);
+      return;
+    }
+
+    const date = new Date(img.created_at);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    let key;
+    if (date.toDateString() === today.toDateString()) {
+      key = 'Today';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      key = 'Yesterday';
+    } else {
+      key = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(img);
+  });
+
+  return groups;
+}
+
+// Group images by annotation count
+function groupImagesByCount(images) {
+  const groups = {};
+
+  images.forEach(img => {
+    let key;
+    if (img.annotation_count === 1) {
+      key = '1 annotation';
+    } else if (img.annotation_count <= 5) {
+      key = '2-5 annotations';
+    } else if (img.annotation_count <= 10) {
+      key = '6-10 annotations';
+    } else {
+      key = '10+ annotations';
+    }
+
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(img);
+  });
+
+  return groups;
+}
+
+// Create folder item
+function createFolderItem(name, images) {
+  const folderId = 'folder-' + name.replace(/\s+/g, '-').toLowerCase();
+
+  const folder = document.createElement('div');
+  folder.className = 'border border-gray-200 rounded';
+
+  const header = document.createElement('button');
+  header.type = 'button';
+  header.className = 'w-full px-3 py-2 flex items-center justify-between hover:bg-gray-50 transition-colors';
+  header.onclick = () => toggleFolder(folderId);
+
+  header.innerHTML = `
+    <div class="flex items-center gap-2">
+      <i id="${folderId}-icon" class="fi fi-rr-folder text-amber-500"></i>
+      <span class="text-sm font-medium text-gray-900">${name}</span>
+      <span class="text-xs text-gray-500">(${images.length})</span>
+    </div>
+    <i id="${folderId}-arrow" class="fi fi-rr-angle-small-down text-gray-400 transition-transform"></i>
+  `;
+
+  const content = document.createElement('div');
+  content.id = folderId;
+  content.className = 'hidden border-t border-gray-200';
+
+  images.forEach(img => {
+    const item = createImageListItem(img);
+    item.classList.add('border-l-2', 'border-gray-200', 'ml-2');
+    content.appendChild(item);
+  });
+
+  folder.appendChild(header);
+  folder.appendChild(content);
+
+  return folder;
+}
+
+// Toggle folder open/close
+function toggleFolder(folderId) {
+  const content = document.getElementById(folderId);
+  const arrow = document.getElementById(folderId + '-arrow');
+  const icon = document.getElementById(folderId + '-icon');
+
+  if (content.classList.contains('hidden')) {
+    content.classList.remove('hidden');
+    arrow.classList.add('rotate-180');
+    icon.classList.replace('fi-rr-folder', 'fi-rr-folder-open');
+  } else {
+    content.classList.add('hidden');
+    arrow.classList.remove('rotate-180');
+    icon.classList.replace('fi-rr-folder-open', 'fi-rr-folder');
+  }
+}
+
+// Create image list item
+function createImageListItem(img) {
+  const item = document.createElement('button');
+  item.type = 'button';
+  item.className = `w-full px-3 py-2 flex items-center gap-3 hover:bg-blue-50 transition-colors ${
+    selectedImageId === img.image_asset_id ? 'bg-blue-100' : ''
+  }`;
+  item.onclick = () => selectImage(img);
+
+  item.innerHTML = `
+    <div class="w-10 h-10 flex-shrink-0 rounded overflow-hidden bg-gray-100">
+      ${img.thumbnail_url
+        ? `<img src="${img.thumbnail_url}" class="w-full h-full object-cover" alt="${img.beetle_id}">`
+        : '<i class="fi fi-rr-picture text-gray-400 text-xl flex items-center justify-center h-full"></i>'
+      }
+    </div>
+    <div class="flex-1 min-w-0 text-left">
+      <p class="text-sm font-medium text-gray-900 truncate">${img.beetle_id}</p>
+    </div>
+    <div class="flex-shrink-0 text-right">
+      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+        ${img.annotation_count}
+      </span>
+    </div>
+  `;
+
+  return item;
+}
+
+// Select an image
+function selectImage(img) {
+  selectedImageId = img.image_asset_id;
+
+  // Store currently open folders before re-rendering
+  const openFolders = new Set();
+  document.querySelectorAll('[id^="folder-"]').forEach(folder => {
+    if (!folder.classList.contains('hidden')) {
+      openFolders.add(folder.id);
+    }
+  });
+
+  // Update UI to show selection
+  organizeImages();
+
+  // Restore open folder states
+  openFolders.forEach(folderId => {
+    const folder = document.getElementById(folderId);
+    const arrow = document.getElementById(folderId + '-arrow');
+    const icon = document.getElementById(folderId + '-icon');
+
+    if (folder) {
+      folder.classList.remove('hidden');
+      if (arrow) arrow.classList.add('rotate-180');
+      if (icon) icon.classList.replace('fi-rr-folder', 'fi-rr-folder-open');
+    }
+  });
+
+  // Load image in viewer (placeholder for now)
+  console.log('Selected image:', img);
+
+  // TODO: Load image and annotations in the right panel
 }
 
 // Get CSRF token from cookie

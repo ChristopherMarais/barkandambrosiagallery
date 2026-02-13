@@ -454,6 +454,68 @@ class BoundingBoxViewSet(viewsets.ModelViewSet):
 
         return boxes
 
+    @action(detail=False, methods=['get'], url_path='images-with-annotations')
+    def images_with_annotations(self, request):
+        """
+        Get list of all images that have bounding box annotations.
+
+        GET /api/v1/bounding-boxes/images-with-annotations/
+
+        Returns:
+        {
+            "images": [
+                {
+                    "image_asset_id": "uuid",
+                    "beetle_id": "uuid",
+                    "beetle_alternative_id": "alternative_id",
+                    "filename": "image.jpg",
+                    "thumbnail_url": "/media/...",
+                    "annotation_count": 5,
+                    "created_at": "2024-01-01T00:00:00Z"
+                },
+                ...
+            ]
+        }
+        """
+        from django.db.models import Count
+
+        # Get all image assets that have bounding boxes
+        images_with_boxes = BoundingBox.objects.values('image_asset_id').annotate(
+            box_count=Count('id')
+        ).filter(box_count__gt=0)
+
+        image_asset_ids = [item['image_asset_id'] for item in images_with_boxes]
+
+        # Fetch image asset details with related beetle info
+        images = []
+        for image_asset_id in image_asset_ids:
+            try:
+                image_asset = ImageAsset.objects.get(pk=image_asset_id)
+                beetle = image_asset.specimens.first()  # Get first beetle for this image
+
+                if not beetle:
+                    continue
+
+                # Get annotation count
+                box_count = BoundingBox.objects.filter(image_asset=image_asset).count()
+
+                images.append({
+                    'image_asset_id': str(image_asset.id),
+                    'beetle_id': str(beetle.id),
+                    'filename': os.path.basename(image_asset.image_file.name) if image_asset.image_file else 'unknown',
+                    'thumbnail_url': image_asset.thumb_small.url if image_asset.thumb_small else None,
+                    'full_image_url': image_asset.display_url,
+                    'annotation_count': box_count,
+                    'created_at': beetle.last_updated_at.isoformat() if beetle.last_updated_at else None,
+                })
+            except ImageAsset.DoesNotExist:
+                continue
+
+        # Sort by created_at descending (most recent first)
+        images.sort(key=lambda x: x['created_at'] or '', reverse=True)
+
+        return Response({'images': images})
+
     @action(detail=False, methods=['get'], url_path='export')
     def export_annotations(self, request):
         """
