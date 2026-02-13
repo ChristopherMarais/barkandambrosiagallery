@@ -7,16 +7,24 @@
 
   <div class="flex gap-6 h-[calc(100vh-12rem)]">
     <!-- Left Sidebar: Upload Panel -->
-    <div class="w-80 flex-shrink-0 space-y-4">
+    <div class="w-80 flex-shrink-0 space-y-4 overflow-y-auto">
 
-      <!-- Import Annotations Card -->
+      <!-- Import Annotations Card (Collapsible) -->
       <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
-        <div class="p-4 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-900">Import Annotations</h2>
-          <p class="text-sm text-gray-500 mt-1">Upload YOLO or COCO format</p>
-        </div>
+        <button
+          type="button"
+          onclick="toggleSection('import-section')"
+          class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+        >
+          <div class="text-left">
+            <h2 class="text-lg font-semibold text-gray-900">Import Annotations</h2>
+            <p class="text-sm text-gray-500 mt-1">Upload YOLO or COCO format</p>
+          </div>
+          <i id="import-section-icon" class="fi fi-rr-angle-down text-gray-500 transition-transform"></i>
+        </button>
 
-        <div class="p-4 space-y-4">
+        <div id="import-section-content" class="border-t border-gray-200">
+          <div class="p-4 space-y-4">
           <!-- Format Selection -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -157,58 +165,82 @@
             <i class="fi fi-rr-cross-circle mr-1"></i>
             Clear Messages
           </button>
+
+          <!-- Import Statistics (Inline) -->
+          <div id="stats-card" class="hidden pt-4 border-t border-gray-200">
+            <h3 class="text-sm font-semibold text-gray-900 mb-3">Import Results</h3>
+            <div class="space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="text-xs text-gray-600">Files Processed</span>
+                <span id="stat-files" class="text-xs font-semibold text-gray-900">0</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-xs text-gray-600">Boxes Imported</span>
+                <span id="stat-imported" class="text-xs font-semibold text-green-600">0</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-xs text-gray-600">Skipped</span>
+                <span id="stat-skipped" class="text-xs font-semibold text-amber-600">0</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-xs text-gray-600">Errors</span>
+                <span id="stat-errors" class="text-xs font-semibold text-red-600">0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Help Section (Inline) -->
+          <div class="pt-4 border-t border-gray-200">
+            <details class="group">
+              <summary class="cursor-pointer text-sm font-semibold text-blue-900 flex items-center justify-between">
+                <span><i class="fi fi-rr-info mr-1"></i> File Format Guide</span>
+                <i class="fi fi-rr-angle-small-down group-open:rotate-180 transition-transform"></i>
+              </summary>
+              <div class="mt-3 text-xs text-gray-700 space-y-2">
+                <div>
+                  <p class="font-medium text-gray-900">YOLO Format:</p>
+                  <code class="block bg-gray-100 px-2 py-1 rounded mt-1 text-gray-800">
+                    class x_center y_center width height
+                  </code>
+                </div>
+                <div>
+                  <p class="font-medium text-gray-900">COCO Format:</p>
+                  <code class="block bg-gray-100 px-2 py-1 rounded mt-1 text-gray-800">
+                    {"bbox": [x, y, w, h], ...}
+                  </code>
+                </div>
+                <p class="text-xs text-gray-600 mt-2">
+                  YOLO uses normalized (0-1) coordinates. COCO uses pixel coordinates.
+                </p>
+              </div>
+            </details>
+          </div>
+
+        </div>
         </div>
       </div>
 
-      <!-- Import Statistics Card -->
-      <div id="stats-card" class="hidden bg-white border border-gray-200 rounded-lg shadow-sm">
-        <div class="p-4 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-900">Import Results</h2>
-        </div>
-        <div class="p-4 space-y-3">
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-gray-600">Files Processed</span>
-            <span id="stat-files" class="text-sm font-semibold text-gray-900">0</span>
+      <!-- Image Browser Card (Collapsible) -->
+      <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
+        <button
+          type="button"
+          onclick="toggleSection('browser-section')"
+          class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+        >
+          <div class="text-left">
+            <h2 class="text-lg font-semibold text-gray-900">Image Browser</h2>
+            <p class="text-sm text-gray-500 mt-1">Select images to annotate</p>
           </div>
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-gray-600">Boxes Imported</span>
-            <span id="stat-imported" class="text-sm font-semibold text-green-600">0</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-gray-600">Skipped</span>
-            <span id="stat-skipped" class="text-sm font-semibold text-amber-600">0</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-gray-600">Errors</span>
-            <span id="stat-errors" class="text-sm font-semibold text-red-600">0</span>
+          <i id="browser-section-icon" class="fi fi-rr-angle-down text-gray-500 transition-transform"></i>
+        </button>
+
+        <div id="browser-section-content" class="hidden border-t border-gray-200">
+          <div class="p-4">
+            <p class="text-sm text-gray-500">Image browser coming soon...</p>
           </div>
         </div>
       </div>
 
-      <!-- Help Card -->
-      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 class="text-sm font-semibold text-blue-900 mb-2">
-          <i class="fi fi-rr-info mr-1"></i>
-          File Format Guide
-        </h3>
-        <div class="text-xs text-blue-800 space-y-2">
-          <div>
-            <p class="font-medium">YOLO Format:</p>
-            <code class="block bg-white px-2 py-1 rounded mt-1 text-blue-900">
-              class x_center y_center width height
-            </code>
-          </div>
-          <div>
-            <p class="font-medium">COCO Format:</p>
-            <code class="block bg-white px-2 py-1 rounded mt-1 text-blue-900">
-              {"bbox": [x, y, w, h], ...}
-            </code>
-          </div>
-          <p class="text-xs text-blue-700 mt-2">
-            All coordinates should be normalized (0-1) for YOLO. COCO uses pixel coordinates.
-          </p>
-        </div>
-      </div>
     </div>
 
     <!-- Right Panel: Image Viewer & Annotation Area (Reserved) -->
@@ -225,6 +257,20 @@
 </div>
 
 <script>
+// Toggle collapsible sections
+function toggleSection(sectionId) {
+  const content = document.getElementById(`${sectionId}-content`);
+  const icon = document.getElementById(`${sectionId}-icon`);
+
+  if (content.classList.contains('hidden')) {
+    content.classList.remove('hidden');
+    icon.classList.add('rotate-180');
+  } else {
+    content.classList.add('hidden');
+    icon.classList.remove('rotate-180');
+  }
+}
+
 // Get CSRF token from cookie
 function getCookie(name) {
   let cookieValue = null;
