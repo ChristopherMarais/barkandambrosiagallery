@@ -307,6 +307,22 @@
           <div id="canvas-actions" class="hidden flex gap-2">
             <button
               type="button"
+              onclick="zoomIn()"
+              class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+              title="Zoom In"
+            >
+              <i class="fi fi-rr-zoom-in text-sm"></i>
+            </button>
+            <button
+              type="button"
+              onclick="zoomOut()"
+              class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+              title="Zoom Out"
+            >
+              <i class="fi fi-rr-zoom-out text-sm"></i>
+            </button>
+            <button
+              type="button"
               onclick="fitToScreen()"
               class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
             >
@@ -344,7 +360,7 @@
           <!-- Canvas Wrapper (for panning and zooming) -->
           <div id="canvas-wrapper" class="hidden absolute inset-0 overflow-auto">
             <div id="canvas-content" class="relative inline-block">
-              <canvas id="annotation-canvas" class="block"></canvas>
+              <canvas id="annotation-canvas" class="block" style="cursor: grab;"></canvas>
             </div>
           </div>
         </div>
@@ -399,6 +415,14 @@ let currentBoundingBoxes = [];
 let canvas = null;
 let ctx = null;
 let zoomLevel = 1.0;
+let selectedBoundingBoxIndex = null;
+
+// Pan state
+let isPanning = false;
+let panStartX = 0;
+let panStartY = 0;
+let scrollStartX = 0;
+let scrollStartY = 0;
 
 // Toggle collapsible sections
 function toggleSection(sectionId) {
@@ -690,6 +714,15 @@ function selectImage(img) {
 function initCanvas() {
   canvas = document.getElementById('annotation-canvas');
   ctx = canvas.getContext('2d');
+
+  // Add mouse wheel zoom listener to canvas wrapper
+  const canvasWrapper = document.getElementById('canvas-wrapper');
+  canvasWrapper.addEventListener('wheel', handleMouseWheel, { passive: false });
+
+  // Add pan event listeners to canvas element
+  canvas.addEventListener('mousedown', handlePanStart);
+  document.addEventListener('mousemove', handlePanMove);
+  document.addEventListener('mouseup', handlePanEnd);
 }
 
 // Load image and bounding boxes on canvas
@@ -797,55 +830,72 @@ function drawBoundingBox(box, index) {
   const width = box.width * imgWidth;
   const height = box.height * imgHeight;
 
-  // Choose color based on validation status
-  let color = box.is_validated ? '#10b981' : '#3b82f6'; // Green if validated, blue otherwise
+  // Choose color based on selection or validation status
+  let color;
+  if (selectedBoundingBoxIndex === index) {
+    color = '#ef4444'; // Red if selected
+  } else {
+    color = box.is_validated ? '#10b981' : '#3b82f6'; // Green if validated, blue otherwise
+  }
 
-  // Draw rectangle
+  // Calculate scale factor based on image size (makes labels readable on large images)
+  const scaleFactor = Math.max(1, Math.min(imgWidth, imgHeight) / 1000);
+
+  // Draw rectangle with scaled line width (thicker if selected)
   ctx.strokeStyle = color;
-  ctx.lineWidth = 3;
+  ctx.lineWidth = (selectedBoundingBoxIndex === index ? 6 : 4) * scaleFactor;
   ctx.strokeRect(x, y, width, height);
 
   // Draw semi-transparent fill
   ctx.fillStyle = color + '20'; // 20 = ~12% opacity
   ctx.fillRect(x, y, width, height);
 
-  // Draw number badge in top-left corner
+  // Draw number badge and label ABOVE the bounding box
   const number = `#${index + 1}`;
-  const numberFontSize = 16;
+  const numberFontSize = Math.max(24, 24 * scaleFactor);
   ctx.font = `bold ${numberFontSize}px Arial`;
-  const numberWidth = ctx.measureText(number).width;
 
-  // Number badge background (circle)
-  const badgeSize = 28;
+  // Number badge background (circle) with scaled size
+  const badgeSize = Math.max(44, 44 * scaleFactor);
+  const badgeY = y - badgeSize - 4; // Position above the box with 4px gap
+
   ctx.fillStyle = color;
   ctx.beginPath();
-  ctx.arc(x + badgeSize/2, y + badgeSize/2, badgeSize/2, 0, 2 * Math.PI);
+  ctx.arc(x + badgeSize/2, badgeY + badgeSize/2, badgeSize/2, 0, 2 * Math.PI);
   ctx.fill();
 
   // Number text
   ctx.fillStyle = '#ffffff';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(number, x + badgeSize/2, y + badgeSize/2);
+  ctx.fillText(number, x + badgeSize/2, badgeY + badgeSize/2);
 
   // Reset text alignment for label
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
 
-  // Draw label next to number badge
+  // Draw label next to number badge with scaled size (also above the box)
   const label = box.label || '';
   if (label) {
-    const labelFontSize = 14;
-    ctx.font = `${labelFontSize}px Arial`;
+    const labelFontSize = Math.max(20, 20 * scaleFactor);
+    ctx.font = `bold ${labelFontSize}px Arial`;
     const labelWidth = ctx.measureText(label).width;
 
-    // Label background
+    // Label background with padding
+    const labelPadding = 8 * scaleFactor;
+    const labelHeight = labelFontSize + labelPadding * 1.5;
+
     ctx.fillStyle = color;
-    ctx.fillRect(x + badgeSize + 4, y, labelWidth + 12, labelFontSize + 8);
+    ctx.fillRect(
+      x + badgeSize + labelPadding/2,
+      badgeY,
+      labelWidth + labelPadding * 2,
+      labelHeight
+    );
 
     // Label text
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(label, x + badgeSize + 10, y + labelFontSize + 2);
+    ctx.fillText(label, x + badgeSize + labelPadding * 1.5, badgeY + labelFontSize + labelPadding/2);
   }
 }
 
@@ -879,15 +929,16 @@ function updateBoundingBoxList() {
 // Create bounding box list item
 function createBoundingBoxListItem(box, index) {
   const item = document.createElement('div');
-  const color = box.is_validated ? '#10b981' : '#3b82f6';
+  const isSelected = selectedBoundingBoxIndex === index;
+  const color = isSelected ? '#ef4444' : (box.is_validated ? '#10b981' : '#3b82f6');
 
-  item.className = 'border rounded-lg p-3 hover:bg-gray-50 transition-colors cursor-pointer';
+  item.className = `border rounded-lg p-3 hover:bg-gray-50 transition-colors cursor-pointer ${isSelected ? 'bg-red-50 border-2' : ''}`;
   item.style.borderColor = color;
   item.onclick = () => highlightBoundingBox(index);
 
   const label = box.label || 'Unlabeled';
   const status = box.is_validated ? 'Validated' : 'Unvalidated';
-  const statusColor = box.is_validated ? 'text-green-600' : 'text-blue-600';
+  const statusColor = isSelected ? 'text-red-600' : (box.is_validated ? 'text-green-600' : 'text-blue-600');
 
   item.innerHTML = `
     <div class="flex items-start gap-3">
@@ -912,9 +963,13 @@ function createBoundingBoxListItem(box, index) {
 
 // Highlight a bounding box when clicked in list
 function highlightBoundingBox(index) {
-  // Redraw canvas with highlighted box
+  // Set selected index
+  selectedBoundingBoxIndex = index;
+
+  // Redraw canvas with selected box in red
   drawCanvas();
 
+  // Scroll to box if needed
   const box = currentBoundingBoxes[index];
   const imgWidth = canvas.width;
   const imgHeight = canvas.height;
@@ -924,12 +979,6 @@ function highlightBoundingBox(index) {
   const width = box.width * imgWidth;
   const height = box.height * imgHeight;
 
-  // Draw highlight
-  ctx.strokeStyle = '#fbbf24'; // Amber highlight
-  ctx.lineWidth = 5;
-  ctx.strokeRect(x - 2, y - 2, width + 4, height + 4);
-
-  // Scroll to box if needed
   const canvasWrapper = document.getElementById('canvas-wrapper');
   const boxCenterX = (x + width / 2) * zoomLevel;
   const boxCenterY = (y + height / 2) * zoomLevel;
@@ -973,6 +1022,98 @@ function applyZoom() {
 
   // Update footer
   document.getElementById('footer-zoom').textContent = Math.round(zoomLevel * 100) + '%';
+}
+
+// Zoom in by 25%
+function zoomIn() {
+  zoomLevel = Math.min(zoomLevel * 1.25, 5); // Max 500%
+  applyZoom();
+}
+
+// Zoom out by 25%
+function zoomOut() {
+  zoomLevel = Math.max(zoomLevel / 1.25, 0.1); // Min 10%
+  applyZoom();
+}
+
+// Handle mouse wheel zoom at cursor position
+function handleMouseWheel(e) {
+  e.preventDefault();
+
+  if (!canvas) return;
+
+  const canvasWrapper = document.getElementById('canvas-wrapper');
+  const canvasContent = document.getElementById('canvas-content');
+
+  // Get mouse position relative to wrapper
+  const rect = canvasWrapper.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  // Get current scroll position
+  const scrollX = canvasWrapper.scrollLeft;
+  const scrollY = canvasWrapper.scrollTop;
+
+  // Calculate mouse position in canvas coordinates (before zoom)
+  const canvasX = (scrollX + mouseX) / zoomLevel;
+  const canvasY = (scrollY + mouseY) / zoomLevel;
+
+  // Determine zoom direction
+  const delta = e.deltaY > 0 ? -1 : 1;
+  const zoomFactor = delta > 0 ? 1.1 : 0.9;
+
+  // Apply new zoom level
+  const oldZoom = zoomLevel;
+  zoomLevel = Math.min(Math.max(zoomLevel * zoomFactor, 0.1), 5);
+  applyZoom();
+
+  // Adjust scroll position to keep mouse position fixed
+  const newScrollX = canvasX * zoomLevel - mouseX;
+  const newScrollY = canvasY * zoomLevel - mouseY;
+
+  canvasWrapper.scrollLeft = newScrollX;
+  canvasWrapper.scrollTop = newScrollY;
+}
+
+// Handle pan start
+function handlePanStart(e) {
+  // Only pan with left mouse button
+  if (e.button !== 0) return;
+
+  const canvasWrapper = document.getElementById('canvas-wrapper');
+
+  isPanning = true;
+  panStartX = e.clientX;
+  panStartY = e.clientY;
+  scrollStartX = canvasWrapper.scrollLeft;
+  scrollStartY = canvasWrapper.scrollTop;
+
+  canvas.style.cursor = 'grabbing';
+  e.preventDefault();
+  e.stopPropagation();
+}
+
+// Handle pan move
+function handlePanMove(e) {
+  if (!isPanning) return;
+
+  const canvasWrapper = document.getElementById('canvas-wrapper');
+
+  const deltaX = e.clientX - panStartX;
+  const deltaY = e.clientY - panStartY;
+
+  canvasWrapper.scrollLeft = scrollStartX - deltaX;
+  canvasWrapper.scrollTop = scrollStartY - deltaY;
+
+  e.preventDefault();
+}
+
+// Handle pan end
+function handlePanEnd(e) {
+  if (!isPanning) return;
+
+  canvas.style.cursor = 'grab';
+  isPanning = false;
 }
 
 // Get CSRF token from cookie
