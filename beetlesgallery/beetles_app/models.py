@@ -666,3 +666,315 @@ class DownloadJob(models.Model):
 
         # 2. Legacy/Plain text (backwards compatibility)
         return qs
+
+
+# -----------------------------
+# BoundingBox (Image Annotations)
+# -----------------------------
+class BoundingBox(models.Model):
+    """
+    Individual bounding box annotation on an image.
+    Uses normalized coordinates (0-1) for scale independence.
+
+    Coordinate System:
+    - x, y: Top-left corner of the box (0 = left/top edge, 1 = right/bottom edge)
+    - width, height: Dimensions of the box (as fraction of image dimensions)
+    - All values are in the range [0, 1]
+
+    Example:
+        x=0.25, y=0.30, width=0.15, height=0.20
+        means: box starts 25% from left, 30% from top,
+               extends 15% of image width, 20% of image height
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # RELATIONSHIPS
+    image_asset = models.ForeignKey(
+        ImageAsset,
+        related_name='annotations',
+        on_delete=models.CASCADE,
+        help_text="The image this bounding box is drawn on"
+    )
+
+    beetle = models.ForeignKey(
+        Beetles,
+        related_name='bounding_boxes',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Optional link to a cataloged specimen record if this box represents a known specimen"
+    )
+
+    # NORMALIZED COORDINATES (0-1)
+    # Using top-left corner + width/height format for web canvas compatibility
+    x = models.FloatField(
+        help_text="Normalized left edge position (0 = left side, 1 = right side)"
+    )
+    y = models.FloatField(
+        help_text="Normalized top edge position (0 = top, 1 = bottom)"
+    )
+    width = models.FloatField(
+        help_text="Normalized width (as fraction of image width, 0-1)"
+    )
+    height = models.FloatField(
+        help_text="Normalized height (as fraction of image height, 0-1)"
+    )
+
+    # CLASSIFICATION
+    label = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Species name, classification label, or other identifier"
+    )
+
+    confidence = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="AI model confidence score (0-1) for AI-generated boxes"
+    )
+
+    source = models.CharField(
+        max_length=20,
+        choices=[
+            ('manual', 'Manual Annotation'),
+            ('ai', 'AI Generated'),
+            ('imported', 'Imported from External Tool')
+        ],
+        default='manual',
+        help_text="How this bounding box was created"
+    )
+
+    # METADATA
+    created_by = models.ForeignKey(
+        User,
+        related_name='created_annotations',
+        on_delete=models.SET_NULL,
+        null=True,
+        help_text="User who created this annotation"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # VALIDATION WORKFLOW
+    is_validated = models.BooleanField(
+        default=False,
+        help_text="Whether this annotation has been verified by a staff member"
+    )
+
+    validated_by = models.ForeignKey(
+        User,
+        related_name='validated_annotations',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Staff member who validated this annotation"
+    )
+
+    validated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this annotation was validated"
+    )
+
+    # OPTIONAL FIELDS
+    notes = models.TextField(
+        blank=True,
+        help_text="Additional notes or comments about this annotation"
+    )
+
+    class Meta:
+        db_table = "bounding_boxes"
+        verbose_name = "Bounding Box"
+        verbose_name_plural = "Bounding Boxes"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['image_asset', 'source']),
+            models.Index(fields=['created_by']),
+            models.Index(fields=['is_validated']),
+            models.Index(fields=['beetle']),
+        ]
+
+    def __str__(self):
+        label_str = self.label or 'Unlabeled'
+        source_str = f"[{self.get_source_display()}]"
+        return f"Box on {self.image_asset_id}: {label_str} {source_str}"
+
+    def clean(self):
+        """Validate that coordinates are within valid bounds"""
+        from django.core.exceptions import ValidationError
+
+        errors = {}
+
+        # Check x, y are in range [0, 1]
+        if not (0 <= self.x <= 1):
+            errors['x'] = f"x must be between 0 and 1 (got {self.x})"
+        if not (0 <= self.y <= 1):
+            errors['y'] = f"y must be between 0 and 1 (got {self.y})"
+
+        # Check width, height are positive and in range (0, 1]
+        if not (0 < self.width <= 1):
+            errors['width'] = f"width must be between 0 and 1 (got {self.width})"
+        if not (0 < self.height <= 1):
+            errors['height'] = f"height must be between 0 and 1 (got {self.height})"
+
+        # Check box doesn't extend beyond image bounds
+        if self.x + self.width > 1.0001:  # Small epsilon for floating point errors
+            errors['width'] = f"Box extends beyond right edge (x + width = {self.x + self.width})"
+        if self.y + self.height > 1.0001:
+            errors['height'] = f"Box extends beyond bottom edge (y + height = {self.y + self.height})"
+
+        if errors:
+            raise ValidationError(errors)
+
+    @property
+    def area(self):
+        """Calculate normalized area of the bounding box (0-1)"""
+        return self.width * self.height
+
+    def to_dict(self):
+        """Serialize for JSON API responses"""
+        return {
+            'id': str(self.id),
+            'x': self.x,
+            'y': self.y,
+            'width': self.width,
+            'height': self.height,
+            'label': self.label,
+            'confidence': self.confidence,
+            'source': self.source,
+            'is_validated': self.is_validated,
+            'created_by': self.created_by.username if self.created_by else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'notes': self.notes,
+            'beetle_id': str(self.beetle_id) if self.beetle_id else None,
+        }
+
+    # ---- Format Conversion Methods ----
+
+    def to_coco(self, image_width, image_height):
+        """
+        Convert to COCO format (absolute pixels, top-left + w/h).
+
+        Args:
+            image_width: Pixel width of the image
+            image_height: Pixel height of the image
+
+        Returns:
+            dict with keys: bbox, area, category_id (label), iscrowd
+        """
+        return {
+            'bbox': [
+                self.x * image_width,
+                self.y * image_height,
+                self.width * image_width,
+                self.height * image_height
+            ],
+            'area': (self.width * image_width) * (self.height * image_height),
+            'category_id': self.label or 'unknown',
+            'iscrowd': 0
+        }
+
+    def to_yolo(self):
+        """
+        Convert to YOLO format (normalized center + w/h).
+
+        Returns:
+            str: "<label> <x_center> <y_center> <width> <height>"
+        """
+        x_center = self.x + (self.width / 2)
+        y_center = self.y + (self.height / 2)
+        label = self.label or '0'
+        return f"{label} {x_center:.6f} {y_center:.6f} {self.width:.6f} {self.height:.6f}"
+
+    def to_pascal_voc(self, image_width, image_height):
+        """
+        Convert to Pascal VOC format (absolute pixels, corner coordinates).
+
+        Args:
+            image_width: Pixel width of the image
+            image_height: Pixel height of the image
+
+        Returns:
+            dict with keys: xmin, ymin, xmax, ymax
+        """
+        return {
+            'xmin': int(self.x * image_width),
+            'ymin': int(self.y * image_height),
+            'xmax': int((self.x + self.width) * image_width),
+            'ymax': int((self.y + self.height) * image_height),
+            'name': self.label or 'unknown'
+        }
+
+    @classmethod
+    def from_coco(cls, bbox, image_width, image_height, **kwargs):
+        """
+        Create BoundingBox from COCO format [x, y, w, h] in pixels.
+
+        Args:
+            bbox: List [x_min, y_min, width, height] in pixels
+            image_width: Pixel width of the image
+            image_height: Pixel height of the image
+            **kwargs: Additional fields (image_asset, label, etc.)
+
+        Returns:
+            BoundingBox instance (not saved)
+        """
+        return cls(
+            x=bbox[0] / image_width,
+            y=bbox[1] / image_height,
+            width=bbox[2] / image_width,
+            height=bbox[3] / image_height,
+            **kwargs
+        )
+
+    @classmethod
+    def from_yolo(cls, line, **kwargs):
+        """
+        Create BoundingBox from YOLO format string.
+
+        Args:
+            line: String in format "<class_id> <x_center> <y_center> <width> <height>"
+            **kwargs: Additional fields (image_asset, etc.)
+
+        Returns:
+            BoundingBox instance (not saved)
+        """
+        parts = line.strip().split()
+        if len(parts) < 5:
+            raise ValueError(f"Invalid YOLO format: {line}")
+
+        label = parts[0]
+        x_center, y_center, w, h = map(float, parts[1:5])
+
+        return cls(
+            x=x_center - (w / 2),  # Convert center to top-left
+            y=y_center - (h / 2),
+            width=w,
+            height=h,
+            label=label,
+            **kwargs
+        )
+
+    @classmethod
+    def from_pascal_voc(cls, xmin, ymin, xmax, ymax, image_width, image_height, **kwargs):
+        """
+        Create BoundingBox from Pascal VOC corner coordinates (pixels).
+
+        Args:
+            xmin, ymin, xmax, ymax: Corner coordinates in pixels
+            image_width: Pixel width of the image
+            image_height: Pixel height of the image
+            **kwargs: Additional fields (image_asset, label, etc.)
+
+        Returns:
+            BoundingBox instance (not saved)
+        """
+        return cls(
+            x=xmin / image_width,
+            y=ymin / image_height,
+            width=(xmax - xmin) / image_width,
+            height=(ymax - ymin) / image_height,
+            **kwargs
+        )

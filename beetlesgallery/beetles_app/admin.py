@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html, mark_safe
-from .models import UploadBatch, Beetles, ImageAsset, DownloadJob
+from .models import UploadBatch, Beetles, ImageAsset, DownloadJob, BoundingBox
 from simple_history.admin import SimpleHistoryAdmin
 
 
@@ -278,3 +278,73 @@ class ImageAssetAdmin(admin.ModelAdmin):
         if obj.image_file:
             return mark_safe(f'<img src="{obj.image_file.url}" style="max-height: 400px;"/>')
         return "No Image"
+
+
+# ---------- BoundingBox ----------
+@admin.register(BoundingBox)
+class BoundingBoxAdmin(admin.ModelAdmin):
+    list_display = (
+        'id_short',
+        'image_asset',
+        'label',
+        'source',
+        'confidence',
+        'is_validated',
+        'created_by',
+        'created_at',
+    )
+    list_filter = ('source', 'is_validated', 'created_by', 'validated_by', 'created_at')
+    search_fields = (
+        '=id',
+        'label',
+        'image_asset__image_sha256',
+        'beetle__id',
+        'notes',
+    )
+    readonly_fields = (
+        'id',
+        'image_asset',
+        'beetle',
+        'x',
+        'y',
+        'width',
+        'height',
+        'label',
+        'confidence',
+        'source',
+        'created_by',
+        'created_at',
+        'updated_at',
+        'is_validated',
+        'validated_by',
+        'validated_at',
+        'notes',
+        'box_area',
+        'coordinates_display',
+    )
+    ordering = ('-created_at',)
+    date_hierarchy = 'created_at'
+
+    @admin.display(description='ID')
+    def id_short(self, obj):
+        return str(obj.id)[:8]
+
+    @admin.display(description='Area')
+    def box_area(self, obj):
+        return f"{obj.area:.4f}"
+
+    @admin.display(description='Coordinates')
+    def coordinates_display(self, obj):
+        return f"x:{obj.x:.3f}, y:{obj.y:.3f}, w:{obj.width:.3f}, h:{obj.height:.3f}"
+
+    def has_view_permission(self, request, obj=None):
+        return True
+
+    def has_add_permission(self, request):
+        return False  # Annotations should be created via the annotation tool
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_staff
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_staff

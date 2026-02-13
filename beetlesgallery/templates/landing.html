@@ -72,6 +72,7 @@
             </div>
           </a>
 
+          {% if user.is_staff %}
           <a href="{% url 'tool_annotate' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-gray-100 hover:bg-gray-50/50 transition-all duration-300">
             <div class="p-3 bg-gray-100 text-gray-600 rounded-xl group-hover:scale-110 transition-transform">
               <i class="fi fi-rr-edit text-xl"></i>
@@ -81,6 +82,7 @@
               <p class="text-sm text-gray-500">Annotate and label image data.</p>
             </div>
           </a>
+          {% endif %}
 
           <a href="{% url 'my_uploads' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-gray-100 hover:bg-gray-50/50 transition-all duration-300">
             <div class="p-3 bg-gray-100 text-gray-600 rounded-xl group-hover:scale-110 transition-transform">

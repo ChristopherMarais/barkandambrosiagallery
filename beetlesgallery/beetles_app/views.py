@@ -1631,8 +1631,9 @@ def taxonomy_search(request):
     })
 
 
+@staff_member_required
 def tool_annotate(request):
     """
-    Data annotation tool page.
+    Data annotation tool page (staff only).
     """
     return render(request, 'beetles/tool_annotate.html', {})
