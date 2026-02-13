@@ -355,18 +355,19 @@
                   {% elif b.status == "validated" %}
                   <span
                     class="inline-flex items-center justify-center w-28 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">Validated</span>
+                  
                   {% elif b.status == "rejected" or b.status == "import_failed" %}
-                  <span
-                    class="inline-flex items-center justify-center w-28 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">{{
-                    b.get_status_display }}</span>
-                  {% if b.error_report_file %}
-                  <button onclick="viewLog('{{ b.error_report_file.url }}', 'Details')"
-                    class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
-                  {% endif %}
+                    <span class="inline-flex items-center justify-center w-28 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                      {{ b.get_status_display }}
+                    </span>
+                    {% if b.error_report_file %}
+                      <button onclick="viewLog('{{ b.error_report_file.url }}', 'Details')"
+                        class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
+                    {% endif %}
                   {% else %}
-                  <span
-                    class="inline-flex items-center justify-center w-28 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 animate-pulse">{{
-                    b.get_status_display }}</span>
+                    <span class="inline-flex items-center justify-center w-28 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 animate-pulse">
+                      {{ b.get_status_display }}
+                    </span>
                   {% endif %}
                 </td>
 
@@ -435,20 +436,20 @@
                   <span
                     class="inline-flex items-center justify-center w-28 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">Validated</span>
                   {% elif u.status == "rejected" or u.status == "apply_failed" %}
-                  <span
-                    class="inline-flex items-center justify-center w-28 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">{{
-                    u.get_status_display }}</span>
-                  {% if u.report_file %}
-                  <button onclick="viewLog('{{ u.report_file.url }}', 'Details')"
-                    class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
-                  {% elif u.error_message %}
-                  <button onclick="viewText('{{ u.error_message|escapejs }}', 'Details')"
-                    class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
-                  {% endif %}
+                    <span class="inline-flex items-center justify-center w-28 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                      {{ u.get_status_display }}
+                    </span>
+                    {% if u.report_file %}
+                      <button onclick="viewLog('{{ u.report_file.url }}', 'Details')"
+                        class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
+                    {% elif u.error_message %}
+                      <button onclick="viewText('{{ u.error_message|escapejs }}', 'Details')"
+                        class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
+                    {% endif %}
                   {% else %}
-                  <span
-                    class="inline-flex items-center justify-center w-28 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 animate-pulse">{{
-                    u.get_status_display }}</span>
+                    <span class="inline-flex items-center justify-center w-28 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 animate-pulse">
+                      {{ u.get_status_display }}
+                    </span>
                   {% endif %}
                 </td>
 
@@ -1002,12 +1003,31 @@
     const el = document.getElementById(elementId);
     if (!el) return;
 
+    // TROUBLESHOOTING: This log will show you exactly what the server is sending
+    console.log(`Update ${elementId}: status=${status}, label=${label}`);
+
+    // Normalize inputs
+    const safeStatus = (status ?? "").toString().trim().toLowerCase();
+    let safeLabel = (label ?? "").toString().trim();
+
+    // Never show raw Django template tokens in the browser
+    if (!safeLabel || safeLabel.includes("{{") || safeLabel.includes("}}")) {
+      // Fallback: use status if label is missing/bad
+      safeLabel = safeStatus || "pending";
+    }
+
+    // Optional: friendly title case for the fallback status words
+    // (keeps "Validation failed" intact if backend sends it correctly)
+    if (safeLabel === safeStatus) {
+      safeLabel = safeLabel.replace(/_/g, " ");
+    }
+    
     let badgeClass = "bg-gray-100 text-gray-600"; // default
     let linkClass = "text-gray-600";
     let icon = "";
 
     // Logic to match your Django template colors
-    const s = status.toLowerCase();
+    const s = safeStatus;
     if (['imported', 'validated', 'applied', 'ready'].includes(s)) {
       badgeClass = "bg-green-100 text-green-800";
     } else if (['validating', 'building', 'staging', 'pending'].includes(s)) {
@@ -1017,8 +1037,13 @@
       linkClass = "text-red-600";
     }
 
-    // Updated: Fixed width pill (w-28)
-    let html = `<span class="inline-flex items-center justify-center w-28 rounded-full px-2 py-0.5 text-xs font-medium ${badgeClass}">${label}</span>`;
+    // Title-case only normal strings; keep backend-provided phrases like "Validation failed"
+    if (safeLabel && typeof safeLabel === "string") {
+      safeLabel = safeLabel.charAt(0).toUpperCase() + safeLabel.slice(1);
+    }
+
+    // Add 'capitalize' class AND inline style to be 100% sure
+    let html = `<span class="inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium capitalize whitespace-nowrap ${badgeClass}" style="text-transform: capitalize;">${safeLabel}</span>`;
 
     // 1. Try File URL first
     if (fileUrl) {
