@@ -2,12 +2,21 @@
 {% load static %}
 
 {% block content %}
+<style>
+  /* Override base template max-width for annotation tool */
+  main {
+    max-width: 100% !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+</style>
+
 <div class="h-full">
   <h1 class="text-3xl font-bold text-gray-900 mb-6">Data Annotation Tool</h1>
 
   <div class="flex gap-6" style="height: calc(100vh - 12rem);">
     <!-- Left Sidebar: Upload Panel -->
-    <div class="space-y-4 overflow-y-auto" style="min-width: 400px; max-width: 400px; height: 100%;">
+    <div class="space-y-4 overflow-y-auto" style="width: 25%; min-width: 320px; max-width: 400px; height: 100%;">
 
       <!-- Import Annotations Card (Collapsible) -->
       <div class="bg-white border border-gray-200 rounded-lg shadow-sm flex-shrink-0">
@@ -283,15 +292,99 @@
 
     </div>
 
-    <!-- Right Panel: Image Viewer & Annotation Area (Reserved) -->
-    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden" style="flex: 1; min-width: 0; height: 100%;">
-      <div class="w-full h-full flex items-center justify-center text-gray-400">
-        <div class="text-center">
-          <i class="fi fi-rr-picture text-6xl mb-4"></i>
-          <p class="text-lg font-medium">Annotation Canvas</p>
-          <p class="text-sm">Image viewer and annotation tools will appear here</p>
+    <!-- Right Panel: Canvas and Bounding Box List -->
+    <div class="flex gap-4" style="flex: 1; min-width: 0; height: 100%;">
+
+      <!-- Image Viewer & Annotation Area -->
+      <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden flex flex-col" style="width: 66%; min-width: 0; height: 100%;">
+
+        <!-- Canvas Header -->
+        <div class="border-b border-gray-200 p-4 flex items-center justify-between bg-gray-50 flex-shrink-0">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900" id="canvas-title">Annotation Canvas</h3>
+            <p class="text-sm text-gray-500" id="canvas-subtitle">Select an image to begin</p>
+          </div>
+          <div id="canvas-actions" class="hidden flex gap-2">
+            <button
+              type="button"
+              onclick="fitToScreen()"
+              class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <i class="fi fi-rr-search text-sm"></i> Fit to Screen
+            </button>
+            <button
+              type="button"
+              onclick="resetZoom()"
+              class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <i class="fi fi-rr-refresh text-sm"></i> Reset Zoom
+            </button>
+          </div>
         </div>
+
+        <!-- Canvas Container -->
+        <div class="flex-1 relative overflow-hidden bg-gray-100" id="canvas-container">
+          <!-- Empty State -->
+          <div id="canvas-empty" class="w-full h-full flex items-center justify-center text-gray-400">
+            <div class="text-center">
+              <i class="fi fi-rr-picture text-6xl mb-4"></i>
+              <p class="text-lg font-medium">No Image Selected</p>
+              <p class="text-sm">Click an image from the browser to view it here</p>
+            </div>
+          </div>
+
+          <!-- Loading State -->
+          <div id="canvas-loading" class="hidden w-full h-full flex items-center justify-center">
+            <div class="text-center">
+              <i class="fi fi-rr-spinner animate-spin text-4xl text-blue-600 mb-4"></i>
+              <p class="text-sm text-gray-600">Loading image...</p>
+            </div>
+          </div>
+
+          <!-- Canvas Wrapper (for panning and zooming) -->
+          <div id="canvas-wrapper" class="hidden absolute inset-0 overflow-auto">
+            <div id="canvas-content" class="relative inline-block">
+              <canvas id="annotation-canvas" class="block"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Canvas Footer / Info Bar -->
+        <div id="canvas-footer" class="hidden border-t border-gray-200 p-3 bg-gray-50 flex items-center justify-between text-xs text-gray-600 flex-shrink-0">
+          <div class="flex gap-4">
+            <span><strong>Beetle ID:</strong> <span id="footer-beetle-id">-</span></span>
+            <span><strong>Annotations:</strong> <span id="footer-annotation-count">0</span></span>
+          </div>
+          <div>
+            <span><strong>Zoom:</strong> <span id="footer-zoom">100%</span></span>
+          </div>
+        </div>
+
       </div>
+
+      <!-- Bounding Box List Panel -->
+      <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden flex flex-col" style="width: 34%; min-width: 280px; height: 100%; flex-shrink: 0;">
+
+        <!-- List Header -->
+        <div class="border-b border-gray-200 p-4 bg-gray-50 flex-shrink-0">
+          <h3 class="text-lg font-semibold text-gray-900">Bounding Boxes</h3>
+          <p class="text-sm text-gray-500" id="bbox-list-count">0 annotations</p>
+        </div>
+
+        <!-- List Content -->
+        <div class="flex-1 overflow-y-auto p-4">
+          <!-- Empty State -->
+          <div id="bbox-list-empty" class="text-center py-8 text-gray-400">
+            <i class="fi fi-rr-square text-3xl mb-2"></i>
+            <p class="text-sm">No bounding boxes</p>
+          </div>
+
+          <!-- Bounding Box List -->
+          <div id="bbox-list" class="hidden space-y-2"></div>
+        </div>
+
+      </div>
+
     </div>
   </div>
 </div>
@@ -301,6 +394,11 @@
 let allImages = [];
 let filteredImages = [];
 let selectedImageId = null;
+let currentImage = null;
+let currentBoundingBoxes = [];
+let canvas = null;
+let ctx = null;
+let zoomLevel = 1.0;
 
 // Toggle collapsible sections
 function toggleSection(sectionId) {
@@ -584,10 +682,297 @@ function selectImage(img) {
     }
   });
 
-  // Load image in viewer (placeholder for now)
-  console.log('Selected image:', img);
+  // Load image and annotations in canvas
+  loadImageOnCanvas(img);
+}
 
-  // TODO: Load image and annotations in the right panel
+// Initialize canvas
+function initCanvas() {
+  canvas = document.getElementById('annotation-canvas');
+  ctx = canvas.getContext('2d');
+}
+
+// Load image and bounding boxes on canvas
+async function loadImageOnCanvas(img) {
+  // Initialize canvas if not already done
+  if (!canvas) {
+    initCanvas();
+  }
+
+  // Show loading state
+  document.getElementById('canvas-empty').classList.add('hidden');
+  document.getElementById('canvas-wrapper').classList.add('hidden');
+  document.getElementById('canvas-loading').classList.remove('hidden');
+  document.getElementById('canvas-actions').classList.add('hidden');
+  document.getElementById('canvas-footer').classList.add('hidden');
+
+  try {
+    // Update header
+    document.getElementById('canvas-title').textContent = img.beetle_id;
+    document.getElementById('canvas-subtitle').textContent = `${img.annotation_count} annotation(s)`;
+
+    // Fetch bounding boxes
+    const response = await fetch(`/api/v1/bounding-boxes/?image_asset=${img.image_asset_id}`, {
+      headers: {
+        'X-CSRFToken': csrftoken
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch bounding boxes');
+    }
+
+    const data = await response.json();
+    currentBoundingBoxes = data.results || data;
+
+    // Load the image
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+
+    image.onload = function() {
+      currentImage = image;
+
+      // Set canvas size to match image
+      canvas.width = image.width;
+      canvas.height = image.height;
+
+      // Draw image and bounding boxes
+      drawCanvas();
+
+      // Show canvas
+      document.getElementById('canvas-loading').classList.add('hidden');
+      document.getElementById('canvas-wrapper').classList.remove('hidden');
+      document.getElementById('canvas-actions').classList.remove('hidden');
+      document.getElementById('canvas-footer').classList.remove('hidden');
+
+      // Update footer
+      document.getElementById('footer-beetle-id').textContent = img.beetle_id;
+      document.getElementById('footer-annotation-count').textContent = currentBoundingBoxes.length;
+
+      // Fit to screen initially
+      fitToScreen();
+    };
+
+    image.onerror = function() {
+      throw new Error('Failed to load image');
+    };
+
+    image.src = img.full_image_url;
+
+  } catch (error) {
+    console.error('Error loading image:', error);
+    document.getElementById('canvas-loading').classList.add('hidden');
+    document.getElementById('canvas-empty').classList.remove('hidden');
+    document.getElementById('canvas-subtitle').textContent = 'Error loading image';
+  }
+}
+
+// Draw image and bounding boxes on canvas
+function drawCanvas() {
+  if (!currentImage || !ctx) return;
+
+  // Clear canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw image
+  ctx.drawImage(currentImage, 0, 0, canvas.width, canvas.height);
+
+  // Draw bounding boxes
+  currentBoundingBoxes.forEach((box, index) => {
+    drawBoundingBox(box, index);
+  });
+
+  // Update bounding box list
+  updateBoundingBoxList();
+}
+
+// Draw a single bounding box
+function drawBoundingBox(box, index) {
+  const imgWidth = canvas.width;
+  const imgHeight = canvas.height;
+
+  // Convert normalized coordinates to pixels
+  const x = box.x * imgWidth;
+  const y = box.y * imgHeight;
+  const width = box.width * imgWidth;
+  const height = box.height * imgHeight;
+
+  // Choose color based on validation status
+  let color = box.is_validated ? '#10b981' : '#3b82f6'; // Green if validated, blue otherwise
+
+  // Draw rectangle
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(x, y, width, height);
+
+  // Draw semi-transparent fill
+  ctx.fillStyle = color + '20'; // 20 = ~12% opacity
+  ctx.fillRect(x, y, width, height);
+
+  // Draw number badge in top-left corner
+  const number = `#${index + 1}`;
+  const numberFontSize = 16;
+  ctx.font = `bold ${numberFontSize}px Arial`;
+  const numberWidth = ctx.measureText(number).width;
+
+  // Number badge background (circle)
+  const badgeSize = 28;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x + badgeSize/2, y + badgeSize/2, badgeSize/2, 0, 2 * Math.PI);
+  ctx.fill();
+
+  // Number text
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(number, x + badgeSize/2, y + badgeSize/2);
+
+  // Reset text alignment for label
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+
+  // Draw label next to number badge
+  const label = box.label || '';
+  if (label) {
+    const labelFontSize = 14;
+    ctx.font = `${labelFontSize}px Arial`;
+    const labelWidth = ctx.measureText(label).width;
+
+    // Label background
+    ctx.fillStyle = color;
+    ctx.fillRect(x + badgeSize + 4, y, labelWidth + 12, labelFontSize + 8);
+
+    // Label text
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(label, x + badgeSize + 10, y + labelFontSize + 2);
+  }
+}
+
+// Update bounding box list in right panel
+function updateBoundingBoxList() {
+  const listEl = document.getElementById('bbox-list');
+  const emptyEl = document.getElementById('bbox-list-empty');
+  const countEl = document.getElementById('bbox-list-count');
+
+  // Clear list
+  listEl.innerHTML = '';
+
+  if (currentBoundingBoxes.length === 0) {
+    emptyEl.classList.remove('hidden');
+    listEl.classList.add('hidden');
+    countEl.textContent = '0 annotations';
+    return;
+  }
+
+  emptyEl.classList.add('hidden');
+  listEl.classList.remove('hidden');
+  countEl.textContent = `${currentBoundingBoxes.length} annotation${currentBoundingBoxes.length !== 1 ? 's' : ''}`;
+
+  // Create list items
+  currentBoundingBoxes.forEach((box, index) => {
+    const item = createBoundingBoxListItem(box, index);
+    listEl.appendChild(item);
+  });
+}
+
+// Create bounding box list item
+function createBoundingBoxListItem(box, index) {
+  const item = document.createElement('div');
+  const color = box.is_validated ? '#10b981' : '#3b82f6';
+
+  item.className = 'border rounded-lg p-3 hover:bg-gray-50 transition-colors cursor-pointer';
+  item.style.borderColor = color;
+  item.onclick = () => highlightBoundingBox(index);
+
+  const label = box.label || 'Unlabeled';
+  const status = box.is_validated ? 'Validated' : 'Unvalidated';
+  const statusColor = box.is_validated ? 'text-green-600' : 'text-blue-600';
+
+  item.innerHTML = `
+    <div class="flex items-start gap-3">
+      <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style="background-color: ${color}">
+        #${index + 1}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="font-medium text-sm text-gray-900 truncate">${label}</div>
+        <div class="text-xs ${statusColor} mt-1">${status}</div>
+        <div class="mt-2 grid grid-cols-2 gap-1 text-xs text-gray-600">
+          <div><span class="font-medium">X:</span> ${box.x.toFixed(3)}</div>
+          <div><span class="font-medium">Y:</span> ${box.y.toFixed(3)}</div>
+          <div><span class="font-medium">W:</span> ${box.width.toFixed(3)}</div>
+          <div><span class="font-medium">H:</span> ${box.height.toFixed(3)}</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  return item;
+}
+
+// Highlight a bounding box when clicked in list
+function highlightBoundingBox(index) {
+  // Redraw canvas with highlighted box
+  drawCanvas();
+
+  const box = currentBoundingBoxes[index];
+  const imgWidth = canvas.width;
+  const imgHeight = canvas.height;
+
+  const x = box.x * imgWidth;
+  const y = box.y * imgHeight;
+  const width = box.width * imgWidth;
+  const height = box.height * imgHeight;
+
+  // Draw highlight
+  ctx.strokeStyle = '#fbbf24'; // Amber highlight
+  ctx.lineWidth = 5;
+  ctx.strokeRect(x - 2, y - 2, width + 4, height + 4);
+
+  // Scroll to box if needed
+  const canvasWrapper = document.getElementById('canvas-wrapper');
+  const boxCenterX = (x + width / 2) * zoomLevel;
+  const boxCenterY = (y + height / 2) * zoomLevel;
+
+  canvasWrapper.scrollTo({
+    left: boxCenterX - canvasWrapper.clientWidth / 2,
+    top: boxCenterY - canvasWrapper.clientHeight / 2,
+    behavior: 'smooth'
+  });
+}
+
+// Fit image to screen
+function fitToScreen() {
+  if (!canvas) return;
+
+  const container = document.getElementById('canvas-container');
+  const containerWidth = container.clientWidth;
+  const containerHeight = container.clientHeight;
+
+  const scaleX = containerWidth / canvas.width;
+  const scaleY = containerHeight / canvas.height;
+  const scale = Math.min(scaleX, scaleY, 1) * 0.95; // 95% to leave some margin
+
+  zoomLevel = scale;
+  applyZoom();
+}
+
+// Reset zoom to 100%
+function resetZoom() {
+  zoomLevel = 1.0;
+  applyZoom();
+}
+
+// Apply zoom level
+function applyZoom() {
+  if (!canvas) return;
+
+  const canvasContent = document.getElementById('canvas-content');
+  canvasContent.style.transform = `scale(${zoomLevel})`;
+  canvasContent.style.transformOrigin = 'top left';
+
+  // Update footer
+  document.getElementById('footer-zoom').textContent = Math.round(zoomLevel * 100) + '%';
 }
 
 // Get CSRF token from cookie
