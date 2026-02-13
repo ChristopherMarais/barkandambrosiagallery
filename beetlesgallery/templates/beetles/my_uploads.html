@@ -764,7 +764,7 @@
             </tr>
             <tr class="hover:bg-gray-50">
               <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">photographer</td>
-              <td class="px-6 py-3">The person to credit for taking the photograph(s) for the image.</td>
+              <td class="px-6 py-3">The person to credit for taking the photograph for the image.</td>
             </tr>
             <tr class="hover:bg-gray-50">
               <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">image_email</td>
@@ -788,11 +788,11 @@
             </tr>
             <tr class="hover:bg-gray-50">
               <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">image_date_taken</td>
-              <td class="px-6 py-3">Timestamp when the image was taken. Ideally UTC, but local time is accepted.</td>
+              <td class="px-6 py-3">Date when the image was taken (YYYY-MM-DD). Time is not stored.</td>
             </tr>
             <tr class="hover:bg-gray-50">
               <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">image_has_multiple_individuals</td>
-              <td class="px-6 py-3">Whether multiple individuals are present. <br><span class="font-mono bg-gray-100 px-1 rounded">0</span> = single individual, <span class="font-mono bg-gray-100 px-1 rounded">1</span> = multiple.</td>
+              <td class="px-6 py-3">Whether multiple individuals are present. Accepted values: 0/1, True/False, or Yes/No.</td>
             </tr>
             <tr class="hover:bg-gray-50">
               <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">depicts_specimen</td>
@@ -800,11 +800,11 @@
             </tr>
             <tr class="hover:bg-gray-50">
               <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">depicts_valid_name_id</td>
-              <td class="px-6 py-3">The valid taxon ID for which this photograph depicts, based on the taxonomy table.</td>
+              <td class="px-6 py-3">The Valid Species ID for the taxon depicted (from the Taxonomy Reference).</td>
             </tr>
             <tr class="hover:bg-gray-50">
               <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">depicts_described_name_id</td>
-              <td class="px-6 py-3">The described name ID which this specimen depicts (from described names table). Mostly for type specimens.</td>
+              <td class="px-6 py-3">The Described Name ID (from Described Names Reference), mostly for type specimens.</td>
             </tr>
             <tr class="hover:bg-gray-50">
               <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">depicts_name_verbatim</td>
@@ -820,7 +820,7 @@
             </tr>
             <tr class="hover:bg-gray-50">
               <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">specimen_sex</td>
-              <td class="px-6 py-3">The sex of the specimen. For multiple individuals, depict as "3 males, 4 females" or leave blank.</td>
+              <td class="px-6 py-3">Strictly restricted to: Male, Female, M, or F. For mixed groups, please use specimen_notes.</td>
             </tr>
             <tr class="hover:bg-gray-50">
               <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">specimen_type_status</td>
