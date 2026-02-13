@@ -23,7 +23,20 @@
 
   {# --- SECTION 1: DATA ACTIONS --- #}
   <div class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm">
-    <h2 class="text-2xl font-bold mb-6 text-gray-800">Data Actions</h2>
+  
+    {# Header with "Help" Link #}
+    <div class="flex justify-between items-start mb-6">
+      <h2 class="text-2xl font-bold text-gray-800">Data Actions</h2>
+      
+      {% if request.user.is_staff %}
+      <button onclick="openModal('modal-field-definitions')" 
+              class="group flex items-center gap-1.5 text-sm font-medium text-gray-400 hover:text-blue-600 transition">
+        <i class="fi fi-rr-info text-base"></i>
+        <span>Field Definitions</span>
+      </button>
+      {% endif %}
+    </div>
+
     <div class="flex flex-wrap gap-4">
 
       {# Staff Only: Upload & Update Buttons #}
@@ -516,11 +529,20 @@
               <div class="mt-4 text-sm text-gray-500">
                 <p class="mb-3">Select a CSV metadata file and a ZIP file of images.</p>
 
-                <a href="{% static 'downloads/beetles_upload_template_v2.csv' %}"
-                  class="mb-6 w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition">
-                  <i class="fi fi-rr-download"></i>
-                  <span>Download CSV Template</span>
-                </a>
+                {# --- SPLIT ROW: Template & Definitions --- #}
+                <div class="flex gap-3 mb-6">
+                  <a href="{% static 'downloads/beetles_upload_template_v2.csv' %}"
+                    class="flex-1 flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-3 text-sm font-bold text-gray-600 hover:bg-gray-100 hover:border-gray-400 hover:text-gray-800 transition text-center">
+                    <i class="fi fi-rr-download"></i>
+                    <span>Download CSV Template</span>
+                  </a>
+
+                  <button type="button" onclick="openModal('modal-field-definitions')"
+                    class="flex-1 flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-blue-600 transition shadow-sm">
+                    <i class="fi fi-rr-book-alt"></i>
+                    <span>Field Definitions</span>
+                  </button>
+                </div>
 
                 <div class="mb-4 text-left">
                   <label class="block mb-1 font-semibold text-gray-700">Metadata (.csv)</label>
@@ -589,11 +611,20 @@
               <div class="mt-4 text-sm text-gray-500">
                 <p class="mb-3">Upload a CSV containing Record IDs to update specific fields.</p>
 
-                <a href="{% static 'downloads/beetles_update_template_v1.csv' %}"
-                  class="mb-6 w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition">
-                  <i class="fi fi-rr-download"></i>
-                  <span>Download CSV Template</span>
-                </a>
+                {# --- SPLIT ROW: Template & Definitions --- #}
+                <div class="flex gap-3 mb-6">
+                  <a href="{% static 'downloads/beetles_update_template_v1.csv' %}"
+                    class="flex-1 flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-3 text-sm font-bold text-gray-600 hover:bg-gray-100 hover:border-gray-400 hover:text-gray-800 transition text-center">
+                    <i class="fi fi-rr-download"></i>
+                    <span>Download CSV Template</span>
+                  </a>
+
+                  <button type="button" onclick="openModal('modal-field-definitions')"
+                    class="flex-1 flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-blue-600 transition shadow-sm">
+                    <i class="fi fi-rr-book-alt"></i>
+                    <span>Field Definitions</span>
+                  </button>
+                </div>
 
                 {# --- UPDATED FILE INPUT --- #}
                 <div class="mb-4 text-left">
@@ -692,6 +723,125 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+</div>
+
+{# --- MODAL 4: FIELD DEFINITIONS --- #}
+<div id="modal-field-definitions" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title-fields" role="dialog" aria-modal="true">
+  <div class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity" onclick="closeModal('modal-field-definitions')"></div>
+  
+  <div class="flex min-h-screen items-center justify-center p-4">
+    <div class="relative w-full max-w-4xl transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all flex flex-col max-h-[90vh]">
+      
+      {# Modal Header #}
+      <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 shrink-0">
+        <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2" id="modal-title-fields">
+          <i class="fi fi-rr-book-alt text-gray-500"></i>
+          Data Dictionary / Field Definitions
+        </h3>
+        <button type="button" onclick="closeModal('modal-field-definitions')" class="text-gray-400 hover:text-gray-600 transition">
+          <i class="fi fi-rr-cross text-lg"></i>
+        </button>
+      </div>
+
+      {# Modal Content (Scrollable) #}
+      <div class="overflow-y-auto p-0">
+        <table class="w-full text-sm text-left border-collapse">
+          <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-bold sticky top-0 shadow-sm z-10">
+            <tr>
+              <th class="px-6 py-3 border-b border-gray-200 w-1/4">Field ID</th>
+              <th class="px-6 py-3 border-b border-gray-200">Description</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 text-gray-700">
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">alternative_id</td>
+              <td class="px-6 py-3">Other identifiers for the photograph, particularly if the photo is derived from a database.</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">image_institution</td>
+              <td class="px-6 py-3">The institution to credit the photograph. This may not be the same as the institution which holds the specimen, or denote full usage rights.</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">photographer</td>
+              <td class="px-6 py-3">The person to credit for taking the photograph for the image.</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">image_email</td>
+              <td class="px-6 py-3">An email contact for enquiries about the image. This may not be the photographer.</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">photo_usage_statement</td>
+              <td class="px-6 py-3">A statement relating to usage of the photograph, with terms of usage (e.g., specific terms or Creative Commons such as CC BY 4.0).</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">aspect</td>
+              <td class="px-6 py-3">The view depicted (e.g., dorsal, lateral, ventral, anterior, posterior) or specific parts (e.g., antennae, genitalia, labels).</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">resolution_in_ppmm</td>
+              <td class="px-6 py-3">The number of pixels per linear millimeter in the best focused area of the image (not the same as optical resolution).</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">image_notes</td>
+              <td class="px-6 py-3">Additional notes regarding the image.</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">image_date_taken</td>
+              <td class="px-6 py-3">Date when the image was taken (YYYY-MM-DD). Time is not stored.</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">image_has_multiple_individuals</td>
+              <td class="px-6 py-3">Whether multiple individuals are present. Accepted values: 0/1, True/False, or Yes/No.</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">depicts_specimen</td>
+              <td class="px-6 py-3">The specimen or biological sample identifier depicted. Only one value should be listed here (even if a sample ID refers to multiple specimens).</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">depicts_valid_name_id</td>
+              <td class="px-6 py-3">The Valid Species ID for the taxon depicted (from the Taxonomy Reference).</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">depicts_described_name_id</td>
+              <td class="px-6 py-3">The Described Name ID (from Described Names Reference), mostly for type specimens.</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">depicts_name_verbatim</td>
+              <td class="px-6 py-3">A verbatim text name. Allows for original descriptions, unknown names, or ambiguous names.</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">collection_country</td>
+              <td class="px-6 py-3">The country of collection (DWC:country).</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">collection_stateProvince</td>
+              <td class="px-6 py-3">The state or province of collection (DWC:stateProvince).</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">specimen_sex</td>
+              <td class="px-6 py-3">Strictly restricted to: Male, Female, M, or F. For mixed groups, please use specimen_notes.</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">specimen_type_status</td>
+              <td class="px-6 py-3">Type status (e.g., Holotype). Include the status, full scientific name, and authority.</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">specimen_notes</td>
+              <td class="px-6 py-3">Additional notes regarding the specimen.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {# Modal Footer #}
+      <div class="px-6 py-3 border-t border-gray-200 bg-gray-50 flex justify-end shrink-0">
+        <button type="button" onclick="closeModal('modal-field-definitions')"
+          class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:text-sm">
+          Close
+        </button>
+      </div>
     </div>
   </div>
 </div>
