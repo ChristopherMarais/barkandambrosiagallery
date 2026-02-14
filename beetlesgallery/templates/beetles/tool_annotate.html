@@ -943,9 +943,8 @@ function createBoundingBoxListItem(box, index) {
   const isSelected = selectedBoundingBoxIndex === index;
   const color = isSelected ? '#ef4444' : (box.is_validated ? '#10b981' : '#3b82f6');
 
-  item.className = `border rounded-lg p-3 hover:bg-gray-50 transition-colors cursor-pointer ${isSelected ? 'bg-red-50 border-2' : ''}`;
+  item.className = `border rounded-lg p-3 hover:bg-gray-50 transition-colors ${isSelected ? 'bg-red-50 border-2' : ''}`;
   item.style.borderColor = color;
-  item.onclick = () => highlightBoundingBox(index);
 
   const label = box.label || 'Unlabeled';
   const status = box.is_validated ? 'Validated' : 'Unvalidated';
@@ -953,10 +952,10 @@ function createBoundingBoxListItem(box, index) {
 
   item.innerHTML = `
     <div class="flex items-start gap-3">
-      <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style="background-color: ${color}">
+      <div class="bbox-number flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm cursor-pointer" style="background-color: ${color}">
         #${index + 1}
       </div>
-      <div class="flex-1 min-w-0">
+      <div class="bbox-info flex-1 min-w-0 cursor-pointer">
         <div class="font-medium text-sm text-gray-900 truncate">${label}</div>
         <div class="text-xs ${statusColor} mt-1">${status}</div>
         <div class="mt-2 grid grid-cols-2 gap-1 text-xs text-gray-600">
@@ -966,8 +965,27 @@ function createBoundingBoxListItem(box, index) {
           <div><span class="font-medium">H:</span> ${box.height.toFixed(3)}</div>
         </div>
       </div>
+      <button
+        type="button"
+        class="bbox-delete flex-shrink-0 w-7 h-7 flex items-center justify-center rounded hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors"
+        title="Delete bounding box"
+      >
+        <i class="fi fi-rr-trash text-sm"></i>
+      </button>
     </div>
   `;
+
+  // Add event listeners
+  const numberEl = item.querySelector('.bbox-number');
+  const infoEl = item.querySelector('.bbox-info');
+  const deleteBtn = item.querySelector('.bbox-delete');
+
+  numberEl.addEventListener('click', () => highlightBoundingBox(index));
+  infoEl.addEventListener('click', () => highlightBoundingBox(index));
+  deleteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    deleteBoundingBox(box.id, index);
+  });
 
   return item;
 }
@@ -999,6 +1017,51 @@ function highlightBoundingBox(index) {
     top: boxCenterY - canvasWrapper.clientHeight / 2,
     behavior: 'smooth'
   });
+}
+
+// Delete a bounding box
+async function deleteBoundingBox(boxId, index) {
+  // Confirm deletion
+  if (!confirm('Are you sure you want to delete this bounding box?')) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/v1/bounding-boxes/${boxId}/`, {
+      method: 'DELETE',
+      headers: {
+        'X-CSRFToken': csrftoken
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete bounding box');
+    }
+
+    // Remove from current array
+    currentBoundingBoxes.splice(index, 1);
+
+    // Clear selection if deleted box was selected
+    if (selectedBoundingBoxIndex === index) {
+      selectedBoundingBoxIndex = null;
+    } else if (selectedBoundingBoxIndex > index) {
+      // Adjust selection index if needed
+      selectedBoundingBoxIndex--;
+    }
+
+    // Redraw canvas and update list
+    drawCanvas();
+
+    // Update footer count
+    document.getElementById('footer-annotation-count').textContent = currentBoundingBoxes.length;
+
+    // Reload image browser to update annotation counts
+    loadAnnotatedImages();
+
+  } catch (error) {
+    console.error('Error deleting bounding box:', error);
+    alert('Failed to delete bounding box. Please try again.');
+  }
 }
 
 // Fit image to screen
