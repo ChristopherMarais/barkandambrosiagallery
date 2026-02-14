@@ -814,10 +814,17 @@ function drawCanvas() {
   // Draw image
   ctx.drawImage(currentImage, 0, 0, canvas.width, canvas.height);
 
-  // Draw bounding boxes
+  // Draw bounding boxes - selected box last so it's on top
   currentBoundingBoxes.forEach((box, index) => {
-    drawBoundingBox(box, index);
+    if (index !== selectedBoundingBoxIndex) {
+      drawBoundingBox(box, index);
+    }
   });
+
+  // Draw selected box last (on top)
+  if (selectedBoundingBoxIndex !== null && currentBoundingBoxes[selectedBoundingBoxIndex]) {
+    drawBoundingBox(currentBoundingBoxes[selectedBoundingBoxIndex], selectedBoundingBoxIndex);
+  }
 
   // Update bounding box list
   updateBoundingBoxList();
