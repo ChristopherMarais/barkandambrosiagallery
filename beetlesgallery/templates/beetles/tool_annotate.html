@@ -381,7 +381,20 @@
 
         <!-- List Header -->
         <div class="border-b border-gray-200 p-4 bg-gray-50 flex-shrink-0">
-          <h3 class="text-lg font-semibold text-gray-900">Bounding Boxes</h3>
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-lg font-semibold text-gray-900">Bounding Boxes</h3>
+            <button
+              type="button"
+              id="add-bbox-btn"
+              onclick="startAddingBoundingBox()"
+              style="background-color: #3b82f6; color: white; display: flex;"
+              class="px-3 py-1.5 text-sm rounded-lg hover:bg-blue-700 transition-colors items-center gap-1"
+              title="Add new bounding box"
+            >
+              <i class="fi fi-rr-plus text-xs"></i>
+              <span>Add</span>
+            </button>
+          </div>
           <p class="text-sm text-gray-500" id="bbox-list-count">0 annotations</p>
         </div>
 
@@ -421,6 +434,14 @@ let panStartX = 0;
 let panStartY = 0;
 let scrollStartX = 0;
 let scrollStartY = 0;
+
+// Drawing state
+let isDrawingMode = false;
+let isDrawing = false;
+let drawStartX = 0;
+let drawStartY = 0;
+let currentDrawBox = null;
+let newBoundingBoxLabel = '';
 
 // Toggle collapsible sections
 function toggleSection(sectionId) {
@@ -722,11 +743,11 @@ function setupCanvasInteractions() {
   const canvasWrapper = document.getElementById('canvas-wrapper');
   canvasWrapper.addEventListener('wheel', handleMouseWheel, { passive: false });
 
-  // Add pan event listeners to canvas element
-  canvas.addEventListener('mousedown', handlePanStart);
-  canvas.addEventListener('mousemove', handlePanMove);
-  canvas.addEventListener('mouseup', handlePanEnd);
-  canvas.addEventListener('mouseleave', handlePanEnd);
+  // Add pan and draw event listeners to canvas element
+  canvas.addEventListener('mousedown', handleCanvasMouseDown);
+  canvas.addEventListener('mousemove', handleCanvasMouseMove);
+  canvas.addEventListener('mouseup', handleCanvasMouseUp);
+  canvas.addEventListener('mouseleave', handleCanvasMouseLeave);
 }
 
 // Load image and bounding boxes on canvas
@@ -826,8 +847,47 @@ function drawCanvas() {
     drawBoundingBox(currentBoundingBoxes[selectedBoundingBoxIndex], selectedBoundingBoxIndex);
   }
 
+  // Draw preview box if in drawing mode
+  if (currentDrawBox) {
+    drawPreviewBox(currentDrawBox);
+  }
+
   // Update bounding box list
   updateBoundingBoxList();
+}
+
+// Draw preview box while drawing
+function drawPreviewBox(box) {
+  const x = box.x;
+  const y = box.y;
+  const width = box.width;
+  const height = box.height;
+
+  // Draw dashed rectangle
+  ctx.strokeStyle = '#ff6b00'; // Orange color
+  ctx.lineWidth = 3;
+  ctx.setLineDash([8, 4]); // Dashed line
+  ctx.strokeRect(x, y, width, height);
+
+  // Draw semi-transparent fill
+  ctx.fillStyle = '#ff6b0030'; // Orange with transparency
+  ctx.fillRect(x, y, width, height);
+
+  // Reset line dash
+  ctx.setLineDash([]);
+
+  // Draw label
+  const label = newBoundingBoxLabel || 'New';
+  ctx.font = 'bold 16px Arial';
+  const labelWidth = ctx.measureText(label).width;
+
+  // Label background
+  ctx.fillStyle = '#ff6b00';
+  ctx.fillRect(x, y - 24, labelWidth + 16, 24);
+
+  // Label text
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(label, x + 8, y - 6);
 }
 
 // Draw a single bounding box
@@ -1185,11 +1245,42 @@ function handleMouseWheel(e) {
   canvasWrapper.scrollTop = newScrollY;
 }
 
-// Handle pan start
-function handlePanStart(e) {
-  // Only pan with left mouse button
-  if (e.button !== 0) return;
+// Unified mouse event handlers that switch between pan and draw modes
+function handleCanvasMouseDown(e) {
+  if (e.button !== 0) return; // Only left mouse button
 
+  if (isDrawingMode) {
+    startDrawing(e);
+  } else {
+    startPanning(e);
+  }
+}
+
+function handleCanvasMouseMove(e) {
+  if (isDrawingMode && isDrawing) {
+    updateDrawing(e);
+  } else if (isPanning) {
+    continuePanning(e);
+  }
+}
+
+function handleCanvasMouseUp(e) {
+  if (isDrawingMode && isDrawing) {
+    finishDrawing(e);
+  } else if (isPanning) {
+    stopPanning(e);
+  }
+}
+
+function handleCanvasMouseLeave(e) {
+  if (isPanning) {
+    stopPanning(e);
+  }
+  // Don't cancel drawing on mouse leave - let user finish
+}
+
+// Pan functions
+function startPanning(e) {
   const canvasWrapper = document.getElementById('canvas-wrapper');
 
   isPanning = true;
@@ -1204,8 +1295,7 @@ function handlePanStart(e) {
   e.preventDefault();
 }
 
-// Handle pan move
-function handlePanMove(e) {
+function continuePanning(e) {
   if (!isPanning) return;
 
   const canvasWrapper = document.getElementById('canvas-wrapper');
@@ -1219,14 +1309,184 @@ function handlePanMove(e) {
   e.preventDefault();
 }
 
-// Handle pan end
-function handlePanEnd(e) {
+function stopPanning(e) {
   if (!isPanning) return;
 
   if (canvas) {
-    canvas.style.cursor = 'grab';
+    canvas.style.cursor = isDrawingMode ? 'crosshair' : 'grab';
   }
   isPanning = false;
+}
+
+// Start adding bounding box mode
+function startAddingBoundingBox() {
+  if (!currentImage) {
+    alert('Please select an image first');
+    return;
+  }
+
+  // Prompt for label
+  const label = prompt('Enter label for the new bounding box (e.g., "0" for class 0):');
+  if (label === null) return; // User cancelled
+
+  newBoundingBoxLabel = label.trim();
+
+  // Enter drawing mode
+  isDrawingMode = true;
+  canvas.style.cursor = 'crosshair';
+
+  // Update button
+  const addBtn = document.getElementById('add-bbox-btn');
+  addBtn.innerHTML = '<span>Cancel</span>';
+  addBtn.style.backgroundColor = '#ef4444';
+  addBtn.style.color = 'white';
+  addBtn.style.display = 'flex';
+  addBtn.className = 'px-3 py-1.5 text-sm rounded-lg hover:bg-red-700 transition-colors items-center gap-1';
+  addBtn.onclick = cancelAddingBoundingBox;
+
+  // Show instruction
+  showMessage('Click and drag on the image to draw a bounding box', 'info');
+}
+
+// Cancel adding bounding box
+function cancelAddingBoundingBox() {
+  isDrawingMode = false;
+  isDrawing = false;
+  currentDrawBox = null;
+  canvas.style.cursor = 'grab';
+
+  // Reset button
+  const addBtn = document.getElementById('add-bbox-btn');
+  addBtn.innerHTML = '<i class="fi fi-rr-plus text-xs"></i><span>Add</span>';
+  addBtn.style.backgroundColor = '#3b82f6';
+  addBtn.style.color = 'white';
+  addBtn.style.display = 'flex';
+  addBtn.className = 'px-3 py-1.5 text-sm rounded-lg hover:bg-blue-700 transition-colors items-center gap-1';
+  addBtn.onclick = startAddingBoundingBox;
+
+  // Redraw to remove preview
+  drawCanvas();
+}
+
+// Drawing functions
+function startDrawing(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+
+  drawStartX = (e.clientX - rect.left) * scaleX;
+  drawStartY = (e.clientY - rect.top) * scaleY;
+
+  isDrawing = true;
+  e.preventDefault();
+}
+
+function updateDrawing(e) {
+  if (!isDrawing) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+
+  const currentX = (e.clientX - rect.left) * scaleX;
+  const currentY = (e.clientY - rect.top) * scaleY;
+
+  // Calculate box dimensions
+  const x = Math.min(drawStartX, currentX);
+  const y = Math.min(drawStartY, currentY);
+  const width = Math.abs(currentX - drawStartX);
+  const height = Math.abs(currentY - drawStartY);
+
+  currentDrawBox = { x, y, width, height };
+
+  // Redraw canvas with preview
+  drawCanvas();
+
+  e.preventDefault();
+}
+
+function finishDrawing(e) {
+  if (!isDrawing || !currentDrawBox) return;
+
+  isDrawing = false;
+
+  // Check if box has minimum size
+  if (currentDrawBox.width < 5 || currentDrawBox.height < 5) {
+    alert('Bounding box is too small. Please draw a larger box.');
+    currentDrawBox = null;
+    drawCanvas();
+    return;
+  }
+
+  // Confirm and save
+  confirmSaveBoundingBox();
+
+  e.preventDefault();
+}
+
+// Confirm and save the new bounding box
+async function confirmSaveBoundingBox() {
+  if (!currentDrawBox) return;
+
+  const confirmed = confirm(`Save this bounding box with label "${newBoundingBoxLabel}"?`);
+  if (!confirmed) {
+    currentDrawBox = null;
+    drawCanvas();
+    return;
+  }
+
+  // Convert pixel coordinates to normalized (0-1)
+  const normalizedBox = {
+    x: currentDrawBox.x / canvas.width,
+    y: currentDrawBox.y / canvas.height,
+    width: currentDrawBox.width / canvas.width,
+    height: currentDrawBox.height / canvas.height,
+    label: newBoundingBoxLabel,
+    source: 'manual',
+    image_asset: selectedImageId,
+    beetle: allImages.find(img => img.image_asset_id === selectedImageId)?.beetle_id
+  };
+
+  try {
+    const response = await fetch('/api/v1/bounding-boxes/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken
+      },
+      body: JSON.stringify(normalizedBox)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to save bounding box');
+    }
+
+    const savedBox = await response.json();
+
+    // Add to current boxes
+    currentBoundingBoxes.push(savedBox);
+
+    // Exit drawing mode
+    cancelAddingBoundingBox();
+
+    // Redraw
+    drawCanvas();
+
+    // Update footer
+    document.getElementById('footer-annotation-count').textContent = currentBoundingBoxes.length;
+
+    // Reload image browser
+    loadAnnotatedImages();
+
+    showMessage('Bounding box saved successfully!', 'success');
+
+  } catch (error) {
+    console.error('Error saving bounding box:', error);
+    alert(`Failed to save bounding box: ${error.message}`);
+    currentDrawBox = null;
+    drawCanvas();
+  }
 }
 
 // Get CSRF token from cookie
