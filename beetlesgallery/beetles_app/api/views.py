@@ -499,6 +499,12 @@ class BoundingBoxViewSet(viewsets.ModelViewSet):
                 # Get annotation count
                 box_count = BoundingBox.objects.filter(image_asset=image_asset).count()
 
+                # Check if any bounding boxes are unvalidated
+                has_unvalidated_boxes = BoundingBox.objects.filter(
+                    image_asset=image_asset,
+                    is_validated=False
+                ).exists()
+
                 images.append({
                     'image_asset_id': str(image_asset.id),
                     'beetle_id': str(beetle.id),
@@ -506,6 +512,7 @@ class BoundingBoxViewSet(viewsets.ModelViewSet):
                     'thumbnail_url': image_asset.thumb_small.url if image_asset.thumb_small else None,
                     'full_image_url': image_asset.display_url,
                     'annotation_count': box_count,
+                    'has_unvalidated_boxes': has_unvalidated_boxes,
                     'created_at': beetle.last_updated_at.isoformat() if beetle.last_updated_at else None,
                 })
             except ImageAsset.DoesNotExist:

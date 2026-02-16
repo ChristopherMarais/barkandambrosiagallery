@@ -268,6 +268,7 @@
                 <option value="none">No Grouping</option>
                 <option value="date">Date Added</option>
                 <option value="count">Annotation Count</option>
+                <option value="validation">Validation Status</option>
               </select>
             </div>
 
@@ -383,17 +384,30 @@
         <div class="border-b border-gray-200 p-4 bg-gray-50 flex-shrink-0">
           <div class="flex items-center justify-between mb-2">
             <h3 class="text-lg font-semibold text-gray-900">Bounding Boxes</h3>
-            <button
-              type="button"
-              id="add-bbox-btn"
-              onclick="startAddingBoundingBox()"
-              style="background-color: #3b82f6; color: white; display: flex;"
-              class="px-3 py-1.5 text-sm rounded-lg hover:bg-blue-700 transition-colors items-center gap-1"
-              title="Add new bounding box"
-            >
-              <i class="fi fi-rr-plus text-xs"></i>
-              <span>Add</span>
-            </button>
+            <div class="flex gap-2">
+              <button
+                type="button"
+                id="validate-all-btn"
+                onclick="validateAllBoundingBoxes()"
+                style="background-color: #10b981; color: white; display: flex;"
+                class="px-3 py-1.5 text-sm rounded-lg hover:bg-green-700 transition-colors items-center gap-1"
+                title="Mark all as validated"
+              >
+                <i class="fi fi-rr-check text-xs"></i>
+                <span>Validate All</span>
+              </button>
+              <button
+                type="button"
+                id="add-bbox-btn"
+                onclick="startAddingBoundingBox()"
+                style="background-color: #3b82f6; color: white; display: flex;"
+                class="px-3 py-1.5 text-sm rounded-lg hover:bg-blue-700 transition-colors items-center gap-1"
+                title="Add new bounding box"
+              >
+                <i class="fi fi-rr-plus text-xs"></i>
+                <span>Add</span>
+              </button>
+            </div>
           </div>
           <p class="text-sm text-gray-500" id="bbox-list-count">0 annotations</p>
         </div>
@@ -535,6 +549,10 @@ function organizeImages() {
     // Group by annotation count ranges
     const groups = groupImagesByCount(filteredImages);
     renderGroupedList(groups);
+  } else if (groupBy === 'validation') {
+    // Group by validation status
+    const groups = groupImagesByValidation(filteredImages);
+    renderGroupedList(groups);
   }
 }
 
@@ -610,6 +628,29 @@ function groupImagesByCount(images) {
     if (!groups[key]) groups[key] = [];
     groups[key].push(img);
   });
+
+  return groups;
+}
+
+// Group images by validation status
+function groupImagesByValidation(images) {
+  const groups = {
+    'Fully Validated': [],
+    'Needs Validation': []
+  };
+
+  images.forEach(img => {
+    // Image is non-validated if has_unvalidated_boxes is true
+    if (img.has_unvalidated_boxes) {
+      groups['Needs Validation'].push(img);
+    } else {
+      groups['Fully Validated'].push(img);
+    }
+  });
+
+  // Remove empty groups
+  if (groups['Fully Validated'].length === 0) delete groups['Fully Validated'];
+  if (groups['Needs Validation'].length === 0) delete groups['Needs Validation'];
 
   return groups;
 }
@@ -1121,6 +1162,80 @@ async function deleteBoundingBox(boxId, index) {
   } catch (error) {
     console.error('Error deleting bounding box:', error);
     alert('Failed to delete bounding box. Please try again.');
+  }
+}
+
+// Validate all bounding boxes
+async function validateAllBoundingBoxes() {
+  if (!currentBoundingBoxes || currentBoundingBoxes.length === 0) {
+    alert('No bounding boxes to validate');
+    return;
+  }
+
+  // Count unvalidated boxes
+  const unvalidatedCount = currentBoundingBoxes.filter(box => !box.is_validated).length;
+
+  if (unvalidatedCount === 0) {
+    alert('All bounding boxes are already validated');
+    return;
+  }
+
+  // Confirm validation
+  if (!confirm(`Mark ${unvalidatedCount} bounding box(es) as validated?`)) {
+    return;
+  }
+
+  const validateBtn = document.getElementById('validate-all-btn');
+  validateBtn.disabled = true;
+  validateBtn.innerHTML = '<i class="fi fi-rr-spinner animate-spin text-xs"></i><span>Validating...</span>';
+
+  try {
+    // Update each unvalidated box
+    const updatePromises = currentBoundingBoxes
+      .filter(box => !box.is_validated)
+      .map(box =>
+        fetch(`/api/v1/bounding-boxes/${box.id}/`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+          },
+          body: JSON.stringify({
+            is_validated: true
+          })
+        })
+      );
+
+    const responses = await Promise.all(updatePromises);
+
+    // Check if all succeeded
+    const failed = responses.filter(r => !r.ok);
+    if (failed.length > 0) {
+      throw new Error(`Failed to validate ${failed.length} bounding box(es)`);
+    }
+
+    // Update local data
+    currentBoundingBoxes.forEach(box => {
+      box.is_validated = true;
+    });
+
+    // Redraw canvas and update list
+    drawCanvas();
+
+    // Reload image browser to update validation status
+    loadAnnotatedImages();
+
+    showMessage(`Successfully validated ${unvalidatedCount} bounding box(es)`, 'success');
+
+  } catch (error) {
+    console.error('Error validating bounding boxes:', error);
+    alert(`Failed to validate all bounding boxes: ${error.message}`);
+  } finally {
+    validateBtn.disabled = false;
+    validateBtn.innerHTML = '<i class="fi fi-rr-check text-xs"></i><span>Validate All</span>';
+    validateBtn.style.backgroundColor = '#10b981';
+    validateBtn.style.color = 'white';
+    validateBtn.style.display = 'flex';
   }
 }
 
