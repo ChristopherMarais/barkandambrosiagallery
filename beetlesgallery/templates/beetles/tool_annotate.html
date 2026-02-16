@@ -12,7 +12,20 @@
 </style>
 
 <div class="h-full">
-  <h1 class="text-3xl font-bold text-gray-900 mb-6">Data Annotation Tool</h1>
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-3xl font-bold text-gray-900">Data Annotation Tool</h1>
+    <button
+      type="button"
+      id="export-btn"
+      onclick="showExportDialog()"
+      style="background-color: #10b981; color: white; display: flex;"
+      class="px-4 py-2 rounded-lg hover:bg-green-700 transition-colors items-center gap-2"
+      title="Export annotations"
+    >
+      <i class="fi fi-rr-download"></i>
+      <span>Export Annotations</span>
+    </button>
+  </div>
 
   <div class="flex gap-6" style="height: calc(100vh - 12rem);">
     <!-- Left Sidebar: Upload Panel -->
@@ -426,6 +439,67 @@
 
       </div>
 
+    </div>
+  </div>
+
+  <!-- Export Dialog (Hidden by default) -->
+  <div id="export-dialog" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+      <h2 class="text-xl font-bold text-gray-900 mb-4">Export Annotations</h2>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Export Format
+          </label>
+          <div class="space-y-2">
+            <label class="flex items-center cursor-pointer p-3 border border-gray-300 rounded-lg hover:bg-gray-50">
+              <input
+                type="radio"
+                name="export-format"
+                value="yolo"
+                checked
+                class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+              >
+              <div class="ml-3">
+                <span class="font-medium text-gray-900">YOLO</span>
+                <p class="text-xs text-gray-500">ZIP file with .txt files per image</p>
+              </div>
+            </label>
+            <label class="flex items-center cursor-pointer p-3 border border-gray-300 rounded-lg hover:bg-gray-50">
+              <input
+                type="radio"
+                name="export-format"
+                value="coco"
+                class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+              >
+              <div class="ml-3">
+                <span class="font-medium text-gray-900">COCO</span>
+                <p class="text-xs text-gray-500">Single JSON file with all annotations</p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="flex gap-3 mt-6">
+          <button
+            type="button"
+            onclick="closeExportDialog()"
+            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onclick="exportAnnotations()"
+            style="background-color: #10b981; color: white; display: flex;"
+            class="flex-1 px-4 py-2 rounded-lg hover:bg-green-700 transition-colors items-center justify-center gap-2"
+          >
+            <i class="fi fi-rr-download"></i>
+            <span>Export</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -1601,6 +1675,78 @@ async function confirmSaveBoundingBox() {
     alert(`Failed to save bounding box: ${error.message}`);
     currentDrawBox = null;
     drawCanvas();
+  }
+}
+
+// Show export dialog
+function showExportDialog() {
+  document.getElementById('export-dialog').classList.remove('hidden');
+}
+
+// Close export dialog
+function closeExportDialog() {
+  document.getElementById('export-dialog').classList.add('hidden');
+}
+
+// Export annotations
+async function exportAnnotations() {
+  const format = document.querySelector('input[name="export-format"]:checked').value;
+
+  // Close dialog
+  closeExportDialog();
+
+  // Update export button to show loading
+  const exportBtn = document.getElementById('export-btn');
+  const originalHTML = exportBtn.innerHTML;
+  exportBtn.disabled = true;
+  exportBtn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i><span>Exporting...</span>';
+
+  try {
+    const response = await fetch(`/api/v1/export-annotations/?format=${format}`, {
+      method: 'GET',
+      headers: {
+        'X-CSRFToken': csrftoken
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to export annotations');
+    }
+
+    // Get filename from Content-Disposition header or use default based on format
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = `annotations_${format}.zip`;
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+      if (filenameMatch) {
+        filename = filenameMatch[1];
+      }
+    }
+
+    // Download the file
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/zip' }));
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+
+    // Cleanup
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    }, 100);
+
+    showMessage(`Successfully exported annotations in ${format.toUpperCase()} format`, 'success');
+
+  } catch (error) {
+    console.error('Error exporting annotations:', error);
+    alert(`Failed to export annotations: ${error.message}`);
+  } finally {
+    exportBtn.disabled = false;
+    exportBtn.innerHTML = originalHTML;
   }
 }
 

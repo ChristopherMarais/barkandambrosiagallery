@@ -10,6 +10,7 @@ import math
 import requests
 import time
 from datetime import date, timedelta
+from io import BytesIO
 
 from django.db.models import Q, Count
 from django.utils import timezone
@@ -28,6 +29,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.files.storage import default_storage
 
 from . import species_ref, described_names_ref
+from .models import ImageAsset, Beetles, BoundingBox
 from .models import Beetles, UploadBatch, DownloadJob, UpdateBatch, ImageAsset
 from .schema import REQUIRED_COLS, MAX_ROWS
 from .forms import TailwindUserCreationForm, ProfileForm, PasswordChangeFormStyled, ValidSpeciesUploadForm, DescribedNamesUploadForm, UpdateBatchUploadForm
@@ -1637,3 +1639,142 @@ def tool_annotate(request):
     Data annotation tool page (staff only).
     """
     return render(request, 'beetles/tool_annotate.html', {})
+
+
+@staff_member_required
+def export_annotations(request):
+    """
+    Export all bounding box annotations in YOLO or COCO format.
+
+    GET /api/v1/export-annotations/?format=yolo
+    GET /api/v1/export-annotations/?format=coco
+    """
+    export_format = request.GET.get('format', 'yolo').lower()
+
+    if export_format not in ['yolo', 'coco']:
+        return JsonResponse({'error': 'Invalid format. Must be "yolo" or "coco".'}, status=400)
+
+    # Get all images with annotations
+    image_asset_ids = BoundingBox.objects.values_list('image_asset_id', flat=True).distinct()
+
+    try:
+        if export_format == 'coco':
+            # COCO: Export all annotations in a single JSON file
+            data = {
+                'images': [],
+                'annotations': [],
+                'categories': []
+            }
+
+            annotation_id = 1
+            processed_images = set()
+
+            for image_id in image_asset_ids:
+                try:
+                    image_asset = ImageAsset.objects.get(pk=image_id)
+
+                    # Skip if we've already processed this image
+                    image_id_str = str(image_asset.id)
+                    if image_id_str in processed_images:
+                        continue
+                    processed_images.add(image_id_str)
+
+                    boxes = BoundingBox.objects.filter(image_asset=image_asset)
+
+                    if not boxes.exists():
+                        continue
+
+                    # Get beetle UUID from first bounding box
+                    first_box = boxes.first()
+                    beetle_uuid = str(first_box.beetle.id) if first_box.beetle else str(image_asset.id)
+
+                    # Add image info
+                    data['images'].append({
+                        'id': beetle_uuid,
+                        'width': image_asset.image_width or 0,
+                        'height': image_asset.image_height or 0,
+                        'file_name': f'{beetle_uuid}.jpg'
+                    })
+
+                    # Add annotations for this image
+                    for box in boxes:
+                        coco_ann = box.to_coco(
+                            image_asset.image_width or 1920,
+                            image_asset.image_height or 1080
+                        )
+                        coco_ann['id'] = annotation_id
+                        coco_ann['image_id'] = beetle_uuid
+                        data['annotations'].append(coco_ann)
+                        annotation_id += 1
+
+                except ImageAsset.DoesNotExist:
+                    continue
+
+            content = json.dumps(data, indent=2)
+
+            # Create ZIP with single JSON file
+            zip_buffer = BytesIO()
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+                zf.writestr('annotations.json', content)
+
+            zip_buffer.seek(0)
+            response = HttpResponse(
+                zip_buffer.getvalue(),
+                content_type='application/zip'
+            )
+            response['Content-Disposition'] = 'attachment; filename="annotations_coco.zip"'
+            return response
+
+        else:
+            # YOLO: Export separate .txt file per image
+            zip_buffer = BytesIO()
+
+            # Group images by beetle to avoid duplicates
+            processed_beetles = set()
+
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+                for image_id in image_asset_ids:
+                    try:
+                        image_asset = ImageAsset.objects.get(pk=image_id)
+                        boxes = BoundingBox.objects.filter(image_asset=image_asset)
+
+                        if not boxes.exists():
+                            continue
+
+                        # Get primary beetle for filename
+                        beetle = image_asset.specimens.first()
+                        if not beetle:
+                            continue
+
+                        # Skip if we've already processed this beetle
+                        beetle_id_str = str(beetle.id)
+                        if beetle_id_str in processed_beetles:
+                            continue
+                        processed_beetles.add(beetle_id_str)
+
+                        filename = f"{beetle.id}.txt"
+
+                        # Export YOLO format - all boxes for this image in one file
+                        lines = []
+                        for box in boxes:
+                            line = box.to_yolo()
+                            lines.append(line)
+                        content = '\n'.join(lines)
+
+                        zf.writestr(filename, content)
+
+                    except ImageAsset.DoesNotExist:
+                        continue
+
+            zip_buffer.seek(0)
+
+            response = HttpResponse(
+                zip_buffer.getvalue(),
+                content_type='application/zip'
+            )
+            response['Content-Disposition'] = 'attachment; filename="annotations_yolo.zip"'
+
+            return response
+
+    except Exception as e:
+        return JsonResponse({'error': f'Export failed: {str(e)}'}, status=500)

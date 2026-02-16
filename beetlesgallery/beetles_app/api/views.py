@@ -1,5 +1,5 @@
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
@@ -244,6 +244,10 @@ class BoundingBoxViewSet(viewsets.ModelViewSet):
         # Get list of annotation files
         file_list = [f for f in zip_file.namelist() if not f.startswith('__MACOSX') and not f.endswith('/')]
 
+        # Special handling for COCO format with single annotations.json file
+        if annotation_format == 'coco' and 'annotations.json' in file_list:
+            return self._process_coco_all_annotations(zip_file, source, overwrite, user)
+
         with transaction.atomic():
             for filename in file_list:
                 try:
@@ -312,6 +316,167 @@ class BoundingBoxViewSet(viewsets.ModelViewSet):
             'imported_count': imported_count,
             'skipped_count': skipped_count,
             'files_processed': len(file_list),
+            'errors': errors,
+            'details': details
+        }
+
+    def _process_coco_all_annotations(self, zip_file, source, overwrite, user):
+        """
+        Process a single COCO annotations.json file containing all images and annotations.
+
+        This is used when importing COCO format exports that contain a single JSON file
+        with multiple images and their annotations.
+        """
+        imported_count = 0
+        skipped_count = 0
+        errors = []
+        details = {}
+
+        try:
+            # Read and parse the annotations.json file
+            content = zip_file.read('annotations.json').decode('utf-8')
+            data = json.loads(content)
+
+            images = data.get('images', [])
+            annotations = data.get('annotations', [])
+
+            # Build a map of image_id to annotations
+            annotations_by_image = {}
+            for ann in annotations:
+                image_id = ann.get('image_id')
+                if image_id not in annotations_by_image:
+                    annotations_by_image[image_id] = []
+                annotations_by_image[image_id].append(ann)
+
+            with transaction.atomic():
+                for image_data in images:
+                    try:
+                        image_id = image_data.get('id')
+                        file_name = image_data.get('file_name', '')
+                        img_width = image_data.get('width')
+                        img_height = image_data.get('height')
+
+                        # Extract beetle UUID from file_name (e.g., "uuid.jpg" -> "uuid")
+                        beetle_uuid = os.path.splitext(file_name)[0]
+
+                        # Look up the Beetle record
+                        try:
+                            beetle = Beetles.objects.select_related('image_asset').get(pk=beetle_uuid)
+                        except Beetles.DoesNotExist:
+                            skipped_count += 1
+                            errors.append(f'{file_name}: No beetle found with UUID {beetle_uuid}')
+                            continue
+
+                        if not beetle.image_asset:
+                            skipped_count += 1
+                            errors.append(f'{file_name}: Beetle {beetle_uuid} has no associated image')
+                            continue
+
+                        image_asset = beetle.image_asset
+
+                        # Check if annotations already exist
+                        existing_boxes_count = BoundingBox.objects.filter(image_asset=image_asset).count()
+
+                        if existing_boxes_count > 0 and not overwrite:
+                            skipped_count += 1
+                            errors.append(
+                                f'{file_name}: Image already has {existing_boxes_count} annotation(s). '
+                                f'Enable "Overwrite existing annotations" to replace them.'
+                            )
+                            continue
+
+                        # Get annotations for this image
+                        image_annotations = annotations_by_image.get(image_id, [])
+
+                        # Parse bounding boxes
+                        boxes = []
+                        for ann in image_annotations:
+                            bbox = ann.get('bbox')
+                            if not bbox or len(bbox) < 4:
+                                continue
+
+                            # COCO bbox format: [x, y, width, height] in pixels
+                            x_px = bbox[0]
+                            y_px = bbox[1]
+                            w_px = bbox[2]
+                            h_px = bbox[3]
+
+                            # Use image dimensions from COCO or fallback to ImageAsset
+                            if img_width and img_height:
+                                width_for_norm = img_width
+                                height_for_norm = img_height
+                            elif image_asset.image_width and image_asset.image_height:
+                                width_for_norm = image_asset.image_width
+                                height_for_norm = image_asset.image_height
+                            else:
+                                continue  # Skip if no dimensions available
+
+                            # Convert to normalized coordinates
+                            x = x_px / width_for_norm
+                            y = y_px / height_for_norm
+                            width = w_px / width_for_norm
+                            height = h_px / height_for_norm
+
+                            # Get label and confidence
+                            label = str(ann.get('category_id', ''))
+                            confidence = ann.get('score')
+
+                            # Create BoundingBox instance
+                            box = BoundingBox(
+                                image_asset=image_asset,
+                                beetle=beetle,
+                                x=x,
+                                y=y,
+                                width=width,
+                                height=height,
+                                label=label,
+                                confidence=confidence,
+                                source=source,
+                                created_by=user
+                            )
+
+                            # Validate coordinates
+                            if 0 <= x <= 1 and 0 <= y <= 1 and 0 < width <= 1 and 0 < height <= 1:
+                                if x + width <= 1.0001 and y + height <= 1.0001:
+                                    boxes.append(box)
+
+                        # Delete existing annotations if overwrite is True
+                        if overwrite and existing_boxes_count > 0:
+                            BoundingBox.objects.filter(image_asset=image_asset).delete()
+
+                        # Bulk create bounding boxes
+                        if boxes:
+                            BoundingBox.objects.bulk_create(boxes)
+                            imported_count += len(boxes)
+                            details[beetle_uuid] = {
+                                'filename': file_name,
+                                'boxes_imported': len(boxes),
+                                'replaced': existing_boxes_count if overwrite else 0
+                            }
+                        else:
+                            skipped_count += 1
+                            errors.append(f'{file_name}: No valid bounding boxes found')
+
+                    except Exception as e:
+                        skipped_count += 1
+                        errors.append(f'{file_name}: {str(e)}')
+                        continue
+
+        except Exception as e:
+            return {
+                'success': False,
+                'imported_count': 0,
+                'skipped_count': 0,
+                'files_processed': 0,
+                'errors': [f'Failed to parse annotations.json: {str(e)}'],
+                'details': {}
+            }
+
+        return {
+            'success': True,
+            'imported_count': imported_count,
+            'skipped_count': skipped_count,
+            'files_processed': len(images),
             'errors': errors,
             'details': details
         }
@@ -523,27 +688,26 @@ class BoundingBoxViewSet(viewsets.ModelViewSet):
 
         return Response({'images': images})
 
-    @action(detail=False, methods=['get'], url_path='export')
+    @action(detail=False, methods=['get'], url_path='export-annotations')
     def export_annotations(self, request):
         """
-        Export annotations for selected images in YOLO or COCO format.
+        Export annotations for all or selected images in YOLO or COCO format.
 
-        GET /api/v1/bounding-boxes/export/?format=yolo&image_asset=<uuid>&image_asset=<uuid>
+        GET /api/v1/bounding-boxes/export-annotations/?format=yolo
+        GET /api/v1/bounding-boxes/export-annotations/?format=coco&image_asset=<uuid>
 
         Query params:
         - format: 'yolo' or 'coco' (default: 'yolo')
-        - image_asset: One or more image asset UUIDs
+        - image_asset: Optional - One or more image asset UUIDs. If not provided, exports all.
 
         Returns a ZIP file containing annotation files.
         """
         export_format = request.query_params.get('format', 'yolo').lower()
         image_asset_ids = request.query_params.getlist('image_asset')
 
+        # If no specific IDs provided, get all images with annotations
         if not image_asset_ids:
-            return Response(
-                {'error': 'No image_asset IDs provided.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            image_asset_ids = BoundingBox.objects.values_list('image_asset_id', flat=True).distinct()
 
         if export_format not in ['yolo', 'coco']:
             return Response(
@@ -552,45 +716,58 @@ class BoundingBoxViewSet(viewsets.ModelViewSet):
             )
 
         try:
-            # Create ZIP file in memory
-            zip_buffer = BytesIO()
+            if export_format == 'coco':
+                # COCO: Export all annotations in a single JSON file
+                content = self._export_all_coco(image_asset_ids)
 
-            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-                for image_id in image_asset_ids:
-                    try:
-                        image_asset = ImageAsset.objects.get(pk=image_id)
-                        boxes = BoundingBox.objects.filter(image_asset=image_asset)
+                # Create ZIP with single JSON file
+                zip_buffer = BytesIO()
+                with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+                    zf.writestr('annotations.json', content)
 
-                        if not boxes.exists():
-                            continue
+                zip_buffer.seek(0)
+                response = FileResponse(
+                    zip_buffer,
+                    content_type='application/zip',
+                    as_attachment=True,
+                    filename='annotations_coco.zip'
+                )
+                return response
+            else:
+                # YOLO: Export separate .txt file per image
+                zip_buffer = BytesIO()
 
-                        # Get primary beetle for filename
-                        beetle = image_asset.specimens.first()
-                        if not beetle:
-                            continue
+                with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+                    for image_id in image_asset_ids:
+                        try:
+                            image_asset = ImageAsset.objects.get(pk=image_id)
+                            boxes = BoundingBox.objects.filter(image_asset=image_asset)
 
-                        filename = f"{beetle.id}.{'txt' if export_format == 'yolo' else 'json'}"
+                            if not boxes.exists():
+                                continue
 
-                        if export_format == 'yolo':
+                            # Get primary beetle for filename
+                            beetle = image_asset.specimens.first()
+                            if not beetle:
+                                continue
+
+                            filename = f"{beetle.id}.txt"
                             content = self._export_yolo(boxes)
-                        else:
-                            content = self._export_coco(boxes, image_asset)
+                            zf.writestr(filename, content)
 
-                        zf.writestr(filename, content)
+                        except ImageAsset.DoesNotExist:
+                            continue
 
-                    except ImageAsset.DoesNotExist:
-                        continue
+                zip_buffer.seek(0)
 
-            zip_buffer.seek(0)
+                response = FileResponse(
+                    zip_buffer,
+                    content_type='application/zip',
+                    as_attachment=True,
+                    filename='annotations_yolo.zip'
+                )
 
-            response = FileResponse(
-                zip_buffer,
-                content_type='application/zip',
-                as_attachment=True,
-                filename=f'annotations_{export_format}.zip'
-            )
-
-            return response
+                return response
 
         except Exception as e:
             return Response(
@@ -605,6 +782,48 @@ class BoundingBoxViewSet(viewsets.ModelViewSet):
             line = box.to_yolo()
             lines.append(line)
         return '\n'.join(lines)
+
+    def _export_all_coco(self, image_asset_ids):
+        """Export all bounding boxes to a single COCO format JSON string."""
+        data = {
+            'images': [],
+            'annotations': [],
+            'categories': []
+        }
+
+        annotation_id = 1
+
+        for image_id in image_asset_ids:
+            try:
+                image_asset = ImageAsset.objects.get(pk=image_id)
+                boxes = BoundingBox.objects.filter(image_asset=image_asset)
+
+                if not boxes.exists():
+                    continue
+
+                # Add image info
+                data['images'].append({
+                    'id': str(image_asset.id),
+                    'width': image_asset.image_width or 0,
+                    'height': image_asset.image_height or 0,
+                    'file_name': os.path.basename(image_asset.image_file.name) if image_asset.image_file else ''
+                })
+
+                # Add annotations for this image
+                for box in boxes:
+                    coco_ann = box.to_coco(
+                        image_asset.image_width or 1920,
+                        image_asset.image_height or 1080
+                    )
+                    coco_ann['id'] = annotation_id
+                    coco_ann['image_id'] = str(image_asset.id)
+                    data['annotations'].append(coco_ann)
+                    annotation_id += 1
+
+            except ImageAsset.DoesNotExist:
+                continue
+
+        return json.dumps(data, indent=2)
 
     def _export_coco(self, boxes, image_asset):
         """Export bounding boxes to COCO format JSON string."""
@@ -628,3 +847,130 @@ class BoundingBoxViewSet(viewsets.ModelViewSet):
             data['annotations'].append(coco_ann)
 
         return json.dumps(data, indent=2)
+
+
+@api_view(['GET'])
+@permission_classes([IsStaffUser])
+def export_annotations_view(request):
+    """
+    Standalone view to export all annotations in YOLO or COCO format.
+
+    GET /api/v1/bounding-boxes/export-annotations/?format=yolo
+    GET /api/v1/bounding-boxes/export-annotations/?format=coco
+    """
+    export_format = request.query_params.get('format', 'yolo').lower()
+
+    if export_format not in ['yolo', 'coco']:
+        return Response(
+            {'error': 'Invalid format. Must be "yolo" or "coco".'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Get all images with annotations
+    image_asset_ids = BoundingBox.objects.values_list('image_asset_id', flat=True).distinct()
+
+    try:
+        if export_format == 'coco':
+            # COCO: Export all annotations in a single JSON file
+            data = {
+                'images': [],
+                'annotations': [],
+                'categories': []
+            }
+
+            annotation_id = 1
+
+            for image_id in image_asset_ids:
+                try:
+                    image_asset = ImageAsset.objects.get(pk=image_id)
+                    boxes = BoundingBox.objects.filter(image_asset=image_asset)
+
+                    if not boxes.exists():
+                        continue
+
+                    # Add image info
+                    data['images'].append({
+                        'id': str(image_asset.id),
+                        'width': image_asset.image_width or 0,
+                        'height': image_asset.image_height or 0,
+                        'file_name': os.path.basename(image_asset.image_file.name) if image_asset.image_file else ''
+                    })
+
+                    # Add annotations for this image
+                    for box in boxes:
+                        coco_ann = box.to_coco(
+                            image_asset.image_width or 1920,
+                            image_asset.image_height or 1080
+                        )
+                        coco_ann['id'] = annotation_id
+                        coco_ann['image_id'] = str(image_asset.id)
+                        data['annotations'].append(coco_ann)
+                        annotation_id += 1
+
+                except ImageAsset.DoesNotExist:
+                    continue
+
+            content = json.dumps(data, indent=2)
+
+            # Create ZIP with single JSON file
+            zip_buffer = BytesIO()
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+                zf.writestr('annotations.json', content)
+
+            zip_buffer.seek(0)
+            response = FileResponse(
+                zip_buffer,
+                content_type='application/zip',
+                as_attachment=True,
+                filename='annotations_coco.zip'
+            )
+            return response
+
+        else:
+            # YOLO: Export separate .txt file per image
+            zip_buffer = BytesIO()
+
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+                for image_id in image_asset_ids:
+                    try:
+                        image_asset = ImageAsset.objects.get(pk=image_id)
+                        boxes = BoundingBox.objects.filter(image_asset=image_asset)
+
+                        if not boxes.exists():
+                            continue
+
+                        # Get primary beetle for filename
+                        beetle = image_asset.specimens.first()
+                        if not beetle:
+                            continue
+
+                        filename = f"{beetle.id}.txt"
+
+                        # Export YOLO format
+                        lines = []
+                        for box in boxes:
+                            line = box.to_yolo()
+                            lines.append(line)
+                        content = '\n'.join(lines)
+
+                        zf.writestr(filename, content)
+
+                    except ImageAsset.DoesNotExist:
+                        continue
+
+            zip_buffer.seek(0)
+
+            response = FileResponse(
+                zip_buffer,
+                content_type='application/zip',
+                as_attachment=True,
+                filename='annotations_yolo.zip'
+            )
+
+            return response
+
+    except Exception as e:
+        return Response(
+            {'error': f'Export failed: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
