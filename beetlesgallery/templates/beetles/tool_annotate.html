@@ -31,6 +31,68 @@
     <!-- Left Sidebar: Upload Panel -->
     <div class="space-y-4 overflow-y-auto" style="width: 25%; min-width: 320px; max-width: 400px; height: 100%;">
 
+      <!-- Image Browser Card (Collapsible) -->
+      <div class="bg-white border border-gray-200 rounded-lg shadow-sm flex-shrink-0">
+        <button
+          type="button"
+          onclick="toggleSection('browser-section')"
+          class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+        >
+          <div class="text-left">
+            <h2 class="text-lg font-semibold text-gray-900">Image Browser</h2>
+            <p class="text-sm text-gray-500 mt-1">Select images to annotate</p>
+          </div>
+          <i id="browser-section-icon" class="fi fi-rr-angle-down text-gray-500 transition-transform"></i>
+        </button>
+
+        <div id="browser-section-content" class="hidden border-t border-gray-200 overflow-y-auto" style="max-height: 600px;">
+          <div class="p-4 space-y-3">
+            <!-- Search Box -->
+            <div class="relative">
+              <input
+                type="text"
+                id="image-search"
+                placeholder="Search images..."
+                oninput="filterImages(this.value)"
+                class="w-full px-3 py-2 pl-9 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+              <i class="fi fi-rr-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+            </div>
+
+            <!-- Folder Organization Controls -->
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-medium text-gray-700">Group by:</span>
+              <select
+                id="group-by-select"
+                onchange="organizeImages()"
+                class="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="none">No Grouping</option>
+                <option value="date">Date Added</option>
+                <option value="count">Annotation Count</option>
+                <option value="validation">Validation Status</option>
+              </select>
+            </div>
+
+            <!-- Loading State -->
+            <div id="browser-loading" class="text-center py-8">
+              <i class="fi fi-rr-spinner animate-spin text-2xl text-gray-400"></i>
+              <p class="text-sm text-gray-500 mt-2">Loading images...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="browser-empty" class="hidden text-center py-8">
+              <i class="fi fi-rr-picture text-3xl text-gray-300"></i>
+              <p class="text-sm text-gray-500 mt-2">No annotated images found</p>
+              <p class="text-xs text-gray-400 mt-1">Import annotations to see images here</p>
+            </div>
+
+            <!-- Image List -->
+            <div id="image-list" class="space-y-1"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Import Annotations Card (Collapsible) -->
       <div class="bg-white border border-gray-200 rounded-lg shadow-sm flex-shrink-0">
         <button
@@ -76,21 +138,6 @@
             <p class="text-xs text-gray-500 mt-2">
               Files should be named with Beetle UUID (e.g., <code class="bg-gray-100 px-1 rounded">abc123-def.txt</code>)
             </p>
-          </div>
-
-          <!-- Source Selection -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Annotation Source
-            </label>
-            <select
-              id="source-select"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-            >
-              <option value="imported">Imported</option>
-              <option value="manual">Manual</option>
-              <option value="ai">AI Generated</option>
-            </select>
           </div>
 
           <!-- Overwrite Option -->
@@ -239,68 +286,6 @@
           </div>
 
         </div>
-        </div>
-      </div>
-
-      <!-- Image Browser Card (Collapsible) -->
-      <div class="bg-white border border-gray-200 rounded-lg shadow-sm flex-shrink-0">
-        <button
-          type="button"
-          onclick="toggleSection('browser-section')"
-          class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-        >
-          <div class="text-left">
-            <h2 class="text-lg font-semibold text-gray-900">Image Browser</h2>
-            <p class="text-sm text-gray-500 mt-1">Select images to annotate</p>
-          </div>
-          <i id="browser-section-icon" class="fi fi-rr-angle-down text-gray-500 transition-transform"></i>
-        </button>
-
-        <div id="browser-section-content" class="hidden border-t border-gray-200 overflow-y-auto" style="max-height: 600px;">
-          <div class="p-4 space-y-3">
-            <!-- Search Box -->
-            <div class="relative">
-              <input
-                type="text"
-                id="image-search"
-                placeholder="Search images..."
-                oninput="filterImages(this.value)"
-                class="w-full px-3 py-2 pl-9 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-              <i class="fi fi-rr-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-            </div>
-
-            <!-- Folder Organization Controls -->
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-medium text-gray-700">Group by:</span>
-              <select
-                id="group-by-select"
-                onchange="organizeImages()"
-                class="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="none">No Grouping</option>
-                <option value="date">Date Added</option>
-                <option value="count">Annotation Count</option>
-                <option value="validation">Validation Status</option>
-              </select>
-            </div>
-
-            <!-- Loading State -->
-            <div id="browser-loading" class="text-center py-8">
-              <i class="fi fi-rr-spinner animate-spin text-2xl text-gray-400"></i>
-              <p class="text-sm text-gray-500 mt-2">Loading images...</p>
-            </div>
-
-            <!-- Empty State -->
-            <div id="browser-empty" class="hidden text-center py-8">
-              <i class="fi fi-rr-picture text-3xl text-gray-300"></i>
-              <p class="text-sm text-gray-500 mt-2">No annotated images found</p>
-              <p class="text-xs text-gray-400 mt-1">Import annotations to see images here</p>
-            </div>
-
-            <!-- Image List -->
-            <div id="image-list" class="space-y-1"></div>
-          </div>
         </div>
       </div>
 
@@ -1893,7 +1878,7 @@ async function uploadAnnotations() {
 
   // Get form values
   const format = document.querySelector('input[name="format"]:checked').value;
-  const source = document.getElementById('source-select').value;
+  const source = 'imported';  // Always use 'imported' for uploaded annotations
   const overwrite = document.getElementById('overwrite-checkbox').checked;
 
   // Clear previous messages and stats
