@@ -13,7 +13,14 @@
 
 <div class="h-full">
   <div class="flex items-center justify-between mb-6">
-    <h1 class="text-3xl font-bold text-gray-900">Data Annotation Tool</h1>
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900">Data Annotation Tool</h1>
+      <p class="text-xs text-gray-500 mt-1">
+        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs">↑↓</kbd> Navigate
+        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs ml-2">Space</kbd> Validate
+        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs ml-2">V</kbd> Toggle Filter
+      </p>
+    </div>
     <button
       type="button"
       id="export-btn"
@@ -47,13 +54,49 @@
 
         <div id="browser-section-content" class="hidden border-t border-gray-200 overflow-y-auto" style="max-height: 600px;">
           <div class="p-4 space-y-3">
+            <!-- Validation Status Filter (Priority) -->
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-2">Show:</label>
+              <div class="flex gap-2">
+                <button
+                  type="button"
+                  id="filter-unvalidated"
+                  onclick="setValidationFilter('unvalidated')"
+                  class="flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors bg-amber-100 text-amber-800 border border-amber-300"
+                >
+                  <i class="fi fi-rr-exclamation text-xs"></i>
+                  Needs Validation
+                  <span id="count-unvalidated" class="ml-1 font-bold"></span>
+                </button>
+                <button
+                  type="button"
+                  id="filter-validated"
+                  onclick="setValidationFilter('validated')"
+                  class="flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200"
+                >
+                  <i class="fi fi-rr-check text-xs"></i>
+                  Validated
+                  <span id="count-validated" class="ml-1"></span>
+                </button>
+                <button
+                  type="button"
+                  id="filter-all"
+                  onclick="setValidationFilter('all')"
+                  class="flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200"
+                >
+                  All
+                  <span id="count-all" class="ml-1"></span>
+                </button>
+              </div>
+            </div>
+
             <!-- Search Box -->
             <div class="relative">
               <input
                 type="text"
                 id="image-search"
                 placeholder="Search images..."
-                oninput="filterImages(this.value)"
+                oninput="filterImagesLocal(this.value)"
                 class="w-full px-3 py-2 pl-9 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
               <i class="fi fi-rr-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
@@ -64,12 +107,10 @@
               <span class="text-xs font-medium text-gray-700">Group by:</span>
               <select
                 id="group-by-select"
-                onchange="organizeImages()"
+                onchange="resetAndLoadImages()"
                 class="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
               >
                 <option value="none">No Grouping</option>
-                <option value="date">Date Added</option>
-                <option value="count">Annotation Count</option>
                 <option value="validation">Validation Status</option>
               </select>
             </div>
@@ -89,6 +130,17 @@
 
             <!-- Image List -->
             <div id="image-list" class="space-y-1"></div>
+
+            <!-- Infinite Scroll Loading Indicator -->
+            <div id="scroll-loading" class="hidden text-center py-4">
+              <i class="fi fi-rr-spinner animate-spin text-lg text-gray-400"></i>
+              <p class="text-xs text-gray-500 mt-1">Loading more...</p>
+            </div>
+
+            <!-- End of List Indicator -->
+            <div id="end-of-list" class="hidden text-center py-4">
+              <p class="text-xs text-gray-500">End of list</p>
+            </div>
           </div>
         </div>
       </div>
@@ -501,6 +553,15 @@ let ctx = null;
 let zoomLevel = 1.0;
 let selectedBoundingBoxIndex = null;
 
+// Pagination state
+let currentPage = 1;
+let totalCount = 0;
+let nextPageUrl = null;
+let isLoadingMore = false;
+let currentValidationFilter = 'unvalidated';  // Start with unvalidated
+let searchTerm = '';
+let validationCounts = { all: 0, validated: 0, unvalidated: 0 };
+
 // Pan state
 let isPanning = false;
 let panStartX = 0;
@@ -528,6 +589,7 @@ function toggleSection(sectionId) {
     // Load images when browser section is opened for the first time
     if (sectionId === 'browser-section' && allImages.length === 0) {
       loadAnnotatedImages();
+      loadValidationCounts();
     }
   } else {
     content.classList.add('hidden');
@@ -535,51 +597,163 @@ function toggleSection(sectionId) {
   }
 }
 
-// Load images with annotations from API
-async function loadAnnotatedImages() {
+// Load validation counts for filter buttons
+async function loadValidationCounts() {
+  try {
+    // Fetch counts for each validation status
+    const responses = await Promise.all([
+      fetch('/api/v1/bounding-boxes/images-with-annotations/?page=1&page_size=1&validation_status=all', {
+        headers: { 'X-CSRFToken': csrftoken }
+      }),
+      fetch('/api/v1/bounding-boxes/images-with-annotations/?page=1&page_size=1&validation_status=validated', {
+        headers: { 'X-CSRFToken': csrftoken }
+      }),
+      fetch('/api/v1/bounding-boxes/images-with-annotations/?page=1&page_size=1&validation_status=unvalidated', {
+        headers: { 'X-CSRFToken': csrftoken }
+      })
+    ]);
+
+    const [allData, validatedData, unvalidatedData] = await Promise.all(
+      responses.map(r => r.json())
+    );
+
+    validationCounts.all = allData.count || 0;
+    validationCounts.validated = validatedData.count || 0;
+    validationCounts.unvalidated = unvalidatedData.count || 0;
+
+    // Update count badges
+    document.getElementById('count-all').textContent = `(${validationCounts.all})`;
+    document.getElementById('count-validated').textContent = `(${validationCounts.validated})`;
+    document.getElementById('count-unvalidated').textContent = `(${validationCounts.unvalidated})`;
+  } catch (error) {
+    console.error('Failed to load validation counts:', error);
+  }
+}
+
+// Set validation filter and reload
+function setValidationFilter(filter) {
+  currentValidationFilter = filter;
+
+  // Update button styles
+  const buttons = ['filter-all', 'filter-validated', 'filter-unvalidated'];
+  buttons.forEach(btnId => {
+    const btn = document.getElementById(btnId);
+    if (btnId === `filter-${filter}`) {
+      if (filter === 'unvalidated') {
+        btn.className = 'flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors bg-amber-100 text-amber-800 border border-amber-300';
+      } else if (filter === 'validated') {
+        btn.className = 'flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors bg-green-100 text-green-800 border border-green-300';
+      } else {
+        btn.className = 'flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors bg-blue-100 text-blue-800 border border-blue-300';
+      }
+    } else {
+      btn.className = 'flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200';
+    }
+  });
+
+  resetAndLoadImages();
+}
+
+// Reset and load images (used when filters change)
+function resetAndLoadImages() {
+  currentPage = 1;
+  allImages = [];
+  filteredImages = [];
+  nextPageUrl = null;
+  document.getElementById('image-list').innerHTML = '';
+  document.getElementById('end-of-list').classList.add('hidden');
+  loadAnnotatedImages();
+}
+
+// Load images with annotations from API (paginated)
+async function loadAnnotatedImages(append = false) {
+  if (isLoadingMore) return;
+
   const loadingEl = document.getElementById('browser-loading');
+  const scrollLoadingEl = document.getElementById('scroll-loading');
   const emptyEl = document.getElementById('browser-empty');
   const listEl = document.getElementById('image-list');
+  const endOfListEl = document.getElementById('end-of-list');
 
-  loadingEl.classList.remove('hidden');
-  emptyEl.classList.add('hidden');
-  listEl.innerHTML = '';
+  isLoadingMore = true;
+
+  if (append) {
+    scrollLoadingEl.classList.remove('hidden');
+  } else {
+    loadingEl.classList.remove('hidden');
+    emptyEl.classList.add('hidden');
+  }
 
   try {
-    const response = await fetch('/api/v1/bounding-boxes/images-with-annotations/', {
-      headers: {
-        'X-CSRFToken': csrftoken
-      }
+    const groupBy = document.getElementById('group-by-select').value;
+    const url = `/api/v1/bounding-boxes/images-with-annotations/?page=${currentPage}&page_size=50&validation_status=${currentValidationFilter}&ordering=-created_at`;
+
+    const response = await fetch(url, {
+      headers: { 'X-CSRFToken': csrftoken }
     });
 
     const data = await response.json();
-    allImages = data.images || [];
-    filteredImages = [...allImages];
+    const newImages = data.results || [];
+
+    totalCount = data.count || 0;
+    nextPageUrl = data.next;
+
+    if (append) {
+      allImages = [...allImages, ...newImages];
+    } else {
+      allImages = newImages;
+    }
 
     loadingEl.classList.add('hidden');
+    scrollLoadingEl.classList.add('hidden');
 
     if (allImages.length === 0) {
       emptyEl.classList.remove('hidden');
     } else {
-      organizeImages();
+      if (groupBy === 'none') {
+        renderFlatList(newImages, append);
+      } else if (groupBy === 'validation') {
+        // For grouped view, reload all
+        if (!append) {
+          organizeImages();
+        }
+      }
+    }
+
+    // Show end of list indicator if no more pages
+    if (!nextPageUrl) {
+      endOfListEl.classList.remove('hidden');
     }
   } catch (error) {
     console.error('Failed to load images:', error);
     loadingEl.classList.add('hidden');
-    emptyEl.classList.remove('hidden');
+    scrollLoadingEl.classList.add('hidden');
+    if (!append) {
+      emptyEl.classList.remove('hidden');
+    }
+  } finally {
+    isLoadingMore = false;
   }
 }
 
-// Filter images by search term
-function filterImages(searchTerm) {
-  const term = searchTerm.toLowerCase();
+// Load next page when scrolling near bottom
+function loadNextPage() {
+  if (nextPageUrl && !isLoadingMore) {
+    currentPage++;
+    loadAnnotatedImages(true);
+  }
+}
 
-  if (!term) {
+// Local filter (search within loaded images)
+function filterImagesLocal(term) {
+  searchTerm = term.toLowerCase();
+
+  if (!searchTerm) {
     filteredImages = [...allImages];
   } else {
     filteredImages = allImages.filter(img =>
-      img.filename.toLowerCase().includes(term) ||
-      img.beetle_id.toLowerCase().includes(term)
+      img.filename.toLowerCase().includes(searchTerm) ||
+      img.beetle_id.toLowerCase().includes(searchTerm)
     );
   }
 
@@ -590,34 +764,39 @@ function filterImages(searchTerm) {
 function organizeImages() {
   const groupBy = document.getElementById('group-by-select').value;
   const listEl = document.getElementById('image-list');
+
+  // Apply local search filter first
+  const imagesToShow = searchTerm
+    ? allImages.filter(img =>
+        img.filename.toLowerCase().includes(searchTerm) ||
+        img.beetle_id.toLowerCase().includes(searchTerm)
+      )
+    : allImages;
+
   listEl.innerHTML = '';
 
-  if (filteredImages.length === 0) {
+  if (imagesToShow.length === 0) {
     listEl.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">No matching images</p>';
     return;
   }
 
   if (groupBy === 'none') {
     // Flat list
-    renderFlatList(filteredImages);
-  } else if (groupBy === 'date') {
-    // Group by date
-    const groups = groupImagesByDate(filteredImages);
-    renderGroupedList(groups);
-  } else if (groupBy === 'count') {
-    // Group by annotation count ranges
-    const groups = groupImagesByCount(filteredImages);
-    renderGroupedList(groups);
+    renderFlatList(imagesToShow, false);
   } else if (groupBy === 'validation') {
     // Group by validation status
-    const groups = groupImagesByValidation(filteredImages);
+    const groups = groupImagesByValidation(imagesToShow);
     renderGroupedList(groups);
   }
 }
 
 // Render flat list of images
-function renderFlatList(images) {
+function renderFlatList(images, append = false) {
   const listEl = document.getElementById('image-list');
+
+  if (!append) {
+    listEl.innerHTML = '';
+  }
 
   images.forEach(img => {
     const item = createImageListItem(img);
@@ -1216,7 +1395,8 @@ async function deleteBoundingBox(boxId, index) {
     document.getElementById('footer-annotation-count').textContent = currentBoundingBoxes.length;
 
     // Reload image browser to update annotation counts
-    loadAnnotatedImages();
+    resetAndLoadImages();
+    loadValidationCounts();
 
   } catch (error) {
     console.error('Error deleting bounding box:', error);
@@ -1281,10 +1461,46 @@ async function validateAllBoundingBoxes() {
     // Redraw canvas and update list
     drawCanvas();
 
-    // Reload image browser to update validation status
-    loadAnnotatedImages();
-
     showMessage(`Successfully validated ${unvalidatedCount} bounding box(es)`, 'success');
+
+    // If filtering by unvalidated, remove current image from list and go to next
+    if (currentValidationFilter === 'unvalidated') {
+      // Find current image index
+      const currentIndex = allImages.findIndex(img => img.image_asset_id === selectedImageId);
+
+      // Remove validated image from local array
+      if (currentIndex !== -1) {
+        allImages.splice(currentIndex, 1);
+      }
+
+      // Automatically navigate to next unvalidated image
+      if (allImages.length > 0) {
+        // Select the image at the same index (which is now the next image)
+        const nextImage = allImages[currentIndex] || allImages[currentIndex - 1] || allImages[0];
+        selectImage(nextImage);
+        scrollToImageInList(nextImage);
+
+        // Re-render the list without the validated image
+        organizeImages();
+      } else if (nextPageUrl && !isLoadingMore) {
+        // No more images on current page, load next page
+        loadNextPage();
+      } else {
+        // No more unvalidated images
+        document.getElementById('image-list').innerHTML = '<p class="text-sm text-gray-500 text-center py-4">No more unvalidated images</p>';
+        currentImage = null;
+        selectedImageId = null;
+        currentBoundingBoxes = [];
+        drawCanvas();
+      }
+
+      // Update counts
+      loadValidationCounts();
+    } else {
+      // If viewing all/validated, just reload to update the list
+      resetAndLoadImages();
+      loadValidationCounts();
+    }
 
   } catch (error) {
     console.error('Error validating bounding boxes:', error);
@@ -1651,7 +1867,8 @@ async function confirmSaveBoundingBox() {
     document.getElementById('footer-annotation-count').textContent = currentBoundingBoxes.length;
 
     // Reload image browser
-    loadAnnotatedImages();
+    resetAndLoadImages();
+    loadValidationCounts();
 
     showMessage('Bounding box saved successfully!', 'success');
 
@@ -1940,6 +2157,10 @@ async function uploadAnnotations() {
 
       // Clear file selection
       clearFileSelection();
+
+      // Reload image browser with new imports
+      resetAndLoadImages();
+      loadValidationCounts();
     } else {
       // Show detailed error message
       const errorMsg = data.error || data.detail || `Upload failed with status ${response.status}`;
@@ -1956,6 +2177,102 @@ async function uploadAnnotations() {
     uploadBtn.style.display = 'flex';
     uploadBtn.innerHTML = '<i class="fi fi-rr-upload"></i><span class="ml-2">Import Annotations</span>';
   }
+}
+
+// Add scroll detection for infinite scroll
+document.addEventListener('DOMContentLoaded', function() {
+  const browserContent = document.getElementById('browser-section-content');
+
+  if (browserContent) {
+    browserContent.addEventListener('scroll', function() {
+      const scrollPosition = this.scrollTop + this.clientHeight;
+      const scrollHeight = this.scrollHeight;
+
+      // Load more when scrolled to within 200px of bottom
+      if (scrollHeight - scrollPosition < 200 && nextPageUrl && !isLoadingMore) {
+        loadNextPage();
+      }
+    });
+  }
+
+  // Keyboard navigation for fast validation workflow
+  document.addEventListener('keydown', function(e) {
+    // Only handle keyboard shortcuts if not typing in an input/textarea
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+      return;
+    }
+
+    // Space bar: Validate all bounding boxes on current image
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (currentImage && currentBoundingBoxes.length > 0) {
+        validateAllBoundingBoxes();
+      }
+    }
+
+    // Arrow Down: Navigate to next image in list
+    if (e.code === 'ArrowDown') {
+      e.preventDefault();
+      navigateToNextImage();
+    }
+
+    // Arrow Up: Navigate to previous image in list
+    if (e.code === 'ArrowUp') {
+      e.preventDefault();
+      navigateToPreviousImage();
+    }
+
+    // 'V' key: Toggle validation status filter
+    if (e.code === 'KeyV') {
+      e.preventDefault();
+      if (currentValidationFilter === 'unvalidated') {
+        setValidationFilter('validated');
+      } else {
+        setValidationFilter('unvalidated');
+      }
+    }
+  });
+});
+
+// Navigate to next image in the list
+function navigateToNextImage() {
+  if (!currentImage || allImages.length === 0) return;
+
+  const currentIndex = allImages.findIndex(img => img.image_asset_id === selectedImageId);
+  if (currentIndex === -1) return;
+
+  // Move to next image
+  if (currentIndex < allImages.length - 1) {
+    selectImage(allImages[currentIndex + 1]);
+    scrollToImageInList(allImages[currentIndex + 1]);
+  } else if (nextPageUrl && !isLoadingMore) {
+    // At end of current page, load next page and select first item
+    loadNextPage();
+  }
+}
+
+// Navigate to previous image in the list
+function navigateToPreviousImage() {
+  if (!currentImage || allImages.length === 0) return;
+
+  const currentIndex = allImages.findIndex(img => img.image_asset_id === selectedImageId);
+  if (currentIndex === -1) return;
+
+  // Move to previous image
+  if (currentIndex > 0) {
+    selectImage(allImages[currentIndex - 1]);
+    scrollToImageInList(allImages[currentIndex - 1]);
+  }
+}
+
+// Scroll to image in the list to keep it visible
+function scrollToImageInList(img) {
+  const listButtons = document.querySelectorAll('#image-list button');
+  listButtons.forEach(btn => {
+    if (btn.textContent.includes(img.beetle_id)) {
+      btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  });
 }
 </script>
 

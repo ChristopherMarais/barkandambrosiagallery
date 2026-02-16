@@ -622,71 +622,125 @@ class BoundingBoxViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='images-with-annotations')
     def images_with_annotations(self, request):
         """
-        Get list of all images that have bounding box annotations.
+        Get paginated list of images with bounding box annotations.
 
         GET /api/v1/bounding-boxes/images-with-annotations/
 
+        Query Parameters:
+        - page: Page number (default: 1)
+        - page_size: Items per page (default: 50, max: 200)
+        - validation_status: 'all', 'unvalidated', 'validated' (default: 'all')
+        - ordering: Sort order, e.g., '-created_at', 'annotation_count' (default: '-created_at')
+
         Returns:
         {
-            "images": [
-                {
-                    "image_asset_id": "uuid",
-                    "beetle_id": "uuid",
-                    "beetle_alternative_id": "alternative_id",
-                    "filename": "image.jpg",
-                    "thumbnail_url": "/media/...",
-                    "annotation_count": 5,
-                    "created_at": "2024-01-01T00:00:00Z"
-                },
-                ...
-            ]
+            "count": 60000,
+            "next": "http://.../api/v1/bounding-boxes/images-with-annotations/?page=2",
+            "previous": null,
+            "results": [...]
         }
         """
-        from django.db.models import Count
+        from django.db.models import Count, Q, Exists, OuterRef, Prefetch
+        from django.core.paginator import Paginator
 
-        # Get all image assets that have bounding boxes
-        images_with_boxes = BoundingBox.objects.values('image_asset_id').annotate(
-            box_count=Count('id')
+        # Query parameters
+        page_num = int(request.GET.get('page', 1))
+        page_size = min(int(request.GET.get('page_size', 50)), 200)  # Max 200 per page
+        validation_status = request.GET.get('validation_status', 'all')
+        ordering = request.GET.get('ordering', '-created_at')
+
+        # Build optimized query with single database hit
+        # Subquery to check for unvalidated boxes
+        unvalidated_subquery = BoundingBox.objects.filter(
+            image_asset_id=OuterRef('image_asset_id'),
+            is_validated=False
+        )
+
+        # Aggregate query: Get image_asset_id with counts
+        base_query = BoundingBox.objects.values('image_asset_id').annotate(
+            box_count=Count('id'),
+            has_unvalidated=Exists(unvalidated_subquery)
         ).filter(box_count__gt=0)
 
-        image_asset_ids = [item['image_asset_id'] for item in images_with_boxes]
+        # Filter by validation status
+        if validation_status == 'unvalidated':
+            base_query = base_query.filter(has_unvalidated=True)
+        elif validation_status == 'validated':
+            base_query = base_query.filter(has_unvalidated=False)
 
-        # Fetch image asset details with related beetle info
+        # Get total count before pagination
+        total_count = base_query.count()
+
+        # Sort (handle ordering by created_at separately since it's from Beetle)
+        if ordering not in ['-created_at', 'created_at']:
+            base_query = base_query.order_by(ordering)
+
+        # Apply pagination to aggregated results
+        paginator = Paginator(list(base_query), page_size)
+        page_obj = paginator.get_page(page_num)
+
+        # Extract image_asset_ids for this page
+        image_asset_ids = [item['image_asset_id'] for item in page_obj.object_list]
+
+        # Bulk fetch all data for this page with optimized queries
+        image_assets = ImageAsset.objects.filter(
+            id__in=image_asset_ids
+        ).prefetch_related(
+            Prefetch('specimens', queryset=Beetles.objects.all())
+        )
+
+        # Create lookup dicts for fast access
+        image_asset_dict = {str(img.id): img for img in image_assets}
+        box_counts = {item['image_asset_id']: item for item in page_obj.object_list}
+
+        # Build response
         images = []
         for image_asset_id in image_asset_ids:
-            try:
-                image_asset = ImageAsset.objects.get(pk=image_asset_id)
-                beetle = image_asset.specimens.first()  # Get first beetle for this image
+            image_asset_id_str = str(image_asset_id)
+            image_asset = image_asset_dict.get(image_asset_id_str)
 
-                if not beetle:
-                    continue
-
-                # Get annotation count
-                box_count = BoundingBox.objects.filter(image_asset=image_asset).count()
-
-                # Check if any bounding boxes are unvalidated
-                has_unvalidated_boxes = BoundingBox.objects.filter(
-                    image_asset=image_asset,
-                    is_validated=False
-                ).exists()
-
-                images.append({
-                    'image_asset_id': str(image_asset.id),
-                    'beetle_id': str(beetle.id),
-                    'filename': os.path.basename(image_asset.image_file.name) if image_asset.image_file else 'unknown',
-                    'thumbnail_url': image_asset.thumb_small.url if image_asset.thumb_small else None,
-                    'full_image_url': image_asset.display_url,
-                    'annotation_count': box_count,
-                    'has_unvalidated_boxes': has_unvalidated_boxes,
-                    'created_at': beetle.last_updated_at.isoformat() if beetle.last_updated_at else None,
-                })
-            except ImageAsset.DoesNotExist:
+            if not image_asset:
                 continue
 
-        # Sort by created_at descending (most recent first)
-        images.sort(key=lambda x: x['created_at'] or '', reverse=True)
+            beetle = image_asset.specimens.first()
+            if not beetle:
+                continue
 
-        return Response({'images': images})
+            box_info = box_counts[image_asset_id]
+
+            images.append({
+                'image_asset_id': image_asset_id_str,
+                'beetle_id': str(beetle.id),
+                'filename': os.path.basename(image_asset.image_file.name) if image_asset.image_file else 'unknown',
+                'thumbnail_url': image_asset.thumb_small.url if image_asset.thumb_small else None,
+                'full_image_url': image_asset.display_url,
+                'annotation_count': box_info['box_count'],
+                'has_unvalidated_boxes': box_info['has_unvalidated'],
+                'created_at': beetle.last_updated_at.isoformat() if beetle.last_updated_at else None,
+            })
+
+        # Sort by created_at if requested (now that we have the data)
+        if ordering in ['-created_at', 'created_at']:
+            reverse = ordering.startswith('-')
+            images.sort(key=lambda x: x['created_at'] or '', reverse=reverse)
+
+        # Build pagination response
+        base_url = request.build_absolute_uri(request.path)
+        next_url = None
+        prev_url = None
+
+        if page_obj.has_next():
+            next_url = f"{base_url}?page={page_obj.next_page_number()}&page_size={page_size}&validation_status={validation_status}&ordering={ordering}"
+
+        if page_obj.has_previous():
+            prev_url = f"{base_url}?page={page_obj.previous_page_number()}&page_size={page_size}&validation_status={validation_status}&ordering={ordering}"
+
+        return Response({
+            'count': total_count,
+            'next': next_url,
+            'previous': prev_url,
+            'results': images
+        })
 
     @action(detail=False, methods=['get'], url_path='export-annotations')
     def export_annotations(self, request):
