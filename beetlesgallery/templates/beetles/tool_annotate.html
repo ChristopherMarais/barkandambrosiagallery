@@ -764,6 +764,11 @@ async function loadAnnotatedImages(append = false) {
       url = `/api/v1/bounding-boxes/images-with-annotations/?page=${currentPage}&page_size=50&validation_status=${currentValidationFilter}&ordering=-created_at`;
     }
 
+    // Add search parameter if present
+    if (searchTerm) {
+      url += `&search=${encodeURIComponent(searchTerm)}`;
+    }
+
     const response = await fetch(url, {
       headers: { 'X-CSRFToken': csrftoken }
     });
@@ -814,19 +819,22 @@ function loadNextPage() {
 }
 
 // Local filter (search within loaded images)
-function filterImagesLocal(term) {
-  searchTerm = term.toLowerCase();
+// Debounce timer for search
+let searchDebounceTimer = null;
 
-  if (!searchTerm) {
-    filteredImages = [...allImages];
-  } else {
-    filteredImages = allImages.filter(img =>
-      img.filename.toLowerCase().includes(searchTerm) ||
-      img.beetle_id.toLowerCase().includes(searchTerm)
-    );
+function filterImagesLocal(term) {
+  searchTerm = term.trim();
+
+  // Clear previous debounce timer
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer);
   }
 
-  organizeImages();
+  // Debounce search - wait 500ms after user stops typing
+  searchDebounceTimer = setTimeout(() => {
+    // Trigger server-side search by reloading images
+    resetAndLoadImages();
+  }, 500);
 }
 
 // Organize images into folders

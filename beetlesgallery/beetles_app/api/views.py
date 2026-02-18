@@ -648,6 +648,7 @@ class BoundingBoxViewSet(viewsets.ModelViewSet):
         page_size = min(int(request.GET.get('page_size', 50)), 200)  # Max 200 per page
         validation_status = request.GET.get('validation_status', 'all')
         ordering = request.GET.get('ordering', '-created_at')
+        search = request.GET.get('search', '').strip()
 
         # Build optimized query with single database hit
         # Subquery to check for unvalidated boxes
@@ -661,6 +662,22 @@ class BoundingBoxViewSet(viewsets.ModelViewSet):
             box_count=Count('id'),
             has_unvalidated=Exists(unvalidated_subquery)
         ).filter(box_count__gt=0)
+
+        # Apply search filter if provided
+        if search:
+            # Get image assets matching search
+            matching_image_assets = ImageAsset.objects.filter(
+                Q(image_file__icontains=search)  # filename search
+            ).values_list('id', flat=True)
+
+            # Get beetles matching search
+            matching_beetles = Beetles.objects.filter(
+                Q(id__icontains=search)  # beetle UUID search
+            ).values_list('image_asset_id', flat=True)
+
+            # Combine both searches
+            matching_ids = set(matching_image_assets) | set(matching_beetles)
+            base_query = base_query.filter(image_asset_id__in=matching_ids)
 
         # Filter by validation status
         if validation_status == 'unvalidated':
@@ -731,9 +748,13 @@ class BoundingBoxViewSet(viewsets.ModelViewSet):
 
         if page_obj.has_next():
             next_url = f"{base_url}?page={page_obj.next_page_number()}&page_size={page_size}&validation_status={validation_status}&ordering={ordering}"
+            if search:
+                next_url += f"&search={search}"
 
         if page_obj.has_previous():
             prev_url = f"{base_url}?page={page_obj.previous_page_number()}&page_size={page_size}&validation_status={validation_status}&ordering={ordering}"
+            if search:
+                prev_url += f"&search={search}"
 
         return Response({
             'count': total_count,
@@ -767,6 +788,7 @@ class BoundingBoxViewSet(viewsets.ModelViewSet):
         # Query parameters
         page_num = int(request.GET.get('page', 1))
         page_size = min(int(request.GET.get('page_size', 50)), 200)  # Max 200 per page
+        search = request.GET.get('search', '').strip()
 
         # Subquery to check if image has any bounding boxes
         has_boxes_subquery = BoundingBox.objects.filter(
@@ -779,7 +801,22 @@ class BoundingBoxViewSet(viewsets.ModelViewSet):
         ).filter(
             has_boxes=False,
             image_file__isnull=False  # Ensure image file exists
-        ).order_by('-created_at')
+        )
+
+        # Apply search filter if provided
+        if search:
+            # Get beetles matching search (beetle UUID)
+            matching_beetles = Beetles.objects.filter(
+                Q(id__icontains=search)
+            ).values_list('image_asset_id', flat=True)
+
+            # Filter by filename or matching beetle IDs
+            images_without_boxes = images_without_boxes.filter(
+                Q(image_file__icontains=search) |
+                Q(id__in=matching_beetles)
+            )
+
+        images_without_boxes = images_without_boxes.order_by('-created_at')
 
         # Get total count
         total_count = images_without_boxes.count()
@@ -814,9 +851,13 @@ class BoundingBoxViewSet(viewsets.ModelViewSet):
 
         if page_obj.has_next():
             next_url = f"{base_url}?page={page_obj.next_page_number()}&page_size={page_size}"
+            if search:
+                next_url += f"&search={search}"
 
         if page_obj.has_previous():
             prev_url = f"{base_url}?page={page_obj.previous_page_number()}&page_size={page_size}"
+            if search:
+                prev_url += f"&search={search}"
 
         return Response({
             'count': total_count,
