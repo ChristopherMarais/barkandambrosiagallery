@@ -742,6 +742,89 @@ class BoundingBoxViewSet(viewsets.ModelViewSet):
             'results': images
         })
 
+    @action(detail=False, methods=['get'], url_path='images-without-annotations')
+    def images_without_annotations(self, request):
+        """
+        Get paginated list of images WITHOUT any bounding box annotations.
+
+        GET /api/v1/bounding-boxes/images-without-annotations/
+
+        Query Parameters:
+        - page: Page number (default: 1)
+        - page_size: Items per page (default: 50, max: 200)
+
+        Returns:
+        {
+            "count": 60000,
+            "next": "http://.../api/v1/bounding-boxes/images-without-annotations/?page=2",
+            "previous": null,
+            "results": [...]
+        }
+        """
+        from django.core.paginator import Paginator
+        from django.db.models import Exists, OuterRef
+
+        # Query parameters
+        page_num = int(request.GET.get('page', 1))
+        page_size = min(int(request.GET.get('page_size', 50)), 200)  # Max 200 per page
+
+        # Subquery to check if image has any bounding boxes
+        has_boxes_subquery = BoundingBox.objects.filter(
+            image_asset_id=OuterRef('pk')
+        )
+
+        # Get all ImageAssets that DON'T have any bounding boxes
+        images_without_boxes = ImageAsset.objects.annotate(
+            has_boxes=Exists(has_boxes_subquery)
+        ).filter(
+            has_boxes=False,
+            image_file__isnull=False  # Ensure image file exists
+        ).order_by('-created_at')
+
+        # Get total count
+        total_count = images_without_boxes.count()
+
+        # Paginate
+        paginator = Paginator(images_without_boxes, page_size)
+        page_obj = paginator.get_page(page_num)
+
+        # Get the image assets for this page
+        image_assets = list(page_obj.object_list)
+
+        # Build response data
+        images = []
+        for image_asset in image_assets:
+            beetle = image_asset.specimens.first()
+
+            images.append({
+                'image_asset_id': str(image_asset.id),
+                'beetle_id': str(beetle.id) if beetle else None,
+                'filename': os.path.basename(image_asset.image_file.name) if image_asset.image_file else 'unknown',
+                'thumbnail_url': image_asset.thumb_small.url if image_asset.thumb_small else None,
+                'full_image_url': image_asset.display_url,
+                'annotation_count': 0,
+                'has_unvalidated_boxes': False,
+                'created_at': image_asset.created_at.isoformat() if image_asset.created_at else None,
+            })
+
+        # Build pagination response
+        base_url = request.build_absolute_uri(request.path)
+        next_url = None
+        prev_url = None
+
+        if page_obj.has_next():
+            next_url = f"{base_url}?page={page_obj.next_page_number()}&page_size={page_size}"
+
+        if page_obj.has_previous():
+            prev_url = f"{base_url}?page={page_obj.previous_page_number()}&page_size={page_size}"
+
+        return Response({
+            'count': total_count,
+            'next': next_url,
+            'previous': prev_url,
+            'results': images
+        })
+
     @action(detail=False, methods=['get'], url_path='category-mapping')
     def category_mapping(self, request):
         """

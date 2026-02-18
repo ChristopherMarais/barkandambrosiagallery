@@ -80,12 +80,13 @@
                 </button>
                 <button
                   type="button"
-                  id="filter-all"
-                  onclick="setValidationFilter('all')"
+                  id="filter-no-annotations"
+                  onclick="setValidationFilter('no-annotations')"
                   class="flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200"
                 >
-                  All
-                  <span id="count-all" class="ml-1"></span>
+                  <i class="fi fi-rr-inbox text-xs"></i>
+                  No Annotations
+                  <span id="count-no-annotations" class="ml-1"></span>
                 </button>
               </div>
             </div>
@@ -608,7 +609,7 @@ let nextPageUrl = null;
 let isLoadingMore = false;
 let currentValidationFilter = 'unvalidated';  // Start with unvalidated
 let searchTerm = '';
-let validationCounts = { all: 0, validated: 0, unvalidated: 0 };
+let validationCounts = { validated: 0, unvalidated: 0, noAnnotations: 0 };
 
 // Category mapping state
 let allCategories = [];
@@ -657,9 +658,6 @@ async function loadValidationCounts() {
   try {
     // Fetch counts for each validation status
     const responses = await Promise.all([
-      fetch('/api/v1/bounding-boxes/images-with-annotations/?page=1&page_size=1&validation_status=all', {
-        headers: { 'X-CSRFToken': csrftoken }
-      }),
       fetch('/api/v1/bounding-boxes/images-with-annotations/?page=1&page_size=1&validation_status=validated', {
         headers: { 'X-CSRFToken': csrftoken }
       }),
@@ -668,16 +666,14 @@ async function loadValidationCounts() {
       })
     ]);
 
-    const [allData, validatedData, unvalidatedData] = await Promise.all(
+    const [validatedData, unvalidatedData] = await Promise.all(
       responses.map(r => r.json())
     );
 
-    validationCounts.all = allData.count || 0;
     validationCounts.validated = validatedData.count || 0;
     validationCounts.unvalidated = unvalidatedData.count || 0;
 
     // Update count badges
-    document.getElementById('count-all').textContent = `(${validationCounts.all})`;
     document.getElementById('count-validated').textContent = `(${validationCounts.validated})`;
     document.getElementById('count-unvalidated').textContent = `(${validationCounts.unvalidated})`;
   } catch (error) {
@@ -685,12 +681,33 @@ async function loadValidationCounts() {
   }
 }
 
+// Load count for no annotations filter (only when clicked)
+async function loadNoAnnotationsCount() {
+  try {
+    const response = await fetch('/api/v1/bounding-boxes/images-without-annotations/?page=1&page_size=1', {
+      headers: { 'X-CSRFToken': csrftoken }
+    });
+
+    const data = await response.json();
+    validationCounts.noAnnotations = data.count || 0;
+
+    document.getElementById('count-no-annotations').textContent = `(${validationCounts.noAnnotations})`;
+  } catch (error) {
+    console.error('Failed to load no annotations count:', error);
+  }
+}
+
 // Set validation filter and reload
 function setValidationFilter(filter) {
   currentValidationFilter = filter;
 
+  // Load count for no-annotations filter lazily
+  if (filter === 'no-annotations' && validationCounts.noAnnotations === 0) {
+    loadNoAnnotationsCount();
+  }
+
   // Update button styles
-  const buttons = ['filter-all', 'filter-validated', 'filter-unvalidated'];
+  const buttons = ['filter-validated', 'filter-unvalidated', 'filter-no-annotations'];
   buttons.forEach(btnId => {
     const btn = document.getElementById(btnId);
     if (btnId === `filter-${filter}`) {
@@ -698,7 +715,7 @@ function setValidationFilter(filter) {
         btn.className = 'flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors bg-amber-100 text-amber-800 border border-amber-300';
       } else if (filter === 'validated') {
         btn.className = 'flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors bg-green-100 text-green-800 border border-green-300';
-      } else {
+      } else if (filter === 'no-annotations') {
         btn.className = 'flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors bg-blue-100 text-blue-800 border border-blue-300';
       }
     } else {
@@ -740,7 +757,12 @@ async function loadAnnotatedImages(append = false) {
   }
 
   try {
-    const url = `/api/v1/bounding-boxes/images-with-annotations/?page=${currentPage}&page_size=50&validation_status=${currentValidationFilter}&ordering=-created_at`;
+    let url;
+    if (currentValidationFilter === 'no-annotations') {
+      url = `/api/v1/bounding-boxes/images-without-annotations/?page=${currentPage}&page_size=50`;
+    } else {
+      url = `/api/v1/bounding-boxes/images-with-annotations/?page=${currentPage}&page_size=50&validation_status=${currentValidationFilter}&ordering=-created_at`;
+    }
 
     const response = await fetch(url, {
       headers: { 'X-CSRFToken': csrftoken }
