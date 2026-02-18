@@ -479,6 +479,67 @@
     </div>
   </div>
 
+  <!-- Category Selection Dialog (Hidden by default) -->
+  <div id="category-dialog" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
+      <h2 class="text-xl font-bold text-gray-900 mb-4">Select Category for Bounding Box</h2>
+
+      <div class="flex-1 overflow-hidden flex flex-col space-y-4">
+        <!-- Search Box -->
+        <div class="relative">
+          <input
+            type="text"
+            id="category-search"
+            placeholder="Search genus or species..."
+            oninput="filterCategories(this.value)"
+            class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+          <i class="fi fi-rr-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        </div>
+
+        <!-- Category List (Scrollable) -->
+        <div id="category-list" class="flex-1 overflow-y-auto border border-gray-200 rounded-lg">
+          <div id="category-list-content" class="p-2">
+            <!-- Will be populated by JavaScript -->
+            <div class="text-center py-8 text-gray-500">
+              <i class="fi fi-rr-spinner animate-spin text-2xl"></i>
+              <p class="text-sm mt-2">Loading categories...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Selected Category Display -->
+        <div id="selected-category-display" class="hidden p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p class="text-sm text-gray-700">
+            Selected: <span id="selected-category-name" class="font-semibold text-blue-900"></span>
+            <span id="selected-category-id" class="ml-2 text-xs text-gray-500"></span>
+          </p>
+        </div>
+      </div>
+
+      <div class="flex gap-3 mt-4">
+        <button
+          type="button"
+          onclick="closeCategoryDialog()"
+          class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-700 font-medium"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          id="confirm-category-btn"
+          onclick="confirmCategorySelection()"
+          disabled
+          style="background-color: #3b82f6; color: white; display: flex;"
+          class="flex-1 px-4 py-2 rounded-lg transition-colors items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700"
+        >
+          <i class="fi fi-rr-pencil"></i>
+          <span>Draw Bounding Box</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Export Dialog (Hidden by default) -->
   <div id="export-dialog" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
@@ -561,6 +622,11 @@ let isLoadingMore = false;
 let currentValidationFilter = 'unvalidated';  // Start with unvalidated
 let searchTerm = '';
 let validationCounts = { all: 0, validated: 0, unvalidated: 0 };
+
+// Category mapping state
+let allCategories = [];
+let filteredCategories = [];
+let selectedCategory = null;
 
 // Pan state
 let isPanning = false;
@@ -1708,18 +1774,132 @@ function stopPanning(e) {
   isPanning = false;
 }
 
-// Start adding bounding box mode
-function startAddingBoundingBox() {
-  if (!currentImage) {
-    alert('Please select an image first');
+// Load category mapping from API
+async function loadCategories() {
+  try {
+    const response = await fetch('/api/v1/bounding-boxes/category-mapping/', {
+      headers: { 'X-CSRFToken': csrftoken }
+    });
+
+    const data = await response.json();
+    allCategories = data.categories || [];
+    filteredCategories = [...allCategories];
+
+    renderCategories(filteredCategories);
+  } catch (error) {
+    console.error('Failed to load categories:', error);
+    document.getElementById('category-list-content').innerHTML = `
+      <div class="text-center py-8 text-red-500">
+        <i class="fi fi-rr-exclamation text-2xl"></i>
+        <p class="text-sm mt-2">Failed to load categories</p>
+      </div>
+    `;
+  }
+}
+
+// Render categories in the list
+function renderCategories(categories) {
+  const listContent = document.getElementById('category-list-content');
+
+  if (categories.length === 0) {
+    listContent.innerHTML = `
+      <div class="text-center py-8 text-gray-500">
+        <i class="fi fi-rr-search text-2xl"></i>
+        <p class="text-sm mt-2">No categories found</p>
+      </div>
+    `;
     return;
   }
 
-  // Prompt for label
-  const label = prompt('Enter label for the new bounding box (e.g., "0" for class 0):');
-  if (label === null) return; // User cancelled
+  listContent.innerHTML = categories.map(cat => {
+    const typeColor = cat.type === 'generic' ? 'bg-gray-100 text-gray-700' :
+                      cat.type === 'genus' ? 'bg-blue-100 text-blue-700' :
+                      'bg-green-100 text-green-700';
 
-  newBoundingBoxLabel = label.trim();
+    const typeLabel = cat.type === 'generic' ? 'Generic' :
+                      cat.type === 'genus' ? 'Genus' : 'Species';
+
+    return `
+      <button
+        type="button"
+        onclick="selectCategoryById(${cat.id})"
+        class="w-full text-left px-3 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-0 transition-colors flex items-center justify-between group"
+      >
+        <div class="flex-1 min-w-0">
+          <p class="font-medium text-gray-900 truncate">${cat.name}</p>
+          ${cat.type === 'species' ? `<p class="text-xs text-gray-500 italic">${cat.genus} ${cat.species}</p>` : ''}
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs px-2 py-0.5 rounded-full ${typeColor}">${typeLabel}</span>
+          <span class="text-xs text-gray-500 font-mono">ID: ${cat.id}</span>
+        </div>
+      </button>
+    `;
+  }).join('');
+}
+
+// Filter categories by search term
+function filterCategories(searchTerm) {
+  const term = searchTerm.toLowerCase().trim();
+
+  if (!term) {
+    filteredCategories = [...allCategories];
+  } else {
+    filteredCategories = allCategories.filter(cat =>
+      cat.name.toLowerCase().includes(term) ||
+      (cat.genus && cat.genus.toLowerCase().includes(term)) ||
+      (cat.species && cat.species.toLowerCase().includes(term))
+    );
+  }
+
+  renderCategories(filteredCategories);
+}
+
+// Select a category by ID
+function selectCategoryById(categoryId) {
+  selectedCategory = allCategories.find(cat => cat.id === categoryId);
+
+  if (selectedCategory) {
+    document.getElementById('selected-category-name').textContent = selectedCategory.name;
+    document.getElementById('selected-category-id').textContent = `(ID: ${selectedCategory.id})`;
+    document.getElementById('selected-category-display').classList.remove('hidden');
+    document.getElementById('confirm-category-btn').disabled = false;
+  }
+}
+
+// Show category dialog
+function showCategoryDialog() {
+  document.getElementById('category-dialog').classList.remove('hidden');
+
+  // Load categories if not already loaded
+  if (allCategories.length === 0) {
+    loadCategories();
+  } else {
+    // Reset to show all categories
+    filteredCategories = [...allCategories];
+    renderCategories(filteredCategories);
+  }
+
+  // Reset search and selection
+  document.getElementById('category-search').value = '';
+  selectedCategory = null;
+  document.getElementById('selected-category-display').classList.add('hidden');
+  document.getElementById('confirm-category-btn').disabled = true;
+}
+
+// Close category dialog
+function closeCategoryDialog() {
+  document.getElementById('category-dialog').classList.add('hidden');
+}
+
+// Confirm category selection and enter drawing mode
+function confirmCategorySelection() {
+  if (!selectedCategory) return;
+
+  closeCategoryDialog();
+
+  // Set the label as the category ID
+  newBoundingBoxLabel = String(selectedCategory.id);
 
   // Enter drawing mode
   isDrawingMode = true;
@@ -1734,8 +1914,19 @@ function startAddingBoundingBox() {
   addBtn.className = 'px-3 py-1.5 text-sm rounded-lg hover:bg-red-700 transition-colors items-center gap-1';
   addBtn.onclick = cancelAddingBoundingBox;
 
-  // Show instruction
-  showMessage('Click and drag on the image to draw a bounding box', 'info');
+  // Show instruction with category name
+  showMessage(`Drawing box for: ${selectedCategory.name} (ID: ${selectedCategory.id})`, 'info');
+}
+
+// Start adding bounding box mode
+function startAddingBoundingBox() {
+  if (!currentImage) {
+    alert('Please select an image first');
+    return;
+  }
+
+  // Show category selection dialog
+  showCategoryDialog();
 }
 
 // Cancel adding bounding box

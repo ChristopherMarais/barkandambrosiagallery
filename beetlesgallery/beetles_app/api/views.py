@@ -742,6 +742,59 @@ class BoundingBoxViewSet(viewsets.ModelViewSet):
             'results': images
         })
 
+    @action(detail=False, methods=['get'], url_path='category-mapping')
+    def category_mapping(self, request):
+        """
+        Get the category mapping for bounding box labels.
+
+        GET /api/v1/bounding-boxes/category-mapping/
+
+        Returns the category mapping JSON with genus and species classifications.
+        Supports optional search parameter to filter categories.
+
+        Query params:
+        - search: Optional search term to filter categories by name
+        """
+        from django.conf import settings
+        from pathlib import Path
+
+        # Load category mapping from JSON file
+        mapping_path = Path(settings.MEDIA_ROOT) / 'reference' / 'category_mapping.json'
+
+        if not mapping_path.exists():
+            return Response(
+                {'error': 'Category mapping file not found. Please run: python manage.py generate_category_mapping'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        try:
+            with open(mapping_path, 'r', encoding='utf-8') as f:
+                data = json.loads(f.read())
+
+            categories = data.get('categories', [])
+
+            # Apply search filter if provided
+            search = request.query_params.get('search', '').strip().lower()
+            if search:
+                categories = [
+                    cat for cat in categories
+                    if search in cat['name'].lower() or
+                       (cat['genus'] and search in cat['genus'].lower()) or
+                       (cat['species'] and search in cat['species'].lower())
+                ]
+
+            return Response({
+                'version': data.get('version'),
+                'total_categories': len(categories),
+                'categories': categories
+            })
+
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to load category mapping: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
     @action(detail=False, methods=['get'], url_path='export-annotations')
     def export_annotations(self, request):
         """
