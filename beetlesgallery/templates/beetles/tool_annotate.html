@@ -627,6 +627,8 @@ let validationCounts = { all: 0, validated: 0, unvalidated: 0 };
 let allCategories = [];
 let filteredCategories = [];
 let selectedCategory = null;
+let lastUsedCategoryForImage = null;  // Track last category used for current image
+let lastUsedImageId = null;  // Track which image the last category was used on
 
 // Pan state
 let isPanning = false;
@@ -1044,7 +1046,16 @@ function createImageListItem(img) {
 
 // Select an image
 function selectImage(img) {
+  // Check if this is a different image
+  const isDifferentImage = selectedImageId !== img.image_asset_id;
+
   selectedImageId = img.image_asset_id;
+
+  // Reset recently used category when switching to a different image
+  if (isDifferentImage) {
+    lastUsedCategoryForImage = null;
+    lastUsedImageId = null;
+  }
 
   // Store currently open folders before re-rendering
   const openFolders = new Set();
@@ -1811,7 +1822,47 @@ function renderCategories(categories) {
     return;
   }
 
-  listContent.innerHTML = categories.map(cat => {
+  let html = '';
+
+  // Show recently used category at the top if on the same image
+  if (lastUsedCategoryForImage && lastUsedImageId === selectedImageId) {
+    const recentCat = lastUsedCategoryForImage;
+    const typeColor = recentCat.type === 'generic' ? 'bg-gray-100 text-gray-700' :
+                      recentCat.type === 'genus' ? 'bg-blue-100 text-blue-700' :
+                      'bg-green-100 text-green-700';
+
+    const typeLabel = recentCat.type === 'generic' ? 'Generic' :
+                      recentCat.type === 'genus' ? 'Genus' : 'Species';
+
+    html += `
+      <div class="bg-amber-50 border-b-2 border-amber-200">
+        <div class="px-3 py-1 text-xs font-semibold text-amber-800 flex items-center gap-1">
+          <i class="fi fi-rr-clock-three"></i>
+          Recently Used
+        </div>
+        <button
+          type="button"
+          onclick="selectCategoryById(${recentCat.id})"
+          class="w-full text-left px-3 py-2 hover:bg-amber-100 border-b border-gray-100 transition-colors flex items-center justify-between"
+        >
+          <div class="flex-1 min-w-0">
+            <p class="font-medium text-gray-900 truncate">${recentCat.name}</p>
+            ${recentCat.type === 'species' ? `<p class="text-xs text-gray-500 italic">${recentCat.genus} ${recentCat.species}</p>` : ''}
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs px-2 py-0.5 rounded-full ${typeColor}">${typeLabel}</span>
+            <span class="text-xs text-gray-500 font-mono">ID: ${recentCat.id}</span>
+          </div>
+        </button>
+      </div>
+      <div class="px-3 py-1 text-xs font-semibold text-gray-600 bg-gray-50 border-b border-gray-200">
+        All Categories
+      </div>
+    `;
+  }
+
+  // Render all categories
+  html += categories.map(cat => {
     const typeColor = cat.type === 'generic' ? 'bg-gray-100 text-gray-700' :
                       cat.type === 'genus' ? 'bg-blue-100 text-blue-700' :
                       'bg-green-100 text-green-700';
@@ -1836,6 +1887,8 @@ function renderCategories(categories) {
       </button>
     `;
   }).join('');
+
+  listContent.innerHTML = html;
 }
 
 // Filter categories by search term
@@ -1895,6 +1948,10 @@ function closeCategoryDialog() {
 // Confirm category selection and enter drawing mode
 function confirmCategorySelection() {
   if (!selectedCategory) return;
+
+  // Remember this category for the current image
+  lastUsedCategoryForImage = selectedCategory;
+  lastUsedImageId = selectedImageId;
 
   closeCategoryDialog();
 
