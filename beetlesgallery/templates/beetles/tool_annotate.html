@@ -102,19 +102,6 @@
               <i class="fi fi-rr-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
             </div>
 
-            <!-- Folder Organization Controls -->
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-medium text-gray-700">Group by:</span>
-              <select
-                id="group-by-select"
-                onchange="resetAndLoadImages()"
-                class="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="none">No Grouping</option>
-                <option value="validation">Validation Status</option>
-              </select>
-            </div>
-
             <!-- Loading State -->
             <div id="browser-loading" class="text-center py-8">
               <i class="fi fi-rr-spinner animate-spin text-2xl text-gray-400"></i>
@@ -753,7 +740,6 @@ async function loadAnnotatedImages(append = false) {
   }
 
   try {
-    const groupBy = document.getElementById('group-by-select').value;
     const url = `/api/v1/bounding-boxes/images-with-annotations/?page=${currentPage}&page_size=50&validation_status=${currentValidationFilter}&ordering=-created_at`;
 
     const response = await fetch(url, {
@@ -778,14 +764,7 @@ async function loadAnnotatedImages(append = false) {
     if (allImages.length === 0) {
       emptyEl.classList.remove('hidden');
     } else {
-      if (groupBy === 'none') {
-        renderFlatList(newImages, append);
-      } else if (groupBy === 'validation') {
-        // For grouped view, reload all
-        if (!append) {
-          organizeImages();
-        }
-      }
+      renderFlatList(newImages, append);
     }
 
     // Show end of list indicator if no more pages
@@ -830,7 +809,6 @@ function filterImagesLocal(term) {
 
 // Organize images into folders
 function organizeImages() {
-  const groupBy = document.getElementById('group-by-select').value;
   const listEl = document.getElementById('image-list');
 
   // Apply local search filter first
@@ -848,14 +826,8 @@ function organizeImages() {
     return;
   }
 
-  if (groupBy === 'none') {
-    // Flat list
-    renderFlatList(imagesToShow, false);
-  } else if (groupBy === 'validation') {
-    // Group by validation status
-    const groups = groupImagesByValidation(imagesToShow);
-    renderGroupedList(groups);
-  }
+  // Always render as flat list
+  renderFlatList(imagesToShow, false);
 }
 
 // Render flat list of images
@@ -870,149 +842,6 @@ function renderFlatList(images, append = false) {
     const item = createImageListItem(img);
     listEl.appendChild(item);
   });
-}
-
-// Render grouped list with folders
-function renderGroupedList(groups) {
-  const listEl = document.getElementById('image-list');
-
-  Object.keys(groups).sort().reverse().forEach(groupName => {
-    const folder = createFolderItem(groupName, groups[groupName]);
-    listEl.appendChild(folder);
-  });
-}
-
-// Group images by date
-function groupImagesByDate(images) {
-  const groups = {};
-
-  images.forEach(img => {
-    if (!img.created_at) {
-      const key = 'Unknown Date';
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(img);
-      return;
-    }
-
-    const date = new Date(img.created_at);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    let key;
-    if (date.toDateString() === today.toDateString()) {
-      key = 'Today';
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      key = 'Yesterday';
-    } else {
-      key = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    }
-
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(img);
-  });
-
-  return groups;
-}
-
-// Group images by annotation count
-function groupImagesByCount(images) {
-  const groups = {};
-
-  images.forEach(img => {
-    let key;
-    if (img.annotation_count === 1) {
-      key = '1 annotation';
-    } else if (img.annotation_count <= 5) {
-      key = '2-5 annotations';
-    } else if (img.annotation_count <= 10) {
-      key = '6-10 annotations';
-    } else {
-      key = '10+ annotations';
-    }
-
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(img);
-  });
-
-  return groups;
-}
-
-// Group images by validation status
-function groupImagesByValidation(images) {
-  const groups = {
-    'Fully Validated': [],
-    'Needs Validation': []
-  };
-
-  images.forEach(img => {
-    // Image is non-validated if has_unvalidated_boxes is true
-    if (img.has_unvalidated_boxes) {
-      groups['Needs Validation'].push(img);
-    } else {
-      groups['Fully Validated'].push(img);
-    }
-  });
-
-  // Remove empty groups
-  if (groups['Fully Validated'].length === 0) delete groups['Fully Validated'];
-  if (groups['Needs Validation'].length === 0) delete groups['Needs Validation'];
-
-  return groups;
-}
-
-// Create folder item
-function createFolderItem(name, images) {
-  const folderId = 'folder-' + name.replace(/\s+/g, '-').toLowerCase();
-
-  const folder = document.createElement('div');
-  folder.className = 'border border-gray-200 rounded';
-
-  const header = document.createElement('button');
-  header.type = 'button';
-  header.className = 'w-full px-3 py-2 flex items-center justify-between hover:bg-gray-50 transition-colors';
-  header.onclick = () => toggleFolder(folderId);
-
-  header.innerHTML = `
-    <div class="flex items-center gap-2">
-      <i id="${folderId}-icon" class="fi fi-rr-folder text-amber-500"></i>
-      <span class="text-sm font-medium text-gray-900">${name}</span>
-      <span class="text-xs text-gray-500">(${images.length})</span>
-    </div>
-    <i id="${folderId}-arrow" class="fi fi-rr-angle-small-down text-gray-400 transition-transform"></i>
-  `;
-
-  const content = document.createElement('div');
-  content.id = folderId;
-  content.className = 'hidden border-t border-gray-200';
-
-  images.forEach(img => {
-    const item = createImageListItem(img);
-    item.classList.add('border-l-2', 'border-gray-200', 'ml-2');
-    content.appendChild(item);
-  });
-
-  folder.appendChild(header);
-  folder.appendChild(content);
-
-  return folder;
-}
-
-// Toggle folder open/close
-function toggleFolder(folderId) {
-  const content = document.getElementById(folderId);
-  const arrow = document.getElementById(folderId + '-arrow');
-  const icon = document.getElementById(folderId + '-icon');
-
-  if (content.classList.contains('hidden')) {
-    content.classList.remove('hidden');
-    arrow.classList.add('rotate-180');
-    icon.classList.replace('fi-rr-folder', 'fi-rr-folder-open');
-  } else {
-    content.classList.add('hidden');
-    arrow.classList.remove('rotate-180');
-    icon.classList.replace('fi-rr-folder-open', 'fi-rr-folder');
-  }
 }
 
 // Create image list item
