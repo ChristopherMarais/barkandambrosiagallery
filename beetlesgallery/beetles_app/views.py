@@ -1657,17 +1657,32 @@ def export_annotations(request):
     # Get all images with annotations
     image_asset_ids = BoundingBox.objects.values_list('image_asset_id', flat=True).distinct()
 
+    # Load category mapping
+    from django.conf import settings
+    from pathlib import Path
+
+    category_map = {}
+    mapping_path = Path(settings.MEDIA_ROOT) / 'reference' / 'category_mapping.json'
+    if mapping_path.exists():
+        try:
+            with open(mapping_path, 'r', encoding='utf-8') as f:
+                mapping_data = json.load(f)
+                for cat in mapping_data.get('categories', []):
+                    category_map[str(cat['id'])] = cat
+        except Exception:
+            pass
+
     try:
         if export_format == 'coco':
             # COCO: Export all annotations in a single JSON file
             data = {
-                'images': [],
-                'annotations': [],
+                'images': [],'annotations': [],
                 'categories': []
             }
 
             annotation_id = 1
             processed_images = set()
+            used_category_ids = set()
 
             for image_id in image_asset_ids:
                 try:
@@ -1704,11 +1719,43 @@ def export_annotations(request):
                         )
                         coco_ann['id'] = annotation_id
                         coco_ann['image_id'] = beetle_uuid
+
+                        # Convert category_id to int
+                        label = box.label.strip() if box.label else '0'
+                        try:
+                            coco_ann['category_id'] = int(label)
+                        except ValueError:
+                            coco_ann['category_id'] = 0
+
                         data['annotations'].append(coco_ann)
                         annotation_id += 1
 
+                        # Track used categories
+                        if label and label not in ['unknown', '']:
+                            used_category_ids.add(label)
+
                 except ImageAsset.DoesNotExist:
                     continue
+
+            # Add categories to COCO format
+            for cat_id in sorted(used_category_ids, key=lambda x: int(x) if x.lstrip('-').isdigit() else 0):
+                cat_info = category_map.get(cat_id)
+                if cat_info:
+                    data['categories'].append({
+                        'id': int(cat_id),
+                        'name': cat_info.get('full_name') or cat_info.get('name', f'class_{cat_id}'),
+                        'supercategory': cat_info.get('type', 'beetle')
+                    })
+                else:
+                    # Fallback if category not found
+                    try:
+                        data['categories'].append({
+                            'id': int(cat_id),
+                            'name': f'class_{cat_id}',
+                            'supercategory': 'beetle'
+                        })
+                    except ValueError:
+                        pass
 
             content = json.dumps(data, indent=2)
 
@@ -1731,6 +1778,7 @@ def export_annotations(request):
 
             # Group images by beetle to avoid duplicates
             processed_beetles = set()
+            used_category_ids = set()
 
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
                 for image_id in image_asset_ids:
@@ -1759,12 +1807,31 @@ def export_annotations(request):
                         for box in boxes:
                             line = box.to_yolo()
                             lines.append(line)
-                        content = '\n'.join(lines)
 
+                            # Track used category IDs
+                            label = box.label.strip() if box.label else '0'
+                            if label and label not in ['unknown', '']:
+                                used_category_ids.add(label)
+
+                        content = '\n'.join(lines)
                         zf.writestr(filename, content)
 
                     except ImageAsset.DoesNotExist:
                         continue
+
+                # Generate and add labels.txt mapping file (only for used categories)
+                if category_map and used_category_ids:
+                    label_ids = sorted([int(k) for k in used_category_ids if k.lstrip('-').isdigit()],
+                                      key=lambda x: x)
+                    label_lines = []
+                    for label_id in label_ids:
+                        cat = category_map.get(str(label_id))
+                        if cat:
+                            name = cat.get('full_name') or cat.get('name', f'class_{label_id}')
+                            label_lines.append(f"{label_id}: {name}")
+                    if label_lines:
+                        labels_content = '\n'.join(label_lines)
+                        zf.writestr('labels.txt', labels_content)
 
             zip_buffer.seek(0)
 
