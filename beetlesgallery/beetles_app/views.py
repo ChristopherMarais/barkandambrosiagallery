@@ -29,7 +29,6 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.files.storage import default_storage
 
 from . import species_ref, described_names_ref
-from .models import ImageAsset, Beetles, BoundingBox
 from .models import Beetles, UploadBatch, DownloadJob, UpdateBatch, ImageAsset
 from .schema import REQUIRED_COLS, MAX_ROWS
 from .forms import TailwindUserCreationForm, ProfileForm, PasswordChangeFormStyled, ValidSpeciesUploadForm, DescribedNamesUploadForm, UpdateBatchUploadForm
@@ -1654,8 +1653,8 @@ def export_annotations(request):
     if export_format not in ['yolo', 'coco']:
         return JsonResponse({'error': 'Invalid format. Must be "yolo" or "coco".'}, status=400)
 
-    # Get all images with annotations
-    image_asset_ids = BoundingBox.objects.values_list('image_asset_id', flat=True).distinct()
+    # Get all images with bbox annotations (Beetles with bbox_x not NULL)
+    image_asset_ids = Beetles.objects.exclude(bbox_x__isnull=True).values_list('image_asset_id', flat=True).distinct()
 
     # Load category mapping
     from django.conf import settings
@@ -1694,14 +1693,17 @@ def export_annotations(request):
                         continue
                     processed_images.add(image_id_str)
 
-                    boxes = BoundingBox.objects.filter(image_asset=image_asset)
+                    # Get all beetle bbox annotations for this image
+                    beetles_with_bbox = Beetles.objects.filter(
+                        image_asset=image_asset
+                    ).exclude(bbox_x__isnull=True)
 
-                    if not boxes.exists():
+                    if not beetles_with_bbox.exists():
                         continue
 
-                    # Get beetle UUID from first bounding box
-                    first_box = boxes.first()
-                    beetle_uuid = str(first_box.beetle.id) if first_box.beetle else str(image_asset.id)
+                    # Get beetle UUID from first specimen on the image
+                    first_beetle = image_asset.specimens.first()
+                    beetle_uuid = str(first_beetle.id) if first_beetle else str(image_asset.id)
 
                     # Add image info
                     data['images'].append({
@@ -1712,16 +1714,19 @@ def export_annotations(request):
                     })
 
                     # Add annotations for this image
-                    for box in boxes:
-                        coco_ann = box.to_coco(
+                    for beetle in beetles_with_bbox:
+                        coco_ann = beetle.to_coco(
                             image_asset.image_width or 1920,
                             image_asset.image_height or 1080
                         )
+                        if not coco_ann:  # Skip if no bbox
+                            continue
+
                         coco_ann['id'] = annotation_id
                         coco_ann['image_id'] = beetle_uuid
 
                         # Convert category_id to int
-                        label = box.label.strip() if box.label else '0'
+                        label = beetle.bbox_label.strip() if beetle.bbox_label else '0'
                         try:
                             coco_ann['category_id'] = int(label)
                         except ValueError:
@@ -1784,12 +1789,16 @@ def export_annotations(request):
                 for image_id in image_asset_ids:
                     try:
                         image_asset = ImageAsset.objects.get(pk=image_id)
-                        boxes = BoundingBox.objects.filter(image_asset=image_asset)
 
-                        if not boxes.exists():
+                        # Get all beetle bbox annotations for this image
+                        beetles_with_bbox = Beetles.objects.filter(
+                            image_asset=image_asset
+                        ).exclude(bbox_x__isnull=True)
+
+                        if not beetles_with_bbox.exists():
                             continue
 
-                        # Get primary beetle for filename
+                        # Get primary beetle for filename (first specimen without bbox)
                         beetle = image_asset.specimens.first()
                         if not beetle:
                             continue
@@ -1804,14 +1813,15 @@ def export_annotations(request):
 
                         # Export YOLO format - all boxes for this image in one file
                         lines = []
-                        for box in boxes:
-                            line = box.to_yolo()
-                            lines.append(line)
+                        for beetle_bbox in beetles_with_bbox:
+                            line = beetle_bbox.to_yolo()
+                            if line:  # Skip empty lines
+                                lines.append(line)
 
-                            # Track used category IDs
-                            label = box.label.strip() if box.label else '0'
-                            if label and label not in ['unknown', '']:
-                                used_category_ids.add(label)
+                                # Track used category IDs
+                                label = beetle_bbox.bbox_label.strip() if beetle_bbox.bbox_label else '0'
+                                if label and label not in ['unknown', '']:
+                                    used_category_ids.add(label)
 
                         content = '\n'.join(lines)
                         zf.writestr(filename, content)

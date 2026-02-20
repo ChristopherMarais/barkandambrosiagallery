@@ -658,10 +658,10 @@ async function loadValidationCounts() {
   try {
     // Fetch counts for each validation status
     const responses = await Promise.all([
-      fetch('/api/v1/bounding-boxes/images-with-annotations/?page=1&page_size=1&validation_status=validated', {
+      fetch('/api/v1/beetles/images-with-annotations/?page=1&page_size=1&validation_status=validated', {
         headers: { 'X-CSRFToken': csrftoken }
       }),
-      fetch('/api/v1/bounding-boxes/images-with-annotations/?page=1&page_size=1&validation_status=unvalidated', {
+      fetch('/api/v1/beetles/images-with-annotations/?page=1&page_size=1&validation_status=unvalidated', {
         headers: { 'X-CSRFToken': csrftoken }
       })
     ]);
@@ -684,7 +684,7 @@ async function loadValidationCounts() {
 // Load count for no annotations filter (only when clicked)
 async function loadNoAnnotationsCount() {
   try {
-    const response = await fetch('/api/v1/bounding-boxes/images-without-annotations/?page=1&page_size=1', {
+    const response = await fetch('/api/v1/beetles/images-without-annotations/?page=1&page_size=1', {
       headers: { 'X-CSRFToken': csrftoken }
     });
 
@@ -759,9 +759,9 @@ async function loadAnnotatedImages(append = false) {
   try {
     let url;
     if (currentValidationFilter === 'no-annotations') {
-      url = `/api/v1/bounding-boxes/images-without-annotations/?page=${currentPage}&page_size=50`;
+      url = `/api/v1/beetles/images-without-annotations/?page=${currentPage}&page_size=50`;
     } else {
-      url = `/api/v1/bounding-boxes/images-with-annotations/?page=${currentPage}&page_size=50&validation_status=${currentValidationFilter}&ordering=-created_at`;
+      url = `/api/v1/beetles/images-with-annotations/?page=${currentPage}&page_size=50&validation_status=${currentValidationFilter}&ordering=-created_at`;
     }
 
     // Add search parameter if present
@@ -984,8 +984,8 @@ async function loadImageOnCanvas(img) {
     document.getElementById('canvas-title').textContent = img.beetle_id;
     document.getElementById('canvas-subtitle').textContent = `${img.annotation_count} annotation(s)`;
 
-    // Fetch bounding boxes
-    const response = await fetch(`/api/v1/bounding-boxes/?image_asset=${img.image_asset_id}`, {
+    // Fetch bounding boxes (only beetles with bbox data)
+    const response = await fetch(`/api/v1/beetles/?image_asset=${img.image_asset_id}&has_bbox=true`, {
       headers: {
         'X-CSRFToken': csrftoken
       }
@@ -1026,9 +1026,16 @@ async function loadImageOnCanvas(img) {
       fitToScreen();
     };
 
-    image.onerror = function() {
-      throw new Error('Failed to load image');
+    image.onerror = function(event) {
+      console.error('Failed to load image:', img.full_image_url, event);
+      document.getElementById('canvas-loading').classList.add('hidden');
+      document.getElementById('canvas-empty').classList.remove('hidden');
+      document.getElementById('canvas-subtitle').textContent = 'Error loading image';
     };
+
+    if (!img.full_image_url) {
+      throw new Error('Image URL is missing');
+    }
 
     image.src = img.full_image_url;
 
@@ -1111,17 +1118,17 @@ function drawBoundingBox(box, index) {
   const imgHeight = canvas.height;
 
   // Convert normalized coordinates to pixels
-  const x = box.x * imgWidth;
-  const y = box.y * imgHeight;
-  const width = box.width * imgWidth;
-  const height = box.height * imgHeight;
+  const x = box.bbox_x * imgWidth;
+  const y = box.bbox_y * imgHeight;
+  const width = box.bbox_width * imgWidth;
+  const height = box.bbox_height * imgHeight;
 
   // Choose color based on selection or validation status
   let color;
   if (selectedBoundingBoxIndex === index) {
     color = '#ef4444'; // Red if selected
   } else {
-    color = box.is_validated ? '#10b981' : '#3b82f6'; // Green if validated, blue otherwise
+    color = box.bbox_is_validated ? '#10b981' : '#3b82f6'; // Green if validated, blue otherwise
   }
 
   // Calculate scale factor based on image size (makes labels readable on large images)
@@ -1161,7 +1168,7 @@ function drawBoundingBox(box, index) {
   ctx.textBaseline = 'alphabetic';
 
   // Draw label next to number badge with scaled size (also above the box)
-  const label = box.label || '';
+  const label = box.bbox_label || '';
   if (label) {
     const labelFontSize = Math.max(20, 20 * scaleFactor);
     ctx.font = `bold ${labelFontSize}px Arial`;
@@ -1216,14 +1223,14 @@ function updateBoundingBoxList() {
 function createBoundingBoxListItem(box, index) {
   const item = document.createElement('div');
   const isSelected = selectedBoundingBoxIndex === index;
-  const color = isSelected ? '#ef4444' : (box.is_validated ? '#10b981' : '#3b82f6');
+  const color = isSelected ? '#ef4444' : (box.bbox_is_validated ? '#10b981' : '#3b82f6');
 
   item.className = `border rounded-lg p-3 hover:bg-gray-50 transition-colors ${isSelected ? 'bg-red-50 border-2' : ''}`;
   item.style.borderColor = color;
 
-  const label = box.label || 'Unlabeled';
-  const status = box.is_validated ? 'Validated' : 'Unvalidated';
-  const statusColor = isSelected ? 'text-red-600' : (box.is_validated ? 'text-green-600' : 'text-blue-600');
+  const label = box.bbox_label || 'Unlabeled';
+  const status = box.bbox_is_validated ? 'Validated' : 'Unvalidated';
+  const statusColor = isSelected ? 'text-red-600' : (box.bbox_is_validated ? 'text-green-600' : 'text-blue-600');
 
   item.innerHTML = `
     <div class="flex items-start gap-3">
@@ -1234,10 +1241,10 @@ function createBoundingBoxListItem(box, index) {
         <div class="font-medium text-sm text-gray-900 truncate">${label}</div>
         <div class="text-xs ${statusColor} mt-1">${status}</div>
         <div class="mt-2 grid grid-cols-2 gap-1 text-xs text-gray-600">
-          <div><span class="font-medium">X:</span> ${box.x.toFixed(3)}</div>
-          <div><span class="font-medium">Y:</span> ${box.y.toFixed(3)}</div>
-          <div><span class="font-medium">W:</span> ${box.width.toFixed(3)}</div>
-          <div><span class="font-medium">H:</span> ${box.height.toFixed(3)}</div>
+          <div><span class="font-medium">X:</span> ${(box.bbox_x || 0).toFixed(3)}</div>
+          <div><span class="font-medium">Y:</span> ${(box.bbox_y || 0).toFixed(3)}</div>
+          <div><span class="font-medium">W:</span> ${(box.bbox_width || 0).toFixed(3)}</div>
+          <div><span class="font-medium">H:</span> ${(box.bbox_height || 0).toFixed(3)}</div>
         </div>
       </div>
       <button
@@ -1278,10 +1285,10 @@ function highlightBoundingBox(index) {
   const imgWidth = canvas.width;
   const imgHeight = canvas.height;
 
-  const x = box.x * imgWidth;
-  const y = box.y * imgHeight;
-  const width = box.width * imgWidth;
-  const height = box.height * imgHeight;
+  const x = box.bbox_x * imgWidth;
+  const y = box.bbox_y * imgHeight;
+  const width = box.bbox_width * imgWidth;
+  const height = box.bbox_height * imgHeight;
 
   const canvasWrapper = document.getElementById('canvas-wrapper');
   const boxCenterX = (x + width / 2) * zoomLevel;
@@ -1302,15 +1309,44 @@ async function deleteBoundingBox(boxId, index) {
   }
 
   try {
-    const response = await fetch(`/api/v1/bounding-boxes/${boxId}/`, {
-      method: 'DELETE',
-      headers: {
-        'X-CSRFToken': csrftoken
-      }
-    });
+    const box = currentBoundingBoxes[index];
+    const hasMultipleIndividuals = box.image_asset?.image_has_multiple_individuals;
 
-    if (!response.ok) {
-      throw new Error('Failed to delete bounding box');
+    // If image_has_multiple_individuals != True, clear bbox fields instead of deleting
+    if (hasMultipleIndividuals !== true) {
+      // PATCH to clear bbox fields
+      const response = await fetch(`/api/v1/beetles/${boxId}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({
+          bbox_x: null,
+          bbox_y: null,
+          bbox_width: null,
+          bbox_height: null,
+          bbox_label: ''
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('PATCH error response:', errorText);
+        throw new Error('Failed to clear bounding box: ' + errorText);
+      }
+    } else {
+      // If multiple individuals, DELETE the entire beetle record
+      const response = await fetch(`/api/v1/beetles/${boxId}/`, {
+        method: 'DELETE',
+        headers: {
+          'X-CSRFToken': csrftoken
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete bounding box');
+      }
     }
 
     // Remove from current array
@@ -1348,7 +1384,7 @@ async function validateAllBoundingBoxes() {
   }
 
   // Count unvalidated boxes
-  const unvalidatedCount = currentBoundingBoxes.filter(box => !box.is_validated).length;
+  const unvalidatedCount = currentBoundingBoxes.filter(box => !box.bbox_is_validated).length;
 
   if (unvalidatedCount === 0) {
     alert('All bounding boxes are already validated');
@@ -1367,16 +1403,16 @@ async function validateAllBoundingBoxes() {
   try {
     // Update each unvalidated box
     const updatePromises = currentBoundingBoxes
-      .filter(box => !box.is_validated)
+      .filter(box => !box.bbox_is_validated)
       .map(box =>
-        fetch(`/api/v1/bounding-boxes/${box.id}/`, {
+        fetch(`/api/v1/beetles/${box.id}/`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': csrftoken
           },
           body: JSON.stringify({
-            is_validated: true
+            bbox_is_validated: true
           })
         })
       );
@@ -1391,7 +1427,7 @@ async function validateAllBoundingBoxes() {
 
     // Update local data
     currentBoundingBoxes.forEach(box => {
-      box.is_validated = true;
+      box.bbox_is_validated = true;
     });
 
     // Redraw canvas and update list
@@ -1647,7 +1683,7 @@ function stopPanning(e) {
 // Load category mapping from API
 async function loadCategories() {
   try {
-    const response = await fetch('/api/v1/bounding-boxes/category-mapping/', {
+    const response = await fetch('/api/v1/beetles/category-mapping/', {
       headers: { 'X-CSRFToken': csrftoken }
     });
 
@@ -1934,18 +1970,16 @@ async function confirmSaveBoundingBox() {
 
   // Convert pixel coordinates to normalized (0-1)
   const normalizedBox = {
-    x: currentDrawBox.x / canvas.width,
-    y: currentDrawBox.y / canvas.height,
-    width: currentDrawBox.width / canvas.width,
-    height: currentDrawBox.height / canvas.height,
-    label: newBoundingBoxLabel,
-    source: 'manual',
-    image_asset: selectedImageId,
-    beetle: allImages.find(img => img.image_asset_id === selectedImageId)?.beetle_id
+    bbox_x: currentDrawBox.x / canvas.width,
+    bbox_y: currentDrawBox.y / canvas.height,
+    bbox_width: currentDrawBox.width / canvas.width,
+    bbox_height: currentDrawBox.height / canvas.height,
+    bbox_label: newBoundingBoxLabel,
+    image_asset_id: selectedImageId
   };
 
   try {
-    const response = await fetch('/api/v1/bounding-boxes/', {
+    const response = await fetch('/api/v1/beetles/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1956,7 +1990,8 @@ async function confirmSaveBoundingBox() {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || 'Failed to save bounding box');
+      console.error('Error response:', errorData);
+      throw new Error(errorData.detail || JSON.stringify(errorData) || 'Failed to save bounding box');
     }
 
     const savedBox = await response.json();
@@ -2226,7 +2261,7 @@ async function uploadAnnotations() {
   updateProgress(10, 'Uploading file...');
 
   try {
-    const response = await fetch('/api/v1/bounding-boxes/import-annotations/', {
+    const response = await fetch('/api/v1/beetles/import-annotations/', {
       method: 'POST',
       headers: {
         'X-CSRFToken': csrftoken

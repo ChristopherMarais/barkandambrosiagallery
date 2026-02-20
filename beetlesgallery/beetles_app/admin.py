@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html, mark_safe
-from .models import UploadBatch, Beetles, ImageAsset, DownloadJob, BoundingBox
+from .models import UploadBatch, Beetles, ImageAsset, DownloadJob
 from simple_history.admin import SimpleHistoryAdmin
 
 
@@ -148,6 +148,8 @@ class BeetlesAdmin(SimpleHistoryAdmin):
         "collection_country",
         "collection_stateProvince",
         "get_date_taken",        # Changed
+        "has_bbox_annotation",
+        "bbox_created_at",
     )
 
     # LIST FILTERS: Use double-underscore to filter across the relationship
@@ -159,6 +161,8 @@ class BeetlesAdmin(SimpleHistoryAdmin):
         "image_asset__image_has_multiple_individuals", # Changed
         "specimen_sex",
         "specimen_type_status",
+        "bbox_is_validated",
+        "bbox_created_by",
     )
 
     # SEARCH FIELDS: Use double-underscore for related search
@@ -202,14 +206,35 @@ class BeetlesAdmin(SimpleHistoryAdmin):
         "specimen_sex",
         "specimen_type_status",
         "specimen_notes",
+        "has_bbox_annotation",
+        "bbox_x",
+        "bbox_y",
+        "bbox_width",
+        "bbox_height",
+        "bbox_label",
+        "bbox_is_validated",
+        "bbox_validated_by",
+        "bbox_validated_at",
+        "bbox_created_by",
+        "bbox_created_at",
     )
 
-    # hides the admin’s bulk actions dropdown
-    actions = None
+    # Enable delete action but remove other bulk actions
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        # Keep only the delete action
+        if 'delete_selected' in actions:
+            return {'delete_selected': actions['delete_selected']}
+        return {}
 
+    @admin.display(description='Has BBox', boolean=True, ordering='bbox_x')
+    def has_bbox_annotation(self, obj):
+        """Show whether this beetle has bounding box data"""
+        return obj.has_bbox()
+
+    @admin.display(description='ID', ordering='id')
     def id_short(self, obj):
         return str(obj.id)[:8]
-    id_short.short_description = "ID"
 
     # --- Accessors for ImageAsset Data ---
     # These functions allow the Admin to read data from the linked table
@@ -280,71 +305,3 @@ class ImageAssetAdmin(admin.ModelAdmin):
         return "No Image"
 
 
-# ---------- BoundingBox ----------
-@admin.register(BoundingBox)
-class BoundingBoxAdmin(admin.ModelAdmin):
-    list_display = (
-        'id_short',
-        'image_asset',
-        'label',
-        'source',
-        'confidence',
-        'is_validated',
-        'created_by',
-        'created_at',
-    )
-    list_filter = ('source', 'is_validated', 'created_by', 'validated_by', 'created_at')
-    search_fields = (
-        '=id',
-        'label',
-        'image_asset__image_sha256',
-        'beetle__id',
-        'notes',
-    )
-    readonly_fields = (
-        'id',
-        'image_asset',
-        'beetle',
-        'x',
-        'y',
-        'width',
-        'height',
-        'label',
-        'confidence',
-        'source',
-        'created_by',
-        'created_at',
-        'updated_at',
-        'is_validated',
-        'validated_by',
-        'validated_at',
-        'notes',
-        'box_area',
-        'coordinates_display',
-    )
-    ordering = ('-created_at',)
-    date_hierarchy = 'created_at'
-
-    @admin.display(description='ID')
-    def id_short(self, obj):
-        return str(obj.id)[:8]
-
-    @admin.display(description='Area')
-    def box_area(self, obj):
-        return f"{obj.area:.4f}"
-
-    @admin.display(description='Coordinates')
-    def coordinates_display(self, obj):
-        return f"x:{obj.x:.3f}, y:{obj.y:.3f}, w:{obj.width:.3f}, h:{obj.height:.3f}"
-
-    def has_view_permission(self, request, obj=None):
-        return True
-
-    def has_add_permission(self, request):
-        return False  # Annotations should be created via the annotation tool
-
-    def has_change_permission(self, request, obj=None):
-        return request.user.is_staff
-
-    def has_delete_permission(self, request, obj=None):
-        return request.user.is_staff

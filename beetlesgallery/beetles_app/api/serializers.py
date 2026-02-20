@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from beetlesgallery.beetles_app.models import ImageAsset, Beetles, BoundingBox
+from beetlesgallery.beetles_app.models import ImageAsset, Beetles
 from beetlesgallery.beetles_app import species_ref
 
 
@@ -48,16 +48,37 @@ class BeetlesSerializer(serializers.ModelSerializer):
     """
     Serializer for Beetles (specimen) model.
     Includes full nested ImageAsset data plus taxonomy information from reference.
+    Now also includes bounding box annotation fields.
     """
+    # For reading, return full ImageAsset object
     image_asset = ImageAssetSerializer(read_only=True)
+    # For writing, accept image_asset UUID
+    image_asset_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+
     subfamily = serializers.SerializerMethodField()
     genus = serializers.SerializerMethodField()
     tribe = serializers.SerializerMethodField()
     scientific_name = serializers.SerializerMethodField()
 
+    # Bbox user fields with readable usernames
+    bbox_created_by_username = serializers.CharField(source='bbox_created_by.username', read_only=True)
+    bbox_validated_by_username = serializers.CharField(source='bbox_validated_by.username', read_only=True)
+
     class Meta:
         model = Beetles
         fields = '__all__'
+
+    def create(self, validated_data):
+        """Handle image_asset_id when creating and load the ImageAsset object"""
+        image_asset_id = validated_data.pop('image_asset_id', None)
+        if image_asset_id:
+            # Load the actual ImageAsset instance
+            try:
+                image_asset = ImageAsset.objects.get(id=image_asset_id)
+                validated_data['image_asset'] = image_asset
+            except ImageAsset.DoesNotExist:
+                raise serializers.ValidationError({'image_asset_id': f'ImageAsset with id {image_asset_id} does not exist'})
+        return super().create(validated_data)
 
     def get_subfamily(self, obj):
         """Look up subfamily from valid_species reference"""
@@ -99,51 +120,39 @@ class BeetlesSerializer(serializers.ModelSerializer):
         except:
             return None
 
-
-class BoundingBoxSerializer(serializers.ModelSerializer):
-    """
-    Serializer for BoundingBox model.
-    Handles CRUD operations for bounding box annotations.
-    """
-    created_by_username = serializers.CharField(source='created_by.username', read_only=True)
-    validated_by_username = serializers.CharField(source='validated_by.username', read_only=True)
-
-    class Meta:
-        model = BoundingBox
-        fields = [
-            'id', 'image_asset', 'beetle', 'x', 'y', 'width', 'height',
-            'label', 'confidence', 'source', 'created_by', 'created_by_username',
-            'created_at', 'updated_at', 'is_validated', 'validated_by',
-            'validated_by_username', 'validated_at', 'notes'
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'created_by_username', 'validated_by_username']
-
     def validate(self, data):
         """
-        Validate bounding box coordinates.
+        Validate bounding box coordinates if present.
         Ensures coordinates are within [0, 1] range and box doesn't extend beyond image bounds.
+        Allows null values for clearing bbox data.
         """
-        x = data.get('x')
-        y = data.get('y')
-        width = data.get('width')
-        height = data.get('height')
+        bbox_x = data.get('bbox_x')
+        bbox_y = data.get('bbox_y')
+        bbox_width = data.get('bbox_width')
+        bbox_height = data.get('bbox_height')
 
         errors = {}
 
-        if x is not None and not (0 <= x <= 1):
-            errors['x'] = f"x must be between 0 and 1 (got {x})"
-        if y is not None and not (0 <= y <= 1):
-            errors['y'] = f"y must be between 0 and 1 (got {y})"
-        if width is not None and not (0 < width <= 1):
-            errors['width'] = f"width must be between 0 and 1 (got {width})"
-        if height is not None and not (0 < height <= 1):
-            errors['height'] = f"height must be between 0 and 1 (got {height})"
+        # Only validate if bbox coordinates are provided and not explicitly set to None
+        # Check if key exists and value is not None
+        if 'bbox_x' in data and bbox_x is not None:
+            if not (0 <= bbox_x <= 1):
+                errors['bbox_x'] = f"bbox_x must be between 0 and 1 (got {bbox_x})"
+        if 'bbox_y' in data and bbox_y is not None:
+            if not (0 <= bbox_y <= 1):
+                errors['bbox_y'] = f"bbox_y must be between 0 and 1 (got {bbox_y})"
+        if 'bbox_width' in data and bbox_width is not None:
+            if not (0 < bbox_width <= 1):
+                errors['bbox_width'] = f"bbox_width must be between 0 and 1 (got {bbox_width})"
+        if 'bbox_height' in data and bbox_height is not None:
+            if not (0 < bbox_height <= 1):
+                errors['bbox_height'] = f"bbox_height must be between 0 and 1 (got {bbox_height})"
 
-        # Check box doesn't extend beyond bounds
-        if x is not None and width is not None and x + width > 1.0001:
-            errors['width'] = f"Box extends beyond right edge (x + width = {x + width})"
-        if y is not None and height is not None and y + height > 1.0001:
-            errors['height'] = f"Box extends beyond bottom edge (y + height = {y + height})"
+        # Check box doesn't extend beyond bounds (only if values are not None)
+        if bbox_x is not None and bbox_width is not None and bbox_x + bbox_width > 1.0001:
+            errors['bbox_width'] = f"Box extends beyond right edge (bbox_x + bbox_width = {bbox_x + bbox_width})"
+        if bbox_y is not None and bbox_height is not None and bbox_y + bbox_height > 1.0001:
+            errors['bbox_height'] = f"Box extends beyond bottom edge (bbox_y + bbox_height = {bbox_y + bbox_height})"
 
         if errors:
             raise serializers.ValidationError(errors)
