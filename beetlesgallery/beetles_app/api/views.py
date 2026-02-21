@@ -172,10 +172,22 @@ class BeetlesViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         """
-        Set bbox_validated_by and bbox_validated_at when bbox_is_validated is set to true.
+        Handle bbox validation and clearing:
+        - Set bbox_validated_by and bbox_validated_at when bbox_is_validated is set to true
+        - Clear bbox_created_by, bbox_created_at, bbox_validated_by, bbox_validated_at when bbox is cleared
         """
+        # Check if bbox is being cleared (bbox_x is null)
+        if 'bbox_x' in serializer.validated_data and serializer.validated_data.get('bbox_x') is None:
+            # Clear all bbox audit fields
+            serializer.save(
+                bbox_created_by=None,
+                bbox_created_at=None,
+                bbox_validated_by=None,
+                bbox_validated_at=None,
+                bbox_is_validated=False
+            )
         # If bbox_is_validated is being set to true, auto-fill validation audit fields
-        if serializer.validated_data.get('bbox_is_validated') == True:
+        elif serializer.validated_data.get('bbox_is_validated') == True:
             serializer.save(
                 bbox_validated_by=self.request.user,
                 bbox_validated_at=timezone.now()
@@ -315,18 +327,32 @@ class BeetlesViewSet(viewsets.ModelViewSet):
                             content, image_asset, template_beetle, user
                         )
 
-                    # result is either a list of new beetles or a single updated beetle
+                    # Handle result: dict with updates + new beetles, or list of new beetles
                     if isinstance(result, dict):
-                        # Single beetle was updated (image_has_multiple_individuals != True)
-                        imported_count += result['boxes_updated']
+                        # Updated existing beetle + possibly new beetles to create
+                        boxes_updated = result.get('boxes_updated', 0)
+                        beetles_to_create = result.get('beetles_to_create', [])
+
+                        # Delete existing bbox annotations if overwrite is True
+                        if overwrite and existing_count > 0:
+                            Beetles.objects.filter(
+                                image_asset=image_asset
+                            ).exclude(bbox_x__isnull=True).delete()
+
+                        # Bulk create new beetle records
+                        if beetles_to_create:
+                            Beetles.objects.bulk_create(beetles_to_create)
+
+                        total_imported = boxes_updated + len(beetles_to_create)
+                        imported_count += total_imported
                         details[beetle_uuid] = {
                             'filename': filename,
-                            'boxes_imported': result['boxes_updated'],
-                            'replaced': 0,
-                            'updated_existing': True
+                            'boxes_imported': total_imported,
+                            'replaced': existing_count if overwrite else 0,
+                            'updated_existing': boxes_updated > 0
                         }
                     else:
-                        # Multiple beetles to create (image_has_multiple_individuals == True)
+                        # All new beetles to create
                         beetle_records = result
 
                         # Delete existing bbox annotations if overwrite is True
@@ -364,16 +390,17 @@ class BeetlesViewSet(viewsets.ModelViewSet):
 
     def _parse_yolo_to_beetles(self, content, image_asset, template_beetle, user):
         """
-        Parse YOLO format and either update template beetle or create new beetles.
+        Parse YOLO format and either update existing beetle or create new beetles.
+
+        Logic:
+        - Find beetle without bbox on this image → update it with first box
+        - If all beetles have bbox → create new beetles with copied metadata
 
         Returns:
-        - dict with 'boxes_updated' if image_has_multiple_individuals != True
-        - list of Beetle instances if image_has_multiple_individuals == True
+        - dict with 'boxes_updated' and 'boxes_created' counts
+        - list of new Beetle instances to bulk create
         """
         import uuid as uuid_lib
-
-        # Check if image has multiple individuals
-        has_multiple = image_asset.image_has_multiple_individuals if image_asset else None
 
         # Parse all bounding boxes from file
         parsed_boxes = []
@@ -417,23 +444,37 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         if not parsed_boxes:
             return []
 
-        # If single individual, update template beetle with first box
-        if has_multiple != True and len(parsed_boxes) > 0:
+        boxes_updated = 0
+        beetles_to_create = []
+
+        # Find beetle without bbox on this image
+        beetle_without_bbox = Beetles.objects.filter(
+            image_asset=image_asset,
+            bbox_x__isnull=True
+        ).first()
+
+        # Process first box
+        if beetle_without_bbox and len(parsed_boxes) > 0:
+            # Update existing beetle with first box
             first_box = parsed_boxes[0]
-            template_beetle.bbox_x = first_box['x']
-            template_beetle.bbox_y = first_box['y']
-            template_beetle.bbox_width = first_box['width']
-            template_beetle.bbox_height = first_box['height']
-            template_beetle.bbox_label = first_box['label']
-            template_beetle.bbox_created_by = user
-            template_beetle.bbox_created_at = timezone.now()
-            template_beetle.save()
+            beetle_without_bbox.bbox_x = first_box['x']
+            beetle_without_bbox.bbox_y = first_box['y']
+            beetle_without_bbox.bbox_width = first_box['width']
+            beetle_without_bbox.bbox_height = first_box['height']
+            beetle_without_bbox.bbox_label = first_box['label']
+            beetle_without_bbox.bbox_created_by = user
+            beetle_without_bbox.bbox_created_at = timezone.now()
+            beetle_without_bbox.save()
+            boxes_updated = 1
 
-            return {'boxes_updated': 1}
+            # Remaining boxes become new beetles
+            remaining_boxes = parsed_boxes[1:]
+        else:
+            # All beetles have bbox - create new beetles for all boxes
+            remaining_boxes = parsed_boxes
 
-        # If multiple individuals, create new beetles
-        beetles = []
-        for box in parsed_boxes:
+        # Create new beetles for remaining boxes
+        for box in remaining_boxes:
             beetle = Beetles(
                 id=uuid_lib.uuid4(),
                 image_asset=image_asset,
@@ -454,22 +495,26 @@ class BeetlesViewSet(viewsets.ModelViewSet):
                 bbox_created_by=user,
                 bbox_created_at=timezone.now()
             )
-            beetles.append(beetle)
+            beetles_to_create.append(beetle)
 
-        return beetles
+        if boxes_updated > 0:
+            return {'boxes_updated': boxes_updated, 'beetles_to_create': beetles_to_create}
+        else:
+            return beetles_to_create
 
     def _parse_coco_to_beetles(self, content, image_asset, template_beetle, user):
         """
-        Parse COCO format and either update template beetle or create new beetles.
+        Parse COCO format and either update existing beetle or create new beetles.
+
+        Logic:
+        - Find beetle without bbox on this image → update it with first box
+        - If all beetles have bbox → create new beetles with copied metadata
 
         Returns:
-        - dict with 'boxes_updated' if image_has_multiple_individuals != True
-        - list of Beetle instances if image_has_multiple_individuals == True
+        - dict with 'boxes_updated' and 'beetles_to_create' counts
+        - list of new Beetle instances to bulk create
         """
         import uuid as uuid_lib
-
-        # Check if image has multiple individuals
-        has_multiple = image_asset.image_has_multiple_individuals if image_asset else None
 
         try:
             data = json.loads(content)
@@ -529,23 +574,37 @@ class BeetlesViewSet(viewsets.ModelViewSet):
             if not parsed_boxes:
                 return []
 
-            # If single individual, update template beetle with first box
-            if has_multiple != True and len(parsed_boxes) > 0:
+            boxes_updated = 0
+            beetles_to_create = []
+
+            # Find beetle without bbox on this image
+            beetle_without_bbox = Beetles.objects.filter(
+                image_asset=image_asset,
+                bbox_x__isnull=True
+            ).first()
+
+            # Process first box
+            if beetle_without_bbox and len(parsed_boxes) > 0:
+                # Update existing beetle with first box
                 first_box = parsed_boxes[0]
-                template_beetle.bbox_x = first_box['x']
-                template_beetle.bbox_y = first_box['y']
-                template_beetle.bbox_width = first_box['width']
-                template_beetle.bbox_height = first_box['height']
-                template_beetle.bbox_label = first_box['label']
-                template_beetle.bbox_created_by = user
-                template_beetle.bbox_created_at = timezone.now()
-                template_beetle.save()
+                beetle_without_bbox.bbox_x = first_box['x']
+                beetle_without_bbox.bbox_y = first_box['y']
+                beetle_without_bbox.bbox_width = first_box['width']
+                beetle_without_bbox.bbox_height = first_box['height']
+                beetle_without_bbox.bbox_label = first_box['label']
+                beetle_without_bbox.bbox_created_by = user
+                beetle_without_bbox.bbox_created_at = timezone.now()
+                beetle_without_bbox.save()
+                boxes_updated = 1
 
-                return {'boxes_updated': 1}
+                # Remaining boxes become new beetles
+                remaining_boxes = parsed_boxes[1:]
+            else:
+                # All beetles have bbox - create new beetles for all boxes
+                remaining_boxes = parsed_boxes
 
-            # If multiple individuals, create new beetles
-            beetles = []
-            for box in parsed_boxes:
+            # Create new beetles for remaining boxes
+            for box in remaining_boxes:
                 beetle = Beetles(
                     id=uuid_lib.uuid4(),
                     image_asset=image_asset,
@@ -566,9 +625,12 @@ class BeetlesViewSet(viewsets.ModelViewSet):
                     bbox_created_by=user,
                     bbox_created_at=timezone.now()
                 )
-                beetles.append(beetle)
+                beetles_to_create.append(beetle)
 
-            return beetles
+            if boxes_updated > 0:
+                return {'boxes_updated': boxes_updated, 'beetles_to_create': beetles_to_create}
+            else:
+                return beetles_to_create
 
         except (json.JSONDecodeError, KeyError, TypeError):
             return []
@@ -686,65 +748,75 @@ class BeetlesViewSet(viewsets.ModelViewSet):
                             errors.append(f'{file_name}: No valid bounding boxes found')
                             continue
 
-                        # Check if image has multiple individuals
-                        has_multiple = image_asset.image_has_multiple_individuals if image_asset else None
+                        boxes_updated = 0
+                        beetles_to_create = []
 
-                        # If single individual, update template beetle with first box
-                        if has_multiple != True and len(parsed_boxes) > 0:
+                        # Find beetle without bbox on this image
+                        beetle_without_bbox = Beetles.objects.filter(
+                            image_asset=image_asset,
+                            bbox_x__isnull=True
+                        ).first()
+
+                        # Process first box
+                        if beetle_without_bbox and len(parsed_boxes) > 0:
+                            # Update existing beetle with first box
                             first_box = parsed_boxes[0]
-                            template_beetle.bbox_x = first_box['x']
-                            template_beetle.bbox_y = first_box['y']
-                            template_beetle.bbox_width = first_box['width']
-                            template_beetle.bbox_height = first_box['height']
-                            template_beetle.bbox_label = first_box['label']
-                            template_beetle.bbox_created_by = user
-                            template_beetle.bbox_created_at = timezone.now()
-                            template_beetle.save()
+                            beetle_without_bbox.bbox_x = first_box['x']
+                            beetle_without_bbox.bbox_y = first_box['y']
+                            beetle_without_bbox.bbox_width = first_box['width']
+                            beetle_without_bbox.bbox_height = first_box['height']
+                            beetle_without_bbox.bbox_label = first_box['label']
+                            beetle_without_bbox.bbox_created_by = user
+                            beetle_without_bbox.bbox_created_at = timezone.now()
+                            beetle_without_bbox.save()
+                            boxes_updated = 1
 
-                            imported_count += 1
-                            details[beetle_uuid] = {
-                                'filename': file_name,
-                                'boxes_imported': 1,
-                                'replaced': 0,
-                                'updated_existing': True
-                            }
+                            # Remaining boxes become new beetles
+                            remaining_boxes = parsed_boxes[1:]
                         else:
-                            # Multiple individuals - create new beetles
-                            beetle_records = []
-                            for box in parsed_boxes:
-                                beetle = Beetles(
-                                    id=uuid_lib.uuid4(),
-                                    image_asset=image_asset,
-                                    depicts_valid_name_id=template_beetle.depicts_valid_name_id,
-                                    depicts_specimen=template_beetle.depicts_specimen,
-                                    depicts_name_verbatim=template_beetle.depicts_name_verbatim,
-                                    collection_country=template_beetle.collection_country,
-                                    collection_stateProvince=template_beetle.collection_stateProvince,
-                                    specimen_sex=template_beetle.specimen_sex,
-                                    specimen_type_status=template_beetle.specimen_type_status,
-                                    bbox_x=box['x'],
-                                    bbox_y=box['y'],
-                                    bbox_width=box['width'],
-                                    bbox_height=box['height'],
-                                    bbox_label=box['label'],
-                                    bbox_created_by=user,
-                                    bbox_created_at=timezone.now()
-                                )
-                                beetle_records.append(beetle)
+                            # All beetles have bbox - create new beetles for all boxes
+                            remaining_boxes = parsed_boxes
 
-                            if overwrite and existing_count > 0:
-                                Beetles.objects.filter(
-                                    image_asset=image_asset
-                                ).exclude(bbox_x__isnull=True).delete()
+                        # Create new beetles for remaining boxes
+                        for box in remaining_boxes:
+                            beetle = Beetles(
+                                id=uuid_lib.uuid4(),
+                                image_asset=image_asset,
+                                depicts_valid_name_id=template_beetle.depicts_valid_name_id,
+                                depicts_specimen=template_beetle.depicts_specimen,
+                                depicts_name_verbatim=template_beetle.depicts_name_verbatim,
+                                collection_country=template_beetle.collection_country,
+                                collection_stateProvince=template_beetle.collection_stateProvince,
+                                specimen_sex=template_beetle.specimen_sex,
+                                specimen_type_status=template_beetle.specimen_type_status,
+                                bbox_x=box['x'],
+                                bbox_y=box['y'],
+                                bbox_width=box['width'],
+                                bbox_height=box['height'],
+                                bbox_label=box['label'],
+                                bbox_created_by=user,
+                                bbox_created_at=timezone.now()
+                            )
+                            beetles_to_create.append(beetle)
 
-                            if beetle_records:
-                                Beetles.objects.bulk_create(beetle_records)
-                                imported_count += len(beetle_records)
-                                details[beetle_uuid] = {
-                                    'filename': file_name,
-                                    'boxes_imported': len(beetle_records),
-                                    'replaced': existing_count if overwrite else 0
-                                }
+                        # Delete existing bbox annotations if overwrite is True
+                        if overwrite and existing_count > 0:
+                            Beetles.objects.filter(
+                                image_asset=image_asset
+                            ).exclude(bbox_x__isnull=True).delete()
+
+                        # Bulk create new beetle records
+                        if beetles_to_create:
+                            Beetles.objects.bulk_create(beetles_to_create)
+
+                        total_imported = boxes_updated + len(beetles_to_create)
+                        imported_count += total_imported
+                        details[beetle_uuid] = {
+                            'filename': file_name,
+                            'boxes_imported': total_imported,
+                            'replaced': existing_count if overwrite else 0,
+                            'updated_existing': boxes_updated > 0
+                        }
 
                     except Exception as e:
                         skipped_count += 1

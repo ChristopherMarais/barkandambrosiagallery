@@ -886,12 +886,12 @@ function createImageListItem(img) {
   item.innerHTML = `
     <div class="w-10 h-10 flex-shrink-0 rounded overflow-hidden bg-gray-100">
       ${img.thumbnail_url
-        ? `<img src="${img.thumbnail_url}" class="w-full h-full object-cover" alt="${img.beetle_id}">`
+        ? `<img src="${img.thumbnail_url}" class="w-full h-full object-cover" alt="${img.image_asset_id}">`
         : '<i class="fi fi-rr-picture text-gray-400 text-xl flex items-center justify-center h-full"></i>'
       }
     </div>
     <div class="flex-1 min-w-0 text-left">
-      <p class="text-sm font-medium text-gray-900 truncate">${img.beetle_id}</p>
+      <p class="text-sm font-medium text-gray-900 truncate">${img.image_asset_id}</p>
     </div>
     <div class="flex-shrink-0 text-right">
       <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
@@ -1019,7 +1019,7 @@ async function loadImageOnCanvas(img) {
       document.getElementById('canvas-footer').classList.remove('hidden');
 
       // Update footer
-      document.getElementById('footer-beetle-id').textContent = img.image_asset_id;
+      document.getElementById('footer-beetle-id').textContent = '-';
       document.getElementById('footer-annotation-count').textContent = currentBoundingBoxes.length;
 
       // Fit to screen initially
@@ -1316,11 +1316,14 @@ async function deleteBoundingBox(boxId, index) {
 
   try {
     const box = currentBoundingBoxes[index];
-    const hasMultipleIndividuals = box.image_asset?.image_has_multiple_individuals;
 
-    // If image_has_multiple_individuals != True, clear bbox fields instead of deleting
-    if (hasMultipleIndividuals !== true) {
-      // PATCH to clear bbox fields
+    // Check if this is the only beetle entry for this image (has metadata but now has bbox)
+    // If there are multiple beetle entries with bbox, we can delete this one
+    // If this is the only one, clear bbox fields instead
+    const beetlesWithBbox = currentBoundingBoxes.length;
+
+    if (beetlesWithBbox === 1) {
+      // This is the only beetle with bbox - clear bbox fields instead of deleting
       const response = await fetch(`/api/v1/beetles/${boxId}/`, {
         method: 'PATCH',
         headers: {
@@ -1332,7 +1335,8 @@ async function deleteBoundingBox(boxId, index) {
           bbox_y: null,
           bbox_width: null,
           bbox_height: null,
-          bbox_label: ''
+          bbox_label: '',
+          bbox_is_validated: false
         })
       });
 
@@ -1342,7 +1346,7 @@ async function deleteBoundingBox(boxId, index) {
         throw new Error('Failed to clear bounding box: ' + errorText);
       }
     } else {
-      // If multiple individuals, DELETE the entire beetle record
+      // Multiple beetles with bbox - DELETE the entire beetle record
       const response = await fetch(`/api/v1/beetles/${boxId}/`, {
         method: 'DELETE',
         headers: {
