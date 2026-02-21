@@ -447,55 +447,48 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         boxes_updated = 0
         beetles_to_create = []
 
-        # Find beetle without bbox on this image
-        beetle_without_bbox = Beetles.objects.filter(
-            image_asset=image_asset,
-            bbox_x__isnull=True
-        ).first()
-
-        # Process first box
-        if beetle_without_bbox and len(parsed_boxes) > 0:
-            # Update existing beetle with first box
-            first_box = parsed_boxes[0]
-            beetle_without_bbox.bbox_x = first_box['x']
-            beetle_without_bbox.bbox_y = first_box['y']
-            beetle_without_bbox.bbox_width = first_box['width']
-            beetle_without_bbox.bbox_height = first_box['height']
-            beetle_without_bbox.bbox_label = first_box['label']
-            beetle_without_bbox.bbox_created_by = user
-            beetle_without_bbox.bbox_created_at = timezone.now()
-            beetle_without_bbox.save()
-            boxes_updated = 1
-
-            # Remaining boxes become new beetles
-            remaining_boxes = parsed_boxes[1:]
-        else:
-            # All beetles have bbox - create new beetles for all boxes
-            remaining_boxes = parsed_boxes
-
-        # Create new beetles for remaining boxes
-        for box in remaining_boxes:
-            beetle = Beetles(
-                id=uuid_lib.uuid4(),
+        # Process each box: find beetle without bbox or create new one
+        for box in parsed_boxes:
+            # Find beetle without bbox on this image
+            beetle_without_bbox = Beetles.objects.filter(
                 image_asset=image_asset,
-                # Copy specimen metadata from template
-                depicts_valid_name_id=template_beetle.depicts_valid_name_id,
-                depicts_specimen=template_beetle.depicts_specimen,
-                depicts_name_verbatim=template_beetle.depicts_name_verbatim,
-                collection_country=template_beetle.collection_country,
-                collection_stateProvince=template_beetle.collection_stateProvince,
-                specimen_sex=template_beetle.specimen_sex,
-                specimen_type_status=template_beetle.specimen_type_status,
-                # Bbox data
-                bbox_x=box['x'],
-                bbox_y=box['y'],
-                bbox_width=box['width'],
-                bbox_height=box['height'],
-                bbox_label=box['label'],
-                bbox_created_by=user,
-                bbox_created_at=timezone.now()
-            )
-            beetles_to_create.append(beetle)
+                bbox_x__isnull=True
+            ).first()
+
+            if beetle_without_bbox:
+                # Update existing beetle with this box
+                beetle_without_bbox.bbox_x = box['x']
+                beetle_without_bbox.bbox_y = box['y']
+                beetle_without_bbox.bbox_width = box['width']
+                beetle_without_bbox.bbox_height = box['height']
+                beetle_without_bbox.bbox_label = box['label']
+                beetle_without_bbox.bbox_created_by = user
+                beetle_without_bbox.bbox_created_at = timezone.now()
+                beetle_without_bbox.save()
+                boxes_updated += 1
+            else:
+                # No beetle without bbox - create new beetle
+                beetle = Beetles(
+                    id=uuid_lib.uuid4(),
+                    image_asset=image_asset,
+                    # Copy specimen metadata from template
+                    depicts_valid_name_id=template_beetle.depicts_valid_name_id,
+                    depicts_specimen=template_beetle.depicts_specimen,
+                    depicts_name_verbatim=template_beetle.depicts_name_verbatim,
+                    collection_country=template_beetle.collection_country,
+                    collection_stateProvince=template_beetle.collection_stateProvince,
+                    specimen_sex=template_beetle.specimen_sex,
+                    specimen_type_status=template_beetle.specimen_type_status,
+                    # Bbox data
+                    bbox_x=box['x'],
+                    bbox_y=box['y'],
+                    bbox_width=box['width'],
+                    bbox_height=box['height'],
+                    bbox_label=box['label'],
+                    bbox_created_by=user,
+                    bbox_created_at=timezone.now()
+                )
+                beetles_to_create.append(beetle)
 
         if boxes_updated > 0:
             return {'boxes_updated': boxes_updated, 'beetles_to_create': beetles_to_create}
@@ -577,55 +570,48 @@ class BeetlesViewSet(viewsets.ModelViewSet):
             boxes_updated = 0
             beetles_to_create = []
 
-            # Find beetle without bbox on this image
-            beetle_without_bbox = Beetles.objects.filter(
-                image_asset=image_asset,
-                bbox_x__isnull=True
-            ).first()
-
-            # Process first box
-            if beetle_without_bbox and len(parsed_boxes) > 0:
-                # Update existing beetle with first box
-                first_box = parsed_boxes[0]
-                beetle_without_bbox.bbox_x = first_box['x']
-                beetle_without_bbox.bbox_y = first_box['y']
-                beetle_without_bbox.bbox_width = first_box['width']
-                beetle_without_bbox.bbox_height = first_box['height']
-                beetle_without_bbox.bbox_label = first_box['label']
-                beetle_without_bbox.bbox_created_by = user
-                beetle_without_bbox.bbox_created_at = timezone.now()
-                beetle_without_bbox.save()
-                boxes_updated = 1
-
-                # Remaining boxes become new beetles
-                remaining_boxes = parsed_boxes[1:]
-            else:
-                # All beetles have bbox - create new beetles for all boxes
-                remaining_boxes = parsed_boxes
-
-            # Create new beetles for remaining boxes
-            for box in remaining_boxes:
-                beetle = Beetles(
-                    id=uuid_lib.uuid4(),
+            # Process each box: find beetle without bbox or create new one
+            for box in parsed_boxes:
+                # Find beetle without bbox on this image
+                beetle_without_bbox = Beetles.objects.filter(
                     image_asset=image_asset,
-                    # Copy specimen metadata from template
-                    depicts_valid_name_id=template_beetle.depicts_valid_name_id,
-                    depicts_specimen=template_beetle.depicts_specimen,
-                    depicts_name_verbatim=template_beetle.depicts_name_verbatim,
-                    collection_country=template_beetle.collection_country,
-                    collection_stateProvince=template_beetle.collection_stateProvince,
-                    specimen_sex=template_beetle.specimen_sex,
-                    specimen_type_status=template_beetle.specimen_type_status,
-                    # Bbox data
-                    bbox_x=box['x'],
-                    bbox_y=box['y'],
-                    bbox_width=box['width'],
-                    bbox_height=box['height'],
-                    bbox_label=box['label'],
-                    bbox_created_by=user,
-                    bbox_created_at=timezone.now()
-                )
-                beetles_to_create.append(beetle)
+                    bbox_x__isnull=True
+                ).first()
+
+                if beetle_without_bbox:
+                    # Update existing beetle with this box
+                    beetle_without_bbox.bbox_x = box['x']
+                    beetle_without_bbox.bbox_y = box['y']
+                    beetle_without_bbox.bbox_width = box['width']
+                    beetle_without_bbox.bbox_height = box['height']
+                    beetle_without_bbox.bbox_label = box['label']
+                    beetle_without_bbox.bbox_created_by = user
+                    beetle_without_bbox.bbox_created_at = timezone.now()
+                    beetle_without_bbox.save()
+                    boxes_updated += 1
+                else:
+                    # No beetle without bbox - create new beetle
+                    beetle = Beetles(
+                        id=uuid_lib.uuid4(),
+                        image_asset=image_asset,
+                        # Copy specimen metadata from template
+                        depicts_valid_name_id=template_beetle.depicts_valid_name_id,
+                        depicts_specimen=template_beetle.depicts_specimen,
+                        depicts_name_verbatim=template_beetle.depicts_name_verbatim,
+                        collection_country=template_beetle.collection_country,
+                        collection_stateProvince=template_beetle.collection_stateProvince,
+                        specimen_sex=template_beetle.specimen_sex,
+                        specimen_type_status=template_beetle.specimen_type_status,
+                        # Bbox data
+                        bbox_x=box['x'],
+                        bbox_y=box['y'],
+                        bbox_width=box['width'],
+                        bbox_height=box['height'],
+                        bbox_label=box['label'],
+                        bbox_created_by=user,
+                        bbox_created_at=timezone.now()
+                    )
+                    beetles_to_create.append(beetle)
 
             if boxes_updated > 0:
                 return {'boxes_updated': boxes_updated, 'beetles_to_create': beetles_to_create}
@@ -748,62 +734,55 @@ class BeetlesViewSet(viewsets.ModelViewSet):
                             errors.append(f'{file_name}: No valid bounding boxes found')
                             continue
 
-                        boxes_updated = 0
-                        beetles_to_create = []
-
-                        # Find beetle without bbox on this image
-                        beetle_without_bbox = Beetles.objects.filter(
-                            image_asset=image_asset,
-                            bbox_x__isnull=True
-                        ).first()
-
-                        # Process first box
-                        if beetle_without_bbox and len(parsed_boxes) > 0:
-                            # Update existing beetle with first box
-                            first_box = parsed_boxes[0]
-                            beetle_without_bbox.bbox_x = first_box['x']
-                            beetle_without_bbox.bbox_y = first_box['y']
-                            beetle_without_bbox.bbox_width = first_box['width']
-                            beetle_without_bbox.bbox_height = first_box['height']
-                            beetle_without_bbox.bbox_label = first_box['label']
-                            beetle_without_bbox.bbox_created_by = user
-                            beetle_without_bbox.bbox_created_at = timezone.now()
-                            beetle_without_bbox.save()
-                            boxes_updated = 1
-
-                            # Remaining boxes become new beetles
-                            remaining_boxes = parsed_boxes[1:]
-                        else:
-                            # All beetles have bbox - create new beetles for all boxes
-                            remaining_boxes = parsed_boxes
-
-                        # Create new beetles for remaining boxes
-                        for box in remaining_boxes:
-                            beetle = Beetles(
-                                id=uuid_lib.uuid4(),
-                                image_asset=image_asset,
-                                depicts_valid_name_id=template_beetle.depicts_valid_name_id,
-                                depicts_specimen=template_beetle.depicts_specimen,
-                                depicts_name_verbatim=template_beetle.depicts_name_verbatim,
-                                collection_country=template_beetle.collection_country,
-                                collection_stateProvince=template_beetle.collection_stateProvince,
-                                specimen_sex=template_beetle.specimen_sex,
-                                specimen_type_status=template_beetle.specimen_type_status,
-                                bbox_x=box['x'],
-                                bbox_y=box['y'],
-                                bbox_width=box['width'],
-                                bbox_height=box['height'],
-                                bbox_label=box['label'],
-                                bbox_created_by=user,
-                                bbox_created_at=timezone.now()
-                            )
-                            beetles_to_create.append(beetle)
-
-                        # Delete existing bbox annotations if overwrite is True
+                        # Delete existing bbox annotations if overwrite is True (BEFORE processing)
                         if overwrite and existing_count > 0:
                             Beetles.objects.filter(
                                 image_asset=image_asset
                             ).exclude(bbox_x__isnull=True).delete()
+
+                        boxes_updated = 0
+                        beetles_to_create = []
+
+                        # Process each box: find beetle without bbox or create new one
+                        for box in parsed_boxes:
+                            # Find beetle without bbox on this image
+                            beetle_without_bbox = Beetles.objects.filter(
+                                image_asset=image_asset,
+                                bbox_x__isnull=True
+                            ).first()
+
+                            if beetle_without_bbox:
+                                # Update existing beetle with this box
+                                beetle_without_bbox.bbox_x = box['x']
+                                beetle_without_bbox.bbox_y = box['y']
+                                beetle_without_bbox.bbox_width = box['width']
+                                beetle_without_bbox.bbox_height = box['height']
+                                beetle_without_bbox.bbox_label = box['label']
+                                beetle_without_bbox.bbox_created_by = user
+                                beetle_without_bbox.bbox_created_at = timezone.now()
+                                beetle_without_bbox.save()
+                                boxes_updated += 1
+                            else:
+                                # No beetle without bbox - create new beetle
+                                beetle = Beetles(
+                                    id=uuid_lib.uuid4(),
+                                    image_asset=image_asset,
+                                    depicts_valid_name_id=template_beetle.depicts_valid_name_id,
+                                    depicts_specimen=template_beetle.depicts_specimen,
+                                    depicts_name_verbatim=template_beetle.depicts_name_verbatim,
+                                    collection_country=template_beetle.collection_country,
+                                    collection_stateProvince=template_beetle.collection_stateProvince,
+                                    specimen_sex=template_beetle.specimen_sex,
+                                    specimen_type_status=template_beetle.specimen_type_status,
+                                    bbox_x=box['x'],
+                                    bbox_y=box['y'],
+                                    bbox_width=box['width'],
+                                    bbox_height=box['height'],
+                                    bbox_label=box['label'],
+                                    bbox_created_by=user,
+                                    bbox_created_at=timezone.now()
+                                )
+                                beetles_to_create.append(beetle)
 
                         # Bulk create new beetle records
                         if beetles_to_create:
