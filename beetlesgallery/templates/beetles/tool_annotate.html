@@ -981,7 +981,7 @@ async function loadImageOnCanvas(img) {
 
   try {
     // Update header
-    document.getElementById('canvas-title').textContent = img.beetle_id;
+    document.getElementById('canvas-title').textContent = img.image_asset_id;
     document.getElementById('canvas-subtitle').textContent = `${img.annotation_count} annotation(s)`;
 
     // Fetch bounding boxes (only beetles with bbox data)
@@ -1019,7 +1019,7 @@ async function loadImageOnCanvas(img) {
       document.getElementById('canvas-footer').classList.remove('hidden');
 
       // Update footer
-      document.getElementById('footer-beetle-id').textContent = img.beetle_id;
+      document.getElementById('footer-beetle-id').textContent = img.image_asset_id;
       document.getElementById('footer-annotation-count').textContent = currentBoundingBoxes.length;
 
       // Fit to screen initially
@@ -1240,6 +1240,7 @@ function createBoundingBoxListItem(box, index) {
       <div class="bbox-info flex-1 min-w-0 cursor-pointer">
         <div class="font-medium text-sm text-gray-900 truncate">${label}</div>
         <div class="text-xs ${statusColor} mt-1">${status}</div>
+        <div class="text-xs text-gray-500 mt-1 font-mono">ID: ${box.id}</div>
         <div class="mt-2 grid grid-cols-2 gap-1 text-xs text-gray-600">
           <div><span class="font-medium">X:</span> ${(box.bbox_x || 0).toFixed(3)}</div>
           <div><span class="font-medium">Y:</span> ${(box.bbox_y || 0).toFixed(3)}</div>
@@ -1277,11 +1278,16 @@ function highlightBoundingBox(index) {
   // Set selected index
   selectedBoundingBoxIndex = index;
 
+  // Update footer with selected beetle ID
+  const box = currentBoundingBoxes[index];
+  if (box && box.id) {
+    document.getElementById('footer-beetle-id').textContent = box.id;
+  }
+
   // Redraw canvas with selected box in red
   drawCanvas();
 
   // Scroll to box if needed
-  const box = currentBoundingBoxes[index];
   const imgWidth = canvas.width;
   const imgHeight = canvas.height;
 
