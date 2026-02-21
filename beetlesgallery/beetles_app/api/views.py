@@ -108,8 +108,8 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         If creating a bbox annotation, either update existing beetle or create new one.
 
         Logic:
-        - If image_has_multiple_individuals != True: Update existing beetle with bbox data
-        - If image_has_multiple_individuals == True: Create new beetle with copied metadata
+        - Find beetle on this image WITHOUT bbox coordinates → update it with new bbox
+        - If all beetles on this image already have bbox → create new beetle with copied metadata + new bbox
 
         NOTE: This runs BEFORE serializer.save() and serializer.create(),
         so image_asset hasn't been resolved yet - we only have image_asset_id.
@@ -119,34 +119,35 @@ class BeetlesViewSet(viewsets.ModelViewSet):
             # Get image_asset_id from initial_data (what was sent from frontend)
             image_asset_id = serializer.initial_data.get('image_asset_id')
 
-            # Find template beetle (existing beetle on same image WITHOUT bbox data)
             if image_asset_id:
-                template = Beetles.objects.select_related('image_asset').filter(
+                # Find beetle without bbox on this image
+                beetle_without_bbox = Beetles.objects.filter(
                     image_asset_id=image_asset_id,
                     bbox_x__isnull=True
                 ).first()
 
-                if template:
-                    # Check if image has multiple individuals
-                    has_multiple = template.image_asset.image_has_multiple_individuals if template.image_asset else None
+                if beetle_without_bbox:
+                    # Update existing beetle record with bbox data
+                    beetle_without_bbox.bbox_x = serializer.validated_data.get('bbox_x')
+                    beetle_without_bbox.bbox_y = serializer.validated_data.get('bbox_y')
+                    beetle_without_bbox.bbox_width = serializer.validated_data.get('bbox_width')
+                    beetle_without_bbox.bbox_height = serializer.validated_data.get('bbox_height')
+                    beetle_without_bbox.bbox_label = serializer.validated_data.get('bbox_label')
+                    beetle_without_bbox.bbox_created_by = self.request.user
+                    beetle_without_bbox.bbox_created_at = timezone.now()
+                    beetle_without_bbox.save()
 
-                    if has_multiple != True:
-                        # Update existing beetle record with bbox data
-                        template.bbox_x = serializer.validated_data.get('bbox_x')
-                        template.bbox_y = serializer.validated_data.get('bbox_y')
-                        template.bbox_width = serializer.validated_data.get('bbox_width')
-                        template.bbox_height = serializer.validated_data.get('bbox_height')
-                        template.bbox_label = serializer.validated_data.get('bbox_label')
-                        template.bbox_created_by = self.request.user
-                        template.bbox_created_at = timezone.now()
-                        template.save()
+                    # Return the updated beetle instead of creating new
+                    serializer.instance = beetle_without_bbox
+                    return
+                else:
+                    # All beetles have bbox - find one to copy metadata from
+                    template = Beetles.objects.filter(
+                        image_asset_id=image_asset_id
+                    ).first()
 
-                        # Return the updated template instead of creating new
-                        # We need to prevent serializer.save() from creating a new record
-                        serializer.instance = template
-                        return
-                    else:
-                        # Multiple individuals: create new beetle with copied metadata
+                    if template:
+                        # Create new beetle with copied metadata
                         extra_fields = {
                             'bbox_created_by': self.request.user,
                             'bbox_created_at': timezone.now(),
