@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django.http import FileResponse
 from django.db import transaction
 from django.utils import timezone
+from django.conf import settings
 from beetlesgallery.beetles_app.models import ImageAsset, Beetles
 from beetlesgallery.beetles_app import species_ref
 from .serializers import ImageAssetSerializer, BeetlesSerializer, SpeciesSerializer
@@ -13,6 +14,7 @@ import json
 import zipfile
 import os
 from io import BytesIO
+from datetime import datetime
 
 
 class IsStaffUser(IsAuthenticated):
@@ -175,9 +177,15 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         Handle bbox validation and clearing:
         - Set bbox_validated_by and bbox_validated_at when bbox_is_validated is set to true
         - Clear bbox_created_by, bbox_created_at, bbox_validated_by, bbox_validated_at when bbox is cleared
+        - Backup beetle record when bbox is being cleared
         """
         # Check if bbox is being cleared (bbox_x is null)
         if 'bbox_x' in serializer.validated_data and serializer.validated_data.get('bbox_x') is None:
+            # Backup the beetle record before clearing bbox data
+            instance = serializer.instance
+            if instance and instance.bbox_x is not None:  # Only backup if it currently has bbox data
+                self._backup_deleted_beetle(instance)
+
             # Clear all bbox audit fields
             serializer.save(
                 bbox_created_by=None,
@@ -194,6 +202,50 @@ class BeetlesViewSet(viewsets.ModelViewSet):
             )
         else:
             serializer.save()
+
+    def _backup_deleted_beetle(self, beetle):
+        """
+        Backup a beetle record to JSON file before deletion.
+        Saves to media/deleted_beetles/<date>/<beetle_id>.json
+        """
+        try:
+            # Create backup directory structure
+            date_str = datetime.now().strftime('%Y-%m-%d')
+            backup_dir = os.path.join(settings.MEDIA_ROOT, 'deleted_beetles', date_str)
+            os.makedirs(backup_dir, exist_ok=True)
+
+            # Serialize beetle data
+            serializer = BeetlesSerializer(beetle)
+            beetle_data = serializer.data
+
+            # Add deletion metadata
+            beetle_data['deleted_at'] = timezone.now().isoformat()
+            beetle_data['deleted_by'] = self.request.user.username if self.request.user else None
+
+            # Write to JSON file
+            filename = f"{beetle.id}.json"
+            filepath = os.path.join(backup_dir, filename)
+
+            with open(filepath, 'w') as f:
+                json.dump(beetle_data, f, indent=2)
+
+            return filepath
+        except Exception as e:
+            # Log error but don't fail the deletion
+            print(f"Warning: Failed to backup beetle {beetle.id}: {str(e)}")
+            return None
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        Override destroy to backup beetle record before deletion.
+        """
+        instance = self.get_object()
+
+        # Backup the beetle record
+        self._backup_deleted_beetle(instance)
+
+        # Proceed with deletion
+        return super().destroy(request, *args, **kwargs)
 
     @action(detail=False, methods=['post'], url_path='import-annotations')
     def import_annotations(self, request):
