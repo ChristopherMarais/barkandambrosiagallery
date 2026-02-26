@@ -1701,16 +1701,15 @@ def export_annotations(request):
                     if not beetles_with_bbox.exists():
                         continue
 
-                    # Get beetle UUID from first specimen on the image
-                    first_beetle = image_asset.specimens.first()
-                    beetle_uuid = str(first_beetle.id) if first_beetle else str(image_asset.id)
+                    # Use image_asset ID for consistency
+                    image_id = str(image_asset.id)
 
                     # Add image info
                     data['images'].append({
-                        'id': beetle_uuid,
+                        'id': image_id,
                         'width': image_asset.image_width or 0,
                         'height': image_asset.image_height or 0,
-                        'file_name': f'{beetle_uuid}.jpg'
+                        'file_name': f'{image_id}.jpg'
                     })
 
                     # Add annotations for this image
@@ -1723,7 +1722,7 @@ def export_annotations(request):
                             continue
 
                         coco_ann['id'] = annotation_id
-                        coco_ann['image_id'] = beetle_uuid
+                        coco_ann['image_id'] = image_id
 
                         # Convert category_id to int
                         label = beetle.bbox_label.strip() if beetle.bbox_label else '0'
@@ -1781,8 +1780,8 @@ def export_annotations(request):
             # YOLO: Export separate .txt file per image
             zip_buffer = BytesIO()
 
-            # Group images by beetle to avoid duplicates
-            processed_beetles = set()
+            # Track processed images to avoid duplicates
+            processed_images = set()
             used_category_ids = set()
 
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
@@ -1798,18 +1797,15 @@ def export_annotations(request):
                         if not beetles_with_bbox.exists():
                             continue
 
-                        # Get primary beetle for filename (first specimen without bbox)
-                        beetle = image_asset.specimens.first()
-                        if not beetle:
-                            continue
+                        # Use image_asset ID for filename consistency
+                        image_id_str = str(image_asset.id)
 
-                        # Skip if we've already processed this beetle
-                        beetle_id_str = str(beetle.id)
-                        if beetle_id_str in processed_beetles:
+                        # Skip if we've already processed this image
+                        if image_id_str in processed_images:
                             continue
-                        processed_beetles.add(beetle_id_str)
+                        processed_images.add(image_id_str)
 
-                        filename = f"{beetle.id}.txt"
+                        filename = f"{image_asset.id}.txt"
 
                         # Export YOLO format - all boxes for this image in one file
                         lines = []

@@ -590,6 +590,240 @@
   </div>
 </div>
 
+<!-- Edit Beetle Record Modal -->
+<div id="edit-beetle-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+  <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl my-8 flex flex-col" style="max-height: calc(100vh - 4rem);">
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between p-4 border-b border-gray-200">
+      <h2 class="text-lg font-semibold text-gray-900">Edit Beetle Record</h2>
+      <button type="button" onclick="closeEditModal()" class="text-gray-400 hover:text-gray-600 transition">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+
+    <!-- Modal Body (Scrollable) -->
+    <div class="flex-1 overflow-y-auto p-4">
+      <form id="edit-beetle-form">
+        <!-- Identity Section -->
+        <div class="mb-6">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700 mb-3">Identity</h3>
+          <div class="space-y-3 text-sm">
+            <div>
+              <label class="block text-gray-600 mb-1">Specimen ID</label>
+              <input type="text" name="depicts_specimen" class="w-full rounded border border-gray-300 px-3 py-2 text-sm">
+            </div>
+
+            <div>
+              <label class="block text-gray-600 mb-1">Valid Name ID (Species)</label>
+              <div class="relative">
+                <input
+                  type="text"
+                  name="depicts_valid_name_id"
+                  id="valid-name-search"
+                  placeholder="Enter ID or search species..."
+                  class="w-full rounded border border-gray-300 px-3 py-2 text-sm pr-8"
+                  autocomplete="off"
+                >
+                <button
+                  type="button"
+                  id="valid-name-search-btn"
+                  class="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1.5 rounded hover:bg-gray-100"
+                  title="Search species"
+                >
+                  <i class="fi fi-rr-search text-xs"></i>
+                </button>
+
+                <!-- Dropdown list -->
+                <div
+                  id="valid-name-dropdown"
+                  class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-64 overflow-y-auto hidden"
+                >
+                  <div id="valid-name-options" class="py-1">
+                    <!-- Options will be populated here -->
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-gray-600 mb-1">Described ID</label>
+              <input type="text" name="depicts_described_name_id" class="w-full rounded border border-gray-300 px-3 py-2 text-sm">
+            </div>
+
+            <div>
+              <label class="block text-gray-600 mb-1">Alternative ID</label>
+              <input type="text" name="alternative_id" class="w-full rounded border border-gray-300 px-3 py-2 text-sm">
+            </div>
+
+            <div>
+              <label class="block text-gray-600 mb-1">Name (verbatim)</label>
+              <input type="text" name="depicts_name_verbatim" class="w-full rounded border border-gray-300 px-3 py-2 text-sm">
+            </div>
+          </div>
+        </div>
+
+        <!-- Taxonomy Section (Read-only, derived from Valid Name ID) -->
+        <div class="mb-6">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700 mb-3">Taxonomy <span class="text-xs font-normal text-gray-500">(Read-only)</span></h3>
+          <div class="text-xs text-gray-600 mb-3 p-2 bg-blue-50 border border-blue-200 rounded">
+            Note: To update taxonomy, change the <strong>Valid Name ID</strong> above.
+          </div>
+          <div class="space-y-2 text-sm">
+            <div class="grid grid-cols-3 gap-2 items-center">
+              <span class="text-gray-600">Scientific Name</span>
+              <span class="col-span-2 text-gray-800" id="tax-scientificName">—</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 items-center">
+              <span class="text-gray-600">Authority</span>
+              <span class="col-span-2 text-gray-800" id="tax-authority">—</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 items-center">
+              <span class="text-gray-600">Subfamily</span>
+              <span class="col-span-2 text-gray-800" id="tax-subfamily">—</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 items-center">
+              <span class="text-gray-600">Tribe</span>
+              <span class="col-span-2 text-gray-800" id="tax-tribe">—</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 items-center">
+              <span class="text-gray-600">Subtribe</span>
+              <span class="col-span-2 text-gray-800" id="tax-subtribe">—</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 items-center">
+              <span class="text-gray-600">Genus</span>
+              <span class="col-span-2 text-gray-800 italic" id="tax-genus">—</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 items-center">
+              <span class="text-gray-600">Species</span>
+              <span class="col-span-2 text-gray-800 italic" id="tax-species">—</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 items-center">
+              <span class="text-gray-600">Subspecies</span>
+              <span class="col-span-2 text-gray-800 italic" id="tax-subspecies">—</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 items-center">
+              <span class="text-gray-600">Authority Year</span>
+              <span class="col-span-2 text-gray-800" id="tax-authorityYear">—</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 items-center">
+              <span class="text-gray-600">Original Genus</span>
+              <span class="col-span-2 text-gray-800 italic" id="tax-originalGenus">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Attribution Section (Image-level, read-only) -->
+        <div class="mb-6">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700 mb-3">Attribution <span class="text-xs font-normal text-gray-500">(Image-level)</span></h3>
+          <div class="space-y-3 text-sm">
+            <div>
+              <label class="block text-gray-600 mb-1">Institution</label>
+              <input type="text" name="image_institution" class="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-gray-100 text-gray-500" disabled>
+            </div>
+
+            <div>
+              <label class="block text-gray-600 mb-1">Photographer</label>
+              <input type="text" name="photographer" class="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-gray-100 text-gray-500" disabled>
+            </div>
+
+            <div>
+              <label class="block text-gray-600 mb-1">Image Email</label>
+              <input type="text" name="image_email" class="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-gray-100 text-gray-500" disabled>
+            </div>
+
+            <div>
+              <label class="block text-gray-600 mb-1">Usage License</label>
+              <input type="text" name="photo_usage_statement" class="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-gray-100 text-gray-500" disabled>
+            </div>
+          </div>
+        </div>
+
+        <!-- Technical Section -->
+        <div class="mb-6">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700 mb-3">Image Technical</h3>
+          <div class="space-y-3 text-sm">
+            <div>
+              <label class="block text-gray-600 mb-1">Aspect</label>
+              <input type="text" name="aspect" class="w-full rounded border border-gray-300 px-3 py-2 text-sm">
+            </div>
+
+            <div>
+              <label class="block text-gray-600 mb-1">Resolution (px/mm)</label>
+              <input type="text" name="resolution_in_ppmm" class="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-gray-100 text-gray-500" disabled>
+            </div>
+
+            <div>
+              <label class="block text-gray-600 mb-1">Image Date</label>
+              <input type="text" name="image_date_taken" placeholder="YYYY-MM-DD" class="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-gray-100 text-gray-500" disabled>
+            </div>
+
+            <div>
+              <label class="block text-gray-600 mb-1">Multiple Individuals</label>
+              <select name="image_has_multiple_individuals" class="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-gray-100 text-gray-500" disabled>
+                <option value="unknown">Unknown</option>
+                <option value="True">Yes</option>
+                <option value="False">No</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Collection / Specimen Section -->
+        <div class="mb-6">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700 mb-3">Collection / Specimen</h3>
+          <div class="space-y-3 text-sm">
+            <div>
+              <label class="block text-gray-600 mb-1">Country</label>
+              <input type="text" name="collection_country" class="w-full rounded border border-gray-300 px-3 py-2 text-sm">
+            </div>
+
+            <div>
+              <label class="block text-gray-600 mb-1">State/Province</label>
+              <input type="text" name="collection_stateProvince" class="w-full rounded border border-gray-300 px-3 py-2 text-sm">
+            </div>
+
+            <div>
+              <label class="block text-gray-600 mb-1">Sex</label>
+              <input type="text" name="specimen_sex" class="w-full rounded border border-gray-300 px-3 py-2 text-sm">
+            </div>
+
+            <div>
+              <label class="block text-gray-600 mb-1">Type Status</label>
+              <input type="text" name="specimen_type_status" class="w-full rounded border border-gray-300 px-3 py-2 text-sm">
+            </div>
+          </div>
+        </div>
+
+        <!-- Notes Section -->
+        <div class="mb-6">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700 mb-3">Notes</h3>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Image Notes <span class="text-xs font-normal text-gray-500">(Image-level)</span></label>
+              <textarea name="image_notes" rows="3" class="w-full rounded border border-gray-300 px-2 py-1 text-sm bg-gray-100 text-gray-500" disabled></textarea>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Specimen Notes</label>
+              <textarea name="specimen_notes" rows="3" class="w-full rounded border border-gray-300 px-2 py-1 text-sm"></textarea>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="flex items-center justify-end gap-3 p-4 border-t border-gray-200">
+      <button type="button" onclick="closeEditModal()" class="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition">
+        Cancel
+      </button>
+      <button type="button" onclick="saveEditedBeetle()" class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition">
+        <span id="save-btn-text">Save Changes</span>
+        <span id="save-btn-loading" class="hidden">Saving...</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
 // Global state
 let allImages = [];
@@ -1248,23 +1482,37 @@ function createBoundingBoxListItem(box, index) {
           <div><span class="font-medium">H:</span> ${(box.bbox_height || 0).toFixed(3)}</div>
         </div>
       </div>
-      <button
-        type="button"
-        class="bbox-delete flex-shrink-0 w-7 h-7 flex items-center justify-center rounded hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors"
-        title="Delete bounding box"
-      >
-        <i class="fi fi-rr-trash text-sm"></i>
-      </button>
+      <div class="flex-shrink-0 flex gap-1">
+        <button
+          type="button"
+          class="bbox-edit w-7 h-7 flex items-center justify-center rounded hover:bg-blue-100 text-gray-400 hover:text-blue-600 transition-colors"
+          title="Edit beetle record"
+        >
+          <i class="fi fi-rr-pencil text-sm"></i>
+        </button>
+        <button
+          type="button"
+          class="bbox-delete w-7 h-7 flex items-center justify-center rounded hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors"
+          title="Delete bounding box"
+        >
+          <i class="fi fi-rr-trash text-sm"></i>
+        </button>
+      </div>
     </div>
   `;
 
   // Add event listeners
   const numberEl = item.querySelector('.bbox-number');
   const infoEl = item.querySelector('.bbox-info');
+  const editBtn = item.querySelector('.bbox-edit');
   const deleteBtn = item.querySelector('.bbox-delete');
 
   numberEl.addEventListener('click', () => highlightBoundingBox(index));
   infoEl.addEventListener('click', () => highlightBoundingBox(index));
+  editBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openEditModal(box.id, index);
+  });
   deleteBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     deleteBoundingBox(box.id, index);
@@ -2425,6 +2673,401 @@ function scrollToImageInList(img) {
       btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   });
+}
+
+// ===== EDIT MODAL FUNCTIONS =====
+
+let currentEditingBeetleId = null;
+let currentEditingBeetleIndex = null;
+
+// Open edit modal for a beetle record
+async function openEditModal(beetleId, index) {
+  currentEditingBeetleId = beetleId;
+  currentEditingBeetleIndex = index;
+
+  const modal = document.getElementById('edit-beetle-modal');
+  const form = document.getElementById('edit-beetle-form');
+
+  try {
+    // Fetch beetle data from API
+    const response = await fetch(`/api/v1/beetles/${beetleId}/`, {
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch beetle data');
+    }
+
+    const beetle = await response.json();
+
+    // Populate form fields
+    form.querySelector('[name="depicts_specimen"]').value = beetle.depicts_specimen || '';
+
+    // Initialize Valid Name ID dropdown
+    initValidNameDropdown();
+
+    // Set Valid Name ID (display just the ID)
+    const validNameSearch = document.getElementById('valid-name-search');
+    validNameSearch.value = beetle.depicts_valid_name_id || '';
+
+    form.querySelector('[name="depicts_described_name_id"]').value = beetle.depicts_described_name_id || '';
+    form.querySelector('[name="alternative_id"]').value = beetle.alternative_id || '';
+    form.querySelector('[name="depicts_name_verbatim"]').value = beetle.depicts_name_verbatim || '';
+
+    // Attribution (image-level, disabled)
+    if (beetle.image_asset) {
+      form.querySelector('[name="image_institution"]').value = beetle.image_asset.image_institution || '';
+      form.querySelector('[name="photographer"]').value = beetle.image_asset.photographer || '';
+      form.querySelector('[name="image_email"]').value = beetle.image_asset.image_email || '';
+      form.querySelector('[name="photo_usage_statement"]').value = beetle.image_asset.photo_usage_statement || '';
+      form.querySelector('[name="resolution_in_ppmm"]').value = beetle.image_asset.resolution_in_ppmm || '';
+      form.querySelector('[name="image_date_taken"]').value = beetle.image_asset.image_date_taken || '';
+      form.querySelector('[name="image_notes"]').value = beetle.image_asset.image_notes || '';
+
+      // Multiple individuals dropdown
+      const multipleSelect = form.querySelector('[name="image_has_multiple_individuals"]');
+      if (beetle.image_asset.image_has_multiple_individuals === true) {
+        multipleSelect.value = 'True';
+      } else if (beetle.image_asset.image_has_multiple_individuals === false) {
+        multipleSelect.value = 'False';
+      } else {
+        multipleSelect.value = 'unknown';
+      }
+    }
+
+    // Technical
+    form.querySelector('[name="aspect"]').value = beetle.aspect || '';
+
+    // Collection/Specimen
+    form.querySelector('[name="collection_country"]').value = beetle.collection_country || '';
+    form.querySelector('[name="collection_stateProvince"]').value = beetle.collection_stateProvince || '';
+    form.querySelector('[name="specimen_sex"]').value = beetle.specimen_sex || '';
+    form.querySelector('[name="specimen_type_status"]').value = beetle.specimen_type_status || '';
+
+    // Notes
+    form.querySelector('[name="specimen_notes"]').value = beetle.specimen_notes || '';
+
+    // Fetch and populate taxonomy data using the shared function
+    await fetchAndUpdateTaxonomy(beetle.depicts_valid_name_id);
+
+    // Show modal
+    modal.classList.remove('hidden');
+
+    // Add ESC key handler only
+    document.addEventListener('keydown', handleEscapeKey);
+
+  } catch (error) {
+    console.error('Error opening edit modal:', error);
+    alert('Failed to load beetle data. Please try again.');
+  }
+}
+
+// Clear taxonomy fields
+function clearTaxonomyFields() {
+  document.getElementById('tax-scientificName').textContent = '—';
+  document.getElementById('tax-authority').textContent = '—';
+  document.getElementById('tax-subfamily').textContent = '—';
+  document.getElementById('tax-tribe').textContent = '—';
+  document.getElementById('tax-subtribe').textContent = '—';
+  document.getElementById('tax-genus').textContent = '—';
+  document.getElementById('tax-species').textContent = '—';
+  document.getElementById('tax-subspecies').textContent = '—';
+  document.getElementById('tax-authorityYear').textContent = '—';
+  document.getElementById('tax-originalGenus').textContent = '—';
+}
+
+// Valid Name ID dropdown state
+let validNameCategories = [];
+let filteredValidNameCategories = [];
+let validNameDropdownInitialized = false;
+
+// Initialize Valid Name ID dropdown
+function initValidNameDropdown() {
+  // Only initialize once to avoid duplicate event listeners
+  if (validNameDropdownInitialized) return;
+  validNameDropdownInitialized = true;
+
+  const searchInput = document.getElementById('valid-name-search');
+  const searchBtn = document.getElementById('valid-name-search-btn');
+  const dropdown = document.getElementById('valid-name-dropdown');
+
+  // Load categories if not already loaded
+  if (validNameCategories.length === 0 && allCategories.length > 0) {
+    // Filter only categories with positive IDs (actual species)
+    validNameCategories = allCategories.filter(cat => {
+      const id = parseInt(cat.id);
+      return !isNaN(id) && id > 0;
+    });
+  }
+
+  // Track if dropdown is shown via search button
+  let isSearchMode = false;
+  let originalValue = '';
+
+  // Search button click - enter search mode
+  searchBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    isSearchMode = true;
+    originalValue = searchInput.value; // Save the ID
+    searchInput.value = ''; // Clear for search
+    searchInput.focus();
+
+    if (validNameCategories.length === 0) {
+      loadCategoriesForValidName().then(() => {
+        filterValidNameOptions('');
+        dropdown.classList.remove('hidden');
+      });
+    } else {
+      filterValidNameOptions('');
+      dropdown.classList.remove('hidden');
+    }
+  });
+
+  // Input event - only filter when in search mode
+  searchInput.addEventListener('input', (e) => {
+    if (isSearchMode) {
+      const searchTerm = e.target.value.toLowerCase().trim();
+      filterValidNameOptions(searchTerm);
+      dropdown.classList.remove('hidden');
+    }
+  });
+
+  // When user manually changes the ID value, update taxonomy
+  searchInput.addEventListener('blur', () => {
+    if (!isSearchMode) {
+      const newId = searchInput.value.trim();
+      if (newId && newId !== originalValue) {
+        fetchAndUpdateTaxonomy(newId);
+      }
+    }
+  });
+
+  // Listen for selection-made event to exit search mode
+  searchInput.addEventListener('selection-made', () => {
+    isSearchMode = false;
+    originalValue = searchInput.value;
+  });
+
+  // Click outside to close dropdown
+  document.addEventListener('click', (e) => {
+    const searchBtnEl = document.getElementById('valid-name-search-btn');
+    if (!searchInput.contains(e.target) && !dropdown.contains(e.target) && !searchBtnEl.contains(e.target)) {
+      dropdown.classList.add('hidden');
+      // If closing while in search mode without selection, restore original value
+      if (isSearchMode) {
+        searchInput.value = originalValue;
+        isSearchMode = false;
+      }
+    }
+  });
+}
+
+// Load categories for Valid Name dropdown
+async function loadCategoriesForValidName() {
+  if (allCategories.length === 0) {
+    await loadCategories();
+  }
+  // Filter only categories with positive IDs
+  validNameCategories = allCategories.filter(cat => {
+    const id = parseInt(cat.id);
+    return !isNaN(id) && id > 0;
+  });
+}
+
+// Filter and render Valid Name options
+function filterValidNameOptions(searchTerm) {
+  const dropdown = document.getElementById('valid-name-dropdown');
+  const optionsContainer = document.getElementById('valid-name-options');
+
+  if (searchTerm === '') {
+    filteredValidNameCategories = [...validNameCategories];
+  } else {
+    filteredValidNameCategories = validNameCategories.filter(cat => {
+      const nameMatch = cat.name.toLowerCase().includes(searchTerm);
+      const fullNameMatch = cat.full_name && cat.full_name.toLowerCase().includes(searchTerm);
+      const genusMatch = cat.genus && cat.genus.toLowerCase().includes(searchTerm);
+      const speciesMatch = cat.species && cat.species.toLowerCase().includes(searchTerm);
+      return nameMatch || fullNameMatch || genusMatch || speciesMatch;
+    });
+  }
+
+  // Render options
+  if (filteredValidNameCategories.length === 0) {
+    optionsContainer.innerHTML = `
+      <div class="px-3 py-2 text-sm text-gray-500 text-center">
+        No species found
+      </div>
+    `;
+  } else {
+    optionsContainer.innerHTML = filteredValidNameCategories.map(cat => {
+      const typeColor = cat.type === 'genus' ? 'bg-blue-50' : 'bg-gray-50';
+      const displayName = cat.full_name || cat.name;
+
+      return `
+        <button
+          type="button"
+          class="w-full px-3 py-2 text-left hover:bg-blue-50 text-sm flex items-center justify-between group"
+          onclick="selectValidNameOption('${cat.id}', '${displayName.replace(/'/g, "\\'")}', '${cat.name.replace(/'/g, "\\'")}')"
+        >
+          <div class="flex-1 min-w-0">
+            <div class="font-medium text-gray-900 truncate">${displayName}</div>
+            ${cat.genus && cat.species ? `<div class="text-xs text-gray-500 italic">${cat.genus} ${cat.species}</div>` : ''}
+          </div>
+          <span class="ml-2 text-xs ${typeColor} px-2 py-0.5 rounded">${cat.id}</span>
+        </button>
+      `;
+    }).join('');
+  }
+}
+
+// Select Valid Name option
+function selectValidNameOption(id, displayName, name) {
+  const searchInput = document.getElementById('valid-name-search');
+  const dropdown = document.getElementById('valid-name-dropdown');
+
+  // Update input with just the ID
+  searchInput.value = id;
+
+  // Hide dropdown
+  dropdown.classList.add('hidden');
+
+  // Exit search mode (need to reset the flag in closure)
+  // We'll handle this by dispatching an event
+  searchInput.dispatchEvent(new CustomEvent('selection-made'));
+
+  // Fetch and update taxonomy
+  fetchAndUpdateTaxonomy(id);
+}
+
+// Fetch and update taxonomy data
+async function fetchAndUpdateTaxonomy(validNameId) {
+  if (!validNameId) {
+    clearTaxonomyFields();
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/v1/beetles/taxonomy/?valid_name_id=${encodeURIComponent(validNameId)}`, {
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
+
+    if (response.ok) {
+      const taxonomy = await response.json();
+
+      // Populate taxonomy fields
+      document.getElementById('tax-scientificName').textContent = taxonomy.scientificName || '—';
+      document.getElementById('tax-authority').textContent = taxonomy.authority || '—';
+      document.getElementById('tax-subfamily').textContent = taxonomy.subfamily || '—';
+      document.getElementById('tax-tribe').textContent = taxonomy.tribe || '—';
+      document.getElementById('tax-subtribe').textContent = taxonomy.subtribe || '—';
+      document.getElementById('tax-genus').textContent = taxonomy.genus || '—';
+      document.getElementById('tax-species').textContent = taxonomy.species || '—';
+      document.getElementById('tax-subspecies').textContent = taxonomy.subspecies || '—';
+      document.getElementById('tax-authorityYear').textContent = taxonomy.authorityYear || '—';
+      document.getElementById('tax-originalGenus').textContent = taxonomy.originalGenus || '—';
+    } else {
+      clearTaxonomyFields();
+    }
+  } catch (error) {
+    console.error('Error fetching taxonomy:', error);
+    clearTaxonomyFields();
+  }
+}
+
+// Close edit modal
+function closeEditModal() {
+  const modal = document.getElementById('edit-beetle-modal');
+  modal.classList.add('hidden');
+
+  // Remove event listener
+  document.removeEventListener('keydown', handleEscapeKey);
+
+  // Reset state
+  currentEditingBeetleId = null;
+  currentEditingBeetleIndex = null;
+}
+
+// Handle ESC key press
+function handleEscapeKey(e) {
+  if (e.key === 'Escape') {
+    closeEditModal();
+  }
+}
+
+// Save edited beetle
+async function saveEditedBeetle() {
+  if (!currentEditingBeetleId) return;
+
+  const form = document.getElementById('edit-beetle-form');
+  const saveBtn = document.querySelector('[onclick="saveEditedBeetle()"]');
+  const saveBtnText = document.getElementById('save-btn-text');
+  const saveBtnLoading = document.getElementById('save-btn-loading');
+
+  // Show loading state
+  saveBtn.disabled = true;
+  saveBtnText.classList.add('hidden');
+  saveBtnLoading.classList.remove('hidden');
+
+  try {
+    // Gather form data (only editable fields)
+    const data = {
+      depicts_specimen: form.querySelector('[name="depicts_specimen"]').value || null,
+      depicts_valid_name_id: form.querySelector('[name="depicts_valid_name_id"]').value || null,
+      depicts_described_name_id: form.querySelector('[name="depicts_described_name_id"]').value || null,
+      alternative_id: form.querySelector('[name="alternative_id"]').value || null,
+      depicts_name_verbatim: form.querySelector('[name="depicts_name_verbatim"]').value || null,
+      aspect: form.querySelector('[name="aspect"]').value || null,
+      collection_country: form.querySelector('[name="collection_country"]').value || null,
+      collection_stateProvince: form.querySelector('[name="collection_stateProvince"]').value || null,
+      specimen_sex: form.querySelector('[name="specimen_sex"]').value || null,
+      specimen_type_status: form.querySelector('[name="specimen_type_status"]').value || null,
+      specimen_notes: form.querySelector('[name="specimen_notes"]').value || null,
+    };
+
+    // Send PATCH request
+    const response = await fetch(`/api/v1/beetles/${currentEditingBeetleId}/`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken
+      },
+      body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(JSON.stringify(errorData));
+    }
+
+    const updatedBeetle = await response.json();
+
+    // Update local currentBoundingBoxes array
+    if (currentEditingBeetleIndex !== null && currentBoundingBoxes[currentEditingBeetleIndex]) {
+      currentBoundingBoxes[currentEditingBeetleIndex] = updatedBeetle;
+    }
+
+    // Refresh bounding box list
+    updateBoundingBoxList();
+
+    // Close modal
+    closeEditModal();
+
+    // Show success message (brief)
+    alert('Beetle record updated successfully!');
+
+  } catch (error) {
+    console.error('Error saving beetle:', error);
+    alert('Failed to save changes. Please check the form and try again.\n\n' + error.message);
+  } finally {
+    // Reset button state
+    saveBtn.disabled = false;
+    saveBtnText.classList.remove('hidden');
+    saveBtnLoading.classList.add('hidden');
+  }
 }
 </script>
 

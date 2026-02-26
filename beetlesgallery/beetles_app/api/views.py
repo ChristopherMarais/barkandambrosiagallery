@@ -1111,6 +1111,70 @@ class BeetlesViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @action(detail=False, methods=['get'], url_path='taxonomy')
+    def taxonomy(self, request):
+        """
+        Get taxonomy data for a given valid_name_id using species_ref.resolve().
+
+        GET /api/v1/beetles/taxonomy/?valid_name_id=123
+
+        Returns:
+        {
+            "scientificName": "...",
+            "authority": "...",
+            "subfamily": "...",
+            "tribe": "...",
+            "subtribe": "...",
+            "genus": "...",
+            "species": "...",
+            "subspecies": "...",
+            "authorityYear": "...",
+            "originalGenus": "..."
+        }
+        """
+        import math
+
+        valid_name_id = request.query_params.get('valid_name_id', '').strip()
+
+        if not valid_name_id:
+            return Response(
+                {'error': 'valid_name_id parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Normalize the ID (same logic as in main views.py)
+        def normalize_id(v):
+            if v is None:
+                return None
+            if isinstance(v, str):
+                s = v.strip()
+                if not s:
+                    return None
+            else:
+                s = str(v).strip()
+            try:
+                f = float(s)
+                if math.isnan(f):
+                    return None
+                if f.is_integer():
+                    return str(int(f))
+            except ValueError:
+                return s
+            return s
+
+        norm_vid = normalize_id(valid_name_id)
+
+        if norm_vid is None:
+            return Response({})
+
+        # Resolve taxonomy using species_ref
+        ref_species = species_ref.resolve(norm_vid)
+
+        if not ref_species:
+            return Response({})
+
+        return Response(ref_species)
+
 
 class SpeciesViewSet(viewsets.ViewSet):
     """
