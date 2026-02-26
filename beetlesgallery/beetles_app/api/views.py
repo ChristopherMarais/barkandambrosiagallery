@@ -902,7 +902,7 @@ class BeetlesViewSet(viewsets.ModelViewSet):
 
         if search:
             matching_image_assets = ImageAsset.objects.filter(
-                Q(image_file__icontains=search)
+                Q(image_file__icontains=search) | Q(id__icontains=search)
             ).values_list('id', flat=True)
 
             matching_beetles = Beetles.objects.filter(
@@ -1019,6 +1019,7 @@ class BeetlesViewSet(viewsets.ModelViewSet):
 
             images_without_boxes = images_without_boxes.filter(
                 Q(image_file__icontains=search) |
+                Q(id__icontains=search) |
                 Q(id__in=matching_beetles)
             )
 

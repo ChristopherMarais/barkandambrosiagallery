@@ -1078,8 +1078,9 @@ function organizeImages() {
   // Apply local search filter first
   const imagesToShow = searchTerm
     ? allImages.filter(img =>
-        img.filename.toLowerCase().includes(searchTerm) ||
-        img.beetle_id.toLowerCase().includes(searchTerm)
+        img.filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        img.beetle_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        img.image_asset_id.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : allImages;
 
