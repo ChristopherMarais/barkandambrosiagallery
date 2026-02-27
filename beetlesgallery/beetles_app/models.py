@@ -773,3 +773,74 @@ class DownloadJob(models.Model):
         return qs
 
 
+# -----------------------------
+# ImageLock (Session-based image viewing lock)
+# -----------------------------
+class ImageLock(models.Model):
+    """
+    Tracks which user is currently viewing/editing an image in the data annotator.
+    Prevents concurrent editing conflicts by showing warnings when another user
+    has the image open.
+
+    Locks automatically expire after LOCK_TIMEOUT_MINUTES of inactivity.
+    """
+    LOCK_TIMEOUT_MINUTES = 5
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    image_asset = models.OneToOneField(
+        ImageAsset,
+        on_delete=models.CASCADE,
+        related_name='active_lock',
+        help_text="The image that is currently locked"
+    )
+
+    locked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='image_locks',
+        help_text="User who has this image open"
+    )
+
+    locked_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        help_text="When the lock was acquired"
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text="Last activity timestamp (for auto-expiry)"
+    )
+
+    class Meta:
+        db_table = "image_locks"
+        verbose_name = "Image Lock"
+        verbose_name_plural = "Image Locks"
+        indexes = [
+            models.Index(fields=["locked_by", "updated_at"]),
+        ]
+
+    def __str__(self):
+        return f"Lock on {self.image_asset.id} by {self.locked_by.username}"
+
+    def is_expired(self) -> bool:
+        """Check if this lock has expired based on last activity."""
+        from datetime import timedelta
+        from django.utils import timezone
+        timeout = timedelta(minutes=self.LOCK_TIMEOUT_MINUTES)
+        return timezone.now() - self.updated_at > timeout
+
+    @classmethod
+    def cleanup_expired_locks(cls):
+        """Remove all expired locks. Can be called periodically or before checking locks."""
+        from datetime import timedelta
+        from django.utils import timezone
+        timeout = timedelta(minutes=cls.LOCK_TIMEOUT_MINUTES)
+        cutoff = timezone.now() - timeout
+        expired = cls.objects.filter(updated_at__lt=cutoff)
+        count = expired.count()
+        expired.delete()
+        return count
+
+

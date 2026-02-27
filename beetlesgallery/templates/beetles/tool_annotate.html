@@ -402,6 +402,28 @@
           </div>
         </div>
 
+        <!-- Lock Warning Banner (shown when image is locked by another user) -->
+        <div id="lock-warning-banner" class="hidden border-b border-amber-300 bg-amber-50 px-4 py-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <i class="fi fi-rr-lock text-amber-600 text-lg"></i>
+            <div>
+              <p class="text-sm font-medium text-amber-900">
+                <span id="lock-warning-text">This image is being viewed by another user</span>
+              </p>
+              <p class="text-xs text-amber-700">
+                Editing controls are disabled to prevent conflicts
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onclick="tryAcquireLock()"
+            class="px-3 py-1.5 text-xs border border-amber-600 text-amber-600 rounded hover:bg-amber-100 transition-colors font-medium"
+          >
+            <i class="fi fi-rr-refresh text-xs"></i> Try Again
+          </button>
+        </div>
+
         <!-- Canvas Container -->
         <div class="flex-1 relative overflow-hidden bg-gray-100" id="canvas-container">
           <!-- Empty State -->
@@ -861,6 +883,10 @@ let ctx = null;
 let zoomLevel = 1.0;
 let selectedBoundingBoxIndex = null;
 
+// Lock state
+let currentImageLock = null; // { locked_by, locked_at } or null if we have the lock
+let isLockedByOther = false; // true if image is locked by another user
+
 // Pagination state
 let currentPage = 1;
 let totalCount = 0;
@@ -1178,9 +1204,14 @@ function createImageListItem(img) {
 }
 
 // Select an image
-function selectImage(img) {
+async function selectImage(img) {
   // Check if this is a different image
   const isDifferentImage = selectedImageId !== img.image_asset_id;
+
+  // Release lock on previous image if switching
+  if (isDifferentImage && selectedImageId) {
+    await releaseLock(selectedImageId);
+  }
 
   selectedImageId = img.image_asset_id;
 
@@ -1213,6 +1244,9 @@ function selectImage(img) {
       if (icon) icon.classList.replace('fi-rr-folder', 'fi-rr-folder-open');
     }
   });
+
+  // Try to acquire lock on new image
+  const lockAcquired = await acquireLock(img.image_asset_id, img.lock);
 
   // Load image and annotations in canvas
   loadImageOnCanvas(img);
@@ -3474,6 +3508,171 @@ async function saveEditedBeetle() {
     saveBtnLoading.classList.add('hidden');
   }
 }
+
+// ========================================
+// Lock Management Functions
+// ========================================
+
+// Acquire lock on an image
+async function acquireLock(imageAssetId, existingLock) {
+  try {
+    // If image already has a lock from API, check if it's by another user
+    if (existingLock && existingLock.locked_by) {
+      const currentUsername = '{{ request.user.username }}';
+      if (existingLock.locked_by !== currentUsername) {
+        // Locked by another user
+        showLockWarning(existingLock.locked_by);
+        isLockedByOther = true;
+        currentImageLock = existingLock;
+        updateUIForLockedState();
+        return false;
+      }
+    }
+
+    // Try to acquire lock via API
+    const response = await fetch(`/api/v1/image-assets/${imageAssetId}/lock/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken
+      }
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      // Lock acquired successfully
+      hideLockWarning();
+      isLockedByOther = false;
+      currentImageLock = null;
+      updateUIForUnlockedState();
+      return true;
+    } else if (response.status === 409) {
+      // Locked by another user
+      showLockWarning(data.locked_by);
+      isLockedByOther = true;
+      currentImageLock = data;
+      updateUIForLockedState();
+      return false;
+    } else {
+      console.error('Failed to acquire lock:', data);
+      return false;
+    }
+  } catch (error) {
+    console.error('Error acquiring lock:', error);
+    return false;
+  }
+}
+
+// Release lock on an image
+async function releaseLock(imageAssetId) {
+  try {
+    await fetch(`/api/v1/image-assets/${imageAssetId}/unlock/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken
+      }
+    });
+  } catch (error) {
+    console.error('Error releasing lock:', error);
+  }
+}
+
+// Try to acquire lock again (for "Try Again" button)
+async function tryAcquireLock() {
+  if (!selectedImageId) return;
+
+  const lockAcquired = await acquireLock(selectedImageId, null);
+  if (lockAcquired) {
+    showMessage('Lock acquired! You can now edit this image.', 'success');
+  }
+}
+
+// Show lock warning banner
+function showLockWarning(lockedByUsername) {
+  const banner = document.getElementById('lock-warning-banner');
+  const text = document.getElementById('lock-warning-text');
+  text.textContent = `This image is currently being viewed by ${lockedByUsername}`;
+  banner.classList.remove('hidden');
+}
+
+// Hide lock warning banner
+function hideLockWarning() {
+  const banner = document.getElementById('lock-warning-banner');
+  banner.classList.add('hidden');
+}
+
+// Update UI to disable editing when locked by another user
+function updateUIForLockedState() {
+  // Disable all edit buttons
+  const addBtn = document.querySelector('button[onclick="openBoundingBoxModal()"]');
+  if (addBtn) addBtn.disabled = true;
+
+  // Disable edit/delete buttons in bounding box list
+  document.querySelectorAll('.bbox-edit, .bbox-edit-geometry, .bbox-delete').forEach(btn => {
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    btn.style.cursor = 'not-allowed';
+  });
+
+  // Disable drawing mode
+  if (isDrawingMode) {
+    cancelDrawing();
+  }
+}
+
+// Update UI to enable editing when lock is acquired
+function updateUIForUnlockedState() {
+  // Enable all edit buttons
+  const addBtn = document.querySelector('button[onclick="openBoundingBoxModal()"]');
+  if (addBtn) addBtn.disabled = false;
+
+  // Enable edit/delete buttons in bounding box list
+  document.querySelectorAll('.bbox-edit, .bbox-edit-geometry, .bbox-delete').forEach(btn => {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+  });
+}
+
+// Release lock when user leaves page or closes tab
+window.addEventListener('beforeunload', () => {
+  if (selectedImageId) {
+    // Use synchronous request since page is unloading
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `/api/v1/image-assets/${selectedImageId}/unlock/`, false);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('X-CSRFToken', csrftoken);
+    xhr.send();
+  }
+});
+
+// Release lock when user switches to another tab or minimizes browser
+document.addEventListener('visibilitychange', async () => {
+  if (document.hidden && selectedImageId && !isLockedByOther) {
+    // User switched away from this tab - release lock
+    await releaseLock(selectedImageId);
+    console.log('Lock released due to tab switch');
+  } else if (!document.hidden && selectedImageId) {
+    // User came back to this tab - try to re-acquire lock
+    const currentImage = allImages.find(img => img.image_asset_id === selectedImageId);
+    if (currentImage) {
+      await acquireLock(selectedImageId, currentImage.lock);
+      console.log('Lock re-acquired after returning to tab');
+    }
+  }
+});
+
+// Periodically refresh lock to keep it active (every 2 minutes)
+setInterval(async () => {
+  // Only refresh if tab is visible and we have an image selected
+  if (selectedImageId && !isLockedByOther && !document.hidden) {
+    // Refresh lock by calling acquire again
+    await acquireLock(selectedImageId, null);
+  }
+}, 2 * 60 * 1000); // 2 minutes
+
 </script>
 
 {% endblock %}

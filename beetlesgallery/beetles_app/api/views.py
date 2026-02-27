@@ -7,7 +7,7 @@ from django.http import FileResponse
 from django.db import transaction
 from django.utils import timezone
 from django.conf import settings
-from beetlesgallery.beetles_app.models import ImageAsset, Beetles
+from beetlesgallery.beetles_app.models import ImageAsset, Beetles, ImageLock
 from beetlesgallery.beetles_app import species_ref
 from .serializers import ImageAssetSerializer, BeetlesSerializer, SpeciesSerializer
 import json
@@ -49,6 +49,94 @@ class ImageAssetViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({'error': 'No image file available'}, status=404)
 
         return FileResponse(asset.image_file.open('rb'))
+
+    @action(detail=True, methods=['post'], permission_classes=[IsStaffUser])
+    def lock(self, request, pk=None):
+        """
+        Acquire a lock on this image for the current user.
+        Prevents concurrent editing by multiple users.
+
+        POST /api/v1/image-assets/{uuid}/lock/
+
+        Returns:
+            - 200: Lock acquired successfully
+            - 409: Image already locked by another user (with lock details)
+        """
+        asset = self.get_object()
+        user = request.user
+
+        # Clean up expired locks first
+        ImageLock.cleanup_expired_locks()
+
+        # Check if image is already locked
+        try:
+            existing_lock = ImageLock.objects.select_related('locked_by').get(image_asset=asset)
+
+            # If locked by current user, just refresh the timestamp
+            if existing_lock.locked_by == user:
+                existing_lock.save()  # Updates updated_at
+                return Response({
+                    'success': True,
+                    'message': 'Lock refreshed',
+                    'locked_by': user.username,
+                    'locked_at': existing_lock.locked_at
+                })
+
+            # Locked by someone else - check if expired
+            if existing_lock.is_expired():
+                existing_lock.delete()
+                # Create new lock below
+            else:
+                return Response({
+                    'success': False,
+                    'error': 'Image is currently locked by another user',
+                    'locked_by': existing_lock.locked_by.username,
+                    'locked_at': existing_lock.locked_at,
+                    'locked_for_minutes': ImageLock.LOCK_TIMEOUT_MINUTES
+                }, status=409)
+
+        except ImageLock.DoesNotExist:
+            pass  # No existing lock, create new one below
+
+        # Create new lock
+        lock = ImageLock.objects.create(
+            image_asset=asset,
+            locked_by=user
+        )
+
+        return Response({
+            'success': True,
+            'message': 'Lock acquired',
+            'locked_by': user.username,
+            'locked_at': lock.locked_at
+        })
+
+    @action(detail=True, methods=['post'], permission_classes=[IsStaffUser])
+    def unlock(self, request, pk=None):
+        """
+        Release the lock on this image for the current user.
+
+        POST /api/v1/image-assets/{uuid}/unlock/
+
+        Returns:
+            - 200: Lock released successfully
+            - 404: No lock exists or not locked by current user
+        """
+        asset = self.get_object()
+        user = request.user
+
+        try:
+            lock = ImageLock.objects.get(image_asset=asset, locked_by=user)
+            lock.delete()
+            return Response({
+                'success': True,
+                'message': 'Lock released'
+            })
+        except ImageLock.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'No active lock found for this user'
+            }, status=404)
 
 
 class BeetlesViewSet(viewsets.ModelViewSet):
@@ -931,10 +1019,13 @@ class BeetlesViewSet(viewsets.ModelViewSet):
             id__in=image_asset_ids
         ).prefetch_related(
             Prefetch('specimens', queryset=Beetles.objects.all())
-        )
+        ).select_related('active_lock__locked_by')
 
         image_asset_dict = {str(img.id): img for img in image_assets}
         box_counts = {item['image_asset_id']: item for item in page_obj.object_list}
+
+        # Clean up expired locks
+        ImageLock.cleanup_expired_locks()
 
         images = []
         for image_asset_id in image_asset_ids:
@@ -950,6 +1041,16 @@ class BeetlesViewSet(viewsets.ModelViewSet):
 
             box_info = box_counts[image_asset_id]
 
+            # Get lock information
+            lock_info = None
+            if hasattr(image_asset, 'active_lock') and image_asset.active_lock:
+                lock = image_asset.active_lock
+                if not lock.is_expired():
+                    lock_info = {
+                        'locked_by': lock.locked_by.username,
+                        'locked_at': lock.locked_at.isoformat()
+                    }
+
             images.append({
                 'image_asset_id': image_asset_id_str,
                 'beetle_id': str(beetle.id),
@@ -959,6 +1060,7 @@ class BeetlesViewSet(viewsets.ModelViewSet):
                 'annotation_count': box_info['box_count'],
                 'has_unvalidated_boxes': box_info['has_unvalidated'],
                 'created_at': beetle.last_updated_at.isoformat() if beetle.last_updated_at else None,
+                'lock': lock_info,
             })
 
         if ordering in ['-created_at', 'created_at']:
@@ -1029,11 +1131,25 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         paginator = Paginator(images_without_boxes, page_size)
         page_obj = paginator.get_page(page_num)
 
-        image_assets = list(page_obj.object_list)
+        # Prefetch locks
+        image_assets = list(page_obj.object_list.select_related('active_lock__locked_by'))
+
+        # Clean up expired locks
+        ImageLock.cleanup_expired_locks()
 
         images = []
         for image_asset in image_assets:
             beetle = image_asset.specimens.first()
+
+            # Get lock information
+            lock_info = None
+            if hasattr(image_asset, 'active_lock') and image_asset.active_lock:
+                lock = image_asset.active_lock
+                if not lock.is_expired():
+                    lock_info = {
+                        'locked_by': lock.locked_by.username,
+                        'locked_at': lock.locked_at.isoformat()
+                    }
 
             images.append({
                 'image_asset_id': str(image_asset.id),
@@ -1044,6 +1160,7 @@ class BeetlesViewSet(viewsets.ModelViewSet):
                 'annotation_count': 0,
                 'has_unvalidated_boxes': False,
                 'created_at': image_asset.created_at.isoformat() if image_asset.created_at else None,
+                'lock': lock_info,
             })
 
         base_url = request.build_absolute_uri(request.path)
