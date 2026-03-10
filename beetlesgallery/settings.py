@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'django_filters',
     'rest_framework',
     'rest_framework.authtoken',
+    'treebeard',
 
     # Local App (Internal Module)
     'beetlesgallery.beetles_app',
