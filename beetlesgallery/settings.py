@@ -242,6 +242,7 @@ CSRF_COOKIE_DOMAIN = os.environ.get('SESSION_COOKIE_DOMAIN', None)
 REST_FRAMEWORK = {
     # No pagination for now
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',  # For web frontend
         'rest_framework.authentication.TokenAuthentication',     # For API clients
     ],
     'DEFAULT_PERMISSION_CLASSES': [

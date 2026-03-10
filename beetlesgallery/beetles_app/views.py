@@ -10,6 +10,7 @@ import math
 import requests
 import time
 from datetime import date, timedelta
+from io import BytesIO
 
 from django.db.models import Q, Count
 from django.utils import timezone
@@ -1629,3 +1630,224 @@ def taxonomy_search(request):
         "species_ids": sorted(species_ids),
         "matches": sorted(set(matches))[:20]  # limit autocomplete suggestions
     })
+
+
+@staff_member_required
+def tool_annotate(request):
+    """
+    Data annotation tool page (staff only).
+    """
+    return render(request, 'beetles/tool_annotate.html', {})
+
+
+@staff_member_required
+def export_annotations(request):
+    """
+    Export all bounding box annotations in YOLO or COCO format.
+
+    GET /api/v1/export-annotations/?format=yolo
+    GET /api/v1/export-annotations/?format=coco
+    """
+    export_format = request.GET.get('format', 'yolo').lower()
+
+    if export_format not in ['yolo', 'coco']:
+        return JsonResponse({'error': 'Invalid format. Must be "yolo" or "coco".'}, status=400)
+
+    # Get all images with bbox annotations (Beetles with bbox_x not NULL)
+    image_asset_ids = Beetles.objects.exclude(bbox_x__isnull=True).values_list('image_asset_id', flat=True).distinct()
+
+    # Load category mapping
+    from django.conf import settings
+    from pathlib import Path
+
+    category_map = {}
+    mapping_path = Path(settings.MEDIA_ROOT) / 'reference' / 'category_mapping.json'
+    if mapping_path.exists():
+        try:
+            with open(mapping_path, 'r', encoding='utf-8') as f:
+                mapping_data = json.load(f)
+                for cat in mapping_data.get('categories', []):
+                    category_map[str(cat['id'])] = cat
+        except Exception:
+            pass
+
+    try:
+        if export_format == 'coco':
+            # COCO: Export all annotations in a single JSON file
+            data = {
+                'images': [],'annotations': [],
+                'categories': []
+            }
+
+            annotation_id = 1
+            processed_images = set()
+            used_category_ids = set()
+
+            for image_id in image_asset_ids:
+                try:
+                    image_asset = ImageAsset.objects.get(pk=image_id)
+
+                    # Skip if we've already processed this image
+                    image_id_str = str(image_asset.id)
+                    if image_id_str in processed_images:
+                        continue
+                    processed_images.add(image_id_str)
+
+                    # Get all beetle bbox annotations for this image
+                    beetles_with_bbox = Beetles.objects.filter(
+                        image_asset=image_asset
+                    ).exclude(bbox_x__isnull=True)
+
+                    if not beetles_with_bbox.exists():
+                        continue
+
+                    # Use image_asset ID for consistency
+                    image_id = str(image_asset.id)
+
+                    # Add image info
+                    data['images'].append({
+                        'id': image_id,
+                        'width': image_asset.image_width or 0,
+                        'height': image_asset.image_height or 0,
+                        'file_name': f'{image_id}.jpg'
+                    })
+
+                    # Add annotations for this image
+                    for beetle in beetles_with_bbox:
+                        coco_ann = beetle.to_coco(
+                            image_asset.image_width or 1920,
+                            image_asset.image_height or 1080
+                        )
+                        if not coco_ann:  # Skip if no bbox
+                            continue
+
+                        coco_ann['id'] = annotation_id
+                        coco_ann['image_id'] = image_id
+
+                        # Convert category_id to int
+                        label = beetle.bbox_label.strip() if beetle.bbox_label else '0'
+                        try:
+                            coco_ann['category_id'] = int(label)
+                        except ValueError:
+                            coco_ann['category_id'] = 0
+
+                        data['annotations'].append(coco_ann)
+                        annotation_id += 1
+
+                        # Track used categories
+                        if label and label not in ['unknown', '']:
+                            used_category_ids.add(label)
+
+                except ImageAsset.DoesNotExist:
+                    continue
+
+            # Add categories to COCO format
+            for cat_id in sorted(used_category_ids, key=lambda x: int(x) if x.lstrip('-').isdigit() else 0):
+                cat_info = category_map.get(cat_id)
+                if cat_info:
+                    data['categories'].append({
+                        'id': int(cat_id),
+                        'name': cat_info.get('full_name') or cat_info.get('name', f'class_{cat_id}'),
+                        'supercategory': cat_info.get('type', 'beetle')
+                    })
+                else:
+                    # Fallback if category not found
+                    try:
+                        data['categories'].append({
+                            'id': int(cat_id),
+                            'name': f'class_{cat_id}',
+                            'supercategory': 'beetle'
+                        })
+                    except ValueError:
+                        pass
+
+            content = json.dumps(data, indent=2)
+
+            # Create ZIP with single JSON file
+            zip_buffer = BytesIO()
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+                zf.writestr('annotations.json', content)
+
+            zip_buffer.seek(0)
+            response = HttpResponse(
+                zip_buffer.getvalue(),
+                content_type='application/zip'
+            )
+            response['Content-Disposition'] = 'attachment; filename="annotations_coco.zip"'
+            return response
+
+        else:
+            # YOLO: Export separate .txt file per image
+            zip_buffer = BytesIO()
+
+            # Track processed images to avoid duplicates
+            processed_images = set()
+            used_category_ids = set()
+
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+                for image_id in image_asset_ids:
+                    try:
+                        image_asset = ImageAsset.objects.get(pk=image_id)
+
+                        # Get all beetle bbox annotations for this image
+                        beetles_with_bbox = Beetles.objects.filter(
+                            image_asset=image_asset
+                        ).exclude(bbox_x__isnull=True)
+
+                        if not beetles_with_bbox.exists():
+                            continue
+
+                        # Use image_asset ID for filename consistency
+                        image_id_str = str(image_asset.id)
+
+                        # Skip if we've already processed this image
+                        if image_id_str in processed_images:
+                            continue
+                        processed_images.add(image_id_str)
+
+                        filename = f"{image_asset.id}.txt"
+
+                        # Export YOLO format - all boxes for this image in one file
+                        lines = []
+                        for beetle_bbox in beetles_with_bbox:
+                            line = beetle_bbox.to_yolo()
+                            if line:  # Skip empty lines
+                                lines.append(line)
+
+                                # Track used category IDs
+                                label = beetle_bbox.bbox_label.strip() if beetle_bbox.bbox_label else '0'
+                                if label and label not in ['unknown', '']:
+                                    used_category_ids.add(label)
+
+                        content = '\n'.join(lines)
+                        zf.writestr(filename, content)
+
+                    except ImageAsset.DoesNotExist:
+                        continue
+
+                # Generate and add labels.txt mapping file (only for used categories)
+                if category_map and used_category_ids:
+                    label_ids = sorted([int(k) for k in used_category_ids if k.lstrip('-').isdigit()],
+                                      key=lambda x: x)
+                    label_lines = []
+                    for label_id in label_ids:
+                        cat = category_map.get(str(label_id))
+                        if cat:
+                            name = cat.get('full_name') or cat.get('name', f'class_{label_id}')
+                            label_lines.append(f"{label_id}: {name}")
+                    if label_lines:
+                        labels_content = '\n'.join(label_lines)
+                        zf.writestr('labels.txt', labels_content)
+
+            zip_buffer.seek(0)
+
+            response = HttpResponse(
+                zip_buffer.getvalue(),
+                content_type='application/zip'
+            )
+            response['Content-Disposition'] = 'attachment; filename="annotations_yolo.zip"'
+
+            return response
+
+    except Exception as e:
+        return JsonResponse({'error': f'Export failed: {str(e)}'}, status=500)

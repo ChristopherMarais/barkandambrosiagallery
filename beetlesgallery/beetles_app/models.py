@@ -120,6 +120,63 @@ class Beetles(models.Model):
     last_updated_at = models.DateTimeField(auto_now=True, db_index=True)
     update_notes = models.TextField(null=True, blank=True)
 
+    # --- Bounding Box Coordinates (normalized 0-1) ---
+    # When bbox_x is not NULL, this Beetle represents a specific annotation on the image
+    bbox_x = models.FloatField(
+        null=True, blank=True,
+        help_text="Normalized left edge position (0 = left side, 1 = right side)"
+    )
+    bbox_y = models.FloatField(
+        null=True, blank=True,
+        help_text="Normalized top edge position (0 = top, 1 = bottom)"
+    )
+    bbox_width = models.FloatField(
+        null=True, blank=True,
+        help_text="Normalized width (as fraction of image width, 0-1)"
+    )
+    bbox_height = models.FloatField(
+        null=True, blank=True,
+        help_text="Normalized height (as fraction of image height, 0-1)"
+    )
+    bbox_label = models.CharField(
+        max_length=200, blank=True,
+        help_text="Species name, classification label, or other identifier"
+    )
+
+    # --- Bounding Box Validation Workflow ---
+    bbox_is_validated = models.BooleanField(
+        default=False,
+        help_text="Whether this annotation has been verified by a staff member"
+    )
+    bbox_validated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='validated_beetle_bboxes',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Staff member who validated this annotation"
+    )
+    bbox_validated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this annotation was validated"
+    )
+
+    # --- Bounding Box Audit Trail ---
+    bbox_created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='created_beetle_bboxes',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="User who created this annotation"
+    )
+    bbox_created_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this annotation was created"
+    )
+
     history = HistoricalRecords()
 
     class Meta:
@@ -140,6 +197,54 @@ class Beetles(models.Model):
         label = self.alternative_id or str(self.id)[:8].strip()
         return f"{label} | {self.depicts_valid_name_id}"
 
+    # ---------
+    # Bounding Box Helper Methods
+    # ---------
+    def has_bbox(self) -> bool:
+        """Check if this Beetle record has bounding box annotation data."""
+        return self.bbox_x is not None
+
+    def to_yolo(self) -> str:
+        """
+        Export bbox to YOLO format (normalized center + w/h).
+
+        Returns:
+            str: "<label> <x_center> <y_center> <width> <height>" or empty string if no bbox
+        """
+        if not self.has_bbox():
+            return ""
+
+        x_center = self.bbox_x + (self.bbox_width / 2)
+        y_center = self.bbox_y + (self.bbox_height / 2)
+        label = self.bbox_label or '0'
+        return f"{label} {x_center:.6f} {y_center:.6f} {self.bbox_width:.6f} {self.bbox_height:.6f}"
+
+    def to_coco(self, image_width: int, image_height: int) -> dict:
+        """
+        Convert bbox to COCO format (absolute pixels, top-left + w/h).
+
+        Args:
+            image_width: Pixel width of the image
+            image_height: Pixel height of the image
+
+        Returns:
+            dict with keys: bbox, area, category_id (label), iscrowd
+            Returns empty dict if no bbox
+        """
+        if not self.has_bbox():
+            return {}
+
+        return {
+            'bbox': [
+                self.bbox_x * image_width,
+                self.bbox_y * image_height,
+                self.bbox_width * image_width,
+                self.bbox_height * image_height
+            ],
+            'area': (self.bbox_width * image_width) * (self.bbox_height * image_height),
+            'category_id': self.bbox_label or 'unknown',
+            'iscrowd': 0
+        }
 
     # ---------
     # Helpers: content-addressed relative paths based on sha256
@@ -666,3 +771,76 @@ class DownloadJob(models.Model):
 
         # 2. Legacy/Plain text (backwards compatibility)
         return qs
+
+
+# -----------------------------
+# ImageLock (Session-based image viewing lock)
+# -----------------------------
+class ImageLock(models.Model):
+    """
+    Tracks which user is currently viewing/editing an image in the data annotator.
+    Prevents concurrent editing conflicts by showing warnings when another user
+    has the image open.
+
+    Locks automatically expire after LOCK_TIMEOUT_MINUTES of inactivity.
+    """
+    LOCK_TIMEOUT_MINUTES = 5
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    image_asset = models.OneToOneField(
+        ImageAsset,
+        on_delete=models.CASCADE,
+        related_name='active_lock',
+        help_text="The image that is currently locked"
+    )
+
+    locked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='image_locks',
+        help_text="User who has this image open"
+    )
+
+    locked_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        help_text="When the lock was acquired"
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text="Last activity timestamp (for auto-expiry)"
+    )
+
+    class Meta:
+        db_table = "image_locks"
+        verbose_name = "Image Lock"
+        verbose_name_plural = "Image Locks"
+        indexes = [
+            models.Index(fields=["locked_by", "updated_at"]),
+        ]
+
+    def __str__(self):
+        return f"Lock on {self.image_asset.id} by {self.locked_by.username}"
+
+    def is_expired(self) -> bool:
+        """Check if this lock has expired based on last activity."""
+        from datetime import timedelta
+        from django.utils import timezone
+        timeout = timedelta(minutes=self.LOCK_TIMEOUT_MINUTES)
+        return timezone.now() - self.updated_at > timeout
+
+    @classmethod
+    def cleanup_expired_locks(cls):
+        """Remove all expired locks. Can be called periodically or before checking locks."""
+        from datetime import timedelta
+        from django.utils import timezone
+        timeout = timedelta(minutes=cls.LOCK_TIMEOUT_MINUTES)
+        cutoff = timezone.now() - timeout
+        expired = cls.objects.filter(updated_at__lt=cutoff)
+        count = expired.count()
+        expired.delete()
+        return count
+
+

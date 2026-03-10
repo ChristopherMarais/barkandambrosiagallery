@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html, mark_safe
-from .models import UploadBatch, Beetles, ImageAsset, DownloadJob
+from .models import UploadBatch, Beetles, ImageAsset, DownloadJob, ImageLock
 from simple_history.admin import SimpleHistoryAdmin
 
 
@@ -148,6 +148,8 @@ class BeetlesAdmin(SimpleHistoryAdmin):
         "collection_country",
         "collection_stateProvince",
         "get_date_taken",        # Changed
+        "has_bbox_annotation",
+        "bbox_created_at",
     )
 
     # LIST FILTERS: Use double-underscore to filter across the relationship
@@ -159,6 +161,8 @@ class BeetlesAdmin(SimpleHistoryAdmin):
         "image_asset__image_has_multiple_individuals", # Changed
         "specimen_sex",
         "specimen_type_status",
+        "bbox_is_validated",
+        "bbox_created_by",
     )
 
     # SEARCH FIELDS: Use double-underscore for related search
@@ -202,14 +206,35 @@ class BeetlesAdmin(SimpleHistoryAdmin):
         "specimen_sex",
         "specimen_type_status",
         "specimen_notes",
+        "has_bbox_annotation",
+        "bbox_x",
+        "bbox_y",
+        "bbox_width",
+        "bbox_height",
+        "bbox_label",
+        "bbox_is_validated",
+        "bbox_validated_by",
+        "bbox_validated_at",
+        "bbox_created_by",
+        "bbox_created_at",
     )
 
-    # hides the admin’s bulk actions dropdown
-    actions = None
+    # Enable delete action but remove other bulk actions
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        # Keep only the delete action
+        if 'delete_selected' in actions:
+            return {'delete_selected': actions['delete_selected']}
+        return {}
 
+    @admin.display(description='Has BBox', boolean=True, ordering='bbox_x')
+    def has_bbox_annotation(self, obj):
+        """Show whether this beetle has bounding box data"""
+        return obj.has_bbox()
+
+    @admin.display(description='ID', ordering='id')
     def id_short(self, obj):
         return str(obj.id)[:8]
-    id_short.short_description = "ID"
 
     # --- Accessors for ImageAsset Data ---
     # These functions allow the Admin to read data from the linked table
@@ -259,8 +284,8 @@ class BeetlesAdmin(SimpleHistoryAdmin):
     # Permissions
     def has_view_permission(self, request, obj=None): return True
     def has_add_permission(self, request): return False
-    def has_change_permission(self, request, obj=None): return False 
-    def has_delete_permission(self, request, obj=None): return False
+    def has_change_permission(self, request, obj=None): return False
+    def has_delete_permission(self, request, obj=None): return request.user.is_superuser
 
 @admin.register(ImageAsset)
 class ImageAssetAdmin(admin.ModelAdmin):
@@ -273,8 +298,104 @@ class ImageAssetAdmin(admin.ModelAdmin):
         if obj.image_file:
             return mark_safe(f'<img src="{obj.image_file.url}" style="height: 50px;"/>')
         return "No Image"
-    
+
     def image_preview_large(self, obj):
         if obj.image_file:
             return mark_safe(f'<img src="{obj.image_file.url}" style="max-height: 400px;"/>')
         return "No Image"
+
+
+# ---------- ImageLock ----------
+@admin.register(ImageLock)
+class ImageLockAdmin(admin.ModelAdmin):
+    """
+    Admin interface for viewing and managing image locks in the data annotator.
+    Shows which users are currently viewing/editing which images.
+    """
+    date_hierarchy = "locked_at"
+    list_per_page = 50
+    empty_value_display = "—"
+
+    list_display = (
+        "id_short",
+        "image_asset_id_short",
+        "locked_by",
+        "locked_at",
+        "updated_at",
+        "time_held",
+        "is_expired_status",
+    )
+
+    list_filter = (
+        "locked_by",
+        "locked_at",
+        "updated_at",
+    )
+
+    search_fields = (
+        "=id",
+        "=image_asset__id",
+        "locked_by__username",
+        "locked_by__email",
+    )
+
+    ordering = ("-updated_at",)
+
+    readonly_fields = (
+        "id",
+        "image_asset",
+        "locked_by",
+        "locked_at",
+        "updated_at",
+        "time_held",
+        "is_expired_status",
+    )
+
+    # Column display methods
+    @admin.display(description="Lock ID", ordering="id")
+    def id_short(self, obj):
+        return str(obj.id)[:8]
+
+    @admin.display(description="Image Asset ID", ordering="image_asset__id")
+    def image_asset_id_short(self, obj):
+        return str(obj.image_asset.id)[:8]
+
+    @admin.display(description="Time Held")
+    def time_held(self, obj):
+        """Show how long the lock has been held"""
+        from django.utils import timezone
+        delta = timezone.now() - obj.locked_at
+        minutes = int(delta.total_seconds() / 60)
+        if minutes < 60:
+            return f"{minutes} minute{'s' if minutes != 1 else ''}"
+        hours = minutes // 60
+        return f"{hours} hour{'s' if hours != 1 else ''}, {minutes % 60} min"
+
+    @admin.display(description="Expired?", boolean=True, ordering="updated_at")
+    def is_expired_status(self, obj):
+        """Show if the lock has expired (boolean indicator)"""
+        return obj.is_expired()
+
+    # Enable actions for cleanup
+    actions = ["delete_selected", "cleanup_expired"]
+
+    @admin.action(description="Clean up expired locks")
+    def cleanup_expired(self, request, queryset):
+        """Custom action to delete expired locks"""
+        count = ImageLock.cleanup_expired_locks()
+        self.message_user(request, f"Cleaned up {count} expired lock(s).")
+
+    # Permissions
+    def has_view_permission(self, request, obj=None):
+        return True
+
+    def has_add_permission(self, request):
+        return False  # Locks should only be created via API
+
+    def has_change_permission(self, request, obj=None):
+        return False  # Locks should not be manually edited
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_staff  # Staff can manually release locks
+
+
