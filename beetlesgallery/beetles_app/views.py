@@ -27,6 +27,7 @@ from django.contrib.auth.views import LoginView as DjangoLoginView, LogoutView
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.files.storage import default_storage
+from django.core.management import call_command
 
 from .models import Beetles, UploadBatch, DownloadJob, UpdateBatch, ImageAsset
 from .schema import REQUIRED_COLS, MAX_ROWS
@@ -927,20 +928,64 @@ def download_taxonomy_archive(request, ref_type, filename):
 
 @superuser_required
 def admin_valid_species(request):
-    current_status = {'label': 'Database Managed (UI Upload Deprecated)', 'version': 'v2.0'}
+    current_status = {'label': 'Database Managed (v2.0)', 'version': 'v2.0'}
+
     if request.method == "POST":
-        messages.error(request, "Taxonomy is now managed natively in Postgres. Please use the ETL management command to ingest new taxonomy data.")
-        return redirect("admin_valid_species")
-    return render(request, "admin/tools_valid_species.html", {"form": ValidSpeciesUploadForm(), "status": current_status})
+        form = ValidSpeciesUploadForm(request.POST, request.FILES)
+        if form.is_valid() and request.FILES:
+            # Extract the uploaded file gracefully
+            uploaded_file = request.FILES.get('file') or list(request.FILES.values())[0]
+            storage_key = getattr(settings, "VALID_SPECIES_PATH", "reference/valid_species.csv")
+
+            # Overwrite the existing file in storage
+            if default_storage.exists(storage_key):
+                default_storage.delete(storage_key)
+            default_storage.save(storage_key, uploaded_file)
+
+            # Synchronously trigger the ETL pipeline
+            try:
+                call_command('migrate_taxonomy_to_db')
+                messages.success(request, "Valid Species uploaded. Postgres database successfully rebuilt and beetles re-linked.")
+            except Exception as e:
+                messages.error(request, f"File saved, but database rebuild failed: {str(e)}")
+
+            return redirect("admin_valid_species")
+        else:
+            messages.error(request, "Invalid file submission.")
+    else:
+        form = ValidSpeciesUploadForm()
+
+    return render(request, "admin/tools_valid_species.html", {"form": form, "status": current_status})
+
 
 @superuser_required
 def admin_described_names(request):
-    current_status = {'label': 'Database Managed (UI Upload Deprecated)', 'version': 'v2.0'}
-    if request.method == "POST":
-        messages.error(request, "Taxonomy is now managed natively in Postgres. Please use the ETL management command to ingest new taxonomy data.")
-        return redirect("admin_described_names")
-    return render(request, "admin/tools_described_names.html", {"form": DescribedNamesUploadForm(), "status": current_status})
+    current_status = {'label': 'Database Managed (v2.0)', 'version': 'v2.0'}
 
+    if request.method == "POST":
+        form = DescribedNamesUploadForm(request.POST, request.FILES)
+        if form.is_valid() and request.FILES:
+            uploaded_file = request.FILES.get('file') or list(request.FILES.values())[0]
+            storage_key = getattr(settings, "DESCRIBED_NAMES_PATH", "reference/described_names.csv")
+
+            if default_storage.exists(storage_key):
+                default_storage.delete(storage_key)
+            default_storage.save(storage_key, uploaded_file)
+
+            try:
+                call_command('migrate_taxonomy_to_db')
+                messages.success(request, "Described Names uploaded. Postgres database successfully rebuilt and beetles re-linked.")
+            except Exception as e:
+                messages.error(request, f"File saved, but database rebuild failed: {str(e)}")
+
+            return redirect("admin_described_names")
+        else:
+            messages.error(request, "Invalid file submission.")
+    else:
+        form = DescribedNamesUploadForm()
+
+    return render(request, "admin/tools_described_names.html", {"form": form, "status": current_status})
+    
 UPDATE_ALLOWED_FIELDS = [
     "alternative_id", "image_institution", "photographer", "image_email", 
     "photo_usage_statement", "aspect", "resolution_in_ppmm", "image_notes", 
