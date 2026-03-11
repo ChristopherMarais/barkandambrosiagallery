@@ -235,16 +235,16 @@
         '</div>';
     }
 
-    // Synonym card using the same label/value rows for consistency
+    // Synonym card natively mapping to Postgres JSON response
     function synonymCard(n) {
-      var name = n.describedScientificName || "—";
+      var name = n.described_scientific_name || "—";
       return '<div style="border:1px solid #e5e7eb; border-radius:6px; padding:10px 12px; margin-bottom:8px; background:#f9fafb;">' +
         '<p style="font-size:0.9rem; font-weight:600; color:#1f2937; font-style:italic; margin:0 0 6px 0;">' + escapeHtml(name) + '</p>' +
-        fieldRow("Genus",      n.name_genus) +
-        fieldRow("Species",    n.name_species) +
-        fieldRow("Authority",  n.describedScientificNameAuthority) +
-        fieldRow("Subspecies", n.name_subspecies) +
-        fieldRow("Year",       n.name_year) +
+        fieldRow("Genus",      n.genus) +
+        fieldRow("Species",    n.species) +
+        fieldRow("Authority",  n.described_scientific_name_authority || n.authority) +
+        fieldRow("Subspecies", n.subspecies) +
+        fieldRow("Year",       n.year) +
       '</div>';
     }
 

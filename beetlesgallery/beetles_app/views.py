@@ -606,6 +606,7 @@ def beetle_detail(request, beetle_id):
             "originalGenus": beetle.taxon.original_genus,
         }
     # Restore Data Provenance: Extract the latest modification timestamp from the Taxon table
+    from beetlesgallery.beetles_app.models import Taxon
     latest_taxon_update = Taxon.objects.order_by("-updated_at").values_list("updated_at", flat=True).first()
     if latest_taxon_update:
         ref_version = f"Database Managed (Last CSV Sync: {latest_taxon_update.strftime('%Y-%m-%d %H:%M UTC')})"
@@ -1267,28 +1268,81 @@ def stream_updates(request):
 @login_required
 def taxonomy_browser(request):
     """
-    Display the taxonomy browser page using native Treebeard serialization.
+    Display the taxonomy browser page dynamically grouped from flat Postgres records.
     """
-    from beetlesgallery.beetles_app.models import Taxon  # <-- ADD THIS IMPORT
+    from beetlesgallery.beetles_app.models import Taxon
+    from django.core.serializers.json import DjangoJSONEncoder
+    import json
+    from collections import defaultdict
 
-    # treebeard natively dumps the materialized path hierarchy to a nested dictionary
-    tree_data = Taxon.dump_bulk()
-    
-    # Pre-fetch a flat map for the frontend UI detail pane
-    species_map = {
-        t.valid_species_id: {
+    # 1. Fetch all flat taxa from DB
+    taxa = Taxon.objects.all()
+
+    # 2. Build nested dictionary: Subfamily -> Tribe -> Genus -> list of Species
+    tree_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    species_map = {}
+
+    for t in taxa:
+        subf = t.subfamily.strip() if t.subfamily else "Unknown Subfamily"
+        tribe = t.tribe.strip() if t.tribe else "Unknown Tribe"
+        genus = t.genus.strip() if t.genus else "Unknown Genus"
+
+        # Add to tree
+        tree_dict[subf][tribe][genus].append({
+            "name": t.species.strip() if t.species else "sp.",
+            "level": "species",
+            "species_id": t.valid_species_id,
+            "scientific_name": t.scientific_name
+        })
+
+        # Pre-fetch for the UI detail pane
+        species_map[t.valid_species_id] = {
             "scientificName": t.scientific_name,
             "scientificNameAuthority": t.scientific_name_authority,
             "subfamily": t.subfamily,
             "tribe": t.tribe,
             "genus": t.genus,
             "species": t.species,
-        } for t in Taxon.objects.all()
-    }
+        }
+
+    # 3. Recursively convert nested dicts to arrays with speciesCount
+    def dict_to_tree(d, current_level):
+        next_level_map = {
+            "subfamily": "tribe",
+            "tribe": "genus",
+            "genus": "species"
+        }
+        next_level = next_level_map.get(current_level)
+
+        result = []
+        for key, value in sorted(d.items()):
+            if current_level == "genus":
+                # Value is a list of species
+                sorted_species = sorted(value, key=lambda x: x["name"])
+                result.append({
+                    "name": key,
+                    "level": "genus",
+                    "speciesCount": len(sorted_species),
+                    "children": sorted_species
+                })
+            else:
+                # Value is a dictionary of the next level
+                children = dict_to_tree(value, next_level)
+                total_count = sum(c.get("speciesCount", 1) for c in children)
+                result.append({
+                    "name": key,
+                    "level": current_level,
+                    "speciesCount": total_count,
+                    "children": children
+                })
+        return result
+
+    # Transform the defaultdict into the final nested array expected by JavaScript
+    tree_data = dict_to_tree(tree_dict, "subfamily")
 
     return render(request, 'beetles/taxonomy_browser.html', {
-        'taxonomy_tree_json': json.dumps(tree_data, ensure_ascii=False),
-        'species_map_json': json.dumps(species_map, ensure_ascii=False),
+        'taxonomy_tree_json': json.dumps(tree_data, cls=DjangoJSONEncoder, ensure_ascii=False),
+        'species_map_json': json.dumps(species_map, cls=DjangoJSONEncoder, ensure_ascii=False),
     })
 
 
@@ -1296,6 +1350,8 @@ def described_names_for_species(request):
     """
     AJAX endpoint: return all described (synonym) names natively from Postgres.
     """
+    from beetlesgallery.beetles_app.models import Synonym
+
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
 
@@ -1359,6 +1415,8 @@ def taxonomy_search(request):
     """
     AJAX endpoint: search by original genus or described scientific name via database ILIKE queries.
     """
+    from beetlesgallery.beetles_app.models import Taxon, Synonym
+
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
 
