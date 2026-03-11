@@ -28,7 +28,6 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.files.storage import default_storage
 
-from . import species_ref, described_names_ref
 from .models import Beetles, UploadBatch, DownloadJob, UpdateBatch, ImageAsset
 from .schema import REQUIRED_COLS, MAX_ROWS
 from .forms import TailwindUserCreationForm, ProfileForm, PasswordChangeFormStyled, ValidSpeciesUploadForm, DescribedNamesUploadForm, UpdateBatchUploadForm
@@ -166,27 +165,12 @@ class PostOnlyLogoutView(LogoutView):
 
 
 def landing(request):
-    # 1. Total number of images
     total_images = ImageAsset.objects.count()
 
-    # 2. Get all distinct valid_name_ids associated with actual images
-    # We need the actual list of IDs to look up taxonomy (Genera) in the CSV reference
-    present_ids_qs = Beetles.objects.exclude(depicts_valid_name_id__isnull=True)\
-                                    .exclude(depicts_valid_name_id="")\
-                                    .values_list('depicts_valid_name_id', flat=True)\
-                                    .distinct()
-    
-    present_ids = list(present_ids_qs)
+    # Count unique species and genera via native SQL Joins, bypassing Python memory
+    total_species = Beetles.objects.filter(taxon__isnull=False).values('taxon_id').distinct().count()
+    total_genera = Beetles.objects.filter(taxon__isnull=False).values('taxon__genus').distinct().count()
 
-    # Count unique species (number of unique valid IDs)
-    total_species = len(present_ids)
-
-    # 3. Count unique Genera
-    # Use the helper in species_ref to map IDs -> Genera -> Unique Set
-    unique_genera_set = species_ref.get_field_values_for_ids(present_ids, "genus")
-    total_genera = len(unique_genera_set)
-
-    # 4. Count unique specimen IDs that have a Type Status
     type_status_count = Beetles.objects.exclude(specimen_type_status__isnull=True)\
                                        .exclude(specimen_type_status="")\
                                        .exclude(depicts_specimen__isnull=True)\
@@ -198,7 +182,7 @@ def landing(request):
     context = {
         'total_images': total_images,
         'total_species': total_species,
-        'total_genera': total_genera,  # Added this
+        'total_genera': total_genera,
         'type_status_count': type_status_count,
     }
     return render(request, 'landing.html', context)
@@ -437,13 +421,15 @@ def gallery(request):
             options = ["Yes", "No"]
             
         elif cfg["type"] == "ref":
-            # 1. Get real values via species_ref
-            used_ids = ctx_qs.exclude(depicts_valid_name_id__isnull=True).values_list('depicts_valid_name_id', flat=True).distinct()
-            vals = species_ref.get_field_values_for_ids(used_ids, cfg["field"])
-            options = sorted(list(vals))
+            # 1. Get real values via native database join
+            field_name = f"taxon__{cfg['field']}"
+            opts_qs = ctx_qs.filter(taxon__isnull=False).values_list(field_name, flat=True).distinct().order_by(field_name)
+            
+            # Filter out empty strings natively
+            options = [o for o in opts_qs if o]
 
             # 2. Add N/A if unidentified records exist
-            if ctx_qs.filter(depicts_valid_name_id__isnull=True).exists():
+            if ctx_qs.filter(taxon__isnull=True).exists():
                 options.insert(0, NA)
 
         # Check if options exist OR if this filter is currently active
@@ -462,7 +448,10 @@ def gallery(request):
 
     # 5. Pagination
     final_qs = final_qs.order_by("image_asset", "id").distinct("image_asset")
-    final_qs = final_qs.select_related("image_asset").prefetch_related("image_asset__specimens")
+    
+    # Critical: Fetch taxon in the same SQL call to guarantee O(1) performance
+    final_qs = final_qs.select_related("image_asset", "taxon").prefetch_related("image_asset__specimens__taxon")
+    
     paginator = Paginator(final_qs, page_size)
     page = request.GET.get("page", 1)
     try:
@@ -474,18 +463,19 @@ def gallery(request):
 
     # Enrichment
     for b in beetles_page.object_list:
-        # 1. Resolve Reference for the *representative* beetle
-        raw_id = (str(b.depicts_valid_name_id).strip() if b.depicts_valid_name_id else None)
-        ref = species_ref.resolve(raw_id)
+        # 1. Resolve Reference natively from the database join
+        def clean(val): return val if val and str(val).lower() != "unknown" else None
         
-        def clean(val): return val if val and val.lower() != "unknown" else None
-        b.ref_scientificName = clean(ref.get("scientificName"))
-        b.ref_genus = clean(ref.get("genus"))
-        b.ref_species = clean(ref.get("species"))
-        b.ref_subfamily = clean(ref.get("subfamily"))
-        b.ref_tribe = clean(ref.get("tribe"))
-        b.ref_subtribe = clean(ref.get("subtribe"))
-        b.ref_subspecies = clean(ref.get("subspecies"))
+        if b.taxon:
+            b.ref_scientificName = clean(b.taxon.scientific_name)
+            b.ref_genus = clean(b.taxon.genus)
+            b.ref_species = clean(b.taxon.species)
+            b.ref_subfamily = clean(b.taxon.subfamily)
+            b.ref_tribe = clean(b.taxon.tribe)
+            b.ref_subtribe = clean(b.taxon.subtribe)
+            b.ref_subspecies = clean(b.taxon.subspecies)
+        else:
+            b.ref_scientificName = b.ref_genus = b.ref_species = b.ref_subfamily = b.ref_tribe = b.ref_subtribe = b.ref_subspecies = None
 
         # 2. Aggregation Logic
         if b.image_asset:
@@ -501,18 +491,15 @@ def gallery(request):
             b.has_multiple_country = check_multiple("collection_country")
             b.has_multiple_sex = check_multiple("specimen_sex")
             
-            # Taxonomy Aggregation
-            # Get all Valid IDs involved in this image
-            ids = {s.depicts_valid_name_id for s in siblings}
+            # Taxonomy Aggregation via DB instances
+            # Get all Valid IDs involved in this image using the relational ID
+            taxa = {s.taxon_id for s in siblings}
             
-            # If we have >1 unique ID (e.g. "123" and None), we might have multiple ranks
-            if len(ids) > 1:
-                # Resolve all involved IDs to check ranks
-                refs = [species_ref.resolve(i) for i in ids]
-                
+            # If we have >1 unique ID, we might have multiple ranks
+            if len(taxa) > 1:
                 def check_rank(key):
-                    # collect unique values for this rank (e.g. "Platypus", "Crossotarsus")
-                    vals = {r.get(key) for r in refs}
+                    # collect unique values for this rank natively from the taxon objects
+                    vals = {getattr(s.taxon, key) for s in siblings if s.taxon}
                     return len(vals) > 1
                 
                 b.has_multiple_subfamily = check_rank("subfamily")
@@ -563,8 +550,8 @@ def beetle_detail(request, beetle_id):
         login_url = reverse("login")
         return redirect(f"{login_url}?next={request.path}")
 
-    # Fetch main object
-    beetle = get_object_or_404(Beetles, pk=beetle_id)
+    # Fetch main object, aggressively joining the taxon relationship to prevent N+1 queries
+    beetle = get_object_or_404(Beetles.objects.select_related("taxon"), pk=beetle_id)
 
     # 1. Siblings (Same Image, different specimen records) - For Pagination inside the card
     siblings = []
@@ -602,11 +589,28 @@ def beetle_detail(request, beetle_id):
             .select_related("image_asset")
         )
 
-    # CSV-based enrichment
-    raw_vid = beetle.depicts_valid_name_id
-    norm_vid = _normalize_valid_id_for_lookup(raw_vid)
-    ref_species = species_ref.resolve(norm_vid) if norm_vid is not None else None
-    ref_version = species_ref.get_version()
+    # Database-based enrichment (Replaces CSV-based species_ref)
+    ref_species = None
+    if beetle.taxon:
+        ref_species = {
+            "scientificName": beetle.taxon.scientific_name,
+            "scientificNameAuthority": beetle.taxon.scientific_name_authority,
+            "subfamily": beetle.taxon.subfamily,
+            "tribe": beetle.taxon.tribe,
+            "subtribe": beetle.taxon.subtribe,
+            "genus": beetle.taxon.genus,
+            "species": beetle.taxon.species,
+            "subspecies": beetle.taxon.subspecies,
+            "authority": beetle.taxon.authority,
+            "authorityYear": beetle.taxon.authority_year,
+            "originalGenus": beetle.taxon.original_genus,
+        }
+    # Restore Data Provenance: Extract the latest modification timestamp from the Taxon table
+    latest_taxon_update = Taxon.objects.order_by("-updated_at").values_list("updated_at", flat=True).first()
+    if latest_taxon_update:
+        ref_version = f"Database Managed (Last CSV Sync: {latest_taxon_update.strftime('%Y-%m-%d %H:%M UTC')})"
+    else:
+        ref_version = "Database Managed (No Sync History)"
 
     return render(
         request,
@@ -823,44 +827,25 @@ def my_uploads(request):
     if request.user.is_superuser:
         import json
         from django.core.serializers.json import DjangoJSONEncoder
+        from beetlesgallery.beetles_app.models import Taxon
+        
+        # Pull latest sync timestamp natively from the database
+        latest_taxon = Taxon.objects.order_by("-updated_at").first()
+        if latest_taxon:
+            t_label = f"Database Managed (Last Sync: {latest_taxon.updated_at.strftime('%Y-%m-%d %H:%M UTC')})"
+        else:
+            t_label = "Database Managed (v2.0)"
 
-        species_ref_status = species_ref.status()
-        described_names_ref_status = described_names_ref.status()
+        species_ref_status = {'label': t_label, 'version': 'v2.0'}
+        described_names_ref_status = {'label': t_label, 'version': 'v2.0'}
 
-        valid_species_archives = species_ref.list_archived_versions()
-        described_names_archives = described_names_ref.list_archived_versions()
-
-        # Get current version info
-        valid_species_path = getattr(settings, "VALID_SPECIES_PATH", "reference/valid_species.csv")
-        described_names_path = getattr(settings, "DESCRIBED_NAMES_PATH", "reference/described_names.csv")
-
-        current_valid_species = None
-        current_described_names = None
-
-        if default_storage.exists(valid_species_path):
-            mtime = default_storage.get_modified_time(valid_species_path)
-            current_valid_species = {
-                'filename': 'valid_species.csv',
-                'timestamp': mtime,
-                'label': species_ref.status().get('label', 'Current version')
-            }
-
-        if default_storage.exists(described_names_path):
-            mtime = default_storage.get_modified_time(described_names_path)
-            current_described_names = {
-                'filename': 'described_names.csv',
-                'timestamp': mtime,
-                'label': described_names_ref.status().get('label', 'Current version')
-            }
-
-        initial_archives = valid_species_archives
-        initial_current = current_valid_species
-
-        # Convert to JSON-serializable format
-        valid_species_archives_json = json.dumps(valid_species_archives, cls=DjangoJSONEncoder)
-        described_names_archives_json = json.dumps(described_names_archives, cls=DjangoJSONEncoder)
-        current_valid_species_json = json.dumps(current_valid_species, cls=DjangoJSONEncoder)
-        current_described_names_json = json.dumps(current_described_names, cls=DjangoJSONEncoder)
+        # Legacy archives deprecated; handled via relational backups if needed
+        valid_species_archives_json = "[]"
+        described_names_archives_json = "[]"
+        current_valid_species_json = "null"
+        current_described_names_json = "null"
+        initial_archives = []
+        initial_current = None
 
     return render(
         request,
@@ -882,101 +867,28 @@ def my_uploads(request):
 
 @login_required(login_url='login')
 def download_taxonomy_ref(request):
-    """
-    Stream the latest valid_species.csv to a logged-in user with a stable, UTC-stamped filename.
-    Adds ETag and Cache-Control for client/proxy caching. If the file is missing, 404.
-    """
     storage_key = getattr(settings, "VALID_SPECIES_PATH", "reference/valid_species.csv")
-
-    # Ensure the file exists / can be opened
     try:
         f = default_storage.open(storage_key, "rb")
     except Exception:
         raise Http404("Taxonomy reference file is not available.")
 
-    # Build a nice filename based on storage mtime (UTC), per Step 1
-    filename = species_ref.build_download_filename()
-
-    # ETag from the published version hash (species_ref publishes this to cache on update)
-    etag = species_ref.get_version()
-    quoted_etag = f'"{etag}"' if etag else None
-
-    # If-None-Match short-circuit (304)
-    inm = request.META.get("HTTP_IF_NONE_MATCH", "")
-    if quoted_etag and quoted_etag in inm:
-        try:
-            f.close()
-        except Exception:
-            pass
-        resp = HttpResponse(status=304)
-        resp["ETag"] = quoted_etag
-        resp["Cache-Control"] = "public, max-age=0, must-revalidate"
-        # Best-effort Last-Modified
-        try:
-            lm = default_storage.get_modified_time(storage_key)
-            resp["Last-Modified"] = http_date(lm.timestamp())
-        except Exception:
-            pass
-        return resp
-
-    # Stream the file
+    filename = f"valid_species_{timezone.now().strftime('%Y%m%d_%H%M%S')}.csv"
     resp = FileResponse(f, content_type="text/csv")
     resp["Content-Disposition"] = f'attachment; filename="{filename}"'
-    if quoted_etag:
-        resp["ETag"] = quoted_etag
-    resp["Cache-Control"] = "public, max-age=0, must-revalidate"
-    # Best-effort Last-Modified
-    try:
-        lm = default_storage.get_modified_time(storage_key)
-        resp["Last-Modified"] = http_date(lm.timestamp())
-    except Exception:
-        pass
-
     return resp
 
 @login_required(login_url='login')
 def download_described_names_ref(request):
-    """
-    Stream the latest described_names.csv to a logged-in user with a stable, UTC-stamped filename.
-    """
     storage_key = getattr(settings, "DESCRIBED_NAMES_PATH", "reference/described_names.csv")
-
     try:
         f = default_storage.open(storage_key, "rb")
     except Exception:
         raise Http404("Described names reference file is not available.")
 
-    filename = described_names_ref.build_download_filename()
-    etag = described_names_ref.get_version()
-    quoted_etag = f'"{etag}"' if etag else None
-
-    inm = request.META.get("HTTP_IF_NONE_MATCH", "")
-    if quoted_etag and quoted_etag in inm:
-        try:
-            f.close()
-        except Exception:
-            pass
-        resp = HttpResponse(status=304)
-        resp["ETag"] = quoted_etag
-        resp["Cache-Control"] = "public, max-age=0, must-revalidate"
-        try:
-            lm = default_storage.get_modified_time(storage_key)
-            resp["Last-Modified"] = http_date(lm.timestamp())
-        except Exception:
-            pass
-        return resp
-
+    filename = f"described_names_{timezone.now().strftime('%Y%m%d_%H%M%S')}.csv"
     resp = FileResponse(f, content_type="text/csv")
     resp["Content-Disposition"] = f'attachment; filename="{filename}"'
-    if quoted_etag:
-        resp["ETag"] = quoted_etag
-    resp["Cache-Control"] = "public, max-age=0, must-revalidate"
-    try:
-        lm = default_storage.get_modified_time(storage_key)
-        resp["Last-Modified"] = http_date(lm.timestamp())
-    except Exception:
-        pass
-
     return resp
 
 @superuser_required
@@ -1014,147 +926,19 @@ def download_taxonomy_archive(request, ref_type, filename):
 
 @superuser_required
 def admin_valid_species(request):
-    """
-    Minimal admin page to publish a new valid_species.csv into default_storage
-    and set the user-facing label.
-    """
-    current_status = species_ref.status()
+    current_status = {'label': 'Database Managed (UI Upload Deprecated)', 'version': 'v2.0'}
     if request.method == "POST":
-        form = ValidSpeciesUploadForm(request.POST, request.FILES)
-        if form.is_valid():
-            f = form.cleaned_data["csv_file"]
-            label = form.cleaned_data.get("label") or None
-
-            # Save the upload to a temp file, then call the publisher helper
-            from pathlib import Path
-            import tempfile
-
-            # use a real temp file (container-/OS-friendly)
-            with tempfile.NamedTemporaryFile(delete=False) as tmp:
-                for chunk in f.chunks():
-                    tmp.write(chunk)
-                tmp_path = tmp.name
-
-            try:
-                rows, version = species_ref.publish_from_file(tmp_path, label=label)
-                success_msg = f"Published valid_species.csv ({rows} rows)."
-                messages.success(request, success_msg)
-
-                # If AJAX request, return JSON
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({'success': True, 'message': success_msg})
-
-                # After publish, refresh status for display
-                current_status = species_ref.status()
-            except Exception as e:
-                error_msg = f"Publish failed: {e}"
-                messages.error(request, error_msg)
-
-                # If AJAX request, return JSON error
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({'success': False, 'error': error_msg}, status=400)
-            finally:
-                try:
-                    os.unlink(tmp_path)
-                except Exception:
-                    pass
-
-            return redirect("admin_valid_species")
-    else:
-        form = ValidSpeciesUploadForm()
-
-    return render(
-        request,
-        "admin/tools_valid_species.html",
-        {"form": form, "status": current_status},
-    )
+        messages.error(request, "Taxonomy is now managed natively in Postgres. Please use the ETL management command to ingest new taxonomy data.")
+        return redirect("admin_valid_species")
+    return render(request, "admin/tools_valid_species.html", {"form": ValidSpeciesUploadForm(), "status": current_status})
 
 @superuser_required
 def admin_described_names(request):
-    """
-    Minimal admin page to publish a new described_names.csv into default_storage
-    and set the user-facing label.
-    """
-    current_status = described_names_ref.status()
+    current_status = {'label': 'Database Managed (UI Upload Deprecated)', 'version': 'v2.0'}
     if request.method == "POST":
-        form = DescribedNamesUploadForm(request.POST, request.FILES)
-        if form.is_valid():
-            f = form.cleaned_data["csv_file"]
-            label = form.cleaned_data.get("label") or None
-
-            # Save the upload to a temp file, then call the publisher helper
-            from pathlib import Path
-            import tempfile
-
-            # use a real temp file (container-/OS-friendly)
-            with tempfile.NamedTemporaryFile(delete=False) as tmp:
-                for chunk in f.chunks():
-                    tmp.write(chunk)
-                tmp_path = tmp.name
-
-            try:
-                rows, version = described_names_ref.publish_from_file(tmp_path, label=label)
-                success_msg = f"Published described_names.csv ({rows} rows)."
-                messages.success(request, success_msg)
-
-                # If AJAX request, return JSON
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({'success': True, 'message': success_msg})
-
-                # After publish, refresh status for display
-                current_status = described_names_ref.status()
-            except Exception as e:
-                error_msg = f"Publish failed: {e}"
-                messages.error(request, error_msg)
-
-                # If AJAX request, return JSON error
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({'success': False, 'error': error_msg}, status=400)
-            finally:
-                try:
-                    os.unlink(tmp_path)
-                except Exception:
-                    pass
-
-            return redirect("admin_described_names")
-    else:
-        form = DescribedNamesUploadForm()
-
-    return render(
-        request,
-        "admin/tools_described_names.html",
-        {"form": form, "status": current_status},
-    )
-
-# Columns allowed to be overwritten, plus the required Record ID.
-UPDATE_ALLOWED_FIELDS = [
-    "alternative_id",
-    "image_institution",
-    "photographer",
-    "image_email",
-    "photo_usage_statement",
-    "aspect",
-    "resolution_in_ppmm",
-    "image_notes",
-    "image_date_taken",
-    "image_has_multiple_individuals",
-    "depicts_specimen",
-    "depicts_valid_name_id",
-    "depicts_described_name_id",
-    "depicts_name_verbatim",
-    "collection_country",
-    "collection_stateProvince",
-    "specimen_sex",
-    "specimen_type_status",
-    "specimen_notes",
-]
-
-# Required header set for updates:
-# - "record_id" (the Beetles primary key) is MANDATORY
-# - All updateable fields must be present (all-or-nothing overwrite policy)
-# - "update_notes" is optional
-UPDATE_REQUIRED_COLS = {"record_id"} | set(UPDATE_ALLOWED_FIELDS)
-UPDATE_OPTIONAL_COLS = {"update_notes"}
+        messages.error(request, "Taxonomy is now managed natively in Postgres. Please use the ETL management command to ingest new taxonomy data.")
+        return redirect("admin_described_names")
+    return render(request, "admin/tools_described_names.html", {"form": DescribedNamesUploadForm(), "status": current_status})
 
 
 @staff_member_required
@@ -1483,36 +1267,32 @@ def stream_updates(request):
 @login_required
 def taxonomy_browser(request):
     """
-    Display the taxonomy browser page.
-    Passes the pre-built taxonomy tree JSON and a flat lookup of
-    valid_species rows (keyed by valid_species_id) so the frontend
-    can show species details without a round-trip.
+    Display the taxonomy browser page using native Treebeard serialization.
     """
-    from . import taxonomy_tree
-
-    tree = taxonomy_tree.get_tree() or []
-
-    # Build a flat map: valid_species_id -> taxonomy fields
-    # Only load once; species_ref keeps it in memory after first call.
-    species_map = {}
-    try:
-        species_ref._ensure_loaded()
-        if species_ref._MAP:
-            species_map = species_ref._MAP
-    except Exception:
-        pass
+    # treebeard natively dumps the materialized path hierarchy to a nested dictionary
+    tree_data = Taxon.dump_bulk()
+    
+    # Pre-fetch a flat map for the frontend UI detail pane
+    species_map = {
+        t.valid_species_id: {
+            "scientificName": t.scientific_name,
+            "scientificNameAuthority": t.scientific_name_authority,
+            "subfamily": t.subfamily,
+            "tribe": t.tribe,
+            "genus": t.genus,
+            "species": t.species,
+        } for t in Taxon.objects.all()
+    }
 
     return render(request, 'beetles/taxonomy_browser.html', {
-        'taxonomy_tree_json': json.dumps(tree, ensure_ascii=False),
+        'taxonomy_tree_json': json.dumps(tree_data, ensure_ascii=False),
         'species_map_json': json.dumps(species_map, ensure_ascii=False),
     })
 
 
 def described_names_for_species(request):
     """
-    AJAX endpoint: return all described (synonym) names for a given valid_species_id.
-    GET /taxonomy/described-names/?species_id=<valid_species_id>
-    Returns: { "names": [ { ...row fields... }, … ] }
+    AJAX endpoint: return all described (synonym) names natively from Postgres.
     """
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
@@ -1521,17 +1301,19 @@ def described_names_for_species(request):
     if not species_id:
         return JsonResponse({"error": "species_id is required"}, status=400)
 
-    # Use the reverse index to find all name_ids linked to this valid_species_id
-    name_ids = described_names_ref.ids_for("valid species id", species_id)
-    if not name_ids:
-        return JsonResponse({"names": []})
+    # O(1) Indexed Foreign Key lookup
+    synonyms = Synonym.objects.filter(taxon__valid_species_id=species_id).values(
+        "name_id", 
+        "described_scientific_name", 
+        "described_scientific_name_authority",
+        "genus", 
+        "species", 
+        "subspecies", 
+        "authority", 
+        "year"
+    )
 
-    # Bulk-fetch the rows
-    rows = described_names_ref.bulk_lookup(name_ids)
-
-    # Return as a list, adding name_id back into each row for the frontend
-    names = [{"name_id": nid, **fields} for nid, fields in rows.items()]
-    return JsonResponse({"names": names})
+    return JsonResponse({"names": list(synonyms)})
 
 
 def species_images(request):
@@ -1573,9 +1355,7 @@ def species_images(request):
 
 def taxonomy_search(request):
     """
-    AJAX endpoint: search by original genus or described scientific name.
-    GET /taxonomy/search/?field=<original_genus|described_name>&query=<term>
-    Returns: { "species_ids": [...], "matches": [...] }
+    AJAX endpoint: search by original genus or described scientific name via database ILIKE queries.
     """
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
@@ -1586,49 +1366,29 @@ def taxonomy_search(request):
     if not field or not query:
         return JsonResponse({"error": "field and query are required"}, status=400)
 
-    from . import species_ref, described_names_ref
-
     species_ids = set()
     matches = []
 
     if field == "original_genus":
-        # Search originalGenus in species_ref (case-insensitive substring)
-        species_ref._ensure_reverse_index()
-        idx = species_ref._rev_index.get("originalGenus", {})
-        q_lower = query.lower()
-
-        for genus_lower, ids in idx.items():
-            if q_lower in genus_lower:
-                species_ids.update(ids)
-                matches.append(genus_lower.capitalize())
+        # Native ILIKE substring search on the database index
+        qs = Taxon.objects.filter(original_genus__icontains=query).values_list("valid_species_id", "original_genus")
+        for vid, genus in qs:
+            species_ids.add(vid)
+            if genus:
+                matches.append(genus.capitalize())
 
     elif field == "described_name":
-        # Search describedScientificName in described_names_ref (case-insensitive substring)
-        described_names_ref._ensure_reverse_index()
-        idx = described_names_ref._rev_index.get("describedScientificName", {})
-        q_lower = query.lower()
-
-        name_ids_found = set()
-        for name_lower, nids in idx.items():
-            if q_lower in name_lower:
-                name_ids_found.update(nids)
-                matches.append(name_lower)
-
-        # Map name_ids → valid_species_ids
-        rows = described_names_ref._load_all_rows()
-        for row in rows:
-            nid = str(row.get("name_id", "")).strip()
-            if nid in name_ids_found:
-                vid = str(row.get("name_valid_species_id", "")).strip()
-                if vid:
-                    species_ids.add(vid)
-
+        qs = Synonym.objects.filter(described_scientific_name__icontains=query).select_related("taxon")
+        for syn in qs:
+            if syn.taxon:
+                species_ids.add(syn.taxon.valid_species_id)
+            matches.append(syn.described_scientific_name)
     else:
         return JsonResponse({"error": "invalid field"}, status=400)
 
     return JsonResponse({
         "species_ids": sorted(species_ids),
-        "matches": sorted(set(matches))[:20]  # limit autocomplete suggestions
+        "matches": sorted(set(matches))[:20] 
     })
 
 

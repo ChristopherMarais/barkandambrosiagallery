@@ -12,8 +12,7 @@ from django.utils import timezone
 from django.conf import settings
 from django.core.files.base import ContentFile
 
-from beetlesgallery.beetles_app.models import UpdateBatch, Beetles, ImageAsset
-from beetlesgallery.beetles_app import species_ref
+from beetlesgallery.beetles_app.models import UpdateBatch, Beetles, ImageAsset, Taxon
 
 try:
     import pandas as pd
@@ -176,6 +175,9 @@ class Command(BaseCommand):
         changed_count = 0
         
         try:
+            # Pre-fetch taxon map to memory for fast foreign key linking during import
+            taxon_map = {t.valid_species_id: t for t in Taxon.objects.all()}
+            
             with transaction.atomic():
                 for plan in updates_plan:
                     obj = plan["beetle"]
@@ -190,9 +192,11 @@ class Command(BaseCommand):
                         else: val = _none(v)
                         
                         current = getattr(obj, k, None)
-                        if str(val) != str(current): # Rough equality check
+                        if str(val) != str(current):
                             setattr(obj, k, val)
                             has_b_change = True
+                            if k == "depicts_valid_name_id":
+                                obj.taxon = taxon_map.get(val)
                     
                     if plan["is_new"]:
                         obj.save() # Insert

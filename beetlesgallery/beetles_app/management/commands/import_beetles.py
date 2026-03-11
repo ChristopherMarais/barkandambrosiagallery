@@ -20,8 +20,7 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-# Updated Imports: Include ImageAsset
-from beetlesgallery.beetles_app.models import Beetles, UploadBatch, ImageAsset
+from beetlesgallery.beetles_app.models import Beetles, UploadBatch, ImageAsset, Taxon
 
 try:
     import pandas as pd
@@ -186,6 +185,9 @@ class Command(BaseCommand):
         # Duplicates are supposed to be caught in validation
         RAISE_ON_DUP = False  # optional backstop on full_path_at_import
 
+        # Pre-fetch taxon map to memory for fast foreign key linking during import
+        taxon_map = {t.valid_species_id: t for t in Taxon.objects.all()}
+
         # All in one transaction for consistency
         with transaction.atomic():
             # enumerate gives 0-based index; Excel-like row number = idx+2 (row 1 is header)
@@ -274,6 +276,7 @@ class Command(BaseCommand):
                 obj = Beetles.objects.create(
                     image_asset=image_asset,  # LINKED HERE
                     depicts_valid_name_id=depicts_valid_name_id,
+                    taxon=taxon_map.get(depicts_valid_name_id), # Link relational hierarchy
                     **beetle_values
                 )
                 created_beetles += 1

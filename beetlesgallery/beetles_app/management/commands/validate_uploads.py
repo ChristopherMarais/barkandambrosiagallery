@@ -6,7 +6,6 @@ import unicodedata
 import time
 import math
 
-from beetlesgallery.beetles_app import species_ref
 from beetlesgallery.beetles_app.models import Beetles, UploadBatch, ImageAsset
 from django.core.management.base import BaseCommand
 from django.core.files.base import ContentFile
@@ -153,9 +152,11 @@ class Command(BaseCommand):
                 if not _is_blank(v)
             }
             candidate_ids = {vid for vid in candidate_ids if vid is not None}
-            ref_map = species_ref.bulk_lookup(candidate_ids) if candidate_ids else {}
+            
+            from beetlesgallery.beetles_app.models import Taxon
+            valid_taxa_set = set(Taxon.objects.filter(valid_species_id__in=candidate_ids).values_list('valid_species_id', flat=True))
         except Exception as e:
-            errors.append(f"Could not access taxonomy reference: {e}")
+            errors.append(f"Could not access taxonomy reference database: {e}")
             return self._finalize(batch, errors, dry_run)
 
         if not batch.zip_file:
@@ -203,8 +204,8 @@ class Command(BaseCommand):
 
             if not _is_blank(valid_id):
                 vid = _normalize_valid_id(valid_id)
-                if vid not in ref_map:
-                    errors.append(f"Row {row_num}: 'depicts_valid_name_id' not found in reference: '{vid}'.")
+                if vid not in valid_taxa_set:
+                    errors.append(f"Row {row_num}: 'depicts_valid_name_id' not found in reference database: '{vid}'.")
                     row_errors += 1
                     continue
 

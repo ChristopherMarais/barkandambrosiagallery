@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from beetlesgallery.beetles_app.models import ImageAsset, Beetles
-from beetlesgallery.beetles_app import species_ref
 
 
 class ImageAssetSerializer(serializers.ModelSerializer):
@@ -81,44 +80,20 @@ class BeetlesSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
     def get_subfamily(self, obj):
-        """Look up subfamily from valid_species reference"""
-        if not obj.depicts_valid_name_id:
-            return None
-        try:
-            species_data = species_ref.lookup(obj.depicts_valid_name_id)
-            return species_data.get('subfamily') if species_data else None
-        except:
-            return None
+        """Look up subfamily natively from Postgres Taxon relationship"""
+        return obj.taxon.subfamily if obj.taxon else None
 
     def get_genus(self, obj):
-        """Look up genus from valid_species reference"""
-        if not obj.depicts_valid_name_id:
-            return None
-        try:
-            species_data = species_ref.lookup(obj.depicts_valid_name_id)
-            return species_data.get('genus') if species_data else None
-        except:
-            return None
+        """Look up genus natively from Postgres Taxon relationship"""
+        return obj.taxon.genus if obj.taxon else None
 
     def get_tribe(self, obj):
-        """Look up tribe from valid_species reference"""
-        if not obj.depicts_valid_name_id:
-            return None
-        try:
-            species_data = species_ref.lookup(obj.depicts_valid_name_id)
-            return species_data.get('tribe') if species_data else None
-        except:
-            return None
+        """Look up tribe natively from Postgres Taxon relationship"""
+        return obj.taxon.tribe if obj.taxon else None
 
     def get_scientific_name(self, obj):
-        """Look up scientific name from valid_species reference"""
-        if not obj.depicts_valid_name_id:
-            return None
-        try:
-            species_data = species_ref.lookup(obj.depicts_valid_name_id)
-            return species_data.get('scientificName') if species_data else None
-        except:
-            return None
+        """Look up scientific name natively from Postgres Taxon relationship"""
+        return obj.taxon.scientific_name if obj.taxon else None
 
     def validate(self, data):
         """

@@ -4,7 +4,7 @@ from django.db.utils import DataError
 from django.core.files.base import ContentFile
 # from django.utils import timezone
 
-from beetlesgallery.beetles_app.models import Beetles, UploadBatch, ImageAsset
+from beetlesgallery.beetles_app.models import Beetles, UploadBatch, ImageAsset, Taxon
 from beetlesgallery.beetles_app.schema import REQUIRED_COLS
 from beetlesgallery.beetles_app.utils import get_system_user
 
@@ -328,6 +328,9 @@ class Command(BaseCommand):
                     )
                 )
 
+            # Pre-fetch taxon map to memory for fast foreign key linking during import
+            taxon_map = {t.valid_species_id: t for t in Taxon.objects.all()}
+
             # Create-only import; validation already enforced uniqueness-by-hash.
             with transaction.atomic():
 
@@ -494,6 +497,7 @@ class Command(BaseCommand):
                                 specimen_sex=values.get('specimen_sex'),
                                 specimen_type_status=values.get('specimen_type_status'),
                                 specimen_notes=specimen_notes,
+                                taxon=taxon_map.get(depicts_valid_name_id),
                             )
                             
                             created_beetles += 1

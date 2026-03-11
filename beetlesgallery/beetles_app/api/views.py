@@ -8,7 +8,6 @@ from django.db import transaction
 from django.utils import timezone
 from django.conf import settings
 from beetlesgallery.beetles_app.models import ImageAsset, Beetles, ImageLock
-from beetlesgallery.beetles_app import species_ref
 from .serializers import ImageAssetSerializer, BeetlesSerializer, SpeciesSerializer
 import json
 import zipfile
@@ -168,15 +167,7 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         # Filter by subfamily if provided
         subfamily = self.request.query_params.get('subfamily')
         if subfamily:
-            # Look up all valid_species_ids that match this subfamily
-            try:
-                matching_ids = species_ref.ids_for('subfamily', subfamily)
-                if matching_ids:
-                    queryset = queryset.filter(depicts_valid_name_id__in=matching_ids)
-                else:
-                    queryset = queryset.none()
-            except Exception:
-                queryset = queryset.none()
+            queryset = queryset.filter(taxon__subfamily__iexact=subfamily)
 
         # Filter by image_asset
         image_asset_id = self.request.query_params.get('image_asset')
@@ -1232,20 +1223,21 @@ class BeetlesViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='taxonomy')
     def taxonomy(self, request):
         """
-        Get taxonomy data for a given valid_name_id using species_ref.resolve().
+        Get taxonomy data for a given valid_name_id natively from Postgres.
 
         GET /api/v1/beetles/taxonomy/?valid_name_id=123
 
         Returns:
         {
             "scientificName": "...",
-            "authority": "...",
+            "scientificNameAuthority": "...",
             "subfamily": "...",
             "tribe": "...",
             "subtribe": "...",
             "genus": "...",
             "species": "...",
             "subspecies": "...",
+            "authority": "...",
             "authorityYear": "...",
             "originalGenus": "..."
         }
@@ -1260,7 +1252,7 @@ class BeetlesViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Normalize the ID (same logic as in main views.py)
+        # Normalize the ID
         def normalize_id(v):
             if v is None:
                 return None
@@ -1285,62 +1277,68 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         if norm_vid is None:
             return Response({})
 
-        # Resolve taxonomy using species_ref
-        ref_species = species_ref.resolve(norm_vid)
-
-        if not ref_species:
+        # Resolve taxonomy natively from Postgres
+        from beetlesgallery.beetles_app.models import Taxon
+        try:
+            taxon = Taxon.objects.get(valid_species_id=norm_vid)
+            return Response({
+                "scientificName": taxon.scientific_name,
+                "scientificNameAuthority": taxon.scientific_name_authority,
+                "subfamily": taxon.subfamily,
+                "tribe": taxon.tribe,
+                "subtribe": taxon.subtribe,
+                "genus": taxon.genus,
+                "species": taxon.species,
+                "subspecies": taxon.subspecies,
+                "authority": taxon.authority,
+                "authorityYear": taxon.authority_year,
+                "originalGenus": taxon.original_genus,
+            })
+        except Taxon.DoesNotExist:
             return Response({})
-
-        return Response(ref_species)
 
 
 class SpeciesViewSet(viewsets.ViewSet):
     """
-    API endpoint for species from valid_species.csv.
-
-    Returns ALL species matching the filter (whether they have images or not).
-    For species with images, includes the image data nested under 'images' field.
-
-    Supports filtering by:
-    GET /api/v1/species/?subfamily=Platypodinae
-    GET /api/v1/species/?genus=Austroplatypus
-    GET /api/v1/species/?tribe=Platypodini
+    API endpoint for species from the native Postgres Taxon table.
     """
     serializer_class = SpeciesSerializer
 
     def list(self, request):
-        """
-        List all species from CSV, optionally filtered by taxonomy.
-        Returns all results without pagination.
-        """
-        # Get filter parameters
+        from beetlesgallery.beetles_app.models import Taxon
+        
         subfamily = request.query_params.get('subfamily')
         genus = request.query_params.get('genus')
         tribe = request.query_params.get('tribe')
         species_param = request.query_params.get('species')
 
-        # Load all species from CSV
-        try:
-            all_rows = species_ref._load_all_rows()
-        except Exception as e:
-            return Response({'error': f'Failed to load species reference: {str(e)}'}, status=500)
-
-        # Filter rows based on query params
-        filtered_rows = all_rows
+        qs = Taxon.objects.all()
 
         if subfamily:
-            filtered_rows = [r for r in filtered_rows if r.get('subfamily', '').lower() == subfamily.lower()]
-
+            qs = qs.filter(subfamily__iexact=subfamily)
         if genus:
-            filtered_rows = [r for r in filtered_rows if r.get('genus', '').lower() == genus.lower()]
-
+            qs = qs.filter(genus__iexact=genus)
         if tribe:
-            filtered_rows = [r for r in filtered_rows if r.get('tribe', '').lower() == tribe.lower()]
-
+            qs = qs.filter(tribe__iexact=tribe)
         if species_param:
-            filtered_rows = [r for r in filtered_rows if r.get('species', '').lower() == species_param.lower()]
+            qs = qs.filter(species__iexact=species_param)
 
-        # Serialize and return all results
-        serializer = SpeciesSerializer(filtered_rows, many=True)
+        results = []
+        for t in qs:
+            results.append({
+                "valid_species_id": t.valid_species_id,
+                "scientificName": t.scientific_name,
+                "scientificNameAuthority": t.scientific_name_authority,
+                "subfamily": t.subfamily,
+                "tribe": t.tribe,
+                "subtribe": t.subtribe,
+                "genus": t.genus,
+                "species": t.species,
+                "subspecies": t.subspecies,
+                "authority": t.authority,
+                "authorityYear": t.authority_year,
+                "originalGenus": t.original_genus,
+            })
 
+        serializer = SpeciesSerializer(results, many=True)
         return Response(serializer.data)

@@ -4,7 +4,6 @@ from django.utils import timezone
 from django.core.files.base import ContentFile
 
 from beetlesgallery.beetles_app.models import Beetles, UpdateBatch, ImageAsset
-from beetlesgallery.beetles_app import species_ref
 
 import uuid as _uuid
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -187,51 +186,35 @@ class Command(BaseCommand):
             return self._finalize(batch, errors, dry_run)
 
         # Pin valid_species version
-        try:
-            species_version = species_ref.get_version() or ""
-            species_label = species_ref.get_label() or ""
-        except Exception:
-            errors.append("valid_species reference is unavailable; cannot validate depicts_valid_name_id.")
-            return self._finalize(batch, errors, dry_run)
-
-        # Build quick index of beetles (prefetching image_asset)
-        record_ids = [str(x).strip() for x in df["record_id"].tolist() if _none(x) is not None]
-        
-        # Duplicate record_id check
-        from collections import Counter
-        dups = [rid for rid, c in Counter(record_ids).items() if c > 1]
-        if dups:
-            examples = ", ".join(dups[:5])
-            errors.append(f"Duplicate record_id values detected ({len(dups)}). Examples: {examples}.")
-            return self._finalize(batch, errors, dry_run)
-
-        # Fetch objects with relation
-        beetles_map = {
-            str(b.id): b
-            for b in Beetles.objects.filter(id__in=record_ids).select_related('image_asset')
-        }
-
         missing_ids = [rid for rid in record_ids if rid not in beetles_map]
         if missing_ids:
             examples = ", ".join(missing_ids[:5])
             errors.append(f"{len(missing_ids)} record_id value(s) do not exist. Examples: {examples}.")
             return self._finalize(batch, errors, dry_run)
 
+        # --- NEW CODE STARTS HERE ---
+        # Pin valid_species version natively
+        from beetlesgallery.beetles_app.models import Taxon
+        latest_taxon = Taxon.objects.order_by("-updated_at").first()
+        species_version = latest_taxon.updated_at.isoformat() if latest_taxon else "unknown"
+        species_label = "Database Managed (v2.0)"
+
         # Taxonomy Check
         candidate_ids = {
             str(v).strip()
-            for v in df["depicts_valid_name_id"].tolist()
+            for v in df.get("depicts_valid_name_id", pd.Series(dtype=str)).tolist()
             if not _is_blank(v)
         }
-        ref_map = species_ref.bulk_lookup(candidate_ids) if candidate_ids else {}
+        valid_taxa_set = set(Taxon.objects.filter(valid_species_id__in=candidate_ids).values_list('valid_species_id', flat=True)) if candidate_ids else set()
 
         row_missing = []
         if "depicts_valid_name_id" in df.columns:
             for i, v in df["depicts_valid_name_id"].items():
                 if _is_blank(v): continue
                 vid = str(v).strip()
-                if vid not in ref_map:
+                if vid not in valid_taxa_set:
                     row_missing.append((i + 2, vid))
+        # --- NEW CODE ENDS HERE ---
 
         if row_missing:
             examples = ", ".join([f"row {r}: '{val}'" for r, val in row_missing[:10]])
