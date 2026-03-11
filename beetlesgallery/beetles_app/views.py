@@ -1269,6 +1269,8 @@ def taxonomy_browser(request):
     """
     Display the taxonomy browser page using native Treebeard serialization.
     """
+    from beetlesgallery.beetles_app.models import Taxon  # <-- ADD THIS IMPORT
+
     # treebeard natively dumps the materialized path hierarchy to a nested dictionary
     tree_data = Taxon.dump_bulk()
     
