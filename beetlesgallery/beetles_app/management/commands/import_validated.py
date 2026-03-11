@@ -85,6 +85,12 @@ def _to_date(v):
     except Exception:
         return None
 
+def _to_float(v):
+    v = _none(v)
+    if v is None: return None
+    try: return float(v)
+    except: return None
+
 def _normalize_sex(v, row_num):
     v = _none(v)
     if v is None:
@@ -382,6 +388,7 @@ class Command(BaseCommand):
                         ("collection_stateProvince", MAXLEN["collection_stateProvince"]),
                         ("specimen_sex", MAXLEN["specimen_sex"]),
                         ("specimen_type_status", MAXLEN["specimen_type_status"]),
+                        ("bbox_label", 200),
                     ]
                     values = {}
                     for fname, maxlen in char_fields:
@@ -419,6 +426,11 @@ class Command(BaseCommand):
                         raise CommandError(
                             f"{batch.id}: Row {row_num} has overlong values: {', '.join(too_long)}"
                         )
+
+                    bbox_x = _to_float(row.get("bbox_x"))
+                    bbox_y = _to_float(row.get("bbox_y"))
+                    bbox_width = _to_float(row.get("bbox_width"))
+                    bbox_height = _to_float(row.get("bbox_height"))
 
                     # Get the ZIP member path for this row (from manifest)
                     zip_member = m.get("zip_member")
@@ -497,6 +509,11 @@ class Command(BaseCommand):
                                 specimen_sex=values.get('specimen_sex'),
                                 specimen_type_status=values.get('specimen_type_status'),
                                 specimen_notes=specimen_notes,
+                                bbox_x=bbox_x,
+                                bbox_y=bbox_y,
+                                bbox_width=bbox_width,
+                                bbox_height=bbox_height,
+                                bbox_label=values.get('bbox_label'),
                                 taxon=taxon_map.get(depicts_valid_name_id),
                             )
                             
@@ -539,13 +556,16 @@ class Command(BaseCommand):
                             raise CommandError(f"{batch.id}: Row {row_num} failed DB insert: {e}") from e
 
                         except IntegrityError as e:
-                            # Most likely the UNIQUE(image_sha256) constraint fired
-                            # -> treat as a hard failure for the entire batch.
-                            filename = os.path.basename(full_path_at_import) if full_path_at_import else "<unknown file>"
-                            raise CommandError(
-                                f"{batch.id}: Row {row_num} duplicate image content for "
-                                f"'{filename}' (image_sha256={image_sha256} already exists in the database)."
-                            ) from e
+                            error_str = str(e).lower()
+                            # Differentiate between a duplicate hash and a strict DB constraint
+                            if "unique constraint" in error_str or "duplicate key" in error_str or "image_sha256" in error_str:
+                                filename = os.path.basename(full_path_at_import) if full_path_at_import else "<unknown file>"
+                                raise CommandError(
+                                    f"{batch.id}: Row {row_num} duplicate image content for "
+                                    f"'{filename}' (image_sha256={image_sha256} already exists in the database)."
+                                ) from e
+                            else:
+                                raise CommandError(f"{batch.id}: Row {row_num} failed DB integrity constraint: {e}") from e
 
                 if dry_run:
                     # don’t persist any of the created rows

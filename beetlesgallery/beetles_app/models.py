@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from django.db.models.functions import Upper
+from django.contrib.postgres.indexes import GinIndex
 
 import uuid
 import json, os
@@ -106,8 +107,8 @@ class Beetles(models.Model):
 
     # --- What the image depicts ---
     depicts_specimen = models.CharField(max_length=255, null=True, blank=True)
-    depicts_valid_name_id = models.CharField(max_length=255, null=True, blank=True)  
-    depicts_described_name_id = models.CharField(max_length=255, null=True, blank=True)
+    depicts_valid_name_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)  
+    depicts_described_name_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     depicts_name_verbatim = models.CharField(max_length=255, null=True, blank=True)
 
     # --- Collection / specimen metadata ---
@@ -149,7 +150,7 @@ class Beetles(models.Model):
         help_text="Normalized height (as fraction of image height, 0-1)"
     )
     bbox_label = models.CharField(
-        max_length=200, blank=True,
+        null=True, max_length=200, blank=True,
         help_text="Species name, classification label, or other identifier"
     )
 
@@ -191,8 +192,8 @@ class Beetles(models.Model):
 
     class Meta:
         db_table = "beetles"
-        verbose_name = "Beetle Metadata"
-        verbose_name_plural = "Beetles Metadata"
+        verbose_name = "Region of Interest (ROI)"
+        verbose_name_plural = "Regions of Interest (ROIs)"
         indexes = [
             models.Index(fields=["depicts_valid_name_id"]),
             models.Index(fields=["collection_country", "collection_stateProvince"]),
@@ -869,21 +870,21 @@ class Taxon(MP_Node):
         db_index=True,
         help_text="Original identifier mapping to valid_species.csv"
     )
-    scientific_name = models.CharField(max_length=255, blank=True, null=True)
+    scientific_name = models.CharField(max_length=255, blank=True, null=True, db_index=True)
     scientific_name_authority = models.CharField(max_length=255, blank=True, null=True)
 
     # Taxonomic Ranks
-    subfamily = models.CharField(max_length=100, blank=True, null=True)
-    tribe = models.CharField(max_length=100, blank=True, null=True)
-    subtribe = models.CharField(max_length=100, blank=True, null=True)
-    genus = models.CharField(max_length=100, blank=True, null=True)
-    species = models.CharField(max_length=100, blank=True, null=True)
+    subfamily = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    tribe = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    subtribe = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    genus = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    species = models.CharField(max_length=100, blank=True, null=True, db_index=True)
     subspecies = models.CharField(max_length=100, blank=True, null=True)
 
     # Nomenclatural Data
     authority = models.CharField(max_length=255, blank=True, null=True)
     authority_year = models.CharField(max_length=50, blank=True, null=True)
-    original_genus = models.CharField(max_length=100, blank=True, null=True)
+    original_genus = models.CharField(max_length=100, blank=True, null=True, db_index=True)
 
     # Audit Trail
     created_at = models.DateTimeField(auto_now_add=True)
@@ -898,6 +899,11 @@ class Taxon(MP_Node):
         indexes = [
             models.Index(fields=["scientific_name"]),
             models.Index(fields=["genus", "species"]),
+            GinIndex(
+                name='taxon_orig_genus_gin', 
+                fields=['original_genus'], 
+                opclasses=['gin_trgm_ops']
+            ),
         ]
 
     def __str__(self):
@@ -938,6 +944,13 @@ class Synonym(models.Model):
         db_table = "synonym"
         verbose_name = "Synonym"
         verbose_name_plural = "Synonyms"
+        indexes = [
+            GinIndex(
+                name='syn_desc_name_gin', 
+                fields=['described_scientific_name'], 
+                opclasses=['gin_trgm_ops']
+            ),
+        ]
 
     def __str__(self):
         return self.described_scientific_name

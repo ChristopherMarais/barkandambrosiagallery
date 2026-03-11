@@ -941,6 +941,21 @@ def admin_described_names(request):
         return redirect("admin_described_names")
     return render(request, "admin/tools_described_names.html", {"form": DescribedNamesUploadForm(), "status": current_status})
 
+UPDATE_ALLOWED_FIELDS = [
+    "alternative_id", "image_institution", "photographer", "image_email", 
+    "photo_usage_statement", "aspect", "resolution_in_ppmm", "image_notes", 
+    "image_date_taken", "image_has_multiple_individuals", "depicts_specimen", 
+    "depicts_valid_name_id", "depicts_described_name_id", "depicts_name_verbatim", 
+    "collection_country", "collection_stateProvince", "specimen_sex", 
+    "specimen_type_status", "specimen_notes",
+    "bbox_x", "bbox_y", "bbox_width", "bbox_height", "bbox_label"
+]
+UPDATE_REQUIRED_COLS = {"record_id"} | set(UPDATE_ALLOWED_FIELDS)
+UPDATE_OPTIONAL_COLS = {"update_notes"}
+UPDATE_IGNORED_COLS = {
+    "image_id", "taxonomy_scientific_name", "taxonomy_subfamily", 
+    "taxonomy_tribe", "taxonomy_genus", "taxonomy_species"
+}
 
 @staff_member_required
 def update_upload(request):
@@ -1004,7 +1019,7 @@ def update_upload(request):
     cols = set(df.columns)
 
     missing = UPDATE_REQUIRED_COLS - cols
-    extras = cols - (UPDATE_REQUIRED_COLS | UPDATE_OPTIONAL_COLS)
+    extras = cols - (UPDATE_REQUIRED_COLS | UPDATE_OPTIONAL_COLS | UPDATE_IGNORED_COLS)
 
     if missing:
         errors.append(f"Missing required columns: {sorted(missing)}")
