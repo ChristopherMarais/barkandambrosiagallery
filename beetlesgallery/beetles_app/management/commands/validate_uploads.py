@@ -276,28 +276,43 @@ class Command(BaseCommand):
             return self._finalize(batch, errors, dry_run)
 
         # Duplicate hash detection (batch internal)
-        seen_by_hash = {}
+        # We only care if DIFFERENT physical files in the ZIP share a hash.
+        # Multiple CSV rows pointing to the SAME physical zip_member is allowed (multiple ROIs).
+        
+        seen_hash_to_member = {}
         dups = []
         for m in manifest:
             h = m["sha256"]
-            if h in seen_by_hash:
-                dups.append((seen_by_hash[h]["filename"], m["filename"]))
+            member_path = m["zip_member"]
+            
+            if h in seen_hash_to_member:
+                existing_member = seen_hash_to_member[h]
+                # If it's a different file path with the same hash, it's a collision
+                if existing_member != member_path:
+                    dups.append((existing_member, member_path))
             else:
-                seen_by_hash[h] = m
+                seen_hash_to_member[h] = member_path
 
         if dups:
             preview = dups[:10]
-            errors.append(f"ZIP contains duplicate images by hash: {preview}...")
+            errors.append(f"ZIP contains duplicate images by hash (different files, same content): {preview}...")
             zf.close()
             return self._finalize(batch, errors, dry_run)
 
         # Duplicate hash detection (database)
-        hashes = [m["sha256"] for m in manifest]
-        existing = set(ImageAsset.objects.filter(image_sha256__in=hashes).values_list("image_sha256", flat=True))
+        unique_hashes = list(seen_hash_to_member.keys())
+        existing = set(ImageAsset.objects.filter(image_sha256__in=unique_hashes).values_list("image_sha256", flat=True))
+        
         if existing:
-            collisions = [m for m in manifest if m["sha256"] in existing][:10]
-            sample = [{"filename": m["filename"], "sha256": m["sha256"]} for m in collisions]
-            errors.append(f"Duplicate images already exist in DB. Examples: {sample}")
+            collisions = [m for m in manifest if m["sha256"] in existing]
+            sample = []
+            seen_failed_members = set()
+            for c in collisions:
+                if c["zip_member"] not in seen_failed_members:
+                    sample.append({"filename": c["filename"], "sha256": c["sha256"]})
+                    seen_failed_members.add(c["zip_member"])
+                    
+            errors.append(f"Duplicate images already exist in DB. Examples: {sample[:10]}")
             zf.close()
             return self._finalize(batch, errors, dry_run)
 

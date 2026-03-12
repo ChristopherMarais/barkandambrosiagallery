@@ -386,6 +386,8 @@ def gallery(request):
 
     # 4. Build Dynamic Options
     from collections import defaultdict
+    from django.db.models import Q
+    
     grouped_filters = defaultdict(list)
     
     categories = []
@@ -397,41 +399,71 @@ def gallery(request):
 
     for cfg in FILTERS_CONFIG:
         param = cfg["param"]
-        ctx_qs = apply_filters(base_search_qs, active_filters, exclude_param=param)
+        ctx_qs = filter_beetles_queryset(base_search_qs, active_filters, exclude_param=param)
         
         options = []
+        has_na = False
+
         if cfg["type"] == "db":
-            # 1. Get real values
-            opts_qs = ctx_qs.exclude(**{f"{cfg['field']}__isnull": True})
+            # 1. Fetch only REAL values, excluding nulls and blanks natively
+            field = cfg['field']
             
-            # Date fields cannot be empty strings, so only exclude nulls for them
-            if cfg["field"] == "image_asset__image_date_taken":
-                options = list(opts_qs.values_list(cfg['field'], flat=True).distinct().order_by(cfg['field']))
-                # Use only isnull check for dates to avoid ValidationError
-                na_check = ctx_qs.filter(**{f"{cfg['field']}__isnull": True}).exists()
+            # Identify if field is Date or Decimal to avoid passing empty string "" to ORM
+            is_strict_type = field in ["image_asset__image_date_taken", "image_asset__resolution_in_ppmm"]
+            
+            if is_strict_type:
+                raw_options = ctx_qs.exclude(**{f"{field}__isnull": True}) \
+                                    .values_list(field, flat=True) \
+                                    .distinct().order_by(field)
             else:
-                # Standard fields: exclude both null and empty string
-                opts_qs = opts_qs.exclude(**{f"{cfg['field']}": ""})
-                options = list(opts_qs.values_list(cfg['field'], flat=True).distinct().order_by(cfg['field']))
-                na_check = ctx_qs.filter(Q(**{f"{cfg['field']}__isnull": True}) | Q(**{f"{cfg['field']}": ""})).exists()
+                raw_options = ctx_qs.exclude(**{f"{field}__isnull": True}) \
+                                    .exclude(**{f"{field}": ""}) \
+                                    .values_list(field, flat=True) \
+                                    .distinct().order_by(field)
             
-            if na_check:
-                options.insert(0, NA)
-            
+            for o in raw_options:
+                val = o.strftime("%Y-%m-%d") if hasattr(o, "strftime") else str(o).strip()
+                if val and val not in options:
+                    options.append(val)
+                    
+            # 2. Hard check the database to see if ANY blank/null records exist
+            if is_strict_type:
+                has_na = ctx_qs.filter(**{f"{field}__isnull": True}).exists()
+            else:
+                has_na = ctx_qs.filter(
+                    Q(**{f"{field}__isnull": True}) | 
+                    Q(**{f"{field}": ""})
+                ).exists()
+
         elif cfg["type"] == "bool":
             options = ["Yes", "No"]
+            has_na = ctx_qs.filter(**{f"{cfg['field']}__isnull": True}).exists()
             
         elif cfg["type"] == "ref":
-            # 1. Get real values via native database join
             field_name = f"taxon__{cfg['field']}"
-            opts_qs = ctx_qs.filter(taxon__isnull=False).values_list(field_name, flat=True).distinct().order_by(field_name)
             
-            # Filter out empty strings natively
-            options = [o for o in opts_qs if o]
+            # 1. Fetch only REAL taxonomy values
+            raw_options = ctx_qs.exclude(taxon__isnull=True) \
+                                .exclude(**{f"{field_name}__isnull": True}) \
+                                .exclude(**{f"{field_name}": ""}) \
+                                .values_list(field_name, flat=True) \
+                                .distinct().order_by(field_name)
+                                
+            for o in raw_options:
+                val = str(o).strip()
+                if val and val not in options:
+                    options.append(val)
 
-            # 2. Add N/A if unidentified records exist
-            if ctx_qs.filter(taxon__isnull=True).exists():
-                options.insert(0, NA)
+            # 2. Hard check if any ROI is unlinked OR its specific taxon rank is empty
+            has_na = ctx_qs.filter(
+                Q(taxon__isnull=True) | 
+                Q(**{f"{field_name}__isnull": True}) | 
+                Q(**{f"{field_name}": ""})
+            ).exists()
+
+        # 3. Safely insert N/A at the top of the list if blanks exist
+        if has_na:
+            options.insert(0, "N/A")
 
         # Check if options exist OR if this filter is currently active
         if options or active_filters.get(param):
@@ -439,7 +471,7 @@ def gallery(request):
                 "param": param,
                 "label": cfg["label"],
                 "options": options,
-                "selected": active_filters.get(param, []), # Pass the LIST of selected values
+                "selected": active_filters.get(param, []),
             })
 
     filter_context = []

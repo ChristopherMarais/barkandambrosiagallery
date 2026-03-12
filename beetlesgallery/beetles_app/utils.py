@@ -405,7 +405,11 @@ def filter_beetles_queryset(qs, filters_dict, size_min=None, size_max=None, res_
                 # Route directly to the Taxon table via the ForeignKey
                 q_ref |= Q(**{f"taxon__{cfg['field']}__in": real_vals})
             if has_na:
-                q_ref |= Q(taxon__isnull=True)
+                q_ref |= (
+                    Q(taxon__isnull=True) | 
+                    Q(**{f"taxon__{cfg['field']}": ""}) | 
+                    Q(**{f"taxon__{cfg['field']}__isnull": True})
+                )
             
             if q_ref:
                 qs = qs.filter(q_ref)
