@@ -860,26 +860,66 @@ def data_management(request):
 
     if request.user.is_superuser:
         import json
+        import os
         from django.core.serializers.json import DjangoJSONEncoder
         from beetlesgallery.beetles_app.models import Taxon
+        from django.utils import timezone
+        from django.core.files.storage import default_storage
         
         # Pull latest sync timestamp natively from the database
         latest_taxon = Taxon.objects.order_by("-updated_at").first()
         if latest_taxon:
             t_label = f"Database Managed (Last Sync: {latest_taxon.updated_at.strftime('%Y-%m-%d %H:%M UTC')})"
+            t_timestamp = latest_taxon.updated_at.isoformat()
         else:
             t_label = "Database Managed (v2.0)"
+            t_timestamp = timezone.now().isoformat()
 
         species_ref_status = {'label': t_label, 'version': 'v2.0'}
         described_names_ref_status = {'label': t_label, 'version': 'v2.0'}
 
-        # Legacy archives deprecated; handled via relational backups if needed
-        valid_species_archives_json = "[]"
-        described_names_archives_json = "[]"
-        current_valid_species_json = "null"
-        current_described_names_json = "null"
-        initial_archives = []
-        initial_current = None
+        # 1. Virtualize the Current Version to display the latest download link
+        current_file_obj = {
+            "timestamp": t_timestamp,
+            "filename": "Active_Database_Export.csv"
+        }
+        
+        initial_current = current_file_obj
+        current_valid_species_json = json.dumps(current_file_obj)
+        current_described_names_json = json.dumps(current_file_obj)
+
+        # 2. Re-implement Storage Scanner for Archives
+        def fetch_archives(ref_type):
+            archive_dir = f"reference/archive/{ref_type}"
+            archives = []
+            try:
+                # Check if directory exists in default_storage
+                if default_storage.exists(archive_dir):
+                    _, files = default_storage.listdir(archive_dir)
+                    for f in files:
+                        if f.endswith('.csv'):
+                            try:
+                                mtime = default_storage.get_modified_time(f"{archive_dir}/{f}")
+                                ts = mtime.isoformat()
+                            except Exception:
+                                ts = timezone.now().isoformat()
+                            archives.append({"filename": f, "timestamp": ts})
+                    
+                    # Sort by filename descending (newest timestamps first)
+                    archives.sort(key=lambda x: x["filename"], reverse=True)
+            except NotImplementedError:
+                # Graceful fail if the storage backend doesn't support listdir
+                pass
+            return archives
+
+        vs_archives = fetch_archives("valid_species")
+        dn_archives = fetch_archives("described_names")
+
+        valid_species_archives_json = json.dumps(vs_archives)
+        described_names_archives_json = json.dumps(dn_archives)
+        
+        # Initial render defaults to Valid Species view
+        initial_archives = vs_archives
 
     return render(
         request,
