@@ -19,11 +19,11 @@ urlpatterns = [
     path("accounts/me/", beetles_views.my_account, name="my_account"),
 
     # --- Pages ---
-    # 1. Root URL -> Landing View (Sidebar "Home" links here)
-    path('', beetles_views.landing, name='home'),
+    # 1. Root URL -> Landing View (Sidebar "image_browser" links here)
+    path('', beetles_views.landing, name='image_browser'),
     
     # 2. /beetles/ -> Gallery View (Sidebar "Beetles" links here)
-    path('beetles/', beetles_views.gallery, name='beetles_home'),
+    path('beetles/', beetles_views.gallery, name='beetles_image_browser'),
 
     # 3. /taxonomy/ -> Taxonomy Browser (Sidebar "Taxonomy Browser" links here)
     path('taxonomy/', beetles_views.taxonomy_browser, name='taxonomy_browser'),

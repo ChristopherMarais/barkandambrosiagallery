@@ -190,8 +190,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Auth Redirects
 LOGIN_URL = "login"
-LOGIN_REDIRECT_URL = "home"
-LOGOUT_REDIRECT_URL = "home"
+LOGIN_REDIRECT_URL = "image_browser"
+LOGOUT_REDIRECT_URL = "image_browser"
 
 # Upload Constraints
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024

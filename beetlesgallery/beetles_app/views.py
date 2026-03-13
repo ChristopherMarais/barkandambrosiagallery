@@ -557,7 +557,7 @@ def gallery(request):
 
     return render(
         request,
-        "beetles/home.html", 
+        "beetles/image_browser.html", 
         {
             "beetles": beetles_page,
             "paginator": paginator,
@@ -694,7 +694,7 @@ def start_batch_download(request):
         # If a user arrives here via GET (e.g. after logging in), 
         # redirect them to the gallery to try again.
         messages.info(request, "Please select items to download.")
-        return redirect("beetles_home")
+        return redirect("beetles_image_browser")
     # ----------------------------------------------------------------------
 
     from .utils import FILTERS_CONFIG
@@ -723,7 +723,7 @@ def start_batch_download(request):
 
     if mode not in ("ids", "query"):
         messages.error(request, "Invalid selection mode.")
-        return redirect("beetles_home")
+        return redirect("beetles_image_browser")
 
     # If query mode, we need to capture ALL filters, not just 'q'.
     # We will serialize them into query_string as JSON.
@@ -1201,7 +1201,7 @@ def create_specimen_for_image(request, image_id):
     _run_update_batch(request, row_data, f"add_specimen_{image_asset.id.hex[:8]}.csv")
     
     messages.success(request, "Update queued successfully. Changes will appear shortly.")
-    return redirect(request.META.get('HTTP_REFERER', 'home'))
+    return redirect(request.META.get('HTTP_REFERER', 'image_browser'))
 
 
 def _run_update_batch(request, row_data, filename):

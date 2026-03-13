@@ -31,8 +31,8 @@ image = (
         "einops"
     )
     .env({
-        "HF_HOME": CACHE_DIR,
-        "TORCH_HOME": CACHE_DIR,
+        "HF_image_browser": CACHE_DIR,
+        "TORCH_image_browser": CACHE_DIR,
         "MPLCONFIGDIR": f"{CACHE_DIR}/matplotlib"
     })
 )
