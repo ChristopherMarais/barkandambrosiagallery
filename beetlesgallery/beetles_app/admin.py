@@ -211,7 +211,6 @@ class BeetlesAdmin(SimpleHistoryAdmin):
         "bbox_y",
         "bbox_width",
         "bbox_height",
-        "bbox_label",
         "bbox_is_validated",
         "bbox_validated_by",
         "bbox_validated_at",
@@ -289,10 +288,10 @@ class BeetlesAdmin(SimpleHistoryAdmin):
 
 @admin.register(ImageAsset)
 class ImageAssetAdmin(admin.ModelAdmin):
-    list_display = ('id', 'image_preview', 'image_institution', 'photographer', 'created_at')
+    list_display = ('id', 'image_preview', 'image_institution', 'photographer', 'is_validated', 'created_at')
     search_fields = ('image_sha256', 'full_path_at_import', 'image_institution', 'photographer')
-    readonly_fields = ('image_preview_large', 'created_at', 'updated_at')
-    list_filter = ('image_institution', 'photographer')
+    readonly_fields = ('image_preview_large', 'is_validated', 'last_updated_by', 'created_at', 'updated_at')
+    list_filter = ('is_validated', 'image_institution', 'photographer')
 
     def image_preview(self, obj):
         if obj.image_file:

@@ -48,6 +48,19 @@ class ImageAsset(models.Model):
     thumb_width = models.PositiveIntegerField(null=True, blank=True)
     thumb_height = models.PositiveIntegerField(null=True, blank=True)
 
+    is_validated = models.BooleanField(
+        default=False, 
+        help_text="Has this image been fully reviewed/validated?"
+    )
+    last_updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='updated_image_assets',
+        help_text="User who last updated this image or its metadata"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -149,10 +162,6 @@ class Beetles(models.Model):
         null=True, blank=True,
         help_text="Normalized height (as fraction of image height, 0-1)"
     )
-    bbox_label = models.CharField(
-        null=True, max_length=200, blank=True,
-        help_text="Species name, classification label, or other identifier"
-    )
 
     # --- Bounding Box Validation Workflow ---
     bbox_is_validated = models.BooleanField(
@@ -215,48 +224,6 @@ class Beetles(models.Model):
     def has_bbox(self) -> bool:
         """Check if this Beetle record has bounding box annotation data."""
         return self.bbox_x is not None
-
-    def to_yolo(self) -> str:
-        """
-        Export bbox to YOLO format (normalized center + w/h).
-
-        Returns:
-            str: "<label> <x_center> <y_center> <width> <height>" or empty string if no bbox
-        """
-        if not self.has_bbox():
-            return ""
-
-        x_center = self.bbox_x + (self.bbox_width / 2)
-        y_center = self.bbox_y + (self.bbox_height / 2)
-        label = self.bbox_label or '0'
-        return f"{label} {x_center:.6f} {y_center:.6f} {self.bbox_width:.6f} {self.bbox_height:.6f}"
-
-    def to_coco(self, image_width: int, image_height: int) -> dict:
-        """
-        Convert bbox to COCO format (absolute pixels, top-left + w/h).
-
-        Args:
-            image_width: Pixel width of the image
-            image_height: Pixel height of the image
-
-        Returns:
-            dict with keys: bbox, area, category_id (label), iscrowd
-            Returns empty dict if no bbox
-        """
-        if not self.has_bbox():
-            return {}
-
-        return {
-            'bbox': [
-                self.bbox_x * image_width,
-                self.bbox_y * image_height,
-                self.bbox_width * image_width,
-                self.bbox_height * image_height
-            ],
-            'area': (self.bbox_width * image_width) * (self.bbox_height * image_height),
-            'category_id': self.bbox_label or 'unknown',
-            'iscrowd': 0
-        }
 
     # ---------
     # Helpers: content-addressed relative paths based on sha256
@@ -954,21 +921,3 @@ class Synonym(models.Model):
 
     def __str__(self):
         return self.described_scientific_name
-
-
-class CategoryMapping(models.Model):
-    """
-    Relational representation of category_mapping.json for annotations.
-    """
-    category_id = models.IntegerField(primary_key=True, help_text="Numeric ID used in YOLO/COCO.")
-    name = models.CharField(max_length=255, db_index=True)
-    full_name = models.CharField(max_length=255, blank=True, null=True)
-    supercategory = models.CharField(max_length=100, default='beetle', db_index=True)
-
-    class Meta:
-        db_table = "category_mapping"
-        verbose_name = "Category Mapping"
-        verbose_name_plural = "Category Mappings"
-
-    def __str__(self):
-        return self.full_name or self.name
