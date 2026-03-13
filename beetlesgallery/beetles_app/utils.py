@@ -214,7 +214,7 @@ def _clause_to_q(field_label: str, value: str, ignored):
         ref_map = {"scientific name": "scientific_name", "genus": "genus", "species": "species"}
         taxon_field = ref_map.get(norm)
         
-        if value and value.strip().upper() == "N/A":
+        if value and value.strip().upper() == "None":
             return Q(taxon__isnull=True)
             
         if not value or value.strip() == "":
@@ -229,7 +229,7 @@ def _clause_to_q(field_label: str, value: str, ignored):
         ignored.append(f"unknown field '{field_label}'")
         return None
 
-    if value is None or value == "" or value.strip().upper() == "N/A":
+    if value is None or value == "" or value.strip().upper() == "None":
         if model_field == "image_asset__image_date_taken":
             return Q(**{f"{model_field}__isnull": True})
         return (Q(**{f"{model_field}__isnull": True}) | Q(**{f"{model_field}": ""}))
@@ -353,7 +353,7 @@ FILTERS_CONFIG = [
 ]
 
 def filter_beetles_queryset(qs, filters_dict, size_min=None, size_max=None, res_min=None, res_max=None, exclude_param=None):
-    NA = "N/A"
+    NA = "None"
     if size_min:
         try:
             qs = qs.filter(image_asset__image_size_bytes__gte=float(size_min) * 1024 * 1024)

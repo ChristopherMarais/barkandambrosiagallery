@@ -69,27 +69,54 @@
             </button>
           </div>
 
-          <details class="mt-3 group border border-gray-200 rounded-lg">
+          <details class="mt-3 group border border-gray-200 rounded-lg relative">
             <summary class="cursor-pointer px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-700 hover:bg-gray-100 flex items-center justify-between">
               <span>Advanced Filters</span>
               <i class="fi fi-rr-angle-small-down group-open:rotate-180 transition-transform"></i>
             </summary>
-            <div class="p-3 max-h-48 overflow-y-auto space-y-3 border-t border-gray-200">
+            <div class="p-3 space-y-4 border-t border-gray-200" style="overflow: visible;">
               {% if filter_groups %}
                 {% for category_name, filters_list in filter_groups %}
-                  <div class="text-xs font-bold text-gray-500 uppercase">{{ category_name }}</div>
-                  {% for f in filters_list %}
-                    <div class="space-y-1">
-                      <label class="text-xs text-gray-700">{{ f.label }}</label>
-                      <select name="{{ f.param }}" class="advanced-filter w-full border border-gray-300 rounded text-xs p-1" onchange="resetAndLoadImages()">
-                        <option value="">All</option>
-                        {% for opt in f.options %}
-                          <option value="{{ opt }}">{{ opt }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-                  {% endfor %}
+                  <div class="space-y-2">
+                      <div class="text-xs font-bold text-gray-500 uppercase border-b border-gray-100 pb-1">{{ category_name }}</div>
+                      {% for f in filters_list %}
+                      <div class="space-y-1 group-filter relative" data-param="{{ f.param }}">
+                          <label class="block text-xs font-semibold text-gray-700">{{ f.label }}</label>
+                          <select name="{{ f.param }}" multiple class="hidden advanced-filter">
+                              {% for opt in f.options %}
+                                  <option value="{{ opt }}" {% if opt in f.selected %}selected{% endif %}>{{ opt }}</option>
+                              {% endfor %}
+                          </select>
+                          <button type="button"
+                                  class="filter-toggle-btn w-full text-left rounded border border-gray-300 bg-white px-2 py-1.5 text-xs flex items-center justify-between hover:border-gray-400 transition"
+                                  onclick="toggleFilterDropdown(this)">
+                              <span class="truncate pr-2">{% if f.selected %}{{ f.selected|length }} Selected{% else %}All{% endif %}</span>
+                              <i class="fi fi-rr-angle-small-down text-gray-400"></i>
+                          </button>
+                          
+                          <div class="filter-dropdown hidden absolute top-full left-0 z-50 w-full min-w-[240px] mt-1 rounded shadow-lg border border-gray-200 bg-white p-2 flex flex-col gap-2">
+                              <input type="text" placeholder="Search..." class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500 outline-none" onkeyup="filterDropdownOptions(this)">
+                              <div class="flex justify-between border-b border-gray-100 pb-1">
+                                  <button type="button" class="text-[10px] font-bold text-gray-600 hover:underline" onclick="selectVisibleOptions(this)">Select All</button>
+                                  <button type="button" class="text-[10px] font-bold text-gray-500 hover:underline" onclick="clearFilterSelection(this)">Clear All</button>
+                              </div>
+                              <div class="max-h-40 overflow-y-auto flex flex-col gap-0.5">
+                                  {% for opt in f.options %}
+                                      <div class="filter-option cursor-pointer select-none rounded px-2 py-1.5 text-xs flex items-center justify-between hover:bg-gray-100 {% if opt in f.selected %}bg-gray-200 font-semibold text-gray-900{% else %}text-gray-700{% endif %}" data-value="{{ opt }}" onclick="toggleDropdownOption(this)">
+                                          <span class="truncate">{{ opt }}</span>
+                                          <div class="w-3 h-3 rounded border flex items-center justify-center shrink-0 {% if opt in f.selected %}bg-gray-600 border-gray-600 text-white{% else %}border-gray-300 bg-white{% endif %}">
+                                              <i class="fi fi-rr-check text-[8px] {% if opt not in f.selected %}hidden{% endif %} check-icon"></i>
+                                          </div>
+                                      </div>
+                                  {% endfor %}
+                                  <div class="no-results hidden px-2 py-2 text-center text-xs text-gray-400 italic">No matches</div>
+                              </div>
+                          </div>
+                      </div>
+                      {% endfor %}
+                  </div>
                 {% endfor %}
+                <button type="button" onclick="resetAndLoadImages()" class="w-full mt-4 bg-gray-800 hover:bg-gray-900 text-white text-xs font-semibold py-2 rounded transition-colors">Apply Filters</button>
               {% else %}
                 <div class="text-xs text-gray-400 italic">Advanced filters unavailable.</div>
               {% endif %}
@@ -307,6 +334,130 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ---------------------------------------------------------
+// ADVANCED FILTER DROPDOWN LOGIC
+// ---------------------------------------------------------
+function toggleFilterDropdown(btn) {
+    const container = btn.closest('.group-filter');
+    const dropdown = container.querySelector('.filter-dropdown');
+    
+    // 1. Close other dropdowns
+    document.querySelectorAll('.group-filter').forEach(group => {
+        const d = group.querySelector('.filter-dropdown');
+        if (d && d !== dropdown) {
+            d.classList.add('hidden');
+            group.classList.remove('z-50'); 
+        }
+    });
+
+    // 2. Toggle current
+    dropdown.classList.toggle('hidden');
+    
+    // 3. Z-Index bump
+    if (!dropdown.classList.contains('hidden')) {
+        container.classList.add('z-50');
+        const searchInput = dropdown.querySelector('input[type="text"]');
+        if (searchInput) setTimeout(() => searchInput.focus(), 50);
+    } else {
+        container.classList.remove('z-50');
+    }
+}
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.group-filter')) {
+        document.querySelectorAll('.filter-dropdown').forEach(d => d.classList.add('hidden'));
+        document.querySelectorAll('.group-filter').forEach(g => g.classList.remove('z-50'));
+    }
+});
+
+function filterDropdownOptions(input) {
+    const filterText = input.value.toLowerCase();
+    const container = input.closest('.filter-dropdown');
+    const options = container.querySelectorAll('.filter-option');
+    let hasVisible = false;
+
+    options.forEach(opt => {
+        const val = opt.getAttribute('data-value').toLowerCase();
+        if (val.includes(filterText)) {
+            opt.classList.remove('hidden');
+            opt.classList.add('flex');
+            hasVisible = true;
+        } else {
+            opt.classList.add('hidden');
+            opt.classList.remove('flex');
+        }
+    });
+    
+    const noRes = container.querySelector('.no-results');
+    if (noRes) {
+      if (!hasVisible) noRes.classList.remove('hidden');
+      else noRes.classList.add('hidden');
+    }
+}
+
+function toggleDropdownOption(div) {
+    const value = div.getAttribute('data-value');
+    const container = div.closest('.group-filter');
+    const hiddenSelect = container.querySelector('select');
+    const icon = div.querySelector('.check-icon');
+    const checkContainer = icon.parentElement;
+    const isSelected = div.classList.contains('bg-gray-200');
+
+    if (isSelected) {
+        div.classList.remove('bg-gray-200', 'text-gray-900', 'font-semibold');
+        div.classList.add('text-gray-700');
+        icon.classList.add('hidden');
+        checkContainer.classList.remove('bg-gray-600', 'border-gray-600', 'text-white');
+        checkContainer.classList.add('border-gray-300', 'bg-white');
+    } else {
+        div.classList.add('bg-gray-200', 'text-gray-900', 'font-semibold');
+        div.classList.remove('text-gray-700');
+        icon.classList.remove('hidden');
+        checkContainer.classList.add('bg-gray-600', 'border-gray-600', 'text-white');
+        checkContainer.classList.remove('border-gray-300', 'bg-white');
+    }
+
+    for (let i = 0; i < hiddenSelect.options.length; i++) {
+        if (hiddenSelect.options[i].value === value) {
+            hiddenSelect.options[i].selected = !isSelected;
+            break;
+        }
+    }
+    updateButtonLabel(container);
+}
+
+function selectVisibleOptions(btn) {
+    const dropdown = btn.closest('.filter-dropdown');
+    const visibleOptions = dropdown.querySelectorAll('.filter-option:not(.hidden):not(.bg-gray-200)');
+    visibleOptions.forEach(opt => toggleDropdownOption(opt));
+}
+
+function clearFilterSelection(btn) {
+    const container = btn.closest('.group-filter');
+    const dropdown = container.querySelector('.filter-dropdown');
+    const selectedOptions = dropdown.querySelectorAll('.filter-option.bg-gray-200');
+    selectedOptions.forEach(opt => toggleDropdownOption(opt));
+}
+
+function updateButtonLabel(container) {
+    const hiddenSelect = container.querySelector('select');
+    const btn = container.querySelector('.filter-toggle-btn');
+    const span = btn.querySelector('span');
+    
+    let count = 0;
+    for(let i=0; i<hiddenSelect.options.length; i++) {
+        if(hiddenSelect.options[i].selected) count++;
+    }
+
+    if (count > 0) {
+        span.textContent = `${count} Selected`;
+        btn.classList.add('border-gray-400', 'text-gray-900', 'font-medium', 'bg-gray-100');
+    } else {
+        span.textContent = 'All';
+        btn.classList.remove('border-gray-400', 'text-gray-900', 'font-medium', 'bg-gray-100');
+    }
+}
+
+// ---------------------------------------------------------
 // LEFT PANEL: IMAGE BROWSER
 // ---------------------------------------------------------
 function setValidationFilter(filter) {
@@ -355,9 +506,11 @@ async function loadAnnotatedImages(append = false) {
     const search = document.getElementById('image-search').value.trim();
     if (search) url += `&search=${encodeURIComponent(search)}`;
     
-    // Apply Advanced Filters
-    document.querySelectorAll('.advanced-filter').forEach(sel => {
-      if (sel.value) url += `&${sel.name}=${encodeURIComponent(sel.value)}`;
+    // Apply Advanced Filters from multiple selects
+    document.querySelectorAll('select.advanced-filter').forEach(sel => {
+        Array.from(sel.selectedOptions).forEach(opt => {
+            if (opt.value) url += `&${sel.name}=${encodeURIComponent(opt.value)}`;
+        });
     });
 
     const res = await fetch(url, { headers: { 'X-CSRFToken': csrftoken } });

@@ -343,7 +343,7 @@ def upload_file(request):
 
 def gallery(request):
     from .utils import build_query_q, filter_beetles_queryset, FILTERS_CONFIG
-    NA = "N/A"
+    NA = "None"
     try:
         page_size = int(request.GET.get("per_page", 12))
     except (ValueError, TypeError):
@@ -461,9 +461,9 @@ def gallery(request):
                 Q(**{f"{field_name}": ""})
             ).exists()
 
-        # 3. Safely insert N/A at the top of the list if blanks exist
+        # 3. Safely insert None at the top of the list if blanks exist
         if has_na:
-            options.insert(0, "N/A")
+            options.insert(0, "None")
 
         # Check if options exist OR if this filter is currently active
         if options or active_filters.get(param):
@@ -1589,7 +1589,92 @@ def tool_annotate(request):
     """
     Data annotation tool page (staff only).
     """
-    return render(request, 'beetles/tool_annotate.html', {})
+    from .utils import FILTERS_CONFIG
+    from collections import defaultdict
+    from django.db.models import Q
+    from .models import Beetles
+    
+    # Query the base records to discover available filter options
+    base_qs = Beetles.objects.all()
+    grouped_filters = defaultdict(list)
+    
+    categories = []
+    seen_cats = set()
+    for cfg in FILTERS_CONFIG:
+        if cfg["category"] not in seen_cats:
+            categories.append(cfg["category"])
+            seen_cats.add(cfg["category"])
+
+    for cfg in FILTERS_CONFIG:
+        param = cfg["param"]
+        options = []
+        has_na = False
+
+        if cfg["type"] == "db":
+            field = cfg['field']
+            is_strict_type = field in ["image_asset__image_date_taken", "image_asset__resolution_in_ppmm"]
+            
+            if is_strict_type:
+                raw_options = base_qs.exclude(**{f"{field}__isnull": True}) \
+                                     .values_list(field, flat=True) \
+                                     .distinct().order_by(field)
+                has_na = base_qs.filter(**{f"{field}__isnull": True}).exists()
+            else:
+                raw_options = base_qs.exclude(**{f"{field}__isnull": True}) \
+                                     .exclude(**{f"{field}": ""}) \
+                                     .values_list(field, flat=True) \
+                                     .distinct().order_by(field)
+                has_na = base_qs.filter(
+                    Q(**{f"{field}__isnull": True}) | 
+                    Q(**{f"{field}": ""})
+                ).exists()
+            
+            for o in raw_options:
+                val = o.strftime("%Y-%m-%d") if hasattr(o, "strftime") else str(o).strip()
+                if val and val not in options:
+                    options.append(val)
+
+        elif cfg["type"] == "bool":
+            options = ["Yes", "No"]
+            has_na = base_qs.filter(**{f"{cfg['field']}__isnull": True}).exists()
+            
+        elif cfg["type"] == "ref":
+            field_name = f"taxon__{cfg['field']}"
+            raw_options = base_qs.exclude(taxon__isnull=True) \
+                                 .exclude(**{f"{field_name}__isnull": True}) \
+                                 .exclude(**{f"{field_name}": ""}) \
+                                 .values_list(field_name, flat=True) \
+                                 .distinct().order_by(field_name)
+            for o in raw_options:
+                val = str(o).strip()
+                if val and val not in options:
+                    options.append(val)
+
+            has_na = base_qs.filter(
+                Q(taxon__isnull=True) | 
+                Q(**{f"{field_name}__isnull": True}) | 
+                Q(**{f"{field_name}": ""})
+            ).exists()
+
+        if has_na:
+            options.insert(0, "None")
+
+        if options:
+            grouped_filters[cfg["category"]].append({
+                "param": param,
+                "label": cfg["label"],
+                "options": options,
+                "selected": [], # Default to no filters selected initially
+            })
+
+    filter_context = []
+    for cat in categories:
+        if grouped_filters[cat]:
+            filter_context.append((cat, grouped_filters[cat]))
+
+    return render(request, 'beetles/tool_annotate.html', {
+        'filter_groups': filter_context
+    })
 
 
 @staff_member_required
