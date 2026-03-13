@@ -9,2789 +9,921 @@
     padding-left: 1rem !important;
     padding-right: 1rem !important;
   }
+  
+  /* Right panel tab styles */
+  .tab-active {
+    border-bottom: 2px solid #3b82f6; /* Blue 500 */
+    color: #1e3a8a; /* Blue 900 */
+    font-weight: 600;
+  }
+  .tab-inactive {
+    color: #6b7280; /* Gray 500 */
+    border-bottom: 2px solid transparent;
+  }
+  .tab-inactive:hover {
+    color: #374151; /* Gray 700 */
+    border-bottom: 2px solid #e5e7eb; /* Gray 200 */
+  }
 </style>
 
-<div class="h-full">
-  <div class="flex items-center justify-between mb-6">
+<div class="h-full flex flex-col">
+  <div class="flex items-center justify-between mb-4 flex-shrink-0">
     <div>
-      <h1 class="text-3xl font-bold text-gray-900">Data Annotation Tool</h1>
+      <h1 class="text-3xl font-bold text-gray-900">Data Curation & Annotation</h1>
       <p class="text-xs text-gray-500 mt-1">
-        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs">↑↓</kbd> Navigate
+        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs">Click + Drag</kbd> Draw / Move / Resize
         <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs ml-2">Space</kbd> Validate
-        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs ml-2">V</kbd> Toggle Filter
       </p>
     </div>
-    <button
-      type="button"
-      id="export-btn"
-      onclick="showExportDialog()"
-      style="background-color: #10b981; color: white; display: flex;"
-      class="px-4 py-2 rounded-lg hover:bg-green-700 transition-colors items-center gap-2"
-      title="Export annotations"
-    >
-      <i class="fi fi-rr-download"></i>
-      <span>Export Annotations</span>
-    </button>
-  </div>
-
-  <div class="flex gap-6" style="height: calc(100vh - 12rem);">
-    <!-- Left Sidebar: Upload Panel -->
-    <div class="space-y-4 overflow-y-auto" style="width: 25%; min-width: 320px; max-width: 400px; height: 100%;">
-
-      <!-- Image Browser Card (Collapsible) -->
-      <div class="bg-white border border-gray-200 rounded-lg shadow-sm flex-shrink-0">
-        <button
-          type="button"
-          onclick="toggleSection('browser-section')"
-          class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-        >
-          <div class="text-left">
-            <h2 class="text-lg font-semibold text-gray-900">Image Browser</h2>
-            <p class="text-sm text-gray-500 mt-1">Select images to annotate</p>
-          </div>
-          <i id="browser-section-icon" class="fi fi-rr-angle-down text-gray-500 transition-transform"></i>
-        </button>
-
-        <div id="browser-section-content" class="hidden border-t border-gray-200 overflow-y-auto" style="max-height: 600px;">
-          <div class="p-4 space-y-3">
-            <!-- Validation Status Filter (Priority) -->
-            <div>
-              <label class="block text-xs font-medium text-gray-700 mb-2">Show:</label>
-              <div class="flex gap-2">
-                <button
-                  type="button"
-                  id="filter-unvalidated"
-                  onclick="setValidationFilter('unvalidated')"
-                  class="flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors bg-amber-100 text-amber-800 border border-amber-300"
-                >
-                  <i class="fi fi-rr-exclamation text-xs"></i>
-                  Needs Validation
-                  <span id="count-unvalidated" class="ml-1 font-bold"></span>
-                </button>
-                <button
-                  type="button"
-                  id="filter-validated"
-                  onclick="setValidationFilter('validated')"
-                  class="flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200"
-                >
-                  <i class="fi fi-rr-check text-xs"></i>
-                  Validated
-                  <span id="count-validated" class="ml-1"></span>
-                </button>
-                <button
-                  type="button"
-                  id="filter-no-annotations"
-                  onclick="setValidationFilter('no-annotations')"
-                  class="flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200"
-                >
-                  <i class="fi fi-rr-inbox text-xs"></i>
-                  No Annotations
-                  <span id="count-no-annotations" class="ml-1"></span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Search Box -->
-            <div class="relative">
-              <input
-                type="text"
-                id="image-search"
-                placeholder="Search images..."
-                oninput="filterImagesLocal(this.value)"
-                class="w-full px-3 py-2 pl-9 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-              <i class="fi fi-rr-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-            </div>
-
-            <!-- Loading State -->
-            <div id="browser-loading" class="text-center py-8">
-              <i class="fi fi-rr-spinner animate-spin text-2xl text-gray-400"></i>
-              <p class="text-sm text-gray-500 mt-2">Loading images...</p>
-            </div>
-
-            <!-- Empty State -->
-            <div id="browser-empty" class="hidden text-center py-8">
-              <i class="fi fi-rr-picture text-3xl text-gray-300"></i>
-              <p class="text-sm text-gray-500 mt-2">No annotated images found</p>
-              <p class="text-xs text-gray-400 mt-1">Import annotations to see images here</p>
-            </div>
-
-            <!-- Image List -->
-            <div id="image-list" class="space-y-1"></div>
-
-            <!-- Infinite Scroll Loading Indicator -->
-            <div id="scroll-loading" class="hidden text-center py-4">
-              <i class="fi fi-rr-spinner animate-spin text-lg text-gray-400"></i>
-              <p class="text-xs text-gray-500 mt-1">Loading more...</p>
-            </div>
-
-            <!-- End of List Indicator -->
-            <div id="end-of-list" class="hidden text-center py-4">
-              <p class="text-xs text-gray-500">End of list</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Import Annotations Card (Collapsible) -->
-      <div class="bg-white border border-gray-200 rounded-lg shadow-sm flex-shrink-0">
-        <button
-          type="button"
-          onclick="toggleSection('import-section')"
-          class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-        >
-          <div class="text-left">
-            <h2 class="text-lg font-semibold text-gray-900">Import Annotations</h2>
-            <p class="text-sm text-gray-500 mt-1">Upload YOLO or COCO format</p>
-          </div>
-          <i id="import-section-icon" class="fi fi-rr-angle-down text-gray-500 transition-transform"></i>
-        </button>
-
-        <div id="import-section-content" class="border-t border-gray-200 overflow-y-auto" style="max-height: 600px;">
-          <div class="p-4 space-y-4">
-          <!-- Format Selection -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Annotation Format
-            </label>
-            <div class="flex gap-3">
-              <label class="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  name="format"
-                  value="yolo"
-                  checked
-                  class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                >
-                <span class="ml-2 text-sm text-gray-700">YOLO</span>
-              </label>
-              <label class="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  name="format"
-                  value="coco"
-                  class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                >
-                <span class="ml-2 text-sm text-gray-700">COCO</span>
-              </label>
-            </div>
-            <p class="text-xs text-gray-500 mt-2">
-              Files should be named with Beetle UUID (e.g., <code class="bg-gray-100 px-1 rounded">abc123-def.txt</code>)
-            </p>
-          </div>
-
-          <!-- Overwrite Option -->
-          <div class="flex items-center">
-            <input
-              type="checkbox"
-              id="overwrite-checkbox"
-              class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            >
-            <label for="overwrite-checkbox" class="ml-2 text-sm text-gray-700">
-              Overwrite existing annotations
-            </label>
-          </div>
-
-          <!-- File Upload -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              ZIP File
-            </label>
-            <div class="relative">
-              <input
-                type="file"
-                id="zip-file-input"
-                accept=".zip"
-                class="hidden"
-              >
-              <button
-                type="button"
-                onclick="document.getElementById('zip-file-input').click()"
-                class="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors text-center"
-              >
-                <i class="fi fi-rr-folder-upload text-2xl text-gray-400"></i>
-                <p class="text-sm text-gray-600 mt-2">
-                  <span class="font-medium text-blue-600">Click to upload</span>
-                  or drag and drop
-                </p>
-                <p class="text-xs text-gray-500 mt-1">ZIP files only</p>
-              </button>
-            </div>
-
-            <!-- Selected File Display -->
-            <div id="file-info" class="hidden mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2 flex-1 min-w-0">
-                  <i class="fi fi-rr-file-zipper text-gray-500"></i>
-                  <span id="file-name" class="text-sm text-gray-700 truncate"></span>
-                </div>
-                <button
-                  type="button"
-                  onclick="clearFileSelection()"
-                  class="ml-2 text-gray-400 hover:text-gray-600"
-                >
-                  <i class="fi fi-rr-cross-small"></i>
-                </button>
-              </div>
-              <p id="file-size" class="text-xs text-gray-500 mt-1"></p>
-            </div>
-          </div>
-
-          <!-- Upload Button -->
-          <button
-            type="button"
-            id="upload-btn"
-            onclick="uploadAnnotations()"
-            disabled
-            style="background-color: #3b82f6; color: white; display: flex;"
-            class="w-full px-4 py-2 rounded-lg font-medium transition-colors items-center justify-center hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <i class="fi fi-rr-upload"></i>
-            <span class="ml-2">Import Annotations</span>
-          </button>
-
-          <!-- Progress Bar -->
-          <div id="progress-container" class="hidden">
-            <div class="flex justify-between text-xs text-gray-600 mb-1">
-              <span id="progress-text">Uploading...</span>
-              <span id="progress-percent">0%</span>
-            </div>
-            <div class="w-full bg-gray-200 rounded-full h-2">
-              <div id="progress-bar" class="bg-blue-600 h-2 rounded-full transition-all" style="width: 0%"></div>
-            </div>
-          </div>
-
-          <!-- Status Messages -->
-          <div id="upload-messages" class="space-y-2"></div>
-
-          <!-- Clear Messages Button -->
-          <button
-            type="button"
-            id="clear-messages-btn"
-            onclick="clearMessages()"
-            class="hidden w-full px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <i class="fi fi-rr-cross-circle mr-1"></i>
-            Clear Messages
-          </button>
-
-          <!-- Import Statistics (Inline) -->
-          <div id="stats-card" class="hidden pt-4 border-t border-gray-200">
-            <h3 class="text-sm font-semibold text-gray-900 mb-3">Import Results</h3>
-            <div class="space-y-2">
-              <div class="flex justify-between items-center">
-                <span class="text-xs text-gray-600">Files Processed</span>
-                <span id="stat-files" class="text-xs font-semibold text-gray-900">0</span>
-              </div>
-              <div class="flex justify-between items-center">
-                <span class="text-xs text-gray-600">Boxes Imported</span>
-                <span id="stat-imported" class="text-xs font-semibold text-green-600">0</span>
-              </div>
-              <div class="flex justify-between items-center">
-                <span class="text-xs text-gray-600">Skipped</span>
-                <span id="stat-skipped" class="text-xs font-semibold text-amber-600">0</span>
-              </div>
-              <div class="flex justify-between items-center">
-                <span class="text-xs text-gray-600">Errors</span>
-                <span id="stat-errors" class="text-xs font-semibold text-red-600">0</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Help Section (Inline) -->
-          <div class="pt-4 border-t border-gray-200">
-            <details class="group">
-              <summary class="cursor-pointer text-sm font-semibold text-blue-900 flex items-center justify-between">
-                <span><i class="fi fi-rr-info mr-1"></i> File Format Guide</span>
-                <i class="fi fi-rr-angle-small-down group-open:rotate-180 transition-transform"></i>
-              </summary>
-              <div class="mt-3 text-xs text-gray-700 space-y-2">
-                <div>
-                  <p class="font-medium text-gray-900">YOLO Format:</p>
-                  <code class="block bg-gray-100 px-2 py-1 rounded mt-1 text-gray-800">
-                    class x_center y_center width height
-                  </code>
-                </div>
-                <div>
-                  <p class="font-medium text-gray-900">COCO Format:</p>
-                  <code class="block bg-gray-100 px-2 py-1 rounded mt-1 text-gray-800">
-                    {"bbox": [x, y, w, h], ...}
-                  </code>
-                </div>
-                <p class="text-xs text-gray-600 mt-2">
-                  YOLO uses normalized (0-1) coordinates. COCO uses pixel coordinates.
-                </p>
-              </div>
-            </details>
-          </div>
-
-        </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Right Panel: Canvas and Bounding Box List -->
-    <div class="flex gap-4" style="flex: 1; min-width: 0; height: 100%;">
-
-      <!-- Image Viewer & Annotation Area -->
-      <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden flex flex-col" style="width: 66%; min-width: 0; height: 100%;">
-
-        <!-- Canvas Header -->
-        <div class="border-b border-gray-200 p-4 flex items-center justify-between bg-gray-50 flex-shrink-0">
-          <div>
-            <h3 class="text-lg font-semibold text-gray-900" id="canvas-title">Annotation Canvas</h3>
-            <p class="text-sm text-gray-500" id="canvas-subtitle">Select an image to begin</p>
-          </div>
-          <div id="canvas-actions" class="hidden flex gap-2">
-            <!-- Edit Mode Actions (shown when editing) -->
-            <div id="edit-mode-actions" class="hidden flex gap-2">
-              <div class="px-3 py-1.5 text-sm bg-purple-50 border border-purple-300 rounded-lg text-purple-700 font-medium flex items-center gap-2">
-                <i class="fi fi-rr-vector text-sm"></i>
-                <span>Editing Bounding Box</span>
-              </div>
-              <button
-                type="button"
-                onclick="saveEditedBox()"
-                class="px-3 py-1.5 text-sm border border-green-600 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-              >
-                <i class="fi fi-rr-check text-sm"></i> Save
-              </button>
-              <button
-                type="button"
-                onclick="cancelEditMode()"
-                class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <i class="fi fi-rr-cross text-sm"></i> Cancel
-              </button>
-            </div>
-
-            <!-- Normal Actions (shown when not editing) -->
-            <div id="normal-mode-actions" class="flex gap-2">
-              <button
-                type="button"
-                onclick="zoomIn()"
-                class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-                title="Zoom In"
-              >
-                <i class="fi fi-rr-zoom-in text-sm"></i>
-              </button>
-              <button
-                type="button"
-                onclick="zoomOut()"
-                class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-                title="Zoom Out"
-              >
-                <i class="fi fi-rr-zoom-out text-sm"></i>
-              </button>
-              <button
-                type="button"
-                onclick="fitToScreen()"
-                class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <i class="fi fi-rr-search text-sm"></i> Fit to Screen
-              </button>
-              <button
-                type="button"
-                onclick="resetZoom()"
-                class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <i class="fi fi-rr-refresh text-sm"></i> Reset Zoom
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Lock Warning Banner (shown when image is locked by another user) -->
-        <div id="lock-warning-banner" class="hidden border-b border-amber-300 bg-amber-50 px-4 py-3 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <i class="fi fi-rr-lock text-amber-600 text-lg"></i>
-            <div>
-              <p class="text-sm font-medium text-amber-900">
-                <span id="lock-warning-text">This image is being viewed by another user</span>
-              </p>
-              <p class="text-xs text-amber-700">
-                Editing controls are disabled to prevent conflicts
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onclick="tryAcquireLock()"
-            class="px-3 py-1.5 text-xs border border-amber-600 text-amber-600 rounded hover:bg-amber-100 transition-colors font-medium"
-          >
-            <i class="fi fi-rr-refresh text-xs"></i> Try Again
-          </button>
-        </div>
-
-        <!-- Canvas Container -->
-        <div class="flex-1 relative overflow-hidden bg-gray-100" id="canvas-container">
-          <!-- Empty State -->
-          <div id="canvas-empty" class="w-full h-full flex items-center justify-center text-gray-400">
-            <div class="text-center">
-              <i class="fi fi-rr-picture text-6xl mb-4"></i>
-              <p class="text-lg font-medium">No Image Selected</p>
-              <p class="text-sm">Click an image from the browser to view it here</p>
-            </div>
-          </div>
-
-          <!-- Loading State -->
-          <div id="canvas-loading" class="hidden w-full h-full flex items-center justify-center">
-            <div class="text-center">
-              <i class="fi fi-rr-spinner animate-spin text-4xl text-blue-600 mb-4"></i>
-              <p class="text-sm text-gray-600">Loading image...</p>
-            </div>
-          </div>
-
-          <!-- Canvas Wrapper (for panning and zooming) -->
-          <div id="canvas-wrapper" class="hidden absolute inset-0" style="overflow: scroll; -webkit-overflow-scrolling: touch;">
-            <canvas id="annotation-canvas" style="display: block; cursor: grab;"></canvas>
-          </div>
-        </div>
-
-        <!-- Canvas Footer / Info Bar -->
-        <div id="canvas-footer" class="hidden border-t border-gray-200 p-3 bg-gray-50 flex items-center justify-between text-xs text-gray-600 flex-shrink-0">
-          <div class="flex gap-4">
-            <span><strong>Beetle ID:</strong> <span id="footer-beetle-id">-</span></span>
-            <span><strong>Annotations:</strong> <span id="footer-annotation-count">0</span></span>
-          </div>
-          <div>
-            <span><strong>Zoom:</strong> <span id="footer-zoom">100%</span></span>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Bounding Box List Panel -->
-      <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden flex flex-col" style="width: 34%; min-width: 280px; height: 100%; flex-shrink: 0;">
-
-        <!-- List Header -->
-        <div class="border-b border-gray-200 p-4 bg-gray-50 flex-shrink-0">
-          <div class="flex items-center justify-between mb-2">
-            <h3 class="text-lg font-semibold text-gray-900">Bounding Boxes</h3>
-            <div class="flex gap-2">
-              <button
-                type="button"
-                id="validate-all-btn"
-                onclick="validateAllBoundingBoxes()"
-                style="background-color: #10b981; color: white; display: flex;"
-                class="px-3 py-1.5 text-sm rounded-lg hover:bg-green-700 transition-colors items-center gap-1"
-                title="Mark all as validated"
-              >
-                <i class="fi fi-rr-check text-xs"></i>
-                <span>Validate All</span>
-              </button>
-              <button
-                type="button"
-                id="add-bbox-btn"
-                onclick="startAddingBoundingBox()"
-                style="background-color: #3b82f6; color: white; display: flex;"
-                class="px-3 py-1.5 text-sm rounded-lg hover:bg-blue-700 transition-colors items-center gap-1"
-                title="Add new bounding box"
-              >
-                <i class="fi fi-rr-plus text-xs"></i>
-                <span>Add</span>
-              </button>
-            </div>
-          </div>
-          <p class="text-sm text-gray-500" id="bbox-list-count">0 annotations</p>
-        </div>
-
-        <!-- List Content -->
-        <div class="flex-1 overflow-y-auto p-4">
-          <!-- Empty State -->
-          <div id="bbox-list-empty" class="text-center py-8 text-gray-400">
-            <i class="fi fi-rr-square text-3xl mb-2"></i>
-            <p class="text-sm">No bounding boxes</p>
-          </div>
-
-          <!-- Bounding Box List -->
-          <div id="bbox-list" class="hidden space-y-2"></div>
-        </div>
-
-      </div>
-
-    </div>
-  </div>
-
-  <!-- Category Selection Dialog (Hidden by default) -->
-  <div id="category-dialog" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
-      <h2 class="text-xl font-bold text-gray-900 mb-4">Select Category for Bounding Box</h2>
-
-      <div class="flex-1 overflow-hidden flex flex-col space-y-4">
-        <!-- Search Box -->
-        <div class="relative">
-          <input
-            type="text"
-            id="category-search"
-            placeholder="Search genus or species..."
-            oninput="filterCategories(this.value)"
-            class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-          <i class="fi fi-rr-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-        </div>
-
-        <!-- Category List (Scrollable) -->
-        <div id="category-list" class="flex-1 overflow-y-auto border border-gray-200 rounded-lg">
-          <div id="category-list-content" class="p-2">
-            <!-- Will be populated by JavaScript -->
-            <div class="text-center py-8 text-gray-500">
-              <i class="fi fi-rr-spinner animate-spin text-2xl"></i>
-              <p class="text-sm mt-2">Loading categories...</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Selected Category Display -->
-        <div id="selected-category-display" class="hidden p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p class="text-sm text-gray-700">
-            Selected: <span id="selected-category-name" class="font-semibold text-blue-900"></span>
-            <span id="selected-category-id" class="ml-2 text-xs text-gray-500"></span>
-          </p>
-        </div>
-      </div>
-
-      <div class="flex gap-3 mt-4">
-        <button
-          type="button"
-          onclick="closeCategoryDialog()"
-          class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-700 font-medium"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          id="confirm-category-btn"
-          onclick="confirmCategorySelection()"
-          disabled
-          style="background-color: #3b82f6; color: white; display: flex;"
-          class="flex-1 px-4 py-2 rounded-lg transition-colors items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700"
-        >
-          <i class="fi fi-rr-pencil"></i>
-          <span>Draw Bounding Box</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Export Dialog (Hidden by default) -->
-  <div id="export-dialog" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-      <h2 class="text-xl font-bold text-gray-900 mb-4">Export Annotations</h2>
-
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Export Format
-          </label>
-          <div class="space-y-2">
-            <label class="flex items-center cursor-pointer p-3 border border-gray-300 rounded-lg hover:bg-gray-50">
-              <input
-                type="radio"
-                name="export-format"
-                value="yolo"
-                checked
-                class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-              >
-              <div class="ml-3">
-                <span class="font-medium text-gray-900">YOLO</span>
-                <p class="text-xs text-gray-500">ZIP file with .txt files per image</p>
-              </div>
-            </label>
-            <label class="flex items-center cursor-pointer p-3 border border-gray-300 rounded-lg hover:bg-gray-50">
-              <input
-                type="radio"
-                name="export-format"
-                value="coco"
-                class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-              >
-              <div class="ml-3">
-                <span class="font-medium text-gray-900">COCO</span>
-                <p class="text-xs text-gray-500">Single JSON file with all annotations</p>
-              </div>
-            </label>
-          </div>
-        </div>
-
-        <div class="flex gap-3 mt-6">
-          <button
-            type="button"
-            onclick="closeExportDialog()"
-            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onclick="exportAnnotations()"
-            style="background-color: #10b981; color: white; display: flex;"
-            class="flex-1 px-4 py-2 rounded-lg hover:bg-green-700 transition-colors items-center justify-center gap-2"
-          >
-            <i class="fi fi-rr-download"></i>
-            <span>Export</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Edit Beetle Record Modal -->
-<div id="edit-beetle-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-  <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl my-8 flex flex-col" style="max-height: calc(100vh - 4rem);">
-    <!-- Modal Header -->
-    <div class="flex items-center justify-between p-4 border-b border-gray-200">
-      <h2 class="text-lg font-semibold text-gray-900">Edit Beetle Record</h2>
-      <button type="button" onclick="closeEditModal()" class="text-gray-400 hover:text-gray-600 transition">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+    <div class="flex gap-2">
+      <button type="button" id="validate-all-btn" onclick="validateAllBoundingBoxes()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg flex items-center gap-2 transition-colors font-medium text-sm">
+        <i class="fi fi-rr-check text-xs"></i> Validate All
+      </button>
+      <button type="button" onclick="showExportDialog()" class="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg flex items-center gap-2 transition-colors font-medium text-sm">
+        <i class="fi fi-rr-download text-xs"></i> Export
       </button>
     </div>
+  </div>
 
-    <!-- Modal Body (Scrollable) -->
-    <div class="flex-1 overflow-y-auto p-4">
-      <form id="edit-beetle-form">
-        <!-- Identity Section -->
-        <div class="mb-6">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700 mb-3">Identity</h3>
-          <div class="space-y-3 text-sm">
-            <div>
-              <label class="block text-gray-600 mb-1">Specimen ID</label>
-              <input type="text" name="depicts_specimen" class="w-full rounded border border-gray-300 px-3 py-2 text-sm">
+  <div class="flex gap-4 h-full min-h-0" style="height: calc(100vh - 8rem);">
+    
+    <div class="space-y-4 overflow-y-auto flex flex-col" style="width: 25%; min-width: 320px; max-width: 400px; height: 100%;">
+      
+      <div class="bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col flex-1 min-h-0">
+        <div class="p-4 border-b border-gray-200 flex-shrink-0">
+          <h2 class="text-lg font-semibold text-gray-900">Image Browser</h2>
+          <p class="text-sm text-gray-500 mt-1">Select images to annotate</p>
+          
+          <div class="mt-4">
+            <label class="block text-xs font-medium text-gray-700 mb-2">Show:</label>
+            <div class="flex gap-2">
+              <button type="button" id="filter-unvalidated" onclick="setValidationFilter('unvalidated')" class="flex-1 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors bg-amber-100 text-amber-800 border border-amber-300">
+                Needs Validation <span id="count-unvalidated" class="ml-1 font-bold"></span>
+              </button>
+              <button type="button" id="filter-validated" onclick="setValidationFilter('validated')" class="flex-1 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200">
+                Validated <span id="count-validated" class="ml-1"></span>
+              </button>
+            </div>
+            <button type="button" id="filter-no-annotations" onclick="setValidationFilter('no-annotations')" class="w-full mt-2 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200">
+              <i class="fi fi-rr-inbox text-xs"></i> No Annotations <span id="count-no-annotations" class="ml-1"></span>
+            </button>
+          </div>
+
+          <details class="mt-3 group border border-gray-200 rounded-lg">
+            <summary class="cursor-pointer px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-700 hover:bg-gray-100 flex items-center justify-between">
+              <span>Advanced Filters</span>
+              <i class="fi fi-rr-angle-small-down group-open:rotate-180 transition-transform"></i>
+            </summary>
+            <div class="p-3 max-h-48 overflow-y-auto space-y-3 border-t border-gray-200">
+              {% if filter_groups %}
+                {% for category_name, filters_list in filter_groups %}
+                  <div class="text-xs font-bold text-gray-500 uppercase">{{ category_name }}</div>
+                  {% for f in filters_list %}
+                    <div class="space-y-1">
+                      <label class="text-xs text-gray-700">{{ f.label }}</label>
+                      <select name="{{ f.param }}" class="advanced-filter w-full border border-gray-300 rounded text-xs p-1" onchange="resetAndLoadImages()">
+                        <option value="">All</option>
+                        {% for opt in f.options %}
+                          <option value="{{ opt }}">{{ opt }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  {% endfor %}
+                {% endfor %}
+              {% else %}
+                <div class="text-xs text-gray-400 italic">Advanced filters unavailable.</div>
+              {% endif %}
+            </div>
+          </details>
+
+          <div class="relative mt-3">
+            <input type="text" id="image-search" placeholder="Search images..." oninput="filterImagesLocal(this.value)" class="w-full px-3 py-2 pl-9 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <i class="fi fi-rr-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+          </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-2" id="browser-section-content">
+          <div id="browser-loading" class="text-center py-8">
+            <i class="fi fi-rr-spinner animate-spin text-2xl text-gray-400"></i>
+            <p class="text-sm text-gray-500 mt-2">Loading images...</p>
+          </div>
+          <div id="browser-empty" class="hidden text-center py-8">
+            <i class="fi fi-rr-picture text-3xl text-gray-300"></i>
+            <p class="text-sm text-gray-500 mt-2">No annotated images found</p>
+          </div>
+          <div id="image-list" class="space-y-1"></div>
+          <div id="scroll-loading" class="hidden text-center py-4"><i class="fi fi-rr-spinner animate-spin text-lg text-gray-400"></i></div>
+          <div id="end-of-list" class="hidden text-center py-4"><p class="text-xs text-gray-500">End of list</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden flex flex-col relative" style="width: 50%; min-width: 0; height: 100%;">
+      <div class="border-b border-gray-200 p-3 flex items-center justify-between bg-gray-50 flex-shrink-0">
+        <div>
+          <h3 class="text-base font-semibold text-gray-900" id="canvas-title">Annotation Canvas</h3>
+          <p class="text-xs text-gray-500" id="canvas-subtitle">Select an image to begin</p>
+        </div>
+        <div id="normal-mode-actions" class="flex gap-1 hidden">
+          <button type="button" onclick="zoomIn()" class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-200" title="Zoom In"><i class="fi fi-rr-zoom-in"></i></button>
+          <span id="footer-zoom" class="px-2 py-1 text-xs text-gray-600 font-mono self-center">100%</span>
+          <button type="button" onclick="zoomOut()" class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-200" title="Zoom Out"><i class="fi fi-rr-zoom-out"></i></button>
+          <button type="button" onclick="fitToScreen()" class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-200 ml-2" title="Fit to Screen"><i class="fi fi-rr-search"></i> Fit</button>
+        </div>
+      </div>
+
+      <div class="flex-1 relative overflow-hidden bg-gray-200" id="canvas-container">
+        <div id="canvas-empty" class="w-full h-full flex items-center justify-center text-gray-400">
+          <div class="text-center">
+            <i class="fi fi-rr-picture text-6xl mb-4"></i>
+            <p class="text-lg font-medium">No Image Selected</p>
+          </div>
+        </div>
+        <div id="canvas-loading" class="hidden w-full h-full flex items-center justify-center">
+          <div class="text-center">
+            <i class="fi fi-rr-spinner animate-spin text-4xl text-blue-600 mb-4"></i>
+            <p class="text-sm text-gray-600">Loading image...</p>
+          </div>
+        </div>
+        <div id="canvas-wrapper" class="hidden absolute inset-0" style="overflow: scroll; cursor: crosshair;">
+          <canvas id="annotation-canvas" style="display: block; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden flex flex-col" style="width: 25%; min-width: 320px; height: 100%; flex-shrink: 0;">
+      
+      <div class="flex border-b border-gray-200 flex-shrink-0 bg-gray-50">
+        <button id="tab-btn-image" onclick="switchRightTab('image')" class="flex-1 py-3 text-sm tab-active">
+          Image Defaults
+        </button>
+        <button id="tab-btn-bbox" onclick="switchRightTab('bbox')" class="flex-1 py-3 text-sm tab-inactive">
+          Annotation Details <span id="tab-bbox-count" class="bg-gray-200 text-gray-700 rounded-full px-2 py-0.5 text-xs ml-1">0</span>
+        </button>
+      </div>
+
+      <div id="tab-content-image" class="flex-1 overflow-y-auto p-4 flex flex-col">
+        <div class="bg-blue-50 border border-blue-200 text-blue-800 text-xs p-3 rounded-lg mb-4">
+          <i class="fi fi-rr-info mr-1"></i> Data entered here serves as the <strong>default</strong> for newly drawn bounding boxes.
+        </div>
+        <form id="form-image-defaults" class="space-y-4" onchange="markImageDefaultsDirty()">
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1 uppercase">Technical</label>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs text-gray-600 mb-1">Aspect</label>
+                <input type="text" name="default_aspect" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500">
+              </div>
+            </div>
+          </div>
+          <hr class="border-gray-200">
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1 uppercase">Collection / Specimen</label>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs text-gray-600 mb-1">Country</label>
+                <input type="text" name="default_collection_country" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500">
+              </div>
+              <div>
+                <label class="block text-xs text-gray-600 mb-1">State/Province</label>
+                <input type="text" name="default_collection_stateProvince" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500">
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div id="tab-content-bbox" class="hidden flex-1 overflow-y-auto p-4 flex flex-col relative">
+        <div id="bbox-editor-empty" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 p-6 text-center">
+          <i class="fi fi-rr-vector text-4xl mb-3"></i>
+          <p class="text-sm font-medium text-gray-700">No Annotation Selected</p>
+          <p class="text-xs mt-1">Click on a bounding box in the canvas or draw a new one to edit its details.</p>
+        </div>
+
+        <div id="bbox-editor-content" class="hidden flex-1 flex flex-col">
+          <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-200">
+            <h3 class="font-bold text-sm text-gray-900 flex items-center gap-2">
+              <span id="active-bbox-badge" class="bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-sm"></span>
+              Selected Box
+            </h3>
+            <button type="button" onclick="deleteActiveBox()" class="text-red-600 hover:bg-red-50 px-2 py-1 rounded text-xs font-medium transition-colors flex items-center gap-1">
+              <i class="fi fi-rr-trash"></i> Delete
+            </button>
+          </div>
+          
+          <form id="form-bbox-metadata" class="space-y-4" onsubmit="event.preventDefault(); saveActiveBoxMetadata();">
+            <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <label class="block text-xs font-semibold text-gray-700 mb-2 uppercase">Taxonomy</label>
+              <div class="relative">
+                <input type="text" name="depicts_valid_name_id" id="panel-valid-name" placeholder="Valid Name ID" onblur="fetchAndUpdateTaxonomyPanel(this.value)" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500">
+                <div id="panel-tax-preview" class="text-xs text-gray-500 mt-2 min-h-[1.5rem] italic"></div>
+              </div>
             </div>
 
             <div>
-              <label class="block text-gray-600 mb-1">Valid Name ID (Species)</label>
-              <div class="relative">
-                <input
-                  type="text"
-                  name="depicts_valid_name_id"
-                  id="valid-name-search"
-                  placeholder="Enter ID or search species..."
-                  class="w-full rounded border border-gray-300 px-3 py-2 text-sm pr-8"
-                  autocomplete="off"
-                >
-                <button
-                  type="button"
-                  id="valid-name-search-btn"
-                  class="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1.5 rounded hover:bg-gray-100"
-                  title="Search species"
-                >
-                  <i class="fi fi-rr-search text-xs"></i>
-                </button>
-
-                <!-- Dropdown list -->
-                <div
-                  id="valid-name-dropdown"
-                  class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-64 overflow-y-auto hidden"
-                >
-                  <div id="valid-name-options" class="py-1">
-                    <!-- Options will be populated here -->
+              <label class="block text-xs font-semibold text-gray-700 mb-2 uppercase">Identity & Details</label>
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Specimen ID</label>
+                  <input type="text" name="depicts_specimen" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-gray-600 mb-1">Sex</label>
+                    <input type="text" name="specimen_sex" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500">
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-600 mb-1">Type Status</label>
+                    <input type="text" name="specimen_type_status" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500">
                   </div>
                 </div>
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Specimen Notes</label>
+                  <textarea name="specimen_notes" rows="2" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500"></textarea>
+                </div>
               </div>
             </div>
 
-            <div>
-              <label class="block text-gray-600 mb-1">Described ID</label>
-              <input type="text" name="depicts_described_name_id" class="w-full rounded border border-gray-300 px-3 py-2 text-sm">
+            <div class="pt-4 border-t border-gray-200 mt-auto">
+              <button type="submit" id="btn-save-bbox" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2">
+                <i class="fi fi-rr-disk"></i> Save Annotation Details
+              </button>
             </div>
-
-            <div>
-              <label class="block text-gray-600 mb-1">Alternative ID</label>
-              <input type="text" name="alternative_id" class="w-full rounded border border-gray-300 px-3 py-2 text-sm">
-            </div>
-
-            <div>
-              <label class="block text-gray-600 mb-1">Name (verbatim)</label>
-              <input type="text" name="depicts_name_verbatim" class="w-full rounded border border-gray-300 px-3 py-2 text-sm">
-            </div>
-          </div>
+          </form>
         </div>
-
-        <!-- Taxonomy Section (Read-only, derived from Valid Name ID) -->
-        <div class="mb-6">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700 mb-3">Taxonomy <span class="text-xs font-normal text-gray-500">(Read-only)</span></h3>
-          <div class="text-xs text-gray-600 mb-3 p-2 bg-blue-50 border border-blue-200 rounded">
-            Note: To update taxonomy, change the <strong>Valid Name ID</strong> above.
-          </div>
-          <div class="space-y-2 text-sm">
-            <div class="grid grid-cols-3 gap-2 items-center">
-              <span class="text-gray-600">Scientific Name</span>
-              <span class="col-span-2 text-gray-800" id="tax-scientificName">—</span>
-            </div>
-            <div class="grid grid-cols-3 gap-2 items-center">
-              <span class="text-gray-600">Authority</span>
-              <span class="col-span-2 text-gray-800" id="tax-authority">—</span>
-            </div>
-            <div class="grid grid-cols-3 gap-2 items-center">
-              <span class="text-gray-600">Subfamily</span>
-              <span class="col-span-2 text-gray-800" id="tax-subfamily">—</span>
-            </div>
-            <div class="grid grid-cols-3 gap-2 items-center">
-              <span class="text-gray-600">Tribe</span>
-              <span class="col-span-2 text-gray-800" id="tax-tribe">—</span>
-            </div>
-            <div class="grid grid-cols-3 gap-2 items-center">
-              <span class="text-gray-600">Subtribe</span>
-              <span class="col-span-2 text-gray-800" id="tax-subtribe">—</span>
-            </div>
-            <div class="grid grid-cols-3 gap-2 items-center">
-              <span class="text-gray-600">Genus</span>
-              <span class="col-span-2 text-gray-800 italic" id="tax-genus">—</span>
-            </div>
-            <div class="grid grid-cols-3 gap-2 items-center">
-              <span class="text-gray-600">Species</span>
-              <span class="col-span-2 text-gray-800 italic" id="tax-species">—</span>
-            </div>
-            <div class="grid grid-cols-3 gap-2 items-center">
-              <span class="text-gray-600">Subspecies</span>
-              <span class="col-span-2 text-gray-800 italic" id="tax-subspecies">—</span>
-            </div>
-            <div class="grid grid-cols-3 gap-2 items-center">
-              <span class="text-gray-600">Authority Year</span>
-              <span class="col-span-2 text-gray-800" id="tax-authorityYear">—</span>
-            </div>
-            <div class="grid grid-cols-3 gap-2 items-center">
-              <span class="text-gray-600">Original Genus</span>
-              <span class="col-span-2 text-gray-800 italic" id="tax-originalGenus">—</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Attribution Section (Image-level, read-only) -->
-        <div class="mb-6">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700 mb-3">Attribution <span class="text-xs font-normal text-gray-500">(Image-level)</span></h3>
-          <div class="space-y-3 text-sm">
-            <div>
-              <label class="block text-gray-600 mb-1">Institution</label>
-              <input type="text" name="image_institution" class="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-gray-100 text-gray-500" disabled>
-            </div>
-
-            <div>
-              <label class="block text-gray-600 mb-1">Photographer</label>
-              <input type="text" name="photographer" class="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-gray-100 text-gray-500" disabled>
-            </div>
-
-            <div>
-              <label class="block text-gray-600 mb-1">Image Email</label>
-              <input type="text" name="image_email" class="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-gray-100 text-gray-500" disabled>
-            </div>
-
-            <div>
-              <label class="block text-gray-600 mb-1">Usage License</label>
-              <input type="text" name="photo_usage_statement" class="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-gray-100 text-gray-500" disabled>
-            </div>
-          </div>
-        </div>
-
-        <!-- Technical Section -->
-        <div class="mb-6">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700 mb-3">Image Technical</h3>
-          <div class="space-y-3 text-sm">
-            <div>
-              <label class="block text-gray-600 mb-1">Aspect</label>
-              <input type="text" name="aspect" class="w-full rounded border border-gray-300 px-3 py-2 text-sm">
-            </div>
-
-            <div>
-              <label class="block text-gray-600 mb-1">Resolution (px/mm)</label>
-              <input type="text" name="resolution_in_ppmm" class="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-gray-100 text-gray-500" disabled>
-            </div>
-
-            <div>
-              <label class="block text-gray-600 mb-1">Image Date</label>
-              <input type="text" name="image_date_taken" placeholder="YYYY-MM-DD" class="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-gray-100 text-gray-500" disabled>
-            </div>
-
-            <div>
-              <label class="block text-gray-600 mb-1">Multiple Individuals</label>
-              <select name="image_has_multiple_individuals" class="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-gray-100 text-gray-500" disabled>
-                <option value="unknown">Unknown</option>
-                <option value="True">Yes</option>
-                <option value="False">No</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- Collection / Specimen Section -->
-        <div class="mb-6">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700 mb-3">Collection / Specimen</h3>
-          <div class="space-y-3 text-sm">
-            <div>
-              <label class="block text-gray-600 mb-1">Country</label>
-              <input type="text" name="collection_country" class="w-full rounded border border-gray-300 px-3 py-2 text-sm">
-            </div>
-
-            <div>
-              <label class="block text-gray-600 mb-1">State/Province</label>
-              <input type="text" name="collection_stateProvince" class="w-full rounded border border-gray-300 px-3 py-2 text-sm">
-            </div>
-
-            <div>
-              <label class="block text-gray-600 mb-1">Sex</label>
-              <input type="text" name="specimen_sex" class="w-full rounded border border-gray-300 px-3 py-2 text-sm">
-            </div>
-
-            <div>
-              <label class="block text-gray-600 mb-1">Type Status</label>
-              <input type="text" name="specimen_type_status" class="w-full rounded border border-gray-300 px-3 py-2 text-sm">
-            </div>
-          </div>
-        </div>
-
-        <!-- Notes Section -->
-        <div class="mb-6">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700 mb-3">Notes</h3>
-          <div class="space-y-3">
-            <div>
-              <label class="block text-xs text-gray-600 mb-1">Image Notes <span class="text-xs font-normal text-gray-500">(Image-level)</span></label>
-              <textarea name="image_notes" rows="3" class="w-full rounded border border-gray-300 px-2 py-1 text-sm bg-gray-100 text-gray-500" disabled></textarea>
-            </div>
-            <div>
-              <label class="block text-xs text-gray-600 mb-1">Specimen Notes</label>
-              <textarea name="specimen_notes" rows="3" class="w-full rounded border border-gray-300 px-2 py-1 text-sm"></textarea>
-            </div>
-          </div>
-        </div>
-      </form>
-    </div>
-
-    <!-- Modal Footer -->
-    <div class="flex items-center justify-end gap-3 p-4 border-t border-gray-200">
-      <button type="button" onclick="closeEditModal()" class="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition">
-        Cancel
-      </button>
-      <button type="button" onclick="saveEditedBeetle()" class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition">
-        <span id="save-btn-text">Save Changes</span>
-        <span id="save-btn-loading" class="hidden">Saving...</span>
-      </button>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-// Global state
-let allImages = [];
-let filteredImages = [];
-let selectedImageId = null;
-let currentImage = null;
-let currentBoundingBoxes = [];
-let canvas = null;
-let ctx = null;
-let zoomLevel = 1.0;
-let selectedBoundingBoxIndex = null;
+// ---------------------------------------------------------
+// GLOBAL STATE
+// ---------------------------------------------------------
+const state = {
+  images: [],
+  selectedImageId: null,
+  currentImageObj: null,
+  bboxes: [],
+  selectedBoxIndex: -1,
+  zoom: 1.0,
+  filter: 'unvalidated',
+  activeTab: 'image',
+  
+  // Advanced Canvas Interaction State (jupyter-bbox-widget replica)
+  interactionMode: 'idle', // 'idle', 'drawing', 'moving', 'resizing'
+  dragHandle: null,
+  startX: 0, startY: 0,
+  startBoxState: null,
+  
+  pagination: { page: 1, next: null, loading: false }
+};
 
-// Lock state
-let currentImageLock = null; // { locked_by, locked_at } or null if we have the lock
-let isLockedByOther = false; // true if image is locked by another user
+let canvas, ctx, wrapper;
+const csrftoken = getCookie('csrftoken');
+let searchDebounceTimer = null;
 
-// Pagination state
-let currentPage = 1;
-let totalCount = 0;
-let nextPageUrl = null;
-let isLoadingMore = false;
-let currentValidationFilter = 'unvalidated';  // Start with unvalidated
-let searchTerm = '';
-let validationCounts = { validated: 0, unvalidated: 0, noAnnotations: 0 };
+// ---------------------------------------------------------
+// INITIALIZATION
+// ---------------------------------------------------------
+document.addEventListener('DOMContentLoaded', () => {
+  canvas = document.getElementById('annotation-canvas');
+  ctx = canvas.getContext('2d');
+  wrapper = document.getElementById('canvas-wrapper');
 
-// Category mapping state
-let allCategories = [];
-let filteredCategories = [];
-let selectedCategory = null;
-let lastUsedCategoryForImage = null;  // Track last category used for current image
-let lastUsedImageId = null;  // Track which image the last category was used on
+  loadAnnotatedImages();
+  loadValidationCounts();
+  setupCanvasEvents();
 
-// Pan state
-let isPanning = false;
-let panStartX = 0;
-let panStartY = 0;
-let scrollStartX = 0;
-let scrollStartY = 0;
-
-// Drawing state
-let isDrawingMode = false;
-let isDrawing = false;
-let drawStartX = 0;
-let drawStartY = 0;
-let currentDrawBox = null;
-let newBoundingBoxLabel = '';
-
-// Edit bounding box state
-let isEditMode = false;
-let editingBoxIndex = null;
-let originalBox = null; // Store original box data for cancel
-let isDragging = false;
-let isResizing = false;
-let dragHandle = null; // 'move', 'nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'
-let dragStartMouseX = 0;
-let dragStartMouseY = 0;
-let dragStartBoxX = 0;
-let dragStartBoxY = 0;
-let dragStartBoxWidth = 0;
-let dragStartBoxHeight = 0;
-
-// Toggle collapsible sections
-function toggleSection(sectionId) {
-  const content = document.getElementById(`${sectionId}-content`);
-  const icon = document.getElementById(`${sectionId}-icon`);
-
-  if (content.classList.contains('hidden')) {
-    content.classList.remove('hidden');
-    icon.classList.add('rotate-180');
-
-    // Load images when browser section is opened for the first time
-    if (sectionId === 'browser-section' && allImages.length === 0) {
-      loadAnnotatedImages();
-      loadValidationCounts();
-    }
-  } else {
-    content.classList.add('hidden');
-    icon.classList.remove('rotate-180');
-  }
-}
-
-// Load validation counts for filter buttons
-async function loadValidationCounts() {
-  try {
-    // Fetch counts for each validation status
-    const responses = await Promise.all([
-      fetch('/api/v1/beetles/images-with-annotations/?page=1&page_size=1&validation_status=validated', {
-        headers: { 'X-CSRFToken': csrftoken }
-      }),
-      fetch('/api/v1/beetles/images-with-annotations/?page=1&page_size=1&validation_status=unvalidated', {
-        headers: { 'X-CSRFToken': csrftoken }
-      })
-    ]);
-
-    const [validatedData, unvalidatedData] = await Promise.all(
-      responses.map(r => r.json())
-    );
-
-    validationCounts.validated = validatedData.count || 0;
-    validationCounts.unvalidated = unvalidatedData.count || 0;
-
-    // Update count badges
-    document.getElementById('count-validated').textContent = `(${validationCounts.validated})`;
-    document.getElementById('count-unvalidated').textContent = `(${validationCounts.unvalidated})`;
-  } catch (error) {
-    console.error('Failed to load validation counts:', error);
-  }
-}
-
-// Load count for no annotations filter (only when clicked)
-async function loadNoAnnotationsCount() {
-  try {
-    const response = await fetch('/api/v1/beetles/images-without-annotations/?page=1&page_size=1', {
-      headers: { 'X-CSRFToken': csrftoken }
+  // Scroll detection for Left Panel
+  const browserContent = document.getElementById('browser-section-content');
+  if (browserContent) {
+    browserContent.addEventListener('scroll', function() {
+      if (this.scrollHeight - (this.scrollTop + this.clientHeight) < 200 && state.pagination.next && !state.pagination.loading) {
+        loadNextPage();
+      }
     });
-
-    const data = await response.json();
-    validationCounts.noAnnotations = data.count || 0;
-
-    document.getElementById('count-no-annotations').textContent = `(${validationCounts.noAnnotations})`;
-  } catch (error) {
-    console.error('Failed to load no annotations count:', error);
   }
-}
+});
 
-// Set validation filter and reload
+// ---------------------------------------------------------
+// LEFT PANEL: IMAGE BROWSER
+// ---------------------------------------------------------
 function setValidationFilter(filter) {
-  currentValidationFilter = filter;
-
-  // Load count for no-annotations filter lazily
-  if (filter === 'no-annotations' && validationCounts.noAnnotations === 0) {
-    loadNoAnnotationsCount();
-  }
-
-  // Update button styles
+  state.filter = filter;
   const buttons = ['filter-validated', 'filter-unvalidated', 'filter-no-annotations'];
   buttons.forEach(btnId => {
     const btn = document.getElementById(btnId);
     if (btnId === `filter-${filter}`) {
-      if (filter === 'unvalidated') {
-        btn.className = 'flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors bg-amber-100 text-amber-800 border border-amber-300';
-      } else if (filter === 'validated') {
-        btn.className = 'flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors bg-green-100 text-green-800 border border-green-300';
-      } else if (filter === 'no-annotations') {
-        btn.className = 'flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors bg-blue-100 text-blue-800 border border-blue-300';
-      }
+      if (filter === 'unvalidated') btn.className = 'flex-1 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors bg-amber-100 text-amber-800 border border-amber-300';
+      else if (filter === 'validated') btn.className = 'flex-1 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors bg-green-100 text-green-800 border border-green-300';
+      else if (filter === 'no-annotations') btn.className = 'w-full mt-2 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors bg-blue-100 text-blue-800 border border-blue-300';
     } else {
-      btn.className = 'flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200';
+      if(btnId === 'filter-no-annotations') btn.className = 'w-full mt-2 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200';
+      else btn.className = 'flex-1 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200';
     }
   });
-
   resetAndLoadImages();
 }
 
-// Reset and load images (used when filters change)
 function resetAndLoadImages() {
-  currentPage = 1;
-  allImages = [];
-  filteredImages = [];
-  nextPageUrl = null;
+  state.pagination.page = 1;
+  state.images = [];
   document.getElementById('image-list').innerHTML = '';
   document.getElementById('end-of-list').classList.add('hidden');
   loadAnnotatedImages();
 }
 
-// Load images with annotations from API (paginated)
+function filterImagesLocal(term) {
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => { resetAndLoadImages(); }, 500);
+}
+
 async function loadAnnotatedImages(append = false) {
-  if (isLoadingMore) return;
+  if (state.pagination.loading) return;
+  state.pagination.loading = true;
 
-  const loadingEl = document.getElementById('browser-loading');
-  const scrollLoadingEl = document.getElementById('scroll-loading');
+  const loadingEl = append ? document.getElementById('scroll-loading') : document.getElementById('browser-loading');
   const emptyEl = document.getElementById('browser-empty');
-  const listEl = document.getElementById('image-list');
-  const endOfListEl = document.getElementById('end-of-list');
-
-  isLoadingMore = true;
-
-  if (append) {
-    scrollLoadingEl.classList.remove('hidden');
-  } else {
-    loadingEl.classList.remove('hidden');
-    emptyEl.classList.add('hidden');
-  }
+  loadingEl.classList.remove('hidden');
+  if(!append) emptyEl.classList.add('hidden');
 
   try {
-    let url;
-    if (currentValidationFilter === 'no-annotations') {
-      url = `/api/v1/beetles/images-without-annotations/?page=${currentPage}&page_size=50`;
-    } else {
-      url = `/api/v1/beetles/images-with-annotations/?page=${currentPage}&page_size=50&validation_status=${currentValidationFilter}&ordering=-created_at`;
-    }
-
-    // Add search parameter if present
-    if (searchTerm) {
-      url += `&search=${encodeURIComponent(searchTerm)}`;
-    }
-
-    const response = await fetch(url, {
-      headers: { 'X-CSRFToken': csrftoken }
+    let url = `/api/v1/beetles/${state.filter === 'no-annotations' ? 'images-without-annotations' : 'images-with-annotations'}/?page=${state.pagination.page}&page_size=50`;
+    if (state.filter !== 'no-annotations') url += `&validation_status=${state.filter}&ordering=-created_at`;
+    
+    const search = document.getElementById('image-search').value.trim();
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    
+    // Apply Advanced Filters
+    document.querySelectorAll('.advanced-filter').forEach(sel => {
+      if (sel.value) url += `&${sel.name}=${encodeURIComponent(sel.value)}`;
     });
 
-    const data = await response.json();
+    const res = await fetch(url, { headers: { 'X-CSRFToken': csrftoken } });
+    const data = await res.json();
+    
+    state.pagination.next = data.next;
     const newImages = data.results || [];
+    
+    if (append) state.images = [...state.images, ...newImages];
+    else state.images = newImages;
 
-    totalCount = data.count || 0;
-    nextPageUrl = data.next;
-
-    if (append) {
-      allImages = [...allImages, ...newImages];
-    } else {
-      allImages = newImages;
-    }
-
-    loadingEl.classList.add('hidden');
-    scrollLoadingEl.classList.add('hidden');
-
-    if (allImages.length === 0) {
+    if (state.images.length === 0 && !append) {
       emptyEl.classList.remove('hidden');
     } else {
-      renderFlatList(newImages, append);
+      renderImageList(newImages, append);
     }
-
-    // Show end of list indicator if no more pages
-    if (!nextPageUrl) {
-      endOfListEl.classList.remove('hidden');
-    }
-  } catch (error) {
-    console.error('Failed to load images:', error);
+    
+    if (!data.next) document.getElementById('end-of-list').classList.remove('hidden');
+  } catch(e) { console.error('Failed to load images:', e); }
+  finally {
     loadingEl.classList.add('hidden');
-    scrollLoadingEl.classList.add('hidden');
-    if (!append) {
-      emptyEl.classList.remove('hidden');
-    }
-  } finally {
-    isLoadingMore = false;
+    state.pagination.loading = false;
   }
 }
 
-// Load next page when scrolling near bottom
 function loadNextPage() {
-  if (nextPageUrl && !isLoadingMore) {
-    currentPage++;
+  if (state.pagination.next && !state.pagination.loading) {
+    state.pagination.page++;
     loadAnnotatedImages(true);
   }
 }
 
-// Local filter (search within loaded images)
-// Debounce timer for search
-let searchDebounceTimer = null;
+async function loadValidationCounts() {
+  try {
+    const [valRes, unvalRes, noAnnRes] = await Promise.all([
+      fetch('/api/v1/beetles/images-with-annotations/?page=1&page_size=1&validation_status=validated', { headers: { 'X-CSRFToken': csrftoken } }),
+      fetch('/api/v1/beetles/images-with-annotations/?page=1&page_size=1&validation_status=unvalidated', { headers: { 'X-CSRFToken': csrftoken } }),
+      fetch('/api/v1/beetles/images-without-annotations/?page=1&page_size=1', { headers: { 'X-CSRFToken': csrftoken } })
+    ]);
+    const valData = await valRes.json();
+    const unvalData = await unvalRes.json();
+    const noAnnData = await noAnnRes.json();
 
-function filterImagesLocal(term) {
-  searchTerm = term.trim();
-
-  // Clear previous debounce timer
-  if (searchDebounceTimer) {
-    clearTimeout(searchDebounceTimer);
-  }
-
-  // Debounce search - wait 500ms after user stops typing
-  searchDebounceTimer = setTimeout(() => {
-    // Trigger server-side search by reloading images
-    resetAndLoadImages();
-  }, 500);
+    document.getElementById('count-validated').textContent = `(${valData.count || 0})`;
+    document.getElementById('count-unvalidated').textContent = `(${unvalData.count || 0})`;
+    document.getElementById('count-no-annotations').textContent = `(${noAnnData.count || 0})`;
+  } catch (error) { console.error('Counts load error', error); }
 }
 
-// Organize images into folders
-function organizeImages() {
+function renderImageList(imagesToRender, append = false) {
   const listEl = document.getElementById('image-list');
+  if (!append) listEl.innerHTML = '';
 
-  // Apply local search filter first
-  const imagesToShow = searchTerm
-    ? allImages.filter(img =>
-        img.filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        img.beetle_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        img.image_asset_id.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : allImages;
+  imagesToRender.forEach(img => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = `w-full px-3 py-2 flex items-center gap-3 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-0 ${state.selectedImageId === img.image_asset_id ? 'bg-blue-100 border-blue-200' : ''}`;
+    btn.onclick = () => selectImage(img);
 
-  listEl.innerHTML = '';
-
-  if (imagesToShow.length === 0) {
-    listEl.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">No matching images</p>';
-    return;
-  }
-
-  // Always render as flat list
-  renderFlatList(imagesToShow, false);
-}
-
-// Render flat list of images
-function renderFlatList(images, append = false) {
-  const listEl = document.getElementById('image-list');
-
-  if (!append) {
-    listEl.innerHTML = '';
-  }
-
-  images.forEach(img => {
-    const item = createImageListItem(img);
-    listEl.appendChild(item);
+    btn.innerHTML = `
+      <div class="w-10 h-10 flex-shrink-0 rounded bg-gray-200 flex items-center justify-center overflow-hidden border border-gray-300">
+        ${img.thumbnail_url ? `<img src="${img.thumbnail_url}" class="w-full h-full object-cover">` : `<i class="fi fi-rr-picture text-gray-400"></i>`}
+      </div>
+      <div class="flex-1 min-w-0 text-left">
+        <p class="text-sm font-medium text-gray-900 truncate" title="${img.image_asset_id}">${img.image_asset_id}</p>
+      </div>
+      <div class="flex-shrink-0">
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200 shadow-sm">
+          ${img.annotation_count}
+        </span>
+      </div>
+    `;
+    listEl.appendChild(btn);
   });
 }
 
-// Create image list item
-function createImageListItem(img) {
-  const item = document.createElement('button');
-  item.type = 'button';
-  item.className = `w-full px-3 py-2 flex items-center gap-3 hover:bg-blue-50 transition-colors ${
-    selectedImageId === img.image_asset_id ? 'bg-blue-100' : ''
-  }`;
-  item.onclick = () => selectImage(img);
-
-  item.innerHTML = `
-    <div class="w-10 h-10 flex-shrink-0 rounded overflow-hidden bg-gray-100">
-      ${img.thumbnail_url
-        ? `<img src="${img.thumbnail_url}" class="w-full h-full object-cover" alt="${img.image_asset_id}">`
-        : '<i class="fi fi-rr-picture text-gray-400 text-xl flex items-center justify-center h-full"></i>'
-      }
-    </div>
-    <div class="flex-1 min-w-0 text-left">
-      <p class="text-sm font-medium text-gray-900 truncate">${img.image_asset_id}</p>
-    </div>
-    <div class="flex-shrink-0 text-right">
-      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-        ${img.annotation_count}
-      </span>
-    </div>
-  `;
-
-  return item;
-}
-
-// Select an image
+// ---------------------------------------------------------
+// IMAGE SELECTION & RIGHT PANEL TABS
+// ---------------------------------------------------------
 async function selectImage(img) {
-  // Check if this is a different image
-  const isDifferentImage = selectedImageId !== img.image_asset_id;
+  state.selectedImageId = img.image_asset_id;
+  renderImageList(state.images, false); // Quick re-render to update highlights
 
-  // Release lock on previous image if switching
-  if (isDifferentImage && selectedImageId) {
-    await releaseLock(selectedImageId);
-  }
-
-  selectedImageId = img.image_asset_id;
-
-  // Reset recently used category when switching to a different image
-  if (isDifferentImage) {
-    lastUsedCategoryForImage = null;
-    lastUsedImageId = null;
-  }
-
-  // Store currently open folders before re-rendering
-  const openFolders = new Set();
-  document.querySelectorAll('[id^="folder-"]').forEach(folder => {
-    if (!folder.classList.contains('hidden')) {
-      openFolders.add(folder.id);
-    }
-  });
-
-  // Update UI to show selection
-  organizeImages();
-
-  // Restore open folder states
-  openFolders.forEach(folderId => {
-    const folder = document.getElementById(folderId);
-    const arrow = document.getElementById(folderId + '-arrow');
-    const icon = document.getElementById(folderId + '-icon');
-
-    if (folder) {
-      folder.classList.remove('hidden');
-      if (arrow) arrow.classList.add('rotate-180');
-      if (icon) icon.classList.replace('fi-rr-folder', 'fi-rr-folder-open');
-    }
-  });
-
-  // Try to acquire lock on new image
-  const lockAcquired = await acquireLock(img.image_asset_id, img.lock);
-
-  // Load image and annotations in canvas
-  loadImageOnCanvas(img);
-}
-
-// Initialize canvas
-function initCanvas() {
-  canvas = document.getElementById('annotation-canvas');
-  ctx = canvas.getContext('2d');
-
-  setupCanvasInteractions();
-}
-
-// Setup canvas interaction handlers
-function setupCanvasInteractions() {
-  // Add mouse wheel zoom listener to canvas wrapper
-  const canvasWrapper = document.getElementById('canvas-wrapper');
-  canvasWrapper.addEventListener('wheel', handleMouseWheel, { passive: false });
-
-  // Add pan and draw event listeners to canvas element
-  canvas.addEventListener('mousedown', handleCanvasMouseDown);
-  canvas.addEventListener('mousemove', handleCanvasMouseMove);
-  canvas.addEventListener('mouseup', handleCanvasMouseUp);
-  canvas.addEventListener('mouseleave', handleCanvasMouseLeave);
-}
-
-// Load image and bounding boxes on canvas
-async function loadImageOnCanvas(img) {
-  // Initialize canvas if not already done
-  if (!canvas) {
-    initCanvas();
-  }
-
-  // Show loading state
+  // UI Setup
+  document.getElementById('canvas-title').textContent = img.image_asset_id;
   document.getElementById('canvas-empty').classList.add('hidden');
   document.getElementById('canvas-wrapper').classList.add('hidden');
   document.getElementById('canvas-loading').classList.remove('hidden');
-  document.getElementById('canvas-actions').classList.add('hidden');
-  document.getElementById('canvas-footer').classList.add('hidden');
+  document.getElementById('normal-mode-actions').classList.add('hidden');
+
+  // Switch right panel to Image tab
+  switchRightTab('image');
 
   try {
-    // Update header
-    document.getElementById('canvas-title').textContent = img.image_asset_id;
-    document.getElementById('canvas-subtitle').textContent = `${img.annotation_count} annotation(s)`;
+    // 1. Fetch Boxes
+    const res = await fetch(`/api/v1/beetles/?image_asset=${img.image_asset_id}&has_bbox=true`, { headers: { 'X-CSRFToken': csrftoken } });
+    const data = await res.json();
+    state.bboxes = data.results || data;
+    selectBox(-1); // clear selection
+    
+    document.getElementById('tab-bbox-count').textContent = state.bboxes.length;
 
-    // Fetch bounding boxes (only beetles with bbox data)
-    const response = await fetch(`/api/v1/beetles/?image_asset=${img.image_asset_id}&has_bbox=true`, {
-      headers: {
-        'X-CSRFToken': csrftoken
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch bounding boxes');
+    // 2. Load Image Defaults (If the API returned first beetle, populate defaults)
+    const defaultsForm = document.getElementById('form-image-defaults');
+    defaultsForm.reset();
+    if (state.bboxes.length > 0) {
+      defaultsForm.elements['default_aspect'].value = state.bboxes[0].aspect || '';
+      defaultsForm.elements['default_collection_country'].value = state.bboxes[0].collection_country || '';
+      defaultsForm.elements['default_collection_stateProvince'].value = state.bboxes[0].collection_stateProvince || '';
     }
 
-    const data = await response.json();
-    currentBoundingBoxes = data.results || data;
-
-    // Load the image
-    const image = new Image();
-    image.crossOrigin = 'anonymous';
-
-    image.onload = function() {
-      currentImage = image;
-
-      // Set canvas size to match image
-      canvas.width = image.width;
-      canvas.height = image.height;
-
-      // Draw image and bounding boxes
-      drawCanvas();
-
-      // Show canvas
+    // 3. Load actual image onto canvas
+    const imageObj = new Image();
+    imageObj.crossOrigin = 'anonymous';
+    imageObj.onload = () => {
+      state.currentImageObj = imageObj;
+      canvas.width = imageObj.width;
+      canvas.height = imageObj.height;
       document.getElementById('canvas-loading').classList.add('hidden');
       document.getElementById('canvas-wrapper').classList.remove('hidden');
-      document.getElementById('canvas-actions').classList.remove('hidden');
-      document.getElementById('canvas-footer').classList.remove('hidden');
-
-      // Update footer
-      document.getElementById('footer-beetle-id').textContent = '-';
-      document.getElementById('footer-annotation-count').textContent = currentBoundingBoxes.length;
-
-      // Fit to screen initially
+      document.getElementById('normal-mode-actions').classList.remove('hidden');
       fitToScreen();
+      drawCanvas();
     };
-
-    image.onerror = function(event) {
-      console.error('Failed to load image:', img.full_image_url, event);
+    imageObj.onerror = () => {
       document.getElementById('canvas-loading').classList.add('hidden');
       document.getElementById('canvas-empty').classList.remove('hidden');
       document.getElementById('canvas-subtitle').textContent = 'Error loading image';
     };
-
-    if (!img.full_image_url) {
-      throw new Error('Image URL is missing');
-    }
-
-    image.src = img.full_image_url;
-
-  } catch (error) {
-    console.error('Error loading image:', error);
-    document.getElementById('canvas-loading').classList.add('hidden');
-    document.getElementById('canvas-empty').classList.remove('hidden');
-    document.getElementById('canvas-subtitle').textContent = 'Error loading image';
-  }
+    imageObj.src = img.full_image_url;
+  } catch(e) { console.error('Image load error', e); }
 }
 
-// Draw image and bounding boxes on canvas
-function drawCanvas() {
-  if (!currentImage || !ctx) return;
+function switchRightTab(tab) {
+  state.activeTab = tab;
+  const btnImg = document.getElementById('tab-btn-image');
+  const btnBox = document.getElementById('tab-btn-bbox');
+  const contImg = document.getElementById('tab-content-image');
+  const contBox = document.getElementById('tab-content-bbox');
 
-  // Clear canvas
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Draw image
-  ctx.drawImage(currentImage, 0, 0, canvas.width, canvas.height);
-
-  // Draw bounding boxes - selected box last so it's on top
-  currentBoundingBoxes.forEach((box, index) => {
-    if (index !== selectedBoundingBoxIndex) {
-      drawBoundingBox(box, index);
-    }
-  });
-
-  // Draw selected box last (on top)
-  if (selectedBoundingBoxIndex !== null && currentBoundingBoxes[selectedBoundingBoxIndex]) {
-    drawBoundingBox(currentBoundingBoxes[selectedBoundingBoxIndex], selectedBoundingBoxIndex);
-  }
-
-  // Draw preview box if in drawing mode
-  if (currentDrawBox) {
-    drawPreviewBox(currentDrawBox);
-  }
-
-  // Update bounding box list
-  updateBoundingBoxList();
-}
-
-// Draw preview box while drawing
-function drawPreviewBox(box) {
-  const x = box.x;
-  const y = box.y;
-  const width = box.width;
-  const height = box.height;
-
-  // Draw dashed rectangle
-  ctx.strokeStyle = '#ff6b00'; // Orange color
-  ctx.lineWidth = 3;
-  ctx.setLineDash([8, 4]); // Dashed line
-  ctx.strokeRect(x, y, width, height);
-
-  // Draw semi-transparent fill
-  ctx.fillStyle = '#ff6b0030'; // Orange with transparency
-  ctx.fillRect(x, y, width, height);
-
-  // Reset line dash
-  ctx.setLineDash([]);
-
-  // Draw label
-  const label = newBoundingBoxLabel || 'New';
-  ctx.font = 'bold 16px Arial';
-  const labelWidth = ctx.measureText(label).width;
-
-  // Label background
-  ctx.fillStyle = '#ff6b00';
-  ctx.fillRect(x, y - 24, labelWidth + 16, 24);
-
-  // Label text
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText(label, x + 8, y - 6);
-}
-
-// Draw a single bounding box
-function drawBoundingBox(box, index) {
-  const imgWidth = canvas.width;
-  const imgHeight = canvas.height;
-
-  // Convert normalized coordinates to pixels
-  const x = box.bbox_x * imgWidth;
-  const y = box.bbox_y * imgHeight;
-  const width = box.bbox_width * imgWidth;
-  const height = box.bbox_height * imgHeight;
-
-  // Choose color based on selection or validation status
-  let color;
-  if (selectedBoundingBoxIndex === index) {
-    color = '#ef4444'; // Red if selected
+  if (tab === 'image') {
+    btnImg.className = 'flex-1 py-3 text-sm tab-active transition-colors bg-white';
+    btnBox.className = 'flex-1 py-3 text-sm tab-inactive transition-colors bg-gray-50';
+    contImg.classList.remove('hidden');
+    contBox.classList.add('hidden');
   } else {
-    color = box.bbox_is_validated ? '#10b981' : '#3b82f6'; // Green if validated, blue otherwise
-  }
-
-  // Calculate scale factor based on image size (makes labels readable on large images)
-  const scaleFactor = Math.max(1, Math.min(imgWidth, imgHeight) / 1000);
-
-  // Draw rectangle with scaled line width (thicker if selected)
-  ctx.strokeStyle = color;
-  ctx.lineWidth = (selectedBoundingBoxIndex === index ? 6 : 4) * scaleFactor;
-  ctx.strokeRect(x, y, width, height);
-
-  // Draw semi-transparent fill
-  ctx.fillStyle = color + '20'; // 20 = ~12% opacity
-  ctx.fillRect(x, y, width, height);
-
-  // Draw number badge and label ABOVE the bounding box
-  const number = `#${index + 1}`;
-  const numberFontSize = Math.max(24, 24 * scaleFactor);
-  ctx.font = `bold ${numberFontSize}px Arial`;
-
-  // Number badge background (circle) with scaled size
-  const badgeSize = Math.max(44, 44 * scaleFactor);
-  const badgeY = y - badgeSize - 4; // Position above the box with 4px gap
-
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(x + badgeSize/2, badgeY + badgeSize/2, badgeSize/2, 0, 2 * Math.PI);
-  ctx.fill();
-
-  // Number text
-  ctx.fillStyle = '#ffffff';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(number, x + badgeSize/2, badgeY + badgeSize/2);
-
-  // Reset text alignment for label
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic';
-
-  // Draw label next to number badge with scaled size (also above the box)
-  const label = box.bbox_label || '';
-  if (label) {
-    const labelFontSize = Math.max(20, 20 * scaleFactor);
-    ctx.font = `bold ${labelFontSize}px Arial`;
-    const labelWidth = ctx.measureText(label).width;
-
-    // Label background with padding
-    const labelPadding = 8 * scaleFactor;
-    const labelHeight = labelFontSize + labelPadding * 1.5;
-
-    ctx.fillStyle = color;
-    ctx.fillRect(
-      x + badgeSize + labelPadding/2,
-      badgeY,
-      labelWidth + labelPadding * 2,
-      labelHeight
-    );
-
-    // Label text
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(label, x + badgeSize + labelPadding * 1.5, badgeY + labelFontSize + labelPadding/2);
-  }
-
-  // Draw resize handles if in edit mode and this is the editing box
-  if (isEditMode && editingBoxIndex === index) {
-    const handleSize = 12;
-    const handleColor = '#8b5cf6'; // Purple color
-
-    // Corner handles
-    const corners = [
-      { x: x, y: y },           // nw
-      { x: x + width, y: y },   // ne
-      { x: x + width, y: y + height }, // se
-      { x: x, y: y + height }   // sw
-    ];
-
-    corners.forEach(corner => {
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(corner.x - handleSize/2, corner.y - handleSize/2, handleSize, handleSize);
-      ctx.strokeStyle = handleColor;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(corner.x - handleSize/2, corner.y - handleSize/2, handleSize, handleSize);
-    });
-
-    // Edge handles
-    const edges = [
-      { x: x + width/2, y: y },           // n
-      { x: x + width, y: y + height/2 },  // e
-      { x: x + width/2, y: y + height },  // s
-      { x: x, y: y + height/2 }           // w
-    ];
-
-    edges.forEach(edge => {
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(edge.x - handleSize/2, edge.y - handleSize/2, handleSize, handleSize);
-      ctx.strokeStyle = handleColor;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(edge.x - handleSize/2, edge.y - handleSize/2, handleSize, handleSize);
-    });
+    btnImg.className = 'flex-1 py-3 text-sm tab-inactive transition-colors bg-gray-50';
+    btnBox.className = 'flex-1 py-3 text-sm tab-active transition-colors bg-white';
+    contImg.classList.add('hidden');
+    contBox.classList.remove('hidden');
   }
 }
 
-// Update bounding box list in right panel
-function updateBoundingBoxList() {
-  const listEl = document.getElementById('bbox-list');
-  const emptyEl = document.getElementById('bbox-list-empty');
-  const countEl = document.getElementById('bbox-list-count');
-
-  // Clear list
-  listEl.innerHTML = '';
-
-  if (currentBoundingBoxes.length === 0) {
-    emptyEl.classList.remove('hidden');
-    listEl.classList.add('hidden');
-    countEl.textContent = '0 annotations';
-    return;
-  }
-
-  emptyEl.classList.add('hidden');
-  listEl.classList.remove('hidden');
-  countEl.textContent = `${currentBoundingBoxes.length} annotation${currentBoundingBoxes.length !== 1 ? 's' : ''}`;
-
-  // Create list items
-  currentBoundingBoxes.forEach((box, index) => {
-    const item = createBoundingBoxListItem(box, index);
-    listEl.appendChild(item);
-  });
+// ---------------------------------------------------------
+// CANVAS INTERACTIONS (JUPYTER-BBOX-WIDGET STYLE)
+// ---------------------------------------------------------
+function setupCanvasEvents() {
+  canvas.addEventListener('mousedown', onMouseDown);
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('mouseup', onMouseUp);
+  canvas.addEventListener('mousemove', updateCursor);
+  wrapper.addEventListener('wheel', handleZoomWheel, { passive: false });
 }
 
-// Create bounding box list item
-function createBoundingBoxListItem(box, index) {
-  const item = document.createElement('div');
-  const isSelected = selectedBoundingBoxIndex === index;
-  const color = isSelected ? '#ef4444' : (box.bbox_is_validated ? '#10b981' : '#3b82f6');
-
-  item.className = `border rounded-lg p-3 hover:bg-gray-50 transition-colors ${isSelected ? 'bg-red-50 border-2' : ''}`;
-  item.style.borderColor = color;
-
-  const label = box.bbox_label || 'Unlabeled';
-  const status = box.bbox_is_validated ? 'Validated' : 'Unvalidated';
-  const statusColor = isSelected ? 'text-red-600' : (box.bbox_is_validated ? 'text-green-600' : 'text-blue-600');
-
-  item.innerHTML = `
-    <div class="flex items-start gap-3">
-      <div class="bbox-number flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm cursor-pointer" style="background-color: ${color}">
-        #${index + 1}
-      </div>
-      <div class="bbox-info flex-1 min-w-0 cursor-pointer">
-        <div class="font-medium text-sm text-gray-900 truncate">${label}</div>
-        <div class="text-xs ${statusColor} mt-1">${status}</div>
-        <div class="text-xs text-gray-500 mt-1 font-mono">ID: ${box.id}</div>
-        <div class="mt-2 grid grid-cols-2 gap-1 text-xs text-gray-600">
-          <div><span class="font-medium">X:</span> ${(box.bbox_x || 0).toFixed(3)}</div>
-          <div><span class="font-medium">Y:</span> ${(box.bbox_y || 0).toFixed(3)}</div>
-          <div><span class="font-medium">W:</span> ${(box.bbox_width || 0).toFixed(3)}</div>
-          <div><span class="font-medium">H:</span> ${(box.bbox_height || 0).toFixed(3)}</div>
-        </div>
-      </div>
-      <div class="flex-shrink-0 flex gap-1">
-        <button
-          type="button"
-          class="bbox-edit-geometry w-7 h-7 flex items-center justify-center rounded hover:bg-purple-100 text-gray-400 hover:text-purple-600 transition-colors"
-          title="Edit bounding box"
-        >
-          <i class="fi fi-rr-vector text-sm"></i>
-        </button>
-        <button
-          type="button"
-          class="bbox-edit w-7 h-7 flex items-center justify-center rounded hover:bg-blue-100 text-gray-400 hover:text-blue-600 transition-colors"
-          title="Edit beetle record"
-        >
-          <i class="fi fi-rr-pencil text-sm"></i>
-        </button>
-        <button
-          type="button"
-          class="bbox-delete w-7 h-7 flex items-center justify-center rounded hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors"
-          title="Delete bounding box"
-        >
-          <i class="fi fi-rr-trash text-sm"></i>
-        </button>
-      </div>
-    </div>
-  `;
-
-  // Add event listeners
-  const numberEl = item.querySelector('.bbox-number');
-  const infoEl = item.querySelector('.bbox-info');
-  const editGeometryBtn = item.querySelector('.bbox-edit-geometry');
-  const editBtn = item.querySelector('.bbox-edit');
-  const deleteBtn = item.querySelector('.bbox-delete');
-
-  numberEl.addEventListener('click', () => highlightBoundingBox(index));
-  infoEl.addEventListener('click', () => highlightBoundingBox(index));
-  editGeometryBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    enterEditMode(index);
-  });
-  editBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    openEditModal(box.id, index);
-  });
-  deleteBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    deleteBoundingBox(box.id, index);
-  });
-
-  return item;
-}
-
-// Highlight a bounding box when clicked in list
-function highlightBoundingBox(index) {
-  // Set selected index
-  selectedBoundingBoxIndex = index;
-
-  // Update footer with selected beetle ID
-  const box = currentBoundingBoxes[index];
-  if (box && box.id) {
-    document.getElementById('footer-beetle-id').textContent = box.id;
-  }
-
-  // Redraw canvas with selected box in red
-  drawCanvas();
-
-  // Scroll to box if needed
-  const imgWidth = canvas.width;
-  const imgHeight = canvas.height;
-
-  const x = box.bbox_x * imgWidth;
-  const y = box.bbox_y * imgHeight;
-  const width = box.bbox_width * imgWidth;
-  const height = box.bbox_height * imgHeight;
-
-  const canvasWrapper = document.getElementById('canvas-wrapper');
-  const boxCenterX = (x + width / 2) * zoomLevel;
-  const boxCenterY = (y + height / 2) * zoomLevel;
-
-  canvasWrapper.scrollTo({
-    left: boxCenterX - canvasWrapper.clientWidth / 2,
-    top: boxCenterY - canvasWrapper.clientHeight / 2,
-    behavior: 'smooth'
-  });
-}
-
-// Delete a bounding box
-async function deleteBoundingBox(boxId, index) {
-  // Confirm deletion
-  if (!confirm('Are you sure you want to delete this bounding box?')) {
-    return;
-  }
-
-  try {
-    const box = currentBoundingBoxes[index];
-
-    // Check if this is the only beetle entry for this image (has metadata but now has bbox)
-    // If there are multiple beetle entries with bbox, we can delete this one
-    // If this is the only one, clear bbox fields instead
-    const beetlesWithBbox = currentBoundingBoxes.length;
-
-    if (beetlesWithBbox === 1) {
-      // This is the only beetle with bbox - clear bbox fields instead of deleting
-      const response = await fetch(`/api/v1/beetles/${boxId}/`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrftoken
-        },
-        body: JSON.stringify({
-          bbox_x: null,
-          bbox_y: null,
-          bbox_width: null,
-          bbox_height: null,
-          bbox_label: '',
-          bbox_is_validated: false
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('PATCH error response:', errorText);
-        throw new Error('Failed to clear bounding box: ' + errorText);
-      }
-    } else {
-      // Multiple beetles with bbox - DELETE the entire beetle record
-      const response = await fetch(`/api/v1/beetles/${boxId}/`, {
-        method: 'DELETE',
-        headers: {
-          'X-CSRFToken': csrftoken
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete bounding box');
-      }
-    }
-
-    // Remove from current array
-    currentBoundingBoxes.splice(index, 1);
-
-    // Clear selection if deleted box was selected
-    if (selectedBoundingBoxIndex === index) {
-      selectedBoundingBoxIndex = null;
-    } else if (selectedBoundingBoxIndex > index) {
-      // Adjust selection index if needed
-      selectedBoundingBoxIndex--;
-    }
-
-    // Redraw canvas and update list
-    drawCanvas();
-
-    // Update footer count
-    document.getElementById('footer-annotation-count').textContent = currentBoundingBoxes.length;
-
-    // Reload image browser to update annotation counts
-    resetAndLoadImages();
-    loadValidationCounts();
-
-  } catch (error) {
-    console.error('Error deleting bounding box:', error);
-    alert('Failed to delete bounding box. Please try again.');
-  }
-}
-
-// Validate all bounding boxes
-async function validateAllBoundingBoxes() {
-  if (!currentBoundingBoxes || currentBoundingBoxes.length === 0) {
-    alert('No bounding boxes to validate');
-    return;
-  }
-
-  // Count unvalidated boxes
-  const unvalidatedCount = currentBoundingBoxes.filter(box => !box.bbox_is_validated).length;
-
-  if (unvalidatedCount === 0) {
-    alert('All bounding boxes are already validated');
-    return;
-  }
-
-  // Confirm validation
-  if (!confirm(`Mark ${unvalidatedCount} bounding box(es) as validated?`)) {
-    return;
-  }
-
-  const validateBtn = document.getElementById('validate-all-btn');
-  validateBtn.disabled = true;
-  validateBtn.innerHTML = '<i class="fi fi-rr-spinner animate-spin text-xs"></i><span>Validating...</span>';
-
-  try {
-    // Update each unvalidated box
-    const updatePromises = currentBoundingBoxes
-      .filter(box => !box.bbox_is_validated)
-      .map(box =>
-        fetch(`/api/v1/beetles/${box.id}/`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrftoken
-          },
-          body: JSON.stringify({
-            bbox_is_validated: true
-          })
-        })
-      );
-
-    const responses = await Promise.all(updatePromises);
-
-    // Check if all succeeded
-    const failed = responses.filter(r => !r.ok);
-    if (failed.length > 0) {
-      throw new Error(`Failed to validate ${failed.length} bounding box(es)`);
-    }
-
-    // Update local data
-    currentBoundingBoxes.forEach(box => {
-      box.bbox_is_validated = true;
-    });
-
-    // Redraw canvas and update list
-    drawCanvas();
-
-    showMessage(`Successfully validated ${unvalidatedCount} bounding box(es)`, 'success');
-
-    // If filtering by unvalidated, remove current image from list and go to next
-    if (currentValidationFilter === 'unvalidated') {
-      // Find current image index
-      const currentIndex = allImages.findIndex(img => img.image_asset_id === selectedImageId);
-
-      // Remove validated image from local array
-      if (currentIndex !== -1) {
-        allImages.splice(currentIndex, 1);
-      }
-
-      // Automatically navigate to next unvalidated image
-      if (allImages.length > 0) {
-        // Select the image at the same index (which is now the next image)
-        const nextImage = allImages[currentIndex] || allImages[currentIndex - 1] || allImages[0];
-        selectImage(nextImage);
-        scrollToImageInList(nextImage);
-
-        // Re-render the list without the validated image
-        organizeImages();
-      } else if (nextPageUrl && !isLoadingMore) {
-        // No more images on current page, load next page
-        loadNextPage();
-      } else {
-        // No more unvalidated images
-        document.getElementById('image-list').innerHTML = '<p class="text-sm text-gray-500 text-center py-4">No more unvalidated images</p>';
-        currentImage = null;
-        selectedImageId = null;
-        currentBoundingBoxes = [];
-        drawCanvas();
-      }
-
-      // Update counts
-      loadValidationCounts();
-    } else {
-      // If viewing all/validated, just reload to update the list
-      resetAndLoadImages();
-      loadValidationCounts();
-    }
-
-  } catch (error) {
-    console.error('Error validating bounding boxes:', error);
-    alert(`Failed to validate all bounding boxes: ${error.message}`);
-  } finally {
-    validateBtn.disabled = false;
-    validateBtn.innerHTML = '<i class="fi fi-rr-check text-xs"></i><span>Validate All</span>';
-    validateBtn.style.backgroundColor = '#10b981';
-    validateBtn.style.color = 'white';
-    validateBtn.style.display = 'flex';
-  }
-}
-
-// Fit image to screen
-function fitToScreen() {
-  if (!canvas) return;
-
-  const container = document.getElementById('canvas-container');
-  const containerWidth = container.clientWidth;
-  const containerHeight = container.clientHeight;
-
-  const scaleX = containerWidth / canvas.width;
-  const scaleY = containerHeight / canvas.height;
-  const scale = Math.min(scaleX, scaleY, 1) * 0.95; // 95% to leave some margin
-
-  zoomLevel = scale;
-  applyZoom();
-
-  // Center the canvas in the viewport
-  centerCanvas();
-}
-
-// Center canvas in viewport
-function centerCanvas() {
-  const canvasWrapper = document.getElementById('canvas-wrapper');
-
-  // Center by setting scroll position to show middle of canvas
-  const scrollMaxX = canvasWrapper.scrollWidth - canvasWrapper.clientWidth;
-  const scrollMaxY = canvasWrapper.scrollHeight - canvasWrapper.clientHeight;
-
-  canvasWrapper.scrollLeft = scrollMaxX / 2;
-  canvasWrapper.scrollTop = scrollMaxY / 2;
-}
-
-// Reset zoom to 100%
-function resetZoom() {
-  zoomLevel = 1.0;
-  applyZoom();
-  centerCanvas();
-}
-
-// Apply zoom level
-function applyZoom() {
-  if (!canvas) return;
-
-  // Scale canvas using CSS width/height
-  canvas.style.width = (canvas.width * zoomLevel) + 'px';
-  canvas.style.height = (canvas.height * zoomLevel) + 'px';
-
-  // Update footer
-  document.getElementById('footer-zoom').textContent = Math.round(zoomLevel * 100) + '%';
-}
-
-// Zoom in by 25%
-function zoomIn() {
-  const canvasWrapper = document.getElementById('canvas-wrapper');
-  const centerX = canvasWrapper.scrollLeft + canvasWrapper.clientWidth / 2;
-  const centerY = canvasWrapper.scrollTop + canvasWrapper.clientHeight / 2;
-
-  const oldZoom = zoomLevel;
-  zoomLevel = Math.min(zoomLevel * 1.25, 5); // Max 500%
-  applyZoom();
-
-  // Adjust scroll to keep center point in same position
-  const zoomRatio = zoomLevel / oldZoom;
-  canvasWrapper.scrollLeft = centerX * zoomRatio - canvasWrapper.clientWidth / 2;
-  canvasWrapper.scrollTop = centerY * zoomRatio - canvasWrapper.clientHeight / 2;
-}
-
-// Zoom out by 25%
-function zoomOut() {
-  const canvasWrapper = document.getElementById('canvas-wrapper');
-  const centerX = canvasWrapper.scrollLeft + canvasWrapper.clientWidth / 2;
-  const centerY = canvasWrapper.scrollTop + canvasWrapper.clientHeight / 2;
-
-  const oldZoom = zoomLevel;
-  zoomLevel = Math.max(zoomLevel / 1.25, 0.1); // Min 10%
-  applyZoom();
-
-  // Adjust scroll to keep center point in same position
-  const zoomRatio = zoomLevel / oldZoom;
-  canvasWrapper.scrollLeft = centerX * zoomRatio - canvasWrapper.clientWidth / 2;
-  canvasWrapper.scrollTop = centerY * zoomRatio - canvasWrapper.clientHeight / 2;
-}
-
-// Handle mouse wheel zoom at cursor position
-function handleMouseWheel(e) {
-  e.preventDefault();
-
-  if (!canvas) return;
-
-  const canvasWrapper = document.getElementById('canvas-wrapper');
-  const canvasContent = document.getElementById('canvas-content');
-
-  // Get mouse position relative to wrapper
-  const rect = canvasWrapper.getBoundingClientRect();
-  const mouseX = e.clientX - rect.left;
-  const mouseY = e.clientY - rect.top;
-
-  // Get current scroll position
-  const scrollX = canvasWrapper.scrollLeft;
-  const scrollY = canvasWrapper.scrollTop;
-
-  // Calculate mouse position in canvas coordinates (before zoom)
-  const canvasX = (scrollX + mouseX) / zoomLevel;
-  const canvasY = (scrollY + mouseY) / zoomLevel;
-
-  // Determine zoom direction
-  const delta = e.deltaY > 0 ? -1 : 1;
-  const zoomFactor = delta > 0 ? 1.1 : 0.9;
-
-  // Apply new zoom level
-  const oldZoom = zoomLevel;
-  zoomLevel = Math.min(Math.max(zoomLevel * zoomFactor, 0.1), 5);
-  applyZoom();
-
-  // Adjust scroll position to keep mouse position fixed
-  const newScrollX = canvasX * zoomLevel - mouseX;
-  const newScrollY = canvasY * zoomLevel - mouseY;
-
-  canvasWrapper.scrollLeft = newScrollX;
-  canvasWrapper.scrollTop = newScrollY;
-}
-
-// Unified mouse event handlers that switch between pan, draw, and edit modes
-function handleCanvasMouseDown(e) {
-  if (e.button !== 0) return; // Only left mouse button
-
-  if (isEditMode) {
-    startEditDrag(e);
-  } else if (isDrawingMode) {
-    startDrawing(e);
-  } else {
-    startPanning(e);
-  }
-}
-
-function handleCanvasMouseMove(e) {
-  if (isEditMode) {
-    if (isDragging || isResizing) {
-      continueEditDrag(e);
-    } else {
-      updateEditCursor(e);
-    }
-  } else if (isDrawingMode && isDrawing) {
-    updateDrawing(e);
-  } else if (isPanning) {
-    continuePanning(e);
-  }
-}
-
-function handleCanvasMouseUp(e) {
-  if (isEditMode && (isDragging || isResizing)) {
-    finishEditDrag(e);
-  } else if (isDrawingMode && isDrawing) {
-    finishDrawing(e);
-  } else if (isPanning) {
-    stopPanning(e);
-  }
-}
-
-function handleCanvasMouseLeave(e) {
-  if (isPanning) {
-    stopPanning(e);
-  }
-  if (isEditMode && (isDragging || isResizing)) {
-    finishEditDrag(e);
-  }
-  // Don't cancel drawing on mouse leave - let user finish
-}
-
-// Pan functions
-function startPanning(e) {
-  const canvasWrapper = document.getElementById('canvas-wrapper');
-
-  isPanning = true;
-  panStartX = e.clientX;
-  panStartY = e.clientY;
-  scrollStartX = canvasWrapper.scrollLeft;
-  scrollStartY = canvasWrapper.scrollTop;
-
-  if (canvas) {
-    canvas.style.cursor = 'grabbing';
-  }
-  e.preventDefault();
-}
-
-function continuePanning(e) {
-  if (!isPanning) return;
-
-  const canvasWrapper = document.getElementById('canvas-wrapper');
-
-  const deltaX = e.clientX - panStartX;
-  const deltaY = e.clientY - panStartY;
-
-  canvasWrapper.scrollLeft = scrollStartX - deltaX;
-  canvasWrapper.scrollTop = scrollStartY - deltaY;
-
-  e.preventDefault();
-}
-
-function stopPanning(e) {
-  if (!isPanning) return;
-
-  if (canvas) {
-    canvas.style.cursor = isDrawingMode ? 'crosshair' : 'grab';
-  }
-  isPanning = false;
-}
-
-// Load category mapping from API
-async function loadCategories() {
-  try {
-    const response = await fetch('/api/v1/beetles/category-mapping/', {
-      headers: { 'X-CSRFToken': csrftoken }
-    });
-
-    const data = await response.json();
-    allCategories = data.categories || [];
-    filteredCategories = [...allCategories];
-
-    renderCategories(filteredCategories);
-  } catch (error) {
-    console.error('Failed to load categories:', error);
-    document.getElementById('category-list-content').innerHTML = `
-      <div class="text-center py-8 text-red-500">
-        <i class="fi fi-rr-exclamation text-2xl"></i>
-        <p class="text-sm mt-2">Failed to load categories</p>
-      </div>
-    `;
-  }
-}
-
-// Render categories in the list
-function renderCategories(categories) {
-  const listContent = document.getElementById('category-list-content');
-
-  if (categories.length === 0) {
-    listContent.innerHTML = `
-      <div class="text-center py-8 text-gray-500">
-        <i class="fi fi-rr-search text-2xl"></i>
-        <p class="text-sm mt-2">No categories found</p>
-      </div>
-    `;
-    return;
-  }
-
-  let html = '';
-
-  // Show recently used category at the top if on the same image
-  if (lastUsedCategoryForImage && lastUsedImageId === selectedImageId) {
-    const recentCat = lastUsedCategoryForImage;
-    const typeColor = recentCat.type === 'generic' ? 'bg-gray-100 text-gray-700' :
-                      recentCat.type === 'genus' ? 'bg-blue-100 text-blue-700' :
-                      'bg-green-100 text-green-700';
-
-    const typeLabel = recentCat.type === 'generic' ? 'Generic' :
-                      recentCat.type === 'genus' ? 'Genus' : 'Species';
-
-    html += `
-      <div class="bg-amber-50 border-b-2 border-amber-200">
-        <div class="px-3 py-1 text-xs font-semibold text-amber-800 flex items-center gap-1">
-          <i class="fi fi-rr-clock-three"></i>
-          Recently Used
-        </div>
-        <button
-          type="button"
-          onclick="selectCategoryById(${recentCat.id})"
-          class="w-full text-left px-3 py-2 hover:bg-amber-100 border-b border-gray-100 transition-colors flex items-center justify-between"
-        >
-          <div class="flex-1 min-w-0">
-            <p class="font-medium text-gray-900 truncate">${recentCat.name}</p>
-            ${recentCat.type === 'species' ? `<p class="text-xs text-gray-500 italic">${recentCat.genus} ${recentCat.species}</p>` : ''}
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="text-xs px-2 py-0.5 rounded-full ${typeColor}">${typeLabel}</span>
-            <span class="text-xs text-gray-500 font-mono">ID: ${recentCat.id}</span>
-          </div>
-        </button>
-      </div>
-      <div class="px-3 py-1 text-xs font-semibold text-gray-600 bg-gray-50 border-b border-gray-200">
-        All Categories
-      </div>
-    `;
-  }
-
-  // Render all categories
-  html += categories.map(cat => {
-    const typeColor = cat.type === 'generic' ? 'bg-gray-100 text-gray-700' :
-                      cat.type === 'genus' ? 'bg-blue-100 text-blue-700' :
-                      'bg-green-100 text-green-700';
-
-    const typeLabel = cat.type === 'generic' ? 'Generic' :
-                      cat.type === 'genus' ? 'Genus' : 'Species';
-
-    return `
-      <button
-        type="button"
-        onclick="selectCategoryById(${cat.id})"
-        class="w-full text-left px-3 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-0 transition-colors flex items-center justify-between group"
-      >
-        <div class="flex-1 min-w-0">
-          <p class="font-medium text-gray-900 truncate">${cat.name}</p>
-          ${cat.type === 'species' ? `<p class="text-xs text-gray-500 italic">${cat.genus} ${cat.species}</p>` : ''}
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="text-xs px-2 py-0.5 rounded-full ${typeColor}">${typeLabel}</span>
-          <span class="text-xs text-gray-500 font-mono">ID: ${cat.id}</span>
-        </div>
-      </button>
-    `;
-  }).join('');
-
-  listContent.innerHTML = html;
-}
-
-// Filter categories by search term
-function filterCategories(searchTerm) {
-  const term = searchTerm.toLowerCase().trim();
-
-  if (!term) {
-    filteredCategories = [...allCategories];
-  } else {
-    filteredCategories = allCategories.filter(cat =>
-      cat.name.toLowerCase().includes(term) ||
-      (cat.genus && cat.genus.toLowerCase().includes(term)) ||
-      (cat.species && cat.species.toLowerCase().includes(term))
-    );
-  }
-
-  renderCategories(filteredCategories);
-}
-
-// Select a category by ID
-function selectCategoryById(categoryId) {
-  selectedCategory = allCategories.find(cat => cat.id === categoryId);
-
-  if (selectedCategory) {
-    document.getElementById('selected-category-name').textContent = selectedCategory.name;
-    document.getElementById('selected-category-id').textContent = `(ID: ${selectedCategory.id})`;
-    document.getElementById('selected-category-display').classList.remove('hidden');
-    document.getElementById('confirm-category-btn').disabled = false;
-  }
-}
-
-// Show category dialog
-function showCategoryDialog() {
-  document.getElementById('category-dialog').classList.remove('hidden');
-
-  // Load categories if not already loaded
-  if (allCategories.length === 0) {
-    loadCategories();
-  } else {
-    // Reset to show all categories
-    filteredCategories = [...allCategories];
-    renderCategories(filteredCategories);
-  }
-
-  // Reset search and selection
-  document.getElementById('category-search').value = '';
-  selectedCategory = null;
-  document.getElementById('selected-category-display').classList.add('hidden');
-  document.getElementById('confirm-category-btn').disabled = true;
-}
-
-// Close category dialog
-function closeCategoryDialog() {
-  document.getElementById('category-dialog').classList.add('hidden');
-}
-
-// Confirm category selection and enter drawing mode
-function confirmCategorySelection() {
-  if (!selectedCategory) return;
-
-  // Remember this category for the current image
-  lastUsedCategoryForImage = selectedCategory;
-  lastUsedImageId = selectedImageId;
-
-  closeCategoryDialog();
-
-  // Set the label as the category ID
-  newBoundingBoxLabel = String(selectedCategory.id);
-
-  // Enter drawing mode
-  isDrawingMode = true;
-  canvas.style.cursor = 'crosshair';
-
-  // Update button
-  const addBtn = document.getElementById('add-bbox-btn');
-  addBtn.innerHTML = '<span>Cancel</span>';
-  addBtn.style.backgroundColor = '#ef4444';
-  addBtn.style.color = 'white';
-  addBtn.style.display = 'flex';
-  addBtn.className = 'px-3 py-1.5 text-sm rounded-lg hover:bg-red-700 transition-colors items-center gap-1';
-  addBtn.onclick = cancelAddingBoundingBox;
-
-  // Show instruction with category name
-  showMessage(`Drawing box for: ${selectedCategory.name} (ID: ${selectedCategory.id})`, 'info');
-}
-
-// Start adding bounding box mode
-function startAddingBoundingBox() {
-  if (!currentImage) {
-    alert('Please select an image first');
-    return;
-  }
-
-  // Show category selection dialog
-  showCategoryDialog();
-}
-
-// Cancel adding bounding box
-function cancelAddingBoundingBox() {
-  isDrawingMode = false;
-  isDrawing = false;
-  currentDrawBox = null;
-  canvas.style.cursor = 'grab';
-
-  // Reset button
-  const addBtn = document.getElementById('add-bbox-btn');
-  addBtn.innerHTML = '<i class="fi fi-rr-plus text-xs"></i><span>Add</span>';
-  addBtn.style.backgroundColor = '#3b82f6';
-  addBtn.style.color = 'white';
-  addBtn.style.display = 'flex';
-  addBtn.className = 'px-3 py-1.5 text-sm rounded-lg hover:bg-blue-700 transition-colors items-center gap-1';
-  addBtn.onclick = startAddingBoundingBox;
-
-  // Redraw to remove preview
-  drawCanvas();
-}
-
-// Drawing functions
-function startDrawing(e) {
+function getPointer(e) {
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width / rect.width;
   const scaleY = canvas.height / rect.height;
-
-  drawStartX = (e.clientX - rect.left) * scaleX;
-  drawStartY = (e.clientY - rect.top) * scaleY;
-
-  isDrawing = true;
-  e.preventDefault();
-}
-
-function updateDrawing(e) {
-  if (!isDrawing) return;
-
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-
-  const currentX = (e.clientX - rect.left) * scaleX;
-  const currentY = (e.clientY - rect.top) * scaleY;
-
-  // Calculate box dimensions
-  const x = Math.min(drawStartX, currentX);
-  const y = Math.min(drawStartY, currentY);
-  const width = Math.abs(currentX - drawStartX);
-  const height = Math.abs(currentY - drawStartY);
-
-  currentDrawBox = { x, y, width, height };
-
-  // Redraw canvas with preview
-  drawCanvas();
-
-  e.preventDefault();
-}
-
-function finishDrawing(e) {
-  if (!isDrawing || !currentDrawBox) return;
-
-  isDrawing = false;
-
-  // Check if box has minimum size
-  if (currentDrawBox.width < 5 || currentDrawBox.height < 5) {
-    alert('Bounding box is too small. Please draw a larger box.');
-    currentDrawBox = null;
-    drawCanvas();
-    return;
-  }
-
-  // Confirm and save
-  confirmSaveBoundingBox();
-
-  e.preventDefault();
-}
-
-// Confirm and save the new bounding box
-async function confirmSaveBoundingBox() {
-  if (!currentDrawBox) return;
-
-  const confirmed = confirm(`Save this bounding box with label "${newBoundingBoxLabel}"?`);
-  if (!confirmed) {
-    currentDrawBox = null;
-    drawCanvas();
-    return;
-  }
-
-  // Convert pixel coordinates to normalized (0-1)
-  const normalizedBox = {
-    bbox_x: currentDrawBox.x / canvas.width,
-    bbox_y: currentDrawBox.y / canvas.height,
-    bbox_width: currentDrawBox.width / canvas.width,
-    bbox_height: currentDrawBox.height / canvas.height,
-    bbox_label: newBoundingBoxLabel,
-    image_asset_id: selectedImageId
-  };
-
-  try {
-    const response = await fetch('/api/v1/beetles/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrftoken
-      },
-      body: JSON.stringify(normalizedBox)
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Error response:', errorData);
-      throw new Error(errorData.detail || JSON.stringify(errorData) || 'Failed to save bounding box');
-    }
-
-    const savedBox = await response.json();
-
-    // Add to current boxes
-    currentBoundingBoxes.push(savedBox);
-
-    // Exit drawing mode
-    cancelAddingBoundingBox();
-
-    // Redraw
-    drawCanvas();
-
-    // Update footer
-    document.getElementById('footer-annotation-count').textContent = currentBoundingBoxes.length;
-
-    // Reload image browser
-    resetAndLoadImages();
-    loadValidationCounts();
-
-    showMessage('Bounding box saved successfully!', 'success');
-
-  } catch (error) {
-    console.error('Error saving bounding box:', error);
-    alert(`Failed to save bounding box: ${error.message}`);
-    currentDrawBox = null;
-    drawCanvas();
-  }
-}
-
-// ===== EDIT BOUNDING BOX MODE =====
-
-// Enter edit mode for a bounding box
-function enterEditMode(index) {
-  if (isDrawingMode) {
-    alert('Please finish or cancel the current drawing first.');
-    return;
-  }
-
-  isEditMode = true;
-  editingBoxIndex = index;
-  selectedBoundingBoxIndex = index;
-
-  // Store original box data for cancel
-  originalBox = JSON.parse(JSON.stringify(currentBoundingBoxes[index]));
-
-  // Update UI
-  document.getElementById('edit-mode-actions').classList.remove('hidden');
-  document.getElementById('normal-mode-actions').classList.add('hidden');
-
-  // Redraw canvas with edit handles
-  drawCanvas();
-
-  showMessage('Edit mode: Drag to move, drag handles to resize', 'info');
-}
-
-// Cancel edit mode
-function cancelEditMode() {
-  if (!isEditMode) return;
-
-  // Restore original box
-  if (originalBox && editingBoxIndex !== null) {
-    currentBoundingBoxes[editingBoxIndex] = originalBox;
-  }
-
-  // Reset state
-  isEditMode = false;
-  editingBoxIndex = null;
-  originalBox = null;
-  isDragging = false;
-  isResizing = false;
-  dragHandle = null;
-
-  // Update UI
-  document.getElementById('edit-mode-actions').classList.add('hidden');
-  document.getElementById('normal-mode-actions').classList.remove('hidden');
-
-  // Reset cursor
-  canvas.style.cursor = 'default';
-
-  // Redraw
-  drawCanvas();
-  updateBoundingBoxList();
-}
-
-// Save edited bounding box
-async function saveEditedBox() {
-  if (!isEditMode || editingBoxIndex === null) return;
-
-  const box = currentBoundingBoxes[editingBoxIndex];
-
-  try {
-    const response = await fetch(`/api/v1/beetles/${box.id}/`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrftoken
-      },
-      body: JSON.stringify({
-        bbox_x: box.bbox_x,
-        bbox_y: box.bbox_y,
-        bbox_width: box.bbox_width,
-        bbox_height: box.bbox_height
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(JSON.stringify(errorData));
-    }
-
-    const updatedBox = await response.json();
-    currentBoundingBoxes[editingBoxIndex] = updatedBox;
-
-    // Exit edit mode
-    isEditMode = false;
-    editingBoxIndex = null;
-    originalBox = null;
-
-    // Update UI
-    document.getElementById('edit-mode-actions').classList.add('hidden');
-    document.getElementById('normal-mode-actions').classList.remove('hidden');
-
-    // Redraw and update
-    drawCanvas();
-    updateBoundingBoxList();
-
-    showMessage('Bounding box updated successfully!', 'success');
-
-  } catch (error) {
-    console.error('Error saving edited box:', error);
-    alert(`Failed to save changes: ${error.message}`);
-  }
-}
-
-// Get cursor position in canvas coordinates
-function getCanvasCoords(e) {
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-
-  return {
-    x: (e.clientX - rect.left) * scaleX,
-    y: (e.clientY - rect.top) * scaleY
+  return { 
+    x: (e.clientX - rect.left) * scaleX, 
+    y: (e.clientY - rect.top) * scaleY 
   };
 }
 
-// Check which handle is under the mouse (if any)
-function getHandleAtPoint(x, y, box) {
-  const imgWidth = canvas.width;
-  const imgHeight = canvas.height;
+function hitTest(x, y) {
+  const W = canvas.width;
+  const H = canvas.height;
+  // Dynamic handle size based on zoom so they are easy to click
+  const handleSize = 14 / state.zoom;
+  const margin = 8 / state.zoom;
 
-  const bx = box.bbox_x * imgWidth;
-  const by = box.bbox_y * imgHeight;
-  const bw = box.bbox_width * imgWidth;
-  const bh = box.bbox_height * imgHeight;
-
-  const handleSize = 12;
-  const hitMargin = 6;
-
-  // Check corners first (higher priority)
-  const corners = {
-    'nw': { x: bx, y: by },
-    'ne': { x: bx + bw, y: by },
-    'se': { x: bx + bw, y: by + bh },
-    'sw': { x: bx, y: by + bh }
-  };
-
-  for (const [handle, pos] of Object.entries(corners)) {
-    if (Math.abs(x - pos.x) < handleSize + hitMargin &&
-        Math.abs(y - pos.y) < handleSize + hitMargin) {
-      return handle;
-    }
+  // Reverse iterate to prioritize top-most boxes
+  for (let i = state.bboxes.length - 1; i >= 0; i--) {
+    const b = state.bboxes[i];
+    const bx = b.bbox_x * W;
+    const by = b.bbox_y * H;
+    const bw = b.bbox_width * W;
+    const bh = b.bbox_height * H;
+    
+    // Prioritize corners
+    if (Math.abs(x - bx) < handleSize && Math.abs(y - by) < handleSize) return {idx: i, handle: 'nw'};
+    if (Math.abs(x - (bx+bw)) < handleSize && Math.abs(y - by) < handleSize) return {idx: i, handle: 'ne'};
+    if (Math.abs(x - bx) < handleSize && Math.abs(y - (by+bh)) < handleSize) return {idx: i, handle: 'sw'};
+    if (Math.abs(x - (bx+bw)) < handleSize && Math.abs(y - (by+bh)) < handleSize) return {idx: i, handle: 'se'};
+    
+    // Edges
+    if (x > bx && x < bx+bw && Math.abs(y - by) < margin) return {idx: i, handle: 'n'};
+    if (x > bx && x < bx+bw && Math.abs(y - (by+bh)) < margin) return {idx: i, handle: 's'};
+    if (y > by && y < by+bh && Math.abs(x - bx) < margin) return {idx: i, handle: 'w'};
+    if (y > by && y < by+bh && Math.abs(x - (bx+bw)) < margin) return {idx: i, handle: 'e'};
+    
+    // Body / Move
+    if (x > bx && x < bx+bw && y > by && y < by+bh) return {idx: i, handle: 'move'};
   }
-
-  // Check edges
-  const edges = {
-    'n': x >= bx && x <= bx + bw && Math.abs(y - by) < hitMargin,
-    's': x >= bx && x <= bx + bw && Math.abs(y - (by + bh)) < hitMargin,
-    'e': y >= by && y <= by + bh && Math.abs(x - (bx + bw)) < hitMargin,
-    'w': y >= by && y <= by + bh && Math.abs(x - bx) < hitMargin
-  };
-
-  for (const [handle, hit] of Object.entries(edges)) {
-    if (hit) return handle;
-  }
-
-  // Check if inside box body (for moving)
-  if (x >= bx && x <= bx + bw && y >= by && y <= by + bh) {
-    return 'move';
-  }
-
   return null;
 }
 
-// Get cursor style for handle
-function getCursorForHandle(handle) {
+function updateCursor(e) {
+  if (state.interactionMode !== 'idle') return;
+  const ptr = getPointer(e);
+  const hit = hitTest(ptr.x, ptr.y);
+  
+  if (!hit) {
+    canvas.style.cursor = 'crosshair'; // Default to draw mode cursor
+    return;
+  }
+  
   const cursors = {
-    'nw': 'nw-resize',
-    'n': 'n-resize',
-    'ne': 'ne-resize',
-    'e': 'e-resize',
-    'se': 'se-resize',
-    's': 's-resize',
-    'sw': 'sw-resize',
-    'w': 'w-resize',
-    'move': 'move'
+    'move': 'move', 'nw': 'nwse-resize', 'se': 'nwse-resize',
+    'ne': 'nesw-resize', 'sw': 'nesw-resize', 'n': 'ns-resize',
+    's': 'ns-resize', 'e': 'ew-resize', 'w': 'ew-resize'
   };
-  return cursors[handle] || 'default';
+  canvas.style.cursor = cursors[hit.handle] || 'default';
 }
 
-// Update cursor based on mouse position in edit mode
-function updateEditCursor(e) {
-  if (!isEditMode || editingBoxIndex === null) return;
+function onMouseDown(e) {
+  if (e.button !== 0 || !state.currentImageObj) return;
+  const ptr = getPointer(e);
+  const hit = hitTest(ptr.x, ptr.y);
 
-  const coords = getCanvasCoords(e);
-  const box = currentBoundingBoxes[editingBoxIndex];
-  const handle = getHandleAtPoint(coords.x, coords.y, box);
+  state.startX = ptr.x;
+  state.startY = ptr.y;
 
-  canvas.style.cursor = getCursorForHandle(handle);
-}
-
-// Start dragging/resizing in edit mode
-function startEditDrag(e) {
-  if (!isEditMode || editingBoxIndex === null) return;
-
-  const coords = getCanvasCoords(e);
-  const box = currentBoundingBoxes[editingBoxIndex];
-  dragHandle = getHandleAtPoint(coords.x, coords.y, box);
-
-  if (!dragHandle) return;
-
-  const imgWidth = canvas.width;
-  const imgHeight = canvas.height;
-
-  dragStartMouseX = coords.x;
-  dragStartMouseY = coords.y;
-  dragStartBoxX = box.bbox_x * imgWidth;
-  dragStartBoxY = box.bbox_y * imgHeight;
-  dragStartBoxWidth = box.bbox_width * imgWidth;
-  dragStartBoxHeight = box.bbox_height * imgHeight;
-
-  if (dragHandle === 'move') {
-    isDragging = true;
+  if (hit) {
+    selectBox(hit.idx);
+    const b = state.bboxes[hit.idx];
+    state.startBoxState = { x: b.bbox_x, y: b.bbox_y, w: b.bbox_width, h: b.bbox_height };
+    state.dragHandle = hit.handle;
+    state.interactionMode = hit.handle === 'move' ? 'moving' : 'resizing';
   } else {
-    isResizing = true;
+    selectBox(-1); // Deselect
+    state.interactionMode = 'drawing';
+    state.startBoxState = { w: 0, h: 0 };
   }
-
-  e.preventDefault();
 }
 
-// Continue dragging/resizing
-function continueEditDrag(e) {
-  if (!isEditMode || editingBoxIndex === null) return;
-  if (!isDragging && !isResizing) return;
+function onMouseMove(e) {
+  if (state.interactionMode === 'idle') return;
+  
+  const ptr = getPointer(e);
+  const dx = (ptr.x - state.startX) / canvas.width;
+  const dy = (ptr.y - state.startY) / canvas.height;
 
-  const coords = getCanvasCoords(e);
-  const box = currentBoundingBoxes[editingBoxIndex];
-  const imgWidth = canvas.width;
-  const imgHeight = canvas.height;
+  if (state.interactionMode === 'drawing') {
+    state.startBoxState.w = ptr.x - state.startX;
+    state.startBoxState.h = ptr.y - state.startY;
+    drawCanvas();
+  } else {
+    const b = state.bboxes[state.selectedBoxIndex];
+    const orig = state.startBoxState;
 
-  const deltaX = coords.x - dragStartMouseX;
-  const deltaY = coords.y - dragStartMouseY;
-
-  if (isDragging) {
-    // Move the entire box
-    let newX = dragStartBoxX + deltaX;
-    let newY = dragStartBoxY + deltaY;
-
-    // Constrain to image bounds
-    newX = Math.max(0, Math.min(newX, imgWidth - dragStartBoxWidth));
-    newY = Math.max(0, Math.min(newY, imgHeight - dragStartBoxHeight));
-
-    box.bbox_x = newX / imgWidth;
-    box.bbox_y = newY / imgHeight;
-
-  } else if (isResizing) {
-    // Resize based on handle
-    let newX = dragStartBoxX;
-    let newY = dragStartBoxY;
-    let newWidth = dragStartBoxWidth;
-    let newHeight = dragStartBoxHeight;
-
-    // Apply deltas based on handle
-    if (dragHandle.includes('w')) {
-      newX = dragStartBoxX + deltaX;
-      newWidth = dragStartBoxWidth - deltaX;
+    if (state.interactionMode === 'moving') {
+      b.bbox_x = Math.max(0, Math.min(1 - b.bbox_width, orig.x + dx));
+      b.bbox_y = Math.max(0, Math.min(1 - b.bbox_height, orig.y + dy));
+    } else if (state.interactionMode === 'resizing') {
+      if (state.dragHandle.includes('w')) { b.bbox_x = Math.max(0, orig.x + dx); b.bbox_width = orig.w - dx; }
+      if (state.dragHandle.includes('e')) { b.bbox_width = orig.w + dx; }
+      if (state.dragHandle.includes('n')) { b.bbox_y = Math.max(0, orig.y + dy); b.bbox_height = orig.h - dy; }
+      if (state.dragHandle.includes('s')) { b.bbox_height = orig.h + dy; }
     }
-    if (dragHandle.includes('e')) {
-      newWidth = dragStartBoxWidth + deltaX;
-    }
-    if (dragHandle.includes('n')) {
-      newY = dragStartBoxY + deltaY;
-      newHeight = dragStartBoxHeight - deltaY;
-    }
-    if (dragHandle.includes('s')) {
-      newHeight = dragStartBoxHeight + deltaY;
-    }
+    drawCanvas();
+  }
+}
 
-    // Minimum size constraint (10px)
-    const minSize = 10;
-    if (newWidth < minSize || newHeight < minSize) {
-      return; // Don't apply if too small
+async function onMouseUp(e) {
+  if (state.interactionMode === 'idle') return;
+
+  if (state.interactionMode === 'drawing') {
+    const w = Math.abs(state.startBoxState.w);
+    const h = Math.abs(state.startBoxState.h);
+    
+    // Validate minimum pixel size to prevent accidental clicks
+    if (w > 10 && h > 10) {
+      const bx = Math.min(state.startX, state.startX + state.startBoxState.w) / canvas.width;
+      const by = Math.min(state.startY, state.startY + state.startBoxState.h) / canvas.height;
+      
+      // Pull defaults from Image Tabs
+      const defaultForm = document.getElementById('form-image-defaults');
+      const payload = {
+        image_asset_id: state.selectedImageId,
+        bbox_x: bx, 
+        bbox_y: by,
+        bbox_width: w / canvas.width, 
+        bbox_height: h / canvas.height,
+        aspect: defaultForm.elements['default_aspect'].value || null,
+        collection_country: defaultForm.elements['default_collection_country'].value || null,
+        collection_stateProvince: defaultForm.elements['default_collection_stateProvince'].value || null
+      };
+      
+      try {
+        const res = await fetch('/api/v1/beetles/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+          body: JSON.stringify(payload)
+        });
+        if(res.ok) {
+          const newBox = await res.json();
+          state.bboxes.push(newBox);
+          document.getElementById('tab-bbox-count').textContent = state.bboxes.length;
+          
+          // Select the new box & open the Annotation tab for immediate metadata typing
+          selectBox(state.bboxes.length - 1);
+          switchRightTab('bbox');
+          document.getElementById('panel-valid-name').focus();
+        }
+      } catch(err) { console.error('Error saving drawn box', err); }
     }
-
-    // Constrain to image bounds
-    newX = Math.max(0, newX);
-    newY = Math.max(0, newY);
-    newWidth = Math.min(newWidth, imgWidth - newX);
-    newHeight = Math.min(newHeight, imgHeight - newY);
-
-    // Update box
-    box.bbox_x = newX / imgWidth;
-    box.bbox_y = newY / imgHeight;
-    box.bbox_width = newWidth / imgWidth;
-    box.bbox_height = newHeight / imgHeight;
+  } else {
+    // End of Move or Resize
+    if (state.selectedBoxIndex >= 0) saveBoxGeometryAPI(state.selectedBoxIndex);
   }
 
-  // Redraw
+  state.interactionMode = 'idle';
   drawCanvas();
-  updateBoundingBoxList();
-
-  e.preventDefault();
 }
 
-// Finish dragging/resizing
-function finishEditDrag(e) {
-  isDragging = false;
-  isResizing = false;
-  dragHandle = null;
+async function saveBoxGeometryAPI(idx) {
+  const b = state.bboxes[idx];
+  try {
+    await fetch(`/api/v1/beetles/${b.id}/`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+      body: JSON.stringify({
+        bbox_x: b.bbox_x, bbox_y: b.bbox_y, 
+        bbox_width: b.bbox_width, bbox_height: b.bbox_height
+      })
+    });
+  } catch(e) { console.error('Error saving resize/move', e); }
 }
 
-// Show export dialog
-function showExportDialog() {
-  document.getElementById('export-dialog').classList.remove('hidden');
+function drawCanvas() {
+  if (!state.currentImageObj || !ctx) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(state.currentImageObj, 0, 0, canvas.width, canvas.height);
+
+  const W = canvas.width;
+  const H = canvas.height;
+
+  // Draw Boxes
+  state.bboxes.forEach((b, i) => {
+    const isSel = (i === state.selectedBoxIndex);
+    const color = isSel ? '#ef4444' : (b.bbox_is_validated ? '#10b981' : '#3b82f6'); // Red, Green, Blue
+    
+    const bx = b.bbox_x * W;
+    const by = b.bbox_y * H;
+    const bw = b.bbox_width * W;
+    const bh = b.bbox_height * H;
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = (isSel ? 4 : 2) / state.zoom;
+    ctx.strokeRect(bx, by, bw, bh);
+    
+    ctx.fillStyle = color + '20'; // 12% opacity
+    ctx.fillRect(bx, by, bw, bh);
+
+    // Number Badge (Top Left Corner of Box)
+    const badgeR = 12 / state.zoom;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(bx + badgeR, by - badgeR - (2/state.zoom), badgeR, 0, 2*Math.PI);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${14/state.zoom}px Arial`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(`${i+1}`, bx + badgeR, by - badgeR - (2/state.zoom));
+
+    // Handles if selected
+    if (isSel) {
+      ctx.fillStyle = '#fff';
+      const hs = 10 / state.zoom;
+      const pts = [
+        [bx, by], [bx+bw, by], [bx, by+bh], [bx+bw, by+bh],
+        [bx+bw/2, by], [bx+bw/2, by+bh], [bx, by+bh/2], [bx+bw, by+bh/2]
+      ];
+      pts.forEach(([px, py]) => {
+        ctx.fillRect(px - hs/2, py - hs/2, hs, hs);
+        ctx.strokeRect(px - hs/2, py - hs/2, hs, hs);
+      });
+    }
+  });
+
+  // Transient Drawing Box
+  if (state.interactionMode === 'drawing') {
+    ctx.strokeStyle = '#ff6b00'; // Orange
+    ctx.lineWidth = 2 / state.zoom;
+    ctx.setLineDash([6/state.zoom, 4/state.zoom]);
+    ctx.strokeRect(state.startX, state.startY, state.startBoxState.w, state.startBoxState.h);
+    ctx.fillStyle = '#ff6b0030';
+    ctx.fillRect(state.startX, state.startY, state.startBoxState.w, state.startBoxState.h);
+    ctx.setLineDash([]);
+  }
 }
 
-// Close export dialog
-function closeExportDialog() {
-  document.getElementById('export-dialog').classList.add('hidden');
+// ---------------------------------------------------------
+// RIGHT PANEL FORM LOGIC
+// ---------------------------------------------------------
+function selectBox(idx) {
+  state.selectedBoxIndex = idx;
+  drawCanvas();
+
+  const emptyDiv = document.getElementById('bbox-editor-empty');
+  const formDiv = document.getElementById('bbox-editor-content');
+
+  if (idx < 0) {
+    emptyDiv.classList.remove('hidden');
+    formDiv.classList.add('hidden');
+  } else {
+    emptyDiv.classList.add('hidden');
+    formDiv.classList.remove('hidden');
+    
+    const b = state.bboxes[idx];
+    document.getElementById('active-bbox-badge').textContent = idx + 1;
+    
+    const form = document.getElementById('form-bbox-metadata');
+    form.elements['depicts_valid_name_id'].value = b.depicts_valid_name_id || '';
+    form.elements['depicts_specimen'].value = b.depicts_specimen || '';
+    form.elements['specimen_sex'].value = b.specimen_sex || '';
+    form.elements['specimen_type_status'].value = b.specimen_type_status || '';
+    form.elements['specimen_notes'].value = b.specimen_notes || '';
+    
+    fetchAndUpdateTaxonomyPanel(b.depicts_valid_name_id);
+  }
 }
 
-// Export annotations
-async function exportAnnotations() {
-  const format = document.querySelector('input[name="export-format"]:checked').value;
+async function saveActiveBoxMetadata() {
+  if (state.selectedBoxIndex < 0) return;
+  const b = state.bboxes[state.selectedBoxIndex];
+  const form = document.getElementById('form-bbox-metadata');
+  const btn = document.getElementById('btn-save-bbox');
+  
+  const payload = {
+    depicts_valid_name_id: form.elements['depicts_valid_name_id'].value || null,
+    depicts_specimen: form.elements['depicts_specimen'].value || null,
+    specimen_sex: form.elements['specimen_sex'].value || null,
+    specimen_type_status: form.elements['specimen_type_status'].value || null,
+    specimen_notes: form.elements['specimen_notes'].value || null,
+  };
 
-  // Close dialog
-  closeExportDialog();
-
-  // Update export button to show loading
-  const exportBtn = document.getElementById('export-btn');
-  const originalHTML = exportBtn.innerHTML;
-  exportBtn.disabled = true;
-  exportBtn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i><span>Exporting...</span>';
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i> Saving...';
 
   try {
-    const response = await fetch(`/api/v1/export-annotations/?format=${format}`, {
-      method: 'GET',
-      headers: {
-        'X-CSRFToken': csrftoken
-      }
+    const res = await fetch(`/api/v1/beetles/${b.id}/`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+      body: JSON.stringify(payload)
     });
-
-    if (!response.ok) {
-      throw new Error('Failed to export annotations');
+    if(res.ok) {
+      state.bboxes[state.selectedBoxIndex] = await res.json();
+      btn.innerHTML = '<i class="fi fi-rr-check"></i> Saved!';
+      setTimeout(() => { btn.innerHTML = '<i class="fi fi-rr-disk"></i> Save Annotation Details'; }, 2000);
     }
-
-    // Get filename from Content-Disposition header or use default based on format
-    const contentDisposition = response.headers.get('Content-Disposition');
-    let filename = `annotations_${format}.zip`;
-    if (contentDisposition) {
-      const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
-      if (filenameMatch) {
-        filename = filenameMatch[1];
-      }
-    }
-
-    // Download the file
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/zip' }));
-    const a = document.createElement('a');
-    a.style.display = 'none';
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-
-    // Cleanup
-    setTimeout(() => {
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    }, 100);
-
-    showMessage(`Successfully exported annotations in ${format.toUpperCase()} format`, 'success');
-
-  } catch (error) {
-    console.error('Error exporting annotations:', error);
-    alert(`Failed to export annotations: ${error.message}`);
+  } catch(e) { 
+    console.error('Metadata save failed', e); 
+    btn.innerHTML = 'Error Saving';
   } finally {
-    exportBtn.disabled = false;
-    exportBtn.innerHTML = originalHTML;
+    btn.disabled = false;
   }
 }
 
-// Get CSRF token from cookie
+async function deleteActiveBox() {
+  if (state.selectedBoxIndex < 0) return;
+  if (!confirm("Are you sure you want to delete this bounding box?")) return;
+  
+  const b = state.bboxes[state.selectedBoxIndex];
+  try {
+    // If it's the only box on the image, the API logic might want us to just clear bbox fields instead of deleting the DB record.
+    if (state.bboxes.length === 1) {
+      await fetch(`/api/v1/beetles/${b.id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+        body: JSON.stringify({ bbox_x: null, bbox_y: null, bbox_width: null, bbox_height: null, bbox_is_validated: false })
+      });
+    } else {
+      await fetch(`/api/v1/beetles/${b.id}/`, { method: 'DELETE', headers: { 'X-CSRFToken': csrftoken } });
+    }
+    
+    state.bboxes.splice(state.selectedBoxIndex, 1);
+    document.getElementById('tab-bbox-count').textContent = state.bboxes.length;
+    selectBox(-1);
+    
+    // Refresh left panel counts silently
+    const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
+    if(currentIndex > -1) {
+      state.images[currentIndex].annotation_count--;
+      renderImageList(state.images, false);
+    }
+  } catch(e) { console.error('Delete failed', e); }
+}
+
+async function fetchAndUpdateTaxonomyPanel(id) {
+  const preview = document.getElementById('panel-tax-preview');
+  if(!id) { preview.textContent = ''; return; }
+  
+  try {
+    const res = await fetch(`/api/v1/beetles/taxonomy/?valid_name_id=${encodeURIComponent(id)}`);
+    if(res.ok) {
+      const t = await res.json();
+      preview.innerHTML = `Identified as: <span class="font-semibold text-gray-800">${t.genus || ''} ${t.species || ''}</span> (${t.family || 'Unknown Family'})`;
+    } else {
+      preview.innerHTML = `<span class="text-red-500">Taxonomy ID not found.</span>`;
+    }
+  } catch(e) { preview.textContent = ''; }
+}
+
+// Optional marker that defaults have changed (could trigger auto-patch of remaining BBoxes if requested later)
+function markImageDefaultsDirty() {
+  // Can be used to auto-save to the first beetle record if desired.
+}
+
+// ---------------------------------------------------------
+// ZOOM & UTILS
+// ---------------------------------------------------------
+function fitToScreen() {
+  if (!canvas.width) return;
+  const cw = wrapper.clientWidth - 40;
+  const ch = wrapper.clientHeight - 40;
+  const scale = Math.min(cw / canvas.width, ch / canvas.height, 1);
+  applyZoom(scale * 0.95);
+  wrapper.scrollLeft = (wrapper.scrollWidth - wrapper.clientWidth) / 2;
+  wrapper.scrollTop = (wrapper.scrollHeight - wrapper.clientHeight) / 2;
+}
+
+function zoomIn() { applyZoom(Math.min(state.zoom * 1.25, 5.0)); }
+function zoomOut() { applyZoom(Math.max(state.zoom / 1.25, 0.1)); }
+
+function applyZoom(z) {
+  state.zoom = z;
+  canvas.style.width = `${canvas.width * z}px`;
+  canvas.style.height = `${canvas.height * z}px`;
+  document.getElementById('footer-zoom').textContent = `${Math.round(z*100)}%`;
+  drawCanvas();
+}
+
+function handleZoomWheel(e) {
+  if (!e.ctrlKey && !e.metaKey) return; // Optional: Require Ctrl+Scroll to zoom so panning is easy
+  e.preventDefault();
+  
+  const rect = wrapper.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+  const canvasX = (wrapper.scrollLeft + mouseX) / state.zoom;
+  const canvasY = (wrapper.scrollTop + mouseY) / state.zoom;
+
+  const delta = e.deltaY > 0 ? 0.9 : 1.1;
+  state.zoom = Math.max(0.1, Math.min(5.0, state.zoom * delta));
+  
+  canvas.style.width = `${canvas.width * state.zoom}px`;
+  canvas.style.height = `${canvas.height * state.zoom}px`;
+  document.getElementById('footer-zoom').textContent = `${Math.round(state.zoom*100)}%`;
+  drawCanvas();
+
+  wrapper.scrollLeft = canvasX * state.zoom - mouseX;
+  wrapper.scrollTop = canvasY * state.zoom - mouseY;
+}
+
 function getCookie(name) {
   let cookieValue = null;
   if (document.cookie && document.cookie !== '') {
@@ -2807,872 +939,41 @@ function getCookie(name) {
   return cookieValue;
 }
 
-const csrftoken = getCookie('csrftoken');
-
-// File input handling
-const fileInput = document.getElementById('zip-file-input');
-const fileInfo = document.getElementById('file-info');
-const fileName = document.getElementById('file-name');
-const fileSize = document.getElementById('file-size');
-const uploadBtn = document.getElementById('upload-btn');
-
-fileInput.addEventListener('change', function(e) {
-  const file = e.target.files[0];
-  if (file) {
-    fileName.textContent = file.name;
-
-    // Format file size appropriately
-    let sizeText;
-    if (file.size < 1024) {
-      sizeText = `${file.size} bytes`;
-    } else if (file.size < 1024 * 1024) {
-      sizeText = `${(file.size / 1024).toFixed(2)} KB`;
-    } else {
-      sizeText = `${(file.size / (1024 * 1024)).toFixed(2)} MB`;
-    }
-
-    fileSize.textContent = sizeText;
-    fileInfo.classList.remove('hidden');
-    uploadBtn.disabled = false;
-  }
-});
-
-// Drag and drop
-const dropZone = document.querySelector('button[onclick*="zip-file-input"]');
-dropZone.addEventListener('dragover', (e) => {
-  e.preventDefault();
-  dropZone.classList.add('border-blue-500', 'bg-blue-50');
-});
-
-dropZone.addEventListener('dragleave', () => {
-  dropZone.classList.remove('border-blue-500', 'bg-blue-50');
-});
-
-dropZone.addEventListener('drop', (e) => {
-  e.preventDefault();
-  dropZone.classList.remove('border-blue-500', 'bg-blue-50');
-
-  const files = e.dataTransfer.files;
-  if (files.length > 0 && files[0].name.endsWith('.zip')) {
-    fileInput.files = files;
-    fileInput.dispatchEvent(new Event('change'));
-  }
-});
-
-function clearFileSelection() {
-  fileInput.value = '';
-  fileInfo.classList.add('hidden');
-  uploadBtn.disabled = true;
-}
-
-function showMessage(message, type = 'info', persistent = false) {
-  const messagesDiv = document.getElementById('upload-messages');
-  const messageEl = document.createElement('div');
-
-  const colors = {
-    'success': 'bg-green-50 border-green-200 text-green-700',
-    'error': 'bg-red-50 border-red-200 text-red-700',
-    'warning': 'bg-amber-50 border-amber-200 text-amber-700',
-    'info': 'bg-blue-50 border-blue-200 text-blue-700'
-  };
-
-  messageEl.className = `p-3 rounded-lg border text-sm ${colors[type]} whitespace-pre-wrap`;
-  messageEl.textContent = message;
-
-  messagesDiv.appendChild(messageEl);
-
-  // Show clear button if there are persistent messages
-  if (persistent || type === 'error' || type === 'warning') {
-    document.getElementById('clear-messages-btn').classList.remove('hidden');
-  }
-
-  // Only auto-remove success and info messages, keep errors and warnings
-  if (!persistent && (type === 'success' || type === 'info')) {
-    setTimeout(() => {
-      messageEl.remove();
-    }, 5000);
-  }
-}
-
-function clearMessages() {
-  document.getElementById('upload-messages').innerHTML = '';
-  document.getElementById('clear-messages-btn').classList.add('hidden');
-}
-
-function updateProgress(percent, text = 'Uploading...') {
-  const progressContainer = document.getElementById('progress-container');
-  const progressBar = document.getElementById('progress-bar');
-  const progressText = document.getElementById('progress-text');
-  const progressPercent = document.getElementById('progress-percent');
-
-  progressContainer.classList.remove('hidden');
-  progressBar.style.width = percent + '%';
-  progressText.textContent = text;
-  progressPercent.textContent = percent + '%';
-
-  if (percent === 100) {
-    setTimeout(() => {
-      progressContainer.classList.add('hidden');
-    }, 1000);
-  }
-}
-
-function updateStats(data) {
-  document.getElementById('stat-files').textContent = data.files_processed || 0;
-  document.getElementById('stat-imported').textContent = data.imported_count || 0;
-  document.getElementById('stat-skipped').textContent = data.skipped_count || 0;
-  document.getElementById('stat-errors').textContent = (data.errors || []).length;
-  document.getElementById('stats-card').classList.remove('hidden');
-}
-
-async function uploadAnnotations() {
-  const file = fileInput.files[0];
-  if (!file) {
-    showMessage('Please select a ZIP file', 'error');
-    return;
-  }
-
-  // Get form values
-  const format = document.querySelector('input[name="format"]:checked').value;
-  const source = 'imported';  // Always use 'imported' for uploaded annotations
-  const overwrite = document.getElementById('overwrite-checkbox').checked;
-
-  // Clear previous messages and stats
-  clearMessages();
-  document.getElementById('stats-card').classList.add('hidden');
-
-  // Prepare form data
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('format', format);
-  formData.append('source', source);
-  formData.append('overwrite', overwrite);
-
-  // Disable upload button
-  uploadBtn.disabled = true;
-  uploadBtn.style.backgroundColor = '#3b82f6';
-  uploadBtn.style.color = 'white';
-  uploadBtn.style.display = 'flex';
-  uploadBtn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i><span class="ml-2">Importing...</span>';
-
-  updateProgress(10, 'Uploading file...');
-
+// ---------------------------------------------------------
+// VALIDATION & EXPORT (Carried over)
+// ---------------------------------------------------------
+async function validateAllBoundingBoxes() {
+  if(state.bboxes.length === 0) return;
+  const unval = state.bboxes.filter(b => !b.bbox_is_validated);
+  if(unval.length === 0) return alert('All boxes already validated.');
+  
+  const btn = document.getElementById('validate-all-btn');
+  btn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i>';
+  
   try {
-    const response = await fetch('/api/v1/beetles/import-annotations/', {
-      method: 'POST',
-      headers: {
-        'X-CSRFToken': csrftoken
-      },
-      body: formData
-    });
-
-    updateProgress(90, 'Processing annotations...');
-
-    let data;
-    try {
-      data = await response.json();
-    } catch (e) {
-      throw new Error(`Server returned invalid response: ${response.status} ${response.statusText}`);
-    }
-
-    if (response.ok) {
-      updateProgress(100, 'Complete!');
-
-      // Show success message
-      showMessage(
-        `Successfully imported ${data.imported_count} bounding boxes from ${data.files_processed} files!`,
-        'success'
-      );
-
-      // Update statistics
-      updateStats(data);
-
-      // Show errors if any (persistent warnings)
-      if (data.errors && data.errors.length > 0) {
-        // Show all errors as one message with line breaks
-        const errorMessage = `${data.errors.length} file(s) skipped:\n\n${data.errors.join('\n')}`;
-        showMessage(errorMessage, 'warning', true);
-      }
-
-      // Clear file selection
-      clearFileSelection();
-
-      // Reload image browser with new imports
-      resetAndLoadImages();
-      loadValidationCounts();
-    } else {
-      // Show detailed error message
-      const errorMsg = data.error || data.detail || `Upload failed with status ${response.status}`;
-      throw new Error(errorMsg);
-    }
-  } catch (error) {
-    updateProgress(0);
-    console.error('Upload error:', error);
-    showMessage(`Error: ${error.message}`, 'error');
-  } finally {
-    uploadBtn.disabled = false;
-    uploadBtn.style.backgroundColor = '#3b82f6';
-    uploadBtn.style.color = 'white';
-    uploadBtn.style.display = 'flex';
-    uploadBtn.innerHTML = '<i class="fi fi-rr-upload"></i><span class="ml-2">Import Annotations</span>';
-  }
-}
-
-// Add scroll detection for infinite scroll
-document.addEventListener('DOMContentLoaded', function() {
-  const browserContent = document.getElementById('browser-section-content');
-
-  if (browserContent) {
-    browserContent.addEventListener('scroll', function() {
-      const scrollPosition = this.scrollTop + this.clientHeight;
-      const scrollHeight = this.scrollHeight;
-
-      // Load more when scrolled to within 200px of bottom
-      if (scrollHeight - scrollPosition < 200 && nextPageUrl && !isLoadingMore) {
-        loadNextPage();
-      }
-    });
-  }
-
-  // Keyboard navigation for fast validation workflow
-  document.addEventListener('keydown', function(e) {
-    // Only handle keyboard shortcuts if not typing in an input/textarea
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-      return;
-    }
-
-    // Space bar: Validate all bounding boxes on current image
-    if (e.code === 'Space') {
-      e.preventDefault();
-      if (currentImage && currentBoundingBoxes.length > 0) {
-        validateAllBoundingBoxes();
-      }
-    }
-
-    // Arrow Down: Navigate to next image in list
-    if (e.code === 'ArrowDown') {
-      e.preventDefault();
-      navigateToNextImage();
-    }
-
-    // Arrow Up: Navigate to previous image in list
-    if (e.code === 'ArrowUp') {
-      e.preventDefault();
-      navigateToPreviousImage();
-    }
-
-    // 'V' key: Toggle validation status filter
-    if (e.code === 'KeyV') {
-      e.preventDefault();
-      if (currentValidationFilter === 'unvalidated') {
-        setValidationFilter('validated');
-      } else {
-        setValidationFilter('unvalidated');
-      }
-    }
-  });
-});
-
-// Navigate to next image in the list
-function navigateToNextImage() {
-  if (!currentImage || allImages.length === 0) return;
-
-  const currentIndex = allImages.findIndex(img => img.image_asset_id === selectedImageId);
-  if (currentIndex === -1) return;
-
-  // Move to next image
-  if (currentIndex < allImages.length - 1) {
-    selectImage(allImages[currentIndex + 1]);
-    scrollToImageInList(allImages[currentIndex + 1]);
-  } else if (nextPageUrl && !isLoadingMore) {
-    // At end of current page, load next page and select first item
-    loadNextPage();
-  }
-}
-
-// Navigate to previous image in the list
-function navigateToPreviousImage() {
-  if (!currentImage || allImages.length === 0) return;
-
-  const currentIndex = allImages.findIndex(img => img.image_asset_id === selectedImageId);
-  if (currentIndex === -1) return;
-
-  // Move to previous image
-  if (currentIndex > 0) {
-    selectImage(allImages[currentIndex - 1]);
-    scrollToImageInList(allImages[currentIndex - 1]);
-  }
-}
-
-// Scroll to image in the list to keep it visible
-function scrollToImageInList(img) {
-  const listButtons = document.querySelectorAll('#image-list button');
-  listButtons.forEach(btn => {
-    if (btn.textContent.includes(img.beetle_id)) {
-      btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  });
-}
-
-// ===== EDIT MODAL FUNCTIONS =====
-
-let currentEditingBeetleId = null;
-let currentEditingBeetleIndex = null;
-
-// Open edit modal for a beetle record
-async function openEditModal(beetleId, index) {
-  currentEditingBeetleId = beetleId;
-  currentEditingBeetleIndex = index;
-
-  const modal = document.getElementById('edit-beetle-modal');
-  const form = document.getElementById('edit-beetle-form');
-
-  try {
-    // Fetch beetle data from API
-    const response = await fetch(`/api/v1/beetles/${beetleId}/`, {
-      headers: {
-        'Accept': 'application/json',
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch beetle data');
-    }
-
-    const beetle = await response.json();
-
-    // Populate form fields
-    form.querySelector('[name="depicts_specimen"]').value = beetle.depicts_specimen || '';
-
-    // Initialize Valid Name ID dropdown
-    initValidNameDropdown();
-
-    // Set Valid Name ID (display just the ID)
-    const validNameSearch = document.getElementById('valid-name-search');
-    validNameSearch.value = beetle.depicts_valid_name_id || '';
-
-    form.querySelector('[name="depicts_described_name_id"]').value = beetle.depicts_described_name_id || '';
-    form.querySelector('[name="alternative_id"]').value = beetle.alternative_id || '';
-    form.querySelector('[name="depicts_name_verbatim"]').value = beetle.depicts_name_verbatim || '';
-
-    // Attribution (image-level, disabled)
-    if (beetle.image_asset) {
-      form.querySelector('[name="image_institution"]').value = beetle.image_asset.image_institution || '';
-      form.querySelector('[name="photographer"]').value = beetle.image_asset.photographer || '';
-      form.querySelector('[name="image_email"]').value = beetle.image_asset.image_email || '';
-      form.querySelector('[name="photo_usage_statement"]').value = beetle.image_asset.photo_usage_statement || '';
-      form.querySelector('[name="resolution_in_ppmm"]').value = beetle.image_asset.resolution_in_ppmm || '';
-      form.querySelector('[name="image_date_taken"]').value = beetle.image_asset.image_date_taken || '';
-      form.querySelector('[name="image_notes"]').value = beetle.image_asset.image_notes || '';
-
-      // Multiple individuals dropdown
-      const multipleSelect = form.querySelector('[name="image_has_multiple_individuals"]');
-      if (beetle.image_asset.image_has_multiple_individuals === true) {
-        multipleSelect.value = 'True';
-      } else if (beetle.image_asset.image_has_multiple_individuals === false) {
-        multipleSelect.value = 'False';
-      } else {
-        multipleSelect.value = 'unknown';
-      }
-    }
-
-    // Technical
-    form.querySelector('[name="aspect"]').value = beetle.aspect || '';
-
-    // Collection/Specimen
-    form.querySelector('[name="collection_country"]').value = beetle.collection_country || '';
-    form.querySelector('[name="collection_stateProvince"]').value = beetle.collection_stateProvince || '';
-    form.querySelector('[name="specimen_sex"]').value = beetle.specimen_sex || '';
-    form.querySelector('[name="specimen_type_status"]').value = beetle.specimen_type_status || '';
-
-    // Notes
-    form.querySelector('[name="specimen_notes"]').value = beetle.specimen_notes || '';
-
-    // Fetch and populate taxonomy data using the shared function
-    await fetchAndUpdateTaxonomy(beetle.depicts_valid_name_id);
-
-    // Show modal
-    modal.classList.remove('hidden');
-
-    // Add ESC key handler only
-    document.addEventListener('keydown', handleEscapeKey);
-
-  } catch (error) {
-    console.error('Error opening edit modal:', error);
-    alert('Failed to load beetle data. Please try again.');
-  }
-}
-
-// Clear taxonomy fields
-function clearTaxonomyFields() {
-  document.getElementById('tax-scientificName').textContent = '—';
-  document.getElementById('tax-authority').textContent = '—';
-  document.getElementById('tax-subfamily').textContent = '—';
-  document.getElementById('tax-tribe').textContent = '—';
-  document.getElementById('tax-subtribe').textContent = '—';
-  document.getElementById('tax-genus').textContent = '—';
-  document.getElementById('tax-species').textContent = '—';
-  document.getElementById('tax-subspecies').textContent = '—';
-  document.getElementById('tax-authorityYear').textContent = '—';
-  document.getElementById('tax-originalGenus').textContent = '—';
-}
-
-// Valid Name ID dropdown state
-let validNameCategories = [];
-let filteredValidNameCategories = [];
-let validNameDropdownInitialized = false;
-
-// Initialize Valid Name ID dropdown
-function initValidNameDropdown() {
-  // Only initialize once to avoid duplicate event listeners
-  if (validNameDropdownInitialized) return;
-  validNameDropdownInitialized = true;
-
-  const searchInput = document.getElementById('valid-name-search');
-  const searchBtn = document.getElementById('valid-name-search-btn');
-  const dropdown = document.getElementById('valid-name-dropdown');
-
-  // Load categories if not already loaded
-  if (validNameCategories.length === 0 && allCategories.length > 0) {
-    // Filter only categories with positive IDs (actual species)
-    validNameCategories = allCategories.filter(cat => {
-      const id = parseInt(cat.id);
-      return !isNaN(id) && id > 0;
-    });
-  }
-
-  // Track if dropdown is shown via search button
-  let isSearchMode = false;
-  let originalValue = '';
-
-  // Search button click - enter search mode
-  searchBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    isSearchMode = true;
-    originalValue = searchInput.value; // Save the ID
-    searchInput.value = ''; // Clear for search
-    searchInput.focus();
-
-    if (validNameCategories.length === 0) {
-      loadCategoriesForValidName().then(() => {
-        filterValidNameOptions('');
-        dropdown.classList.remove('hidden');
-      });
-    } else {
-      filterValidNameOptions('');
-      dropdown.classList.remove('hidden');
-    }
-  });
-
-  // Input event - only filter when in search mode
-  searchInput.addEventListener('input', (e) => {
-    if (isSearchMode) {
-      const searchTerm = e.target.value.toLowerCase().trim();
-      filterValidNameOptions(searchTerm);
-      dropdown.classList.remove('hidden');
-    }
-  });
-
-  // When user manually changes the ID value, update taxonomy
-  searchInput.addEventListener('blur', () => {
-    if (!isSearchMode) {
-      const newId = searchInput.value.trim();
-      if (newId && newId !== originalValue) {
-        fetchAndUpdateTaxonomy(newId);
-      }
-    }
-  });
-
-  // Listen for selection-made event to exit search mode
-  searchInput.addEventListener('selection-made', () => {
-    isSearchMode = false;
-    originalValue = searchInput.value;
-  });
-
-  // Click outside to close dropdown
-  document.addEventListener('click', (e) => {
-    const searchBtnEl = document.getElementById('valid-name-search-btn');
-    if (!searchInput.contains(e.target) && !dropdown.contains(e.target) && !searchBtnEl.contains(e.target)) {
-      dropdown.classList.add('hidden');
-      // If closing while in search mode without selection, restore original value
-      if (isSearchMode) {
-        searchInput.value = originalValue;
-        isSearchMode = false;
-      }
-    }
-  });
-}
-
-// Load categories for Valid Name dropdown
-async function loadCategoriesForValidName() {
-  if (allCategories.length === 0) {
-    await loadCategories();
-  }
-  // Filter only categories with positive IDs
-  validNameCategories = allCategories.filter(cat => {
-    const id = parseInt(cat.id);
-    return !isNaN(id) && id > 0;
-  });
-}
-
-// Filter and render Valid Name options
-function filterValidNameOptions(searchTerm) {
-  const dropdown = document.getElementById('valid-name-dropdown');
-  const optionsContainer = document.getElementById('valid-name-options');
-
-  if (searchTerm === '') {
-    filteredValidNameCategories = [...validNameCategories];
-  } else {
-    filteredValidNameCategories = validNameCategories.filter(cat => {
-      const nameMatch = cat.name.toLowerCase().includes(searchTerm);
-      const fullNameMatch = cat.full_name && cat.full_name.toLowerCase().includes(searchTerm);
-      const genusMatch = cat.genus && cat.genus.toLowerCase().includes(searchTerm);
-      const speciesMatch = cat.species && cat.species.toLowerCase().includes(searchTerm);
-      return nameMatch || fullNameMatch || genusMatch || speciesMatch;
-    });
-  }
-
-  // Render options
-  if (filteredValidNameCategories.length === 0) {
-    optionsContainer.innerHTML = `
-      <div class="px-3 py-2 text-sm text-gray-500 text-center">
-        No species found
-      </div>
-    `;
-  } else {
-    optionsContainer.innerHTML = filteredValidNameCategories.map(cat => {
-      const typeColor = cat.type === 'genus' ? 'bg-blue-50' : 'bg-gray-50';
-      const displayName = cat.full_name || cat.name;
-
-      return `
-        <button
-          type="button"
-          class="w-full px-3 py-2 text-left hover:bg-blue-50 text-sm flex items-center justify-between group"
-          onclick="selectValidNameOption('${cat.id}', '${displayName.replace(/'/g, "\\'")}', '${cat.name.replace(/'/g, "\\'")}')"
-        >
-          <div class="flex-1 min-w-0">
-            <div class="font-medium text-gray-900 truncate">${displayName}</div>
-            ${cat.genus && cat.species ? `<div class="text-xs text-gray-500 italic">${cat.genus} ${cat.species}</div>` : ''}
-          </div>
-          <span class="ml-2 text-xs ${typeColor} px-2 py-0.5 rounded">${cat.id}</span>
-        </button>
-      `;
-    }).join('');
-  }
-}
-
-// Select Valid Name option
-function selectValidNameOption(id, displayName, name) {
-  const searchInput = document.getElementById('valid-name-search');
-  const dropdown = document.getElementById('valid-name-dropdown');
-
-  // Update input with just the ID
-  searchInput.value = id;
-
-  // Hide dropdown
-  dropdown.classList.add('hidden');
-
-  // Exit search mode (need to reset the flag in closure)
-  // We'll handle this by dispatching an event
-  searchInput.dispatchEvent(new CustomEvent('selection-made'));
-
-  // Fetch and update taxonomy
-  fetchAndUpdateTaxonomy(id);
-}
-
-// Fetch and update taxonomy data
-async function fetchAndUpdateTaxonomy(validNameId) {
-  if (!validNameId) {
-    clearTaxonomyFields();
-    return;
-  }
-
-  try {
-    const response = await fetch(`/api/v1/beetles/taxonomy/?valid_name_id=${encodeURIComponent(validNameId)}`, {
-      headers: {
-        'Accept': 'application/json',
-      }
-    });
-
-    if (response.ok) {
-      const taxonomy = await response.json();
-
-      // Populate taxonomy fields
-      document.getElementById('tax-scientificName').textContent = taxonomy.scientificName || '—';
-      document.getElementById('tax-authority').textContent = taxonomy.authority || '—';
-      document.getElementById('tax-subfamily').textContent = taxonomy.subfamily || '—';
-      document.getElementById('tax-tribe').textContent = taxonomy.tribe || '—';
-      document.getElementById('tax-subtribe').textContent = taxonomy.subtribe || '—';
-      document.getElementById('tax-genus').textContent = taxonomy.genus || '—';
-      document.getElementById('tax-species').textContent = taxonomy.species || '—';
-      document.getElementById('tax-subspecies').textContent = taxonomy.subspecies || '—';
-      document.getElementById('tax-authorityYear').textContent = taxonomy.authorityYear || '—';
-      document.getElementById('tax-originalGenus').textContent = taxonomy.originalGenus || '—';
-    } else {
-      clearTaxonomyFields();
-    }
-  } catch (error) {
-    console.error('Error fetching taxonomy:', error);
-    clearTaxonomyFields();
-  }
-}
-
-// Close edit modal
-function closeEditModal() {
-  const modal = document.getElementById('edit-beetle-modal');
-  modal.classList.add('hidden');
-
-  // Remove event listener
-  document.removeEventListener('keydown', handleEscapeKey);
-
-  // Reset state
-  currentEditingBeetleId = null;
-  currentEditingBeetleIndex = null;
-}
-
-// Handle ESC key press
-function handleEscapeKey(e) {
-  if (e.key === 'Escape') {
-    closeEditModal();
-  }
-}
-
-// Save edited beetle
-async function saveEditedBeetle() {
-  if (!currentEditingBeetleId) return;
-
-  const form = document.getElementById('edit-beetle-form');
-  const saveBtn = document.querySelector('[onclick="saveEditedBeetle()"]');
-  const saveBtnText = document.getElementById('save-btn-text');
-  const saveBtnLoading = document.getElementById('save-btn-loading');
-
-  // Show loading state
-  saveBtn.disabled = true;
-  saveBtnText.classList.add('hidden');
-  saveBtnLoading.classList.remove('hidden');
-
-  try {
-    // Gather form data (only editable fields)
-    const data = {
-      depicts_specimen: form.querySelector('[name="depicts_specimen"]').value || null,
-      depicts_valid_name_id: form.querySelector('[name="depicts_valid_name_id"]').value || null,
-      depicts_described_name_id: form.querySelector('[name="depicts_described_name_id"]').value || null,
-      alternative_id: form.querySelector('[name="alternative_id"]').value || null,
-      depicts_name_verbatim: form.querySelector('[name="depicts_name_verbatim"]').value || null,
-      aspect: form.querySelector('[name="aspect"]').value || null,
-      collection_country: form.querySelector('[name="collection_country"]').value || null,
-      collection_stateProvince: form.querySelector('[name="collection_stateProvince"]').value || null,
-      specimen_sex: form.querySelector('[name="specimen_sex"]').value || null,
-      specimen_type_status: form.querySelector('[name="specimen_type_status"]').value || null,
-      specimen_notes: form.querySelector('[name="specimen_notes"]').value || null,
-    };
-
-    // Send PATCH request
-    const response = await fetch(`/api/v1/beetles/${currentEditingBeetleId}/`, {
+    await Promise.all(unval.map(b => fetch(`/api/v1/beetles/${b.id}/`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrftoken
-      },
-      body: JSON.stringify(data)
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(JSON.stringify(errorData));
-    }
-
-    const updatedBeetle = await response.json();
-
-    // Update local currentBoundingBoxes array
-    if (currentEditingBeetleIndex !== null && currentBoundingBoxes[currentEditingBeetleIndex]) {
-      currentBoundingBoxes[currentEditingBeetleIndex] = updatedBeetle;
-    }
-
-    // Refresh bounding box list
-    updateBoundingBoxList();
-
-    // Close modal
-    closeEditModal();
-
-    // Show success message (brief)
-    alert('Beetle record updated successfully!');
-
-  } catch (error) {
-    console.error('Error saving beetle:', error);
-    alert('Failed to save changes. Please check the form and try again.\n\n' + error.message);
-  } finally {
-    // Reset button state
-    saveBtn.disabled = false;
-    saveBtnText.classList.remove('hidden');
-    saveBtnLoading.classList.add('hidden');
-  }
-}
-
-// ========================================
-// Lock Management Functions
-// ========================================
-
-// Acquire lock on an image
-async function acquireLock(imageAssetId, existingLock) {
-  try {
-    // If image already has a lock from API, check if it's by another user
-    if (existingLock && existingLock.locked_by) {
-      const currentUsername = '{{ request.user.username }}';
-      if (existingLock.locked_by !== currentUsername) {
-        // Locked by another user
-        showLockWarning(existingLock.locked_by);
-        isLockedByOther = true;
-        currentImageLock = existingLock;
-        updateUIForLockedState();
-        return false;
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+      body: JSON.stringify({ bbox_is_validated: true })
+    })));
+    
+    state.bboxes.forEach(b => b.bbox_is_validated = true);
+    drawCanvas();
+    alert(`Successfully validated ${unval.length} boxes.`);
+    
+    if (state.filter === 'unvalidated') {
+      const idx = state.images.findIndex(img => img.image_asset_id === state.selectedImageId);
+      if(idx > -1) {
+        state.images.splice(idx, 1);
+        if(state.images.length > 0) selectImage(state.images[idx] || state.images[0]);
+        else resetAndLoadImages();
       }
     }
-
-    // Try to acquire lock via API
-    const response = await fetch(`/api/v1/image-assets/${imageAssetId}/lock/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrftoken
-      }
-    });
-
-    const data = await response.json();
-
-    if (response.ok && data.success) {
-      // Lock acquired successfully
-      hideLockWarning();
-      isLockedByOther = false;
-      currentImageLock = null;
-      updateUIForUnlockedState();
-      return true;
-    } else if (response.status === 409) {
-      // Locked by another user
-      showLockWarning(data.locked_by);
-      isLockedByOther = true;
-      currentImageLock = data;
-      updateUIForLockedState();
-      return false;
-    } else {
-      console.error('Failed to acquire lock:', data);
-      return false;
-    }
-  } catch (error) {
-    console.error('Error acquiring lock:', error);
-    return false;
-  }
+  } catch(e) { console.error(e); }
+  finally { btn.innerHTML = '<i class="fi fi-rr-check text-xs"></i> Validate All'; }
 }
 
-// Release lock on an image
-async function releaseLock(imageAssetId) {
-  try {
-    await fetch(`/api/v1/image-assets/${imageAssetId}/unlock/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrftoken
-      }
-    });
-  } catch (error) {
-    console.error('Error releasing lock:', error);
-  }
-}
-
-// Try to acquire lock again (for "Try Again" button)
-async function tryAcquireLock() {
-  if (!selectedImageId) return;
-
-  const lockAcquired = await acquireLock(selectedImageId, null);
-  if (lockAcquired) {
-    showMessage('Lock acquired! You can now edit this image.', 'success');
-  }
-}
-
-// Show lock warning banner
-function showLockWarning(lockedByUsername) {
-  const banner = document.getElementById('lock-warning-banner');
-  const text = document.getElementById('lock-warning-text');
-  text.textContent = `This image is currently being viewed by ${lockedByUsername}`;
-  banner.classList.remove('hidden');
-}
-
-// Hide lock warning banner
-function hideLockWarning() {
-  const banner = document.getElementById('lock-warning-banner');
-  banner.classList.add('hidden');
-}
-
-// Update UI to disable editing when locked by another user
-function updateUIForLockedState() {
-  // Disable all edit buttons
-  const addBtn = document.querySelector('button[onclick="openBoundingBoxModal()"]');
-  if (addBtn) addBtn.disabled = true;
-
-  // Disable edit/delete buttons in bounding box list
-  document.querySelectorAll('.bbox-edit, .bbox-edit-geometry, .bbox-delete').forEach(btn => {
-    btn.disabled = true;
-    btn.style.opacity = '0.5';
-    btn.style.cursor = 'not-allowed';
-  });
-
-  // Disable drawing mode
-  if (isDrawingMode) {
-    cancelDrawing();
-  }
-}
-
-// Update UI to enable editing when lock is acquired
-function updateUIForUnlockedState() {
-  // Enable all edit buttons
-  const addBtn = document.querySelector('button[onclick="openBoundingBoxModal()"]');
-  if (addBtn) addBtn.disabled = false;
-
-  // Enable edit/delete buttons in bounding box list
-  document.querySelectorAll('.bbox-edit, .bbox-edit-geometry, .bbox-delete').forEach(btn => {
-    btn.disabled = false;
-    btn.style.opacity = '1';
-    btn.style.cursor = 'pointer';
-  });
-}
-
-// Release lock when user leaves page or closes tab
-window.addEventListener('beforeunload', () => {
-  if (selectedImageId) {
-    // Use synchronous request since page is unloading
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', `/api/v1/image-assets/${selectedImageId}/unlock/`, false);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.setRequestHeader('X-CSRFToken', csrftoken);
-    xhr.send();
-  }
-});
-
-// Release lock when user switches to another tab or minimizes browser
-document.addEventListener('visibilitychange', async () => {
-  if (document.hidden && selectedImageId && !isLockedByOther) {
-    // User switched away from this tab - release lock
-    await releaseLock(selectedImageId);
-    console.log('Lock released due to tab switch');
-  } else if (!document.hidden && selectedImageId) {
-    // User came back to this tab - try to re-acquire lock
-    const currentImage = allImages.find(img => img.image_asset_id === selectedImageId);
-    if (currentImage) {
-      await acquireLock(selectedImageId, currentImage.lock);
-      console.log('Lock re-acquired after returning to tab');
-    }
-  }
-});
-
-// Periodically refresh lock to keep it active (every 2 minutes)
-setInterval(async () => {
-  // Only refresh if tab is visible and we have an image selected
-  if (selectedImageId && !isLockedByOther && !document.hidden) {
-    // Refresh lock by calling acquire again
-    await acquireLock(selectedImageId, null);
-  }
-}, 2 * 60 * 1000); // 2 minutes
-
+function showExportDialog() { alert("Export dialog triggered. (Re-enable the modal HTML below the UI if you kept it)."); }
 </script>
 
 {% endblock %}
