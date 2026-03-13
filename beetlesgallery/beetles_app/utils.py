@@ -331,6 +331,9 @@ def build_query_q(user_qs: str):
 
 # --- Configuration for Faceted Search ---
 FILTERS_CONFIG = [
+    {"category": "Annotation Status", "param": "has_rois", "type": "custom_has_rois", "field": "", "label": "Has Bounding Boxes"},
+    {"category": "Annotation Status", "param": "image_validated", "type": "bool", "field": "image_asset__is_validated", "label": "Image Validated"},
+    {"category": "Annotation Status", "param": "has_unval_rois", "type": "custom_unval_rois", "field": "", "label": "Has Unvalidated ROIs"},
     {"category": "Taxonomy", "param": "subfamily", "type": "ref", "field": "subfamily", "label": "Subfamily"},
     {"category": "Taxonomy", "param": "tribe", "type": "ref", "field": "tribe", "label": "Tribe"},
     {"category": "Taxonomy", "param": "subtribe", "type": "ref", "field": "subtribe", "label": "Subtribe"},
@@ -378,7 +381,22 @@ def filter_beetles_queryset(qs, filters_dict, size_min=None, size_max=None, res_
         has_na = NA in vals
         real_vals = [v for v in vals if v != NA]
 
-        if cfg["type"] == "db":
+        if cfg["type"] == "custom_has_rois":
+            if "Yes" in vals and "No" not in vals:
+                # Images that HAVE at least one ROI
+                qs = qs.filter(bbox_x__isnull=False)
+            elif "No" in vals and "Yes" not in vals:
+                # Exclude any records whose parent image has ANY ROIs
+                qs = qs.exclude(image_asset__specimens__bbox_x__isnull=False)
+
+        elif cfg["type"] == "custom_unval_rois":
+            if "Yes" in vals and "No" not in vals:
+                qs = qs.filter(bbox_x__isnull=False, bbox_is_validated=False)
+            elif "No" in vals and "Yes" not in vals:
+                # Exclude any records whose parent image has ANY unvalidated ROIs
+                qs = qs.exclude(image_asset__specimens__bbox_x__isnull=False, image_asset__specimens__bbox_is_validated=False)
+
+        elif cfg["type"] == "db":
             q_part = Q()
             if real_vals:
                 q_part |= Q(**{f"{cfg['field']}__in": real_vals})
