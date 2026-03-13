@@ -54,24 +54,9 @@
           <h2 class="text-lg font-semibold text-gray-900">Image Browser</h2>
           <p class="text-sm text-gray-500 mt-1">Select images to annotate</p>
           
-          <div class="mt-4">
-            <label class="block text-xs font-medium text-gray-700 mb-2">Show:</label>
-            <div class="flex gap-2">
-              <button type="button" id="filter-unvalidated" onclick="setValidationFilter('unvalidated')" class="flex-1 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors bg-gray-100 text-gray-800 border border-gray-300">
-                Needs Validation <span id="count-unvalidated" class="ml-1 font-bold"></span>
-              </button>
-              <button type="button" id="filter-validated" onclick="setValidationFilter('validated')" class="flex-1 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200">
-                Validated <span id="count-validated" class="ml-1"></span>
-              </button>
-            </div>
-            <button type="button" id="filter-no-annotations" onclick="setValidationFilter('no-annotations')" class="w-full mt-2 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200">
-              <i class="fi fi-rr-inbox text-xs"></i> No Annotations <span id="count-no-annotations" class="ml-1"></span>
-            </button>
-          </div>
-
-          <details class="mt-3 group border border-gray-200 rounded-lg relative">
+          <details id="advanced-filters-details" class="mt-4 group border border-gray-200 rounded-lg relative">
             <summary class="cursor-pointer px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-700 hover:bg-gray-100 flex items-center justify-between">
-              <span>Advanced Filters</span>
+              <span>Filters</span>
               <i class="fi fi-rr-angle-small-down group-open:rotate-180 transition-transform"></i>
             </summary>
             <div class="p-3 space-y-4 border-t border-gray-200" style="overflow: visible;">
@@ -102,10 +87,10 @@
                               </div>
                               <div class="max-h-40 overflow-y-auto flex flex-col gap-0.5">
                                   {% for opt in f.options %}
-                                      <div class="filter-option cursor-pointer select-none rounded px-2 py-1.5 text-xs flex items-center justify-between hover:bg-gray-100 {% if opt in f.selected %}bg-gray-200 font-semibold text-gray-900{% else %}text-gray-700{% endif %}" data-value="{{ opt }}" onclick="toggleDropdownOption(this)">
+                                      <div class="filter-option cursor-pointer select-none rounded px-2 py-1.5 text-xs flex items-center justify-between hover:bg-gray-100 {% if opt in f.selected %}bg-gray-100 font-semibold text-gray-900{% else %}text-gray-700{% endif %}" data-value="{{ opt }}" onclick="toggleDropdownOption(this)">
                                           <span class="truncate">{{ opt }}</span>
-                                          <div class="w-3 h-3 rounded border flex items-center justify-center shrink-0 {% if opt in f.selected %}bg-gray-600 border-gray-600 text-white{% else %}border-gray-300 bg-white{% endif %}">
-                                              <i class="fi fi-rr-check text-[8px] {% if opt not in f.selected %}hidden{% endif %} check-icon"></i>
+                                          <div class="w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors {% if opt in f.selected %}bg-gray-800 border-gray-800 text-white{% else %}border-gray-300 bg-white{% endif %}">
+                                              <svg class="w-3 h-3 {% if opt not in f.selected %}hidden{% endif %} check-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                                           </div>
                                       </div>
                                   {% endfor %}
@@ -116,15 +101,15 @@
                       {% endfor %}
                   </div>
                 {% endfor %}
-                <button type="button" onclick="resetAndLoadImages()" class="w-full mt-4 bg-gray-800 hover:bg-gray-900 text-white text-xs font-semibold py-2 rounded transition-colors">Apply Filters</button>
+                <button type="button" onclick="closeAndApplyFilters()" class="w-full mt-4 rounded-lg bg-gray-200 border border-gray-300 py-3 text-sm font-bold text-gray-800 hover:bg-gray-300 hover:text-black transition shadow-sm tracking-wide">Apply Filters</button>
               {% else %}
-                <div class="text-xs text-gray-400 italic">Advanced filters unavailable.</div>
+                <div class="text-xs text-gray-400 italic">Filters unavailable.</div>
               {% endif %}
             </div>
           </details>
 
           <div class="relative mt-3">
-            <input type="text" id="image-search" placeholder="Search images..." oninput="filterImagesLocal(this.value)" class="w-full px-3 py-2 pl-9 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-500 focus:border-transparent">
+            <input type="text" id="image-search" placeholder="Search metadata..." oninput="filterImagesLocal(this.value)" class="w-full px-3 py-2 pl-9 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-500 focus:border-transparent">
             <i class="fi fi-rr-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
           </div>
         </div>
@@ -136,7 +121,7 @@
           </div>
           <div id="browser-empty" class="hidden text-center py-8">
             <i class="fi fi-rr-picture text-3xl text-gray-300"></i>
-            <p class="text-sm text-gray-500 mt-2">No annotated images found</p>
+            <p class="text-sm text-gray-500 mt-2">No images found</p>
           </div>
           <div id="image-list" class="space-y-1"></div>
           <div id="scroll-loading" class="hidden text-center py-4"><i class="fi fi-rr-spinner animate-spin text-lg text-gray-400"></i></div>
@@ -294,10 +279,8 @@ const state = {
   bboxes: [],
   selectedBoxIndex: -1,
   zoom: 1.0,
-  filter: 'unvalidated',
   activeTab: 'image',
   
-  // Advanced Canvas Interaction State (jupyter-bbox-widget replica)
   interactionMode: 'idle', // 'idle', 'drawing', 'moving', 'resizing'
   dragHandle: null,
   startX: 0, startY: 0,
@@ -319,10 +302,8 @@ document.addEventListener('DOMContentLoaded', () => {
   wrapper = document.getElementById('canvas-wrapper');
 
   loadAnnotatedImages();
-  loadValidationCounts();
   setupCanvasEvents();
 
-  // Scroll detection for Left Panel
   const browserContent = document.getElementById('browser-section-content');
   if (browserContent) {
     browserContent.addEventListener('scroll', function() {
@@ -340,7 +321,6 @@ function toggleFilterDropdown(btn) {
     const container = btn.closest('.group-filter');
     const dropdown = container.querySelector('.filter-dropdown');
     
-    // 1. Close other dropdowns
     document.querySelectorAll('.group-filter').forEach(group => {
         const d = group.querySelector('.filter-dropdown');
         if (d && d !== dropdown) {
@@ -349,10 +329,8 @@ function toggleFilterDropdown(btn) {
         }
     });
 
-    // 2. Toggle current
     dropdown.classList.toggle('hidden');
     
-    // 3. Z-Index bump
     if (!dropdown.classList.contains('hidden')) {
         container.classList.add('z-50');
         const searchInput = dropdown.querySelector('input[type="text"]');
@@ -400,19 +378,19 @@ function toggleDropdownOption(div) {
     const hiddenSelect = container.querySelector('select');
     const icon = div.querySelector('.check-icon');
     const checkContainer = icon.parentElement;
-    const isSelected = div.classList.contains('bg-gray-200');
+    const isSelected = div.classList.contains('bg-gray-100');
 
     if (isSelected) {
-        div.classList.remove('bg-gray-200', 'text-gray-900', 'font-semibold');
+        div.classList.remove('bg-gray-100', 'text-gray-900', 'font-semibold');
         div.classList.add('text-gray-700');
         icon.classList.add('hidden');
-        checkContainer.classList.remove('bg-gray-600', 'border-gray-600', 'text-white');
+        checkContainer.classList.remove('bg-gray-800', 'border-gray-800', 'text-white');
         checkContainer.classList.add('border-gray-300', 'bg-white');
     } else {
-        div.classList.add('bg-gray-200', 'text-gray-900', 'font-semibold');
+        div.classList.add('bg-gray-100', 'text-gray-900', 'font-semibold');
         div.classList.remove('text-gray-700');
         icon.classList.remove('hidden');
-        checkContainer.classList.add('bg-gray-600', 'border-gray-600', 'text-white');
+        checkContainer.classList.add('bg-gray-800', 'border-gray-800', 'text-white');
         checkContainer.classList.remove('border-gray-300', 'bg-white');
     }
 
@@ -427,14 +405,14 @@ function toggleDropdownOption(div) {
 
 function selectVisibleOptions(btn) {
     const dropdown = btn.closest('.filter-dropdown');
-    const visibleOptions = dropdown.querySelectorAll('.filter-option:not(.hidden):not(.bg-gray-200)');
+    const visibleOptions = dropdown.querySelectorAll('.filter-option:not(.hidden):not(.bg-gray-100)');
     visibleOptions.forEach(opt => toggleDropdownOption(opt));
 }
 
 function clearFilterSelection(btn) {
     const container = btn.closest('.group-filter');
     const dropdown = container.querySelector('.filter-dropdown');
-    const selectedOptions = dropdown.querySelectorAll('.filter-option.bg-gray-200');
+    const selectedOptions = dropdown.querySelectorAll('.filter-option.bg-gray-100');
     selectedOptions.forEach(opt => toggleDropdownOption(opt));
 }
 
@@ -460,21 +438,29 @@ function updateButtonLabel(container) {
 // ---------------------------------------------------------
 // LEFT PANEL: IMAGE BROWSER
 // ---------------------------------------------------------
-function setValidationFilter(filter) {
-  state.filter = filter;
-  const buttons = ['filter-validated', 'filter-unvalidated', 'filter-no-annotations'];
-  buttons.forEach(btnId => {
-    const btn = document.getElementById(btnId);
-    if (btnId === `filter-${filter}`) {
-      if (filter === 'unvalidated') btn.className = 'flex-1 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors bg-gray-100 text-gray-800 border border-gray-300';
-      else if (filter === 'validated') btn.className = 'flex-1 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors bg-gray-100 text-gray-800 border border-gray-300';
-      else if (filter === 'no-annotations') btn.className = 'w-full mt-2 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors bg-gray-100 text-gray-800 border border-gray-300';
-    } else {
-      if(btnId === 'filter-no-annotations') btn.className = 'w-full mt-2 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200';
-      else btn.className = 'flex-1 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200';
-    }
-  });
-  resetAndLoadImages();
+function getFilterQueryString() {
+    let params = new URLSearchParams();
+    const search = document.getElementById('image-search').value.trim();
+    if (search) params.append('search', search);
+
+    document.querySelectorAll('select.advanced-filter').forEach(sel => {
+        Array.from(sel.selectedOptions).forEach(opt => {
+            if (opt.value) params.append(sel.name, opt.value);
+        });
+    });
+    
+    const query = params.toString();
+    return query ? '&' + query : '';
+}
+
+function closeAndApplyFilters() {
+    const details = document.getElementById('advanced-filters-details');
+    if (details) details.removeAttribute('open');
+    
+    document.querySelectorAll('.filter-dropdown').forEach(d => d.classList.add('hidden'));
+    document.querySelectorAll('.group-filter').forEach(g => g.classList.remove('z-50'));
+    
+    resetAndLoadImages();
 }
 
 function resetAndLoadImages() {
@@ -500,18 +486,8 @@ async function loadAnnotatedImages(append = false) {
   if(!append) emptyEl.classList.add('hidden');
 
   try {
-    let url = `/api/v1/beetles/${state.filter === 'no-annotations' ? 'images-without-annotations' : 'images-with-annotations'}/?page=${state.pagination.page}&page_size=50`;
-    if (state.filter !== 'no-annotations') url += `&validation_status=${state.filter}&ordering=-created_at`;
-    
-    const search = document.getElementById('image-search').value.trim();
-    if (search) url += `&search=${encodeURIComponent(search)}`;
-    
-    // Apply Advanced Filters from multiple selects
-    document.querySelectorAll('select.advanced-filter').forEach(sel => {
-        Array.from(sel.selectedOptions).forEach(opt => {
-            if (opt.value) url += `&${sel.name}=${encodeURIComponent(opt.value)}`;
-        });
-    });
+    let url = `/api/v1/beetles/images-with-annotations/?page=${state.pagination.page}&page_size=50`;
+    url += getFilterQueryString();
 
     const res = await fetch(url, { headers: { 'X-CSRFToken': csrftoken } });
     const data = await res.json();
@@ -543,23 +519,6 @@ function loadNextPage() {
   }
 }
 
-async function loadValidationCounts() {
-  try {
-    const [valRes, unvalRes, noAnnRes] = await Promise.all([
-      fetch('/api/v1/beetles/images-with-annotations/?page=1&page_size=1&validation_status=validated', { headers: { 'X-CSRFToken': csrftoken } }),
-      fetch('/api/v1/beetles/images-with-annotations/?page=1&page_size=1&validation_status=unvalidated', { headers: { 'X-CSRFToken': csrftoken } }),
-      fetch('/api/v1/beetles/images-without-annotations/?page=1&page_size=1', { headers: { 'X-CSRFToken': csrftoken } })
-    ]);
-    const valData = await valRes.json();
-    const unvalData = await unvalRes.json();
-    const noAnnData = await noAnnRes.json();
-
-    document.getElementById('count-validated').textContent = `(${valData.count || 0})`;
-    document.getElementById('count-unvalidated').textContent = `(${unvalData.count || 0})`;
-    document.getElementById('count-no-annotations').textContent = `(${noAnnData.count || 0})`;
-  } catch (error) { console.error('Counts load error', error); }
-}
-
 function renderImageList(imagesToRender, append = false) {
   const listEl = document.getElementById('image-list');
   if (!append) listEl.innerHTML = '';
@@ -576,9 +535,10 @@ function renderImageList(imagesToRender, append = false) {
       </div>
       <div class="flex-1 min-w-0 text-left">
         <p class="text-sm font-medium text-gray-900 truncate" title="${img.image_asset_id}">${img.image_asset_id}</p>
+        <p class="text-xs text-gray-500 mt-0.5 truncate">${img.is_validated ? 'Validated' : 'Not Validated'}</p>
       </div>
       <div class="flex-shrink-0">
-        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-800 border border-gray-200 shadow-sm">
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${img.has_unvalidated_boxes ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-gray-100 text-gray-800 border border-gray-200'} shadow-sm" title="ROIs">
           ${img.annotation_count}
         </span>
       </div>
@@ -592,28 +552,24 @@ function renderImageList(imagesToRender, append = false) {
 // ---------------------------------------------------------
 async function selectImage(img) {
   state.selectedImageId = img.image_asset_id;
-  renderImageList(state.images, false); // Quick re-render to update highlights
+  renderImageList(state.images, false);
 
-  // UI Setup
   document.getElementById('canvas-title').textContent = img.image_asset_id;
   document.getElementById('canvas-empty').classList.add('hidden');
   document.getElementById('canvas-wrapper').classList.add('hidden');
   document.getElementById('canvas-loading').classList.remove('hidden');
   document.getElementById('normal-mode-actions').classList.add('hidden');
 
-  // Switch right panel to Image tab
   switchRightTab('image');
 
   try {
-    // 1. Fetch Boxes
     const res = await fetch(`/api/v1/beetles/?image_asset=${img.image_asset_id}&has_bbox=true`, { headers: { 'X-CSRFToken': csrftoken } });
     const data = await res.json();
     state.bboxes = data.results || data;
-    selectBox(-1); // clear selection
+    selectBox(-1);
     
     document.getElementById('tab-bbox-count').textContent = state.bboxes.length;
 
-    // 2. Load Image Defaults (If the API returned first beetle, populate defaults)
     const defaultsForm = document.getElementById('form-image-defaults');
     defaultsForm.reset();
     if (state.bboxes.length > 0) {
@@ -622,7 +578,6 @@ async function selectImage(img) {
       defaultsForm.elements['default_collection_stateProvince'].value = state.bboxes[0].collection_stateProvince || '';
     }
 
-    // 3. Load actual image onto canvas
     const imageObj = new Image();
     imageObj.crossOrigin = 'anonymous';
     imageObj.onload = () => {
@@ -688,11 +643,9 @@ function getPointer(e) {
 function hitTest(x, y) {
   const W = canvas.width;
   const H = canvas.height;
-  // Dynamic handle size based on zoom so they are easy to click
   const handleSize = 14 / state.zoom;
   const margin = 8 / state.zoom;
 
-  // Reverse iterate to prioritize top-most boxes
   for (let i = state.bboxes.length - 1; i >= 0; i--) {
     const b = state.bboxes[i];
     const bx = b.bbox_x * W;
@@ -700,19 +653,16 @@ function hitTest(x, y) {
     const bw = b.bbox_width * W;
     const bh = b.bbox_height * H;
     
-    // Prioritize corners
     if (Math.abs(x - bx) < handleSize && Math.abs(y - by) < handleSize) return {idx: i, handle: 'nw'};
     if (Math.abs(x - (bx+bw)) < handleSize && Math.abs(y - by) < handleSize) return {idx: i, handle: 'ne'};
     if (Math.abs(x - bx) < handleSize && Math.abs(y - (by+bh)) < handleSize) return {idx: i, handle: 'sw'};
     if (Math.abs(x - (bx+bw)) < handleSize && Math.abs(y - (by+bh)) < handleSize) return {idx: i, handle: 'se'};
     
-    // Edges
     if (x > bx && x < bx+bw && Math.abs(y - by) < margin) return {idx: i, handle: 'n'};
     if (x > bx && x < bx+bw && Math.abs(y - (by+bh)) < margin) return {idx: i, handle: 's'};
     if (y > by && y < by+bh && Math.abs(x - bx) < margin) return {idx: i, handle: 'w'};
     if (y > by && y < by+bh && Math.abs(x - (bx+bw)) < margin) return {idx: i, handle: 'e'};
     
-    // Body / Move
     if (x > bx && x < bx+bw && y > by && y < by+bh) return {idx: i, handle: 'move'};
   }
   return null;
@@ -724,7 +674,7 @@ function updateCursor(e) {
   const hit = hitTest(ptr.x, ptr.y);
   
   if (!hit) {
-    canvas.style.cursor = 'crosshair'; // Default to draw mode cursor
+    canvas.style.cursor = 'crosshair';
     return;
   }
   
@@ -751,7 +701,7 @@ function onMouseDown(e) {
     state.dragHandle = hit.handle;
     state.interactionMode = hit.handle === 'move' ? 'moving' : 'resizing';
   } else {
-    selectBox(-1); // Deselect
+    selectBox(-1);
     state.interactionMode = 'drawing';
     state.startBoxState = { w: 0, h: 0 };
   }
@@ -792,12 +742,10 @@ async function onMouseUp(e) {
     const w = Math.abs(state.startBoxState.w);
     const h = Math.abs(state.startBoxState.h);
     
-    // Validate minimum pixel size to prevent accidental clicks
     if (w > 10 && h > 10) {
       const bx = Math.min(state.startX, state.startX + state.startBoxState.w) / canvas.width;
       const by = Math.min(state.startY, state.startY + state.startBoxState.h) / canvas.height;
       
-      // Pull defaults from Image Tabs
       const defaultForm = document.getElementById('form-image-defaults');
       const payload = {
         image_asset_id: state.selectedImageId,
@@ -821,7 +769,13 @@ async function onMouseUp(e) {
           state.bboxes.push(newBox);
           document.getElementById('tab-bbox-count').textContent = state.bboxes.length;
           
-          // Select the new box & open the Annotation tab for immediate metadata typing
+          const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
+          if (currentIndex > -1) {
+              state.images[currentIndex].annotation_count++;
+              state.images[currentIndex].has_unvalidated_boxes = true; // New boxes require validation
+              renderImageList(state.images, false);
+          }
+
           selectBox(state.bboxes.length - 1);
           switchRightTab('bbox');
           document.getElementById('panel-valid-name').focus();
@@ -829,7 +783,6 @@ async function onMouseUp(e) {
       } catch(err) { console.error('Error saving drawn box', err); }
     }
   } else {
-    // End of Move or Resize
     if (state.selectedBoxIndex >= 0) saveBoxGeometryAPI(state.selectedBoxIndex);
   }
 
@@ -859,10 +812,9 @@ function drawCanvas() {
   const W = canvas.width;
   const H = canvas.height;
 
-  // Draw Boxes
   state.bboxes.forEach((b, i) => {
     const isSel = (i === state.selectedBoxIndex);
-    const color = isSel ? '#ef4444' : (b.bbox_is_validated ? '#10b981' : '#3b82f6'); // gray, gray, gray
+    const color = isSel ? '#ef4444' : (b.bbox_is_validated ? '#10b981' : '#3b82f6');
     
     const bx = b.bbox_x * W;
     const by = b.bbox_y * H;
@@ -873,10 +825,9 @@ function drawCanvas() {
     ctx.lineWidth = (isSel ? 4 : 2) / state.zoom;
     ctx.strokeRect(bx, by, bw, bh);
     
-    ctx.fillStyle = color + '20'; // 12% opacity
+    ctx.fillStyle = color + '20';
     ctx.fillRect(bx, by, bw, bh);
 
-    // Number Badge (Top Left Corner of Box)
     const badgeR = 12 / state.zoom;
     ctx.fillStyle = color;
     ctx.beginPath();
@@ -887,7 +838,6 @@ function drawCanvas() {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(`${i+1}`, bx + badgeR, by - badgeR - (2/state.zoom));
 
-    // Handles if selected
     if (isSel) {
       ctx.fillStyle = '#fff';
       const hs = 10 / state.zoom;
@@ -902,9 +852,8 @@ function drawCanvas() {
     }
   });
 
-  // Transient Drawing Box
   if (state.interactionMode === 'drawing') {
-    ctx.strokeStyle = '#ff6b00'; // Orange
+    ctx.strokeStyle = '#ff6b00';
     ctx.lineWidth = 2 / state.zoom;
     ctx.setLineDash([6/state.zoom, 4/state.zoom]);
     ctx.strokeRect(state.startX, state.startY, state.startBoxState.w, state.startBoxState.h);
@@ -987,7 +936,6 @@ async function deleteActiveBox() {
   
   const b = state.bboxes[state.selectedBoxIndex];
   try {
-    // If it's the only box on the image, the API logic might want us to just clear bbox fields instead of deleting the DB record.
     if (state.bboxes.length === 1) {
       await fetch(`/api/v1/beetles/${b.id}/`, {
         method: 'PATCH',
@@ -1002,10 +950,11 @@ async function deleteActiveBox() {
     document.getElementById('tab-bbox-count').textContent = state.bboxes.length;
     selectBox(-1);
     
-    // Refresh left panel counts silently
     const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
     if(currentIndex > -1) {
       state.images[currentIndex].annotation_count--;
+      const remainingUnval = state.bboxes.filter(b => !b.bbox_is_validated).length;
+      state.images[currentIndex].has_unvalidated_boxes = (remainingUnval > 0);
       renderImageList(state.images, false);
     }
   } catch(e) { console.error('Delete failed', e); }
@@ -1026,10 +975,7 @@ async function fetchAndUpdateTaxonomyPanel(id) {
   } catch(e) { preview.textContent = ''; }
 }
 
-// Optional marker that defaults have changed (could trigger auto-patch of remaining BBoxes if requested later)
-function markImageDefaultsDirty() {
-  // Can be used to auto-save to the first beetle record if desired.
-}
+function markImageDefaultsDirty() { }
 
 // ---------------------------------------------------------
 // ZOOM & UTILS
@@ -1056,7 +1002,7 @@ function applyZoom(z) {
 }
 
 function handleZoomWheel(e) {
-  if (!e.ctrlKey && !e.metaKey) return; // Optional: Require Ctrl+Scroll to zoom so panning is easy
+  if (!e.ctrlKey && !e.metaKey) return; 
   e.preventDefault();
   
   const rect = wrapper.getBoundingClientRect();
@@ -1093,40 +1039,55 @@ function getCookie(name) {
 }
 
 // ---------------------------------------------------------
-// VALIDATION & EXPORT (Carried over)
+// VALIDATION & EXPORT
 // ---------------------------------------------------------
 async function validateAllBoundingBoxes() {
-  if(state.bboxes.length === 0) return;
+  if (!state.selectedImageId) return alert('Select an image first.');
+  
   const unval = state.bboxes.filter(b => !b.bbox_is_validated);
-  if(unval.length === 0) return alert('All boxes already validated.');
   
   const btn = document.getElementById('validate-all-btn');
   btn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i>';
   
   try {
-    await Promise.all(unval.map(b => fetch(`/api/v1/beetles/${b.id}/`, {
+    // 1. Validate all unvalidated bounding boxes
+    if (unval.length > 0) {
+      await Promise.all(unval.map(b => fetch(`/api/v1/beetles/${b.id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+        body: JSON.stringify({ bbox_is_validated: true })
+      })));
+      state.bboxes.forEach(b => b.bbox_is_validated = true);
+    }
+    
+    // 2. Validate the Image Asset itself
+    await fetch(`/api/v1/image-assets/${state.selectedImageId}/`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-      body: JSON.stringify({ bbox_is_validated: true })
-    })));
-    
-    state.bboxes.forEach(b => b.bbox_is_validated = true);
+      body: JSON.stringify({ is_validated: true })
+    });
+
     drawCanvas();
-    alert(`Successfully validated ${unval.length} boxes.`);
     
-    if (state.filter === 'unvalidated') {
-      const idx = state.images.findIndex(img => img.image_asset_id === state.selectedImageId);
-      if(idx > -1) {
-        state.images.splice(idx, 1);
-        if(state.images.length > 0) selectImage(state.images[idx] || state.images[0]);
-        else resetAndLoadImages();
-      }
+    // Refresh the specific image in the list to show it is now validated
+    const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
+    if(currentIndex > -1) {
+      state.images[currentIndex].is_validated = true;
+      state.images[currentIndex].has_unvalidated_boxes = false;
+      renderImageList(state.images, false);
     }
-  } catch(e) { console.error(e); }
-  finally { btn.innerHTML = '<i class="fi fi-rr-check text-xs"></i> Validate All'; }
+    
+    alert(`Successfully validated image and ${unval.length} boxes.`);
+    
+  } catch(e) { 
+    console.error(e); 
+    alert("An error occurred during validation.");
+  } finally { 
+    btn.innerHTML = '<i class="fi fi-rr-check text-xs"></i> Validate All'; 
+  }
 }
 
-function showExportDialog() { alert("Export dialog triggered. (Re-enable the modal HTML below the UI if you kept it)."); }
+function showExportDialog() { alert("Export dialog triggered."); }
 </script>
 
 {% endblock %}

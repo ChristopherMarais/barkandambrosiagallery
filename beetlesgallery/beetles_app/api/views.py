@@ -24,29 +24,23 @@ class IsStaffUser(IsAuthenticated):
         return super().has_permission(request, view) and request.user.is_staff
 
 
-class ImageAssetViewSet(viewsets.ReadOnlyModelViewSet):
+class ImageAssetViewSet(viewsets.ModelViewSet):
     """
     API endpoint for ImageAsset records.
-
-    List all image assets or retrieve a single one by UUID.
-    Supports download of original image files.
     """
     queryset = ImageAsset.objects.all()
     serializer_class = ImageAssetSerializer
+    permission_classes = [IsStaffUser] # Required so only staff can validate/update
+
+    def perform_update(self, serializer):
+        # Automatically track who updated/validated the image
+        serializer.save(last_updated_by=self.request.user)
 
     @action(detail=True, methods=['get'])
     def download(self, request, pk=None):
-        """
-        Download the original image file.
-
-        GET /api/v1/image-assets/{uuid}/download/
-        Returns: Binary file stream
-        """
         asset = self.get_object()
-
         if not asset.image_file:
             return Response({'error': 'No image file available'}, status=404)
-
         return FileResponse(asset.image_file.open('rb'))
 
     @action(detail=True, methods=['post'], permission_classes=[IsStaffUser])
@@ -304,7 +298,7 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         )
 
         image_qs = image_qs.annotate(
-            roi_count=Count('specimens__id', filter=Q(specimens__bbox_x__isnull=False), distinct=True),
+            roi_count=Count('specimens', filter=Q(specimens__bbox_x__isnull=False), distinct=True),
             has_unvalidated_boxes=Exists(unvalidated_rois)
         )
 

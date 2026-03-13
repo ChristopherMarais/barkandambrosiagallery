@@ -333,9 +333,7 @@ def build_query_q(user_qs: str):
 FILTERS_CONFIG = [
     {"category": "Annotation Status", "param": "has_rois", "type": "custom_has_rois", "field": "", "label": "Has Bounding Boxes"},
     {"category": "Annotation Status", "param": "image_validated", "type": "bool", "field": "image_asset__is_validated", "label": "Image Validated"},
-    {"category": "Annotation Status", "param": "has_unval_rois", "type": "custom_unval_rois", "field": "", "label": "Has Unvalidated ROIs"},
-    {"category": "Taxonomy", "param": "subfamily", "type": "ref", "field": "subfamily", "label": "Subfamily"},
-    {"category": "Taxonomy", "param": "tribe", "type": "ref", "field": "tribe", "label": "Tribe"},
+{"category": "Annotation Status", "param": "all_rois_val", "type": "custom_all_rois_val", "field": "", "label": "Has all ROIs validated"},    {"category": "Taxonomy", "param": "tribe", "type": "ref", "field": "tribe", "label": "Tribe"},
     {"category": "Taxonomy", "param": "subtribe", "type": "ref", "field": "subtribe", "label": "Subtribe"},
     {"category": "Taxonomy", "param": "genus", "type": "ref", "field": "genus", "label": "Genus"},
     {"category": "Taxonomy", "param": "species", "type": "ref", "field": "species", "label": "Species"},
@@ -389,12 +387,20 @@ def filter_beetles_queryset(qs, filters_dict, size_min=None, size_max=None, res_
                 # Exclude any records whose parent image has ANY ROIs
                 qs = qs.exclude(image_asset__specimens__bbox_x__isnull=False)
 
-        elif cfg["type"] == "custom_unval_rois":
+        elif cfg["type"] == "custom_all_rois_val":
             if "Yes" in vals and "No" not in vals:
-                qs = qs.filter(bbox_x__isnull=False, bbox_is_validated=False)
+                # Images where ALL ROIs are validated 
+                # (Must have at least one ROI, and exclude any image that has an unvalidated ROI)
+                qs = qs.filter(bbox_x__isnull=False).exclude(
+                    image_asset__specimens__bbox_x__isnull=False, 
+                    image_asset__specimens__bbox_is_validated=False
+                )
             elif "No" in vals and "Yes" not in vals:
-                # Exclude any records whose parent image has ANY unvalidated ROIs
-                qs = qs.exclude(image_asset__specimens__bbox_x__isnull=False, image_asset__specimens__bbox_is_validated=False)
+                # Images that have AT LEAST ONE unvalidated ROI
+                qs = qs.filter(
+                    image_asset__specimens__bbox_x__isnull=False, 
+                    image_asset__specimens__bbox_is_validated=False
+                )
 
         elif cfg["type"] == "db":
             q_part = Q()

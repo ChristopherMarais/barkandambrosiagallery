@@ -1634,9 +1634,12 @@ def tool_annotate(request):
                 if val and val not in options:
                     options.append(val)
 
-        elif cfg["type"] == "bool":
+        elif cfg["type"] in ["bool", "custom_has_rois", "custom_all_rois_val"]:
             options = ["Yes", "No"]
-            has_na = base_qs.filter(**{f"{cfg['field']}__isnull": True}).exists()
+            if cfg["type"] == "bool":
+                has_na = base_qs.filter(**{f"{cfg['field']}__isnull": True}).exists()
+            else:
+                has_na = False
             
         elif cfg["type"] == "ref":
             field_name = f"taxon__{cfg['field']}"
