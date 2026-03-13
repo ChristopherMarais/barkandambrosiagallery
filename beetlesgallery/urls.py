@@ -19,11 +19,11 @@ urlpatterns = [
     path("accounts/me/", beetles_views.my_account, name="my_account"),
 
     # --- Pages ---
-    # 1. Root URL -> Landing View (Sidebar "Home" links here)
-    path('', beetles_views.landing, name='home'),
+    # 1. Root URL -> Landing View (Sidebar "image_browser" links here)
+    path('', beetles_views.landing, name='image_browser'),
     
     # 2. /beetles/ -> Gallery View (Sidebar "Beetles" links here)
-    path('beetles/', beetles_views.gallery, name='beetles_home'),
+    path('beetles/', beetles_views.gallery, name='beetles_image_browser'),
 
     # 3. /taxonomy/ -> Taxonomy Browser (Sidebar "Taxonomy Browser" links here)
     path('taxonomy/', beetles_views.taxonomy_browser, name='taxonomy_browser'),
@@ -36,7 +36,7 @@ urlpatterns = [
 
     # --- Tools ---
     path('upload/', beetles_views.upload_file, name='upload'),
-    path("my-uploads/", beetles_views.my_uploads, name="my_uploads"),
+    path("my-uploads/", beetles_views.data_management, name="data_management"),
     path("events/", beetles_views.stream_updates, name="stream_updates"),
     path("downloads/start/", beetles_views.start_batch_download, name="start_batch_download"),
     path("updates/", beetles_views.update_upload, name="update_upload"),

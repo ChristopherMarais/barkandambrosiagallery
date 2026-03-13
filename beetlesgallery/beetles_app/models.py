@@ -2,10 +2,12 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from django.db.models.functions import Upper
+from django.contrib.postgres.indexes import GinIndex
 
 import uuid
 import json, os
 from simple_history.models import HistoricalRecords
+from treebeard.mp_tree import MP_Node
 
 # -----------------------------
 # Unified Beetle record
@@ -92,12 +94,21 @@ class Beetles(models.Model):
         related_name='specimens'
     )
 
+    taxon = models.ForeignKey(
+        'Taxon', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='specimens',
+        help_text="Relational link to the materialized taxonomy tree."
+    )
+
     aspect = models.CharField(max_length=100, null=True, blank=True)
 
     # --- What the image depicts ---
     depicts_specimen = models.CharField(max_length=255, null=True, blank=True)
-    depicts_valid_name_id = models.CharField(max_length=255, null=True, blank=True)  
-    depicts_described_name_id = models.CharField(max_length=255, null=True, blank=True)
+    depicts_valid_name_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)  
+    depicts_described_name_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     depicts_name_verbatim = models.CharField(max_length=255, null=True, blank=True)
 
     # --- Collection / specimen metadata ---
@@ -139,7 +150,7 @@ class Beetles(models.Model):
         help_text="Normalized height (as fraction of image height, 0-1)"
     )
     bbox_label = models.CharField(
-        max_length=200, blank=True,
+        null=True, max_length=200, blank=True,
         help_text="Species name, classification label, or other identifier"
     )
 
@@ -181,8 +192,8 @@ class Beetles(models.Model):
 
     class Meta:
         db_table = "beetles"
-        verbose_name = "Beetle Metadata"
-        verbose_name_plural = "Beetles Metadata"
+        verbose_name = "Region of Interest (ROI)"
+        verbose_name_plural = "Regions of Interest (ROIs)"
         indexes = [
             models.Index(fields=["depicts_valid_name_id"]),
             models.Index(fields=["collection_country", "collection_stateProvince"]),
@@ -190,6 +201,7 @@ class Beetles(models.Model):
             models.Index(Upper("collection_country"), name="beetles_u_country_idx"),
             models.Index(Upper("specimen_sex"), name="beetles_u_sex_idx"),
             models.Index(Upper("specimen_type_status"), name="beetles_u_type_status_idx"),
+            models.Index(fields=["image_asset", "id"], name="beetles_asset_id_idx"),
         ]
 
     def __str__(self):
@@ -844,3 +856,119 @@ class ImageLock(models.Model):
         return count
 
 
+# -----------------------------
+# Relational Taxonomy & Metadata
+# -----------------------------
+class Taxon(MP_Node):
+    """
+    Relational representation of valid_species.csv using a Materialized Path tree.
+    Inheriting from MP_Node provides 'path', 'depth', and 'numchild' fields natively.
+    """
+    valid_species_id = models.CharField(
+        max_length=255, 
+        unique=True, 
+        db_index=True,
+        help_text="Original identifier mapping to valid_species.csv"
+    )
+    scientific_name = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+    scientific_name_authority = models.CharField(max_length=255, blank=True, null=True)
+
+    # Taxonomic Ranks
+    subfamily = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    tribe = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    subtribe = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    genus = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    species = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    subspecies = models.CharField(max_length=100, blank=True, null=True)
+
+    # Nomenclatural Data
+    authority = models.CharField(max_length=255, blank=True, null=True)
+    authority_year = models.CharField(max_length=50, blank=True, null=True)
+    original_genus = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+
+    # Audit Trail
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    node_order_by = ['scientific_name']
+
+    class Meta:
+        db_table = "taxon"
+        verbose_name = "Taxon"
+        verbose_name_plural = "Taxa"
+        indexes = [
+            models.Index(fields=["scientific_name"]),
+            models.Index(fields=["genus", "species"]),
+            GinIndex(
+                name='taxon_orig_genus_gin', 
+                fields=['original_genus'], 
+                opclasses=['gin_trgm_ops']
+            ),
+        ]
+
+    def __str__(self):
+        return self.scientific_name or self.valid_species_id
+
+
+class Synonym(models.Model):
+    """
+    Relational representation of described_names.csv.
+    """
+    taxon = models.ForeignKey(
+        Taxon, 
+        on_delete=models.CASCADE, 
+        related_name='synonyms',
+        db_index=True,
+        help_text="The valid taxon this synonym maps to."
+    )
+    name_id = models.CharField(
+        max_length=255, 
+        unique=True, 
+        db_index=True,
+        help_text="Original identifier mapping to described_names.csv"
+    )
+    described_scientific_name = models.CharField(max_length=255, db_index=True)
+    described_scientific_name_authority = models.CharField(max_length=255, blank=True, null=True)
+
+    # Synonymous Ranks
+    genus = models.CharField(max_length=100, blank=True, null=True)
+    species = models.CharField(max_length=100, blank=True, null=True)
+    subspecies = models.CharField(max_length=100, blank=True, null=True)
+    
+    authority = models.CharField(max_length=255, blank=True, null=True)
+    year = models.CharField(max_length=50, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "synonym"
+        verbose_name = "Synonym"
+        verbose_name_plural = "Synonyms"
+        indexes = [
+            GinIndex(
+                name='syn_desc_name_gin', 
+                fields=['described_scientific_name'], 
+                opclasses=['gin_trgm_ops']
+            ),
+        ]
+
+    def __str__(self):
+        return self.described_scientific_name
+
+
+class CategoryMapping(models.Model):
+    """
+    Relational representation of category_mapping.json for annotations.
+    """
+    category_id = models.IntegerField(primary_key=True, help_text="Numeric ID used in YOLO/COCO.")
+    name = models.CharField(max_length=255, db_index=True)
+    full_name = models.CharField(max_length=255, blank=True, null=True)
+    supercategory = models.CharField(max_length=100, default='beetle', db_index=True)
+
+    class Meta:
+        db_table = "category_mapping"
+        verbose_name = "Category Mapping"
+        verbose_name_plural = "Category Mappings"
+
+    def __str__(self):
+        return self.full_name or self.name

@@ -4,7 +4,6 @@ from django.utils import timezone
 from django.core.files.base import ContentFile
 
 from beetlesgallery.beetles_app.models import Beetles, UpdateBatch, ImageAsset
-from beetlesgallery.beetles_app import species_ref
 
 import uuid as _uuid
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -21,45 +20,39 @@ except ImportError:
 
 # ---- Field Separation ----
 IMAGE_FIELDS = {
-    "image_institution",
-    "photographer",
-    "image_email",
-    "photo_usage_statement",
-    "resolution_in_ppmm",
-    "image_notes",
-    "image_date_taken",
-    "image_has_multiple_individuals",
+    "image_institution", "photographer", "image_email", "photo_usage_statement",
+    "resolution_in_ppmm", "image_notes", "image_date_taken", "image_has_multiple_individuals",
 }
 
 BEETLE_FIELDS = {
-    "alternative_id",
-    "aspect",
-    "depicts_specimen",
-    "depicts_valid_name_id",
-    "depicts_described_name_id",
-    "depicts_name_verbatim",
-    "collection_country",
-    "collection_stateProvince",
-    "specimen_sex",
-    "specimen_type_status",
-    "specimen_notes",
+    "alternative_id", "aspect", "depicts_specimen", "depicts_valid_name_id",
+    "depicts_described_name_id", "depicts_name_verbatim", "collection_country",
+    "collection_stateProvince", "specimen_sex", "specimen_type_status", "specimen_notes",
+    "bbox_x", "bbox_y", "bbox_width", "bbox_height", "bbox_label"
 }
 
 UPDATE_ALLOWED_FIELDS = list(IMAGE_FIELDS | BEETLE_FIELDS)
-
 UPDATE_REQUIRED_COLS = {"record_id"} | set(UPDATE_ALLOWED_FIELDS)
 UPDATE_OPTIONAL_COLS = {"update_notes"}
-
+UPDATE_IGNORED_COLS = {
+    "image_id", "taxonomy_scientific_name", "taxonomy_subfamily", 
+    "taxonomy_tribe", "taxonomy_genus", "taxonomy_species"
+}
 
 # ---- Coercion helpers ----
 def _none(v):
-    if v is None:
-        return None
-    if isinstance(v, float) and math.isnan(v):
-        return None
-    if isinstance(v, str) and v.strip() == "":
-        return None
+    if v is None: return None
+    if isinstance(v, float) and math.isnan(v): return None
+    if isinstance(v, str):
+        s = v.strip().lower()
+        if s == "" or s == "nan": return None
     return v
+
+def _to_float(v):
+    v = _none(v)
+    if v is None: return None
+    try: return float(v)
+    except: return None
 
 def _to_decimal_12_4(v):
     v = _none(v)
@@ -155,83 +148,68 @@ class Command(BaseCommand):
         errors = []
 
         try:
-            df = pd.read_excel(batch.file.path)
+            df = pd.read_csv(batch.file.path)
             df.columns = [str(c).strip() for c in df.columns]
         except Exception as e:
-            errors.append(f"Cannot open workbook: {e}")
+            errors.append(f"Cannot open CSV: {e}")
             return self._finalize(batch, errors, dry_run)
+
+        # UI Compatibility (Merge 'link_image_uuid' into 'image_id')
+        if "link_image_uuid" in df.columns and "image_id" not in df.columns:
+            df["image_id"] = df["link_image_uuid"]
 
         # Header checks
         cols = set(df.columns)
-        missing = UPDATE_REQUIRED_COLS - cols
-        extras = cols - (UPDATE_REQUIRED_COLS | UPDATE_OPTIONAL_COLS)
-        if missing:
-            errors.append(f"Missing required columns: {sorted(missing)}")
+        if "record_id" not in cols and "image_id" not in cols:
+            errors.append("CSV must contain either 'record_id' or 'image_id' column.")
+            return self._finalize(batch, errors, dry_run)
+
+        extras = cols - (set(UPDATE_ALLOWED_FIELDS) | UPDATE_OPTIONAL_COLS | UPDATE_IGNORED_COLS | {"record_id", "link_image_uuid"})
         if extras:
             errors.append(f"Unexpected extra columns: {sorted(extras)}")
 
         if errors:
             return self._finalize(batch, errors, dry_run)
 
-        # Light UUID sanity check
-        bad_uuid_examples = []
-        for s in df["record_id"].dropna().astype(str).head(20):
-            try:
-                _uuid.UUID(str(s).strip())
-            except Exception:
-                bad_uuid_examples.append(s)
-                if len(bad_uuid_examples) >= 3:
-                    break
-        if bad_uuid_examples:
-            errors.append(f"'record_id' contains non-UUID values (examples: {bad_uuid_examples[:3]})")
-            return self._finalize(batch, errors, dry_run)
+        # Clean IDs (Destroy Pandas "nan")
+        if "record_id" in df.columns:
+            df["record_id"] = df["record_id"].astype(str).replace(r"^(?i)nan$", "", regex=True).str.strip()
+        else:
+            df["record_id"] = ""
+            
+        if "image_id" in df.columns:
+            df["image_id"] = df["image_id"].astype(str).replace(r"^(?i)nan$", "", regex=True).str.strip()
+        else:
+            df["image_id"] = ""
 
-        # Pin valid_species version
-        try:
-            species_version = species_ref.get_version() or ""
-            species_label = species_ref.get_label() or ""
-        except Exception:
-            errors.append("valid_species reference is unavailable; cannot validate depicts_valid_name_id.")
-            return self._finalize(batch, errors, dry_run)
+        record_ids = [r for r in df["record_id"].unique() if r and r.lower() != "new"]
+        image_ids = [i for i in df["image_id"].unique() if i and i.lower() != "new"]
 
-        # Build quick index of beetles (prefetching image_asset)
-        record_ids = [str(x).strip() for x in df["record_id"].tolist() if _none(x) is not None]
-        
-        # Duplicate record_id check
-        from collections import Counter
-        dups = [rid for rid, c in Counter(record_ids).items() if c > 1]
-        if dups:
-            examples = ", ".join(dups[:5])
-            errors.append(f"Duplicate record_id values detected ({len(dups)}). Examples: {examples}.")
-            return self._finalize(batch, errors, dry_run)
+        # Pre-fetch Maps to avoid N+1 Queries
+        from beetlesgallery.beetles_app.models import Taxon, Beetles, ImageAsset
+        beetles_map = {str(b.id): b for b in Beetles.objects.filter(id__in=record_ids).select_related('image_asset')}
+        image_map = {str(img.id): img for img in ImageAsset.objects.filter(id__in=image_ids)}
 
-        # Fetch objects with relation
-        beetles_map = {
-            str(b.id): b
-            for b in Beetles.objects.filter(id__in=record_ids).select_related('image_asset')
-        }
-
-        missing_ids = [rid for rid in record_ids if rid not in beetles_map]
-        if missing_ids:
-            examples = ", ".join(missing_ids[:5])
-            errors.append(f"{len(missing_ids)} record_id value(s) do not exist. Examples: {examples}.")
-            return self._finalize(batch, errors, dry_run)
+        latest_taxon = Taxon.objects.order_by("-updated_at").first()
+        species_version = latest_taxon.updated_at.isoformat() if latest_taxon else "unknown"
+        species_label = "Database Managed (v2.0)"
 
         # Taxonomy Check
         candidate_ids = {
             str(v).strip()
-            for v in df["depicts_valid_name_id"].tolist()
+            for v in df.get("depicts_valid_name_id", pd.Series(dtype=str)).tolist()
             if not _is_blank(v)
         }
-        ref_map = species_ref.bulk_lookup(candidate_ids) if candidate_ids else {}
+        valid_taxa_set = set(Taxon.objects.filter(valid_species_id__in=candidate_ids).values_list('valid_species_id', flat=True)) if candidate_ids else set()
 
         row_missing = []
         if "depicts_valid_name_id" in df.columns:
             for i, v in df["depicts_valid_name_id"].items():
                 if _is_blank(v): continue
                 vid = str(v).strip()
-                if vid not in ref_map:
+                if vid not in valid_taxa_set:
                     row_missing.append((i + 2, vid))
+        # --- NEW CODE ENDS HERE ---
 
         if row_missing:
             examples = ", ".join([f"row {r}: '{val}'" for r, val in row_missing[:10]])
@@ -246,19 +224,20 @@ class Command(BaseCommand):
 
         # Length Limits
         MAXLEN = {
-            "alternative_id": 255,
-            "image_institution": 255,
+            "alternative_id": 255, 
+            "image_institution": 255, 
             "photographer": 255,
-            "image_email": 254,
-            "aspect": 100,
+            "image_email": 254, 
+            "aspect": 100, 
             "depicts_specimen": 255,
-            "depicts_valid_name_id": 255,
+            "depicts_valid_name_id": 255, 
             "depicts_described_name_id": 255,
-            "depicts_name_verbatim": 255,
+            "depicts_name_verbatim": 255, 
             "collection_country": 100,
-            "collection_stateProvince": 100,
+            "collection_stateProvince": 100, 
             "specimen_sex": 50,
-            "specimen_type_status": 100,
+            "specimen_type_status": 100, 
+            "bbox_label": 200
         }
 
         def enforce_len(name, val):
@@ -270,16 +249,34 @@ class Command(BaseCommand):
 
         for i, row in df.iterrows():
             excel_row = i + 2
-            rid = str(row.get("record_id", "")).strip()
-            if not rid:
+            rid = row.get("record_id", "")
+            iid = row.get("image_id", "")
+            
+            b = None
+            is_new = False
+            
+            # 1. Update Existing ROI
+            if rid and rid.lower() != "new":
+                b = beetles_map.get(rid)
+                if not b:
+                    rows_failed += 1
+                    per_row.append({"record_id": rid, "status": "failed", "error_message": f"Row {excel_row}: record_id '{rid}' not found"})
+                    continue
+            
+            # 2. Create New ROI
+            elif iid:
+                img = image_map.get(iid)
+                if not img:
+                    rows_failed += 1
+                    per_row.append({"record_id": rid, "status": "failed", "error_message": f"Row {excel_row}: image_id '{iid}' not found"})
+                    continue
+                is_new = True
+                b = Beetles(image_asset=img) # Temp object for diffing
+            
+            # 3. Invalid State
+            else:
                 rows_failed += 1
-                per_row.append({"record_id": "", "status": "failed", "error_message": f"Row {excel_row}: missing record_id"})
-                continue
-
-            b = beetles_map.get(rid)
-            if not b:
-                rows_failed += 1
-                per_row.append({"record_id": rid, "status": "failed", "error_message": f"Row {excel_row}: record_id not found"})
+                per_row.append({"record_id": "", "status": "failed", "error_message": f"Row {excel_row}: Must provide 'record_id' or 'image_id'"})
                 continue
 
             rows_matched += 1
@@ -293,6 +290,7 @@ class Command(BaseCommand):
                     elif fname == "image_date_taken": v = _to_date(v)
                     elif fname == "specimen_sex": v = _normalize_sex(v)
                     elif fname == "image_has_multiple_individuals": v = _to_bool(v)
+                    elif fname in ["bbox_x", "bbox_y", "bbox_width", "bbox_height"]: v = _to_float(v)
                     else: v = _none(v)
 
                     enforce_len(fname, v)

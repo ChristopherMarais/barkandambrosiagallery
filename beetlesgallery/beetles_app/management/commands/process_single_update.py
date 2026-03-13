@@ -12,8 +12,7 @@ from django.utils import timezone
 from django.conf import settings
 from django.core.files.base import ContentFile
 
-from beetlesgallery.beetles_app.models import UpdateBatch, Beetles, ImageAsset
-from beetlesgallery.beetles_app import species_ref
+from beetlesgallery.beetles_app.models import UpdateBatch, Beetles, ImageAsset, Taxon
 
 try:
     import pandas as pd
@@ -34,7 +33,12 @@ BEETLE_FIELDS = {
     "depicts_valid_name_id", "depicts_described_name_id", 
     "depicts_name_verbatim", "collection_country", 
     "collection_stateProvince", "specimen_sex", 
-    "specimen_type_status", "specimen_notes"
+    "specimen_type_status", "specimen_notes",
+    "bbox_x", "bbox_y", "bbox_width", "bbox_height", "bbox_label"
+}
+UPDATE_IGNORED_COLS = {
+    "image_id", "taxonomy_scientific_name", "taxonomy_subfamily", 
+    "taxonomy_tribe", "taxonomy_genus", "taxonomy_species", "update_notes"
 }
 
 # -----------------------
@@ -43,8 +47,16 @@ BEETLE_FIELDS = {
 def _none(v):
     if v is None: return None
     if isinstance(v, float) and math.isnan(v): return None
-    if isinstance(v, str) and v.strip() == "": return None
+    if isinstance(v, str):
+        s = v.strip().lower()
+        if s == "" or s == "nan": return None
     return v
+
+def _to_float(v):
+    v = _none(v)
+    if v is None: return None
+    try: return float(v)
+    except: return None
 
 def _to_bool(v):
     v = _none(v)
@@ -113,32 +125,34 @@ class Command(BaseCommand):
         for i, row in df.iterrows():
             row_num = i + 2
             
-            raw_id = str(row.get("record_id", "")).strip()
-            link_image_uuid = str(row.get("link_image_uuid", "")).strip() # Special column for linking new specimens
+            raw_id = str(row.get("record_id", "")).strip().lower()
+            if raw_id == "nan": raw_id = ""
+            
+            # FIX 2: Check BOTH 'image_id' (from downloads) and 'link_image_uuid' (from UI)
+            target_image_id = str(row.get("image_id", row.get("link_image_uuid", ""))).strip().lower()
+            if target_image_id == "nan": target_image_id = ""
             
             beetle_obj = None
             is_new = False
 
             # 1. Resolve Target
-            if raw_id and raw_id.upper() != "NEW":
+            if raw_id and raw_id != "new":
                 try:
                     beetle_obj = Beetles.objects.get(pk=raw_id)
                 except (Beetles.DoesNotExist, ValueError):
                     errors.append(f"Row {row_num}: Record ID '{raw_id}' not found.")
                     continue
-            elif link_image_uuid:
+            elif target_image_id:
                 # CREATION MODE
-                # We need to ensure the ImageAsset exists
                 try:
-                    image_asset = ImageAsset.objects.get(pk=link_image_uuid)
-                    # Create a provisional shell object (not saved yet)
+                    image_asset = ImageAsset.objects.get(pk=target_image_id)
                     beetle_obj = Beetles(image_asset=image_asset)
                     is_new = True
-                except ImageAsset.DoesNotExist:
-                    errors.append(f"Row {row_num}: Linked Image UUID '{link_image_uuid}' not found.")
+                except (ImageAsset.DoesNotExist, ValueError):
+                    errors.append(f"Row {row_num}: Image ID '{target_image_id}' not found.")
                     continue
             else:
-                errors.append(f"Row {row_num}: Must provide 'record_id' or 'link_image_uuid'.")
+                errors.append(f"Row {row_num}: Must provide valid 'record_id' or 'image_id'.")
                 continue
 
             # 2. Prepare Data Dictionaries
@@ -147,7 +161,7 @@ class Command(BaseCommand):
 
             # Iterate columns provided in the Excel
             for col in df.columns:
-                if col in ["record_id", "link_image_uuid", "update_notes"]: 
+                if col in ["record_id", "image_id", "link_image_uuid", "update_notes"] or col in UPDATE_IGNORED_COLS: 
                     continue
                 
                 val = row[col]
@@ -176,6 +190,9 @@ class Command(BaseCommand):
         changed_count = 0
         
         try:
+            # Pre-fetch taxon map to memory for fast foreign key linking during import
+            taxon_map = {t.valid_species_id: t for t in Taxon.objects.all()}
+            
             with transaction.atomic():
                 for plan in updates_plan:
                     obj = plan["beetle"]
@@ -186,13 +203,26 @@ class Command(BaseCommand):
                     has_b_change = False
                     for k, v in b_data.items():
                         # Type conversion
-                        if k == "specimen_sex": val = _none(v) # Normalize?
-                        else: val = _none(v)
+                        if k == "specimen_sex": 
+                            val = _none(v)
+                        elif k in ["bbox_x", "bbox_y", "bbox_width", "bbox_height"]: 
+                            val = _to_float(v)
+                        elif k in ["depicts_valid_name_id", "depicts_described_name_id"]:
+                            val = _none(v)
+                            if val is not None:
+                                # Force to string and strip Pandas floating '.0' if present
+                                val = str(val).replace('.0', '').strip()
+                        else: 
+                            val = _none(v)
                         
                         current = getattr(obj, k, None)
-                        if str(val) != str(current): # Rough equality check
+                        if str(val) != str(current):
                             setattr(obj, k, val)
                             has_b_change = True
+                            
+                            # Hydrate the relational Taxon Foreign Key
+                            if k == "depicts_valid_name_id":
+                                obj.taxon = taxon_map.get(val) if val else None
                     
                     if plan["is_new"]:
                         obj.save() # Insert

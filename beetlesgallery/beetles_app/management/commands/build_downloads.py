@@ -14,7 +14,6 @@ from django.utils import timezone
 from django.conf import settings
 from django.core.files import File
 
-from beetlesgallery.beetles_app import species_ref
 from beetlesgallery.beetles_app.models import Beetles, DownloadJob
 
 class Command(BaseCommand):
@@ -234,28 +233,12 @@ class Command(BaseCommand):
 
         qs = (
             self._resolve_queryset(job)
-            .select_related("image_asset")
+            .select_related("image_asset", "taxon")
             .order_by("id")
         )
 
         total = qs.count()
         self.stdout.write(f"[{job.id}] Resolved selection: {total} rows")
-        
-        # --- reference join (valid_species.csv): build once ---
-        try:
-            ref_ids = set(
-                (str(v).strip() if v is not None else "")
-                for v in qs.values_list("depicts_valid_name_id", flat=True)
-            )
-            ref_map = species_ref.bulk_lookup(ref_ids)  # dict[id] -> dict of ref fields
-            ref_label = species_ref.get_label() or ""   # human-friendly label for users
-        except Exception as e:
-            # Proceed without enrichment if reference is unavailable
-            ref_map = {}
-            ref_label = ""
-            self.stderr.write(self.style.WARNING(
-                f"[{job.id}] Reference CSV not available; proceeding without enrichment: {e}"
-            ))
 
         # --- Preflight: count limit ---
         max_records = getattr(settings, "DOWNLOAD_MAX_RECORDS", 50_000)
@@ -376,6 +359,7 @@ class Command(BaseCommand):
             # Headers: use visible column names + the stable filename
             headers = [
                 "record_id",
+                "image_id",
                 "alternative_id",
                 "image_institution",
                 "photographer",
@@ -390,6 +374,16 @@ class Command(BaseCommand):
                 "depicts_valid_name_id",
                 "depicts_described_name_id",
                 "depicts_name_verbatim",
+                "taxonomy_scientific_name",
+                "taxonomy_subfamily",
+                "taxonomy_tribe",
+                "taxonomy_genus",
+                "taxonomy_species",
+                "bbox_x",
+                "bbox_y",
+                "bbox_width",
+                "bbox_height",
+                "bbox_label",
                 "collection_country",
                 "collection_stateProvince",
                 "specimen_sex",
@@ -424,6 +418,7 @@ class Command(BaseCommand):
 
                 writer.writerow([
                     str(b.id),                                      # record_id
+                    str(img.id) if img else "",                     # image_id
                     b.alternative_id or "",
                     img.image_institution if img else "",
                     img.photographer if img else "",
@@ -438,6 +433,16 @@ class Command(BaseCommand):
                     b.depicts_valid_name_id or "",
                     b.depicts_described_name_id or "",
                     b.depicts_name_verbatim or "",
+                    b.taxon.scientific_name if b.taxon else "",     
+                    b.taxon.subfamily if b.taxon else "",
+                    b.taxon.tribe if b.taxon else "",
+                    b.taxon.genus if b.taxon else "",
+                    b.taxon.species if b.taxon else "",
+                    b.bbox_x if b.bbox_x is not None else "",
+                    b.bbox_y if b.bbox_y is not None else "",
+                    b.bbox_width if b.bbox_width is not None else "",
+                    b.bbox_height if b.bbox_height is not None else "",
+                    b.bbox_label or "",
                     b.collection_country or "",
                     b.collection_stateProvince or "",
                     b.specimen_sex or "",

@@ -54,7 +54,7 @@
                 </span>
             {% endif %}
             
-            <a href="{% url 'beetles_home' %}?per_page={{ per_page }}" class="text-xs text-gray-500 hover:underline hover:text-text flex items-center self-center ml-2 font-medium">× Clear all</a>
+            <a href="{% url 'beetles_image_browser' %}?per_page={{ per_page }}" class="text-xs text-gray-500 hover:underline hover:text-text flex items-center self-center ml-2 font-medium">× Clear all</a>
         </div>
       {% endif %}
 
@@ -225,14 +225,14 @@
                             
                             <button type="submit" form="download-selected-form" name="download_type" value="package"
                                     class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full">
-                                <span class="font-bold block text-gray-900">Standard Package</span>
-                                <span class="text-xs text-gray-500">Images + Metadata (.zip)</span>
+                                <span class="font-bold block text-gray-900">All Selected Data</span>
+                                <span class="text-xs text-gray-500">Images (.zip) + Metadata (.csv)</span>
                             </button>
 
                             <button type="submit" form="download-selected-form" name="download_type" value="metadata_only"
                                     class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full border-t border-gray-100">
                                 <span class="font-bold block text-gray-900">Metadata Only</span>
-                                <span class="text-xs text-gray-500">CSV Spreadsheet (.csv)</span>
+                                <span class="text-xs text-gray-500">Metadata (.csv)</span>
                             </button>
                         </div>
                     </div>
@@ -271,14 +271,14 @@
                                 
                                 <button type="submit" form="download-all-form" name="download_type" value="package"
                                         class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full">
-                                    <span class="font-bold block text-gray-900">Standard Package</span>
-                                    <span class="text-xs text-gray-500">Images + Metadata (.zip)</span>
+                                    <span class="font-bold block text-gray-900">All Selected Data</span>
+                                    <span class="text-xs text-gray-500">Images (.zip) + Metadata (.csv)</span>
                                 </button>
 
                                 <button type="submit" form="download-all-form" name="download_type" value="metadata_only"
                                         class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full border-t border-gray-100">
                                     <span class="font-bold block text-gray-900">Metadata Only</span>
-                                    <span class="text-xs text-gray-500">CSV Spreadsheet (.csv)</span>
+                                    <span class="text-xs text-gray-500">Metadata (.csv)</span>
                                 </button>
                             </div>
                         </div>
@@ -525,14 +525,14 @@
                             
                             <button type="submit" form="download-selected-form" name="download_type" value="package"
                                     class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full">
-                                <span class="font-bold block text-gray-900">Standard Package</span>
-                                <span class="text-xs text-gray-500">Images + Metadata (.zip)</span>
+                                <span class="font-bold block text-gray-900">All Selected Data</span>
+                                <span class="text-xs text-gray-500">Images (.zip) + Metadata (.csv)</span>
                             </button>
 
                             <button type="submit" form="download-selected-form" name="download_type" value="metadata_only"
                                     class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full border-t border-gray-100">
                                 <span class="font-bold block text-gray-900">Metadata Only</span>
-                                <span class="text-xs text-gray-500">CSV Spreadsheet (.csv)</span>
+                                <span class="text-xs text-gray-500">Metadata (.csv)</span>
                             </button>
                         </div>
                     </div>
@@ -571,14 +571,14 @@
                                 
                                 <button type="submit" form="download-all-form" name="download_type" value="package"
                                         class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full">
-                                    <span class="font-bold block text-gray-900">Standard Package</span>
-                                    <span class="text-xs text-gray-500">Images + Metadata (.zip)</span>
+                                    <span class="font-bold block text-gray-900">All Selected Data</span>
+                                    <span class="text-xs text-gray-500">Images (.zip) + Metadata (.csv)</span>
                                 </button>
 
                                 <button type="submit" form="download-all-form" name="download_type" value="metadata_only"
                                         class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full border-t border-gray-100">
                                     <span class="font-bold block text-gray-900">Metadata Only</span>
-                                    <span class="text-xs text-gray-500">CSV Spreadsheet (.csv)</span>
+                                    <span class="text-xs text-gray-500">Metadata (.csv)</span>
                                 </button>
                             </div>
                         </div>

@@ -48,6 +48,7 @@ redis-py = ">=7.1.0,<8"
 django-redis = "*"
 celery = ">=5.5.3,<6"
 python-multipart = ">=0.0.21,<0.0.22"
+django-treebeard = ">=4.8.0,<5"
 
 # --- Dependencies for LINUX/MAC ONLY (Server/Docker) ---
 # Gunicorn will be installed in Docker, but ignored on your Windows laptop.

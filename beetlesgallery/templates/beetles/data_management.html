@@ -30,7 +30,7 @@
       
       {% if request.user.is_staff %}
       <button onclick="openModal('modal-field-definitions')" 
-              class="group flex items-center gap-1.5 text-sm font-medium text-gray-400 hover:text-blue-600 transition">
+              class="group flex items-center gap-1.5 text-sm font-medium text-gray-400 hover:text-gray-600 transition">
         <i class="fi fi-rr-info text-base"></i>
         <span>Field Definitions</span>
       </button>
@@ -55,7 +55,7 @@
       {% endif %}
 
       {# All Users: Download Link #}
-      <a href="{% url 'beetles_home' %}"
+      <a href="{% url 'beetles_image_browser' %}"
         class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
         <i class="fi fi-rr-search-alt"></i>
         <span>Browse Gallery to Download</span>
@@ -538,7 +538,7 @@
                   </a>
 
                   <button type="button" onclick="openModal('modal-field-definitions')"
-                    class="flex-1 flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-blue-600 transition shadow-sm">
+                    class="flex-1 flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-600 transition shadow-sm">
                     <i class="fi fi-rr-book-alt"></i>
                     <span>Field Definitions</span>
                   </button>
@@ -620,7 +620,7 @@
                   </a>
 
                   <button type="button" onclick="openModal('modal-field-definitions')"
-                    class="flex-1 flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-blue-600 transition shadow-sm">
+                    class="flex-1 flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-600 transition shadow-sm">
                     <i class="fi fi-rr-book-alt"></i>
                     <span>Field Definitions</span>
                   </button>
@@ -756,79 +756,79 @@
           </thead>
           <tbody class="divide-y divide-gray-100 text-gray-700">
             <tr class="hover:bg-gray-50">
-              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">alternative_id</td>
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-gray-700">alternative_id</td>
               <td class="px-6 py-3">Other identifiers for the photograph, particularly if the photo is derived from a database.</td>
             </tr>
             <tr class="hover:bg-gray-50">
-              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">image_institution</td>
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-gray-700">image_institution</td>
               <td class="px-6 py-3">The institution to credit the photograph. This may not be the same as the institution which holds the specimen, or denote full usage rights.</td>
             </tr>
             <tr class="hover:bg-gray-50">
-              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">photographer</td>
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-gray-700">photographer</td>
               <td class="px-6 py-3">The person to credit for taking the photograph for the image.</td>
             </tr>
             <tr class="hover:bg-gray-50">
-              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">image_email</td>
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-gray-700">image_email</td>
               <td class="px-6 py-3">An email contact for enquiries about the image. This may not be the photographer.</td>
             </tr>
             <tr class="hover:bg-gray-50">
-              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">photo_usage_statement</td>
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-gray-700">photo_usage_statement</td>
               <td class="px-6 py-3">A statement relating to usage of the photograph, with terms of usage (e.g., specific terms or Creative Commons such as CC BY 4.0).</td>
             </tr>
             <tr class="hover:bg-gray-50">
-              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">aspect</td>
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-gray-700">aspect</td>
               <td class="px-6 py-3">The view depicted (e.g., dorsal, lateral, ventral, anterior, posterior) or specific parts (e.g., antennae, genitalia, labels).</td>
             </tr>
             <tr class="hover:bg-gray-50">
-              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">resolution_in_ppmm</td>
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-gray-700">resolution_in_ppmm</td>
               <td class="px-6 py-3">The number of pixels per linear millimeter in the best focused area of the image (not the same as optical resolution).</td>
             </tr>
             <tr class="hover:bg-gray-50">
-              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">image_notes</td>
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-gray-700">image_notes</td>
               <td class="px-6 py-3">Additional notes regarding the image.</td>
             </tr>
             <tr class="hover:bg-gray-50">
-              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">image_date_taken</td>
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-gray-700">image_date_taken</td>
               <td class="px-6 py-3">Date when the image was taken (YYYY-MM-DD). Time is not stored.</td>
             </tr>
             <tr class="hover:bg-gray-50">
-              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">image_has_multiple_individuals</td>
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-gray-700">image_has_multiple_individuals</td>
               <td class="px-6 py-3">Whether multiple individuals are present. Accepted values: 0/1, True/False, or Yes/No.</td>
             </tr>
             <tr class="hover:bg-gray-50">
-              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">depicts_specimen</td>
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-gray-700">depicts_specimen</td>
               <td class="px-6 py-3">The specimen or biological sample identifier depicted. Only one value should be listed here (even if a sample ID refers to multiple specimens).</td>
             </tr>
             <tr class="hover:bg-gray-50">
-              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">depicts_valid_name_id</td>
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-gray-700">depicts_valid_name_id</td>
               <td class="px-6 py-3">The Valid Species ID for the taxon depicted (from the Taxonomy Reference).</td>
             </tr>
             <tr class="hover:bg-gray-50">
-              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">depicts_described_name_id</td>
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-gray-700">depicts_described_name_id</td>
               <td class="px-6 py-3">The Described Name ID (from Described Names Reference), mostly for type specimens.</td>
             </tr>
             <tr class="hover:bg-gray-50">
-              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">depicts_name_verbatim</td>
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-gray-700">depicts_name_verbatim</td>
               <td class="px-6 py-3">A verbatim text name. Allows for original descriptions, unknown names, or ambiguous names.</td>
             </tr>
             <tr class="hover:bg-gray-50">
-              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">collection_country</td>
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-gray-700">collection_country</td>
               <td class="px-6 py-3">The country of collection (DWC:country).</td>
             </tr>
             <tr class="hover:bg-gray-50">
-              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">collection_stateProvince</td>
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-gray-700">collection_stateProvince</td>
               <td class="px-6 py-3">The state or province of collection (DWC:stateProvince).</td>
             </tr>
             <tr class="hover:bg-gray-50">
-              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">specimen_sex</td>
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-gray-700">specimen_sex</td>
               <td class="px-6 py-3">Strictly restricted to: Male, Female, M, or F. For mixed groups, please use specimen_notes.</td>
             </tr>
             <tr class="hover:bg-gray-50">
-              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">specimen_type_status</td>
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-gray-700">specimen_type_status</td>
               <td class="px-6 py-3">Type status (e.g., Holotype). Include the status, full scientific name, and authority.</td>
             </tr>
             <tr class="hover:bg-gray-50">
-              <td class="px-6 py-3 font-mono text-xs font-semibold text-blue-700">specimen_notes</td>
+              <td class="px-6 py-3 font-mono text-xs font-semibold text-gray-700">specimen_notes</td>
               <td class="px-6 py-3">Additional notes regarding the specimen.</td>
             </tr>
           </tbody>

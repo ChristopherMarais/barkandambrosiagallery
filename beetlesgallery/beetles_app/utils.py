@@ -59,7 +59,11 @@ FREE_TEXT_FIELDS = [
     "specimen_type_status", 
     "specimen_notes",
     "aspect", 
-    "specimen_sex"
+    "specimen_sex",
+    "taxon__scientific_name",
+    "taxon__genus",
+    "taxon__species",
+    "taxon__original_genus"
 ]
 
 # --- Query Parser Helpers ---
@@ -199,7 +203,6 @@ def _normalize_sex(v: str):
     return None
 
 def _clause_to_q(field_label: str, value: str, ignored):
-    from . import species_ref
     if not field_label:
         ignored.append("empty field")
         return None
@@ -207,15 +210,19 @@ def _clause_to_q(field_label: str, value: str, ignored):
     norm = _normalize_header(field_label)
 
     if norm in REF_FIELD_LABELS:
+        # Map user-friendly labels natively to the Taxon table fields
+        ref_map = {"scientific name": "scientific_name", "genus": "genus", "species": "species"}
+        taxon_field = ref_map.get(norm)
+        
         if value and value.strip().upper() == "N/A":
-            return Q(depicts_valid_name_id__isnull=True)
-        ids = species_ref.ids_for(field_label, value)
-        if ids is None:
-            ignored.append(f"reference unavailable for '{field_label}'")
+            return Q(taxon__isnull=True)
+            
+        if not value or value.strip() == "":
+            ignored.append(f"empty value for '{field_label}'")
             return None
-        if not ids:
-            return Q(pk__in=[])
-        return Q(depicts_valid_name_id__in=list(ids))
+            
+        # O(1) Relational JOIN lookup
+        return Q(**{f"taxon__{taxon_field}__iexact": value.strip()})
 
     model_field = FIELD_MAP.get(norm)
     if not model_field:
@@ -270,7 +277,6 @@ def _clause_to_q(field_label: str, value: str, ignored):
     return Q(**{f"{model_field}__icontains": value})
 
 def build_query_q(user_qs: str):
-    from . import species_ref
     parts = _tokenize_query(user_qs or "")
 
     # Exact Record ID (UUID) Check
@@ -309,9 +315,6 @@ def build_query_q(user_qs: str):
             q_any = Q()
             for f in FREE_TEXT_FIELDS:
                 q_any |= Q(**{f"{f}__icontains": val})
-            matching_ids = species_ref.find_ids_matching_text(val)
-            if matching_ids:
-                q_any |= Q(depicts_valid_name_id__in=matching_ids)
             stack.append(q_any)
 
         else:
@@ -335,8 +338,8 @@ FILTERS_CONFIG = [
     {"category": "Taxonomy", "param": "species", "type": "ref", "field": "species", "label": "Species"},
     {"category": "Taxonomy", "param": "subspecies", "type": "ref", "field": "subspecies", "label": "Subspecies"},
     {"category": "Taxonomy", "param": "authority", "type": "ref", "field": "authority", "label": "Authority"},
-    {"category": "Taxonomy", "param": "authority_year", "type": "ref", "field": "authorityYear", "label": "Authority Year"},
-    {"category": "Taxonomy", "param": "original_genus", "type": "ref", "field": "originalGenus", "label": "Original Genus"},
+    {"category": "Taxonomy", "param": "authority_year", "type": "ref", "field": "authority_year", "label": "Authority Year"},
+    {"category": "Taxonomy", "param": "original_genus", "type": "ref", "field": "original_genus", "label": "Original Genus"},
     {"category": "Collection", "param": "country", "type": "db", "field": "collection_country", "label": "Country"},
     {"category": "Collection", "param": "state", "type": "db", "field": "collection_stateProvince", "label": "State/Province"},
     {"category": "Collection", "param": "sex", "type": "db", "field": "specimen_sex", "label": "Sex"},
@@ -350,7 +353,6 @@ FILTERS_CONFIG = [
 ]
 
 def filter_beetles_queryset(qs, filters_dict, size_min=None, size_max=None, res_min=None, res_max=None, exclude_param=None):
-    from . import species_ref
     NA = "N/A"
     if size_min:
         try:
@@ -400,18 +402,19 @@ def filter_beetles_queryset(qs, filters_dict, size_min=None, size_max=None, res_
         elif cfg["type"] == "ref":
             q_ref = Q()
             if real_vals:
-                all_ids = []
-                for v in real_vals:
-                    ids = species_ref.ids_for(cfg['field'], v)
-                    if ids: all_ids.extend(ids)
-                if all_ids:
-                    q_ref |= Q(depicts_valid_name_id__in=all_ids)
+                # Route directly to the Taxon table via the ForeignKey
+                q_ref |= Q(**{f"taxon__{cfg['field']}__in": real_vals})
             if has_na:
-                q_ref |= Q(depicts_valid_name_id__isnull=True)
+                q_ref |= (
+                    Q(taxon__isnull=True) | 
+                    Q(**{f"taxon__{cfg['field']}": ""}) | 
+                    Q(**{f"taxon__{cfg['field']}__isnull": True})
+                )
+            
             if q_ref:
                 qs = qs.filter(q_ref)
             elif vals:
-                return qs.none()
+                qs = qs.none()
     return qs
 
 def get_system_user(username: str = "admin"):

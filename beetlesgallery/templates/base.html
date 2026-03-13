@@ -45,7 +45,7 @@
           }
         }
 
-        // If the user is viewing Home, Gallery, or My Files on the direct server...
+        // If the user is viewing image_browser, Gallery, or My Files on the direct server...
         if (!isAllowed) {
           // ...force them back to the secure main domain.
           window.location.href = "https://" + MAIN_HOST + path;
@@ -60,8 +60,8 @@
       transition: width 0.3s ease-in-out;
     }
 
-    /* Home Icon Animation */
-    #home-icon {
+    /* image_browser Icon Animation */
+    #image_browser-icon {
       /* Initial State: Vertical */
       width: 3rem;
       height: 3rem;
@@ -117,7 +117,7 @@
       }
 
       /* UPDATED: Rotate 90deg and fill FULL horizontal space */
-      #sidenav:hover #home-icon {
+      #sidenav:hover #image_browser-icon {
         transform: rotate(90deg);
         height: 16rem;
         width: 10rem;
@@ -150,16 +150,16 @@
 
           <div class="flex flex-col gap-2 w-full p-2 mt-2">
 
-            <a href="{% url 'home' %}"
-              class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'home' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
-              <img src="{% static 'img/IMG_5557.PNG' %}" alt="Home" class="h-8 w-8 object-contain" />
-              <span class="font-medium text-gray-700 ml-3">Home</span>
+            <a href="{% url 'image_browser' %}"
+              class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'image_browser' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+              <img src="{% static 'img/IMG_5557.PNG' %}" alt="image_browser" class="h-8 w-8 object-contain" />
+              <span class="font-medium text-gray-700 ml-3">image_browser</span>
             </a>
 
             <div class="h-px bg-gray-300 my-1 mx-2"></div>
 
-            <a href="{% url 'beetles_home' %}"
-              class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'beetles_home' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+            <a href="{% url 'beetles_image_browser' %}"
+              class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'beetles_image_browser' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
               <i class="fi fi-rr-bug text-xl text-gray-700 w-8 text-center"></i>
               <span class="font-medium text-gray-700 ml-1">Image Browser</span>
             </a>
@@ -184,8 +184,8 @@
             </a>
             {% endif %}
 
-            <a href="{% url 'my_uploads' %}"
-              class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'my_uploads' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+            <a href="{% url 'data_management' %}"
+              class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'data_management' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
               <i class="fi fi-rr-folder text-xl text-gray-700 w-8 text-center"></i>
               <span class="font-medium text-gray-700 ml-1">Data Management</span>
             </a>
@@ -231,15 +231,15 @@
         class="hidden lg:flex flex-col h-full bg-gray-50 border-r border-gray-200 overflow-hidden shadow-lg group">
         <div id="sideItems" class="flex flex-col h-full gap-2 w-full p-2 mt-4">
 
-          <a href="{% url 'home' %}"
-            class="flex items-center p-4 rounded-lg group overflow-hidden whitespace-nowrap justify-center relative {% if request.resolver_match.url_name == 'home' %}bg-gray-200{% else %}hover:bg-gray-200{% endif %}">
-            <img id="home-icon" src="{% static 'img/IMG_5557.PNG' %}" alt="Home" class="object-contain" />
+          <a href="{% url 'image_browser' %}"
+            class="flex items-center p-4 rounded-lg group overflow-hidden whitespace-nowrap justify-center relative {% if request.resolver_match.url_name == 'image_browser' %}bg-gray-200{% else %}hover:bg-gray-200{% endif %}">
+            <img id="image_browser-icon" src="{% static 'img/IMG_5557.PNG' %}" alt="image_browser" class="object-contain" />
           </a>
 
           <div class="h-px bg-gray-300 my-2 mx-2"></div>
 
-          <a href="{% url 'beetles_home' %}"
-            class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'beetles_home' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+          <a href="{% url 'beetles_image_browser' %}"
+            class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'beetles_image_browser' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
             <i class="fi fi-rr-bug text-xl text-gray-700 w-8 text-center"></i>
             <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
               Image Browser
@@ -272,8 +272,8 @@
           </a>
           {% endif %}
 
-          <a href="{% url 'my_uploads' %}"
-            class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'my_uploads' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+          <a href="{% url 'data_management' %}"
+            class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'data_management' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
             <i class="fi fi-rr-folder text-xl text-gray-700 w-8 text-center"></i>
             <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
               Data Management
