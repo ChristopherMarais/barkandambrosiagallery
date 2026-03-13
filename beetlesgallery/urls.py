@@ -36,7 +36,7 @@ urlpatterns = [
 
     # --- Tools ---
     path('upload/', beetles_views.upload_file, name='upload'),
-    path("my-uploads/", beetles_views.my_uploads, name="my_uploads"),
+    path("my-uploads/", beetles_views.data_management, name="data_management"),
     path("events/", beetles_views.stream_updates, name="stream_updates"),
     path("downloads/start/", beetles_views.start_batch_download, name="start_batch_download"),
     path("updates/", beetles_views.update_upload, name="update_upload"),

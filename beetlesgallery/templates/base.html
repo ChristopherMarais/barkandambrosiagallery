@@ -184,8 +184,8 @@
             </a>
             {% endif %}
 
-            <a href="{% url 'my_uploads' %}"
-              class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'my_uploads' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+            <a href="{% url 'data_management' %}"
+              class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'data_management' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
               <i class="fi fi-rr-folder text-xl text-gray-700 w-8 text-center"></i>
               <span class="font-medium text-gray-700 ml-1">Data Management</span>
             </a>
@@ -272,8 +272,8 @@
           </a>
           {% endif %}
 
-          <a href="{% url 'my_uploads' %}"
-            class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'my_uploads' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+          <a href="{% url 'data_management' %}"
+            class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'data_management' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
             <i class="fi fi-rr-folder text-xl text-gray-700 w-8 text-center"></i>
             <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
               Data Management

@@ -227,7 +227,7 @@ def _normalize_valid_id_for_lookup(v):
 def upload_file(request):
     print("DEBUG: entered upload_file view", flush=True)
     if request.method != "POST":
-        return redirect("my_uploads")
+        return redirect("data_management")
 
     # --- DEBUGGING LOGS  ---
     print(f"DEBUG: POST keys: {list(request.POST.keys())}", flush=True)
@@ -242,7 +242,7 @@ def upload_file(request):
 
     if not csv_file or not zipf:
         messages.error(request, "Please attach both a .csv metadata file and a .zip of images.")
-        return redirect("my_uploads")
+        return redirect("data_management")
 
     # --- allowlist + size guard ---
     ext_x = os.path.splitext(csv_file.name)[1].lower()
@@ -250,31 +250,31 @@ def upload_file(request):
 
     if ext_x != ".csv":
         messages.error(request, "The metadata file must be a .csv.")
-        return redirect("my_uploads")
+        return redirect("data_management")
     if ext_z != ".zip":
         messages.error(request, "The images archive must be a .zip.")
-        return redirect("my_uploads")
+        return redirect("data_management")
 
     CSV_MAX = getattr(settings, "MAX_UPLOAD_SIZE_CSV", 10 * 1024 * 1024)        # 10 MB
     ZIP_MAX  = getattr(settings, "MAX_UPLOAD_SIZE_ZIP",  1024 * 1024 * 1024)      # 1 GB
 
     if csv_file.size and csv_file.size > CSV_MAX:
         messages.error(request, f"Metadata .csv is too large (> {CSV_MAX // (1024*1024)} MB).")
-        return redirect("my_uploads")
+        return redirect("data_management")
 
     if zipf.size and zipf.size > ZIP_MAX:
         messages.error(request, f"Images .zip is too large (> {ZIP_MAX // (1024*1024)} MB).")
-        return redirect("my_uploads")
+        return redirect("data_management")
     # --- Quick check that ZIP is valid and contains at least one entry ---
     try:
         with zipfile.ZipFile(zipf) as z:
             names = z.namelist()
             if not names:
                 messages.error(request, "The images ZIP is empty.")
-                return redirect("my_uploads")
+                return redirect("data_management")
     except zipfile.BadZipFile:
         messages.error(request, "The images ZIP is corrupt or not a valid ZIP.")
-        return redirect("my_uploads")
+        return redirect("data_management")
 
     # Reset pointer
     try:
@@ -339,7 +339,7 @@ def upload_file(request):
     print(f"Queued process_single_upload for batch {batch.id}", flush=True)
 
     messages.success(request, "Files received. Track the upload status below in the Activity Logs.")
-    return redirect("my_uploads")
+    return redirect("data_management")
 
 def gallery(request):
     from .utils import build_query_q, filter_beetles_queryset, FILTERS_CONFIG
@@ -812,7 +812,7 @@ def start_batch_download(request):
             job.error_message = "No valid rows were selected (IDs missing or malformed)."
             job.save(update_fields=["status", "error_message"])
             messages.error(request, "No valid rows were selected.")
-            return redirect("my_uploads")
+            return redirect("data_management")
 
         job.set_ids(ids)
         job.total_requested = len(ids)
@@ -821,11 +821,11 @@ def start_batch_download(request):
 
     build_downloads_task.delay(job.id)
     messages.success(request, "Download started. Track progress below in the Activity Logs.")
-    return redirect("my_uploads")
+    return redirect("data_management")
     
 
 @login_required
-def my_uploads(request):
+def data_management(request):
     batches = (
         UploadBatch.objects
         .filter(uploaded_by=request.user)
@@ -883,7 +883,7 @@ def my_uploads(request):
 
     return render(
         request,
-        "beetles/my_uploads.html",
+        "beetles/data_management.html",
         {
         "batches": batches,
         "download_jobs": download_jobs,
@@ -1045,22 +1045,22 @@ def update_upload(request):
     Creates an UpdateBatch in 'staging'. Full validation/diff/apply comes next steps.
     """
     if request.method != "POST":
-        return redirect("my_uploads")
+        return redirect("data_management")
 
     csv_file = request.FILES.get("csv_file") or request.FILES.get("csv")
     if not csv_file:
         messages.error(request, "Please attach a .csv file.")
-        return redirect("my_uploads")
+        return redirect("data_management")
 
     ext = os.path.splitext(csv_file.name)[1].lower()
     if ext != ".csv":
         messages.error(request, "The update file must be a .csv.")
-        return redirect("my_uploads")
+        return redirect("data_management")
 
     CSV_MAX = getattr(settings, "MAX_UPLOAD_SIZE_CSV", 10 * 1024 * 1024)  # 10 MB default
     if csv_file.size and csv_file.size > CSV_MAX:
         messages.error(request, f"Update .csv is too large (> {CSV_MAX // (1024*1024)} MB).")
-        return redirect("my_uploads")
+        return redirect("data_management")
 
     # Create the UpdateBatch row so we have an ID + on-disk path
     batch = UpdateBatch.objects.create(
@@ -1080,7 +1080,7 @@ def update_upload(request):
     # Quick preflight with pandas (header checks only)
     if pd is None:
         messages.warning(request, "File received. Note: server missing pandas; skipping quick checks.")
-        return redirect("my_uploads")
+        return redirect("data_management")
 
     errors = []
     try:
@@ -1090,7 +1090,7 @@ def update_upload(request):
     except Exception as e:
         batch.mark_rejected_and_move(f"Cannot open CSV: {e}")
         messages.error(request, "Update rejected: cannot open CSV.")
-        return redirect("my_uploads")
+        return redirect("data_management")
 
     # Header contract: exact match = required set + optional 'update_notes'; no extras, no missing.
     cols = set(df.columns)
@@ -1121,7 +1121,7 @@ def update_upload(request):
         reason = "; ".join(map(str, errors))[:2000]
         batch.mark_rejected_and_move(reason)
         messages.error(request, "Update rejected: " + reason)
-        return redirect("my_uploads")
+        return redirect("data_management")
 
     # -- Starting background validate+apply for this update batch --
     process_update_task.delay(batch.id)
@@ -1132,7 +1132,7 @@ def update_upload(request):
             "track the status below in the Activity Logs."
     )
     # Send them where they can see the batch status
-    return redirect("my_uploads")
+    return redirect("data_management")
 
 @staff_member_required
 @require_POST
