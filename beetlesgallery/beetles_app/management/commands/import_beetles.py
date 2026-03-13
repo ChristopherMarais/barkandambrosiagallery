@@ -225,6 +225,9 @@ class Command(BaseCommand):
                 image_defaults["image_notes"] = _none(row.get("image_notes"))
                 image_defaults["image_date_taken"] = _to_date(row.get("image_date_taken"))
                 image_defaults["image_has_multiple_individuals"] = _to_bool(row.get("image_has_multiple_individuals"))
+                image_defaults["is_validated"] = _to_bool(row.get("is_validated")) or False
+                if history_user:
+                    image_defaults["last_updated_by"] = history_user
 
 
                 # B. Fields that belong to Beetles

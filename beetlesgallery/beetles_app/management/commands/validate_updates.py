@@ -22,13 +22,14 @@ except ImportError:
 IMAGE_FIELDS = {
     "image_institution", "photographer", "image_email", "photo_usage_statement",
     "resolution_in_ppmm", "image_notes", "image_date_taken", "image_has_multiple_individuals",
+    "is_validated"
 }
 
 BEETLE_FIELDS = {
     "alternative_id", "aspect", "depicts_specimen", "depicts_valid_name_id",
     "depicts_described_name_id", "depicts_name_verbatim", "collection_country",
     "collection_stateProvince", "specimen_sex", "specimen_type_status", "specimen_notes",
-    "bbox_x", "bbox_y", "bbox_width", "bbox_height", "bbox_label"
+    "bbox_x", "bbox_y", "bbox_width", "bbox_height", "bbox_is_validated"
 }
 
 UPDATE_ALLOWED_FIELDS = list(IMAGE_FIELDS | BEETLE_FIELDS)
@@ -237,7 +238,6 @@ class Command(BaseCommand):
             "collection_stateProvince": 100, 
             "specimen_sex": 50,
             "specimen_type_status": 100, 
-            "bbox_label": 200
         }
 
         def enforce_len(name, val):
@@ -289,12 +289,12 @@ class Command(BaseCommand):
                     if fname == "resolution_in_ppmm": v = _to_decimal_12_4(v)
                     elif fname == "image_date_taken": v = _to_date(v)
                     elif fname == "specimen_sex": v = _normalize_sex(v)
-                    elif fname == "image_has_multiple_individuals": v = _to_bool(v)
-                    elif fname in ["bbox_x", "bbox_y", "bbox_width", "bbox_height"]: v = _to_float(v)
-                    else: v = _none(v)
-
-                    enforce_len(fname, v)
-                    proposed[fname] = v
+                    elif fname in ["image_has_multiple_individuals", "is_validated", "bbox_is_validated"]: 
+                        v = _to_bool(v)
+                    elif fname in ["bbox_x", "bbox_y", "bbox_width", "bbox_height"]: 
+                        v = _to_float(v)
+                    else: 
+                        v = _none(v)
 
                 # Diff against current DB values
                 changed_fields = []
