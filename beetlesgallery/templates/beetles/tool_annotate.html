@@ -167,40 +167,78 @@
       
       <div class="flex border-b border-gray-200 flex-shrink-0 bg-gray-50">
         <button id="tab-btn-image" onclick="switchRightTab('image')" class="flex-1 py-3 text-sm tab-active">
-          Image Defaults
+          Image Details
         </button>
         <button id="tab-btn-bbox" onclick="switchRightTab('bbox')" class="flex-1 py-3 text-sm tab-inactive">
           Annotation Details <span id="tab-bbox-count" class="bg-gray-200 text-gray-700 rounded-full px-2 py-0.5 text-xs ml-1">0</span>
         </button>
       </div>
 
-      <div id="tab-content-image" class="flex-1 overflow-y-auto p-4 flex flex-col">
-        <div class="bg-gray-50 border border-gray-200 text-gray-800 text-xs p-3 rounded-lg mb-4">
-          <i class="fi fi-rr-info mr-1"></i> Data entered here serves as the <strong>default</strong> for newly drawn bounding boxes.
+      <div id="tab-content-image" class="flex-1 overflow-y-auto p-4 flex flex-col relative">
+        <div id="lock-warning" class="hidden bg-red-50 border border-red-200 text-red-800 text-xs p-3 rounded-lg mb-4 flex items-center gap-2 font-medium shadow-sm">
+          <i class="fi fi-rr-lock text-base"></i>
+          <span id="lock-warning-text">Locked by another user. Viewing only.</span>
         </div>
-        <form id="form-image-defaults" class="space-y-4" onchange="markImageDefaultsDirty()">
+
+        <form id="form-image-details" class="space-y-4" onsubmit="event.preventDefault(); saveImageDetails();">
           <div>
-            <label class="block text-xs font-semibold text-gray-700 mb-1 uppercase">Technical</label>
+            <label class="block text-xs font-semibold text-gray-700 mb-2 uppercase">Provenance</label>
             <div class="space-y-3">
               <div>
-                <label class="block text-xs text-gray-600 mb-1">Aspect</label>
-                <input type="text" name="default_aspect" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500">
+                <label class="block text-xs text-gray-600 mb-1">Institution</label>
+                <input type="text" name="image_institution" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500">
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Photographer</label>
+                  <input type="text" name="photographer" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500">
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Date Taken</label>
+                  <input type="date" name="image_date_taken" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500 text-gray-700">
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs text-gray-600 mb-1">Contact Email</label>
+                <input type="email" name="image_email" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500">
+              </div>
+              <div>
+                <label class="block text-xs text-gray-600 mb-1">Usage Statement (License)</label>
+                <input type="text" name="photo_usage_statement" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500">
               </div>
             </div>
           </div>
           <hr class="border-gray-200">
           <div>
-            <label class="block text-xs font-semibold text-gray-700 mb-1 uppercase">Collection / Specimen</label>
+            <label class="block text-xs font-semibold text-gray-700 mb-2 uppercase">Technical</label>
             <div class="space-y-3">
-              <div>
-                <label class="block text-xs text-gray-600 mb-1">Country</label>
-                <input type="text" name="default_collection_country" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500">
+              <div class="flex items-center gap-2 mt-2 bg-gray-50 p-2 rounded border border-gray-200">
+                <input type="checkbox" id="image_has_multiple_individuals" name="image_has_multiple_individuals" class="rounded text-gray-800 focus:ring-gray-500">
+                <label for="image_has_multiple_individuals" class="text-xs text-gray-700 font-medium cursor-pointer">Image has multiple individuals</label>
               </div>
               <div>
-                <label class="block text-xs text-gray-600 mb-1">State/Province</label>
-                <input type="text" name="default_collection_stateProvince" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500">
+                <label class="block text-xs text-gray-600 mb-1">Resolution (Pixels per mm)</label>
+                <input type="number" step="0.0001" name="resolution_in_ppmm" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500">
+              </div>
+              <div>
+                <label class="block text-xs text-gray-600 mb-1">Image Notes</label>
+                <textarea name="image_notes" rows="3" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500"></textarea>
               </div>
             </div>
+          </div>
+
+          <div id="image-form-actions" class="pt-4 border-t border-gray-200 mt-auto flex flex-col gap-2">
+            <div class="flex gap-2">
+              <button type="button" onclick="cancelImageChanges()" class="flex-1 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 font-medium py-2 rounded-lg transition-colors text-sm">
+                Cancel
+              </button>
+              <button type="submit" id="btn-save-image" class="flex-1 bg-gray-800 hover:bg-gray-900 text-white font-medium py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2">
+                <i class="fi fi-rr-disk"></i> Save Image
+              </button>
+            </div>
+            <button type="button" onclick="deleteImage()" class="w-full bg-white hover:bg-red-50 border border-red-200 text-red-600 font-medium py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2 mt-2">
+              <i class="fi fi-rr-trash"></i> Delete Image Completely
+            </button>
           </div>
         </form>
       </div>
@@ -276,6 +314,7 @@ const state = {
   images: [],
   selectedImageId: null,
   currentImageObj: null,
+  currentImageDetails: null, // Caches DB state for the Image Form
   bboxes: [],
   selectedBoxIndex: -1,
   zoom: 1.0,
@@ -286,7 +325,9 @@ const state = {
   startX: 0, startY: 0,
   startBoxState: null,
   
-  pagination: { page: 1, next: null, loading: false }
+  pagination: { page: 1, next: null, loading: false },
+  heartbeatInterval: null,
+  isLockedByOther: false
 };
 
 let canvas, ctx, wrapper;
@@ -548,9 +589,19 @@ function renderImageList(imagesToRender, append = false) {
 }
 
 // ---------------------------------------------------------
-// IMAGE SELECTION & RIGHT PANEL TABS
+// IMAGE SELECTION, LOCKING & RIGHT PANEL TABS
 // ---------------------------------------------------------
 async function selectImage(img) {
+  if (!img) {
+    document.getElementById('canvas-empty').classList.remove('hidden');
+    document.getElementById('canvas-wrapper').classList.add('hidden');
+    document.getElementById('normal-mode-actions').classList.add('hidden');
+    document.getElementById('canvas-title').textContent = 'Annotation Canvas';
+    document.getElementById('canvas-subtitle').textContent = 'Select an image to begin';
+    state.selectedImageId = null;
+    return;
+  }
+
   state.selectedImageId = img.image_asset_id;
   renderImageList(state.images, false);
 
@@ -562,7 +613,25 @@ async function selectImage(img) {
 
   switchRightTab('image');
 
+  // --- CONCURRENCY LOCKING ---
+  if (state.heartbeatInterval) clearInterval(state.heartbeatInterval);
+  const locked = await acquireLock(img.image_asset_id);
+  
+  if (locked) {
+      // Start 60-second heartbeat to keep lock alive
+      state.heartbeatInterval = setInterval(() => {
+          acquireLock(img.image_asset_id);
+      }, 60000);
+  }
+
   try {
+    // 1. Fetch full Image Asset details for the form
+    const assetRes = await fetch(`/api/v1/image-assets/${img.image_asset_id}/`, { headers: { 'X-CSRFToken': csrftoken } });
+    const assetData = await assetRes.json();
+    state.currentImageDetails = assetData;
+    populateImageForm();
+
+    // 2. Fetch ROIs (Beetles)
     const res = await fetch(`/api/v1/beetles/?image_asset=${img.image_asset_id}&has_bbox=true`, { headers: { 'X-CSRFToken': csrftoken } });
     const data = await res.json();
     state.bboxes = data.results || data;
@@ -570,14 +639,7 @@ async function selectImage(img) {
     
     document.getElementById('tab-bbox-count').textContent = state.bboxes.length;
 
-    const defaultsForm = document.getElementById('form-image-defaults');
-    defaultsForm.reset();
-    if (state.bboxes.length > 0) {
-      defaultsForm.elements['default_aspect'].value = state.bboxes[0].aspect || '';
-      defaultsForm.elements['default_collection_country'].value = state.bboxes[0].collection_country || '';
-      defaultsForm.elements['default_collection_stateProvince'].value = state.bboxes[0].collection_stateProvince || '';
-    }
-
+    // 3. Load Image Canvas
     const imageObj = new Image();
     imageObj.crossOrigin = 'anonymous';
     imageObj.onload = () => {
@@ -599,6 +661,52 @@ async function selectImage(img) {
   } catch(e) { console.error('Image load error', e); }
 }
 
+async function acquireLock(imageId) {
+    try {
+        const res = await fetch(`/api/v1/image-assets/${imageId}/heartbeat/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken }
+        });
+        if (res.status === 409) {
+            const data = await res.json();
+            setLockState(true, data.error);
+            return false;
+        } else if (res.ok) {
+            setLockState(false);
+            return true;
+        }
+    } catch (e) {
+        console.error("Lock error", e);
+        return false;
+    }
+}
+
+function setLockState(isLockedByOther, msg = '') {
+    state.isLockedByOther = isLockedByOther;
+    const warningEl = document.getElementById('lock-warning');
+    const warningText = document.getElementById('lock-warning-text');
+    const imageFormFields = document.getElementById('form-image-details').querySelectorAll('input, textarea, button');
+    const bboxFormFields = document.getElementById('form-bbox-metadata').querySelectorAll('input, textarea, button');
+    const globalValidateBtn = document.getElementById('validate-all-btn');
+
+    if (isLockedByOther) {
+        warningText.textContent = msg;
+        warningEl.classList.remove('hidden');
+        imageFormFields.forEach(el => el.disabled = true);
+        bboxFormFields.forEach(el => el.disabled = true);
+        globalValidateBtn.disabled = true;
+        globalValidateBtn.classList.replace('bg-gray-500', 'bg-gray-300');
+        document.getElementById('image-form-actions').classList.add('hidden');
+    } else {
+        warningEl.classList.add('hidden');
+        imageFormFields.forEach(el => el.disabled = false);
+        bboxFormFields.forEach(el => el.disabled = false);
+        globalValidateBtn.disabled = false;
+        globalValidateBtn.classList.replace('bg-gray-300', 'bg-gray-500');
+        document.getElementById('image-form-actions').classList.remove('hidden');
+    }
+}
+
 function switchRightTab(tab) {
   state.activeTab = tab;
   const btnImg = document.getElementById('tab-btn-image');
@@ -618,6 +726,92 @@ function switchRightTab(tab) {
     contBox.classList.remove('hidden');
   }
 }
+
+// ---------------------------------------------------------
+// IMAGE DETAILS FORM (SAVE, CANCEL, DELETE)
+// ---------------------------------------------------------
+function populateImageForm() {
+    if (!state.currentImageDetails) return;
+    const f = document.getElementById('form-image-details');
+    f.elements['image_institution'].value = state.currentImageDetails.image_institution || '';
+    f.elements['photographer'].value = state.currentImageDetails.photographer || '';
+    f.elements['image_date_taken'].value = state.currentImageDetails.image_date_taken || '';
+    f.elements['image_email'].value = state.currentImageDetails.image_email || '';
+    f.elements['photo_usage_statement'].value = state.currentImageDetails.photo_usage_statement || '';
+    f.elements['image_has_multiple_individuals'].checked = !!state.currentImageDetails.image_has_multiple_individuals;
+    f.elements['resolution_in_ppmm'].value = state.currentImageDetails.resolution_in_ppmm || '';
+    f.elements['image_notes'].value = state.currentImageDetails.image_notes || '';
+}
+
+function cancelImageChanges() {
+    populateImageForm(); // Reverts fields to cached DB state
+}
+
+async function saveImageDetails() {
+    if (!state.selectedImageId || state.isLockedByOther) return;
+    
+    const f = document.getElementById('form-image-details');
+    const btn = document.getElementById('btn-save-image');
+    
+    const payload = {
+        image_institution: f.elements['image_institution'].value || null,
+        photographer: f.elements['photographer'].value || null,
+        image_date_taken: f.elements['image_date_taken'].value || null,
+        image_email: f.elements['image_email'].value || null,
+        photo_usage_statement: f.elements['photo_usage_statement'].value || null,
+        image_has_multiple_individuals: f.elements['image_has_multiple_individuals'].checked,
+        resolution_in_ppmm: f.elements['resolution_in_ppmm'].value || null,
+        image_notes: f.elements['image_notes'].value || null,
+    };
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i> Saving...';
+
+    try {
+        const res = await fetch(`/api/v1/image-assets/${state.selectedImageId}/`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+            body: JSON.stringify(payload)
+        });
+        if(res.ok) {
+            state.currentImageDetails = await res.json(); // Update cache
+            btn.innerHTML = '<i class="fi fi-rr-check"></i> Saved!';
+            setTimeout(() => { btn.innerHTML = '<i class="fi fi-rr-disk"></i> Save Image'; btn.disabled = false; }, 2000);
+        }
+    } catch(e) {
+        console.error('Image save failed', e);
+        btn.innerHTML = 'Error';
+        btn.disabled = false;
+    }
+}
+
+async function deleteImage() {
+    if (!state.selectedImageId || state.isLockedByOther) return;
+    if (!confirm("Are you sure you want to delete this image and all its regions of interest?\n\n(This action can be reversed later via the admin panel).")) return;
+    
+    try {
+        const res = await fetch(`/api/v1/image-assets/${state.selectedImageId}/`, {
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': csrftoken }
+        });
+        if(res.ok) {
+            // Remove from left panel and select next image
+            const idx = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
+            if(idx > -1) {
+                state.images.splice(idx, 1);
+                if(state.images.length > 0) selectImage(state.images[idx] || state.images[0]);
+                else {
+                    resetAndLoadImages();
+                    selectImage(null);
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Delete failed", e);
+        alert("Failed to delete image.");
+    }
+}
+
 
 // ---------------------------------------------------------
 // CANVAS INTERACTIONS (JUPYTER-BBOX-WIDGET STYLE)
@@ -687,7 +881,7 @@ function updateCursor(e) {
 }
 
 function onMouseDown(e) {
-  if (e.button !== 0 || !state.currentImageObj) return;
+  if (e.button !== 0 || !state.currentImageObj || state.isLockedByOther) return;
   const ptr = getPointer(e);
   const hit = hitTest(ptr.x, ptr.y);
 
@@ -708,7 +902,7 @@ function onMouseDown(e) {
 }
 
 function onMouseMove(e) {
-  if (state.interactionMode === 'idle') return;
+  if (state.interactionMode === 'idle' || state.isLockedByOther) return;
   
   const ptr = getPointer(e);
   const dx = (ptr.x - state.startX) / canvas.width;
@@ -736,7 +930,7 @@ function onMouseMove(e) {
 }
 
 async function onMouseUp(e) {
-  if (state.interactionMode === 'idle') return;
+  if (state.interactionMode === 'idle' || state.isLockedByOther) return;
 
   if (state.interactionMode === 'drawing') {
     const w = Math.abs(state.startBoxState.w);
@@ -746,16 +940,12 @@ async function onMouseUp(e) {
       const bx = Math.min(state.startX, state.startX + state.startBoxState.w) / canvas.width;
       const by = Math.min(state.startY, state.startY + state.startBoxState.h) / canvas.height;
       
-      const defaultForm = document.getElementById('form-image-defaults');
       const payload = {
         image_asset_id: state.selectedImageId,
         bbox_x: bx, 
         bbox_y: by,
         bbox_width: w / canvas.width, 
-        bbox_height: h / canvas.height,
-        aspect: defaultForm.elements['default_aspect'].value || null,
-        collection_country: defaultForm.elements['default_collection_country'].value || null,
-        collection_stateProvince: defaultForm.elements['default_collection_stateProvince'].value || null
+        bbox_height: h / canvas.height
       };
       
       try {
@@ -772,7 +962,7 @@ async function onMouseUp(e) {
           const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
           if (currentIndex > -1) {
               state.images[currentIndex].annotation_count++;
-              state.images[currentIndex].has_unvalidated_boxes = true; // New boxes require validation
+              state.images[currentIndex].has_unvalidated_boxes = true;
               renderImageList(state.images, false);
           }
 
@@ -838,7 +1028,7 @@ function drawCanvas() {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(`${i+1}`, bx + badgeR, by - badgeR - (2/state.zoom));
 
-    if (isSel) {
+    if (isSel && !state.isLockedByOther) {
       ctx.fillStyle = '#fff';
       const hs = 10 / state.zoom;
       const pts = [
@@ -864,7 +1054,7 @@ function drawCanvas() {
 }
 
 // ---------------------------------------------------------
-// RIGHT PANEL FORM LOGIC
+// RIGHT PANEL FORM LOGIC (ROI METADATA)
 // ---------------------------------------------------------
 function selectBox(idx) {
   state.selectedBoxIndex = idx;
@@ -895,7 +1085,7 @@ function selectBox(idx) {
 }
 
 async function saveActiveBoxMetadata() {
-  if (state.selectedBoxIndex < 0) return;
+  if (state.selectedBoxIndex < 0 || state.isLockedByOther) return;
   const b = state.bboxes[state.selectedBoxIndex];
   const form = document.getElementById('form-bbox-metadata');
   const btn = document.getElementById('btn-save-bbox');
@@ -920,18 +1110,17 @@ async function saveActiveBoxMetadata() {
     if(res.ok) {
       state.bboxes[state.selectedBoxIndex] = await res.json();
       btn.innerHTML = '<i class="fi fi-rr-check"></i> Saved!';
-      setTimeout(() => { btn.innerHTML = '<i class="fi fi-rr-disk"></i> Save Annotation Details'; }, 2000);
+      setTimeout(() => { btn.innerHTML = '<i class="fi fi-rr-disk"></i> Save Annotation Details'; btn.disabled = false; }, 2000);
     }
   } catch(e) { 
     console.error('Metadata save failed', e); 
     btn.innerHTML = 'Error Saving';
-  } finally {
     btn.disabled = false;
   }
 }
 
 async function deleteActiveBox() {
-  if (state.selectedBoxIndex < 0) return;
+  if (state.selectedBoxIndex < 0 || state.isLockedByOther) return;
   if (!confirm("Are you sure you want to delete this bounding box?")) return;
   
   const b = state.bboxes[state.selectedBoxIndex];
@@ -974,8 +1163,6 @@ async function fetchAndUpdateTaxonomyPanel(id) {
     }
   } catch(e) { preview.textContent = ''; }
 }
-
-function markImageDefaultsDirty() { }
 
 // ---------------------------------------------------------
 // ZOOM & UTILS
@@ -1042,15 +1229,13 @@ function getCookie(name) {
 // VALIDATION & EXPORT
 // ---------------------------------------------------------
 async function validateAllBoundingBoxes() {
-  if (!state.selectedImageId) return alert('Select an image first.');
+  if (!state.selectedImageId || state.isLockedByOther) return alert('Select an unlocked image first.');
   
   const unval = state.bboxes.filter(b => !b.bbox_is_validated);
-  
   const btn = document.getElementById('validate-all-btn');
   btn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i>';
   
   try {
-    // 1. Validate all unvalidated bounding boxes
     if (unval.length > 0) {
       await Promise.all(unval.map(b => fetch(`/api/v1/beetles/${b.id}/`, {
         method: 'PATCH',
@@ -1060,7 +1245,6 @@ async function validateAllBoundingBoxes() {
       state.bboxes.forEach(b => b.bbox_is_validated = true);
     }
     
-    // 2. Validate the Image Asset itself
     await fetch(`/api/v1/image-assets/${state.selectedImageId}/`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
@@ -1069,15 +1253,14 @@ async function validateAllBoundingBoxes() {
 
     drawCanvas();
     
-    // Refresh the specific image in the list to show it is now validated
     const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
     if(currentIndex > -1) {
       state.images[currentIndex].is_validated = true;
       state.images[currentIndex].has_unvalidated_boxes = false;
-      renderImageList(state.images, false);
+      renderImageList(state.images, false); 
     }
     
-    alert(`Successfully validated image and ${unval.length} boxes.`);
+    alert(`Successfully validated image${unval.length > 0 ? ` and ${unval.length} boxes` : ''}.`);
     
   } catch(e) { 
     console.error(e); 

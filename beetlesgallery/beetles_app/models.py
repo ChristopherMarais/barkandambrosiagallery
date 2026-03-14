@@ -64,6 +64,28 @@ class ImageAsset(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    is_deleted = models.BooleanField(
+        default=False, 
+        db_index=True,
+        help_text="Soft deletion flag. If true, hidden from UI."
+    )
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    
+    history = HistoricalRecords()
+
+    def delete(self, using=None, keep_parents=False, deleted_by=None):
+        """Soft delete the image and cascade soft-delete to all its ROIs."""
+        from django.utils import timezone
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        if deleted_by:
+            self.last_updated_by = deleted_by
+        self.save(update_fields=['is_deleted', 'deleted_at', 'last_updated_by', 'updated_at'])
+        
+        # Cascade soft-delete to associated Beetles/ROIs
+        for beetle in self.specimens.filter(is_deleted=False):
+            beetle.delete(deleted_by=deleted_by)
+
     def __str__(self):
         return f"Image {self.image_sha256[:8] if self.image_sha256 else 'NoSHA'} ({self.full_path_at_import})"
 
@@ -197,7 +219,24 @@ class Beetles(models.Model):
         help_text="When this annotation was created"
     )
 
+    # --- Soft Delete ---
+    is_deleted = models.BooleanField(
+        default=False, 
+        db_index=True,
+        help_text="Soft deletion flag."
+    )
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
     history = HistoricalRecords()
+
+    def delete(self, using=None, keep_parents=False, deleted_by=None):
+        """Soft delete the beetle (ROI/specimen)."""
+        from django.utils import timezone
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        if deleted_by:
+            self.last_updated_by = deleted_by
+        self.save(update_fields=['is_deleted', 'deleted_at', 'last_updated_by', 'last_updated_at'])
 
     class Meta:
         db_table = "beetles"

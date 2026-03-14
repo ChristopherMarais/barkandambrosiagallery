@@ -14,6 +14,7 @@ import zipfile
 import os
 from io import BytesIO
 from datetime import datetime
+from rest_framework import status
 
 
 class IsStaffUser(IsAuthenticated):
@@ -28,9 +29,14 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
     """
     API endpoint for ImageAsset records.
     """
-    queryset = ImageAsset.objects.all()
+    # --> UPDATED: Filter out soft-deleted images
+    queryset = ImageAsset.objects.filter(is_deleted=False)
     serializer_class = ImageAssetSerializer
     permission_classes = [IsStaffUser] # Required so only staff can validate/update
+
+    # --> NEW: Soft delete attribution
+    def perform_destroy(self, instance):
+        instance.delete(deleted_by=self.request.user)
 
     def perform_update(self, serializer):
         # Automatically track who updated/validated the image
@@ -42,6 +48,32 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
         if not asset.image_file:
             return Response({'error': 'No image file available'}, status=404)
         return FileResponse(asset.image_file.open('rb'))
+
+    @action(detail=True, methods=['post'], url_path='heartbeat')
+    def heartbeat(self, request, pk=None):
+        """
+        Refresh the lock on this image to prevent concurrent editing.
+        Called automatically by the frontend every 60 seconds.
+        """
+        asset = self.get_object()
+        
+        if hasattr(asset, 'active_lock') and asset.active_lock:
+            lock = asset.active_lock
+            if lock.locked_by != request.user and not lock.is_expired():
+                return Response(
+                    {'error': f'Locked by {lock.locked_by.username}'}, 
+                    status=status.HTTP_409_CONFLICT
+                )
+            if lock.locked_by == request.user:
+                lock.updated_at = timezone.now()
+                lock.save(update_fields=['updated_at'])
+                return Response({'status': 'Lock refreshed'})
+                
+        ImageLock.objects.update_or_create(
+            image_asset=asset,
+            defaults={'locked_by': request.user, 'updated_at': timezone.now()}
+        )
+        return Response({'status': 'Lock acquired'})
 
     @action(detail=True, methods=['post'], permission_classes=[IsStaffUser])
     def lock(self, request, pk=None):
@@ -58,16 +90,12 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
         asset = self.get_object()
         user = request.user
 
-        # Clean up expired locks first
         ImageLock.cleanup_expired_locks()
 
-        # Check if image is already locked
         try:
             existing_lock = ImageLock.objects.select_related('locked_by').get(image_asset=asset)
-
-            # If locked by current user, just refresh the timestamp
             if existing_lock.locked_by == user:
-                existing_lock.save()  # Updates updated_at
+                existing_lock.save()
                 return Response({
                     'success': True,
                     'message': 'Lock refreshed',
@@ -75,10 +103,8 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
                     'locked_at': existing_lock.locked_at
                 })
 
-            # Locked by someone else - check if expired
             if existing_lock.is_expired():
                 existing_lock.delete()
-                # Create new lock below
             else:
                 return Response({
                     'success': False,
@@ -89,9 +115,8 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
                 }, status=409)
 
         except ImageLock.DoesNotExist:
-            pass  # No existing lock, create new one below
+            pass
 
-        # Create new lock
         lock = ImageLock.objects.create(
             image_asset=asset,
             locked_by=user
@@ -137,11 +162,12 @@ class BeetlesViewSet(viewsets.ModelViewSet):
     permission_classes = [IsStaffUser]
 
     def get_queryset(self):
+        # --> UPDATED: Filter out soft-deleted ROIs
         queryset = Beetles.objects.select_related(
             'image_asset',
             'bbox_created_by',
             'bbox_validated_by'
-        ).all()
+        ).filter(is_deleted=False)
 
         subfamily = self.request.query_params.get('subfamily')
         if subfamily:
@@ -159,6 +185,10 @@ class BeetlesViewSet(viewsets.ModelViewSet):
 
         return queryset
 
+    # --> NEW: Trigger the soft-delete method
+    def perform_destroy(self, instance):
+        instance.delete(deleted_by=self.request.user)
+
     def perform_create(self, serializer):
         if serializer.validated_data.get('bbox_x') is not None:
             image_asset_id = serializer.initial_data.get('image_asset_id')
@@ -166,7 +196,8 @@ class BeetlesViewSet(viewsets.ModelViewSet):
             if image_asset_id:
                 beetle_without_bbox = Beetles.objects.filter(
                     image_asset_id=image_asset_id,
-                    bbox_x__isnull=True
+                    bbox_x__isnull=True,
+                    is_deleted=False # --> Added check
                 ).first()
 
                 if beetle_without_bbox:
@@ -174,19 +205,20 @@ class BeetlesViewSet(viewsets.ModelViewSet):
                     beetle_without_bbox.bbox_y = serializer.validated_data.get('bbox_y')
                     beetle_without_bbox.bbox_width = serializer.validated_data.get('bbox_width')
                     beetle_without_bbox.bbox_height = serializer.validated_data.get('bbox_height')
-                    # bbox_label REMOVED
                     beetle_without_bbox.bbox_created_by = self.request.user
                     beetle_without_bbox.bbox_created_at = timezone.now()
+                    beetle_without_bbox.last_updated_by = self.request.user
                     beetle_without_bbox.save()
 
                     serializer.instance = beetle_without_bbox
                     return
                 else:
-                    template = Beetles.objects.filter(image_asset_id=image_asset_id).first()
+                    template = Beetles.objects.filter(image_asset_id=image_asset_id, is_deleted=False).first() # --> Added check
                     if template:
                         extra_fields = {
                             'bbox_created_by': self.request.user,
                             'bbox_created_at': timezone.now(),
+                            'last_updated_by': self.request.user,
                             'depicts_valid_name_id': template.depicts_valid_name_id,
                             'depicts_specimen': template.depicts_specimen,
                             'depicts_name_verbatim': template.depicts_name_verbatim,
@@ -200,63 +232,41 @@ class BeetlesViewSet(viewsets.ModelViewSet):
 
             serializer.save(
                 bbox_created_by=self.request.user,
-                bbox_created_at=timezone.now()
+                bbox_created_at=timezone.now(),
+                last_updated_by=self.request.user
             )
         else:
-            serializer.save()
+            serializer.save(last_updated_by=self.request.user)
 
     def perform_update(self, serializer):
         if 'bbox_x' in serializer.validated_data and serializer.validated_data.get('bbox_x') is None:
             instance = serializer.instance
             if instance and instance.bbox_x is not None:
-                self._backup_deleted_beetle(instance)
+                # --> UPDATED: Instead of writing a json file, just soft-delete the ROI record
+                instance.delete(deleted_by=self.request.user)
+                return
 
             serializer.save(
                 bbox_created_by=None,
                 bbox_created_at=None,
                 bbox_validated_by=None,
                 bbox_validated_at=None,
-                bbox_is_validated=False
+                bbox_is_validated=False,
+                last_updated_by=self.request.user
             )
         elif serializer.validated_data.get('bbox_is_validated') == True:
             serializer.save(
                 bbox_validated_by=self.request.user,
-                bbox_validated_at=timezone.now()
+                bbox_validated_at=timezone.now(),
+                last_updated_by=self.request.user
             )
         else:
-            serializer.save()
-
-    def _backup_deleted_beetle(self, beetle):
-        try:
-            date_str = datetime.now().strftime('%Y-%m-%d')
-            backup_dir = os.path.join(settings.MEDIA_ROOT, 'deleted_beetles', date_str)
-            os.makedirs(backup_dir, exist_ok=True)
-
-            serializer = BeetlesSerializer(beetle)
-            beetle_data = serializer.data
-
-            beetle_data['deleted_at'] = timezone.now().isoformat()
-            beetle_data['deleted_by'] = self.request.user.username if self.request.user else None
-
-            filepath = os.path.join(backup_dir, f"{beetle.id}.json")
-            with open(filepath, 'w') as f:
-                json.dump(beetle_data, f, indent=2)
-
-            return filepath
-        except Exception as e:
-            print(f"Warning: Failed to backup beetle {beetle.id}: {str(e)}")
-            return None
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        self._backup_deleted_beetle(instance)
-        return super().destroy(request, *args, **kwargs)
+            serializer.save(last_updated_by=self.request.user)
 
     @action(detail=False, methods=['get'], url_path='images-with-annotations')
     def images_with_annotations(self, request):
         """
         Unified API Feed for the Annotation Tool.
-        Returns a paginated list of ImageAssets and respects all advanced filters.
         """
         from django.db.models import Count, Q, Exists, OuterRef
         from django.core.paginator import Paginator
@@ -267,7 +277,6 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         ordering = request.GET.get('ordering', '-created_at')
         search = request.GET.get('search', '').strip()
 
-        # Step 1: Base Beetles Query (Apply text search and advanced filters)
         beetles_qs = Beetles.objects.all()
 
         if search:
@@ -285,20 +294,20 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         if active_filters:
             beetles_qs = filter_beetles_queryset(beetles_qs, active_filters, None, None, None, None)
 
-        # Get valid image IDs that survived the beetle-level filters
-        valid_image_ids = beetles_qs.values('image_asset_id')
+        # --> UPDATED: Enforce is_deleted=False across the board
+        valid_image_ids = beetles_qs.filter(is_deleted=False).values('image_asset_id')
 
-        # Step 2: Query ImageAssets directly for clean pagination and grouping
-        image_qs = ImageAsset.objects.filter(id__in=valid_image_ids).select_related('active_lock__locked_by')
+        image_qs = ImageAsset.objects.filter(id__in=valid_image_ids, is_deleted=False).select_related('active_lock__locked_by')
 
         unvalidated_rois = Beetles.objects.filter(
             image_asset_id=OuterRef('pk'),
             bbox_x__isnull=False,
-            bbox_is_validated=False
+            bbox_is_validated=False,
+            is_deleted=False
         )
 
         image_qs = image_qs.annotate(
-            roi_count=Count('specimens', filter=Q(specimens__bbox_x__isnull=False), distinct=True),
+            roi_count=Count('specimens', filter=Q(specimens__bbox_x__isnull=False, specimens__is_deleted=False), distinct=True),
             has_unvalidated_boxes=Exists(unvalidated_rois)
         )
 
@@ -327,7 +336,6 @@ class BeetlesViewSet(viewsets.ModelViewSet):
 
             images.append({
                 'image_asset_id': str(img.id),
-                # If no specimens exist, beetle_id can be left null
                 'beetle_id': str(img.specimens.first().id) if img.specimens.exists() else None, 
                 'filename': os.path.basename(img.image_file.name) if img.image_file else 'unknown',
                 'thumbnail_url': img.thumb_small.url if img.thumb_small else None,
@@ -339,12 +347,10 @@ class BeetlesViewSet(viewsets.ModelViewSet):
                 'lock': lock_info,
             })
 
-        # Pagination URLs
         base_url = request.build_absolute_uri(request.path)
         next_url = None
         prev_url = None
         
-        # Reconstruct query string for pagination links
         query_string = request.GET.copy()
         if 'page' in query_string: query_string.pop('page')
 
