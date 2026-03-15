@@ -1642,36 +1642,60 @@ async function onMouseUp(e) {
         bbox_width: w / canvas.width, bbox_height: h / canvas.height
       };
       
-      try {
-        const res = await fetch('/api/v1/beetles/', {
-          method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-          body: JSON.stringify(payload)
-        });
-        if(res.ok) {
-          const newBox = await res.json();
-          state.bboxes.push(newBox);
-          document.getElementById('tab-bbox-count').textContent = state.bboxes.length;
-          
-          const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
-          if (currentIndex > -1) {
-              state.images[currentIndex].annotation_count++;
-              state.images[currentIndex].has_unvalidated_boxes = true;
-              renderImageList(state.images, false);
-          }
+      // --- OPTIMISTIC UI UPDATE ---
+      // 1. Create a temporary box and push it to the screen instantly to remove all lag
+      const tempBox = { ...payload, id: 'temp_' + Date.now(), bbox_is_validated: false };
+      state.bboxes.push(tempBox);
+      const tempIndex = state.bboxes.length - 1;
+      state.selectedBoxIndex = tempIndex;
+      
+      // 2. Release the UI thread immediately and draw the canvas
+      state.interactionMode = 'idle';
+      drawCanvas();
 
-          // Auto-tick checkbox if we now have multiple
-          syncMultipleIndividualsCheckbox();
-
-          await checkAndAutoValidateImage();
-          updateMainStatusIndicator();
-
-          renderRoiAccordions();
-          selectBox(state.bboxes.length - 1);
-          switchRightTab('bbox');
+      // 3. Perform the network save silently in the background
+      fetch('/api/v1/beetles/', {
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+        body: JSON.stringify(payload)
+      })
+      .then(res => {
+          if (!res.ok) throw new Error('Network error');
+          return res.json();
+      })
+      .then(async (newBox) => {
+        // 4. Once the server responds, seamlessly swap the temp box with the real database box
+        state.bboxes[tempIndex] = newBox;
+        document.getElementById('tab-bbox-count').textContent = state.bboxes.length;
+        
+        const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
+        if (currentIndex > -1) {
+            state.images[currentIndex].annotation_count++;
+            state.images[currentIndex].has_unvalidated_boxes = true;
+            renderImageList(state.images, false);
         }
-      } catch(err) { console.error('Error saving drawn box', err); }
+
+        syncMultipleIndividualsCheckbox();
+        await checkAndAutoValidateImage();
+        updateMainStatusIndicator();
+
+        renderRoiAccordions();
+        selectBox(tempIndex);
+        switchRightTab('bbox');
+      })
+      .catch(err => {
+        console.error('Error saving drawn box', err);
+        // If the server fails, remove the temporary box and alert the user
+        state.bboxes.splice(tempIndex, 1);
+        state.selectedBoxIndex = -1;
+        drawCanvas();
+        alert("Failed to save the bounding box. Please check your connection.");
+      });
+
+      return; // Exit early because we already reset interactionMode and drew the canvas
     }
   } else {
+    // Handling resizing and moving (which is already optimistic)
     if (state.selectedBoxIndex >= 0) {
         saveBoxGeometryAPI(state.selectedBoxIndex);
         syncBboxInputs(state.selectedBoxIndex);
