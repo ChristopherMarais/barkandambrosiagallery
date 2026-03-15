@@ -44,8 +44,7 @@
     <div>
       <h1 class="text-3xl font-bold text-gray-900">Data Curation & Annotation</h1>
       <p class="text-xs text-gray-500 mt-1">
-        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs">Click + Drag</kbd> Draw / Move / Resize
-        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs ml-2">Space</kbd> Validate
+        Select an image to begin.
       </p>
     </div>
   </div>
@@ -175,11 +174,17 @@
     </div>
 
     <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden flex flex-col relative" style="width: 50%; min-width: 0; height: 100%;">
+      <div class="hidden bg-gray-300 bg-amber-500 bg-green-500 bg-blue-500"></div>
+      
       <div class="border-b border-gray-200 p-3 flex items-center justify-between bg-gray-50 flex-shrink-0">
-        <div>
-          <h3 class="text-base font-semibold text-gray-900" id="canvas-title">Annotation Canvas</h3>
-          <p class="text-xs text-gray-500" id="canvas-subtitle">Select an image to begin</p>
+        <div class="flex items-center gap-3">
+          <div id="main-status-indicator" class="w-3 h-3 rounded-full bg-gray-300 hidden"></div>
+          <div>
+            <h3 class="text-base font-semibold text-gray-900 flex items-center gap-2" id="canvas-title">Annotation Canvas</h3>
+            <p class="text-xs text-gray-500" id="canvas-subtitle">Please select an image to begin annotating</p>
+          </div>
         </div>
+        
         <div id="normal-mode-actions" class="flex gap-1 hidden">
           <button type="button" onclick="zoomIn()" class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-200" title="Zoom In"><i class="fi fi-rr-zoom-in"></i></button>
           <span id="footer-zoom" class="px-2 py-1 text-xs text-gray-600 font-mono self-center">100%</span>
@@ -677,6 +682,100 @@ function syncMultipleIndividualsCheckbox() {
 }
 
 // ---------------------------------------------------------
+// UPDATE MAIN WINDOW STATUS INDICATOR
+// ---------------------------------------------------------
+function updateMainStatusIndicator() {
+    const indicator = document.getElementById('main-status-indicator');
+    if (!indicator) return; // Fail gracefully if the DOM element isn't found
+    
+    if (!state.selectedImageId) {
+        indicator.classList.add('hidden');
+        return;
+    }
+    
+    const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
+    if (currentIndex === -1) {
+        indicator.classList.add('hidden');
+        return;
+    }
+    
+    indicator.classList.remove('hidden', 'bg-gray-300', 'bg-green-500', 'bg-amber-500', 'bg-blue-500');
+
+    // Evaluate based on the live UI state rather than the lagging imgData
+    if (state.bboxes.length === 0) {
+        indicator.classList.add('bg-gray-300'); // No boxes
+        indicator.title = "No Bounding Boxes";
+    } else {
+        const validatedCount = state.bboxes.filter(b => b.bbox_is_validated).length;
+        
+        // If the number of validated boxes matches the total boxes
+        if (validatedCount === state.bboxes.length) {
+            indicator.classList.add('bg-green-500'); // Image fully validated
+            indicator.title = "Fully Validated";
+        } else if (validatedCount > 0) {
+            indicator.classList.add('bg-blue-500'); // Partially validated
+            indicator.title = "Partially Validated";
+        } else {
+            indicator.classList.add('bg-amber-500'); // Not validated
+            indicator.title = "Not Validated";
+        }
+    }
+}
+
+async function checkAndAutoValidateImage() {
+    if (!state.selectedImageId) return;
+    
+    const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
+    if (currentIndex === -1) return;
+
+    // Edge case: User deleted the last remaining box
+    if (state.bboxes.length === 0) {
+        if (state.images[currentIndex].is_validated) {
+            try {
+                await fetch(`/api/v1/image-assets/${state.selectedImageId}/`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                    body: JSON.stringify({ is_validated: false })
+                });
+                state.images[currentIndex].is_validated = false;
+                state.images[currentIndex].has_unvalidated_boxes = false;
+                renderImageList(state.images, false);
+            } catch(e) { console.error(e); }
+        }
+        return;
+    }
+    
+    const allValidated = state.bboxes.every(b => b.bbox_is_validated);
+    
+    if (currentIndex > -1 && allValidated && !state.images[currentIndex].is_validated) {
+        try {
+            await fetch(`/api/v1/image-assets/${state.selectedImageId}/`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                body: JSON.stringify({ is_validated: true })
+            });
+            state.images[currentIndex].is_validated = true;
+            state.images[currentIndex].has_unvalidated_boxes = false;
+            renderImageList(state.images, false);
+            updateMainStatusIndicator();
+        } catch(e) { console.error('Failed to auto-validate image', e); }
+    } else if (currentIndex > -1 && !allValidated && state.images[currentIndex].is_validated) {
+        // If they add a new box or unvalidate one, make sure the image is marked as unvalidated
+        try {
+            await fetch(`/api/v1/image-assets/${state.selectedImageId}/`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                body: JSON.stringify({ is_validated: false })
+            });
+            state.images[currentIndex].is_validated = false;
+            state.images[currentIndex].has_unvalidated_boxes = true;
+            renderImageList(state.images, false);
+            updateMainStatusIndicator();
+        } catch(e) { console.error('Failed to un-validate image', e); }
+    }
+}
+
+// ---------------------------------------------------------
 // IMAGE SELECTION, LOCKING & RIGHT PANEL TABS
 // ---------------------------------------------------------
 async function selectImage(img) {
@@ -687,6 +786,7 @@ async function selectImage(img) {
     document.getElementById('canvas-title').textContent = 'Annotation Canvas';
     document.getElementById('canvas-subtitle').textContent = 'Select an image to begin';
     state.selectedImageId = null;
+    updateMainStatusIndicator();
     return;
   }
 
@@ -698,6 +798,7 @@ async function selectImage(img) {
   document.getElementById('canvas-wrapper').classList.add('hidden');
   document.getElementById('canvas-loading').classList.remove('hidden');
   document.getElementById('normal-mode-actions').classList.add('hidden');
+  updateMainStatusIndicator();
 
   switchRightTab(state.activeTab);
 
@@ -724,6 +825,7 @@ async function selectImage(img) {
 
     // Sync the checkbox on load
     syncMultipleIndividualsCheckbox();
+    updateMainStatusIndicator();
 
     const imageObj = new Image();
     imageObj.crossOrigin = 'anonymous';
@@ -1158,6 +1260,10 @@ async function saveRoiMetadata(idx, isValidating = false) {
       drawCanvas(); // Move the box instantly if they manually changed coordinates
       setTimeout(() => { btn.innerHTML = '<i class="fi fi-rr-disk"></i> Save'; btn.disabled = false; }, 1500);
       setTimeout(() => renderRoiAccordions(), 1600);
+
+      await checkAndAutoValidateImage();
+      updateMainStatusIndicator();
+
     }
   } catch(e) { btn.innerHTML = 'Error'; btn.disabled = false; }
 }
@@ -1199,6 +1305,10 @@ async function deleteBoxUi(idx) {
 
     // Auto-untick checkbox if we now have 1 or 0
     syncMultipleIndividualsCheckbox();
+
+    // Automatically re-check the image validation status and update the UI dot
+    await checkAndAutoValidateImage();
+    updateMainStatusIndicator();
     
     state.selectedBoxIndex = -1;
     renderRoiAccordions(); 
@@ -1548,6 +1658,9 @@ async function onMouseUp(e) {
           // Auto-tick checkbox if we now have multiple
           syncMultipleIndividualsCheckbox();
 
+          await checkAndAutoValidateImage();
+          updateMainStatusIndicator();
+
           renderRoiAccordions();
           selectBox(state.bboxes.length - 1);
           switchRightTab('bbox');
@@ -1740,6 +1853,7 @@ async function validateAllBoundingBoxes() {
       state.images[currentIndex].has_unvalidated_boxes = false;
       renderImageList(state.images, false); 
     }
+    updateMainStatusIndicator();
     
   } catch(e) { 
     console.error(e); 

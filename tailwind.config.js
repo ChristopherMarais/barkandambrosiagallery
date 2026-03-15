@@ -10,6 +10,10 @@ module.exports = {
     safelist: [
         'max-h-28',
         'max-h-80',
+        'bg-gray-300',
+        'bg-amber-500',
+        'bg-green-500',
+        'bg-blue-500',
     ],
     darkMode: false,
     theme: {
