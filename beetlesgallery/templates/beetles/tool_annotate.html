@@ -68,7 +68,7 @@
           <div id="filter-stats" class="mt-2 hidden flex-col gap-3 text-[11px] bg-gray-50 px-3 py-2.5 rounded border border-gray-200">
   
             <div class="space-y-1.5">
-              <div class="font-bold text-gray-500 tracking-wider uppercase text-[10px]">Images</div>
+              <div class="font-bold text-gray-700 tracking-wider uppercase text-[10px]">Images</div>
               <div class="flex flex-wrap gap-x-5 gap-y-2">
                 
                 <div title="Validated" class="flex items-center">
@@ -93,7 +93,7 @@
             </div>
 
             <div class="space-y-1.5 border-t border-gray-200 pt-2">
-              <div class="font-bold text-gray-500 tracking-wider uppercase text-[10px]">ROIs</div>
+              <div class="font-bold text-gray-700 tracking-wider text-[10px]">ROIs</div>
               <div class="flex flex-wrap gap-x-5 gap-y-2">
                 
                 <div title="Validated ROIs" class="flex items-center">
@@ -625,7 +625,7 @@ async function selectImage(img) {
   document.getElementById('canvas-loading').classList.remove('hidden');
   document.getElementById('normal-mode-actions').classList.add('hidden');
 
-  switchRightTab('image');
+  switchRightTab(state.activeTab);
 
   if (state.heartbeatInterval) clearInterval(state.heartbeatInterval);
   const locked = await acquireLock(img.image_asset_id);
