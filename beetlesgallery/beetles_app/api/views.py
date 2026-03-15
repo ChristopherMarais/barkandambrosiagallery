@@ -162,7 +162,6 @@ class BeetlesViewSet(viewsets.ModelViewSet):
     permission_classes = [IsStaffUser]
 
     def get_queryset(self):
-        # --> UPDATED: Filter out soft-deleted ROIs
         queryset = Beetles.objects.select_related(
             'image_asset',
             'bbox_created_by',
@@ -185,7 +184,6 @@ class BeetlesViewSet(viewsets.ModelViewSet):
 
         return queryset
 
-    # --> NEW: Trigger the soft-delete method
     def perform_destroy(self, instance):
         instance.delete(deleted_by=self.request.user)
 
@@ -194,13 +192,15 @@ class BeetlesViewSet(viewsets.ModelViewSet):
             image_asset_id = serializer.initial_data.get('image_asset_id')
 
             if image_asset_id:
+                # 1. Look for a "Ghost" ROI (has metadata, but no bbox)
                 beetle_without_bbox = Beetles.objects.filter(
                     image_asset_id=image_asset_id,
                     bbox_x__isnull=True,
-                    is_deleted=False # --> Added check
+                    is_deleted=False
                 ).first()
 
                 if beetle_without_bbox:
+                    # Resurrect the Ghost ROI with the new coordinates
                     beetle_without_bbox.bbox_x = serializer.validated_data.get('bbox_x')
                     beetle_without_bbox.bbox_y = serializer.validated_data.get('bbox_y')
                     beetle_without_bbox.bbox_width = serializer.validated_data.get('bbox_width')
@@ -213,19 +213,29 @@ class BeetlesViewSet(viewsets.ModelViewSet):
                     serializer.instance = beetle_without_bbox
                     return
                 else:
-                    template = Beetles.objects.filter(image_asset_id=image_asset_id, is_deleted=False).first() # --> Added check
+                    # 2. No Ghost ROI found. Copy 100% of metadata from the LATEST existing ROI
+                    template = Beetles.objects.filter(
+                        image_asset_id=image_asset_id, 
+                        is_deleted=False
+                    ).order_by('-last_updated_at').first()
+                    
                     if template:
                         extra_fields = {
                             'bbox_created_by': self.request.user,
                             'bbox_created_at': timezone.now(),
                             'last_updated_by': self.request.user,
-                            'depicts_valid_name_id': template.depicts_valid_name_id,
+                            'taxon': template.taxon,
+                            'aspect': template.aspect,
                             'depicts_specimen': template.depicts_specimen,
+                            'depicts_valid_name_id': template.depicts_valid_name_id,
+                            'depicts_described_name_id': template.depicts_described_name_id,
                             'depicts_name_verbatim': template.depicts_name_verbatim,
+                            'alternative_id': template.alternative_id,
                             'collection_country': template.collection_country,
                             'collection_stateProvince': template.collection_stateProvince,
                             'specimen_sex': template.specimen_sex,
                             'specimen_type_status': template.specimen_type_status,
+                            'specimen_notes': template.specimen_notes,
                         }
                         serializer.save(**extra_fields)
                         return
@@ -239,13 +249,9 @@ class BeetlesViewSet(viewsets.ModelViewSet):
             serializer.save(last_updated_by=self.request.user)
 
     def perform_update(self, serializer):
+        # 3. If frontend sends a PATCH setting bbox to null (Last ROI Deletion)
         if 'bbox_x' in serializer.validated_data and serializer.validated_data.get('bbox_x') is None:
-            instance = serializer.instance
-            if instance and instance.bbox_x is not None:
-                # --> UPDATED: Instead of writing a json file, just soft-delete the ROI record
-                instance.delete(deleted_by=self.request.user)
-                return
-
+            # We DO NOT delete the record. We keep the Ghost ROI alive.
             serializer.save(
                 bbox_created_by=None,
                 bbox_created_at=None,
@@ -254,7 +260,9 @@ class BeetlesViewSet(viewsets.ModelViewSet):
                 bbox_is_validated=False,
                 last_updated_by=self.request.user
             )
-        elif serializer.validated_data.get('bbox_is_validated') == True:
+            return
+
+        if serializer.validated_data.get('bbox_is_validated') == True:
             serializer.save(
                 bbox_validated_by=self.request.user,
                 bbox_validated_at=timezone.now(),
