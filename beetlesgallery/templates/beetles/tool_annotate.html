@@ -66,51 +66,41 @@
           <h2 class="text-lg font-semibold text-gray-900">Image Browser</h2>
           
           <div id="filter-stats" class="mt-2 hidden flex-col gap-3 text-[11px] bg-gray-50 px-3 py-2.5 rounded border border-gray-200">
-  
             <div class="space-y-1.5">
               <div class="font-bold text-gray-700 tracking-wider uppercase text-[10px]">Images</div>
               <div class="flex flex-wrap gap-x-5 gap-y-2">
-                
                 <div title="Validated" class="flex items-center">
                   <span class="text-gray-600 mr-2">Validated:</span>
                   <span class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mr-1.5"></span>
                   <span id="stat-img-val" class="text-gray-900 font-bold truncate">0</span>
                 </div>
-                
                 <div title="Not Validated" class="flex items-center">
                   <span class="text-gray-600 mr-2">Not Validated:</span>
                   <span class="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0 mr-1.5"></span>
                   <span id="stat-img-unval" class="text-gray-900 font-bold truncate">0</span>
                 </div>
-                
                 <div title="No Bounding Boxes" class="flex items-center">
                   <span class="text-gray-600 mr-2">No Bounding Box:</span>
                   <span class="w-2 h-2 rounded-full bg-gray-300 flex-shrink-0 mr-1.5"></span>
                   <span id="stat-img-empty" class="text-gray-900 font-bold truncate">0</span>
                 </div>
-
               </div>
             </div>
-
             <div class="space-y-1.5 border-t border-gray-200 pt-2">
               <div class="font-bold text-gray-700 tracking-wider text-[10px]">ROIs</div>
               <div class="flex flex-wrap gap-x-5 gap-y-2">
-                
                 <div title="Validated ROIs" class="flex items-center">
                   <span class="text-gray-600 mr-2">Validated:</span>
                   <span class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mr-1.5"></span>
                   <span id="stat-roi-val" class="text-gray-900 font-bold truncate">0</span>
                 </div>
-                
                 <div title="Not Validated ROIs" class="flex items-center">
                   <span class="text-gray-600 mr-2">Not Validated:</span>
                   <span class="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0 mr-1.5"></span>
                   <span id="stat-roi-unval" class="text-gray-900 font-bold truncate">0</span>
                 </div>
-
               </div>
             </div>
-
           </div>
           
           <details id="advanced-filters-details" class="mt-4 group border border-gray-200 rounded-lg relative">
@@ -131,9 +121,7 @@
                                   <option value="{{ opt }}" {% if opt in f.selected %}selected{% endif %}>{{ opt }}</option>
                               {% endfor %}
                           </select>
-                          <button type="button"
-                                  class="filter-toggle-btn w-full text-left rounded border border-gray-300 bg-white px-2 py-1.5 text-xs flex items-center justify-between hover:border-gray-400 transition"
-                                  onclick="toggleFilterDropdown(this)">
+                          <button type="button" class="filter-toggle-btn w-full text-left rounded border border-gray-300 bg-white px-2 py-1.5 text-xs flex items-center justify-between hover:border-gray-400 transition" onclick="toggleFilterDropdown(this)">
                               <span class="truncate pr-2">{% if f.selected %}{{ f.selected|length }} Selected{% else %}All{% endif %}</span>
                               <i class="fi fi-rr-angle-small-down text-gray-400"></i>
                           </button>
@@ -225,15 +213,15 @@
     <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden flex flex-col" style="width: 25%; min-width: 320px; height: 100%; flex-shrink: 0;">
       
       <div class="flex border-b border-gray-200 flex-shrink-0 bg-gray-50">
-        <button id="tab-btn-image" onclick="switchRightTab('image')" class="flex-1 py-3 text-sm tab-active transition-colors">
+        <button id="tab-btn-image" onclick="switchRightTab('image')" class="flex-1 py-3 text-sm tab-inactive transition-colors">
           Image Details
         </button>
-        <button id="tab-btn-bbox" onclick="switchRightTab('bbox')" class="flex-1 py-3 text-sm tab-inactive transition-colors">
+        <button id="tab-btn-bbox" onclick="switchRightTab('bbox')" class="flex-1 py-3 text-sm tab-active transition-colors">
           Regions of Interest <span id="tab-bbox-count" class="bg-gray-200 text-gray-700 rounded-full px-2 py-0.5 text-xs ml-1">0</span>
         </button>
       </div>
 
-      <div id="tab-content-image" class="flex-1 overflow-y-auto p-4 flex flex-col relative">
+      <div id="tab-content-image" class="hidden flex-1 overflow-y-auto p-4 flex flex-col relative">
         <div id="lock-warning" class="hidden bg-red-50 border border-red-200 text-red-800 text-xs p-3 rounded-lg mb-4 flex items-center gap-2 font-medium shadow-sm">
           <i class="fi fi-rr-lock text-base"></i>
           <span id="lock-warning-text">Locked by another user. Viewing only.</span>
@@ -285,6 +273,17 @@
               </div>
             </div>
           </div>
+          
+          <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+            <label class="block text-[11px] font-bold text-gray-500 mb-2 uppercase tracking-wide">Read-Only File Data</label>
+            <div class="grid grid-cols-2 gap-y-2 text-[11px] text-gray-600">
+              <div><span class="font-semibold text-gray-700">Width:</span> <span id="lbl-img-w">-</span> px</div>
+              <div><span class="font-semibold text-gray-700">Height:</span> <span id="lbl-img-h">-</span> px</div>
+              <div><span class="font-semibold text-gray-700">Size:</span> <span id="lbl-img-size">-</span> bytes</div>
+              <div class="col-span-2 truncate"><span class="font-semibold text-gray-700">SHA256:</span> <span id="lbl-img-sha">-</span></div>
+              <div class="col-span-2 break-all"><span class="font-semibold text-gray-700">Import Path:</span> <span id="lbl-img-path">-</span></div>
+            </div>
+          </div>
 
           <div id="image-form-actions" class="pt-4 border-t border-gray-200 mt-auto flex flex-col gap-2">
             <div class="flex gap-2">
@@ -302,7 +301,7 @@
         </form>
       </div>
 
-      <div id="tab-content-bbox" class="hidden flex-1 overflow-y-auto p-4 flex flex-col bg-gray-50">
+      <div id="tab-content-bbox" class="flex-1 overflow-y-auto p-4 flex flex-col bg-gray-50">
         <div id="bbox-editor-empty" class="hidden flex flex-col items-center justify-center text-gray-400 p-6 text-center mt-10">
           <i class="fi fi-rr-vector text-4xl mb-3"></i>
           <p class="text-sm font-medium text-gray-700">No Annotations</p>
@@ -328,7 +327,7 @@ const state = {
   bboxes: [],
   selectedBoxIndex: -1,
   zoom: 1.0,
-  activeTab: 'image',
+  activeTab: 'bbox',
   
   interactionMode: 'idle', // 'idle', 'drawing', 'moving', 'resizing'
   dragHandle: null,
@@ -337,7 +336,8 @@ const state = {
   
   pagination: { page: 1, next: null, loading: false },
   heartbeatInterval: null,
-  isLockedByOther: false
+  isLockedByOther: false,
+  taxonomyList: [] // <--- ADDED
 };
 
 let canvas, ctx, wrapper;
@@ -354,6 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   loadAnnotatedImages();
   setupCanvasEvents();
+  loadTaxonomyList();
 
   const browserContent = document.getElementById('browser-section-content');
   if (browserContent) {
@@ -364,6 +365,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+async function loadTaxonomyList() {
+    try {
+        const res = await fetch('/api/v1/species/', { headers: { 'X-CSRFToken': csrftoken } });
+        if (res.ok) state.taxonomyList = await res.json();
+    } catch(e) { console.error('Failed to load taxonomy list', e); }
+}
 
 // ---------------------------------------------------------
 // ADVANCED FILTER DROPDOWN LOGIC
@@ -694,7 +702,6 @@ function setLockState(isLockedByOther, msg = '') {
         globalValidateBtn.disabled = true;
         globalValidateBtn.classList.replace('bg-gray-500', 'bg-gray-300');
         document.getElementById('image-form-actions').classList.add('hidden');
-        // Disable ROI accordion fields dynamically via CSS or iterating
     } else {
         warningEl.classList.add('hidden');
         imageFormFields.forEach(el => el.disabled = false);
@@ -702,7 +709,6 @@ function setLockState(isLockedByOther, msg = '') {
         globalValidateBtn.classList.replace('bg-gray-300', 'bg-gray-500');
         document.getElementById('image-form-actions').classList.remove('hidden');
     }
-    // Re-render accordions to apply disabled state
     if (state.bboxes.length > 0) renderRoiAccordions();
 }
 
@@ -740,6 +746,13 @@ function populateImageForm() {
     f.elements['image_has_multiple_individuals'].checked = !!state.currentImageDetails.image_has_multiple_individuals;
     f.elements['resolution_in_ppmm'].value = state.currentImageDetails.resolution_in_ppmm || '';
     f.elements['image_notes'].value = state.currentImageDetails.image_notes || '';
+    
+    // Populate Read-Only Labels
+    document.getElementById('lbl-img-w').textContent = state.currentImageDetails.image_width || '-';
+    document.getElementById('lbl-img-h').textContent = state.currentImageDetails.image_height || '-';
+    document.getElementById('lbl-img-size').textContent = state.currentImageDetails.image_size_bytes || '-';
+    document.getElementById('lbl-img-sha').textContent = state.currentImageDetails.image_sha256 || '-';
+    document.getElementById('lbl-img-path').textContent = state.currentImageDetails.full_path_at_import || '-';
 }
 
 function cancelImageChanges() { populateImageForm(); }
@@ -815,6 +828,13 @@ function renderRoiAccordions() {
     const badgeHtml = b.bbox_is_validated 
         ? `<span class="bg-green-100 text-green-800 border border-green-200 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ml-2">Validated</span>`
         : `<span class="bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ml-2">Unvalidated</span>`;
+    
+    let taxDisplay = '';
+    if (b.taxon) {
+        taxDisplay = `${b.taxon.subfamily || 'Unknown'} > ${b.taxon.tribe || 'Unknown'} > ${b.taxon.genus} ${b.taxon.species} [${b.depicts_valid_name_id}]`;
+    } else if (b.depicts_valid_name_id) {
+        taxDisplay = `[${b.depicts_valid_name_id}]`;
+    }
 
     const html = `
       <div id="roi-accordion-${i}" class="border ${isSelected ? 'border-gray-500 shadow-md accordion-expanded' : 'border-gray-200'} rounded-lg bg-white overflow-hidden transition-all">
@@ -833,10 +853,24 @@ function renderRoiAccordions() {
             
             <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
               <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase tracking-wide">Taxonomy</label>
-              <div class="relative">
-                <input type="text" name="depicts_valid_name_id" placeholder="Valid Name ID" value="${b.depicts_valid_name_id || ''}" onblur="fetchTaxonomyPreview(${i}, this.value)" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
-                <div id="tax-preview-${i}" class="text-[11px] text-gray-500 mt-1 min-h-[1rem] italic">
-                   ${b.taxon ? `Identified as: <span class="font-semibold text-gray-700">${b.taxon.genus} ${b.taxon.species}</span>` : 'No taxonomy ID linked.'}
+              <div class="relative taxonomy-dropdown-container">
+                <input type="hidden" name="depicts_valid_name_id" id="hidden-tax-${i}" value="${b.depicts_valid_name_id || ''}">
+                
+                <input type="text" id="search-tax-${i}" placeholder="Search taxonomy..." value="${taxDisplay}" 
+                       class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500 bg-white" 
+                       onfocus="openTaxonomyDropdown(${i})" oninput="filterTaxonomyDropdown(${i}, this.value)" autocomplete="off" ${disabledAttr}>
+                
+                <div id="dropdown-tax-${i}" class="hidden absolute top-full left-0 z-50 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-48 overflow-y-auto">
+                   </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3 mt-3">
+                <div>
+                  <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-wide">Described Name ID</label>
+                  <input type="text" name="depicts_described_name_id" value="${b.depicts_described_name_id || ''}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-xs focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                </div>
+                <div>
+                  <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-wide">Name Verbatim</label>
+                  <input type="text" name="depicts_name_verbatim" value="${b.depicts_name_verbatim || ''}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-xs focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
                 </div>
               </div>
             </div>
@@ -844,11 +878,21 @@ function renderRoiAccordions() {
             <div>
               <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase tracking-wide">Identity & Details</label>
               <div class="space-y-3">
-                <div>
-                  <label class="block text-xs text-gray-600 mb-1">Specimen ID</label>
-                  <input type="text" name="depicts_specimen" value="${b.depicts_specimen || ''}" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
-                </div>
                 <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-gray-600 mb-1">Specimen ID</label>
+                    <input type="text" name="depicts_specimen" value="${b.depicts_specimen || ''}" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-600 mb-1">Alternative ID</label>
+                    <input type="text" name="alternative_id" value="${b.alternative_id || ''}" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                  </div>
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-xs text-gray-600 mb-1">Aspect</label>
+                    <input type="text" name="aspect" value="${b.aspect || ''}" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                  </div>
                   <div>
                     <label class="block text-xs text-gray-600 mb-1">Sex</label>
                     <input type="text" name="specimen_sex" value="${b.specimen_sex || ''}" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
@@ -858,21 +902,57 @@ function renderRoiAccordions() {
                     <input type="text" name="specimen_type_status" value="${b.specimen_type_status || ''}" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
                   </div>
                 </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-gray-600 mb-1">Country</label>
+                    <input type="text" name="collection_country" value="${b.collection_country || ''}" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-600 mb-1">State/Province</label>
+                    <input type="text" name="collection_stateProvince" value="${b.collection_stateProvince || ''}" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                  </div>
+                </div>
                 <div>
                   <label class="block text-xs text-gray-600 mb-1">Specimen Notes</label>
-                  <textarea name="specimen_notes" rows="2" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>${b.specimen_notes || ''}</textarea>
+                  <textarea name="specimen_notes" rows="1" class="w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>${b.specimen_notes || ''}</textarea>
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Update Notes</label>
+                  <textarea name="update_notes" rows="1" class="w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>${b.update_notes || ''}</textarea>
                 </div>
               </div>
             </div>
 
-            <div class="pt-3 border-t border-gray-100 flex items-center justify-between">
+            <div class="mt-3 bg-gray-50 p-2 rounded border border-gray-200">
+              <label class="block text-[10px] font-bold text-gray-600 mb-1 uppercase tracking-wide">Bounding Box Coordinates (0.0 - 1.0)</label>
+              <div class="grid grid-cols-4 gap-2">
+                <div>
+                  <label class="block text-[9px] text-gray-500 uppercase font-semibold">X</label>
+                  <input type="number" step="0.0001" min="0" max="1" name="bbox_x" id="input-bbox-x-${i}" value="${b.bbox_x !== null ? Number(b.bbox_x).toFixed(4) : ''}" class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                </div>
+                <div>
+                  <label class="block text-[9px] text-gray-500 uppercase font-semibold">Y</label>
+                  <input type="number" step="0.0001" min="0" max="1" name="bbox_y" id="input-bbox-y-${i}" value="${b.bbox_y !== null ? Number(b.bbox_y).toFixed(4) : ''}" class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                </div>
+                <div>
+                  <label class="block text-[9px] text-gray-500 uppercase font-semibold">w</label>
+                  <input type="number" step="0.0001" min="0" max="1" name="bbox_width" id="input-bbox-w-${i}" value="${b.bbox_width !== null ? Number(b.bbox_width).toFixed(4) : ''}" class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                </div>
+                <div>
+                  <label class="block text-[9px] text-gray-500 uppercase font-semibold">h</label>
+                  <input type="number" step="0.0001" min="0" max="1" name="bbox_height" id="input-bbox-h-${i}" value="${b.bbox_height !== null ? Number(b.bbox_height).toFixed(4) : ''}" class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-3 border-t border-gray-200 flex items-center justify-between">
               <button type="button" onclick="deleteBoxUi(${i})" class="text-red-600 hover:bg-red-50 px-3 py-1.5 rounded text-xs font-bold transition-colors flex items-center gap-1" ${disabledAttr}>
-                <i class="fi fi-rr-trash"></i> Delete
+                <i class="fi fi-rr-trash"></i> Delete Box
               </button>
               <div class="flex gap-2">
                 <button type="button" onclick="renderRoiAccordions()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded text-xs font-bold transition-colors" ${disabledAttr}>Cancel</button>
                 <button type="submit" id="btn-save-roi-${i}" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-1.5 rounded text-xs font-bold transition-colors flex items-center gap-1" ${disabledAttr}>
-                  <i class="fi fi-rr-disk"></i> Save
+                  <i class="fi fi-rr-disk"></i> Save Changes
                 </button>
               </div>
             </div>
@@ -884,14 +964,12 @@ function renderRoiAccordions() {
     container.insertAdjacentHTML('beforeend', html);
   });
 
-  // Ensure selected accordion is scrolled into view
   if (state.selectedBoxIndex >= 0) {
     const activeAcc = document.getElementById(`roi-accordion-${state.selectedBoxIndex}`);
     if (activeAcc) activeAcc.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 }
 
-// Expands specific accordion dynamically without wiping out typed/unsaved text in others
 function updateAccordionSelection() {
   state.bboxes.forEach((b, i) => {
     const acc = document.getElementById(`roi-accordion-${i}`);
@@ -908,24 +986,48 @@ function updateAccordionSelection() {
 }
 
 function selectBox(idx) {
-  if (state.selectedBoxIndex === idx) return; // Ignore if already selected
+  if (state.selectedBoxIndex === idx) return; 
   state.selectedBoxIndex = idx;
   drawCanvas();
   updateAccordionSelection();
 }
 
+// Ensure DOM inputs sync instantly when moving/resizing on canvas
+function syncBboxInputs(idx) {
+  if (idx < 0 || state.isLockedByOther) return;
+  const b = state.bboxes[idx];
+  const ix = document.getElementById(`input-bbox-x-${idx}`);
+  if (ix) {
+    ix.value = b.bbox_x !== null ? b.bbox_x.toFixed(4) : '';
+    document.getElementById(`input-bbox-y-${idx}`).value = b.bbox_y !== null ? b.bbox_y.toFixed(4) : '';
+    document.getElementById(`input-bbox-w-${idx}`).value = b.bbox_width !== null ? b.bbox_width.toFixed(4) : '';
+    document.getElementById(`input-bbox-h-${idx}`).value = b.bbox_height !== null ? b.bbox_height.toFixed(4) : '';
+  }
+}
+
 async function saveRoiMetadata(idx) {
   if (state.isLockedByOther) return;
-  const b = state.bboxes[idx];
   const form = document.getElementById(`form-roi-${idx}`);
   const btn = document.getElementById(`btn-save-roi-${idx}`);
+  const b = state.bboxes[idx];
   
   const payload = {
     depicts_valid_name_id: form.elements['depicts_valid_name_id'].value || null,
+    depicts_described_name_id: form.elements['depicts_described_name_id'].value || null,
+    depicts_name_verbatim: form.elements['depicts_name_verbatim'].value || null,
     depicts_specimen: form.elements['depicts_specimen'].value || null,
+    alternative_id: form.elements['alternative_id'].value || null,
+    aspect: form.elements['aspect'].value || null,
     specimen_sex: form.elements['specimen_sex'].value || null,
     specimen_type_status: form.elements['specimen_type_status'].value || null,
+    collection_country: form.elements['collection_country'].value || null,
+    collection_stateProvince: form.elements['collection_stateProvince'].value || null,
     specimen_notes: form.elements['specimen_notes'].value || null,
+    update_notes: form.elements['update_notes'].value || null,
+    bbox_x: form.elements['bbox_x'].value !== "" ? parseFloat(form.elements['bbox_x'].value) : null,
+    bbox_y: form.elements['bbox_y'].value !== "" ? parseFloat(form.elements['bbox_y'].value) : null,
+    bbox_width: form.elements['bbox_width'].value !== "" ? parseFloat(form.elements['bbox_width'].value) : null,
+    bbox_height: form.elements['bbox_height'].value !== "" ? parseFloat(form.elements['bbox_height'].value) : null,
   };
 
   btn.disabled = true;
@@ -939,8 +1041,8 @@ async function saveRoiMetadata(idx) {
     if(res.ok) {
       state.bboxes[idx] = await res.json();
       btn.innerHTML = '<i class="fi fi-rr-check"></i>';
-      setTimeout(() => { btn.innerHTML = '<i class="fi fi-rr-disk"></i> Save'; btn.disabled = false; }, 1500);
-      // Re-render to update badges/taxonomy preview safely
+      drawCanvas(); // Move the box instantly if they manually changed coordinates
+      setTimeout(() => { btn.innerHTML = '<i class="fi fi-rr-disk"></i> Save Changes'; btn.disabled = false; }, 1500);
       setTimeout(() => renderRoiAccordions(), 1600);
     }
   } catch(e) { btn.innerHTML = 'Error'; btn.disabled = false; }
@@ -948,33 +1050,26 @@ async function saveRoiMetadata(idx) {
 
 async function deleteBoxUi(idx) {
   if (state.isLockedByOther) return;
-  
   const b = state.bboxes[idx];
 
-  // 1. Only show a confirmation popup if this is the VERY LAST bounding box
   if (state.bboxes.length === 1) {
     const msg = "This is the last bounding box for this image.\n\nThe coordinates will be removed, but the ROI metadata (taxonomy, notes, etc.) will be kept as a template for any future boxes you draw.\n\nProceed?";
     if (!confirm(msg)) return;
   }
-  // If there are multiple boxes, it skips the confirm() and deletes instantly!
 
   try {
     if (state.bboxes.length === 1) {
-      // Last box: Nullify coordinates to create a "Ghost ROI"
       await fetch(`/api/v1/beetles/${b.id}/`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
         body: JSON.stringify({ bbox_x: null, bbox_y: null, bbox_width: null, bbox_height: null, bbox_is_validated: false })
       });
     } else {
-      // Multiple boxes: Actually delete the ROI record
       await fetch(`/api/v1/beetles/${b.id}/`, { method: 'DELETE', headers: { 'X-CSRFToken': csrftoken } });
     }
     
-    // Update local UI state
     state.bboxes.splice(idx, 1);
     document.getElementById('tab-bbox-count').textContent = state.bboxes.length;
     
-    // Update the image browser list counts
     const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
     if(currentIndex > -1) {
       state.images[currentIndex].annotation_count--;
@@ -984,27 +1079,81 @@ async function deleteBoxUi(idx) {
     }
     
     state.selectedBoxIndex = -1;
-    renderRoiAccordions(); // Re-render to remove the accordion
-    drawCanvas(); // Clear the box from the image
-  } catch(e) { 
-    console.error('Delete failed', e); 
-  }
+    renderRoiAccordions(); 
+    drawCanvas(); 
+  } catch(e) { console.error('Delete failed', e); }
 }
 
-async function fetchTaxonomyPreview(idx, id) {
-  const preview = document.getElementById(`tax-preview-${idx}`);
-  if(!id) { preview.textContent = 'No taxonomy ID linked.'; return; }
-  try {
-    const res = await fetch(`/api/v1/beetles/taxonomy/?valid_name_id=${encodeURIComponent(id)}`);
-    if(res.ok) {
-      const t = await res.json();
-      preview.innerHTML = `Identified as: <span class="font-semibold text-gray-700">${t.genus || ''} ${t.species || ''}</span>`;
-    } else {
-      preview.innerHTML = `<span class="text-red-500">Taxonomy ID not found.</span>`;
+// ---------------------------------------------------------
+// CUSTOM TAXONOMY DROPDOWN LOGIC
+// ---------------------------------------------------------
+function openTaxonomyDropdown(idx) {
+    if (state.isLockedByOther) return;
+    
+    // Close any other open dropdowns
+    document.querySelectorAll('[id^="dropdown-tax-"]').forEach(el => el.classList.add('hidden'));
+    
+    const dropdown = document.getElementById(`dropdown-tax-${idx}`);
+    dropdown.classList.remove('hidden');
+    
+    // Populate with default list (or current search)
+    filterTaxonomyDropdown(idx, document.getElementById(`search-tax-${idx}`).value);
+}
+
+function filterTaxonomyDropdown(idx, query) {
+    const dropdown = document.getElementById(`dropdown-tax-${idx}`);
+    dropdown.innerHTML = ''; 
+    
+    // Allow users to clear the input
+    if (query.trim() === '') {
+        document.getElementById(`hidden-tax-${idx}`).value = '';
     }
-  } catch(e) { preview.textContent = ''; }
+    
+    const q = query.toLowerCase().trim();
+    
+    // Filter list (limit to 50 to prevent DOM lagging)
+    let matches = state.taxonomyList;
+    if (q) {
+        matches = state.taxonomyList.filter(t => {
+            const fullString = `${t.subfamily} ${t.tribe} ${t.genus} ${t.species} ${t.valid_species_id}`.toLowerCase();
+            return fullString.includes(q);
+        });
+    }
+    
+    matches.slice(0, 50).forEach(t => {
+        const sub = t.subfamily || 'Unknown';
+        const tribe = t.tribe || 'Unknown';
+        const displayStr = `${sub} > ${tribe} > ${t.genus} ${t.species} [${t.valid_species_id}]`;
+        
+        const div = document.createElement('div');
+        div.className = 'px-3 py-2 text-[11px] text-gray-700 hover:bg-gray-100 cursor-pointer border-b border-gray-50 last:border-0 truncate';
+        div.textContent = displayStr;
+        div.onmousedown = (e) => {
+            e.preventDefault(); // Prevents the input from losing focus before click registers
+            selectTaxonomy(idx, t.valid_species_id, displayStr);
+        };
+        dropdown.appendChild(div);
+    });
+    
+    if (matches.length === 0) {
+        dropdown.innerHTML = `<div class="px-3 py-2 text-xs text-gray-500 italic">No matches found.</div>`;
+    } else if (matches.length > 50) {
+        dropdown.innerHTML += `<div class="px-3 py-1.5 text-[10px] text-gray-400 text-center font-bold bg-gray-50 sticky bottom-0">Showing top 50 of ${matches.length} matches</div>`;
+    }
 }
 
+function selectTaxonomy(idx, id, displayStr) {
+    document.getElementById(`hidden-tax-${idx}`).value = id;
+    document.getElementById(`search-tax-${idx}`).value = displayStr;
+    document.getElementById(`dropdown-tax-${idx}`).classList.add('hidden');
+}
+
+// Close taxonomy dropdowns when clicking outside
+document.addEventListener('mousedown', (e) => {
+    if (!e.target.closest('.taxonomy-dropdown-container')) {
+        document.querySelectorAll('[id^="dropdown-tax-"]').forEach(el => el.classList.add('hidden'));
+    }
+});
 
 // ---------------------------------------------------------
 // CANVAS INTERACTIONS (DRAW, MOVE, RESIZE, CANVAS DELETE X)
@@ -1037,7 +1186,6 @@ function hitTest(x, y) {
     const bw = b.bbox_width * W;
     const bh = b.bbox_height * H;
     
-    // Check Canvas Delete X (Only on the currently selected box)
     if (i === state.selectedBoxIndex && !state.isLockedByOther) {
         const deleteR = 12 / state.zoom;
         if (Math.hypot(x - (bx + bw), y - by) <= deleteR * 1.5) {
@@ -1092,7 +1240,7 @@ function onMouseDown(e) {
 
   if (hit) {
     if (hit.handle === 'delete_x') {
-        deleteBoxUi(hit.idx); // Immediately delete
+        deleteBoxUi(hit.idx); 
         return;
     }
     selectBox(hit.idx);
@@ -1132,6 +1280,7 @@ function onMouseMove(e) {
       if (state.dragHandle.includes('s')) { b.bbox_height = orig.h + dy; }
     }
     drawCanvas();
+    syncBboxInputs(state.selectedBoxIndex); // Sync form text inputs while dragging
   }
 }
 
@@ -1169,7 +1318,6 @@ async function onMouseUp(e) {
               renderImageList(state.images, false);
           }
 
-          // Re-render accordions to show the new box
           renderRoiAccordions();
           selectBox(state.bboxes.length - 1);
           switchRightTab('bbox');
@@ -1177,7 +1325,10 @@ async function onMouseUp(e) {
       } catch(err) { console.error('Error saving drawn box', err); }
     }
   } else {
-    if (state.selectedBoxIndex >= 0) saveBoxGeometryAPI(state.selectedBoxIndex);
+    if (state.selectedBoxIndex >= 0) {
+        saveBoxGeometryAPI(state.selectedBoxIndex);
+        syncBboxInputs(state.selectedBoxIndex);
+    }
   }
 
   state.interactionMode = 'idle';
@@ -1218,7 +1369,6 @@ function drawCanvas() {
     ctx.fillStyle = color + '20';
     ctx.fillRect(bx, by, bw, bh);
 
-    // Render Box Number Badge
     const badgeR = 12 / state.zoom;
     ctx.fillStyle = color;
     ctx.beginPath();
@@ -1229,7 +1379,6 @@ function drawCanvas() {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(`${i+1}`, bx + badgeR, by - badgeR - (2/state.zoom));
 
-    // Render Resize Handles & Canvas Delete X (if selected)
     if (isSel && !state.isLockedByOther) {
       ctx.fillStyle = '#fff';
       const hs = 10 / state.zoom;
@@ -1242,9 +1391,8 @@ function drawCanvas() {
         ctx.strokeRect(px - hs/2, py - hs/2, hs, hs);
       });
 
-      // Canvas Delete X (Top Right Corner)
       const deleteR = 12 / state.zoom;
-      ctx.fillStyle = '#dc2626'; // red-600
+      ctx.fillStyle = '#dc2626'; 
       ctx.beginPath();
       ctx.arc(bx + bw, by, deleteR, 0, 2*Math.PI);
       ctx.fill();
