@@ -37,6 +37,22 @@
   .accordion-expanded .accordion-icon {
     transform: rotate(180deg);
   }
+
+  /* Panel Collapse Transitions */
+  .panel-transition {
+    transition: all 0.3s ease-in-out;
+  }
+  .panel-collapsed {
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin: 0 !important;
+    border-width: 0 !important;
+    opacity: 0;
+    overflow: hidden !important;
+  }
 </style>
 
 <div class="h-full flex flex-col">
@@ -55,7 +71,7 @@
 
   <div class="flex gap-4 h-full min-h-0" style="height: calc(100vh - 8rem);">
     
-    <div class="space-y-4 overflow-y-auto flex flex-col" style="width: 25%; min-width: 320px; max-width: 400px; height: 100%;">
+    <div id="panel-left" class="space-y-4 overflow-y-auto flex flex-col panel-transition" style="width: 25%; min-width: 320px; max-width: 400px; height: 100%;">
       <div class="bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col flex-1 min-h-0">
         <div class="p-4 border-b border-gray-200 flex-shrink-0">
           <h2 class="text-lg font-semibold text-gray-900">Image Browser</h2>
@@ -177,23 +193,33 @@
       </div>
     </div>
 
-    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden flex flex-col relative" style="width: 50%; min-width: 0; height: 100%;">
+    <div id="panel-center" class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden flex flex-col relative flex-1 panel-transition" style="min-width: 0; height: 100%;">
       <div class="hidden bg-gray-300 bg-amber-500 bg-green-500 bg-blue-500"></div>
       
       <div class="border-b border-gray-200 p-3 flex items-center justify-between bg-gray-50 flex-shrink-0">
         <div class="flex items-center gap-3">
-          <div id="main-status-indicator" class="w-3 h-3 rounded-full bg-gray-300 hidden"></div>
+          <button type="button" onclick="toggleLeftPanel()" class="px-2 py-1 text-sm text-gray-500 border border-gray-300 rounded hover:bg-gray-200 transition-colors mr-1" title="Toggle Image Browser">
+            <i class="fi fi-rr-angle-left" id="icon-toggle-left"></i>
+          </button>
+          
+          <div id="main-status-indicator" class="w-3 h-3 rounded-full hidden"></div>
           <div>
             <h3 class="text-base font-semibold text-gray-900 flex items-center gap-2" id="canvas-title">Annotation Canvas</h3>
             <p class="text-xs text-gray-500" id="canvas-subtitle">Please select an image to begin annotating</p>
           </div>
         </div>
         
-        <div id="normal-mode-actions" class="flex gap-1 hidden">
-          <button type="button" onclick="zoomIn()" class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-200" title="Zoom In"><i class="fi fi-rr-zoom-in"></i></button>
-          <span id="footer-zoom" class="px-2 py-1 text-xs text-gray-600 font-mono self-center">100%</span>
-          <button type="button" onclick="zoomOut()" class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-200" title="Zoom Out"><i class="fi fi-rr-zoom-out"></i></button>
-          <button type="button" onclick="fitToScreen()" class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-200 ml-2" title="Fit to Screen"><i class="fi fi-rr-search"></i> Fit</button>
+        <div class="flex items-center gap-3">
+            <div id="normal-mode-actions" class="flex gap-1 hidden">
+              <button type="button" onclick="zoomIn()" class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-200" title="Zoom In"><i class="fi fi-rr-zoom-in"></i></button>
+              <span id="footer-zoom" class="px-2 py-1 text-xs text-gray-600 font-mono self-center">100%</span>
+              <button type="button" onclick="zoomOut()" class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-200" title="Zoom Out"><i class="fi fi-rr-zoom-out"></i></button>
+              <button type="button" onclick="fitToScreen()" class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-200 ml-2" title="Fit to Screen"><i class="fi fi-rr-search"></i> Fit</button>
+            </div>
+            
+            <button type="button" onclick="toggleRightPanel()" class="px-2 py-1 text-sm text-gray-500 border border-gray-300 rounded hover:bg-gray-200 transition-colors ml-1" title="Toggle Data Panel">
+              <i class="fi fi-rr-angle-right" id="icon-toggle-right"></i>
+            </button>
         </div>
       </div>
 
@@ -216,8 +242,7 @@
       </div>
     </div>
 
-    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden flex flex-col" style="width: 25%; min-width: 320px; height: 100%; flex-shrink: 0;">
-      
+    <div id="panel-right" class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden flex flex-col panel-transition" style="width: 25%; min-width: 320px; height: 100%; flex-shrink: 0;">      
       <div class="flex border-b border-gray-200 flex-shrink-0 bg-gray-50">
         <button id="tab-btn-image" onclick="switchRightTab('image')" class="flex-1 py-3 text-sm tab-inactive transition-colors">
           Image Details
@@ -353,6 +378,41 @@ const state = {
 let canvas, ctx, wrapper;
 const csrftoken = getCookie('csrftoken');
 let searchDebounceTimer = null;
+
+// ---------------------------------------------------------
+// PANEL TOGGLE LOGIC
+// ---------------------------------------------------------
+function toggleLeftPanel() {
+    const panel = document.getElementById('panel-left');
+    const icon = document.getElementById('icon-toggle-left');
+    
+    panel.classList.toggle('panel-collapsed');
+    
+    if (panel.classList.contains('panel-collapsed')) {
+        icon.classList.replace('fi-rr-angle-left', 'fi-rr-angle-right');
+    } else {
+        icon.classList.replace('fi-rr-angle-right', 'fi-rr-angle-left');
+    }
+    
+    // Wait for the 300ms CSS animation to finish, then resize the canvas
+    setTimeout(() => { if(state.currentImageObj) fitToScreen(); }, 310);
+}
+
+function toggleRightPanel() {
+    const panel = document.getElementById('panel-right');
+    const icon = document.getElementById('icon-toggle-right');
+    
+    panel.classList.toggle('panel-collapsed');
+    
+    if (panel.classList.contains('panel-collapsed')) {
+        icon.classList.replace('fi-rr-angle-right', 'fi-rr-angle-left');
+    } else {
+        icon.classList.replace('fi-rr-angle-left', 'fi-rr-angle-right');
+    }
+    
+    // Wait for the 300ms CSS animation to finish, then resize the canvas
+    setTimeout(() => { if(state.currentImageObj) fitToScreen(); }, 310);
+}
 
 // ---------------------------------------------------------
 // INITIALIZATION
