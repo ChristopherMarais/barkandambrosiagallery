@@ -1303,6 +1303,10 @@ video {
           user-select: all;
 }
 
+.resize {
+  resize: both;
+}
+
 .list-none {
   list-style-type: none;
 }

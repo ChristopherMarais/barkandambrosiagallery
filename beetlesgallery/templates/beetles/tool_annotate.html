@@ -1524,8 +1524,12 @@ function hitTest(x, y) {
     const bh = b.bbox_height * H;
     
     if (i === state.selectedBoxIndex && !state.isLockedByOther) {
-        const deleteR = 12 / state.zoom;
-        if (Math.hypot(x - (bx + bw), y - by) <= deleteR * 1.5) {
+        const deleteR = 9 / state.zoom;
+        const offset = 12 / state.zoom; // Shift outward offset
+        const delX = bx + bw + offset;
+        const delY = by - offset;
+        
+        if (Math.hypot(x - delX, y - delY) <= deleteR * 1.5) {
             return {idx: i, handle: 'delete_x'};
         }
     }
@@ -1698,60 +1702,57 @@ function drawCanvas() {
 
   state.bboxes.forEach((b, i) => {
     const isSel = (i === state.selectedBoxIndex);
-    const color = isSel ? '#ef4444' : (b.bbox_is_validated ? '#10b981' : '#3b82f6');
+    
+    // Set colors: Selected = Blue, Validated = Green, Unvalidated = Amber
+    const boxColor = isSel ? '#3b82f6' : (b.bbox_is_validated ? '#10b981' : '#f59e0b');
     
     const bx = b.bbox_x * W;
     const by = b.bbox_y * H;
     const bw = b.bbox_width * W;
     const bh = b.bbox_height * H;
 
-    ctx.strokeStyle = color;
-    ctx.lineWidth = (isSel ? 4 : 2) / state.zoom;
+    ctx.strokeStyle = boxColor;
+    ctx.lineWidth = 2 / state.zoom; // Line thickness remains exactly the same, selected or not
     ctx.strokeRect(bx, by, bw, bh);
     
-    ctx.fillStyle = color + '20';
+    ctx.fillStyle = boxColor + '20';
     ctx.fillRect(bx, by, bw, bh);
 
-    const badgeR = 12 / state.zoom;
-    ctx.fillStyle = color;
+    // Number Pill (Decreased size)
+    const badgeR = 9 / state.zoom;
+    ctx.fillStyle = boxColor; // Always matches the box color (Blue when selected)
     ctx.beginPath();
     ctx.arc(bx + badgeR, by - badgeR - (2/state.zoom), badgeR, 0, 2*Math.PI);
     ctx.fill();
     ctx.fillStyle = '#fff';
-    ctx.font = `bold ${14/state.zoom}px Arial`;
+    ctx.font = `bold ${10/state.zoom}px Arial`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(`${i+1}`, bx + badgeR, by - badgeR - (2/state.zoom));
+    ctx.fillText(`${i+1}`, bx + badgeR, by - badgeR - (1/state.zoom));
 
     if (isSel && !state.isLockedByOther) {
-      ctx.fillStyle = '#fff';
-      const hs = 10 / state.zoom;
-      const pts = [
-        [bx, by], [bx+bw, by], [bx, by+bh], [bx+bw, by+bh],
-        [bx+bw/2, by], [bx+bw/2, by+bh], [bx, by+bh/2], [bx+bw, by+bh/2]
-      ];
-      pts.forEach(([px, py]) => {
-        ctx.fillRect(px - hs/2, py - hs/2, hs, hs);
-        ctx.strokeRect(px - hs/2, py - hs/2, hs, hs);
-      });
+      // Draw the Delete 'X' Pill
+      const deleteR = 9 / state.zoom;
+      const offset = 12 / state.zoom; // Shift outward offset
+      const delX = bx + bw + offset;
+      const delY = by - offset;
 
-      const deleteR = 12 / state.zoom;
-      ctx.fillStyle = '#dc2626'; 
+      ctx.fillStyle = '#ef4444'; // Always Red
       ctx.beginPath();
-      ctx.arc(bx + bw, by, deleteR, 0, 2*Math.PI);
+      ctx.arc(delX, delY, deleteR, 0, 2*Math.PI);
       ctx.fill();
       ctx.fillStyle = '#ffffff';
-      ctx.font = `bold ${14/state.zoom}px Arial`;
+      ctx.font = `bold ${11/state.zoom}px Arial`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('X', bx + bw, by + (1/state.zoom));
+      ctx.fillText('X', delX, delY + (1/state.zoom));
     }
   });
 
   if (state.interactionMode === 'drawing') {
-    ctx.strokeStyle = '#ff6b00';
+    ctx.strokeStyle = '#3b82f6'; // Blue while drawing
     ctx.lineWidth = 2 / state.zoom;
-    ctx.setLineDash([6/state.zoom, 4/state.zoom]);
+    ctx.setLineDash([6/state.zoom, 4/state.zoom]); // Keep it dashed
     ctx.strokeRect(state.startX, state.startY, state.startBoxState.w, state.startBoxState.h);
-    ctx.fillStyle = '#ff6b0030';
+    ctx.fillStyle = '#3b82f630'; // Blue fill
     ctx.fillRect(state.startX, state.startY, state.startBoxState.w, state.startBoxState.h);
     ctx.setLineDash([]);
   }
