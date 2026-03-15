@@ -313,6 +313,17 @@ class BeetlesViewSet(viewsets.ModelViewSet):
 
         total_count = image_qs.count()
 
+        images_validated = image_qs.filter(is_validated=True).count()
+        images_unvalidated = image_qs.filter(is_validated=False).count()
+        images_no_bbox = image_qs.filter(roi_count=0).count()
+
+        roi_stats = beetles_qs.filter(bbox_x__isnull=False, is_deleted=False).aggregate(
+            val_count=Count('id', filter=Q(bbox_is_validated=True)),
+            unval_count=Count('id', filter=Q(bbox_is_validated=False))
+        )
+        rois_validated = roi_stats['val_count'] or 0
+        rois_unvalidated = roi_stats['unval_count'] or 0
+
         if ordering == '-created_at':
             image_qs = image_qs.order_by('-created_at')
         else:
@@ -366,7 +377,14 @@ class BeetlesViewSet(viewsets.ModelViewSet):
             'count': total_count,
             'next': next_url,
             'previous': prev_url,
-            'results': images
+            'results': images,
+            'stats': {
+                'images_validated': images_validated,
+                'images_unvalidated': images_unvalidated,
+                'images_no_bbox': images_no_bbox,
+                'rois_validated': rois_validated,
+                'rois_unvalidated': rois_unvalidated
+            }
         })
 
 
