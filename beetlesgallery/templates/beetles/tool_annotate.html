@@ -295,7 +295,7 @@
               </button>
             </div>
             <button type="button" onclick="deleteImage()" class="w-full bg-white hover:bg-red-50 border border-red-200 text-red-600 font-medium py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2 mt-2">
-              <i class="fi fi-rr-trash"></i> Delete Image Completely
+              <i class="fi fi-rr-trash"></i> Delete Image
             </button>
           </div>
         </form>
@@ -784,7 +784,7 @@ async function saveImageDetails() {
         if(res.ok) {
             state.currentImageDetails = await res.json();
             btn.innerHTML = '<i class="fi fi-rr-check"></i> Saved!';
-            setTimeout(() => { btn.innerHTML = '<i class="fi fi-rr-disk"></i> Save Image'; btn.disabled = false; }, 2000);
+            setTimeout(() => { btn.innerHTML = '<i class="fi fi-rr-disk"></i> Save Changes'; btn.disabled = false; }, 2000);
         }
     } catch(e) { btn.innerHTML = 'Error'; btn.disabled = false; }
 }
@@ -851,7 +851,7 @@ function renderRoiAccordions() {
         <div class="accordion-body p-4 border-t border-gray-200 bg-white">
           <form id="form-roi-${i}" onsubmit="event.preventDefault(); saveRoiMetadata(${i});" class="space-y-4">
             
-            <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+            <div class="">
               <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase tracking-wide">Taxonomy</label>
               <div class="relative taxonomy-dropdown-container">
                 <input type="hidden" name="depicts_valid_name_id" id="hidden-tax-${i}" value="${b.depicts_valid_name_id || ''}">
@@ -860,6 +860,10 @@ function renderRoiAccordions() {
                        class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500 bg-white" 
                        onfocus="openTaxonomyDropdown(${i})" oninput="filterTaxonomyDropdown(${i}, this.value)" autocomplete="off" ${disabledAttr}>
                 
+                <div id="tax-preview-${i}" class="text-[10px] text-gray-500 mt-1.5 min-h-[1rem] leading-tight">
+                   ${b.taxon ? `<span class="font-semibold text-gray-700">${b.taxon.subfamily || 'Unknown'} > ${b.taxon.tribe || 'Unknown'} > ${b.taxon.genus} ${b.taxon.species}</span>` : 'No taxonomy ID linked.'}
+                </div>
+
                 <div id="dropdown-tax-${i}" class="hidden absolute top-full left-0 z-50 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-64 overflow-y-auto">
                    </div>
               </div>
@@ -923,24 +927,24 @@ function renderRoiAccordions() {
               </div>
             </div>
 
-            <div class="mt-3 bg-gray-50 p-2 rounded border border-gray-200">
-              <label class="block text-[10px] font-bold text-gray-600 mb-1 uppercase tracking-wide">Bounding Box Coordinates (0.0 - 1.0)</label>
+            <div class="mt-3 bg-gray-50 p-2">
+              <label class="block text-[10px] font-bold text-gray-600 mb-1 uppercase tracking-wide">Bounding Box</label>
               <div class="grid grid-cols-4 gap-2">
                 <div>
                   <label class="block text-[9px] text-gray-500 uppercase font-semibold">X</label>
-                  <input type="number" step="0.0001" min="0" max="1" name="bbox_x" id="input-bbox-x-${i}" value="${b.bbox_x !== null ? Number(b.bbox_x).toFixed(4) : ''}" class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                  <input type="number" step="0.0001" min="0" max="1" name="bbox_x" id="input-bbox-x-${i}" value="${b.bbox_x !== null ? Number(b.bbox_x).toFixed(4) : ''}" class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500" oninput="updateBboxFromInput(${i})" ${disabledAttr}>
                 </div>
                 <div>
                   <label class="block text-[9px] text-gray-500 uppercase font-semibold">Y</label>
-                  <input type="number" step="0.0001" min="0" max="1" name="bbox_y" id="input-bbox-y-${i}" value="${b.bbox_y !== null ? Number(b.bbox_y).toFixed(4) : ''}" class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                  <input type="number" step="0.0001" min="0" max="1" name="bbox_y" id="input-bbox-y-${i}" value="${b.bbox_y !== null ? Number(b.bbox_y).toFixed(4) : ''}" class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500" oninput="updateBboxFromInput(${i})" ${disabledAttr}>
                 </div>
                 <div>
                   <label class="block text-[9px] text-gray-500 uppercase font-semibold">w</label>
-                  <input type="number" step="0.0001" min="0" max="1" name="bbox_width" id="input-bbox-w-${i}" value="${b.bbox_width !== null ? Number(b.bbox_width).toFixed(4) : ''}" class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                  <input type="number" step="0.0001" min="0" max="1" name="bbox_width" id="input-bbox-w-${i}" value="${b.bbox_width !== null ? Number(b.bbox_width).toFixed(4) : ''}" class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500" oninput="updateBboxFromInput(${i})" ${disabledAttr}>
                 </div>
                 <div>
                   <label class="block text-[9px] text-gray-500 uppercase font-semibold">h</label>
-                  <input type="number" step="0.0001" min="0" max="1" name="bbox_height" id="input-bbox-h-${i}" value="${b.bbox_height !== null ? Number(b.bbox_height).toFixed(4) : ''}" class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                  <input type="number" step="0.0001" min="0" max="1" name="bbox_height" id="input-bbox-h-${i}" value="${b.bbox_height !== null ? Number(b.bbox_height).toFixed(4) : ''}" class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500" oninput="updateBboxFromInput(${i})" ${disabledAttr}>
                 </div>
               </div>
             </div>
@@ -1003,6 +1007,26 @@ function syncBboxInputs(idx) {
     document.getElementById(`input-bbox-w-${idx}`).value = b.bbox_width !== null ? b.bbox_width.toFixed(4) : '';
     document.getElementById(`input-bbox-h-${idx}`).value = b.bbox_height !== null ? b.bbox_height.toFixed(4) : '';
   }
+}
+
+// Instantly update the canvas when the user types coordinates manually
+function updateBboxFromInput(idx) {
+  if (state.isLockedByOther) return;
+  const b = state.bboxes[idx];
+  const form = document.getElementById(`form-roi-${idx}`);
+  
+  const bx = parseFloat(form.elements['bbox_x'].value);
+  const by = parseFloat(form.elements['bbox_y'].value);
+  const bw = parseFloat(form.elements['bbox_width'].value);
+  const bh = parseFloat(form.elements['bbox_height'].value);
+
+  // Only apply numbers if they are valid floats
+  if (!isNaN(bx)) b.bbox_x = bx;
+  if (!isNaN(by)) b.bbox_y = by;
+  if (!isNaN(bw)) b.bbox_width = bw;
+  if (!isNaN(bh)) b.bbox_height = bh;
+
+  drawCanvas(); // Force canvas redraw instantly
 }
 
 async function saveRoiMetadata(idx) {
@@ -1227,6 +1251,14 @@ function selectTaxonomy(idx, id, displayStr) {
     input.value = displayStr;
     input.dataset.currentDisplay = displayStr; // Lock in the new value
     document.getElementById(`dropdown-tax-${idx}`).classList.add('hidden');
+    
+    // UPDATE the preview text underneath
+    const preview = document.getElementById(`tax-preview-${idx}`);
+    if (preview) {
+        // Strip out the [ID] part to show just the clean lineage
+        const lineageOnly = displayStr.replace(/\s*\[.*?\]$/, '');
+        preview.innerHTML = `<span class="font-semibold text-gray-700">${lineageOnly}</span>`;
+    }
 }
 
 // Close dropdowns on outside click, and restore text if no selection was made
