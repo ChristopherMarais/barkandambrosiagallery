@@ -53,6 +53,63 @@
     opacity: 0;
     overflow: hidden !important;
   }
+
+  /* Drag Resizer Styles */
+  .resizer {
+    width: 16px;
+    cursor: col-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    z-index: 10;
+    user-select: none;
+    position: relative;
+  }
+  .resizer-line {
+    width: 4px;
+    height: 100%;
+    background-color: #e5e7eb; /* gray-200 */
+    border-radius: 4px;
+    transition: background-color 0.2s;
+  }
+  .resizer:hover .resizer-line, .resizer:active .resizer-line {
+    background-color: #9ca3af; /* gray-400 */
+  }
+  .resizer-btn {
+    width: 20px;
+    height: 36px;
+    background-color: white;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    
+    /* Center the container on the resizer line */
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 20;
+
+    /* Center the ICON inside the button */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    color: #9ca3af;
+    transition: background-color 0.2s, color 0.2s;
+  }
+
+  /* Reset any potential line-height or margins on the icon itself */
+  .resizer-btn i {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+    margin: 0;
+    padding: 0;
+  }
+
 </style>
 
 <div class="h-full flex flex-col">
@@ -69,9 +126,9 @@
     </div>
   </div>
 
-  <div class="flex gap-4 h-full min-h-0" style="height: calc(100vh - 8rem);">
+  <div class="flex h-full min-h-0" style="height: calc(100vh - 8rem);">
     
-    <div id="panel-left" class="space-y-4 overflow-y-auto flex flex-col panel-transition" style="width: 25%; min-width: 320px; max-width: 400px; height: 100%;">
+    <div id="panel-left" class="space-y-4 overflow-y-auto flex flex-col panel-transition" style="width: 25%; min-width: 320px; height: 100%;">
       <div class="bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col flex-1 min-h-0">
         <div class="p-4 border-b border-gray-200 flex-shrink-0">
           <h2 class="text-lg font-semibold text-gray-900">Image Browser</h2>
@@ -192,16 +249,18 @@
         </div>
       </div>
     </div>
+    <div class="resizer" id="resizer-left">
+      <div class="resizer-line"></div>
+      <div class="resizer-btn" onclick="toggleLeftPanel()" title="Toggle Image Browser">
+        <i class="fi fi-rr-angle-double-left text-[10px]" id="icon-toggle-left"></i>
+      </div>
+    </div>
 
     <div id="panel-center" class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden flex flex-col relative flex-1 panel-transition" style="min-width: 0; height: 100%;">
       <div class="hidden bg-gray-300 bg-amber-500 bg-green-500 bg-blue-500"></div>
       
       <div class="border-b border-gray-200 p-3 flex items-center justify-between bg-gray-50 flex-shrink-0">
         <div class="flex items-center gap-3">
-          <button type="button" onclick="toggleLeftPanel()" class="px-2 py-1 text-sm text-gray-500 border border-gray-300 rounded hover:bg-gray-200 transition-colors mr-1" title="Toggle Image Browser">
-            <i class="fi fi-rr-angle-left" id="icon-toggle-left"></i>
-          </button>
-          
           <div id="main-status-indicator" class="w-3 h-3 rounded-full hidden"></div>
           <div>
             <h3 class="text-base font-semibold text-gray-900 flex items-center gap-2" id="canvas-title">Annotation Canvas</h3>
@@ -216,10 +275,6 @@
               <button type="button" onclick="zoomOut()" class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-200" title="Zoom Out"><i class="fi fi-rr-zoom-out"></i></button>
               <button type="button" onclick="fitToScreen()" class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-200 ml-2" title="Fit to Screen"><i class="fi fi-rr-search"></i> Fit</button>
             </div>
-            
-            <button type="button" onclick="toggleRightPanel()" class="px-2 py-1 text-sm text-gray-500 border border-gray-300 rounded hover:bg-gray-200 transition-colors ml-1" title="Toggle Data Panel">
-              <i class="fi fi-rr-angle-right" id="icon-toggle-right"></i>
-            </button>
         </div>
       </div>
 
@@ -239,6 +294,12 @@
         <div id="canvas-wrapper" class="hidden absolute inset-0" style="overflow: scroll; cursor: crosshair;">
           <canvas id="annotation-canvas" style="display: block; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></canvas>
         </div>
+      </div>
+    </div>
+    <div class="resizer" id="resizer-right">
+      <div class="resizer-line"></div>
+      <div class="resizer-btn" onclick="toggleRightPanel()" title="Toggle Data Panel">
+        <i class="fi fi-rr-angle-double-right text-[10px]" id="icon-toggle-right"></i>
       </div>
     </div>
 
@@ -389,12 +450,11 @@ function toggleLeftPanel() {
     panel.classList.toggle('panel-collapsed');
     
     if (panel.classList.contains('panel-collapsed')) {
-        icon.classList.replace('fi-rr-angle-left', 'fi-rr-angle-right');
+        icon.classList.replace('fi-rr-angle-double-left', 'fi-rr-angle-double-right');
     } else {
-        icon.classList.replace('fi-rr-angle-right', 'fi-rr-angle-left');
+        icon.classList.replace('fi-rr-angle-double-right', 'fi-rr-angle-double-left');
     }
     
-    // Wait for the 300ms CSS animation to finish, then resize the canvas
     setTimeout(() => { if(state.currentImageObj) fitToScreen(); }, 310);
 }
 
@@ -405,13 +465,79 @@ function toggleRightPanel() {
     panel.classList.toggle('panel-collapsed');
     
     if (panel.classList.contains('panel-collapsed')) {
-        icon.classList.replace('fi-rr-angle-right', 'fi-rr-angle-left');
+        icon.classList.replace('fi-rr-angle-double-right', 'fi-rr-angle-double-left');
     } else {
-        icon.classList.replace('fi-rr-angle-left', 'fi-rr-angle-right');
+        icon.classList.replace('fi-rr-angle-double-left', 'fi-rr-angle-double-right');
     }
     
-    // Wait for the 300ms CSS animation to finish, then resize the canvas
     setTimeout(() => { if(state.currentImageObj) fitToScreen(); }, 310);
+}
+
+// ---------------------------------------------------------
+// PANEL RESIZE LOGIC
+// ---------------------------------------------------------
+function initResizers() {
+    const resizerLeft = document.getElementById('resizer-left');
+    const resizerRight = document.getElementById('resizer-right');
+    const panelLeft = document.getElementById('panel-left');
+    const panelRight = document.getElementById('panel-right');
+    const container = panelLeft.parentElement;
+
+    let isResizingLeft = false;
+    let isResizingRight = false;
+
+    resizerLeft.addEventListener('mousedown', (e) => {
+        // Don't trigger resize if clicking the toggle button
+        if (e.target.closest('.resizer-btn')) return;
+        if (panelLeft.classList.contains('panel-collapsed')) return;
+        
+        isResizingLeft = true;
+        document.body.style.cursor = 'col-resize';
+        // Remove transitions so dragging is instantaneous
+        panelLeft.classList.remove('panel-transition');
+    });
+
+    resizerRight.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.resizer-btn')) return;
+        if (panelRight.classList.contains('panel-collapsed')) return;
+        
+        isResizingRight = true;
+        document.body.style.cursor = 'col-resize';
+        panelRight.classList.remove('panel-transition');
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizingLeft && !isResizingRight) return;
+        const containerRect = container.getBoundingClientRect();
+
+        if (isResizingLeft) {
+            let newWidth = e.clientX - containerRect.left;
+            if (newWidth < 320) newWidth = 320;
+            if (newWidth > containerRect.width * 0.5) newWidth = containerRect.width * 0.5; // Cap at 50%
+            panelLeft.style.width = `${newWidth}px`;
+        }
+
+        if (isResizingRight) {
+            let newWidth = containerRect.right - e.clientX;
+            if (newWidth < 320) newWidth = 320;
+            if (newWidth > containerRect.width * 0.5) newWidth = containerRect.width * 0.5;
+            panelRight.style.width = `${newWidth}px`;
+        }
+        
+        // Re-fit canvas to keep image centered smoothly during the drag
+        if(state.currentImageObj) fitToScreen();
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isResizingLeft || isResizingRight) {
+            isResizingLeft = false;
+            isResizingRight = false;
+            document.body.style.cursor = 'default';
+            // Restore transitions for the toggle button functionality
+            panelLeft.classList.add('panel-transition');
+            panelRight.classList.add('panel-transition');
+        }
+    });
 }
 
 // ---------------------------------------------------------
@@ -425,6 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadAnnotatedImages();
   setupCanvasEvents();
   loadTaxonomyList();
+  initResizers(); // Initialize the drag-to-resize feature
 
   const browserContent = document.getElementById('browser-section-content');
   if (browserContent) {
