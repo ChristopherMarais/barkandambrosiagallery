@@ -61,7 +61,7 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
             lock = asset.active_lock
             if lock.locked_by != request.user and not lock.is_expired():
                 return Response(
-                    {'error': f'Locked by {lock.locked_by.username}'}, 
+                    {'error': f'Being edited by {lock.locked_by.username}'}, 
                     status=status.HTTP_409_CONFLICT
                 )
             if lock.locked_by == request.user:
@@ -277,7 +277,7 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         ordering = request.GET.get('ordering', '-created_at')
         search = request.GET.get('search', '').strip()
 
-        beetles_qs = Beetles.objects.all()
+        beetles_qs = Beetles.objects.filter(is_deleted=False)
 
         if search:
             q_obj, _ = build_query_q(search)

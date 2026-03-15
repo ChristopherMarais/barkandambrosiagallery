@@ -48,7 +48,6 @@ urlpatterns = [
     path('tools/annotate/', beetles_views.tool_annotate, name='tool_annotate'),
 
     # --- API ---
-    path('api/v1/export-annotations/', beetles_views.export_annotations, name='api-export-annotations'),
     path('api/v1/', include('beetlesgallery.beetles_app.api.urls')),
 ]
 
