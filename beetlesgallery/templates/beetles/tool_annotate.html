@@ -110,6 +110,9 @@
             </summary>
             <div class="p-3 space-y-4 border-t border-gray-200" style="overflow: visible;">
               {% if filter_groups %}
+                <button type="button" onclick="closeAndApplyFilters()" class="w-full mb-2 bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 rounded-lg transition-colors text-sm shadow-sm flex items-center justify-center gap-2">
+                  <i class="text-xs"></i> Apply Filters
+                </button>
                 {% for category_name, filters_list in filter_groups %}
                   <div class="space-y-2">
                       <div class="text-xs font-bold text-gray-500 uppercase border-b border-gray-100 pb-1">{{ category_name }}</div>
@@ -148,7 +151,9 @@
                       {% endfor %}
                   </div>
                 {% endfor %}
-                <button type="button" onclick="closeAndApplyFilters()" class="w-full mt-4 rounded-lg bg-gray-200 border border-gray-300 py-3 text-sm font-bold text-gray-800 hover:bg-gray-300 hover:text-black transition shadow-sm tracking-wide">Apply Filters</button>
+                <button type="button" onclick="closeAndApplyFilters()" class="w-full mt-4 bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 rounded-lg transition-colors text-sm shadow-sm flex items-center justify-center gap-2">
+                  <i class="text-xs"></i> Apply Filters
+                </button>
               {% else %}
                 <div class="text-xs text-gray-400 italic">Filters unavailable.</div>
               {% endif %}
