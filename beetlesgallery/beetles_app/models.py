@@ -237,6 +237,38 @@ class Beetles(models.Model):
         if deleted_by:
             self.last_updated_by = deleted_by
         self.save(update_fields=['is_deleted', 'deleted_at', 'last_updated_by', 'last_updated_at'])
+    
+    def save(self, *args, **kwargs):
+        """
+        Automatically keep the relational Taxon FK in sync with the string ID 
+        when a single record is saved (e.g. from the Annotation Tool).
+        """
+        update_fields = kwargs.get('update_fields')
+        # If doing a targeted save (like soft-delete), skip the taxonomy sync unless relevant
+        if update_fields is None or 'depicts_valid_name_id' in update_fields or 'taxon' in update_fields:
+            if self.depicts_valid_name_id:
+                from beetlesgallery.beetles_app.models import Taxon
+                needs_update = True
+                
+                # If a taxon is already linked, check if it matches the current string ID
+                if self.taxon_id:
+                    try:
+                        if self.taxon and self.taxon.valid_species_id == self.depicts_valid_name_id:
+                            needs_update = False
+                    except Taxon.DoesNotExist:
+                        pass
+                
+                if needs_update:
+                    self.taxon = Taxon.objects.filter(valid_species_id=self.depicts_valid_name_id).first()
+                    # Ensure taxon gets saved if update_fields is explicitly strictly defined
+                    if update_fields is not None and 'taxon' not in update_fields:
+                        kwargs['update_fields'] = list(update_fields) + ['taxon']
+            else:
+                self.taxon = None
+                if update_fields is not None and 'taxon' not in update_fields:
+                    kwargs['update_fields'] = list(update_fields) + ['taxon']
+
+        super().save(*args, **kwargs)
 
     class Meta:
         db_table = "beetles"

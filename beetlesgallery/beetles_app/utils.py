@@ -61,6 +61,8 @@ FREE_TEXT_FIELDS = [
     "aspect", 
     "specimen_sex",
     "taxon__scientific_name",
+    "taxon__subfamily",
+    "taxon__tribe",
     "taxon__genus",
     "taxon__species",
     "taxon__original_genus"
@@ -333,7 +335,9 @@ def build_query_q(user_qs: str):
 FILTERS_CONFIG = [
     {"category": "Annotation Status", "param": "has_rois", "type": "custom_has_rois", "field": "", "label": "Has Bounding Boxes"},
     {"category": "Annotation Status", "param": "image_validated", "type": "bool", "field": "image_asset__is_validated", "label": "Image Validated"},
-{"category": "Annotation Status", "param": "all_rois_val", "type": "custom_all_rois_val", "field": "", "label": "Has all ROIs validated"},    {"category": "Taxonomy", "param": "tribe", "type": "ref", "field": "tribe", "label": "Tribe"},
+    {"category": "Annotation Status", "param": "all_rois_val", "type": "custom_all_rois_val", "field": "", "label": "Has all ROIs validated"},    {"category": "Taxonomy", "param": "tribe", "type": "ref", "field": "tribe", "label": "Tribe"},
+    {"category": "Taxonomy", "param": "subfamily", "type": "ref", "field": "subfamily", "label": "Subfamily"}, # <-- ADDED
+    {"category": "Taxonomy", "param": "tribe", "type": "ref", "field": "tribe", "label": "Tribe"},
     {"category": "Taxonomy", "param": "subtribe", "type": "ref", "field": "subtribe", "label": "Subtribe"},
     {"category": "Taxonomy", "param": "genus", "type": "ref", "field": "genus", "label": "Genus"},
     {"category": "Taxonomy", "param": "species", "type": "ref", "field": "species", "label": "Species"},
