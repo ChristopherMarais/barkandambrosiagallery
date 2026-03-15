@@ -44,7 +44,11 @@
     <div>
       <h1 class="text-3xl font-bold text-gray-900">Data Curation & Annotation</h1>
       <p class="text-xs text-gray-500 mt-1">
-        Select an image to begin.
+        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-[10px]">W/S or Up/Down</kbd> Prev/Next Image
+        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-[10px] ml-2">D</kbd> Switch Tab
+        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-[10px] ml-2">A</kbd> Save Target
+        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-[10px] ml-2">F</kbd> Validate ROI
+        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-[10px] ml-2">Space</kbd> Validate All & Next
       </p>
     </div>
   </div>
@@ -642,7 +646,7 @@ function renderImageList(imagesToRender, append = false) {
   imagesToRender.forEach(img => {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = `w-full px-3 py-2 flex items-center gap-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0 ${state.selectedImageId === img.image_asset_id ? 'bg-gray-100 border-gray-200' : ''}`;
+    btn.className = `w-full px-3 py-2 flex items-center gap-3 hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-0 ${state.selectedImageId === img.image_asset_id ? 'bg-gray-200 border-gray-300 shadow-inner ring-1 ring-gray-300' : ''}`;
     btn.onclick = () => selectImage(img);
 
     btn.innerHTML = `
@@ -1934,6 +1938,15 @@ async function validateAllBoundingBoxes() {
       state.images[currentIndex].is_validated = true;
       state.images[currentIndex].has_unvalidated_boxes = false;
       renderImageList(state.images, false); 
+      
+      // Auto-advance to next image if possible
+      if (currentIndex + 1 < state.images.length) {
+          selectImage(state.images[currentIndex + 1]);
+          // If we reached the end of loaded images, load more
+          if (currentIndex + 1 >= state.images.length - 5 && state.pagination.next && !state.pagination.loading) {
+              loadNextPage();
+          }
+      }
     }
     updateMainStatusIndicator();
     
@@ -1944,6 +1957,78 @@ async function validateAllBoundingBoxes() {
     btn.innerHTML = '<i class="fi fi-rr-check-circle"></i> Validate All'; 
   }
 }
+
+// ---------------------------------------------------------
+// KEYBOARD SHORTCUTS
+// ---------------------------------------------------------
+document.addEventListener('keydown', (e) => {
+    // Prevent triggering shortcuts if typing in an input/textarea
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+        return;
+    }
+
+    const key = e.key.toLowerCase();
+    const isImageTab = state.activeTab === 'image';
+    const isBboxTab = state.activeTab === 'bbox';
+    
+    const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
+
+    // [Space] Validate All and Next
+    if (e.code === 'Space') {
+        e.preventDefault();
+        if (state.selectedImageId && !state.isLockedByOther) {
+            validateAllBoundingBoxes();
+        }
+    }
+
+    // [W] or [ArrowUp]: Previous Image
+    if (key === 'w' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (currentIndex > 0) {
+            selectImage(state.images[currentIndex - 1]);
+        }
+    }
+
+    // [S] or [ArrowDown]: Next Image
+    if (key === 's' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (currentIndex > -1 && currentIndex + 1 < state.images.length) {
+            selectImage(state.images[currentIndex + 1]);
+            // Load more if getting close to end
+            if (currentIndex + 1 >= state.images.length - 5 && state.pagination.next && !state.pagination.loading) {
+                loadNextPage();
+            }
+        }
+    }
+
+    // [D] Switch Tabs
+    if (key === 'd') {
+        e.preventDefault();
+        switchRightTab(isImageTab ? 'bbox' : 'image');
+    }
+
+    // [A] Contextual Save
+    if (key === 'a') {
+        e.preventDefault();
+        if (state.isLockedByOther || !state.selectedImageId) return;
+        
+        if (isImageTab) {
+            saveImageDetails();
+        } else if (isBboxTab && state.selectedBoxIndex > -1) {
+            // Save just the selected ROI metadata (not global save)
+            saveRoiMetadata(state.selectedBoxIndex, false, false);
+        }
+    }
+    
+    // [F] Validate Selected ROI
+    if (key === 'f') {
+        e.preventDefault();
+        if (isBboxTab && state.selectedBoxIndex > -1 && !state.isLockedByOther) {
+            validateRoi(state.selectedBoxIndex);
+        }
+    }
+});
+
 </script>
 
 {% endblock %}

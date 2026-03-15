@@ -1303,10 +1303,6 @@ video {
           user-select: all;
 }
 
-.resize {
-  resize: both;
-}
-
 .list-none {
   list-style-type: none;
 }
@@ -2470,6 +2466,11 @@ video {
 .ring-gray-200 {
   --tw-ring-opacity: 1;
   --tw-ring-color: rgb(229 231 235 / var(--tw-ring-opacity, 1));
+}
+
+.ring-gray-300 {
+  --tw-ring-opacity: 1;
+  --tw-ring-color: rgb(209 213 219 / var(--tw-ring-opacity, 1));
 }
 
 .ring-text\/10 {
