@@ -48,14 +48,6 @@
         <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs ml-2">Space</kbd> Validate
       </p>
     </div>
-    <div class="flex gap-2">
-      <button type="button" id="validate-all-btn" onclick="validateAllBoundingBoxes()" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg flex items-center gap-2 transition-colors font-medium text-sm">
-        <i class="fi fi-rr-check text-xs"></i> Validate All
-      </button>
-      <button type="button" onclick="showExportDialog()" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg flex items-center gap-2 transition-colors font-medium text-sm">
-        <i class="fi fi-rr-download text-xs"></i> Export
-      </button>
-    </div>
   </div>
 
   <div class="flex gap-4 h-full min-h-0" style="height: calc(100vh - 8rem);">
@@ -293,13 +285,16 @@
           <div id="image-form-actions" class="pt-4 border-t border-gray-200 mt-auto flex flex-col gap-2">
             <div class="flex gap-2">
               <button type="button" onclick="cancelImageChanges()" class="flex-1 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 font-medium py-2 rounded-lg transition-colors text-sm">
-                Cancel
+                Undo
               </button>
               <button type="submit" id="btn-save-image" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2">
                 <i class="fi fi-rr-disk"></i> Save
               </button>
             </div>
-            <button type="button" onclick="deleteImage()" class="w-full bg-white hover:bg-red-50 border border-red-200 text-red-600 font-medium py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2 mt-2">
+            <button type="button" id="validate-all-btn" onclick="validateAllBoundingBoxes()" class="w-full bg-white hover:bg-green-50 border border-green-200 text-green-700 font-medium py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2 mt-1">
+              <i class="fi fi-rr-check-circle"></i> Validate All
+            </button>
+            <button type="button" onclick="deleteImage()" class="w-full bg-white hover:bg-red-50 border border-red-200 text-red-600 font-medium py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2 mt-1">
               <i class="fi fi-rr-trash"></i> Delete Image
             </button>
           </div>
@@ -1038,13 +1033,16 @@ function renderRoiAccordions() {
             <div class="pt-4 border-t border-gray-200 mt-4 flex flex-col gap-2">
               <div class="flex gap-2">
                 <button type="button" onclick="renderRoiAccordions()" class="flex-1 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 font-medium py-2 rounded-lg transition-colors text-sm" ${disabledAttr}>
-                  Cancel
+                  Undo
                 </button>
                 <button type="submit" id="btn-save-roi-${i}" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2" ${disabledAttr}>
                   <i class="fi fi-rr-disk"></i> Save
                 </button>
               </div>
-              <button type="button" onclick="deleteBoxUi(${i})" class="w-full bg-white hover:bg-red-50 border border-red-200 text-red-600 font-medium py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2 mt-2" ${disabledAttr}>
+              <button type="button" id="btn-val-roi-${i}" onclick="validateRoi(${i})" class="w-full bg-white hover:bg-green-50 border border-green-200 text-green-700 font-medium py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2 mt-1" ${disabledAttr}>
+                <i class="fi fi-rr-check-circle"></i> Validate
+              </button>
+              <button type="button" onclick="deleteBoxUi(${i})" class="w-full bg-white hover:bg-red-50 border border-red-200 text-red-600 font-medium py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2 mt-1" ${disabledAttr}>
                 <i class="fi fi-rr-trash"></i> Delete Box
               </button>
             </div>
@@ -1117,10 +1115,10 @@ function updateBboxFromInput(idx) {
   drawCanvas(); // Force canvas redraw instantly
 }
 
-async function saveRoiMetadata(idx) {
+async function saveRoiMetadata(idx, isValidating = false) {
   if (state.isLockedByOther) return;
   const form = document.getElementById(`form-roi-${idx}`);
-  const btn = document.getElementById(`btn-save-roi-${idx}`);
+  const btn = document.getElementById(isValidating ? `btn-val-roi-${idx}` : `btn-save-roi-${idx}`);
   const b = state.bboxes[idx];
   
   const payload = {
@@ -1142,6 +1140,10 @@ async function saveRoiMetadata(idx) {
     bbox_height: form.elements['bbox_height'].value !== "" ? parseFloat(form.elements['bbox_height'].value) : null,
   };
 
+  if (isValidating) {
+    payload.bbox_is_validated = true;
+  }
+
   btn.disabled = true;
   btn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i>';
 
@@ -1158,6 +1160,11 @@ async function saveRoiMetadata(idx) {
       setTimeout(() => renderRoiAccordions(), 1600);
     }
   } catch(e) { btn.innerHTML = 'Error'; btn.disabled = false; }
+}
+
+async function validateRoi(idx) {
+  if (state.isLockedByOther) return;
+  await saveRoiMetadata(idx, true);
 }
 
 async function deleteBoxUi(idx) {
@@ -1734,17 +1741,13 @@ async function validateAllBoundingBoxes() {
       renderImageList(state.images, false); 
     }
     
-    alert(`Successfully validated image${unval.length > 0 ? ` and ${unval.length} boxes` : ''}.`);
-    
   } catch(e) { 
     console.error(e); 
     alert("An error occurred during validation.");
   } finally { 
-    btn.innerHTML = '<i class="fi fi-rr-check text-xs"></i> Validate All'; 
+    btn.innerHTML = '<i class="fi fi-rr-check-circle"></i> Validate All'; 
   }
 }
-
-function showExportDialog() { alert("Export dialog triggered."); }
 </script>
 
 {% endblock %}
