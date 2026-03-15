@@ -933,6 +933,21 @@ async function saveImageDetails() {
     const f = document.getElementById('form-image-details');
     const btn = document.getElementById('btn-save-image');
     
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i> Saving...';
+
+    // 1. Save all ROIs first
+    try {
+        if (state.bboxes && state.bboxes.length > 0) {
+            // Create an array of promises to save all ROIs concurrently
+            const savePromises = state.bboxes.map((_, i) => saveRoiMetadata(i, false, true)); // Pass true for 'isGlobalSave'
+            await Promise.all(savePromises);
+        }
+    } catch(e) {
+        console.error("Failed saving ROIs", e);
+    }
+
+    // 2. Then save the main Image Details
     const payload = {
         image_institution: f.elements['image_institution'].value || null,
         photographer: f.elements['photographer'].value || null,
@@ -944,9 +959,6 @@ async function saveImageDetails() {
         image_notes: f.elements['image_notes'].value || null,
     };
 
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i> Saving...';
-
     try {
         const res = await fetch(`/api/v1/image-assets/${state.selectedImageId}/`, {
             method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
@@ -954,8 +966,11 @@ async function saveImageDetails() {
         });
         if(res.ok) {
             state.currentImageDetails = await res.json();
-            btn.innerHTML = '<i class="fi fi-rr-check"></i> Saved!';
+            btn.innerHTML = '<i class="fi fi-rr-check"></i> Saved All!';
             setTimeout(() => { btn.innerHTML = '<i class="fi fi-rr-disk"></i> Save'; btn.disabled = false; }, 2000);
+            
+            // Re-render accordions to show any updated taxonomy text from the ROI saves
+            renderRoiAccordions();
         }
     } catch(e) { btn.innerHTML = 'Error'; btn.disabled = false; }
 }
@@ -1217,7 +1232,7 @@ function updateBboxFromInput(idx) {
   drawCanvas(); // Force canvas redraw instantly
 }
 
-async function saveRoiMetadata(idx, isValidating = false) {
+async function saveRoiMetadata(idx, isValidating = false, isGlobalSave = false) {
   if (state.isLockedByOther) return;
   const form = document.getElementById(`form-roi-${idx}`);
   const btn = document.getElementById(isValidating ? `btn-val-roi-${idx}` : `btn-save-roi-${idx}`);
@@ -1256,16 +1271,19 @@ async function saveRoiMetadata(idx, isValidating = false) {
     });
     if(res.ok) {
       state.bboxes[idx] = await res.json();
-      btn.innerHTML = '<i class="fi fi-rr-check"></i>';
-      drawCanvas(); // Move the box instantly if they manually changed coordinates
-      setTimeout(() => { btn.innerHTML = '<i class="fi fi-rr-disk"></i> Save'; btn.disabled = false; }, 1500);
-      setTimeout(() => renderRoiAccordions(), 1600);
-
-      await checkAndAutoValidateImage();
-      updateMainStatusIndicator();
-
+      
+      if (!isGlobalSave) {
+          btn.innerHTML = '<i class="fi fi-rr-check"></i>';
+          drawCanvas(); 
+          setTimeout(() => { btn.innerHTML = '<i class="fi fi-rr-disk"></i> Save'; btn.disabled = false; }, 1500);
+          setTimeout(() => renderRoiAccordions(), 1600);
+          await checkAndAutoValidateImage();
+          updateMainStatusIndicator();
+      }
     }
-  } catch(e) { btn.innerHTML = 'Error'; btn.disabled = false; }
+  } catch(e) { 
+      if (!isGlobalSave) { btn.innerHTML = 'Error'; btn.disabled = false; }
+  }
 }
 
 async function validateRoi(idx) {
@@ -1516,7 +1534,8 @@ function hitTest(x, y) {
   const handleSize = 14 / state.zoom;
   const margin = 8 / state.zoom;
 
-  for (let i = state.bboxes.length - 1; i >= 0; i--) {
+  // Helper to check boundaries for a single box index
+  const checkBounds = (i) => {
     const b = state.bboxes[i];
     const bx = b.bbox_x * W;
     const by = b.bbox_y * H;
@@ -1525,7 +1544,7 @@ function hitTest(x, y) {
     
     if (i === state.selectedBoxIndex && !state.isLockedByOther) {
         const deleteR = 9 / state.zoom;
-        const offset = 12 / state.zoom; // Shift outward offset
+        const offset = 12 / state.zoom; 
         const delX = bx + bw + offset;
         const delY = by - offset;
         
@@ -1545,7 +1564,23 @@ function hitTest(x, y) {
     if (y > by && y < by+bh && Math.abs(x - (bx+bw)) < margin) return {idx: i, handle: 'e'};
     
     if (x > bx && x < bx+bw && y > by && y < by+bh) return {idx: i, handle: 'move'};
+    
+    return null;
+  };
+
+  // 1. ALWAYS check the currently selected box FIRST so it takes priority over overlapping boxes
+  if (state.selectedBoxIndex >= 0 && state.selectedBoxIndex < state.bboxes.length) {
+      const hit = checkBounds(state.selectedBoxIndex);
+      if (hit) return hit;
   }
+
+  // 2. Check the rest of the boxes from top to bottom
+  for (let i = state.bboxes.length - 1; i >= 0; i--) {
+    if (i === state.selectedBoxIndex) continue; // Already checked
+    const hit = checkBounds(i);
+    if (hit) return hit;
+  }
+  
   return null;
 }
 
@@ -1697,6 +1732,19 @@ async function onMouseUp(e) {
   } else {
     // Handling resizing and moving (which is already optimistic)
     if (state.selectedBoxIndex >= 0) {
+        const b = state.bboxes[state.selectedBoxIndex];
+        
+        // --- FIX FOR INVERTED BOXES ---
+        // If the user drags a corner over itself, normalize the negative dimensions into true positive bounds
+        if (b.bbox_width < 0) {
+            b.bbox_x = b.bbox_x + b.bbox_width;
+            b.bbox_width = Math.abs(b.bbox_width);
+        }
+        if (b.bbox_height < 0) {
+            b.bbox_y = b.bbox_y + b.bbox_height;
+            b.bbox_height = Math.abs(b.bbox_height);
+        }
+        
         saveBoxGeometryAPI(state.selectedBoxIndex);
         syncBboxInputs(state.selectedBoxIndex);
     }
@@ -1724,7 +1772,16 @@ function drawCanvas() {
   const W = canvas.width;
   const H = canvas.height;
 
-  state.bboxes.forEach((b, i) => {
+  // Draw unselected boxes first, then draw the selected box last so it sits on top
+  const boxIndices = state.bboxes.map((_, i) => i);
+  boxIndices.sort((a, b) => {
+      if (a === state.selectedBoxIndex) return 1;
+      if (b === state.selectedBoxIndex) return -1;
+      return 0;
+  });
+
+  boxIndices.forEach((i) => {
+    const b = state.bboxes[i];
     const isSel = (i === state.selectedBoxIndex);
     
     // Set colors: Selected = Blue, Validated = Green, Unvalidated = Amber
