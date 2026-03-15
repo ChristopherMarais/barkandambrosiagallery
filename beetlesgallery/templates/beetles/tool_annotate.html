@@ -856,11 +856,11 @@ function renderRoiAccordions() {
               <div class="relative taxonomy-dropdown-container">
                 <input type="hidden" name="depicts_valid_name_id" id="hidden-tax-${i}" value="${b.depicts_valid_name_id || ''}">
                 
-                <input type="text" id="search-tax-${i}" placeholder="Search taxonomy..." value="${taxDisplay}" 
+                <input type="text" id="search-tax-${i}" placeholder="Search taxonomy..." value="${taxDisplay}" data-current-display="${taxDisplay}"
                        class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500 bg-white" 
                        onfocus="openTaxonomyDropdown(${i})" oninput="filterTaxonomyDropdown(${i}, this.value)" autocomplete="off" ${disabledAttr}>
                 
-                <div id="dropdown-tax-${i}" class="hidden absolute top-full left-0 z-50 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-48 overflow-y-auto">
+                <div id="dropdown-tax-${i}" class="hidden absolute top-full left-0 z-50 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-64 overflow-y-auto">
                    </div>
               </div>
               <div class="grid grid-cols-2 gap-3 mt-3">
@@ -1085,73 +1085,162 @@ async function deleteBoxUi(idx) {
 }
 
 // ---------------------------------------------------------
-// CUSTOM TAXONOMY DROPDOWN LOGIC
+// CUSTOM TAXONOMY DROPDOWN LOGIC (COLLAPSIBLE TREE)
 // ---------------------------------------------------------
 function openTaxonomyDropdown(idx) {
     if (state.isLockedByOther) return;
     
-    // Close any other open dropdowns
+    // Close other open dropdowns
     document.querySelectorAll('[id^="dropdown-tax-"]').forEach(el => el.classList.add('hidden'));
     
     const dropdown = document.getElementById(`dropdown-tax-${idx}`);
     dropdown.classList.remove('hidden');
     
-    // Populate with default list (or current search)
-    filterTaxonomyDropdown(idx, document.getElementById(`search-tax-${idx}`).value);
+    const input = document.getElementById(`search-tax-${idx}`);
+    // Save current display to restore it if they click away without picking anything
+    input.dataset.currentDisplay = input.value;
+    input.value = ''; // Clear input so user sees the full tree
+    
+    filterTaxonomyDropdown(idx, '');
 }
 
 function filterTaxonomyDropdown(idx, query) {
     const dropdown = document.getElementById(`dropdown-tax-${idx}`);
     dropdown.innerHTML = ''; 
     
-    // Allow users to clear the input
     if (query.trim() === '') {
         document.getElementById(`hidden-tax-${idx}`).value = '';
     }
     
     const q = query.toLowerCase().trim();
+    const isSearching = q.length > 0;
     
-    // Filter list (limit to 50 to prevent DOM lagging)
     let matches = state.taxonomyList;
-    if (q) {
+    if (isSearching) {
         matches = state.taxonomyList.filter(t => {
             const fullString = `${t.subfamily} ${t.tribe} ${t.genus} ${t.species} ${t.valid_species_id}`.toLowerCase();
             return fullString.includes(q);
         });
     }
     
-    matches.slice(0, 50).forEach(t => {
-        const sub = t.subfamily || 'Unknown';
-        const tribe = t.tribe || 'Unknown';
-        const displayStr = `${sub} > ${tribe} > ${t.genus} ${t.species} [${t.valid_species_id}]`;
-        
-        const div = document.createElement('div');
-        div.className = 'px-3 py-2 text-[11px] text-gray-700 hover:bg-gray-100 cursor-pointer border-b border-gray-50 last:border-0 truncate';
-        div.textContent = displayStr;
-        div.onmousedown = (e) => {
-            e.preventDefault(); // Prevents the input from losing focus before click registers
-            selectTaxonomy(idx, t.valid_species_id, displayStr);
-        };
-        dropdown.appendChild(div);
-    });
-    
     if (matches.length === 0) {
         dropdown.innerHTML = `<div class="px-3 py-2 text-xs text-gray-500 italic">No matches found.</div>`;
-    } else if (matches.length > 50) {
-        dropdown.innerHTML += `<div class="px-3 py-1.5 text-[10px] text-gray-400 text-center font-bold bg-gray-50 sticky bottom-0">Showing top 50 of ${matches.length} matches</div>`;
+        return;
     }
+
+    // Safety limit to prevent browser hanging on extremely vague searches
+    if (isSearching && matches.length > 300) {
+        matches = matches.slice(0, 300);
+        const warning = document.createElement('div');
+        warning.className = 'px-3 py-1.5 text-[10px] text-amber-600 bg-amber-50 border-b border-amber-200 font-bold sticky top-0 z-20';
+        warning.textContent = `Showing top 300 matches. Please refine your search.`;
+        dropdown.appendChild(warning);
+    }
+    
+    // 1. Build the hierarchical tree data structure
+    const tree = {};
+    matches.forEach(t => {
+        const sub = t.subfamily || 'Unknown Subfamily';
+        const tribe = t.tribe || 'Unknown Tribe';
+        const genus = t.genus || 'Unknown Genus';
+        
+        if (!tree[sub]) tree[sub] = {};
+        if (!tree[sub][tribe]) tree[sub][tribe] = {};
+        if (!tree[sub][tribe][genus]) tree[sub][tribe][genus] = [];
+        tree[sub][tribe][genus].push(t);
+    });
+    
+    // Helper function to generate an expandable folder node
+    function createTreeNode(label, levelClass, forceExpand) {
+        const container = document.createElement('div');
+        
+        const header = document.createElement('div');
+        header.className = `px-3 py-1.5 flex items-center justify-between cursor-pointer hover:bg-gray-200 border-b border-gray-100 select-none ${levelClass}`;
+        
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'font-semibold text-gray-700 truncate';
+        labelSpan.textContent = label;
+        
+        const icon = document.createElement('i');
+        icon.className = `fi fi-rr-angle-small-${forceExpand ? 'down' : 'right'} text-gray-400 transition-transform`;
+        
+        header.appendChild(labelSpan);
+        header.appendChild(icon);
+        
+        const childrenWrapper = document.createElement('div');
+        childrenWrapper.className = forceExpand ? 'block' : 'hidden';
+        
+        // Toggle visibility on click
+        header.onmousedown = (e) => {
+            e.preventDefault(); // Keeps the input field focused so the dropdown doesn't close
+            const isHidden = childrenWrapper.classList.contains('hidden');
+            if (isHidden) {
+                childrenWrapper.classList.remove('hidden');
+                icon.classList.replace('fi-rr-angle-small-right', 'fi-rr-angle-small-down');
+            } else {
+                childrenWrapper.classList.add('hidden');
+                icon.classList.replace('fi-rr-angle-small-down', 'fi-rr-angle-small-right');
+            }
+        };
+        
+        container.appendChild(header);
+        container.appendChild(childrenWrapper);
+        
+        return { container, childrenWrapper };
+    }
+
+    // 2. Render the Tree into the DOM
+    Object.keys(tree).sort().forEach(sub => {
+        const subNode = createTreeNode(sub, 'bg-gray-100 text-[11px] uppercase tracking-wide', isSearching);
+        dropdown.appendChild(subNode.container);
+        
+        Object.keys(tree[sub]).sort().forEach(tribe => {
+            const tribeNode = createTreeNode(tribe, 'bg-gray-50 text-[11px] pl-6', isSearching);
+            subNode.childrenWrapper.appendChild(tribeNode.container);
+            
+            Object.keys(tree[sub][tribe]).sort().forEach(genus => {
+                const genusNode = createTreeNode(genus, 'bg-white text-[11px] pl-9 italic', isSearching);
+                tribeNode.childrenWrapper.appendChild(genusNode.container);
+                
+                // Render Species Leaves (Clickable items that actually select the taxonomy)
+                tree[sub][tribe][genus].sort((a,b) => (a.species||'').localeCompare(b.species||'')).forEach(t => {
+                    const displayStr = `${t.subfamily || 'Unknown'} > ${t.tribe || 'Unknown'} > ${t.genus} ${t.species} [${t.valid_species_id}]`;
+                    
+                    const leaf = document.createElement('div');
+                    leaf.className = 'px-3 py-1.5 text-[11px] text-gray-700 hover:bg-blue-50 hover:text-blue-700 cursor-pointer border-b border-gray-50 pl-12 transition-colors flex justify-between select-none';
+                    leaf.innerHTML = `<span class="italic">${t.genus} <span class="font-bold">${t.species}</span></span> <span class="text-gray-400 ml-2 shrink-0">[${t.valid_species_id}]</span>`;
+                    
+                    leaf.onmousedown = (e) => {
+                        e.preventDefault();
+                        selectTaxonomy(idx, t.valid_species_id, displayStr);
+                    };
+                    genusNode.childrenWrapper.appendChild(leaf);
+                });
+            });
+        });
+    });
 }
 
 function selectTaxonomy(idx, id, displayStr) {
     document.getElementById(`hidden-tax-${idx}`).value = id;
-    document.getElementById(`search-tax-${idx}`).value = displayStr;
+    const input = document.getElementById(`search-tax-${idx}`);
+    input.value = displayStr;
+    input.dataset.currentDisplay = displayStr; // Lock in the new value
     document.getElementById(`dropdown-tax-${idx}`).classList.add('hidden');
 }
 
-// Close taxonomy dropdowns when clicking outside
+// Close dropdowns on outside click, and restore text if no selection was made
 document.addEventListener('mousedown', (e) => {
     if (!e.target.closest('.taxonomy-dropdown-container')) {
-        document.querySelectorAll('[id^="dropdown-tax-"]').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('[id^="dropdown-tax-"]').forEach(el => {
+            el.classList.add('hidden');
+            const idx = el.id.replace('dropdown-tax-', '');
+            const input = document.getElementById(`search-tax-${idx}`);
+            // If user clicked away leaving it blank, restore the previous value
+            if (input && input.value === '' && input.dataset.currentDisplay) {
+                input.value = input.dataset.currentDisplay;
+            }
+        });
     }
 });
 
