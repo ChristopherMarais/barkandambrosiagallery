@@ -868,7 +868,7 @@ def data_management(request):
         
         # Pull latest sync timestamp natively from the database
         latest_taxon = Taxon.objects.order_by("-updated_at").first()
-        if latest_taxon:
+        if latest_taxon and latest_taxon.updated_at: 
             t_label = f"Database Managed (Last Sync: {latest_taxon.updated_at.strftime('%Y-%m-%d %H:%M UTC')})"
             t_timestamp = latest_taxon.updated_at.isoformat()
         else:
@@ -905,10 +905,8 @@ def data_management(request):
                                 ts = timezone.now().isoformat()
                             archives.append({"filename": f, "timestamp": ts})
                     
-                    # Sort by filename descending (newest timestamps first)
                     archives.sort(key=lambda x: x["filename"], reverse=True)
-            except NotImplementedError:
-                # Graceful fail if the storage backend doesn't support listdir
+            except (NotImplementedError, FileNotFoundError, OSError):
                 pass
             return archives
 

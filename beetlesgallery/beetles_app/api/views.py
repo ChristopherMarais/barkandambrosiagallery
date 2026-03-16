@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.pagination import LimitOffsetPagination
@@ -14,15 +14,16 @@ import zipfile
 import os
 from io import BytesIO
 from datetime import datetime
-from rest_framework import status
 
 
 class IsStaffUser(IsAuthenticated):
     """
-    Permission class that checks if user is authenticated and is staff.
+    Permission class that checks if user is authenticated and is staff OR superuser.
     """
     def has_permission(self, request, view):
-        return super().has_permission(request, view) and request.user.is_staff
+        is_authenticated = super().has_permission(request, view)
+        # Authorize if the user is staff OR an administrative superuser
+        return bool(is_authenticated and (request.user.is_staff or request.user.is_superuser))
 
 
 class ImageAssetViewSet(viewsets.ModelViewSet):
@@ -393,21 +394,26 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         })
 
 
-class SpeciesViewSet(viewsets.ViewSet):
+class SpeciesViewSet(viewsets.ReadOnlyModelViewSet):
     """
     API endpoint for species from the native Postgres Taxon table.
+    Upgraded to ReadOnlyModelViewSet to support native DRF SearchFilter.
     """
     serializer_class = SpeciesSerializer
+    filter_backends = [filters.SearchFilter]
+    
+    # Define the fields the frontend can search against
+    search_fields = ['scientific_name', 'genus', 'species', 'subfamily', 'tribe']
 
-    def list(self, request):
+    def get_queryset(self):
         from beetlesgallery.beetles_app.models import Taxon
-        
-        subfamily = request.query_params.get('subfamily')
-        genus = request.query_params.get('genus')
-        tribe = request.query_params.get('tribe')
-        species_param = request.query_params.get('species')
-
         qs = Taxon.objects.all()
+
+        # Retain custom exact-match parameters
+        subfamily = self.request.query_params.get('subfamily')
+        genus = self.request.query_params.get('genus')
+        tribe = self.request.query_params.get('tribe')
+        species_param = self.request.query_params.get('species')
 
         if subfamily:
             qs = qs.filter(subfamily__iexact=subfamily)
@@ -418,22 +424,4 @@ class SpeciesViewSet(viewsets.ViewSet):
         if species_param:
             qs = qs.filter(species__iexact=species_param)
 
-        results = []
-        for t in qs:
-            results.append({
-                "valid_species_id": t.valid_species_id,
-                "scientificName": t.scientific_name,
-                "scientificNameAuthority": t.scientific_name_authority,
-                "subfamily": t.subfamily,
-                "tribe": t.tribe,
-                "subtribe": t.subtribe,
-                "genus": t.genus,
-                "species": t.species,
-                "subspecies": t.subspecies,
-                "authority": t.authority,
-                "authorityYear": t.authority_year,
-                "originalGenus": t.original_genus,
-            })
-
-        serializer = SpeciesSerializer(results, many=True)
-        return Response(serializer.data)
+        return qs
