@@ -18,17 +18,22 @@ class SpeciesSerializer(serializers.Serializer):
     Returns all taxonomy fields from CSV plus any beetle specimens that depict this species.
     """
     valid_species_id = serializers.CharField()
-    scientificName = serializers.CharField()
-    scientificNameAuthority = serializers.CharField(allow_blank=True)
-    subfamily = serializers.CharField(allow_blank=True)
-    tribe = serializers.CharField(allow_blank=True)
-    subtribe = serializers.CharField(allow_blank=True)
-    genus = serializers.CharField(allow_blank=True)
-    species = serializers.CharField(allow_blank=True)
-    subspecies = serializers.CharField(allow_blank=True)
-    authority = serializers.CharField(allow_blank=True)
-    authorityYear = serializers.CharField(allow_blank=True)
-    originalGenus = serializers.CharField(allow_blank=True)
+    
+    # Bridge camelCase API expectations to the new snake_case database model attributes
+    scientificName = serializers.CharField(source='scientific_name', allow_blank=True, allow_null=True)
+    scientificNameAuthority = serializers.CharField(source='scientific_name_authority', allow_blank=True, allow_null=True)
+    
+    subfamily = serializers.CharField(allow_blank=True, allow_null=True)
+    tribe = serializers.CharField(allow_blank=True, allow_null=True)
+    subtribe = serializers.CharField(allow_blank=True, allow_null=True)
+    genus = serializers.CharField(allow_blank=True, allow_null=True)
+    species = serializers.CharField(allow_blank=True, allow_null=True)
+    subspecies = serializers.CharField(allow_blank=True, allow_null=True)
+    authority = serializers.CharField(allow_blank=True, allow_null=True)
+    
+    # Bridge remaining camelCase fields
+    authorityYear = serializers.CharField(source='authority_year', allow_blank=True, allow_null=True)
+    originalGenus = serializers.CharField(source='original_genus', allow_blank=True, allow_null=True)
 
     # Images for this species
     images = serializers.SerializerMethodField()
@@ -38,7 +43,7 @@ class SpeciesSerializer(serializers.Serializer):
         Get all beetle specimens (with images) that depict this species.
         Returns list of beetles with their associated image assets.
         """
-        species_id = obj.get('valid_species_id')
+        species_id = obj.valid_species_id 
         beetles = Beetles.objects.filter(
             depicts_valid_name_id=species_id,
             is_deleted=False
