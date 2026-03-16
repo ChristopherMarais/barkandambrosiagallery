@@ -24,7 +24,8 @@ except ImportError:
 IMAGE_FIELDS = {
     "image_institution", "photographer", "image_email", 
     "photo_usage_statement", "image_date_taken", "image_notes",
-    "image_has_multiple_individuals", "resolution_in_ppmm"
+    "image_has_multiple_individuals", "resolution_in_ppmm",
+    "is_validated"
 }
 
 # Fields that live on the Beetles model
@@ -34,7 +35,8 @@ BEETLE_FIELDS = {
     "depicts_name_verbatim", "collection_country", 
     "collection_stateProvince", "specimen_sex", 
     "specimen_type_status", "specimen_notes",
-    "bbox_x", "bbox_y", "bbox_width", "bbox_height", "bbox_label"
+    "bbox_x", "bbox_y", "bbox_width", "bbox_height", "bbox_label",
+    "bbox_is_validated"
 }
 UPDATE_IGNORED_COLS = {
     "image_id", "taxonomy_scientific_name", "taxonomy_subfamily", 
@@ -207,6 +209,8 @@ class Command(BaseCommand):
                             val = _none(v)
                         elif k in ["bbox_x", "bbox_y", "bbox_width", "bbox_height"]: 
                             val = _to_float(v)
+                        elif k == "bbox_is_validated":
+                            val = _to_bool(v)
                         elif k in ["depicts_valid_name_id", "depicts_described_name_id"]:
                             val = _none(v)
                             if val is not None:
@@ -250,6 +254,7 @@ class Command(BaseCommand):
                         has_i_change = False
                         for k, v in i_data.items():
                             if k == "image_has_multiple_individuals": val = _to_bool(v)
+                            elif k == "is_validated": val = _to_bool(v)
                             elif k == "resolution_in_ppmm": val = _to_decimal(v)
                             elif k == "image_date_taken": val = _to_date(v)
                             else: val = _none(v)

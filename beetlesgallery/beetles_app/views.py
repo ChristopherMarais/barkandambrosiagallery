@@ -1174,7 +1174,8 @@ UPDATE_ALLOWED_FIELDS = [
     "depicts_valid_name_id", "depicts_described_name_id", "depicts_name_verbatim", 
     "collection_country", "collection_stateProvince", "specimen_sex", 
     "specimen_type_status", "specimen_notes",
-    "bbox_x", "bbox_y", "bbox_width", "bbox_height"
+    "bbox_x", "bbox_y", "bbox_width", "bbox_height",
+    "bbox_is_validated", "is_validated"
 ]
 UPDATE_REQUIRED_COLS = {"record_id"} | set(UPDATE_ALLOWED_FIELDS)
 UPDATE_OPTIONAL_COLS = {"update_notes"}
