@@ -2,9 +2,7 @@ services:
   web:
     build: .
     command: >
-      sh -c "pixi run python manage.py collectstatic --noinput &&
-             pixi run python manage.py migrate &&
-             pixi run gunicorn beetlesgallery.wsgi:application --bind 0.0.0.0:8000 --workers 9 --timeout 120"
+      sh -c "pixi run gunicorn beetlesgallery.wsgi:application --bind 0.0.0.0:8000 --workers 9 --timeout 120"
     restart: always
     ports:
       - "80:8000"
