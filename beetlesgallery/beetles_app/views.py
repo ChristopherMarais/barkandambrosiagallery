@@ -350,7 +350,22 @@ def gallery(request):
         page_size = 12
 
     WARN_IMAGE_SIZE_BYTES = getattr(settings, "WARN_IMAGE_SIZE_BYTES", 10 * 1024 * 1024)
-    base_qs = base_qs = Beetles.objects.filter(is_deleted=False).order_by("-id")
+    
+    from django.db.models import Prefetch
+
+    # 1. Define exactly what a "Sibling" is (must not be deleted)
+    sibling_prefetch = Prefetch(
+        'image_asset__specimens',
+        queryset=Beetles.objects.filter(is_deleted=False),
+        to_attr='active_siblings' # This stores them in a list, preventing recursion
+    )
+
+    # 2. Apply it to your main query
+    base_qs = Beetles.objects.filter(is_deleted=False).select_related(
+        'image_asset', 'taxon'
+    ).prefetch_related(
+        sibling_prefetch
+    ).order_by("-id")
 
     # 1. Text Search
     raw_q = request.GET.get("q", "").strip()
