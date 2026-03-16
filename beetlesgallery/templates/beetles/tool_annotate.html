@@ -1147,18 +1147,38 @@ async function saveImageDetails() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i> Saving...';
 
-    // 1. Save all ROIs first
+    // 1. Bulk Save all ROIs in a single transaction
     try {
         if (state.bboxes && state.bboxes.length > 0) {
-            // Create an array of promises to save all ROIs concurrently
-            const savePromises = state.bboxes.map((_, i) => saveRoiMetadata(i, false, true)); // Pass true for 'isGlobalSave'
-            await Promise.all(savePromises);
+            // Build the array of partial updates
+            const payloads = state.bboxes.map((b, i) => {
+                const payload = getRoiPayloadFromForm(i);
+                payload.id = b.id; // Attach UUID for the backend mapping
+                return payload;
+            });
+            
+            const res = await fetch('/api/v1/beetles/bulk-update/', {
+                method: 'PATCH', 
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                body: JSON.stringify(payloads)
+            });
+            
+            if (res.ok) {
+                const updatedBoxes = await res.json();
+                // Merge database truth back into local state silently
+                updatedBoxes.forEach(ub => {
+                    const index = state.bboxes.findIndex(bx => bx.id === ub.id);
+                    if (index > -1) state.bboxes[index] = ub;
+                });
+            } else {
+                console.error("Bulk ROI save rejected by server.");
+            }
         }
     } catch(e) {
-        console.error("Failed saving ROIs", e);
+        console.error("Failed executing bulk ROI update network request", e);
     }
 
-    // 2. Then save the main Image Details
+    // 2. Execute final save for the Main Image Details
     const payload = {
         image_institution: f.elements['image_institution'].value || null,
         photographer: f.elements['photographer'].value || null,
@@ -1443,58 +1463,66 @@ function updateBboxFromInput(idx) {
   drawCanvas(); // Force canvas redraw instantly
 }
 
+function getRoiPayloadFromForm(idx) {
+    const form = document.getElementById(`form-roi-${idx}`);
+    if (!form) return {};
+    
+    return {
+        depicts_valid_name_id: form.elements['depicts_valid_name_id'].value || null,
+        depicts_described_name_id: form.elements['depicts_described_name_id'].value || null,
+        depicts_name_verbatim: form.elements['depicts_name_verbatim'].value || null,
+        depicts_specimen: form.elements['depicts_specimen'].value || null,
+        alternative_id: form.elements['alternative_id'].value || null,
+        aspect: form.elements['aspect'].value || null,
+        specimen_sex: form.elements['specimen_sex'].value || null,
+        specimen_type_status: form.elements['specimen_type_status'].value || null,
+        collection_country: form.elements['collection_country'].value || null,
+        collection_stateProvince: form.elements['collection_stateProvince'].value || null,
+        specimen_notes: form.elements['specimen_notes'].value || null,
+        update_notes: form.elements['update_notes'].value || null,
+        bbox_x: form.elements['bbox_x'].value !== "" ? parseFloat(form.elements['bbox_x'].value) : null,
+        bbox_y: form.elements['bbox_y'].value !== "" ? parseFloat(form.elements['bbox_y'].value) : null,
+        bbox_width: form.elements['bbox_width'].value !== "" ? parseFloat(form.elements['bbox_width'].value) : null,
+        bbox_height: form.elements['bbox_height'].value !== "" ? parseFloat(form.elements['bbox_height'].value) : null,
+    };
+}
+
 async function saveRoiMetadata(idx, isValidating = false, isGlobalSave = false) {
-  if (state.isLockedByOther) return;
-  const form = document.getElementById(`form-roi-${idx}`);
-  const btn = document.getElementById(isValidating ? `btn-val-roi-${idx}` : `btn-save-roi-${idx}`);
-  const b = state.bboxes[idx];
-  
-  const payload = {
-    depicts_valid_name_id: form.elements['depicts_valid_name_id'].value || null,
-    depicts_described_name_id: form.elements['depicts_described_name_id'].value || null,
-    depicts_name_verbatim: form.elements['depicts_name_verbatim'].value || null,
-    depicts_specimen: form.elements['depicts_specimen'].value || null,
-    alternative_id: form.elements['alternative_id'].value || null,
-    aspect: form.elements['aspect'].value || null,
-    specimen_sex: form.elements['specimen_sex'].value || null,
-    specimen_type_status: form.elements['specimen_type_status'].value || null,
-    collection_country: form.elements['collection_country'].value || null,
-    collection_stateProvince: form.elements['collection_stateProvince'].value || null,
-    specimen_notes: form.elements['specimen_notes'].value || null,
-    update_notes: form.elements['update_notes'].value || null,
-    bbox_x: form.elements['bbox_x'].value !== "" ? parseFloat(form.elements['bbox_x'].value) : null,
-    bbox_y: form.elements['bbox_y'].value !== "" ? parseFloat(form.elements['bbox_y'].value) : null,
-    bbox_width: form.elements['bbox_width'].value !== "" ? parseFloat(form.elements['bbox_width'].value) : null,
-    bbox_height: form.elements['bbox_height'].value !== "" ? parseFloat(form.elements['bbox_height'].value) : null,
-  };
-
-  if (isValidating) {
-    payload.bbox_is_validated = true;
-  }
-
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i>';
-
-  try {
-    const res = await fetch(`/api/v1/beetles/${b.id}/`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-      body: JSON.stringify(payload)
-    });
-    if(res.ok) {
-      state.bboxes[idx] = await res.json();
-      
-      if (!isGlobalSave) {
-          btn.innerHTML = '<i class="fi fi-rr-check"></i>';
-          drawCanvas(); 
-          setTimeout(() => { btn.innerHTML = '<i class="fi fi-rr-disk"></i> Save'; btn.disabled = false; }, 1500);
-          setTimeout(() => renderRoiAccordions(), 1600);
-          await checkAndAutoValidateImage();
-          updateMainStatusIndicator();
-      }
+    if (state.isLockedByOther) return;
+    
+    const btn = document.getElementById(isValidating ? `btn-val-roi-${idx}` : `btn-save-roi-${idx}`);
+    const b = state.bboxes[idx];
+    
+    const payload = getRoiPayloadFromForm(idx);
+    if (isValidating) {
+        payload.bbox_is_validated = true;
     }
-  } catch(e) { 
-      if (!isGlobalSave) { btn.innerHTML = 'Error'; btn.disabled = false; }
-  }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i>';
+
+    try {
+        const res = await fetch(`/api/v1/beetles/${b.id}/`, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+            body: JSON.stringify(payload)
+        });
+        if(res.ok) {
+            state.bboxes[idx] = await res.json();
+            
+            if (!isGlobalSave) {
+                btn.innerHTML = '<i class="fi fi-rr-check"></i>';
+                drawCanvas(); 
+                setTimeout(() => { btn.innerHTML = '<i class="fi fi-rr-disk"></i> Save'; btn.disabled = false; }, 1500);
+                setTimeout(() => renderRoiAccordions(), 1600);
+                await checkAndAutoValidateImage();
+                updateMainStatusIndicator();
+            }
+        } else {
+            throw new Error('API rejection');
+        }
+    } catch(e) { 
+        if (!isGlobalSave) { btn.innerHTML = 'Error'; btn.disabled = false; }
+    }
 }
 
 async function validateRoi(idx) {
@@ -2089,54 +2117,65 @@ function handleZoomWheel(e) {
 // VALIDATION & EXPORT
 // ---------------------------------------------------------
 async function validateAllBoundingBoxes() {
-  if (!state.selectedImageId || state.isLockedByOther) return alert('Select an unlocked image first.');
-  
-  const unval = state.bboxes.filter(b => !b.bbox_is_validated);
-  const btn = document.getElementById('validate-all-btn');
-  btn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i>';
-  
-  try {
-    if (unval.length > 0) {
-      await Promise.all(unval.map(b => fetch(`/api/v1/beetles/${b.id}/`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-        body: JSON.stringify({ bbox_is_validated: true })
-      })));
-      state.bboxes.forEach(b => b.bbox_is_validated = true);
-    }
+    if (!state.selectedImageId || state.isLockedByOther) return alert('Select an unlocked image first.');
     
-    await fetch(`/api/v1/image-assets/${state.selectedImageId}/`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-      body: JSON.stringify({ is_validated: true })
-    });
+    const unval = state.bboxes.filter(b => !b.bbox_is_validated);
+    const btn = document.getElementById('validate-all-btn');
+    btn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i>';
+    
+    try {
+        // 1. Bulk validate all ROIs in one request
+        if (unval.length > 0) {
+            const payloads = unval.map(b => ({ id: b.id, bbox_is_validated: true }));
+            
+            const res = await fetch('/api/v1/beetles/bulk-update/', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                body: JSON.stringify(payloads)
+            });
+            
+            if (!res.ok) throw new Error("Bulk validation failed");
+            
+            const updatedBoxes = await res.json();
+            updatedBoxes.forEach(ub => {
+                const index = state.bboxes.findIndex(bx => bx.id === ub.id);
+                if (index > -1) state.bboxes[index] = ub;
+            });
+        }
+        
+        // 2. Validate the parent image asset
+        await fetch(`/api/v1/image-assets/${state.selectedImageId}/`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+            body: JSON.stringify({ is_validated: true })
+        });
 
-    drawCanvas();
-    renderRoiAccordions(); // Update validation badges in accordions
-    
-    const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
-    if(currentIndex > -1) {
-      state.images[currentIndex].is_validated = true;
-      state.images[currentIndex].has_unvalidated_boxes = false;
-      renderImageList(state.images, false); 
-      
-      // Auto-advance to next image if possible
-      if (currentIndex + 1 < state.images.length) {
-          selectImage(state.images[currentIndex + 1]);
-          // If we reached the end of loaded images, load more
-          if (currentIndex + 1 >= state.images.length - 5 && state.pagination.next && !state.pagination.loading) {
-              loadNextPage();
-          }
-      }
+        drawCanvas();
+        renderRoiAccordions(); // Update validation badges in accordions
+        
+        const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
+        if(currentIndex > -1) {
+            state.images[currentIndex].is_validated = true;
+            state.images[currentIndex].has_unvalidated_boxes = false;
+            renderImageList(state.images, false); 
+            
+            // Auto-advance to next image if possible
+            if (currentIndex + 1 < state.images.length) {
+                selectImage(state.images[currentIndex + 1]);
+                // If we reached the end of loaded images, load more
+                if (currentIndex + 1 >= state.images.length - 5 && state.pagination.next && !state.pagination.loading) {
+                    loadNextPage();
+                }
+            }
+        }
+        updateMainStatusIndicator();
+        
+    } catch(e) { 
+        console.error(e); 
+        alert("An error occurred during bulk validation.");
+    } finally { 
+        btn.innerHTML = '<i class="fi fi-rr-check-circle"></i> Validate All'; 
     }
-    updateMainStatusIndicator();
-    
-  } catch(e) { 
-    console.error(e); 
-    alert("An error occurred during validation.");
-  } finally { 
-    btn.innerHTML = '<i class="fi fi-rr-check-circle"></i> Validate All'; 
-  }
 }
 
 // ---------------------------------------------------------
