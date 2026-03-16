@@ -350,7 +350,12 @@ def gallery(request):
         page_size = 12
 
     WARN_IMAGE_SIZE_BYTES = getattr(settings, "WARN_IMAGE_SIZE_BYTES", 10 * 1024 * 1024)
-    base_qs = base_qs = Beetles.objects.filter(is_deleted=False).order_by("-id")
+    # PREFETCH_RELATED loads all sibling specimens in a single query to eliminate lag
+    base_qs = Beetles.objects.filter(is_deleted=False).select_related(
+        'image_asset', 'taxon'
+    ).prefetch_related(
+        'image_asset__specimens'
+    ).order_by("-id")
 
     # 1. Text Search
     raw_q = request.GET.get("q", "").strip()
