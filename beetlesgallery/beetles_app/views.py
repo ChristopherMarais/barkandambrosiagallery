@@ -826,74 +826,50 @@ def start_batch_download(request):
 
 @login_required
 def data_management(request):
-    batches = (
-        UploadBatch.objects
-        .filter(uploaded_by=request.user)
-        .order_by("-created_at")
-    )
+    batches = UploadBatch.objects.filter(uploaded_by=request.user).order_by("-created_at")
+    download_jobs = DownloadJob.objects.filter(requested_by=request.user).order_by("-created_at")
 
-    download_jobs = (
-        DownloadJob.objects
-        .filter(requested_by=request.user)
-        .order_by("-created_at")
-    )
-
-    # Staff-only updates listing
     if request.user.is_staff:
-        update_batches = (
-            UpdateBatch.objects
-            .filter(uploaded_by=request.user)
-            .order_by("-created_at")
-        )
+        update_batches = UpdateBatch.objects.filter(uploaded_by=request.user).order_by("-created_at")
     else:
         update_batches = []
 
-    # Superuser-only taxonomy archives
-    valid_species_archives_json = "[]"
-    described_names_archives_json = "[]"
-    current_valid_species_json = "null"
-    current_described_names_json = "null"
-    species_ref_status = {}
-    described_names_ref_status = {}
-    initial_archives = []
-    initial_current = None
-
     if request.user.is_superuser:
         import json
-        import os
-        from django.core.serializers.json import DjangoJSONEncoder
-        from beetlesgallery.beetles_app.models import Taxon
         from django.utils import timezone
         from django.core.files.storage import default_storage
         
-        # Pull latest sync timestamp natively from the database
-        latest_taxon = Taxon.objects.order_by("-updated_at").first()
-        if latest_taxon and latest_taxon.updated_at: 
-            t_label = f"Database Managed (Last Sync: {latest_taxon.updated_at.strftime('%Y-%m-%d %H:%M UTC')})"
-            t_timestamp = latest_taxon.updated_at.isoformat()
-        else:
+        # Broad try/except to completely prevent 500 errors on dashboard load
+        try:
+            from beetlesgallery.beetles_app.models import Taxon
+            latest_taxon = Taxon.objects.order_by("-updated_at").first()
+            if latest_taxon and latest_taxon.updated_at: 
+                t_label = f"Database Managed (Last Sync: {latest_taxon.updated_at.strftime('%Y-%m-%d %H:%M UTC')})"
+                t_timestamp = latest_taxon.updated_at.isoformat()
+            else:
+                t_label = "Database Managed (v2.0)"
+                t_timestamp = timezone.now().isoformat()
+        except Exception as e:
+            print(f"Safe error parsing Taxon: {e}")
             t_label = "Database Managed (v2.0)"
             t_timestamp = timezone.now().isoformat()
 
         species_ref_status = {'label': t_label, 'version': 'v2.0'}
         described_names_ref_status = {'label': t_label, 'version': 'v2.0'}
 
-        # 1. Virtualize the Current Version to display the latest download link
         current_file_obj = {
             "timestamp": t_timestamp,
             "filename": "Active_Database_Export.csv"
         }
         
-        initial_current = current_file_obj
+        # JSON strings exclusively for the Javascript frontend
         current_valid_species_json = json.dumps(current_file_obj)
         current_described_names_json = json.dumps(current_file_obj)
 
-        # 2. Re-implement Storage Scanner for Archives
         def fetch_archives(ref_type):
             archive_dir = f"reference/archive/{ref_type}"
             archives = []
             try:
-                # Check if directory exists in default_storage
                 if default_storage.exists(archive_dir):
                     _, files = default_storage.listdir(archive_dir)
                     for f in files:
@@ -904,38 +880,162 @@ def data_management(request):
                             except Exception:
                                 ts = timezone.now().isoformat()
                             archives.append({"filename": f, "timestamp": ts})
-                    
                     archives.sort(key=lambda x: x["filename"], reverse=True)
-            except (NotImplementedError, FileNotFoundError, OSError):
-                pass
+            except Exception as e:
+                print(f"Safe error reading storage: {e}")
             return archives
 
         vs_archives = fetch_archives("valid_species")
         dn_archives = fetch_archives("described_names")
 
+        # JSON strings exclusively for Javascript frontend
         valid_species_archives_json = json.dumps(vs_archives)
         described_names_archives_json = json.dumps(dn_archives)
         
-        # Initial render defaults to Valid Species view
+        # NATIVE PYTHON OBJECTS for the Django Template Server-Side Rendering
         initial_archives = vs_archives
+        initial_current = current_file_obj
+    else:
+        valid_species_archives_json = "[]"
+        described_names_archives_json = "[]"
+        current_valid_species_json = "null"
+        current_described_names_json = "null"
+        species_ref_status = {}
+        described_names_ref_status = {}
+        initial_archives = []
+        initial_current = None
 
     return render(
         request,
         "beetles/data_management.html",
         {
-        "batches": batches,
-        "download_jobs": download_jobs,
-        "update_batches": update_batches,
-        "valid_species_archives": valid_species_archives_json,
-        "described_names_archives": described_names_archives_json,
-        "current_valid_species": current_valid_species_json,
-        "current_described_names": current_described_names_json,
-        "species_ref_status": species_ref_status,
-        "described_names_ref_status": described_names_ref_status,
-        "initial_archives": initial_archives,
-        "initial_current": initial_current,
+            "batches": batches,
+            "download_jobs": download_jobs,
+            "update_batches": update_batches,
+            "valid_species_archives": valid_species_archives_json,
+            "described_names_archives": described_names_archives_json,
+            "current_valid_species": current_valid_species_json,
+            "current_described_names": current_described_names_json,
+            "species_ref_status": species_ref_status,
+            "described_names_ref_status": described_names_ref_status,
+            "initial_archives": initial_archives,
+            "initial_current": initial_current,
         }
     )
+
+
+@staff_member_required
+def tool_annotate(request):
+    """
+    Data annotation tool page (staff only).
+    """
+    from .utils import FILTERS_CONFIG
+    from collections import defaultdict
+    from django.db.models import Q
+    from .models import Beetles, Taxon
+    from django.core.serializers.json import DjangoJSONEncoder
+    import json
+    
+    # Query the base records to discover available filter options
+    base_qs = Beetles.objects.filter(is_deleted=False)
+    grouped_filters = defaultdict(list)
+    
+    categories = []
+    seen_cats = set()
+    for cfg in FILTERS_CONFIG:
+        if cfg["category"] not in seen_cats:
+            categories.append(cfg["category"])
+            seen_cats.add(cfg["category"])
+
+    for cfg in FILTERS_CONFIG:
+        param = cfg["param"]
+        options = []
+        has_na = False
+
+        if cfg["type"] == "db":
+            field = cfg['field']
+            is_strict_type = field in ["image_asset__image_date_taken", "image_asset__resolution_in_ppmm"]
+            
+            if is_strict_type:
+                raw_options = base_qs.exclude(**{f"{field}__isnull": True}).values_list(field, flat=True).distinct().order_by(field)
+                has_na = base_qs.filter(**{f"{field}__isnull": True}).exists()
+            else:
+                raw_options = base_qs.exclude(**{f"{field}__isnull": True}).exclude(**{f"{field}": ""}).values_list(field, flat=True).distinct().order_by(field)
+                has_na = base_qs.filter(Q(**{f"{field}__isnull": True}) | Q(**{f"{field}": ""})).exists()
+            
+            for o in raw_options:
+                val = o.strftime("%Y-%m-%d") if hasattr(o, "strftime") else str(o).strip()
+                if val and val not in options:
+                    options.append(val)
+
+        elif cfg["type"] in ["bool", "custom_has_rois", "custom_all_rois_val"]:
+            options = ["Yes", "No"]
+            if cfg["type"] == "bool":
+                has_na = base_qs.filter(**{f"{cfg['field']}__isnull": True}).exists()
+            else:
+                has_na = False
+            
+        elif cfg["type"] == "ref":
+            field_name = f"taxon__{cfg['field']}"
+            raw_options = base_qs.exclude(taxon__isnull=True).exclude(**{f"{field_name}__isnull": True}).exclude(**{f"{field_name}": ""}).values_list(field_name, flat=True).distinct().order_by(field_name)
+            for o in raw_options:
+                val = str(o).strip()
+                if val and val not in options:
+                    options.append(val)
+
+            has_na = base_qs.filter(Q(taxon__isnull=True) | Q(**{f"{field_name}__isnull": True}) | Q(**{f"{field_name}": ""})).exists()
+
+        if has_na:
+            options.insert(0, "None")
+
+        if options:
+            grouped_filters[cfg["category"]].append({
+                "param": param,
+                "label": cfg["label"],
+                "options": options,
+                "selected": [],
+            })
+
+    filter_context = []
+    for cat in categories:
+        if grouped_filters[cat]:
+            filter_context.append((cat, grouped_filters[cat]))
+
+    # --- Inject Taxonomy Tree for Cascading Dropdowns ---
+    taxa = Taxon.objects.all()
+    tree_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    species_map = {}
+
+    for t in taxa:
+        subf = t.subfamily.strip() if t.subfamily else "Unknown Subfamily"
+        tribe = t.tribe.strip() if t.tribe else "Unknown Tribe"
+        genus = t.genus.strip() if t.genus else "Unknown Genus"
+
+        tree_dict[subf][tribe][genus].append({
+            "name": t.species.strip() if t.species else "sp.",
+            "species_id": str(t.valid_species_id),
+        })
+
+        species_map[str(t.valid_species_id)] = {
+            "subfamily": subf,
+            "tribe": tribe,
+            "genus": genus,
+            "name": t.species.strip() if t.species else "sp."
+        }
+
+    # Convert defaultdict to standard dict to prevent silent serialization failures
+    def default_to_regular(d):
+        if isinstance(d, defaultdict):
+            d = {k: default_to_regular(v) for k, v in d.items()}
+        return d
+    
+    tree_dict_clean = default_to_regular(tree_dict)
+
+    return render(request, 'beetles/tool_annotate.html', {
+        'filter_groups': filter_context,
+        'taxonomy_tree_json': json.dumps(tree_dict_clean, cls=DjangoJSONEncoder, ensure_ascii=False),
+        'species_map_json': json.dumps(species_map, cls=DjangoJSONEncoder, ensure_ascii=False),
+    })
 
 @login_required(login_url='login')
 def download_taxonomy_ref(request):
