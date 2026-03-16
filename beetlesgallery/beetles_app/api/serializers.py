@@ -35,21 +35,6 @@ class SpeciesSerializer(serializers.Serializer):
     authorityYear = serializers.CharField(source='authority_year', allow_blank=True, allow_null=True)
     originalGenus = serializers.CharField(source='original_genus', allow_blank=True, allow_null=True)
 
-    # Images for this species
-    images = serializers.SerializerMethodField()
-
-    def get_images(self, obj):
-        """
-        Get all beetle specimens (with images) that depict this species.
-        Returns list of beetles with their associated image assets.
-        """
-        species_id = obj.valid_species_id 
-        beetles = Beetles.objects.filter(
-            depicts_valid_name_id=species_id,
-            is_deleted=False
-        ).select_related('image_asset')
-        return BeetlesSerializer(beetles, many=True).data
-
 
 class BeetlesSerializer(serializers.ModelSerializer):
     """
