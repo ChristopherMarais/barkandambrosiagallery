@@ -19,10 +19,12 @@ from rest_framework import status
 
 class IsStaffUser(IsAuthenticated):
     """
-    Permission class that checks if user is authenticated and is staff.
+    Permission class that checks if user is authenticated and is staff OR superuser.
     """
     def has_permission(self, request, view):
-        return super().has_permission(request, view) and request.user.is_staff
+        is_authenticated = super().has_permission(request, view)
+        # Authorize if the user is staff OR an administrative superuser
+        return bool(is_authenticated and (request.user.is_staff or request.user.is_superuser))
 
 
 class ImageAssetViewSet(viewsets.ModelViewSet):

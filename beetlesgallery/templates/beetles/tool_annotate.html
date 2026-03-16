@@ -411,6 +411,11 @@
 </div>
 
 <script>
+  // ---------------------------------------------------------
+// CSRF TOKEN EXTRACTION (REPLACES getCookie)
+// ---------------------------------------------------------
+const csrftoken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
 // ---------------------------------------------------------
 // GLOBAL STATE
 // ---------------------------------------------------------
@@ -437,7 +442,6 @@ const state = {
 };
 
 let canvas, ctx, wrapper;
-const csrftoken = getCookie('csrftoken');
 let searchDebounceTimer = null;
 
 // ---------------------------------------------------------
@@ -2074,21 +2078,6 @@ function handleZoomWheel(e) {
 
   wrapper.scrollLeft = canvasX * state.zoom - mouseX;
   wrapper.scrollTop = canvasY * state.zoom - mouseY;
-}
-
-function getCookie(name) {
-  let cookieValue = null;
-  if (document.cookie && document.cookie !== '') {
-    const cookies = document.cookie.split(';');
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i].trim();
-      if (cookie.substring(0, name.length + 1) === (name + '=')) {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-        break;
-      }
-    }
-  }
-  return cookieValue;
 }
 
 // ---------------------------------------------------------
