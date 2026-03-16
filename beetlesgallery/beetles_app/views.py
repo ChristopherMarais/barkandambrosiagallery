@@ -494,67 +494,57 @@ def gallery(request):
     except EmptyPage:
         beetles_page = paginator.page(paginator.num_pages)
 
+    # --- helper functions OUTSIDE the loop to prevent O(N) memory allocation ---
+    def clean_val(val):
+        return val if val and str(val).lower() != "unknown" else None
+
     # Enrichment
     for b in beetles_page.object_list:
         # 1. Resolve Reference natively from the database join
-        def clean(val): return val if val and str(val).lower() != "unknown" else None
-        
         if b.taxon:
-            b.ref_scientificName = clean(b.taxon.scientific_name)
-            b.ref_genus = clean(b.taxon.genus)
-            b.ref_species = clean(b.taxon.species)
-            b.ref_subfamily = clean(b.taxon.subfamily)
-            b.ref_tribe = clean(b.taxon.tribe)
-            b.ref_subtribe = clean(b.taxon.subtribe)
-            b.ref_subspecies = clean(b.taxon.subspecies)
+            b.ref_scientificName = clean_val(b.taxon.scientific_name)
+            b.ref_genus = clean_val(b.taxon.genus)
+            b.ref_species = clean_val(b.taxon.species)
+            b.ref_subfamily = clean_val(b.taxon.subfamily)
+            b.ref_tribe = clean_val(b.taxon.tribe)
+            b.ref_subtribe = clean_val(b.taxon.subtribe)
+            b.ref_subspecies = clean_val(b.taxon.subspecies)
         else:
             b.ref_scientificName = b.ref_genus = b.ref_species = b.ref_subfamily = b.ref_tribe = b.ref_subtribe = b.ref_subspecies = None
 
-        # 2. Aggregation Logic
-        for b in page_obj:
-            b.siblings_count = 0
-            if b.image_asset:
-                # Filter out soft-deleted records purely in Python.
-                # Doing this in Python (list comprehension) prevents Django from firing 
-                # a new N+1 database query for every image on the gallery page.
-                siblings = [s for s in b.image_asset.specimens.all() if not s.is_deleted]
-                b.siblings_count = len(siblings)
-            
-            # Helper: Check if there is more than 1 unique value (counting None as a value)
-            def check_multiple(attr):
-                values = {getattr(s, attr) for s in siblings}
-                return len(values) > 1
+        # 2. Aggregation Logic Initialization
+        b.siblings_count = 0
+        b.has_multiple_aspect = False
+        b.has_multiple_country = False
+        b.has_multiple_sex = False
+        b.has_multiple_subfamily = False
+        b.has_multiple_tribe = False
+        b.has_multiple_subtribe = False
+        b.has_multiple_genus = False
+        b.has_multiple_species = False
+        b.has_multiple_subspecies = False
+        b.warn_large = False
 
-            b.has_multiple_aspect = check_multiple("aspect")
-            b.has_multiple_country = check_multiple("collection_country")
-            b.has_multiple_sex = check_multiple("specimen_sex")
-            
-            # Taxonomy Aggregation via DB instances
-            # Get all Valid IDs involved in this image using the relational ID
-            taxa = {s.taxon_id for s in siblings}
-            
-            # If we have >1 unique ID, we might have multiple ranks
-            if len(taxa) > 1:
-                def check_rank(key):
-                    # collect unique values for this rank natively from the taxon objects
-                    vals = {getattr(s.taxon, key) for s in siblings if s.taxon}
-                    return len(vals) > 1
+        if b.image_asset:
+            siblings = [s for s in b.image_asset.specimens.all() if not s.is_deleted]
+            b.siblings_count = len(siblings)
+
+            # Only calculate multiple attributes if there is more than 1 sibling
+            if b.siblings_count > 1:
+                b.has_multiple_aspect = len({s.aspect for s in siblings}) > 1
+                b.has_multiple_country = len({s.collection_country for s in siblings}) > 1
+                b.has_multiple_sex = len({s.specimen_sex for s in siblings}) > 1
                 
-                b.has_multiple_subfamily = check_rank("subfamily")
-                b.has_multiple_tribe = check_rank("tribe")
-                b.has_multiple_subtribe = check_rank("subtribe")
-                b.has_multiple_genus = check_rank("genus")
-                b.has_multiple_species = check_rank("species")
-                b.has_multiple_subspecies = check_rank("subspecies")
-            else:
-                # All beetles have the same ID (or all None), so ranks are identical
-                b.has_multiple_subfamily = False
-                b.has_multiple_tribe = False
-                b.has_multiple_subtribe = False
-                b.has_multiple_genus = False
-                b.has_multiple_species = False
-                b.has_multiple_subspecies = False
-            
+                # Taxonomy Aggregation via DB instances
+                taxa = {s.taxon_id for s in siblings}
+                if len(taxa) > 1:
+                    b.has_multiple_subfamily = len({s.taxon.subfamily for s in siblings if s.taxon}) > 1
+                    b.has_multiple_tribe = len({s.taxon.tribe for s in siblings if s.taxon}) > 1
+                    b.has_multiple_subtribe = len({s.taxon.subtribe for s in siblings if s.taxon}) > 1
+                    b.has_multiple_genus = len({s.taxon.genus for s in siblings if s.taxon}) > 1
+                    b.has_multiple_species = len({s.taxon.species for s in siblings if s.taxon}) > 1
+                    b.has_multiple_subspecies = len({s.taxon.subspecies for s in siblings if s.taxon}) > 1
+
             b.warn_large = (b.image_asset.image_size_bytes or 0) >= WARN_IMAGE_SIZE_BYTES
         else:
             b.siblings_count = 0
