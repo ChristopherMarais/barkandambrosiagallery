@@ -48,8 +48,43 @@ class ImageAsset(models.Model):
     thumb_width = models.PositiveIntegerField(null=True, blank=True)
     thumb_height = models.PositiveIntegerField(null=True, blank=True)
 
+    is_validated = models.BooleanField(
+        default=False, 
+        help_text="Has this image been fully reviewed/validated?"
+    )
+    last_updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='updated_image_assets',
+        help_text="User who last updated this image or its metadata"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    is_deleted = models.BooleanField(
+        default=False, 
+        db_index=True,
+        help_text="Soft deletion flag. If true, hidden from UI."
+    )
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    
+    history = HistoricalRecords()
+
+    def delete(self, using=None, keep_parents=False, deleted_by=None):
+        """Soft delete the image and cascade soft-delete to all its ROIs."""
+        from django.utils import timezone
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        if deleted_by:
+            self.last_updated_by = deleted_by
+        self.save(update_fields=['is_deleted', 'deleted_at', 'last_updated_by', 'updated_at'])
+        
+        # Cascade soft-delete to associated Beetles/ROIs
+        for beetle in self.specimens.filter(is_deleted=False):
+            beetle.delete(deleted_by=deleted_by)
 
     def __str__(self):
         return f"Image {self.image_sha256[:8] if self.image_sha256 else 'NoSHA'} ({self.full_path_at_import})"
@@ -149,10 +184,6 @@ class Beetles(models.Model):
         null=True, blank=True,
         help_text="Normalized height (as fraction of image height, 0-1)"
     )
-    bbox_label = models.CharField(
-        null=True, max_length=200, blank=True,
-        help_text="Species name, classification label, or other identifier"
-    )
 
     # --- Bounding Box Validation Workflow ---
     bbox_is_validated = models.BooleanField(
@@ -188,7 +219,56 @@ class Beetles(models.Model):
         help_text="When this annotation was created"
     )
 
+    # --- Soft Delete ---
+    is_deleted = models.BooleanField(
+        default=False, 
+        db_index=True,
+        help_text="Soft deletion flag."
+    )
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
     history = HistoricalRecords()
+
+    def delete(self, using=None, keep_parents=False, deleted_by=None):
+        """Soft delete the beetle (ROI/specimen)."""
+        from django.utils import timezone
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        if deleted_by:
+            self.last_updated_by = deleted_by
+        self.save(update_fields=['is_deleted', 'deleted_at', 'last_updated_by', 'last_updated_at'])
+    
+    def save(self, *args, **kwargs):
+        """
+        Automatically keep the relational Taxon FK in sync with the string ID 
+        when a single record is saved (e.g. from the Annotation Tool).
+        """
+        update_fields = kwargs.get('update_fields')
+        # If doing a targeted save (like soft-delete), skip the taxonomy sync unless relevant
+        if update_fields is None or 'depicts_valid_name_id' in update_fields or 'taxon' in update_fields:
+            if self.depicts_valid_name_id:
+                from beetlesgallery.beetles_app.models import Taxon
+                needs_update = True
+                
+                # If a taxon is already linked, check if it matches the current string ID
+                if self.taxon_id:
+                    try:
+                        if self.taxon and self.taxon.valid_species_id == self.depicts_valid_name_id:
+                            needs_update = False
+                    except Taxon.DoesNotExist:
+                        pass
+                
+                if needs_update:
+                    self.taxon = Taxon.objects.filter(valid_species_id=self.depicts_valid_name_id).first()
+                    # Ensure taxon gets saved if update_fields is explicitly strictly defined
+                    if update_fields is not None and 'taxon' not in update_fields:
+                        kwargs['update_fields'] = list(update_fields) + ['taxon']
+            else:
+                self.taxon = None
+                if update_fields is not None and 'taxon' not in update_fields:
+                    kwargs['update_fields'] = list(update_fields) + ['taxon']
+
+        super().save(*args, **kwargs)
 
     class Meta:
         db_table = "beetles"
@@ -215,48 +295,6 @@ class Beetles(models.Model):
     def has_bbox(self) -> bool:
         """Check if this Beetle record has bounding box annotation data."""
         return self.bbox_x is not None
-
-    def to_yolo(self) -> str:
-        """
-        Export bbox to YOLO format (normalized center + w/h).
-
-        Returns:
-            str: "<label> <x_center> <y_center> <width> <height>" or empty string if no bbox
-        """
-        if not self.has_bbox():
-            return ""
-
-        x_center = self.bbox_x + (self.bbox_width / 2)
-        y_center = self.bbox_y + (self.bbox_height / 2)
-        label = self.bbox_label or '0'
-        return f"{label} {x_center:.6f} {y_center:.6f} {self.bbox_width:.6f} {self.bbox_height:.6f}"
-
-    def to_coco(self, image_width: int, image_height: int) -> dict:
-        """
-        Convert bbox to COCO format (absolute pixels, top-left + w/h).
-
-        Args:
-            image_width: Pixel width of the image
-            image_height: Pixel height of the image
-
-        Returns:
-            dict with keys: bbox, area, category_id (label), iscrowd
-            Returns empty dict if no bbox
-        """
-        if not self.has_bbox():
-            return {}
-
-        return {
-            'bbox': [
-                self.bbox_x * image_width,
-                self.bbox_y * image_height,
-                self.bbox_width * image_width,
-                self.bbox_height * image_height
-            ],
-            'area': (self.bbox_width * image_width) * (self.bbox_height * image_height),
-            'category_id': self.bbox_label or 'unknown',
-            'iscrowd': 0
-        }
 
     # ---------
     # Helpers: content-addressed relative paths based on sha256
@@ -954,21 +992,3 @@ class Synonym(models.Model):
 
     def __str__(self):
         return self.described_scientific_name
-
-
-class CategoryMapping(models.Model):
-    """
-    Relational representation of category_mapping.json for annotations.
-    """
-    category_id = models.IntegerField(primary_key=True, help_text="Numeric ID used in YOLO/COCO.")
-    name = models.CharField(max_length=255, db_index=True)
-    full_name = models.CharField(max_length=255, blank=True, null=True)
-    supercategory = models.CharField(max_length=100, default='beetle', db_index=True)
-
-    class Meta:
-        db_table = "category_mapping"
-        verbose_name = "Category Mapping"
-        verbose_name_plural = "Category Mappings"
-
-    def __str__(self):
-        return self.full_name or self.name

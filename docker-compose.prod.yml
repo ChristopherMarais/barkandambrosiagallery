@@ -2,8 +2,7 @@ services:
   web:
     build: .
     command: >
-      sh -c "pixi run python manage.py build_taxonomy_tree &&
-             pixi run gunicorn --workers 25 --timeout 600"
+      sh -c "pixi run gunicorn --workers 25 --timeout 600"
     restart: always
     ports:
       - "80:8000"

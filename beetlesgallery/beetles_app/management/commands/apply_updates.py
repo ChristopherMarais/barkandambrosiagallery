@@ -25,6 +25,7 @@ IMAGE_FIELDS = {
     "image_notes",
     "image_date_taken",
     "image_has_multiple_individuals",
+    "is_validated",
 }
 
 BEETLE_FIELDS = {
@@ -39,6 +40,11 @@ BEETLE_FIELDS = {
     "specimen_sex",
     "specimen_type_status",
     "specimen_notes",
+    "bbox_x",
+    "bbox_y",
+    "bbox_width",
+    "bbox_height",
+    "bbox_is_validated",
 }
 
 UPDATE_ALLOWED_FIELDS = list(IMAGE_FIELDS | BEETLE_FIELDS)
@@ -57,6 +63,12 @@ def _clean_str(v):
     if v is None: return None
     s = str(v).replace("\u00a0", " ").replace("\n", " ").replace("\r", " ").replace("\t", " ").strip()
     return s if s != "" else None
+
+def _to_float(v):
+    v = _none(v)
+    if v is None: return None
+    try: return float(v)
+    except: return None
 
 def _to_decimal_12_4(v):
     v = _none(v)
@@ -188,7 +200,10 @@ class Command(BaseCommand):
                 if fname == "resolution_in_ppmm": v = _to_decimal_12_4(raw)
                 elif fname == "image_date_taken": v = _to_date(raw)
                 elif fname == "specimen_sex": v = _normalize_sex(raw, excel_row)
-                elif fname == "image_has_multiple_individuals": v = _to_bool(raw)
+                elif fname in ["image_has_multiple_individuals", "is_validated", "bbox_is_validated"]: 
+                    v = _to_bool(raw)
+                elif fname in ["bbox_x", "bbox_y", "bbox_width", "bbox_height"]: 
+                    v = _to_float(raw)
                 elif fname == "depicts_valid_name_id":
                     if _is_blank(raw): v = None
                     else: v = _clean_str(raw)
@@ -266,6 +281,9 @@ class Command(BaseCommand):
                     if i_changes and b.image_asset:
                         for k, v in i_changes.items():
                             setattr(b.image_asset, k, v)
+                            
+                        b.image_asset.last_updated_by = history_user
+                        
                         try:
                             b.image_asset.save()
                         except Exception as e:

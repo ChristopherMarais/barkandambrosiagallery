@@ -39,7 +39,10 @@ class SpeciesSerializer(serializers.Serializer):
         Returns list of beetles with their associated image assets.
         """
         species_id = obj.get('valid_species_id')
-        beetles = Beetles.objects.filter(depicts_valid_name_id=species_id).select_related('image_asset')
+        beetles = Beetles.objects.filter(
+            depicts_valid_name_id=species_id,
+            is_deleted=False
+        ).select_related('image_asset')
         return BeetlesSerializer(beetles, many=True).data
 
 

@@ -166,7 +166,7 @@ class PostOnlyLogoutView(LogoutView):
 
 
 def landing(request):
-    total_images = ImageAsset.objects.count()
+    total_images = ImageAsset.objects.filter(is_deleted=False).count()
 
     # Count unique species and genera via native SQL Joins, bypassing Python memory
     total_species = Beetles.objects.filter(taxon__isnull=False).values('taxon_id').distinct().count()
@@ -343,14 +343,14 @@ def upload_file(request):
 
 def gallery(request):
     from .utils import build_query_q, filter_beetles_queryset, FILTERS_CONFIG
-    NA = "N/A"
+    NA = "None"
     try:
         page_size = int(request.GET.get("per_page", 12))
     except (ValueError, TypeError):
         page_size = 12
 
     WARN_IMAGE_SIZE_BYTES = getattr(settings, "WARN_IMAGE_SIZE_BYTES", 10 * 1024 * 1024)
-    base_qs = Beetles.objects.all().order_by("-id")
+    base_qs = base_qs = Beetles.objects.filter(is_deleted=False).order_by("-id")
 
     # 1. Text Search
     raw_q = request.GET.get("q", "").strip()
@@ -461,9 +461,9 @@ def gallery(request):
                 Q(**{f"{field_name}": ""})
             ).exists()
 
-        # 3. Safely insert N/A at the top of the list if blanks exist
+        # 3. Safely insert None at the top of the list if blanks exist
         if has_na:
-            options.insert(0, "N/A")
+            options.insert(0, "None")
 
         # Check if options exist OR if this filter is currently active
         if options or active_filters.get(param):
@@ -584,7 +584,7 @@ def beetle_detail(request, beetle_id):
         return redirect(f"{login_url}?next={request.path}")
 
     # Fetch main object, aggressively joining the taxon relationship to prevent N+1 queries
-    beetle = get_object_or_404(Beetles.objects.select_related("taxon"), pk=beetle_id)
+    beetle = get_object_or_404(Beetles.objects.filter(is_deleted=False).select_related("taxon"), pk=beetle_id)
 
     # 1. Siblings (Same Image, different specimen records) - For Pagination inside the card
     siblings = []
@@ -860,26 +860,66 @@ def data_management(request):
 
     if request.user.is_superuser:
         import json
+        import os
         from django.core.serializers.json import DjangoJSONEncoder
         from beetlesgallery.beetles_app.models import Taxon
+        from django.utils import timezone
+        from django.core.files.storage import default_storage
         
         # Pull latest sync timestamp natively from the database
         latest_taxon = Taxon.objects.order_by("-updated_at").first()
         if latest_taxon:
             t_label = f"Database Managed (Last Sync: {latest_taxon.updated_at.strftime('%Y-%m-%d %H:%M UTC')})"
+            t_timestamp = latest_taxon.updated_at.isoformat()
         else:
             t_label = "Database Managed (v2.0)"
+            t_timestamp = timezone.now().isoformat()
 
         species_ref_status = {'label': t_label, 'version': 'v2.0'}
         described_names_ref_status = {'label': t_label, 'version': 'v2.0'}
 
-        # Legacy archives deprecated; handled via relational backups if needed
-        valid_species_archives_json = "[]"
-        described_names_archives_json = "[]"
-        current_valid_species_json = "null"
-        current_described_names_json = "null"
-        initial_archives = []
-        initial_current = None
+        # 1. Virtualize the Current Version to display the latest download link
+        current_file_obj = {
+            "timestamp": t_timestamp,
+            "filename": "Active_Database_Export.csv"
+        }
+        
+        initial_current = current_file_obj
+        current_valid_species_json = json.dumps(current_file_obj)
+        current_described_names_json = json.dumps(current_file_obj)
+
+        # 2. Re-implement Storage Scanner for Archives
+        def fetch_archives(ref_type):
+            archive_dir = f"reference/archive/{ref_type}"
+            archives = []
+            try:
+                # Check if directory exists in default_storage
+                if default_storage.exists(archive_dir):
+                    _, files = default_storage.listdir(archive_dir)
+                    for f in files:
+                        if f.endswith('.csv'):
+                            try:
+                                mtime = default_storage.get_modified_time(f"{archive_dir}/{f}")
+                                ts = mtime.isoformat()
+                            except Exception:
+                                ts = timezone.now().isoformat()
+                            archives.append({"filename": f, "timestamp": ts})
+                    
+                    # Sort by filename descending (newest timestamps first)
+                    archives.sort(key=lambda x: x["filename"], reverse=True)
+            except NotImplementedError:
+                # Graceful fail if the storage backend doesn't support listdir
+                pass
+            return archives
+
+        vs_archives = fetch_archives("valid_species")
+        dn_archives = fetch_archives("described_names")
+
+        valid_species_archives_json = json.dumps(vs_archives)
+        described_names_archives_json = json.dumps(dn_archives)
+        
+        # Initial render defaults to Valid Species view
+        initial_archives = vs_archives
 
     return render(
         request,
@@ -1025,7 +1065,7 @@ UPDATE_ALLOWED_FIELDS = [
     "depicts_valid_name_id", "depicts_described_name_id", "depicts_name_verbatim", 
     "collection_country", "collection_stateProvince", "specimen_sex", 
     "specimen_type_status", "specimen_notes",
-    "bbox_x", "bbox_y", "bbox_width", "bbox_height", "bbox_label"
+    "bbox_x", "bbox_y", "bbox_width", "bbox_height"
 ]
 UPDATE_REQUIRED_COLS = {"record_id"} | set(UPDATE_ALLOWED_FIELDS)
 UPDATE_OPTIONAL_COLS = {"update_notes"}
@@ -1482,7 +1522,7 @@ def species_images(request):
     # Same dedup pattern as the gallery: one row per unique ImageAsset
     beetles = (
         Beetles.objects
-        .filter(depicts_valid_name_id=species_id)
+        .filter(depicts_valid_name_id=species_id, is_deleted=False)
         .select_related("image_asset")
         .order_by("image_asset", "id")
         .distinct("image_asset")
@@ -1549,217 +1589,93 @@ def tool_annotate(request):
     """
     Data annotation tool page (staff only).
     """
-    return render(request, 'beetles/tool_annotate.html', {})
+    from .utils import FILTERS_CONFIG
+    from collections import defaultdict
+    from django.db.models import Q
+    from .models import Beetles
+    
+    # Query the base records to discover available filter options
+    base_qs = Beetles.objects.all()
+    grouped_filters = defaultdict(list)
+    
+    categories = []
+    seen_cats = set()
+    for cfg in FILTERS_CONFIG:
+        if cfg["category"] not in seen_cats:
+            categories.append(cfg["category"])
+            seen_cats.add(cfg["category"])
 
+    for cfg in FILTERS_CONFIG:
+        param = cfg["param"]
+        options = []
+        has_na = False
 
-@staff_member_required
-def export_annotations(request):
-    """
-    Export all bounding box annotations in YOLO or COCO format.
+        if cfg["type"] == "db":
+            field = cfg['field']
+            is_strict_type = field in ["image_asset__image_date_taken", "image_asset__resolution_in_ppmm"]
+            
+            if is_strict_type:
+                raw_options = base_qs.exclude(**{f"{field}__isnull": True}) \
+                                     .values_list(field, flat=True) \
+                                     .distinct().order_by(field)
+                has_na = base_qs.filter(**{f"{field}__isnull": True}).exists()
+            else:
+                raw_options = base_qs.exclude(**{f"{field}__isnull": True}) \
+                                     .exclude(**{f"{field}": ""}) \
+                                     .values_list(field, flat=True) \
+                                     .distinct().order_by(field)
+                has_na = base_qs.filter(
+                    Q(**{f"{field}__isnull": True}) | 
+                    Q(**{f"{field}": ""})
+                ).exists()
+            
+            for o in raw_options:
+                val = o.strftime("%Y-%m-%d") if hasattr(o, "strftime") else str(o).strip()
+                if val and val not in options:
+                    options.append(val)
 
-    GET /api/v1/export-annotations/?format=yolo
-    GET /api/v1/export-annotations/?format=coco
-    """
-    export_format = request.GET.get('format', 'yolo').lower()
+        elif cfg["type"] in ["bool", "custom_has_rois", "custom_all_rois_val"]:
+            options = ["Yes", "No"]
+            if cfg["type"] == "bool":
+                has_na = base_qs.filter(**{f"{cfg['field']}__isnull": True}).exists()
+            else:
+                has_na = False
+            
+        elif cfg["type"] == "ref":
+            field_name = f"taxon__{cfg['field']}"
+            raw_options = base_qs.exclude(taxon__isnull=True) \
+                                 .exclude(**{f"{field_name}__isnull": True}) \
+                                 .exclude(**{f"{field_name}": ""}) \
+                                 .values_list(field_name, flat=True) \
+                                 .distinct().order_by(field_name)
+            for o in raw_options:
+                val = str(o).strip()
+                if val and val not in options:
+                    options.append(val)
 
-    if export_format not in ['yolo', 'coco']:
-        return JsonResponse({'error': 'Invalid format. Must be "yolo" or "coco".'}, status=400)
+            has_na = base_qs.filter(
+                Q(taxon__isnull=True) | 
+                Q(**{f"{field_name}__isnull": True}) | 
+                Q(**{f"{field_name}": ""})
+            ).exists()
 
-    # Get all images with bbox annotations (Beetles with bbox_x not NULL)
-    image_asset_ids = Beetles.objects.exclude(bbox_x__isnull=True).values_list('image_asset_id', flat=True).distinct()
+        if has_na:
+            options.insert(0, "None")
 
-    # Load category mapping
-    from django.conf import settings
-    from pathlib import Path
+        if options:
+            grouped_filters[cfg["category"]].append({
+                "param": param,
+                "label": cfg["label"],
+                "options": options,
+                "selected": [], # Default to no filters selected initially
+            })
 
-    category_map = {}
-    mapping_path = Path(settings.MEDIA_ROOT) / 'reference' / 'category_mapping.json'
-    if mapping_path.exists():
-        try:
-            with open(mapping_path, 'r', encoding='utf-8') as f:
-                mapping_data = json.load(f)
-                for cat in mapping_data.get('categories', []):
-                    category_map[str(cat['id'])] = cat
-        except Exception:
-            pass
+    filter_context = []
+    for cat in categories:
+        if grouped_filters[cat]:
+            filter_context.append((cat, grouped_filters[cat]))
 
-    try:
-        if export_format == 'coco':
-            # COCO: Export all annotations in a single JSON file
-            data = {
-                'images': [],'annotations': [],
-                'categories': []
-            }
+    return render(request, 'beetles/tool_annotate.html', {
+        'filter_groups': filter_context
+    })
 
-            annotation_id = 1
-            processed_images = set()
-            used_category_ids = set()
-
-            for image_id in image_asset_ids:
-                try:
-                    image_asset = ImageAsset.objects.get(pk=image_id)
-
-                    # Skip if we've already processed this image
-                    image_id_str = str(image_asset.id)
-                    if image_id_str in processed_images:
-                        continue
-                    processed_images.add(image_id_str)
-
-                    # Get all beetle bbox annotations for this image
-                    beetles_with_bbox = Beetles.objects.filter(
-                        image_asset=image_asset
-                    ).exclude(bbox_x__isnull=True)
-
-                    if not beetles_with_bbox.exists():
-                        continue
-
-                    # Use image_asset ID for consistency
-                    image_id = str(image_asset.id)
-
-                    # Add image info
-                    data['images'].append({
-                        'id': image_id,
-                        'width': image_asset.image_width or 0,
-                        'height': image_asset.image_height or 0,
-                        'file_name': f'{image_id}.jpg'
-                    })
-
-                    # Add annotations for this image
-                    for beetle in beetles_with_bbox:
-                        coco_ann = beetle.to_coco(
-                            image_asset.image_width or 1920,
-                            image_asset.image_height or 1080
-                        )
-                        if not coco_ann:  # Skip if no bbox
-                            continue
-
-                        coco_ann['id'] = annotation_id
-                        coco_ann['image_id'] = image_id
-
-                        # Convert category_id to int
-                        label = beetle.bbox_label.strip() if beetle.bbox_label else '0'
-                        try:
-                            coco_ann['category_id'] = int(label)
-                        except ValueError:
-                            coco_ann['category_id'] = 0
-
-                        data['annotations'].append(coco_ann)
-                        annotation_id += 1
-
-                        # Track used categories
-                        if label and label not in ['unknown', '']:
-                            used_category_ids.add(label)
-
-                except ImageAsset.DoesNotExist:
-                    continue
-
-            # Add categories to COCO format
-            for cat_id in sorted(used_category_ids, key=lambda x: int(x) if x.lstrip('-').isdigit() else 0):
-                cat_info = category_map.get(cat_id)
-                if cat_info:
-                    data['categories'].append({
-                        'id': int(cat_id),
-                        'name': cat_info.get('full_name') or cat_info.get('name', f'class_{cat_id}'),
-                        'supercategory': cat_info.get('type', 'beetle')
-                    })
-                else:
-                    # Fallback if category not found
-                    try:
-                        data['categories'].append({
-                            'id': int(cat_id),
-                            'name': f'class_{cat_id}',
-                            'supercategory': 'beetle'
-                        })
-                    except ValueError:
-                        pass
-
-            content = json.dumps(data, indent=2)
-
-            # Create ZIP with single JSON file
-            zip_buffer = BytesIO()
-            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-                zf.writestr('annotations.json', content)
-
-            zip_buffer.seek(0)
-            response = HttpResponse(
-                zip_buffer.getvalue(),
-                content_type='application/zip'
-            )
-            response['Content-Disposition'] = 'attachment; filename="annotations_coco.zip"'
-            return response
-
-        else:
-            # YOLO: Export separate .txt file per image
-            zip_buffer = BytesIO()
-
-            # Track processed images to avoid duplicates
-            processed_images = set()
-            used_category_ids = set()
-
-            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-                for image_id in image_asset_ids:
-                    try:
-                        image_asset = ImageAsset.objects.get(pk=image_id)
-
-                        # Get all beetle bbox annotations for this image
-                        beetles_with_bbox = Beetles.objects.filter(
-                            image_asset=image_asset
-                        ).exclude(bbox_x__isnull=True)
-
-                        if not beetles_with_bbox.exists():
-                            continue
-
-                        # Use image_asset ID for filename consistency
-                        image_id_str = str(image_asset.id)
-
-                        # Skip if we've already processed this image
-                        if image_id_str in processed_images:
-                            continue
-                        processed_images.add(image_id_str)
-
-                        filename = f"{image_asset.id}.txt"
-
-                        # Export YOLO format - all boxes for this image in one file
-                        lines = []
-                        for beetle_bbox in beetles_with_bbox:
-                            line = beetle_bbox.to_yolo()
-                            if line:  # Skip empty lines
-                                lines.append(line)
-
-                                # Track used category IDs
-                                label = beetle_bbox.bbox_label.strip() if beetle_bbox.bbox_label else '0'
-                                if label and label not in ['unknown', '']:
-                                    used_category_ids.add(label)
-
-                        content = '\n'.join(lines)
-                        zf.writestr(filename, content)
-
-                    except ImageAsset.DoesNotExist:
-                        continue
-
-                # Generate and add labels.txt mapping file (only for used categories)
-                if category_map and used_category_ids:
-                    label_ids = sorted([int(k) for k in used_category_ids if k.lstrip('-').isdigit()],
-                                      key=lambda x: x)
-                    label_lines = []
-                    for label_id in label_ids:
-                        cat = category_map.get(str(label_id))
-                        if cat:
-                            name = cat.get('full_name') or cat.get('name', f'class_{label_id}')
-                            label_lines.append(f"{label_id}: {name}")
-                    if label_lines:
-                        labels_content = '\n'.join(label_lines)
-                        zf.writestr('labels.txt', labels_content)
-
-            zip_buffer.seek(0)
-
-            response = HttpResponse(
-                zip_buffer.getvalue(),
-                content_type='application/zip'
-            )
-            response['Content-Disposition'] = 'attachment; filename="annotations_yolo.zip"'
-
-            return response
-
-    except Exception as e:
-        return JsonResponse({'error': f'Export failed: {str(e)}'}, status=500)

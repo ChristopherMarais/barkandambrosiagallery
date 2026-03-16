@@ -1,7 +1,28 @@
 from django.contrib import admin
 from django.utils.html import format_html, mark_safe
+from django.utils import timezone
 from .models import UploadBatch, Beetles, ImageAsset, DownloadJob, ImageLock
 from simple_history.admin import SimpleHistoryAdmin
+
+@admin.action(description="Restore selected items (Undo Soft Delete)")
+def restore_items(modeladmin, request, queryset):
+    # 1. Capture the IDs BEFORE we modify the database so the queryset doesn't empty out
+    item_ids = list(queryset.values_list('id', flat=True))
+    
+    # 2. Restore the selected items
+    updated_count = queryset.update(is_deleted=False, deleted_at=None)
+    
+    # 3. Restore dependencies using the safely captured IDs
+    if modeladmin.model.__name__ == 'ImageAsset':
+        from .models import Beetles
+        Beetles.objects.filter(image_asset_id__in=item_ids).update(is_deleted=False, deleted_at=None)
+        
+    elif modeladmin.model.__name__ == 'Beetles':
+        from .models import ImageAsset, Beetles
+        image_ids = Beetles.objects.filter(id__in=item_ids).values_list('image_asset_id', flat=True).distinct()
+        ImageAsset.objects.filter(id__in=image_ids).update(is_deleted=False, deleted_at=None)
+        
+    modeladmin.message_user(request, f"Successfully restored {updated_count} items and their dependencies.")
 
 
 # ---------- DownloadJob ----------
@@ -139,26 +160,30 @@ class BeetlesAdmin(SimpleHistoryAdmin):
     list_per_page = 50
     empty_value_display = "—"
 
+    # ---> NEW: Register the action <---
+    actions = [restore_items]
+
     # LIST DISPLAY: We must use custom methods for fields that moved to ImageAsset
     list_display = (
         "id_short",
+        "image_preview_in_beetle", # Moved preview to list display for better visibility
         "depicts_valid_name_id",
         "alternative_id",
-        "get_photographer",      # Changed
+        "get_photographer",
         "collection_country",
-        "collection_stateProvince",
-        "get_date_taken",        # Changed
         "has_bbox_annotation",
-        "bbox_created_at",
+        "is_deleted", # ---> NEW <---
+        "last_updated_at", # ---> NEW <---
     )
 
     # LIST FILTERS: Use double-underscore to filter across the relationship
     list_filter = (
+        "is_deleted", # ---> NEW <---
         "collection_country",
         "collection_stateProvince",
-        "image_asset__photographer",                 # Changed
-        "image_asset__image_institution",            # Changed
-        "image_asset__image_has_multiple_individuals", # Changed
+        "image_asset__photographer",
+        "image_asset__image_institution",
+        "image_asset__image_has_multiple_individuals",
         "specimen_sex",
         "specimen_type_status",
         "bbox_is_validated",
@@ -172,12 +197,12 @@ class BeetlesAdmin(SimpleHistoryAdmin):
         "alternative_id",
         "depicts_described_name_id",
         "depicts_name_verbatim",
-        "image_asset__photographer",        # Changed
-        "image_asset__image_institution",   # Changed
+        "image_asset__photographer",
+        "image_asset__image_institution",
         "collection_country",
         "collection_stateProvince",
         "specimen_notes",
-        "image_asset__image_notes",         # Changed
+        "image_asset__image_notes",
     )
 
     ordering = ("depicts_valid_name_id", "-image_asset__image_date_taken")
@@ -185,7 +210,7 @@ class BeetlesAdmin(SimpleHistoryAdmin):
     # READONLY FIELDS: Point to custom methods below so we can see the data
     readonly_fields = (
         "id",
-        "image_preview_in_beetle", # New: Show image directly here!
+        "image_preview_in_beetle",
         "get_full_path",
         "alternative_id",
         "get_institution",
@@ -211,7 +236,6 @@ class BeetlesAdmin(SimpleHistoryAdmin):
         "bbox_y",
         "bbox_width",
         "bbox_height",
-        "bbox_label",
         "bbox_is_validated",
         "bbox_validated_by",
         "bbox_validated_at",
@@ -219,13 +243,15 @@ class BeetlesAdmin(SimpleHistoryAdmin):
         "bbox_created_at",
     )
 
-    # Enable delete action but remove other bulk actions
+    # ---> UPDATED: Allow both delete AND restore actions <---
     def get_actions(self, request):
         actions = super().get_actions(request)
-        # Keep only the delete action
+        allowed_actions = {}
         if 'delete_selected' in actions:
-            return {'delete_selected': actions['delete_selected']}
-        return {}
+            allowed_actions['delete_selected'] = actions['delete_selected']
+        if 'restore_items' in actions:
+            allowed_actions['restore_items'] = actions['restore_items']
+        return allowed_actions
 
     @admin.display(description='Has BBox', boolean=True, ordering='bbox_x')
     def has_bbox_annotation(self, obj):
@@ -289,10 +315,12 @@ class BeetlesAdmin(SimpleHistoryAdmin):
 
 @admin.register(ImageAsset)
 class ImageAssetAdmin(admin.ModelAdmin):
-    list_display = ('id', 'image_preview', 'image_institution', 'photographer', 'created_at')
+    actions = [restore_items]
+    
+    list_display = ('id', 'image_preview', 'image_institution', 'photographer', 'is_validated', 'is_deleted', 'created_at')
     search_fields = ('image_sha256', 'full_path_at_import', 'image_institution', 'photographer')
-    readonly_fields = ('image_preview_large', 'created_at', 'updated_at')
-    list_filter = ('image_institution', 'photographer')
+    readonly_fields = ('image_preview_large', 'is_validated', 'last_updated_by', 'created_at', 'updated_at')
+    list_filter = ('is_deleted', 'is_validated', 'image_institution', 'photographer')
 
     def image_preview(self, obj):
         if obj.image_file:
