@@ -269,6 +269,42 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         else:
             serializer.save(last_updated_by=self.request.user)
 
+    @action(detail=False, methods=['patch'], url_path='bulk-update')
+    def bulk_update(self, request):
+        """
+        Accepts a JSON array of dicts: [{"id": "uuid", "bbox_x": 0.5, ...}, ...]
+        Updates all records in a single atomic database transaction.
+        """
+        data = request.data
+        if not isinstance(data, list):
+            return Response({"error": "Expected a list of objects."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 1. Extract IDs and map existing instances from the database
+        ids = [item.get('id') for item in data if item.get('id')]
+        instances = Beetles.objects.filter(id__in=ids, is_deleted=False)
+        instance_map = {str(inst.id): inst for inst in instances}
+
+        results = []
+        try:
+            # 2. Open a single database transaction
+            with transaction.atomic():
+                for item in data:
+                    inst = instance_map.get(str(item.get('id')))
+                    if inst:
+                        # 3. Initialize serializer with partial=True for sparse updates
+                        serializer = self.get_serializer(inst, data=item, partial=True)
+                        serializer.is_valid(raise_exception=True)
+                        
+                        # 4. Route through perform_update to trigger your existing Validation/Ghost ROI logic!
+                        self.perform_update(serializer)
+                        
+                        results.append(serializer.data)
+                        
+            return Response(results, status=status.HTTP_200_OK)
+        except Exception as e:
+            # If ANY serializer fails, the entire transaction rolls back
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
     @action(detail=False, methods=['get'], url_path='images-with-annotations')
     def images_with_annotations(self, request):
         """

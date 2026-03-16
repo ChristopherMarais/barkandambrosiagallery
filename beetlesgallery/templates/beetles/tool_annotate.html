@@ -411,11 +411,6 @@
 </div>
 
 <script>
-  // ---------------------------------------------------------
-// CSRF TOKEN EXTRACTION (REPLACES getCookie)
-// ---------------------------------------------------------
-const csrftoken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
 // ---------------------------------------------------------
 // GLOBAL STATE
 // ---------------------------------------------------------
@@ -423,13 +418,13 @@ const state = {
   images: [],
   selectedImageId: null,
   currentImageObj: null,
-  currentImageDetails: null, // Caches DB state for the Image Form
+  currentImageDetails: null, 
   bboxes: [],
   selectedBoxIndex: -1,
   zoom: 1.0,
   activeTab: 'bbox',
   
-  interactionMode: 'idle', // 'idle', 'drawing', 'moving', 'resizing'
+  interactionMode: 'idle', 
   dragHandle: null,
   startX: 0, startY: 0,
   startBoxState: null,
@@ -437,11 +432,13 @@ const state = {
   pagination: { page: 1, next: null, loading: false },
   heartbeatInterval: null,
   isLockedByOther: false,
+  
   taxonomyList: [],
-  defaultTreeHTML: ''
+  taxonomyTree: null
 };
 
 let canvas, ctx, wrapper;
+const csrftoken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 let searchDebounceTimer = null;
 
 // ---------------------------------------------------------
@@ -554,6 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   loadAnnotatedImages();
   setupCanvasEvents();
+  loadTaxonomyList();
   initResizers(); // Initialize the drag-to-resize feature
 
   const browserContent = document.getElementById('browser-section-content');
@@ -565,6 +563,79 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+// ---------------------------------------------------------
+// TAXONOMY INITIALIZATION & JIT ENGINE
+// ---------------------------------------------------------
+async function loadTaxonomyList() {
+    try {
+        const res = await fetch('/api/v1/species/?page_size=10000', { headers: { 'X-CSRFToken': csrftoken } });
+        if (res.ok) {
+            const data = await res.json();
+            state.taxonomyList = data.results || data; 
+            buildTaxonomyDataTree(); 
+        } else {
+            console.error(`[Taxonomy API Error] Status: ${res.status} ${res.statusText}`);
+            alert(`Failed to load taxonomy data (Error ${res.status}). Please check your console.`);
+        }
+    } catch(e) { 
+        console.error('[Taxonomy Network Error] Failed to reach the server:', e); 
+        alert("Network error: Could not reach the API to download taxonomy data.");
+    }
+}
+
+function buildTaxonomyDataTree() {
+    state.taxonomyTree = {};
+    state.taxonomyList.forEach(t => {
+        const sub = t.subfamily || 'Unknown Subfamily';
+        const tribe = t.tribe || 'Unknown Tribe';
+        const genus = t.genus || 'Unknown Genus';
+        
+        if (!state.taxonomyTree[sub]) state.taxonomyTree[sub] = {};
+        if (!state.taxonomyTree[sub][tribe]) state.taxonomyTree[sub][tribe] = {};
+        if (!state.taxonomyTree[sub][tribe][genus]) state.taxonomyTree[sub][tribe][genus] = [];
+        
+        state.taxonomyTree[sub][tribe][genus].push(t);
+    });
+}
+
+function createLazyTreeNode(label, levelClass, forceExpand, onExpand) {
+    const container = document.createElement('div');
+    
+    const header = document.createElement('div');
+    header.className = `px-3 py-1.5 flex items-center justify-between cursor-pointer hover:bg-gray-200 border-b border-gray-100 select-none ${levelClass}`;
+    
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'truncate';
+    labelSpan.textContent = label;
+    
+    const icon = document.createElement('i');
+    icon.className = `fi fi-rr-angle-small-${forceExpand ? 'down' : 'right'} text-gray-400 transition-transform`;
+    
+    header.appendChild(labelSpan);
+    header.appendChild(icon);
+    
+    const childrenWrapper = document.createElement('div');
+    childrenWrapper.className = forceExpand ? 'block' : 'hidden';
+    
+    header.onmousedown = (e) => {
+        e.preventDefault(); // Prevent input blur
+        const isHidden = childrenWrapper.classList.contains('hidden');
+        if (isHidden) {
+            if (onExpand) onExpand(childrenWrapper); // Execute JIT rendering callback
+            childrenWrapper.classList.remove('hidden');
+            icon.classList.replace('fi-rr-angle-small-right', 'fi-rr-angle-small-down');
+        } else {
+            childrenWrapper.classList.add('hidden');
+            icon.classList.replace('fi-rr-angle-small-down', 'fi-rr-angle-small-right');
+        }
+    };
+    
+    container.appendChild(header);
+    container.appendChild(childrenWrapper);
+    
+    return { container, childrenWrapper };
+}
 
 // ---------------------------------------------------------
 // ADVANCED FILTER DROPDOWN LOGIC
@@ -862,59 +933,6 @@ function updateMainStatusIndicator() {
     }
 }
 
-async function checkAndAutoValidateImage() {
-    if (!state.selectedImageId) return;
-    
-    const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
-    if (currentIndex === -1) return;
-
-    // Edge case: User deleted the last remaining box
-    if (state.bboxes.length === 0) {
-        if (state.images[currentIndex].is_validated) {
-            try {
-                await fetch(`/api/v1/image-assets/${state.selectedImageId}/`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                    body: JSON.stringify({ is_validated: false })
-                });
-                state.images[currentIndex].is_validated = false;
-                state.images[currentIndex].has_unvalidated_boxes = false;
-                renderImageList(state.images, false);
-            } catch(e) { console.error(e); }
-        }
-        return;
-    }
-    
-    const allValidated = state.bboxes.every(b => b.bbox_is_validated);
-    
-    if (currentIndex > -1 && allValidated && !state.images[currentIndex].is_validated) {
-        try {
-            await fetch(`/api/v1/image-assets/${state.selectedImageId}/`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                body: JSON.stringify({ is_validated: true })
-            });
-            state.images[currentIndex].is_validated = true;
-            state.images[currentIndex].has_unvalidated_boxes = false;
-            renderImageList(state.images, false);
-            updateMainStatusIndicator();
-        } catch(e) { console.error('Failed to auto-validate image', e); }
-    } else if (currentIndex > -1 && !allValidated && state.images[currentIndex].is_validated) {
-        // If they add a new box or unvalidate one, make sure the image is marked as unvalidated
-        try {
-            await fetch(`/api/v1/image-assets/${state.selectedImageId}/`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                body: JSON.stringify({ is_validated: false })
-            });
-            state.images[currentIndex].is_validated = false;
-            state.images[currentIndex].has_unvalidated_boxes = true;
-            renderImageList(state.images, false);
-            updateMainStatusIndicator();
-        } catch(e) { console.error('Failed to un-validate image', e); }
-    }
-}
-
 // ---------------------------------------------------------
 // IMAGE SELECTION, LOCKING & RIGHT PANEL TABS
 // ---------------------------------------------------------
@@ -1076,18 +1094,38 @@ async function saveImageDetails() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i> Saving...';
 
-    // 1. Save all ROIs first
+    // 1. Bulk Save all ROIs in a single transaction
     try {
         if (state.bboxes && state.bboxes.length > 0) {
-            // Create an array of promises to save all ROIs concurrently
-            const savePromises = state.bboxes.map((_, i) => saveRoiMetadata(i, false, true)); // Pass true for 'isGlobalSave'
-            await Promise.all(savePromises);
+            // Build the array of partial updates
+            const payloads = state.bboxes.map((b, i) => {
+                const payload = getRoiPayloadFromForm(i);
+                payload.id = b.id; // Attach UUID for the backend mapping
+                return payload;
+            });
+            
+            const res = await fetch('/api/v1/beetles/bulk-update/', {
+                method: 'PATCH', 
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                body: JSON.stringify(payloads)
+            });
+            
+            if (res.ok) {
+                const updatedBoxes = await res.json();
+                // Merge database truth back into local state silently
+                updatedBoxes.forEach(ub => {
+                    const index = state.bboxes.findIndex(bx => bx.id === ub.id);
+                    if (index > -1) state.bboxes[index] = ub;
+                });
+            } else {
+                console.error("Bulk ROI save rejected by server.");
+            }
         }
     } catch(e) {
-        console.error("Failed saving ROIs", e);
+        console.error("Failed executing bulk ROI update network request", e);
     }
 
-    // 2. Then save the main Image Details
+    // 2. Execute final save for the Main Image Details
     const payload = {
         image_institution: f.elements['image_institution'].value || null,
         photographer: f.elements['photographer'].value || null,
@@ -1151,10 +1189,20 @@ function renderRoiAccordions() {
 
   state.bboxes.forEach((b, i) => {
     const isSelected = (i === state.selectedBoxIndex);
-    const badgeHtml = b.bbox_is_validated 
-        ? `<span class="bg-green-100 text-green-800 border border-green-200 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ml-2">Validated</span>`
-        : `<span class="bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ml-2">Unvalidated</span>`;
+    const isSyncing = b.is_syncing === true;
     
+    // Disable inputs if locked by another user OR if this specific box is waiting on the network
+    const disabledAttr = (state.isLockedByOther || isSyncing) ? 'disabled' : '';
+
+    let badgeHtml = '';
+    if (isSyncing) {
+        badgeHtml = `<span class="bg-gray-100 text-gray-500 border border-gray-200 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ml-2"><i class="fi fi-rr-spinner animate-spin"></i> Saving</span>`;
+    } else {
+        badgeHtml = b.bbox_is_validated 
+            ? `<span class="bg-green-100 text-green-800 border border-green-200 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ml-2">Validated</span>`
+            : `<span class="bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ml-2">Unvalidated</span>`;
+    }
+
     // 1. Determine the correct ID safely
     const validId = b.depicts_valid_name_id || (typeof b.taxon === 'object' ? b.taxon?.valid_species_id : b.taxon);
     
@@ -1372,58 +1420,65 @@ function updateBboxFromInput(idx) {
   drawCanvas(); // Force canvas redraw instantly
 }
 
+function getRoiPayloadFromForm(idx) {
+    const form = document.getElementById(`form-roi-${idx}`);
+    if (!form) return {};
+    
+    return {
+        depicts_valid_name_id: form.elements['depicts_valid_name_id'].value || null,
+        depicts_described_name_id: form.elements['depicts_described_name_id'].value || null,
+        depicts_name_verbatim: form.elements['depicts_name_verbatim'].value || null,
+        depicts_specimen: form.elements['depicts_specimen'].value || null,
+        alternative_id: form.elements['alternative_id'].value || null,
+        aspect: form.elements['aspect'].value || null,
+        specimen_sex: form.elements['specimen_sex'].value || null,
+        specimen_type_status: form.elements['specimen_type_status'].value || null,
+        collection_country: form.elements['collection_country'].value || null,
+        collection_stateProvince: form.elements['collection_stateProvince'].value || null,
+        specimen_notes: form.elements['specimen_notes'].value || null,
+        update_notes: form.elements['update_notes'].value || null,
+        bbox_x: form.elements['bbox_x'].value !== "" ? parseFloat(form.elements['bbox_x'].value) : null,
+        bbox_y: form.elements['bbox_y'].value !== "" ? parseFloat(form.elements['bbox_y'].value) : null,
+        bbox_width: form.elements['bbox_width'].value !== "" ? parseFloat(form.elements['bbox_width'].value) : null,
+        bbox_height: form.elements['bbox_height'].value !== "" ? parseFloat(form.elements['bbox_height'].value) : null,
+    };
+}
+
 async function saveRoiMetadata(idx, isValidating = false, isGlobalSave = false) {
-  if (state.isLockedByOther) return;
-  const form = document.getElementById(`form-roi-${idx}`);
-  const btn = document.getElementById(isValidating ? `btn-val-roi-${idx}` : `btn-save-roi-${idx}`);
-  const b = state.bboxes[idx];
-  
-  const payload = {
-    depicts_valid_name_id: form.elements['depicts_valid_name_id'].value || null,
-    depicts_described_name_id: form.elements['depicts_described_name_id'].value || null,
-    depicts_name_verbatim: form.elements['depicts_name_verbatim'].value || null,
-    depicts_specimen: form.elements['depicts_specimen'].value || null,
-    alternative_id: form.elements['alternative_id'].value || null,
-    aspect: form.elements['aspect'].value || null,
-    specimen_sex: form.elements['specimen_sex'].value || null,
-    specimen_type_status: form.elements['specimen_type_status'].value || null,
-    collection_country: form.elements['collection_country'].value || null,
-    collection_stateProvince: form.elements['collection_stateProvince'].value || null,
-    specimen_notes: form.elements['specimen_notes'].value || null,
-    update_notes: form.elements['update_notes'].value || null,
-    bbox_x: form.elements['bbox_x'].value !== "" ? parseFloat(form.elements['bbox_x'].value) : null,
-    bbox_y: form.elements['bbox_y'].value !== "" ? parseFloat(form.elements['bbox_y'].value) : null,
-    bbox_width: form.elements['bbox_width'].value !== "" ? parseFloat(form.elements['bbox_width'].value) : null,
-    bbox_height: form.elements['bbox_height'].value !== "" ? parseFloat(form.elements['bbox_height'].value) : null,
-  };
-
-  if (isValidating) {
-    payload.bbox_is_validated = true;
-  }
-
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i>';
-
-  try {
-    const res = await fetch(`/api/v1/beetles/${b.id}/`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-      body: JSON.stringify(payload)
-    });
-    if(res.ok) {
-      state.bboxes[idx] = await res.json();
-      
-      if (!isGlobalSave) {
-          btn.innerHTML = '<i class="fi fi-rr-check"></i>';
-          drawCanvas(); 
-          setTimeout(() => { btn.innerHTML = '<i class="fi fi-rr-disk"></i> Save'; btn.disabled = false; }, 1500);
-          setTimeout(() => renderRoiAccordions(), 1600);
-          await checkAndAutoValidateImage();
-          updateMainStatusIndicator();
-      }
+    if (state.isLockedByOther) return;
+    
+    const btn = document.getElementById(isValidating ? `btn-val-roi-${idx}` : `btn-save-roi-${idx}`);
+    const b = state.bboxes[idx];
+    
+    const payload = getRoiPayloadFromForm(idx);
+    if (isValidating) {
+        payload.bbox_is_validated = true;
     }
-  } catch(e) { 
-      if (!isGlobalSave) { btn.innerHTML = 'Error'; btn.disabled = false; }
-  }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i>';
+
+    try {
+        const res = await fetch(`/api/v1/beetles/${b.id}/`, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+            body: JSON.stringify(payload)
+        });
+        if(res.ok) {
+            state.bboxes[idx] = await res.json();
+            
+            if (!isGlobalSave) {
+                btn.innerHTML = '<i class="fi fi-rr-check"></i>';
+                drawCanvas(); 
+                setTimeout(() => { btn.innerHTML = '<i class="fi fi-rr-disk"></i> Save'; btn.disabled = false; }, 1500);
+                setTimeout(() => renderRoiAccordions(), 1600);
+                updateMainStatusIndicator();
+            }
+        } else {
+            throw new Error('API rejection');
+        }
+    } catch(e) { 
+        if (!isGlobalSave) { btn.innerHTML = 'Error'; btn.disabled = false; }
+    }
 }
 
 async function validateRoi(idx) {
@@ -1465,7 +1520,6 @@ async function deleteBoxUi(idx) {
     syncMultipleIndividualsCheckbox();
 
     // Automatically re-check the image validation status and update the UI dot
-    await checkAndAutoValidateImage();
     updateMainStatusIndicator();
     
     state.selectedBoxIndex = -1;
@@ -1477,81 +1531,135 @@ async function deleteBoxUi(idx) {
 // ---------------------------------------------------------
 // CUSTOM TAXONOMY DROPDOWN LOGIC (COLLAPSIBLE TREE)
 // ---------------------------------------------------------
-let taxonomySearchTimer = null;
-
 function openTaxonomyDropdown(idx) {
     if (state.isLockedByOther) return;
     
+    // Close other open dropdowns
     document.querySelectorAll('[id^="dropdown-tax-"]').forEach(el => el.classList.add('hidden'));
     
     const dropdown = document.getElementById(`dropdown-tax-${idx}`);
     dropdown.classList.remove('hidden');
     
     const input = document.getElementById(`search-tax-${idx}`);
+    // Save current display to restore it if they click away without picking anything
     input.dataset.currentDisplay = input.value;
-    input.value = ''; 
+    input.value = ''; // Clear input so user sees the full tree
     
-    // Initialize with prompt instead of generating 10,000 nodes
-    dropdown.innerHTML = `<div class="px-3 py-2 text-xs text-gray-500 italic">Type 3 or more characters to search phylogenetic tree...</div>`;
+    filterTaxonomyDropdown(idx, '');
 }
 
 function filterTaxonomyDropdown(idx, query) {
     const dropdown = document.getElementById(`dropdown-tax-${idx}`);
-    const q = query.toLowerCase().trim();
-
-    if (q === '') {
-        document.getElementById(`hidden-tax-${idx}`).value = '';
-        dropdown.innerHTML = `<div class="px-3 py-2 text-xs text-gray-500 italic">Type 3 or more characters to search phylogenetic tree...</div>`;
-        return;
-    }
-
-    if (q.length < 3) {
-        dropdown.innerHTML = `<div class="px-3 py-2 text-[10px] text-gray-400 italic">Keep typing...</div>`;
-        return;
-    }
-
-    dropdown.innerHTML = `<div class="px-3 py-2 text-xs text-gray-500 italic flex items-center gap-2"><i class="fi fi-rr-spinner animate-spin"></i> Searching database...</div>`;
-
-    clearTimeout(taxonomySearchTimer);
+    dropdown.innerHTML = ''; 
     
-    // 300ms debounce prevents hammering the Postgres database on every keystroke
-    taxonomySearchTimer = setTimeout(async () => {
-        try {
-            const res = await fetch(`/api/v1/species/?search=${encodeURIComponent(q)}&page_size=20`, {
-                headers: { 'X-CSRFToken': csrftoken }
+    // NEW: Intercept clicks if the network request is still pending
+    if (!state.taxonomyTree) {
+        dropdown.innerHTML = `
+            <div class="px-3 py-3 text-xs text-gray-600 font-medium flex items-center gap-2">
+                <i class="fi fi-rr-spinner animate-spin text-gray-400 text-sm"></i> 
+                Downloading taxonomy data... please wait.
+            </div>`;
+        return;
+    }
+
+    if (query.trim() === '') {
+        document.getElementById(`hidden-tax-${idx}`).value = '';
+    }
+    
+    const q = query.toLowerCase().trim();
+    const isSearching = q.length > 0;
+
+    // SCENARIO 1: Empty Search (Lazy Load the Full Tree)
+    if (!isSearching && state.taxonomyTree) {
+        Object.keys(state.taxonomyTree).sort().forEach(sub => {
+            const subNode = createLazyTreeNode(sub, 'bg-gray-200 text-[11px] font-bold text-gray-700 uppercase sticky top-0 z-10', false, (wrapper) => {
+                if (wrapper.childElementCount > 0) return; // Prevent duplicate rendering
+                Object.keys(state.taxonomyTree[sub]).sort().forEach(tribe => {
+                    const tribeNode = createLazyTreeNode(tribe, 'bg-gray-50 text-[11px] font-semibold text-gray-700 pl-6 border-l-2 border-gray-200 ml-2', false, (wrapper2) => {
+                        if (wrapper2.childElementCount > 0) return;
+                        Object.keys(state.taxonomyTree[sub][tribe]).sort().forEach(genus => {
+                            const genusNode = createLazyTreeNode(genus, 'bg-white text-[11px] font-medium text-gray-800 italic pl-9', false, (wrapper3) => {
+                                if (wrapper3.childElementCount > 0) return;
+                                state.taxonomyTree[sub][tribe][genus].sort((a,b) => (a.species||'').localeCompare(b.species||'')).forEach(t => {
+                                    const displayStr = `${t.subfamily || 'Unknown'} > ${t.tribe || 'Unknown'} > ${t.genus} ${t.species} [${t.valid_species_id}]`;
+                                    const safeDisplayStr = displayStr.replace(/'/g, "\\'"); 
+                                    const leaf = document.createElement('div');
+                                    leaf.className = 'px-3 py-1.5 text-[11px] text-gray-600 hover:bg-gray-50 hover:text-gray-700 cursor-pointer flex justify-between select-none pl-12';
+                                    leaf.innerHTML = `<span><span class="italic">${t.genus}</span> <span class="font-bold italic">${t.species}</span></span><span class="text-gray-400 ml-2">[${t.valid_species_id}]</span>`;
+                                    leaf.onmousedown = (e) => {
+                                        e.preventDefault();
+                                        selectTaxonomy(idx, t.valid_species_id, safeDisplayStr);
+                                    };
+                                    wrapper3.appendChild(leaf);
+                                });
+                            });
+                            wrapper2.appendChild(genusNode.container);
+                        });
+                    });
+                    wrapper.appendChild(tribeNode.container);
+                });
             });
+            dropdown.appendChild(subNode.container);
+        });
+        return; 
+    }
+
+    // SCENARIO 2: Active Search (Synchronous rendering of filtered subset)
+    let matches = state.taxonomyList.filter(t => {
+        const fullString = `${t.subfamily} ${t.tribe} ${t.genus} ${t.species} ${t.valid_species_id}`.toLowerCase();
+        return fullString.includes(q);
+    });
+    
+    if (matches.length === 0) {
+        dropdown.innerHTML = `<div class="px-3 py-2 text-xs text-gray-500 italic">No matches found.</div>`;
+        return;
+    }
+
+    if (matches.length > 300) {
+        matches = matches.slice(0, 300);
+        const warning = document.createElement('div');
+        warning.className = 'px-3 py-1.5 text-[10px] text-amber-600 bg-amber-50 border-b border-amber-200 font-bold sticky top-0 z-20';
+        warning.textContent = `Showing top 300 matches. Please refine your search.`;
+        dropdown.appendChild(warning);
+    }
+    
+    const tempTree = {};
+    matches.forEach(t => {
+        const sub = t.subfamily || 'Unknown Subfamily';
+        const tribe = t.tribe || 'Unknown Tribe';
+        const genus = t.genus || 'Unknown Genus';
+        if (!tempTree[sub]) tempTree[sub] = {};
+        if (!tempTree[sub][tribe]) tempTree[sub][tribe] = {};
+        if (!tempTree[sub][tribe][genus]) tempTree[sub][tribe][genus] = [];
+        tempTree[sub][tribe][genus].push(t);
+    });
+    
+    Object.keys(tempTree).sort().forEach(sub => {
+        const subNode = createLazyTreeNode(sub, 'bg-gray-200 text-[11px] font-bold text-gray-700 uppercase sticky top-0 z-10', true);
+        dropdown.appendChild(subNode.container);
+        
+        Object.keys(tempTree[sub]).sort().forEach(tribe => {
+            const tribeNode = createLazyTreeNode(tribe, 'bg-gray-50 text-[11px] font-semibold text-gray-700 pl-6 border-l-2 border-gray-200 ml-2', true);
+            subNode.childrenWrapper.appendChild(tribeNode.container);
             
-            if (!res.ok) throw new Error('Search failed');
-            const data = await res.json();
-            const matches = data.results || [];
-
-            if (matches.length === 0) {
-                dropdown.innerHTML = `<div class="px-3 py-2 text-xs text-gray-500 italic">No valid taxonomy found.</div>`;
-                return;
-            }
-
-            let html = '<div class="max-h-64 overflow-y-auto">';
-            matches.forEach(t => {
-                const displayStr = `${t.subfamily || 'Unknown'} > ${t.tribe || 'Unknown'} > ${t.genus} ${t.species} [${t.valid_species_id}]`;
-                const safeDisplayStr = displayStr.replace(/'/g, "\\'");
-                html += `
-                    <div class="px-3 py-2 text-[11px] text-gray-700 hover:bg-gray-50 hover:text-gray-900 cursor-pointer border-b border-gray-50 transition-colors flex justify-between items-center select-none"
-                         onmousedown="event.preventDefault(); selectTaxonomy(${idx}, '${t.valid_species_id}', '${safeDisplayStr}')">
-                        <div class="flex flex-col min-w-0 pr-2">
-                            <span class="text-[9px] text-gray-400 uppercase tracking-wide truncate">${t.subfamily || ''} > ${t.tribe || ''}</span>
-                            <span class="truncate"><span class="italic">${t.genus}</span> <span class="font-bold italic">${t.species}</span></span>
-                        </div>
-                        <span class="text-gray-400 shrink-0 text-[10px]">[${t.valid_species_id}]</span>
-                    </div>`;
+            Object.keys(tempTree[sub][tribe]).sort().forEach(genus => {
+                const genusNode = createLazyTreeNode(genus, 'bg-white text-[11px] font-medium text-gray-800 italic pl-9', true);
+                tribeNode.childrenWrapper.appendChild(genusNode.container);
+                
+                tempTree[sub][tribe][genus].sort((a,b) => (a.species||'').localeCompare(b.species||'')).forEach(t => {
+                    const displayStr = `${t.subfamily || 'Unknown'} > ${t.tribe || 'Unknown'} > ${t.genus} ${t.species} [${t.valid_species_id}]`;
+                    const leaf = document.createElement('div');
+                    leaf.className = 'px-3 py-1.5 text-[11px] text-gray-700 hover:bg-gray-50 hover:text-gray-700 cursor-pointer border-b border-gray-50 pl-12 flex justify-between select-none';
+                    leaf.innerHTML = `<span class="italic">${t.genus} <span class="font-bold">${t.species}</span></span> <span class="text-gray-400 ml-2 shrink-0">[${t.valid_species_id}]</span>`;
+                    leaf.onmousedown = (e) => {
+                        e.preventDefault();
+                        selectTaxonomy(idx, t.valid_species_id, displayStr);
+                    };
+                    genusNode.childrenWrapper.appendChild(leaf);
+                });
             });
-            html += '</div>';
-            dropdown.innerHTML = html;
-
-        } catch (e) {
-            console.error("Taxonomy API Error:", e);
-            dropdown.innerHTML = `<div class="px-3 py-2 text-xs text-red-500 italic">Server connectivity error.</div>`;
-        }
-    }, 300);
+        });
+    });
 }
 
 function selectTaxonomy(idx, id, displayStr) {
@@ -1690,6 +1798,11 @@ function onMouseDown(e) {
   state.startY = ptr.y;
 
   if (hit) {
+    // HARD LOCK: Prevent any interaction with a box currently in network transit
+    if (state.bboxes[hit.idx].is_syncing) {
+        return; 
+    }
+
     if (hit.handle === 'delete_x') {
         deleteBoxUi(hit.idx); 
         return;
@@ -1753,15 +1866,21 @@ async function onMouseUp(e) {
       };
       
       // --- OPTIMISTIC UI UPDATE ---
-      // 1. Create a temporary box and push it to the screen instantly to remove all lag
-      const tempBox = { ...payload, id: 'temp_' + Date.now(), bbox_is_validated: false };
+      // 1. Create a temporary box with an explicit is_syncing lock
+      const tempIndex = state.bboxes.length;
+      const tempBox = { 
+          ...payload, 
+          id: 'temp_' + Date.now(), 
+          bbox_is_validated: false, 
+          is_syncing: true // Network lock activated
+      };
       state.bboxes.push(tempBox);
-      const tempIndex = state.bboxes.length - 1;
       state.selectedBoxIndex = tempIndex;
       
       // 2. Release the UI thread immediately and draw the canvas
       state.interactionMode = 'idle';
       drawCanvas();
+      renderRoiAccordions(); // Render the disabled accordion immediately
 
       // 3. Perform the network save silently in the background
       fetch('/api/v1/beetles/', {
@@ -1786,7 +1905,6 @@ async function onMouseUp(e) {
         }
 
         syncMultipleIndividualsCheckbox();
-        await checkAndAutoValidateImage();
         updateMainStatusIndicator();
 
         renderRoiAccordions();
@@ -1858,34 +1976,54 @@ function drawCanvas() {
   boxIndices.forEach((i) => {
     const b = state.bboxes[i];
     const isSel = (i === state.selectedBoxIndex);
+    const isSyncing = b.is_syncing === true;
     
-    // Set colors: Selected = Blue, Validated = Green, Unvalidated = Amber
-    const boxColor = isSel ? '#3b82f6' : (b.bbox_is_validated ? '#10b981' : '#f59e0b');
-    
+    // Set colors: Syncing = Blue, Selected = Blue, Validated = Green, Unvalidated = Amber
+    const boxColor = isSyncing ? '#3b82f6' : (isSel ? '#3b82f6' : (b.bbox_is_validated ? '#10b981' : '#f59e0b'));    
     const bx = b.bbox_x * W;
     const by = b.bbox_y * H;
     const bw = b.bbox_width * W;
     const bh = b.bbox_height * H;
 
     ctx.strokeStyle = boxColor;
-    ctx.lineWidth = 2 / state.zoom; // Line thickness remains exactly the same, selected or not
+    ctx.lineWidth = 2 / state.zoom; 
+    
+    // Apply dashed line and partial transparency if waiting on network
+    if (isSyncing) {
+        ctx.setLineDash([4/state.zoom, 4/state.zoom]);
+        ctx.globalAlpha = 0.6;
+    } else {
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1.0;
+    }
+
     ctx.strokeRect(bx, by, bw, bh);
     
     ctx.fillStyle = boxColor + '20';
     ctx.fillRect(bx, by, bw, bh);
 
-    // Number Pill (Decreased size)
+    // Number Pill
     const badgeR = 9 / state.zoom;
-    ctx.fillStyle = boxColor; // Always matches the box color (Blue when selected)
+    ctx.fillStyle = boxColor; 
     ctx.beginPath();
     ctx.arc(bx + badgeR, by - badgeR - (2/state.zoom), badgeR, 0, 2*Math.PI);
     ctx.fill();
     ctx.fillStyle = '#fff';
     ctx.font = `bold ${10/state.zoom}px Arial`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(`${i+1}`, bx + badgeR, by - badgeR - (1/state.zoom));
+    
+    // Show dots if syncing, else show number
+    if (isSyncing) {
+        ctx.fillText(`...`, bx + badgeR, by - badgeR - (1/state.zoom));
+    } else {
+        ctx.fillText(`${i+1}`, bx + badgeR, by - badgeR - (1/state.zoom));
+    }
 
-    if (isSel && !state.isLockedByOther) {
+    // Reset alpha and dash for the Delete 'X' Pill and subsequent boxes
+    ctx.globalAlpha = 1.0;
+    ctx.setLineDash([]);
+
+    if (isSel && !state.isLockedByOther && !isSyncing) {
       // Draw the Delete 'X' Pill
       const deleteR = 9 / state.zoom;
       const offset = 12 / state.zoom; // Shift outward offset
@@ -1964,54 +2102,58 @@ function handleZoomWheel(e) {
 // VALIDATION & EXPORT
 // ---------------------------------------------------------
 async function validateAllBoundingBoxes() {
-  if (!state.selectedImageId || state.isLockedByOther) return alert('Select an unlocked image first.');
-  
-  const unval = state.bboxes.filter(b => !b.bbox_is_validated);
-  const btn = document.getElementById('validate-all-btn');
-  btn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i>';
-  
-  try {
-    if (unval.length > 0) {
-      await Promise.all(unval.map(b => fetch(`/api/v1/beetles/${b.id}/`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-        body: JSON.stringify({ bbox_is_validated: true })
-      })));
-      state.bboxes.forEach(b => b.bbox_is_validated = true);
-    }
+    if (!state.selectedImageId || state.isLockedByOther) return alert('Select an unlocked image first.');
     
-    await fetch(`/api/v1/image-assets/${state.selectedImageId}/`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-      body: JSON.stringify({ is_validated: true })
-    });
+    const unval = state.bboxes.filter(b => !b.bbox_is_validated);
+    const btn = document.getElementById('validate-all-btn');
+    btn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i>';
+    
+    try {
+        // 1. Bulk validate all ROIs in one request
+        if (unval.length > 0) {
+            const payloads = unval.map(b => ({ id: b.id, bbox_is_validated: true }));
+            
+            const res = await fetch('/api/v1/beetles/bulk-update/', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                body: JSON.stringify(payloads)
+            });
+            
+            if (!res.ok) throw new Error("Bulk validation failed");
+            
+            const updatedBoxes = await res.json();
+            updatedBoxes.forEach(ub => {
+                const index = state.bboxes.findIndex(bx => bx.id === ub.id);
+                if (index > -1) state.bboxes[index] = ub;
+            });
+        }
 
-    drawCanvas();
-    renderRoiAccordions(); // Update validation badges in accordions
-    
-    const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
-    if(currentIndex > -1) {
-      state.images[currentIndex].is_validated = true;
-      state.images[currentIndex].has_unvalidated_boxes = false;
-      renderImageList(state.images, false); 
-      
-      // Auto-advance to next image if possible
-      if (currentIndex + 1 < state.images.length) {
-          selectImage(state.images[currentIndex + 1]);
-          // If we reached the end of loaded images, load more
-          if (currentIndex + 1 >= state.images.length - 5 && state.pagination.next && !state.pagination.loading) {
-              loadNextPage();
-          }
-      }
+        drawCanvas();
+        renderRoiAccordions(); // Update validation badges in accordions
+        
+        const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
+        if(currentIndex > -1) {
+            state.images[currentIndex].is_validated = true;
+            state.images[currentIndex].has_unvalidated_boxes = false;
+            renderImageList(state.images, false); 
+            
+            // Auto-advance to next image if possible
+            if (currentIndex + 1 < state.images.length) {
+                selectImage(state.images[currentIndex + 1]);
+                // If we reached the end of loaded images, load more
+                if (currentIndex + 1 >= state.images.length - 5 && state.pagination.next && !state.pagination.loading) {
+                    loadNextPage();
+                }
+            }
+        }
+        updateMainStatusIndicator();
+        
+    } catch(e) { 
+        console.error(e); 
+        alert("An error occurred during bulk validation.");
+    } finally { 
+        btn.innerHTML = '<i class="fi fi-rr-check-circle"></i> Validate All'; 
     }
-    updateMainStatusIndicator();
-    
-  } catch(e) { 
-    console.error(e); 
-    alert("An error occurred during validation.");
-  } finally { 
-    btn.innerHTML = '<i class="fi fi-rr-check-circle"></i> Validate All'; 
-  }
 }
 
 // ---------------------------------------------------------
