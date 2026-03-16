@@ -350,11 +350,21 @@ def gallery(request):
         page_size = 12
 
     WARN_IMAGE_SIZE_BYTES = getattr(settings, "WARN_IMAGE_SIZE_BYTES", 10 * 1024 * 1024)
-    # PREFETCH_RELATED loads all sibling specimens in a single query to eliminate lag
+    
+    from django.db.models import Prefetch
+
+    # 1. Define exactly what a "Sibling" is (must not be deleted)
+    sibling_prefetch = Prefetch(
+        'image_asset__specimens',
+        queryset=Beetles.objects.filter(is_deleted=False),
+        to_attr='active_siblings' # This stores them in a list, preventing recursion
+    )
+
+    # 2. Apply it to your main query
     base_qs = Beetles.objects.filter(is_deleted=False).select_related(
         'image_asset', 'taxon'
     ).prefetch_related(
-        'image_asset__specimens'
+        sibling_prefetch
     ).order_by("-id")
 
     # 1. Text Search
@@ -522,7 +532,7 @@ def gallery(request):
                 # Filter out soft-deleted records purely in Python.
                 # Doing this in Python (list comprehension) prevents Django from firing 
                 # a new N+1 database query for every image on the gallery page.
-                siblings = [s for s in b.image_asset.specimens.all() if not s.is_deleted]
+                siblings = b.image_asset.active_siblings if b.image_asset else []
                 b.siblings_count = len(siblings)
             
             # Helper: Check if there is more than 1 unique value (counting None as a value)
