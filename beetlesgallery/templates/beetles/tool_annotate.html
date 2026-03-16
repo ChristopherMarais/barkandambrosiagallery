@@ -1904,12 +1904,14 @@ async function onMouseUp(e) {
             renderImageList(state.images, false);
         }
 
-        syncMultipleIndividualsCheckbox();
-        updateMainStatusIndicator();
-
+        // Render the DOM FIRST to populate inputs with server metadata
         renderRoiAccordions();
         selectBox(tempIndex);
         switchRightTab('bbox');
+
+        // THEN execute syncing logic which reads those newly rendered inputs
+        syncMultipleIndividualsCheckbox();
+        updateMainStatusIndicator();
       })
       .catch(err => {
         console.error('Error saving drawn box', err);

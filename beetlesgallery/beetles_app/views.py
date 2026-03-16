@@ -350,7 +350,12 @@ def gallery(request):
         page_size = 12
 
     WARN_IMAGE_SIZE_BYTES = getattr(settings, "WARN_IMAGE_SIZE_BYTES", 10 * 1024 * 1024)
-    base_qs = base_qs = Beetles.objects.filter(is_deleted=False).order_by("-id")
+    # PREFETCH_RELATED loads all sibling specimens in a single query to eliminate lag
+    base_qs = Beetles.objects.filter(is_deleted=False).select_related(
+        'image_asset', 'taxon'
+    ).prefetch_related(
+        'image_asset__specimens'
+    ).order_by("-id")
 
     # 1. Text Search
     raw_q = request.GET.get("q", "").strip()
@@ -511,9 +516,14 @@ def gallery(request):
             b.ref_scientificName = b.ref_genus = b.ref_species = b.ref_subfamily = b.ref_tribe = b.ref_subtribe = b.ref_subspecies = None
 
         # 2. Aggregation Logic
-        if b.image_asset:
-            siblings = b.image_asset.specimens.all()
-            b.siblings_count = len(siblings)
+        for b in page_obj:
+            b.siblings_count = 0
+            if b.image_asset:
+                # Filter out soft-deleted records purely in Python.
+                # Doing this in Python (list comprehension) prevents Django from firing 
+                # a new N+1 database query for every image on the gallery page.
+                siblings = [s for s in b.image_asset.specimens.all() if not s.is_deleted]
+                b.siblings_count = len(siblings)
             
             # Helper: Check if there is more than 1 unique value (counting None as a value)
             def check_multiple(attr):
@@ -589,9 +599,10 @@ def beetle_detail(request, beetle_id):
     # 1. Siblings (Same Image, different specimen records) - For Pagination inside the card
     siblings = []
     if beetle.image_asset:
+        # Explicitly filter the database query to exclude soft-deleted siblings
+        # so the details page count and pagination arrows remain perfectly accurate.
         siblings = list(
-            beetle.image_asset.specimens.all()
-            .order_by("id") 
+            beetle.image_asset.specimens.filter(is_deleted=False).order_by("id")
         )
 
     # Calculate pagination context

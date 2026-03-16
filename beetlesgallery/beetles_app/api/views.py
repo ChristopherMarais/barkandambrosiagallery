@@ -336,7 +336,7 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         if active_filters:
             beetles_qs = filter_beetles_queryset(beetles_qs, active_filters, None, None, None, None)
 
-        # --> UPDATED: Enforce is_deleted=False across the board
+        # Enforce is_deleted=False across the board
         valid_image_ids = beetles_qs.filter(is_deleted=False).values('image_asset_id')
 
         image_qs = ImageAsset.objects.filter(id__in=valid_image_ids, is_deleted=False).select_related('active_lock__locked_by')
@@ -355,16 +355,25 @@ class BeetlesViewSet(viewsets.ModelViewSet):
 
         total_count = image_qs.count()
 
-        images_validated = image_qs.filter(is_validated=True).count()
-        images_unvalidated = image_qs.filter(is_validated=False).count()
-        images_no_bbox = image_qs.filter(roi_count=0).count()
-
-        roi_stats = beetles_qs.filter(bbox_x__isnull=False, is_deleted=False).aggregate(
-            val_count=Count('id', filter=Q(bbox_is_validated=True)),
-            unval_count=Count('id', filter=Q(bbox_is_validated=False))
-        )
-        rois_validated = roi_stats['val_count'] or 0
-        rois_unvalidated = roi_stats['unval_count'] or 0
+        # PERFORMANCE: Only compute heavy aggregate stats on initial page load (page 1)
+        stats_data = None
+        if page_num == 1:
+            img_stats = image_qs.aggregate(
+                val_count=Count('id', filter=Q(is_validated=True)),
+                unval_count=Count('id', filter=Q(is_validated=False)),
+                no_bbox_count=Count('id', filter=Q(roi_count=0))
+            )
+            roi_stats = beetles_qs.filter(bbox_x__isnull=False, is_deleted=False).aggregate(
+                val_count=Count('id', filter=Q(bbox_is_validated=True)),
+                unval_count=Count('id', filter=Q(bbox_is_validated=False))
+            )
+            stats_data = {
+                'images_validated': img_stats['val_count'] or 0,
+                'images_unvalidated': img_stats['unval_count'] or 0,
+                'images_no_bbox': img_stats['no_bbox_count'] or 0,
+                'rois_validated': roi_stats['val_count'] or 0,
+                'rois_unvalidated': roi_stats['unval_count'] or 0
+            }
 
         if ordering == '-created_at':
             image_qs = image_qs.order_by('-created_at')
@@ -420,13 +429,7 @@ class BeetlesViewSet(viewsets.ModelViewSet):
             'next': next_url,
             'previous': prev_url,
             'results': images,
-            'stats': {
-                'images_validated': images_validated,
-                'images_unvalidated': images_unvalidated,
-                'images_no_bbox': images_no_bbox,
-                'rois_validated': rois_validated,
-                'rois_unvalidated': rois_unvalidated
-            }
+            'stats': stats_data  # Will be a dictionary on Page 1, and null on subsequent pages
         })
 
 
