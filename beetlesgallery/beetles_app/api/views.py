@@ -188,65 +188,62 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         instance.delete(deleted_by=self.request.user)
 
     def perform_create(self, serializer):
-        if serializer.validated_data.get('bbox_x') is not None:
-            image_asset_id = serializer.initial_data.get('image_asset_id')
+        """
+        Create a new bbox annotation or update an existing template beetle.
+        Delegates all database writes strictly to serializer.save().
+        """
+        # Base audit fields for any creation or update
+        save_kwargs = {
+            'last_updated_by': self.request.user
+        }
 
-            if image_asset_id:
-                # 1. Look for a "Ghost" ROI (has metadata, but no bbox)
-                beetle_without_bbox = Beetles.objects.filter(
-                    image_asset_id=image_asset_id,
+        # Determine if the payload contains bounding box geometry
+        if serializer.validated_data.get('bbox_x') is not None:
+            save_kwargs.update({
+                'bbox_created_by': self.request.user,
+                'bbox_created_at': timezone.now()
+            })
+
+            # Extract the resolved ImageAsset object injected by BeetlesSerializer.validate()
+            image_asset = serializer.validated_data.get('image_asset')
+
+            if image_asset:
+                # 1. Look for a "Template/Ghost" ROI (has metadata, but NULL bbox coordinates)
+                template_beetle = Beetles.objects.filter(
+                    image_asset=image_asset,
                     bbox_x__isnull=True,
                     is_deleted=False
                 ).first()
 
-                if beetle_without_bbox:
-                    # Resurrect the Ghost ROI with the new coordinates
-                    beetle_without_bbox.bbox_x = serializer.validated_data.get('bbox_x')
-                    beetle_without_bbox.bbox_y = serializer.validated_data.get('bbox_y')
-                    beetle_without_bbox.bbox_width = serializer.validated_data.get('bbox_width')
-                    beetle_without_bbox.bbox_height = serializer.validated_data.get('bbox_height')
-                    beetle_without_bbox.bbox_created_by = self.request.user
-                    beetle_without_bbox.bbox_created_at = timezone.now()
-                    beetle_without_bbox.last_updated_by = self.request.user
-                    beetle_without_bbox.save()
-
-                    serializer.instance = beetle_without_bbox
-                    return
+                if template_beetle:
+                    # Instruct DRF to UPSERT: By setting serializer.instance, the subsequent 
+                    # serializer.save() executes an SQL UPDATE instead of an INSERT.
+                    serializer.instance = template_beetle
                 else:
-                    # 2. No Ghost ROI found. Copy 100% of metadata from the LATEST existing ROI
-                    template = Beetles.objects.filter(
-                        image_asset_id=image_asset_id, 
+                    # 2. No Template found. Create a NEW ROI by copying metadata from the most recent existing ROI.
+                    existing_beetle = Beetles.objects.filter(
+                        image_asset=image_asset,
                         is_deleted=False
                     ).order_by('-last_updated_at').first()
                     
-                    if template:
-                        extra_fields = {
-                            'bbox_created_by': self.request.user,
-                            'bbox_created_at': timezone.now(),
-                            'last_updated_by': self.request.user,
-                            'taxon': template.taxon,
-                            'aspect': template.aspect,
-                            'depicts_specimen': template.depicts_specimen,
-                            'depicts_valid_name_id': template.depicts_valid_name_id,
-                            'depicts_described_name_id': template.depicts_described_name_id,
-                            'depicts_name_verbatim': template.depicts_name_verbatim,
-                            'alternative_id': template.alternative_id,
-                            'collection_country': template.collection_country,
-                            'collection_stateProvince': template.collection_stateProvince,
-                            'specimen_sex': template.specimen_sex,
-                            'specimen_type_status': template.specimen_type_status,
-                            'specimen_notes': template.specimen_notes,
-                        }
-                        serializer.save(**extra_fields)
-                        return
+                    if existing_beetle:
+                        save_kwargs.update({
+                            'taxon': existing_beetle.taxon,  # Critical: Maintains materialized tree link
+                            'aspect': existing_beetle.aspect,
+                            'depicts_specimen': existing_beetle.depicts_specimen,
+                            'depicts_valid_name_id': existing_beetle.depicts_valid_name_id,
+                            'depicts_described_name_id': existing_beetle.depicts_described_name_id,
+                            'depicts_name_verbatim': existing_beetle.depicts_name_verbatim,
+                            'alternative_id': existing_beetle.alternative_id,
+                            'collection_country': existing_beetle.collection_country,
+                            'collection_stateProvince': existing_beetle.collection_stateProvince,
+                            'specimen_sex': existing_beetle.specimen_sex,
+                            'specimen_type_status': existing_beetle.specimen_type_status,
+                            'specimen_notes': existing_beetle.specimen_notes,
+                        })
 
-            serializer.save(
-                bbox_created_by=self.request.user,
-                bbox_created_at=timezone.now(),
-                last_updated_by=self.request.user
-            )
-        else:
-            serializer.save(last_updated_by=self.request.user)
+        # 3. Terminal Execution: Execute the save exclusively through the serializer pipeline
+        serializer.save(**save_kwargs)
 
     def perform_update(self, serializer):
         # 3. If frontend sends a PATCH setting bbox to null (Last ROI Deletion)

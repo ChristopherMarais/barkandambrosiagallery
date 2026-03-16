@@ -70,18 +70,6 @@ class BeetlesSerializer(serializers.ModelSerializer):
         model = Beetles
         fields = '__all__'
 
-    def create(self, validated_data):
-        """Handle image_asset_id when creating and load the ImageAsset object"""
-        image_asset_id = validated_data.pop('image_asset_id', None)
-        if image_asset_id:
-            # Load the actual ImageAsset instance
-            try:
-                image_asset = ImageAsset.objects.get(id=image_asset_id)
-                validated_data['image_asset'] = image_asset
-            except ImageAsset.DoesNotExist:
-                raise serializers.ValidationError({'image_asset_id': f'ImageAsset with id {image_asset_id} does not exist'})
-        return super().create(validated_data)
-
     def get_subfamily(self, obj):
         """Look up subfamily natively from Postgres Taxon relationship"""
         return obj.taxon.subfamily if obj.taxon else None
@@ -100,10 +88,18 @@ class BeetlesSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         """
-        Validate bounding box coordinates if present.
-        Ensures coordinates are within [0, 1] range and box doesn't extend beyond image bounds.
-        Allows null values for clearing bbox data.
+        Resolve ImageAsset relations and validate bounding box coordinates.
+        Ensures coordinates are within [0, 1] range and box doesn't extend beyond bounds.
         """
+        # 1. Resolve image_asset_id to an actual ImageAsset ORM object dynamically
+        image_asset_id = data.pop('image_asset_id', None)
+        if image_asset_id:
+            try:
+                data['image_asset'] = ImageAsset.objects.get(id=image_asset_id)
+            except ImageAsset.DoesNotExist:
+                raise serializers.ValidationError({'image_asset_id': f'ImageAsset with id {image_asset_id} does not exist'})
+
+        # 2. Extract bounding box data
         bbox_x = data.get('bbox_x')
         bbox_y = data.get('bbox_y')
         bbox_width = data.get('bbox_width')
@@ -111,8 +107,7 @@ class BeetlesSerializer(serializers.ModelSerializer):
 
         errors = {}
 
-        # Only validate if bbox coordinates are provided and not explicitly set to None
-        # Check if key exists and value is not None
+        # 3. Geometric Validation
         if 'bbox_x' in data and bbox_x is not None:
             if not (0 <= bbox_x <= 1):
                 errors['bbox_x'] = f"bbox_x must be between 0 and 1 (got {bbox_x})"
@@ -126,7 +121,6 @@ class BeetlesSerializer(serializers.ModelSerializer):
             if not (0 < bbox_height <= 1):
                 errors['bbox_height'] = f"bbox_height must be between 0 and 1 (got {bbox_height})"
 
-        # Check box doesn't extend beyond bounds (only if values are not None)
         if bbox_x is not None and bbox_width is not None and bbox_x + bbox_width > 1.0001:
             errors['bbox_width'] = f"Box extends beyond right edge (bbox_x + bbox_width = {bbox_x + bbox_width})"
         if bbox_y is not None and bbox_height is not None and bbox_y + bbox_height > 1.0001:
