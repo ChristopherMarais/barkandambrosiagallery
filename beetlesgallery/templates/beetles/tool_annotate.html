@@ -933,59 +933,6 @@ function updateMainStatusIndicator() {
     }
 }
 
-async function checkAndAutoValidateImage() {
-    if (!state.selectedImageId) return;
-    
-    const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
-    if (currentIndex === -1) return;
-
-    // Edge case: User deleted the last remaining box
-    if (state.bboxes.length === 0) {
-        if (state.images[currentIndex].is_validated) {
-            try {
-                await fetch(`/api/v1/image-assets/${state.selectedImageId}/`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                    body: JSON.stringify({ is_validated: false })
-                });
-                state.images[currentIndex].is_validated = false;
-                state.images[currentIndex].has_unvalidated_boxes = false;
-                renderImageList(state.images, false);
-            } catch(e) { console.error(e); }
-        }
-        return;
-    }
-    
-    const allValidated = state.bboxes.every(b => b.bbox_is_validated);
-    
-    if (currentIndex > -1 && allValidated && !state.images[currentIndex].is_validated) {
-        try {
-            await fetch(`/api/v1/image-assets/${state.selectedImageId}/`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                body: JSON.stringify({ is_validated: true })
-            });
-            state.images[currentIndex].is_validated = true;
-            state.images[currentIndex].has_unvalidated_boxes = false;
-            renderImageList(state.images, false);
-            updateMainStatusIndicator();
-        } catch(e) { console.error('Failed to auto-validate image', e); }
-    } else if (currentIndex > -1 && !allValidated && state.images[currentIndex].is_validated) {
-        // If they add a new box or unvalidate one, make sure the image is marked as unvalidated
-        try {
-            await fetch(`/api/v1/image-assets/${state.selectedImageId}/`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                body: JSON.stringify({ is_validated: false })
-            });
-            state.images[currentIndex].is_validated = false;
-            state.images[currentIndex].has_unvalidated_boxes = true;
-            renderImageList(state.images, false);
-            updateMainStatusIndicator();
-        } catch(e) { console.error('Failed to un-validate image', e); }
-    }
-}
-
 // ---------------------------------------------------------
 // IMAGE SELECTION, LOCKING & RIGHT PANEL TABS
 // ---------------------------------------------------------
@@ -1514,7 +1461,6 @@ async function saveRoiMetadata(idx, isValidating = false, isGlobalSave = false) 
                 drawCanvas(); 
                 setTimeout(() => { btn.innerHTML = '<i class="fi fi-rr-disk"></i> Save'; btn.disabled = false; }, 1500);
                 setTimeout(() => renderRoiAccordions(), 1600);
-                await checkAndAutoValidateImage();
                 updateMainStatusIndicator();
             }
         } else {
@@ -1564,7 +1510,6 @@ async function deleteBoxUi(idx) {
     syncMultipleIndividualsCheckbox();
 
     // Automatically re-check the image validation status and update the UI dot
-    await checkAndAutoValidateImage();
     updateMainStatusIndicator();
     
     state.selectedBoxIndex = -1;
@@ -1939,7 +1884,6 @@ async function onMouseUp(e) {
         }
 
         syncMultipleIndividualsCheckbox();
-        await checkAndAutoValidateImage();
         updateMainStatusIndicator();
 
         renderRoiAccordions();
@@ -2142,13 +2086,6 @@ async function validateAllBoundingBoxes() {
                 if (index > -1) state.bboxes[index] = ub;
             });
         }
-        
-        // 2. Validate the parent image asset
-        await fetch(`/api/v1/image-assets/${state.selectedImageId}/`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-            body: JSON.stringify({ is_validated: true })
-        });
 
         drawCanvas();
         renderRoiAccordions(); // Update validation badges in accordions

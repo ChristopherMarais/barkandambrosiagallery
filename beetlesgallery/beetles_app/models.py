@@ -992,3 +992,48 @@ class Synonym(models.Model):
 
     def __str__(self):
         return self.described_scientific_name
+
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+
+@receiver(post_save, sender=Beetles)
+@receiver(post_delete, sender=Beetles)
+def update_image_asset_validation_status(sender, instance, **kwargs):
+    """
+    Automatically orchestrates the validation status of the parent ImageAsset 
+    whenever a child Beetles (ROI) record is saved, modified, or deleted.
+    """
+    # Defensive check: Ensure the ROI is attached to an image
+    if not instance.image_asset_id:
+        return
+
+    # Use .first() rather than direct lookup to prevent crash if ImageAsset is being deleted
+    image_asset = ImageAsset.objects.filter(id=instance.image_asset_id).first()
+    if not image_asset:
+        return
+
+    # Get all active (non-deleted) ROIs for this image that actually have a bounding box drawn
+    active_rois = Beetles.objects.filter(
+        image_asset=image_asset,
+        bbox_x__isnull=False,
+        is_deleted=False
+    )
+
+    # Scenario A: No bounding boxes exist on the image
+    if not active_rois.exists():
+        if image_asset.is_validated:
+            image_asset.is_validated = False
+            # Use update_fields to bypass saving the whole model and avoid infinite loops
+            image_asset.save(update_fields=['is_validated'])
+        return
+
+    # Scenario B: Bounding boxes exist. Are they ALL validated?
+    unvalidated_count = active_rois.filter(bbox_is_validated=False).count()
+    
+    # If unvalidated_count is 0, all boxes are validated
+    should_be_validated = (unvalidated_count == 0)
+
+    # Only execute a database write if the state actually needs to change
+    if image_asset.is_validated != should_be_validated:
+        image_asset.is_validated = should_be_validated
+        image_asset.save(update_fields=['is_validated'])
