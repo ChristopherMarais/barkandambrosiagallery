@@ -411,11 +411,6 @@
 </div>
 
 <script>
-  // ---------------------------------------------------------
-// CSRF TOKEN EXTRACTION (REPLACES getCookie)
-// ---------------------------------------------------------
-const csrftoken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
 // ---------------------------------------------------------
 // GLOBAL STATE
 // ---------------------------------------------------------
@@ -442,6 +437,7 @@ const state = {
 };
 
 let canvas, ctx, wrapper;
+const csrftoken = getCookie('csrftoken');
 let searchDebounceTimer = null;
 
 // ---------------------------------------------------------
@@ -554,6 +550,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   loadAnnotatedImages();
   setupCanvasEvents();
+  loadTaxonomyList();
   initResizers(); // Initialize the drag-to-resize feature
 
   const browserContent = document.getElementById('browser-section-content');
@@ -565,6 +562,60 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+async function loadTaxonomyList() {
+    try {
+        // Appended ?page_size=10000 to ensure we get the FULL taxonomy dictionary
+        const res = await fetch('/api/v1/species/?page_size=10000', { headers: { 'X-CSRFToken': csrftoken } });
+        if (res.ok) {
+            const data = await res.json();
+            // Ensure we extract the array if the API wraps it in pagination results
+            state.taxonomyList = data.results || data; 
+            buildDefaultTaxonomyTree(); 
+        }
+    } catch(e) { console.error('Failed to load taxonomy list', e); }
+}
+
+// Pre-computes the heavy HTML so the dropdown opens instantly
+function buildDefaultTaxonomyTree() {
+    const matches = state.taxonomyList;
+    const tree = {};
+    
+    matches.forEach(t => {
+        const sub = t.subfamily || 'Unknown Subfamily';
+        const tribe = t.tribe || 'Unknown Tribe';
+        const genus = t.genus || 'Unknown Genus';
+        if (!tree[sub]) tree[sub] = {};
+        if (!tree[sub][tribe]) tree[sub][tribe] = {};
+        if (!tree[sub][tribe][genus]) tree[sub][tribe][genus] = [];
+        tree[sub][tribe][genus].push(t);
+    });
+    
+    let html = '';
+    Object.keys(tree).sort().forEach(sub => {
+        html += `<details class="border-b border-gray-200 last:border-0"><summary class="cursor-pointer px-3 py-1.5 bg-gray-200 text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-300 select-none sticky top-0 z-10">${sub}</summary><div class="pl-3">`;
+        Object.keys(tree[sub]).sort().forEach(tribe => {
+            html += `<details class="border-b border-gray-100 last:border-0"><summary class="cursor-pointer px-3 py-1.5 bg-gray-50 text-[11px] font-semibold text-gray-700 hover:bg-gray-200 select-none">${tribe}</summary><div class="pl-3 border-l-2 border-gray-200 ml-2">`;
+            Object.keys(tree[sub][tribe]).sort().forEach(genus => {
+                html += `<details><summary class="cursor-pointer px-3 py-1.5 bg-white text-[11px] font-medium text-gray-800 italic hover:bg-gray-100 select-none">${genus}</summary><div class="pl-3 pb-1">`;
+                tree[sub][tribe][genus].sort((a,b) => (a.species||'').localeCompare(b.species||'')).forEach(t => {
+                    const displayStr = `${t.subfamily || 'Unknown'} > ${t.tribe || 'Unknown'} > ${t.genus} ${t.species} [${t.valid_species_id}]`;
+                    const safeDisplayStr = displayStr.replace(/'/g, "\\'"); 
+                    // Note the __IDX__ placeholder here!
+                    html += `<div class="px-3 py-1.5 text-[11px] text-gray-600 hover:bg-gray-50 hover:text-gray-700 cursor-pointer flex justify-between select-none" onmousedown="event.preventDefault(); selectTaxonomy(__IDX__, '${t.valid_species_id}', '${safeDisplayStr}')">
+                                <span><span class="italic">${t.genus}</span> <span class="font-bold italic">${t.species}</span></span>
+                                <span class="text-gray-400 ml-2">[${t.valid_species_id}]</span>
+                            </div>`;
+                });
+                html += `</div></details>`;
+            });
+            html += `</div></details>`;
+        });
+        html += `</div></details>`;
+    });
+    
+    state.defaultTreeHTML = html;
+}
 
 // ---------------------------------------------------------
 // ADVANCED FILTER DROPDOWN LOGIC
@@ -1157,6 +1208,23 @@ function renderRoiAccordions() {
     
     // 1. Determine the correct ID safely
     const validId = b.depicts_valid_name_id || (typeof b.taxon === 'object' ? b.taxon?.valid_species_id : b.taxon);
+    
+    let currentTaxon = null;
+    if (validId && state.taxonomyList.length > 0) {
+        currentTaxon = state.taxonomyList.find(t => String(t.valid_species_id) === String(validId));
+    }
+    
+    // Only use the fallback if it is an actual dictionary/object, NOT an integer ID!
+    if (!currentTaxon && typeof b.taxon === 'object' && b.taxon !== null) {
+        currentTaxon = b.taxon; 
+    }
+
+    let taxDisplay = '';
+    if (currentTaxon) {
+        taxDisplay = `${currentTaxon.subfamily || 'Unknown'} > ${currentTaxon.tribe || 'Unknown'} > ${currentTaxon.genus || ''} ${currentTaxon.species || ''} [${validId}]`;
+    } else if (validId) {
+        taxDisplay = `[${validId}]`;
+    }
 
     const html = `
       <div id="roi-accordion-${i}" class="border ${isSelected ? 'border-gray-500 shadow-md accordion-expanded' : 'border-gray-200'} rounded-lg bg-white overflow-hidden transition-all">
@@ -1175,18 +1243,18 @@ function renderRoiAccordions() {
             <div class="">
               <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase tracking-wide">Taxonomy</label>
               <div class="relative taxonomy-dropdown-container">
-                <input type="hidden" name="depicts_valid_name_id" id="hidden-tax-${i}" value="${validId || ''}">
+                <input type="hidden" name="depicts_valid_name_id" id="hidden-tax-${i}" value="${b.depicts_valid_name_id || ''}">
                 
-                <input type="text" id="search-tax-${i}" placeholder="Search species, genus, or ID..." value="${taxDisplay}" data-current-display="${taxDisplay}"
+                <input type="text" id="search-tax-${i}" placeholder="Search taxonomy..." value="${taxDisplay}" data-current-display="${taxDisplay}"
                        class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500 bg-white" 
-                       onfocus="openTreeDropdown(${i})" oninput="filterTreeDropdown(${i}, this.value)" autocomplete="off" ${disabledAttr}>
+                       onfocus="openTaxonomyDropdown(${i})" oninput="filterTaxonomyDropdown(${i}, this.value)" autocomplete="off" ${disabledAttr}>
                 
                 <div id="tax-preview-${i}" class="text-[10px] text-gray-500 mt-1.5 min-h-[1rem] leading-tight">
-                  ${currentTaxon ? `<span class="font-semibold text-gray-700">${currentTaxon.subfamily || 'Unknown'} > ${currentTaxon.tribe || 'Unknown'} > ${currentTaxon.genus || ''} ${currentTaxon.name || ''}</span> <span class="text-blue-600 font-bold">[ID: ${validId}]</span>` : 'No taxonomy linked.'}
+                  ${currentTaxon ? `<span class="font-semibold text-gray-700">${currentTaxon.subfamily || 'Unknown'} > ${currentTaxon.tribe || 'Unknown'} > ${currentTaxon.genus || ''} ${currentTaxon.species || ''}</span>` : 'No taxonomy ID linked.'}
                 </div>
 
-                <div id="dropdown-tax-${i}" class="hidden absolute top-[40px] left-0 z-50 w-full bg-white border border-gray-300 rounded shadow-2xl max-h-72 overflow-y-auto">
-                </div>
+                <div id="dropdown-tax-${i}" class="hidden absolute top-full left-0 z-50 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-64 overflow-y-auto">
+                   </div>
               </div>
               <div class="grid grid-cols-2 gap-3 mt-3">
                 <div>
@@ -1292,9 +1360,6 @@ function renderRoiAccordions() {
       </div>
     `;
     container.insertAdjacentHTML('beforeend', html);
-    
-    // Initialize the cascading dropdown for this specific ROI box
-    populateCascading(i, validId);
   });
 
   if (state.selectedBoxIndex >= 0) {
@@ -1459,6 +1524,182 @@ async function deleteBoxUi(idx) {
     drawCanvas(); 
   } catch(e) { console.error('Delete failed', e); }
 }
+
+// ---------------------------------------------------------
+// CUSTOM TAXONOMY DROPDOWN LOGIC (COLLAPSIBLE TREE)
+// ---------------------------------------------------------
+function openTaxonomyDropdown(idx) {
+    if (state.isLockedByOther) return;
+    
+    // Close other open dropdowns
+    document.querySelectorAll('[id^="dropdown-tax-"]').forEach(el => el.classList.add('hidden'));
+    
+    const dropdown = document.getElementById(`dropdown-tax-${idx}`);
+    dropdown.classList.remove('hidden');
+    
+    const input = document.getElementById(`search-tax-${idx}`);
+    // Save current display to restore it if they click away without picking anything
+    input.dataset.currentDisplay = input.value;
+    input.value = ''; // Clear input so user sees the full tree
+    
+    filterTaxonomyDropdown(idx, '');
+}
+
+function filterTaxonomyDropdown(idx, query) {
+    const dropdown = document.getElementById(`dropdown-tax-${idx}`);
+    dropdown.innerHTML = ''; 
+    
+    if (query.trim() === '') {
+        document.getElementById(`hidden-tax-${idx}`).value = '';
+    }
+    
+    const q = query.toLowerCase().trim();
+    const isSearching = q.length > 0;
+
+    if (!isSearching && state.defaultTreeHTML) {
+        // Swap out the __IDX__ placeholder for the current box index
+        dropdown.innerHTML = state.defaultTreeHTML.replace(/__IDX__/g, idx);
+        return; 
+    }
+
+    dropdown.innerHTML = '';
+    let matches = state.taxonomyList;
+    if (isSearching) {
+        matches = state.taxonomyList.filter(t => {
+            const fullString = `${t.subfamily} ${t.tribe} ${t.genus} ${t.species} ${t.valid_species_id}`.toLowerCase();
+            return fullString.includes(q);
+        });
+    }
+    
+    if (matches.length === 0) {
+        dropdown.innerHTML = `<div class="px-3 py-2 text-xs text-gray-500 italic">No matches found.</div>`;
+        return;
+    }
+
+    // Safety limit to prevent browser hanging on extremely vague searches
+    if (isSearching && matches.length > 300) {
+        matches = matches.slice(0, 300);
+        const warning = document.createElement('div');
+        warning.className = 'px-3 py-1.5 text-[10px] text-amber-600 bg-amber-50 border-b border-amber-200 font-bold sticky top-0 z-20';
+        warning.textContent = `Showing top 300 matches. Please refine your search.`;
+        dropdown.appendChild(warning);
+    }
+    
+    // 1. Build the hierarchical tree data structure
+    const tree = {};
+    matches.forEach(t => {
+        const sub = t.subfamily || 'Unknown Subfamily';
+        const tribe = t.tribe || 'Unknown Tribe';
+        const genus = t.genus || 'Unknown Genus';
+        
+        if (!tree[sub]) tree[sub] = {};
+        if (!tree[sub][tribe]) tree[sub][tribe] = {};
+        if (!tree[sub][tribe][genus]) tree[sub][tribe][genus] = [];
+        tree[sub][tribe][genus].push(t);
+    });
+    
+    // Helper function to generate an expandable folder node
+    function createTreeNode(label, levelClass, forceExpand) {
+        const container = document.createElement('div');
+        
+        const header = document.createElement('div');
+        header.className = `px-3 py-1.5 flex items-center justify-between cursor-pointer hover:bg-gray-200 border-b border-gray-100 select-none ${levelClass}`;
+        
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'font-semibold text-gray-700 truncate';
+        labelSpan.textContent = label;
+        
+        const icon = document.createElement('i');
+        icon.className = `fi fi-rr-angle-small-${forceExpand ? 'down' : 'right'} text-gray-400 transition-transform`;
+        
+        header.appendChild(labelSpan);
+        header.appendChild(icon);
+        
+        const childrenWrapper = document.createElement('div');
+        childrenWrapper.className = forceExpand ? 'block' : 'hidden';
+        
+        // Toggle visibility on click
+        header.onmousedown = (e) => {
+            e.preventDefault(); // Keeps the input field focused so the dropdown doesn't close
+            const isHidden = childrenWrapper.classList.contains('hidden');
+            if (isHidden) {
+                childrenWrapper.classList.remove('hidden');
+                icon.classList.replace('fi-rr-angle-small-right', 'fi-rr-angle-small-down');
+            } else {
+                childrenWrapper.classList.add('hidden');
+                icon.classList.replace('fi-rr-angle-small-down', 'fi-rr-angle-small-right');
+            }
+        };
+        
+        container.appendChild(header);
+        container.appendChild(childrenWrapper);
+        
+        return { container, childrenWrapper };
+    }
+
+    // 2. Render the Tree into the DOM
+    Object.keys(tree).sort().forEach(sub => {
+        const subNode = createTreeNode(sub, 'bg-gray-100 text-[11px] uppercase tracking-wide', isSearching);
+        dropdown.appendChild(subNode.container);
+        
+        Object.keys(tree[sub]).sort().forEach(tribe => {
+            const tribeNode = createTreeNode(tribe, 'bg-gray-50 text-[11px] pl-6', isSearching);
+            subNode.childrenWrapper.appendChild(tribeNode.container);
+            
+            Object.keys(tree[sub][tribe]).sort().forEach(genus => {
+                const genusNode = createTreeNode(genus, 'bg-white text-[11px] pl-9 italic', isSearching);
+                tribeNode.childrenWrapper.appendChild(genusNode.container);
+                
+                // Render Species Leaves (Clickable items that actually select the taxonomy)
+                tree[sub][tribe][genus].sort((a,b) => (a.species||'').localeCompare(b.species||'')).forEach(t => {
+                    // FIX: Changed all valid_name_id to valid_species_id
+                    const displayStr = `${t.subfamily || 'Unknown'} > ${t.tribe || 'Unknown'} > ${t.genus} ${t.species} [${t.valid_species_id}]`;
+                    
+                    const leaf = document.createElement('div');
+                    leaf.className = 'px-3 py-1.5 text-[11px] text-gray-700 hover:bg-gray-50 hover:text-gray-700 cursor-pointer border-b border-gray-50 pl-12 transition-colors flex justify-between select-none';
+                    leaf.innerHTML = `<span class="italic">${t.genus} <span class="font-bold">${t.species}</span></span> <span class="text-gray-400 ml-2 shrink-0">[${t.valid_species_id}]</span>`;
+                    
+                    leaf.onmousedown = (e) => {
+                        e.preventDefault();
+                        selectTaxonomy(idx, t.valid_species_id, displayStr);
+                    };
+                    genusNode.childrenWrapper.appendChild(leaf);
+                });
+            });
+        });
+    });
+}
+
+function selectTaxonomy(idx, id, displayStr) {
+    document.getElementById(`hidden-tax-${idx}`).value = id;
+    const input = document.getElementById(`search-tax-${idx}`);
+    input.value = displayStr;
+    input.dataset.currentDisplay = displayStr; // Lock in the new value
+    document.getElementById(`dropdown-tax-${idx}`).classList.add('hidden');
+    
+    // Instantly update the text preview below the input
+    const preview = document.getElementById(`tax-preview-${idx}`);
+    if (preview) {
+        // Strip out the [ID] part to show just the clean lineage
+        const lineageOnly = displayStr.replace(/\s*\[.*?\]$/, '');
+        preview.innerHTML = `<span class="font-bold text-gray-800">${lineageOnly}</span>`;
+    }
+}
+
+// Close dropdowns on outside click, and restore text if no selection was made
+document.addEventListener('mousedown', (e) => {
+    if (!e.target.closest('.taxonomy-dropdown-container')) {
+        document.querySelectorAll('[id^="dropdown-tax-"]').forEach(el => {
+            el.classList.add('hidden');
+            const idx = el.id.replace('dropdown-tax-', '');
+            const input = document.getElementById(`search-tax-${idx}`);
+            // If user clicked away leaving it blank, restore the previous value
+            if (input && input.value === '' && input.dataset.currentDisplay) {
+                input.value = input.dataset.currentDisplay;
+            }
+        });
+    }
+});
 
 // ---------------------------------------------------------
 // CANVAS INTERACTIONS (DRAW, MOVE, RESIZE, CANVAS DELETE X)
@@ -1835,6 +2076,21 @@ function handleZoomWheel(e) {
   wrapper.scrollTop = canvasY * state.zoom - mouseY;
 }
 
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
 // ---------------------------------------------------------
 // VALIDATION & EXPORT
 // ---------------------------------------------------------
@@ -1960,164 +2216,6 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// ---------------------------------------------------------
-// INTERACTIVE TAXONOMY TREE LOGIC (Zero-Latency Client Side)
-// ---------------------------------------------------------
-const rawTreeStr = "{{ taxonomy_tree_json|escapejs }}";
-const rawTree = rawTreeStr ? JSON.parse(rawTreeStr) : {};
-
-function buildTreeHTML(idx) {
-    let html = '<ul class="p-2 select-none text-xs text-gray-800 space-y-0.5 font-sans">';
-    
-    const subfs = Object.keys(rawTree).sort();
-    for (const subf of subfs) {
-        html += `<li class="tree-subf">
-                    <div class="flex items-center gap-1 cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors" onclick="toggleTreeNode(this)">
-                        <i class="fi fi-rr-angle-small-right text-gray-400 transition-transform"></i>
-                        <span class="font-bold uppercase tracking-wider text-[10px] text-gray-500">${subf}</span>
-                    </div>
-                    <ul class="pl-4 hidden border-l border-gray-100 ml-2 mt-0.5 space-y-0.5">`;
-        
-        const tribes = Object.keys(rawTree[subf]).sort();
-        for (const tribe of tribes) {
-            html += `<li class="tree-tribe">
-                        <div class="flex items-center gap-1 cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors" onclick="toggleTreeNode(this)">
-                            <i class="fi fi-rr-angle-small-right text-gray-400 transition-transform"></i>
-                            <span class="font-bold uppercase tracking-wider text-[10px] text-gray-400">${tribe}</span>
-                        </div>
-                        <ul class="pl-4 hidden border-l border-gray-100 ml-2 mt-0.5 space-y-0.5">`;
-            
-            const genera = Object.keys(rawTree[subf][tribe]).sort();
-            for (const genus of genera) {
-                html += `<li class="tree-genus">
-                            <div class="flex items-center gap-1 cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors" onclick="toggleTreeNode(this)">
-                                <i class="fi fi-rr-angle-small-right text-gray-400 transition-transform"></i>
-                                <span class="italic font-semibold text-gray-700">${genus}</span>
-                            </div>
-                            <ul class="pl-4 hidden border-l border-gray-100 ml-2 mt-0.5 space-y-0.5">`;
-                
-                const speciesList = rawTree[subf][tribe][genus].sort((a,b) => a.name.localeCompare(b.name));
-                speciesList.forEach(sp => {
-                    const lineageStr = `${subf} > ${tribe} > ${genus} ${sp.name}`.replace(/'/g, "\\'");
-                    const searchStr = `${subf} ${tribe} ${genus} ${sp.name} ${sp.species_id}`.toLowerCase();
-                    
-                    html += `<li class="tree-species p-1.5 hover:bg-blue-50 cursor-pointer rounded flex justify-between items-center group transition-colors"
-                                 data-search="${searchStr}"
-                                 onclick="selectTaxonomy(${idx}, '${sp.species_id}', '${lineageStr}')">
-                                <span><span class="italic">${genus}</span> <span class="italic font-bold text-gray-900">${sp.name}</span></span>
-                                <span class="text-[9px] text-gray-400 group-hover:text-blue-600 font-mono">[${sp.species_id}]</span>
-                             </li>`;
-                });
-                html += `</ul></li>`;
-            }
-            html += `</ul></li>`;
-        }
-        html += `</ul></li>`;
-    }
-    html += '</ul>';
-    return html;
-}
-
-function toggleTreeNode(headerDiv) {
-    const ul = headerDiv.nextElementSibling;
-    const icon = headerDiv.querySelector('i');
-    ul.classList.toggle('hidden');
-    if (ul.classList.contains('hidden')) {
-        icon.style.transform = 'rotate(0deg)';
-    } else {
-        icon.style.transform = 'rotate(90deg)';
-    }
-}
-
-function openTreeDropdown(idx) {
-    if (state.isLockedByOther) return;
-    
-    document.querySelectorAll('[id^="dropdown-tax-"]').forEach(el => el.classList.add('hidden'));
-    
-    const dropdown = document.getElementById(`dropdown-tax-${idx}`);
-    dropdown.classList.remove('hidden');
-    
-    if (dropdown.innerHTML.trim() === '') {
-        dropdown.innerHTML = buildTreeHTML(idx);
-    }
-    
-    const input = document.getElementById(`search-tax-${idx}`);
-    input.dataset.currentDisplay = input.value; 
-    input.value = ''; 
-}
-
-function filterTreeDropdown(idx, query) {
-    const dropdown = document.getElementById(`dropdown-tax-${idx}`);
-    const q = query.toLowerCase().trim();
-    const speciesNodes = dropdown.querySelectorAll('.tree-species');
-    
-    if (q === '') {
-        speciesNodes.forEach(n => n.classList.remove('hidden'));
-        dropdown.querySelectorAll('ul.pl-4').forEach(ul => ul.classList.add('hidden'));
-        dropdown.querySelectorAll('i.fi-rr-angle-small-right').forEach(i => i.style.transform = 'rotate(0deg)');
-        dropdown.querySelectorAll('li').forEach(li => li.classList.remove('hidden'));
-        return;
-    }
-
-    speciesNodes.forEach(sp => {
-        const searchData = sp.getAttribute('data-search');
-        if (searchData.includes(q)) {
-            sp.classList.remove('hidden');
-            
-            let parentUl = sp.closest('ul');
-            while (parentUl && parentUl.classList.contains('pl-4')) {
-                parentUl.classList.remove('hidden');
-                const header = parentUl.previousElementSibling;
-                if (header) {
-                    const icon = header.querySelector('i');
-                    if (icon) icon.style.transform = 'rotate(90deg)';
-                    parentUl.parentElement.classList.remove('hidden'); 
-                }
-                parentUl = parentUl.parentElement.closest('ul');
-            }
-        } else {
-            sp.classList.add('hidden');
-        }
-    });
-    
-    ['tree-genus', 'tree-tribe', 'tree-subf'].forEach(className => {
-        dropdown.querySelectorAll(`.${className}`).forEach(node => {
-            const visibleSpecies = node.querySelectorAll('.tree-species:not(.hidden)');
-            if (visibleSpecies.length === 0) {
-                node.classList.add('hidden');
-            } else {
-                node.classList.remove('hidden');
-            }
-        });
-    });
-}
-
-function selectTaxonomy(idx, id, displayStr) {
-    document.getElementById(`hidden-tax-${idx}`).value = id;
-    
-    const input = document.getElementById(`search-tax-${idx}`);
-    input.value = displayStr;
-    input.dataset.currentDisplay = displayStr; 
-    
-    const preview = document.getElementById(`tax-preview-${idx}`);
-    if (preview) {
-        preview.innerHTML = `<span class="font-semibold text-gray-700">${displayStr}</span> <span class="text-blue-600 font-bold">[ID: ${id}]</span>`;
-    }
-    
-    document.getElementById(`dropdown-tax-${idx}`).classList.add('hidden');
-}
-
-document.addEventListener('mousedown', (e) => {
-    if (!e.target.closest('.taxonomy-dropdown-container')) {
-        document.querySelectorAll('[id^="dropdown-tax-"]').forEach(el => {
-            el.classList.add('hidden');
-            const idx = el.id.replace('dropdown-tax-', '');
-            const input = document.getElementById(`search-tax-${idx}`);
-            if (input && input.value === '' && input.dataset.currentDisplay) {
-                input.value = input.dataset.currentDisplay;
-            }
-        });
-    }
-});
 </script>
+
 {% endblock %}
