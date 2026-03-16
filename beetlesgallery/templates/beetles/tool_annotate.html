@@ -1189,10 +1189,20 @@ function renderRoiAccordions() {
 
   state.bboxes.forEach((b, i) => {
     const isSelected = (i === state.selectedBoxIndex);
-    const badgeHtml = b.bbox_is_validated 
-        ? `<span class="bg-green-100 text-green-800 border border-green-200 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ml-2">Validated</span>`
-        : `<span class="bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ml-2">Unvalidated</span>`;
+    const isSyncing = b.is_syncing === true;
     
+    // Disable inputs if locked by another user OR if this specific box is waiting on the network
+    const disabledAttr = (state.isLockedByOther || isSyncing) ? 'disabled' : '';
+
+    let badgeHtml = '';
+    if (isSyncing) {
+        badgeHtml = `<span class="bg-gray-100 text-gray-500 border border-gray-200 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ml-2"><i class="fi fi-rr-spinner animate-spin"></i> Saving</span>`;
+    } else {
+        badgeHtml = b.bbox_is_validated 
+            ? `<span class="bg-green-100 text-green-800 border border-green-200 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ml-2">Validated</span>`
+            : `<span class="bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ml-2">Unvalidated</span>`;
+    }
+
     // 1. Determine the correct ID safely
     const validId = b.depicts_valid_name_id || (typeof b.taxon === 'object' ? b.taxon?.valid_species_id : b.taxon);
     
@@ -1788,6 +1798,11 @@ function onMouseDown(e) {
   state.startY = ptr.y;
 
   if (hit) {
+    // HARD LOCK: Prevent any interaction with a box currently in network transit
+    if (state.bboxes[hit.idx].is_syncing) {
+        return; 
+    }
+
     if (hit.handle === 'delete_x') {
         deleteBoxUi(hit.idx); 
         return;
@@ -1851,15 +1866,21 @@ async function onMouseUp(e) {
       };
       
       // --- OPTIMISTIC UI UPDATE ---
-      // 1. Create a temporary box and push it to the screen instantly to remove all lag
-      const tempBox = { ...payload, id: 'temp_' + Date.now(), bbox_is_validated: false };
+      // 1. Create a temporary box with an explicit is_syncing lock
+      const tempIndex = state.bboxes.length;
+      const tempBox = { 
+          ...payload, 
+          id: 'temp_' + Date.now(), 
+          bbox_is_validated: false, 
+          is_syncing: true // Network lock activated
+      };
       state.bboxes.push(tempBox);
-      const tempIndex = state.bboxes.length - 1;
       state.selectedBoxIndex = tempIndex;
       
       // 2. Release the UI thread immediately and draw the canvas
       state.interactionMode = 'idle';
       drawCanvas();
+      renderRoiAccordions(); // Render the disabled accordion immediately
 
       // 3. Perform the network save silently in the background
       fetch('/api/v1/beetles/', {
@@ -1955,34 +1976,54 @@ function drawCanvas() {
   boxIndices.forEach((i) => {
     const b = state.bboxes[i];
     const isSel = (i === state.selectedBoxIndex);
+    const isSyncing = b.is_syncing === true;
     
-    // Set colors: Selected = Blue, Validated = Green, Unvalidated = Amber
-    const boxColor = isSel ? '#3b82f6' : (b.bbox_is_validated ? '#10b981' : '#f59e0b');
-    
+    // Set colors: Syncing = Blue, Selected = Blue, Validated = Green, Unvalidated = Amber
+    const boxColor = isSyncing ? '#3b82f6' : (isSel ? '#3b82f6' : (b.bbox_is_validated ? '#10b981' : '#f59e0b'));    
     const bx = b.bbox_x * W;
     const by = b.bbox_y * H;
     const bw = b.bbox_width * W;
     const bh = b.bbox_height * H;
 
     ctx.strokeStyle = boxColor;
-    ctx.lineWidth = 2 / state.zoom; // Line thickness remains exactly the same, selected or not
+    ctx.lineWidth = 2 / state.zoom; 
+    
+    // Apply dashed line and partial transparency if waiting on network
+    if (isSyncing) {
+        ctx.setLineDash([4/state.zoom, 4/state.zoom]);
+        ctx.globalAlpha = 0.6;
+    } else {
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1.0;
+    }
+
     ctx.strokeRect(bx, by, bw, bh);
     
     ctx.fillStyle = boxColor + '20';
     ctx.fillRect(bx, by, bw, bh);
 
-    // Number Pill (Decreased size)
+    // Number Pill
     const badgeR = 9 / state.zoom;
-    ctx.fillStyle = boxColor; // Always matches the box color (Blue when selected)
+    ctx.fillStyle = boxColor; 
     ctx.beginPath();
     ctx.arc(bx + badgeR, by - badgeR - (2/state.zoom), badgeR, 0, 2*Math.PI);
     ctx.fill();
     ctx.fillStyle = '#fff';
     ctx.font = `bold ${10/state.zoom}px Arial`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(`${i+1}`, bx + badgeR, by - badgeR - (1/state.zoom));
+    
+    // Show dots if syncing, else show number
+    if (isSyncing) {
+        ctx.fillText(`...`, bx + badgeR, by - badgeR - (1/state.zoom));
+    } else {
+        ctx.fillText(`${i+1}`, bx + badgeR, by - badgeR - (1/state.zoom));
+    }
 
-    if (isSel && !state.isLockedByOther) {
+    // Reset alpha and dash for the Delete 'X' Pill and subsequent boxes
+    ctx.globalAlpha = 1.0;
+    ctx.setLineDash([]);
+
+    if (isSel && !state.isLockedByOther && !isSyncing) {
       // Draw the Delete 'X' Pill
       const deleteR = 9 / state.zoom;
       const offset = 12 / state.zoom; // Shift outward offset
