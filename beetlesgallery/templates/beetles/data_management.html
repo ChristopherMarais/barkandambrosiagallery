@@ -1109,42 +1109,46 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
-    // 1. Connect to the stream
-    const eventSource = new EventSource("{% url 'stream_updates' %}");
+    
+    function fetchUpdates() {
+      fetch("{% url 'stream_updates' %}", {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+      })
+      .then(data => {
+        // The data object looks like: { "download_123": {status: "ready", ...}, "upload_456": {...} }
+        for (const [key, info] of Object.entries(data)) {
 
-    eventSource.onmessage = function (e) {
-      const data = JSON.parse(e.data);
+          // --- HANDLE DOWNLOAD JOBS ---
+          if (key.startsWith('download_')) {
+            const id = key.replace('download_', '');
+            updateDownloadRow(id, info);
+          }
 
-      // The data object looks like: { "download_123": {status: "ready", ...}, "upload_456": {...} }
-      for (const [key, info] of Object.entries(data)) {
+          // --- HANDLE UPLOAD BATCHES ---
+          if (key.startsWith('upload_')) {
+            const id = key.replace('upload_', '');
+            updateStatusCell(`status-upload-${id}`, info.status, info.status_display, info.error_log_url, info.error_message, 'Details');
+          }
 
-        // --- HANDLE DOWNLOAD JOBS ---
-        if (key.startsWith('download_')) {
-          const id = key.replace('download_', '');
-          updateDownloadRow(id, info);
+          // --- HANDLE UPDATE BATCHES ---
+          if (key.startsWith('update_')) {
+            const id = key.replace('update_', '');
+            updateStatusCell(`status-update-${id}`, info.status, info.status_display, info.report_url, info.error_message, 'Details');
+          }
         }
+      })
+      .catch(error => {
+        console.error("Polling error:", error);
+      });
+    }
 
-        // --- HANDLE UPLOAD BATCHES ---
-        if (key.startsWith('upload_')) {
-          const id = key.replace('upload_', '');
-          // Pass info.error_message (4th arg)
-          updateStatusCell(`status-upload-${id}`, info.status, info.status_display, info.error_log_url, info.error_message, 'Details');
-        }
-
-        // --- HANDLE UPDATE BATCHES ---
-        if (key.startsWith('update_')) {
-          const id = key.replace('update_', '');
-          // Pass info.error_message (4th arg)
-          updateStatusCell(`status-update-${id}`, info.status, info.status_display, info.report_url, info.error_message, 'Details');
-        }
-      }
-    };
-
-    eventSource.onerror = function () {
-      // If connection dies, wait 5s and reload (simple recovery)
-      eventSource.close();
-      setTimeout(() => { window.location.reload(); }, 5000);
-    };
+    // Run immediately on load, then every 3 seconds
+    fetchUpdates();
+    setInterval(fetchUpdates, 3000);
   });
 
   // Helper to update the Badge color/text

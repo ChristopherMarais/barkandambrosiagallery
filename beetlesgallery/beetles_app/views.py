@@ -1427,85 +1427,64 @@ def tool_classify(request):
 @login_required
 def stream_updates(request):
     """
-    Server-Sent Events (SSE) stream.
-    Optimized to only fetch active jobs + those that finished in the last 10 seconds.
+    Standard AJAX endpoint for status polling.
+    Replaced SSE to prevent Gunicorn synchronous worker starvation.
     """
-    def event_stream():
-        # 1. Define final states
-        # Matches models choices for UploadBatch, UpdateBatch, and DownloadJob
-        FINAL_STATES = {
-            'imported', 'rejected', 'import_failed', 
-            'applied', 'apply_failed', 
-            'ready', 'failed', 'expired'
+    FINAL_STATES = {
+        'imported', 'rejected', 'import_failed', 
+        'applied', 'apply_failed', 
+        'ready', 'failed', 'expired'
+    }
+
+    data = {}
+    now = timezone.now()
+    recent_cutoff = now - timedelta(seconds=10)
+
+    # --- A. DOWNLOAD JOBS ---
+    downloads = DownloadJob.objects.filter(requested_by=request.user).filter(
+        ~Q(status__in=FINAL_STATES) | 
+        Q(finished_at__gte=recent_cutoff)
+    ).order_by('-created_at')
+
+    for job in downloads:
+        data[f"download_{job.id}"] = {
+            "status": job.status,
+            "status_display": job.get_status_display(),
+            "csv_url": job.csv_file.url if job.csv_file else None,
+            "zip_url": job.zip_file.url if job.zip_file else None,
+            "error_message": job.error_message,
         }
 
-        while True:
-            data = {}
-            has_updates = False
+    # --- B. UPLOAD BATCHES ---
+    uploads = UploadBatch.objects.filter(uploaded_by=request.user).filter(
+        ~Q(status__in=FINAL_STATES) | 
+        Q(updated_at__gte=recent_cutoff)
+    ).order_by('-created_at')
 
-            # 2. Define "Recently" 
-            # Keep fetching finished jobs for 10s so the UI has time to update to Green/Red.
-            now = timezone.now()
-            recent_cutoff = now - timedelta(seconds=10)
+    for batch in uploads:
+        data[f"upload_{batch.id}"] = {
+            "status": batch.status,
+            "status_display": batch.get_status_display(),
+            "error_log_url": batch.error_report_file.url if batch.error_report_file else None,
+            "error_message": batch.error_message,
+        }
 
-            # --- A. DOWNLOAD JOBS ---
-            # Logic: Fetch if (Status is NOT Final) OR (Finished recently)
-            downloads = DownloadJob.objects.filter(requested_by=request.user).filter(
-                ~Q(status__in=FINAL_STATES) | 
-                Q(finished_at__gte=recent_cutoff)
-            ).order_by('-created_at')
+    # --- C. UPDATE BATCHES ---
+    if request.user.is_staff:
+        updates = UpdateBatch.objects.filter(uploaded_by=request.user).filter(
+            ~Q(status__in=FINAL_STATES) | 
+            Q(updated_at__gte=recent_cutoff)
+        ).order_by('-created_at')
 
-            for job in downloads:
-                data[f"download_{job.id}"] = {
-                    "status": job.status,
-                    "status_display": job.get_status_display(),
-                    "csv_url": job.csv_file.url if job.csv_file else None,
-                    "zip_url": job.zip_file.url if job.zip_file else None,
-                    "error_message": job.error_message,
-                }
-                has_updates = True
+        for batch in updates:
+            data[f"update_{batch.id}"] = {
+                "status": batch.status,
+                "status_display": batch.get_status_display(),
+                "report_url": batch.report_file.url if batch.report_file else None,
+                "error_message": batch.error_message,
+            }
 
-            # --- B. UPLOAD BATCHES ---
-            # Logic: Fetch if (Status is NOT Final) OR (Updated recently)
-            uploads = UploadBatch.objects.filter(uploaded_by=request.user).filter(
-                ~Q(status__in=FINAL_STATES) | 
-                Q(updated_at__gte=recent_cutoff)
-            ).order_by('-created_at')
-
-            for batch in uploads:
-                data[f"upload_{batch.id}"] = {
-                    "status": batch.status,
-                    "status_display": batch.get_status_display(),
-                    "error_log_url": batch.error_report_file.url if batch.error_report_file else None,
-                    "error_message": batch.error_message,
-                }
-                has_updates = True
-
-            # --- C. UPDATE BATCHES ---
-            if request.user.is_staff:
-                updates = UpdateBatch.objects.filter(uploaded_by=request.user).filter(
-                    ~Q(status__in=FINAL_STATES) | 
-                    Q(updated_at__gte=recent_cutoff)
-                ).order_by('-created_at')
-
-                for batch in updates:
-                    data[f"update_{batch.id}"] = {
-                        "status": batch.status,
-                        "status_display": batch.get_status_display(),
-                        "report_url": batch.report_file.url if batch.report_file else None,
-                        "error_message": batch.error_message,
-                    }
-                    has_updates = True
-
-            if has_updates:
-                yield f"data: {json.dumps(data)}\n\n"
-
-            time.sleep(3)
-
-    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
-    response['Cache-Control'] = 'no-cache'
-    response['X-Accel-Buffering'] = 'no'
-    return response
+    return JsonResponse(data)
 
 @login_required
 def taxonomy_browser(request):
