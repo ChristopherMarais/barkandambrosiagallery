@@ -388,7 +388,6 @@ class Command(BaseCommand):
                         ("collection_stateProvince", MAXLEN["collection_stateProvince"]),
                         ("specimen_sex", MAXLEN["specimen_sex"]),
                         ("specimen_type_status", MAXLEN["specimen_type_status"]),
-                        ("bbox_label", 200),
                     ]
                     values = {}
                     for fname, maxlen in char_fields:
@@ -513,7 +512,7 @@ class Command(BaseCommand):
                                 bbox_y=bbox_y,
                                 bbox_width=bbox_width,
                                 bbox_height=bbox_height,
-                                bbox_label=values.get('bbox_label'),
+                                bbox_is_validated=_to_bool(row.get('bbox_is_validated')) or False,
                                 taxon=taxon_map.get(depicts_valid_name_id),
                             )
                             
