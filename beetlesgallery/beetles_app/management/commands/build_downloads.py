@@ -124,41 +124,47 @@ class Command(BaseCommand):
         """
         if job.selection_mode == "ids":
             ids = job.get_ids()
-            return Beetles.objects.filter(id__in=ids)
+            # Get the selected ROIs first
+            selected_beetles = Beetles.objects.filter(id__in=ids)
+            # Extract their image_asset IDs
+            image_asset_ids = selected_beetles.values_list('image_asset_id', flat=True).distinct()
+            # Return ALL ROIs for those images (not just the selected ones)
+            return Beetles.objects.filter(image_asset_id__in=image_asset_ids, is_deleted=False)
             
         elif job.selection_mode == "query":
             # Check if query_string is JSON (new style) or plain text (legacy)
             raw_q = job.query_string or ""
-            
+
             try:
                 data = json.loads(raw_q)
                 # It's JSON: {"q": "...", "filters": {...}, "ranges": {...}}
-                qs = Beetles.objects.all()
-                
+                qs = Beetles.objects.filter(is_deleted=False)
+
                 # 1. Apply Text Search
                 text_q = data.get("q", "").strip()
                 if text_q:
                     q_obj, _ = build_query_q(text_q)
                     qs = qs.filter(q_obj)
-                
+
                 # 2. Apply Filters & Ranges
                 filters = data.get("filters", {})
                 ranges = data.get("ranges", {})
-                
+
                 qs = filter_beetles_queryset(
-                    qs, 
-                    filters, 
+                    qs,
+                    filters,
                     size_min=ranges.get("size_min"),
                     size_max=ranges.get("size_max"),
                     res_min=ranges.get("res_min"),
                     res_max=ranges.get("res_max")
                 )
+                # Return ALL ROIs (not distinct by image_asset like the gallery view)
                 return qs
 
             except (json.JSONDecodeError, TypeError):
                 # Fallback: Treat as plain text query (Legacy)
                 q_obj, _ = build_query_q(raw_q)
-                return Beetles.objects.filter(q_obj)
+                return Beetles.objects.filter(q_obj, is_deleted=False)
 
         else:
             return Beetles.objects.none()
@@ -234,7 +240,7 @@ class Command(BaseCommand):
         qs = (
             self._resolve_queryset(job)
             .select_related("image_asset", "taxon")
-            .order_by("id")
+            .order_by("image_asset_id", "id")
         )
 
         total = qs.count()
@@ -396,26 +402,33 @@ class Command(BaseCommand):
 
             rows_iter = qs.iterator(chunk_size=1000)
 
+            # Track which images we've already added to the ZIP to avoid duplicates
+            added_images = set()
+
             for b in rows_iter:
-                img = b.image_asset 
+                img = b.image_asset
 
                 if job.include_images and zf and img and img.image_file:
-                    f_obj = img.image_file
-                    ext = os.path.splitext(f_obj.name)[1].lstrip(".").lower() or "bin"
-                    image_filename = f"{b.id}.{ext}"
-                    
-                    try:
-                        src_path = f_obj.path
-                        if os.path.exists(src_path):
-                            zf.write(src_path, arcname=image_filename)
-                        else:
-                            raise FileNotFoundError
-                    except Exception:
+                    # Only add each unique image once to the ZIP
+                    if img.id not in added_images:
+                        f_obj = img.image_file
+                        ext = os.path.splitext(f_obj.name)[1].lstrip(".").lower() or "bin"
+                        image_filename = f"{img.id}.{ext}"
+
                         try:
-                            with f_obj.storage.open(f_obj.name, "rb") as sf, zf.open(image_filename, "w") as dest:
-                                shutil.copyfileobj(sf, dest, length=1024 * 1024)
+                            src_path = f_obj.path
+                            if os.path.exists(src_path):
+                                zf.write(src_path, arcname=image_filename)
+                            else:
+                                raise FileNotFoundError
                         except Exception:
-                            pass
+                            try:
+                                with f_obj.storage.open(f_obj.name, "rb") as sf, zf.open(image_filename, "w") as dest:
+                                    shutil.copyfileobj(sf, dest, length=1024 * 1024)
+                            except Exception:
+                                pass
+
+                        added_images.add(img.id)
 
                 writer.writerow([
                     str(b.id),                                      # record_id

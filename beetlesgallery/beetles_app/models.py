@@ -993,6 +993,25 @@ class Synonym(models.Model):
     def __str__(self):
         return self.described_scientific_name
 
+
+class CategoryMapping(models.Model):
+    """
+    Relational representation of category_mapping.json for annotations.
+    """
+    category_id = models.IntegerField(primary_key=True, help_text="Numeric ID used in YOLO/COCO.")
+    name = models.CharField(max_length=255, db_index=True)
+    full_name = models.CharField(max_length=255, blank=True, null=True)
+    supercategory = models.CharField(max_length=100, default='beetle', db_index=True)
+
+    class Meta:
+        db_table = "category_mapping"
+        verbose_name = "Category Mapping"
+        verbose_name_plural = "Category Mappings"
+
+    def __str__(self):
+        return self.full_name or self.name
+
+
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 
