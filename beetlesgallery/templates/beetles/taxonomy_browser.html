@@ -147,13 +147,16 @@
     const params = new URLSearchParams();
 
     if (node.level === "species") {
-      // For species, we need to get genus and species from SPECIES_MAP
+      // For species, we need to get genus, species, and subspecies from SPECIES_MAP
       const ref = SPECIES_MAP[node.species_id] || {};
       if (ref.genus) {
         params.append("genus", ref.genus);
       }
       if (ref.species) {
         params.append("species", ref.species);
+      }
+      if (ref.subspecies) {
+        params.append("subspecies", ref.subspecies);
       }
     } else if (node.level === "subfamily") {
       params.append("subfamily", node.name);
