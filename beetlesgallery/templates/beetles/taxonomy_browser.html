@@ -13,14 +13,14 @@
     </div>
   {% else %}
 
-  <div style="display: flex; flex-wrap: wrap; gap: 1.5rem;">
+  <div class="taxonomy-browser-container">
 
     {# ----------------------------------------------------------------- #}
     {# LEFT: scrollable collapsible tree                                  #}
     {# ----------------------------------------------------------------- #}
-    <div style="flex: 0 0 30%; max-width: 30%; min-width: 250px;">
-      <div class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
-        <div class="border-b border-gray-200 bg-gray-50 px-4 py-2.5 flex items-center justify-between">
+    <div class="taxonomy-tree-section">
+      <div class="border border-gray-200 rounded-lg bg-white shadow-sm h-full flex flex-col overflow-hidden">
+        <div class="border-b border-gray-200 bg-gray-50 px-4 py-2.5 flex items-center justify-between flex-shrink-0">
           <span class="text-sm font-semibold text-gray-700">Taxonomy Tree</span>
           <div class="flex gap-2">
             <button type="button" id="expand-all-btn"
@@ -35,7 +35,7 @@
         </div>
 
         {# Search bar #}
-        <div class="px-3 pt-4 pb-3">
+        <div class="px-3 pt-4 pb-3 flex-shrink-0">
           <div class="taxonomy-filter-row">
             <select id="taxonomy-filter-field" class="taxonomy-filter-select">
               <option value="tribe">Tribe</option>
@@ -55,18 +55,18 @@
         </div>
 
         {# The tree is rendered by JS into this container #}
-        <div id="taxonomy-tree-root" class="overflow-y-auto p-3" style="max-height: 70vh;"></div>
+        <div id="taxonomy-tree-root" class="overflow-y-auto p-3 flex-1"></div>
       </div>
     </div>
 
     {# ----------------------------------------------------------------- #}
     {# RIGHT: species detail panel                                        #}
     {# ----------------------------------------------------------------- #}
-    <div style="flex: 1 1 0; min-width: 0;">
-      <div class="border border-gray-200 rounded-lg bg-white shadow-sm h-full">
+    <div class="taxonomy-detail-section">
+      <div class="border border-gray-200 rounded-lg bg-white shadow-sm h-full flex flex-col overflow-hidden">
 
         {# placeholder shown until a species is clicked #}
-        <div id="species-detail-placeholder" class="flex flex-col items-center justify-center text-gray-400 p-12 h-full">
+        <div id="species-detail-placeholder" class="flex flex-col items-center justify-center text-gray-400 p-12 flex-1">
           <svg class="w-12 h-12 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
               d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
@@ -75,7 +75,7 @@
         </div>
 
         {# populated by JS when a species leaf is clicked #}
-        <div id="species-detail-panel" class="hidden p-6"></div>
+        <div id="species-detail-panel" class="hidden p-6 overflow-y-auto flex-1"></div>
       </div>
     </div>
 
@@ -714,6 +714,27 @@
 </script>
 
 <style>
+  /* --------------------------------------------------------
+     Taxonomy browser layout
+     -------------------------------------------------------- */
+  .taxonomy-browser-container {
+    display: flex;
+    gap: 1.5rem;
+    height: calc(100vh - 180px); /* Adjust based on header/padding */
+    min-height: 600px;
+  }
+
+  .taxonomy-tree-section {
+    flex: 0 0 35%;
+    min-width: 350px;
+    max-width: 500px;
+  }
+
+  .taxonomy-detail-section {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
   /* --------------------------------------------------------
      Taxonomy tree styles
      -------------------------------------------------------- */
