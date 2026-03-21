@@ -248,9 +248,16 @@ class Command(BaseCommand):
                     val = _none(row.get(field_name))
                     _enforce_maxlen(field_name, val, maxlen, row_num)
                     beetle_values[field_name] = val
-                
+
                 # Add non-char fields for Beetles
                 beetle_values["specimen_notes"] = _none(row.get("specimen_notes"))
+
+                # Add bounding box fields (decimal coordinates)
+                beetle_values["bbox_x"] = _to_decimal_12_4(row.get("bbox_x"))
+                beetle_values["bbox_y"] = _to_decimal_12_4(row.get("bbox_y"))
+                beetle_values["bbox_width"] = _to_decimal_12_4(row.get("bbox_width"))
+                beetle_values["bbox_height"] = _to_decimal_12_4(row.get("bbox_height"))
+                beetle_values["bbox_is_validated"] = _to_bool(row.get("bbox_is_validated")) or False
 
 
                 # --- 2. GET OR CREATE THE IMAGE ASSET ---
