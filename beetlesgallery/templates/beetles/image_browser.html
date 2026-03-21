@@ -4,6 +4,15 @@
 
 {% block content %}
 <section class="relative z-0">
+  {# Loading Overlay #}
+  <div id="page-loading-overlay" class="fixed inset-0 bg-white bg-opacity-90 z-50 flex items-center justify-center">
+    <div class="flex flex-col items-center gap-4">
+      <div class="loading-spinner"></div>
+      <p class="text-lg font-medium text-gray-700">Loading image browser...</p>
+      <p class="text-sm text-gray-500">Please wait while we fetch the data</p>
+    </div>
+  </div>
+
   <h1 class="text-2xl sm:text-3xl font-semibold mb-8">Beetle Image Browser</h1>
 
   <form method="get" id="main-form" class="w-full max-w-7xl mx-auto mb-8">
@@ -933,5 +942,68 @@
       }
   });
 
+  // --- 7. Page Loading Management ---
+
+  // Hide loading overlay when page is fully loaded
+  window.addEventListener('load', function() {
+    const overlay = document.getElementById('page-loading-overlay');
+    if (overlay) {
+      overlay.style.opacity = '0';
+      overlay.style.transition = 'opacity 0.3s ease-out';
+      setTimeout(function() {
+        overlay.style.display = 'none';
+      }, 300);
+    }
+  });
+
+  // Show loading overlay when navigating (form submit or link click)
+  const mainForm = document.getElementById('main-form');
+  if (mainForm) {
+    mainForm.addEventListener('submit', function() {
+      const overlay = document.getElementById('page-loading-overlay');
+      if (overlay) {
+        overlay.style.display = 'flex';
+        overlay.style.opacity = '1';
+      }
+    });
+  }
+
+  // Show loading on pagination and filter links
+  document.querySelectorAll('a[href*="beetles"]').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      // Only show loading for same-page navigation
+      if (link.href.includes('beetles/') && !link.hasAttribute('target')) {
+        const overlay = document.getElementById('page-loading-overlay');
+        if (overlay) {
+          overlay.style.display = 'flex';
+          overlay.style.opacity = '1';
+        }
+      }
+    });
+  });
+
 </script>
+
+<style>
+  /* Loading Spinner Animation */
+  .loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #e5e7eb;
+    border-top: 4px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* Ensure loading overlay is above everything */
+  #page-loading-overlay {
+    z-index: 9999;
+  }
+</style>
+
 {% endblock %}
