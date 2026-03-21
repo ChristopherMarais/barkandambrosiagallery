@@ -209,10 +209,22 @@
   {# --- TOP CONTROLS (Pagination & Download) --- #}
   {% if total_matches is not None %}
     <div class="w-full max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-text/10">
-         
+
          <div class="flex flex-wrap items-center gap-4">
              <div class="text-sm text-text/70">
                Found <span class="font-bold text-text">{{ total_matches }}</span> image{{ total_matches|pluralize }}.
+             </div>
+
+             {# View Toggle #}
+             <div class="flex items-center gap-1 border border-gray-300 rounded-lg overflow-hidden">
+               <button type="button" id="view-toggle-card" class="view-toggle-btn active px-3 py-1.5 text-sm hover:bg-gray-100 transition flex items-center gap-1.5" title="Card View">
+                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                 <span class="hidden sm:inline">Cards</span>
+               </button>
+               <button type="button" id="view-toggle-gallery" class="view-toggle-btn px-3 py-1.5 text-sm hover:bg-gray-100 transition flex items-center gap-1.5" title="Gallery View">
+                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg>
+                 <span class="hidden sm:inline">Gallery</span>
+               </button>
              </div>
              
              <div class="flex items-center gap-4">
@@ -340,9 +352,12 @@
     </div>
   {% endif %}
 
-  {# --- RESULTS GRID (Preserved Card Layout) --- #}
-  <div class="w-full max-w-7xl mx-auto flex flex-col gap-4">
-    {% for b in beetles %}
+  {# --- RESULTS SECTION --- #}
+  <div class="w-full max-w-7xl mx-auto">
+
+    {# Card View #}
+    <div id="card-view" class="flex flex-col gap-4">
+      {% for b in beetles %}
        <div class="group relative flex flex-row rounded-lg border border-text/10 bg-primary2 overflow-hidden hover:shadow-md transition h-auto min-h-40">
            
             <div class="w-32 sm:w-36 shrink-0 flex flex-col justify-center p-3">
@@ -499,11 +514,42 @@
              </div>
            </div>
        </div>
-    {% empty %}
-       <div class="py-12 text-center text-text/50 border-2 border-dashed border-text/10 rounded-xl">
+      {% empty %}
+         <div class="py-12 text-center text-text/50 border-2 border-dashed border-text/10 rounded-xl">
+            <p>No specimens found matching your search.</p>
+         </div>
+      {% endfor %}
+    </div>
+
+    {# Gallery View #}
+    <div id="gallery-view" class="hidden grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+      {% for b in beetles %}
+        <div class="gallery-item group relative">
+          <a href="{% url 'beetle_detail' beetle_id=b.id %}" class="block aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200 hover:border-blue-400 hover:shadow-lg transition-all">
+            {% if b.image_asset and b.image_asset.thumb_small %}
+              <img src="{{ b.image_asset.thumb_small.url }}" alt="{{ b.ref_scientificName|default:'Unidentified' }}" loading="lazy" class="w-full h-full object-cover" />
+            {% else %}
+              <div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">No Image</div>
+            {% endif %}
+            {# Checkbox overlay in top-right corner #}
+            <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <label class="flex items-center cursor-pointer" onclick="event.preventDefault(); event.stopPropagation();">
+                <input type="checkbox" class="row-select h-5 w-5 rounded border-gray-300 bg-white shadow-sm text-gray-800 accent-gray-500 focus:ring-gray-400 cursor-pointer" value="{{ b.id }}" onclick="event.stopPropagation();">
+              </label>
+            </div>
+          </a>
+          {# Optional: Show scientific name on hover #}
+          <div class="mt-1 text-xs text-center truncate text-gray-600 italic">
+            {{ b.ref_scientificName|default:"Unidentified" }}
+          </div>
+        </div>
+      {% empty %}
+        <div class="col-span-full py-12 text-center text-text/50 border-2 border-dashed border-text/10 rounded-xl">
           <p>No specimens found matching your search.</p>
-       </div>
-    {% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+
   </div>
 
   {# --- BOTTOM CONTROLS (Duplicate of Top) --- #}
@@ -942,10 +988,62 @@
       }
   });
 
-  // --- 7. Page Loading Management ---
+  // --- 7. View Toggle (Card/Gallery) ---
 
-  // Hide loading overlay when page is fully loaded
-  window.addEventListener('load', function() {
+  const VIEW_STORAGE_KEY = 'beetles_view_mode';
+  const cardViewBtn = document.getElementById('view-toggle-card');
+  const galleryViewBtn = document.getElementById('view-toggle-gallery');
+  const cardViewContainer = document.getElementById('card-view');
+  const galleryViewContainer = document.getElementById('gallery-view');
+
+  // Initialize view from localStorage or default to card
+  function initializeView() {
+    const savedView = localStorage.getItem(VIEW_STORAGE_KEY) || 'card';
+    setView(savedView);
+  }
+
+  function setView(viewMode) {
+    if (viewMode === 'gallery') {
+      // Show gallery, hide card
+      cardViewContainer.classList.add('hidden');
+      galleryViewContainer.classList.remove('hidden');
+
+      // Update button states
+      cardViewBtn.classList.remove('active');
+      galleryViewBtn.classList.add('active');
+    } else {
+      // Show card, hide gallery
+      cardViewContainer.classList.remove('hidden');
+      galleryViewContainer.classList.add('hidden');
+
+      // Update button states
+      cardViewBtn.classList.add('active');
+      galleryViewBtn.classList.remove('active');
+    }
+
+    // Save preference
+    localStorage.setItem(VIEW_STORAGE_KEY, viewMode);
+  }
+
+  // Event listeners for toggle buttons
+  if (cardViewBtn) {
+    cardViewBtn.addEventListener('click', function() {
+      setView('card');
+    });
+  }
+
+  if (galleryViewBtn) {
+    galleryViewBtn.addEventListener('click', function() {
+      setView('gallery');
+    });
+  }
+
+  // Initialize on page load
+  initializeView();
+
+  // --- 8. Page Loading Management ---
+
+  function hideLoadingOverlay() {
     const overlay = document.getElementById('page-loading-overlay');
     if (overlay) {
       overlay.style.opacity = '0';
@@ -954,17 +1052,35 @@
         overlay.style.display = 'none';
       }, 300);
     }
+  }
+
+  function showLoadingOverlay() {
+    const overlay = document.getElementById('page-loading-overlay');
+    if (overlay) {
+      overlay.style.display = 'flex';
+      overlay.style.opacity = '1';
+    }
+  }
+
+  // Hide loading overlay when page is fully loaded
+  window.addEventListener('load', hideLoadingOverlay);
+
+  // Handle browser back/forward navigation (pageshow event)
+  window.addEventListener('pageshow', function(event) {
+    // If page was loaded from cache (bfcache), hide the overlay immediately
+    if (event.persisted) {
+      hideLoadingOverlay();
+    }
   });
+
+  // Hide overlay on DOMContentLoaded as backup
+  document.addEventListener('DOMContentLoaded', hideLoadingOverlay);
 
   // Show loading overlay when navigating (form submit or link click)
   const mainForm = document.getElementById('main-form');
   if (mainForm) {
     mainForm.addEventListener('submit', function() {
-      const overlay = document.getElementById('page-loading-overlay');
-      if (overlay) {
-        overlay.style.display = 'flex';
-        overlay.style.opacity = '1';
-      }
+      showLoadingOverlay();
     });
   }
 
@@ -973,11 +1089,7 @@
     link.addEventListener('click', function(e) {
       // Only show loading for same-page navigation
       if (link.href.includes('beetles/') && !link.hasAttribute('target')) {
-        const overlay = document.getElementById('page-loading-overlay');
-        if (overlay) {
-          overlay.style.display = 'flex';
-          overlay.style.opacity = '1';
-        }
+        showLoadingOverlay();
       }
     });
   });
@@ -1003,6 +1115,43 @@
   /* Ensure loading overlay is above everything */
   #page-loading-overlay {
     z-index: 9999;
+  }
+
+  /* View Toggle Buttons */
+  .view-toggle-btn {
+    background-color: white;
+    color: #6b7280;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+
+  .view-toggle-btn.active {
+    background-color: #3b82f6;
+    color: white;
+    font-weight: 600;
+  }
+
+  .view-toggle-btn:not(.active):hover {
+    background-color: #f3f4f6;
+    color: #374151;
+  }
+
+  /* Gallery View Styles */
+  #gallery-view .gallery-item {
+    position: relative;
+  }
+
+  #gallery-view .gallery-item img {
+    transition: transform 0.2s;
+  }
+
+  #gallery-view .gallery-item:hover img {
+    transform: scale(1.05);
+  }
+
+  /* Aspect ratio for gallery images */
+  .aspect-square {
+    aspect-ratio: 1 / 1;
   }
 </style>
 
