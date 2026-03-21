@@ -43,22 +43,23 @@ OP_PRECEDENCE = {"NOT": 3, "AND": 2, "OR": 1}
 OPERATORS = set(OP_PRECEDENCE.keys())
 
 # Fields to search when user provides "free text" (not Field:Value)
+# Note: Image ID (UUID) is handled separately in build_query_q() for exact matches
 FREE_TEXT_FIELDS = [
-    "alternative_id", 
+    "alternative_id",
     "image_asset__image_institution",
     "image_asset__photographer",
     "image_asset__image_email",
     "image_asset__photo_usage_statement",
     "image_asset__image_notes",
-    "depicts_specimen", 
-    "depicts_valid_name_id", 
-    "depicts_described_name_id", 
-    "depicts_name_verbatim", 
-    "collection_country", 
-    "collection_stateProvince", 
-    "specimen_type_status", 
+    "depicts_specimen",
+    "depicts_valid_name_id",
+    "depicts_described_name_id",
+    "depicts_name_verbatim",
+    "collection_country",
+    "collection_stateProvince",
+    "specimen_type_status",
     "specimen_notes",
-    "aspect", 
+    "aspect",
     "specimen_sex",
     "taxon__scientific_name",
     "taxon__subfamily",
@@ -281,12 +282,13 @@ def _clause_to_q(field_label: str, value: str, ignored):
 def build_query_q(user_qs: str):
     parts = _tokenize_query(user_qs or "")
 
-    # Exact Record ID (UUID) Check
-    # If valid UUID, return exact match on 'id' immediately.
+    # Exact UUID Check (ROI ID or Image ID)
+    # If valid UUID, check both ROI id and image_asset__id
     clean_q = (user_qs or "").strip()
     try:
         uuid_val = uuid.UUID(clean_q)
-        return Q(id=uuid_val), []
+        # Search by either ROI ID or Image Asset ID
+        return Q(id=uuid_val) | Q(image_asset__id=uuid_val), []
     except (ValueError, TypeError):
         # Not a valid UUID, proceed to standard tokenization logic
         pass
