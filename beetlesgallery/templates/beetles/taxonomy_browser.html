@@ -13,14 +13,14 @@
     </div>
   {% else %}
 
-  <div style="display: flex; flex-wrap: wrap; gap: 1.5rem;">
+  <div class="taxonomy-browser-container">
 
     {# ----------------------------------------------------------------- #}
     {# LEFT: scrollable collapsible tree                                  #}
     {# ----------------------------------------------------------------- #}
-    <div style="flex: 0 0 30%; max-width: 30%; min-width: 250px;">
-      <div class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
-        <div class="border-b border-gray-200 bg-gray-50 px-4 py-2.5 flex items-center justify-between">
+    <div class="taxonomy-tree-section">
+      <div class="border border-gray-200 rounded-lg bg-white shadow-sm h-full flex flex-col overflow-hidden">
+        <div class="border-b border-gray-200 bg-gray-50 px-4 py-2.5 flex items-center justify-between flex-shrink-0">
           <span class="text-sm font-semibold text-gray-700">Taxonomy Tree</span>
           <div class="flex gap-2">
             <button type="button" id="expand-all-btn"
@@ -35,7 +35,7 @@
         </div>
 
         {# Search bar #}
-        <div class="px-3 pt-4 pb-3">
+        <div class="px-3 pt-4 pb-3 flex-shrink-0">
           <div class="taxonomy-filter-row">
             <select id="taxonomy-filter-field" class="taxonomy-filter-select">
               <option value="tribe">Tribe</option>
@@ -55,18 +55,18 @@
         </div>
 
         {# The tree is rendered by JS into this container #}
-        <div id="taxonomy-tree-root" class="overflow-y-auto p-3" style="max-height: 70vh;"></div>
+        <div id="taxonomy-tree-root" class="overflow-y-auto p-3 flex-1"></div>
       </div>
     </div>
 
     {# ----------------------------------------------------------------- #}
     {# RIGHT: species detail panel                                        #}
     {# ----------------------------------------------------------------- #}
-    <div style="flex: 1 1 0; min-width: 0;">
-      <div class="border border-gray-200 rounded-lg bg-white shadow-sm h-full">
+    <div class="taxonomy-detail-section">
+      <div class="border border-gray-200 rounded-lg bg-white shadow-sm h-full flex flex-col overflow-hidden">
 
         {# placeholder shown until a species is clicked #}
-        <div id="species-detail-placeholder" class="flex flex-col items-center justify-center text-gray-400 p-12 h-full">
+        <div id="species-detail-placeholder" class="flex flex-col items-center justify-center text-gray-400 p-12 flex-1">
           <svg class="w-12 h-12 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
               d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
@@ -75,7 +75,7 @@
         </div>
 
         {# populated by JS when a species leaf is clicked #}
-        <div id="species-detail-panel" class="hidden p-6"></div>
+        <div id="species-detail-panel" class="hidden p-6 overflow-y-auto flex-1"></div>
       </div>
     </div>
 
@@ -141,11 +141,46 @@
   // ---------- helpers ----------
 
   /**
+   * Build the image browser URL with appropriate taxonomy filters for a node.
+   */
+  function buildImageBrowserUrl(node) {
+    const params = new URLSearchParams();
+
+    if (node.level === "species") {
+      // For species, we need to get genus, species, and subspecies from SPECIES_MAP
+      const ref = SPECIES_MAP[node.species_id] || {};
+      if (ref.genus) {
+        params.append("genus", ref.genus);
+      }
+      if (ref.species) {
+        params.append("species", ref.species);
+      }
+      if (ref.subspecies) {
+        params.append("subspecies", ref.subspecies);
+      }
+    } else if (node.level === "subfamily") {
+      params.append("subfamily", node.name);
+    } else if (node.level === "tribe") {
+      params.append("tribe", node.name);
+    } else if (node.level === "subtribe") {
+      params.append("subtribe", node.name);
+    } else if (node.level === "genus") {
+      params.append("genus", node.name);
+    }
+
+    return "/beetles/?" + params.toString();
+  }
+
+  /**
    * Build a single collapsible <li> for a non-leaf node (subfamily / tribe / genus).
    */
   function buildBranchNode(node) {
     const li = document.createElement("li");
     li.className = "tree-branch";
+
+    // Container div for toggle button and browse link
+    const container = document.createElement("div");
+    container.className = "tree-node-container";
 
     // toggle button [+] / [-]
     const btn = document.createElement("button");
@@ -159,7 +194,20 @@
         ' <span class="tree-count">(' + node.speciesCount + ' species)</span>' +
       '</span>';
 
-    li.appendChild(btn);
+    // Create "View in Image Browser" icon link
+    const browseLink = document.createElement("a");
+    browseLink.href = buildImageBrowserUrl(node);
+    browseLink.className = "tree-browse-link";
+    browseLink.title = "View images in image browser";
+    browseLink.setAttribute("target", "_blank");
+    browseLink.innerHTML = '<svg class="tree-browse-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
+    browseLink.addEventListener("click", function(e) {
+      e.stopPropagation(); // Prevent triggering the toggle
+    });
+
+    container.appendChild(btn);
+    container.appendChild(browseLink);
+    li.appendChild(container);
 
     // children <ul> – starts hidden
     const ul = document.createElement("ul");
@@ -194,6 +242,10 @@
     const li = document.createElement("li");
     li.className = "tree-leaf";
 
+    // Container div for species button and browse link
+    const container = document.createElement("div");
+    container.className = "tree-node-container tree-leaf-container";
+
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "tree-species-btn";
@@ -211,7 +263,20 @@
       showSpeciesDetail(node);
     });
 
-    li.appendChild(btn);
+    // Create "View in Image Browser" icon link for species
+    const browseLink = document.createElement("a");
+    browseLink.href = buildImageBrowserUrl(node);
+    browseLink.className = "tree-browse-link";
+    browseLink.title = "View images in image browser";
+    browseLink.setAttribute("target", "_blank");
+    browseLink.innerHTML = '<svg class="tree-browse-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
+    browseLink.addEventListener("click", function(e) {
+      e.stopPropagation();
+    });
+
+    container.appendChild(btn);
+    container.appendChild(browseLink);
+    li.appendChild(container);
     return li;
   }
 
@@ -650,6 +715,27 @@
 
 <style>
   /* --------------------------------------------------------
+     Taxonomy browser layout
+     -------------------------------------------------------- */
+  .taxonomy-browser-container {
+    display: flex;
+    gap: 1.5rem;
+    height: calc(100vh - 180px); /* Adjust based on header/padding */
+    min-height: 600px;
+  }
+
+  .taxonomy-tree-section {
+    flex: 0 0 35%;
+    min-width: 350px;
+    max-width: 500px;
+  }
+
+  .taxonomy-detail-section {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  /* --------------------------------------------------------
      Taxonomy tree styles
      -------------------------------------------------------- */
 
@@ -675,12 +761,20 @@
     position: relative;
   }
 
+  /* Container for toggle button and browse link */
+  .tree-node-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+  }
+
   /* The toggle button itself */
   .tree-toggle {
     display: flex;
     align-items: center;
     gap: 0.35rem;
-    width: 100%;
+    flex: 1;
     padding: 0.35rem 0.5rem;
     background: none;
     border: none;
@@ -691,6 +785,36 @@
   }
   .tree-toggle:hover {
     background-color: #f3f4f6; /* gray-100 */
+  }
+
+  /* Browse link styling */
+  .tree-browse-link {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;           /* gray-500 */
+    text-decoration: none;
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    transition: color 0.15s, background-color 0.15s, opacity 0.15s;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .tree-node-container:hover .tree-browse-link {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .tree-browse-link:hover {
+    color: #1d4ed8;           /* blue-700 */
+    background-color: #eff6ff; /* blue-50 */
+  }
+
+  /* Browse icon */
+  .tree-browse-icon {
+    width: 1rem;
+    height: 1rem;
+    display: block;
   }
 
   /* [+] / [−] icon box – mimics the screenshot's small square toggle */
@@ -743,11 +867,13 @@
   .tree-leaf {
     position: relative;
   }
+  .tree-leaf-container {
+    padding-left: 1.1rem;    /* indent past where the toggle icon would be */
+  }
   .tree-species-btn {
     display: block;
-    width: 100%;
+    flex: 1;
     padding: 0.3rem 0.5rem;
-    padding-left: 1.1rem;    /* indent past where the toggle icon would be */
     background: none;
     border: none;
     border-radius: 0.375rem;
@@ -870,8 +996,9 @@
   .species-thumb-img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     display: block;
+    background-color: #f9fafb;  /* Light gray background for transparency */
   }
 
   .species-thumb-placeholder {

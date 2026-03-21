@@ -1508,12 +1508,19 @@ def taxonomy_browser(request):
         tribe = t.tribe.strip() if t.tribe else "Unknown Tribe"
         genus = t.genus.strip() if t.genus else "Unknown Genus"
 
+        # Build display name with subspecies if available
+        species_name = t.species.strip() if t.species else "sp."
+        display_name = species_name
+        if t.subspecies and t.subspecies.strip():
+            display_name = f"{species_name} {t.subspecies.strip()}"
+
         # Add to tree
         tree_dict[subf][tribe][genus].append({
-            "name": t.species.strip() if t.species else "sp.",
+            "name": display_name,
             "level": "species",
             "species_id": t.valid_species_id,
-            "scientific_name": t.scientific_name
+            "scientific_name": t.scientific_name,
+            "subspecies": t.subspecies.strip() if t.subspecies else None
         })
 
         # Pre-fetch for the UI detail pane
@@ -1524,6 +1531,7 @@ def taxonomy_browser(request):
             "tribe": t.tribe,
             "genus": t.genus,
             "species": t.species,
+            "subspecies": t.subspecies,
         }
 
     # 3. Recursively convert nested dicts to arrays with speciesCount
