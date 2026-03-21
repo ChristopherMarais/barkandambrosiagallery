@@ -1041,7 +1041,29 @@
   // Initialize on page load
   initializeView();
 
-  // --- 8. Page Loading Management ---
+  // --- 8. Global Enter Key for Search ---
+
+  // Allow Enter key to submit search from anywhere on the page
+  document.addEventListener('keydown', function(e) {
+    // Check if Enter key was pressed
+    if (e.key === 'Enter') {
+      // Don't trigger if user is typing in a textarea or if Ctrl/Cmd is held
+      const target = e.target;
+      const isTextarea = target.tagName === 'TEXTAREA';
+      const isModifierKey = e.ctrlKey || e.metaKey || e.shiftKey || e.altKey;
+
+      if (!isTextarea && !isModifierKey) {
+        // Submit the main form
+        const form = document.getElementById('main-form');
+        if (form) {
+          e.preventDefault(); // Prevent default Enter behavior
+          form.submit();
+        }
+      }
+    }
+  });
+
+  // --- 9. Page Loading Management ---
 
   function hideLoadingOverlay() {
     const overlay = document.getElementById('page-loading-overlay');
