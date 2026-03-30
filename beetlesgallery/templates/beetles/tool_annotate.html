@@ -979,7 +979,8 @@ async function selectImage(img) {
     
     // Completely re-render the ROI Accordion list for the new image
     renderRoiAccordions();
-    selectBox(-1);
+    // Auto-select first ROI if any annotations exist, otherwise deselect
+    selectBox(state.bboxes.length > 0 ? 0 : -1);
 
     // Sync the checkbox on load
     syncMultipleIndividualsCheckbox();
