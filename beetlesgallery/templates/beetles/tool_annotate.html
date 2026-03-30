@@ -1854,15 +1854,30 @@ async function onMouseUp(e) {
   if (state.interactionMode === 'drawing') {
     const w = Math.abs(state.startBoxState.w);
     const h = Math.abs(state.startBoxState.h);
-    
+
     if (w > 10 && h > 10) {
-      const bx = Math.min(state.startX, state.startX + state.startBoxState.w) / canvas.width;
-      const by = Math.min(state.startY, state.startY + state.startBoxState.h) / canvas.height;
-      
+      // Calculate raw box coordinates
+      let x1 = Math.min(state.startX, state.startX + state.startBoxState.w);
+      let y1 = Math.min(state.startY, state.startY + state.startBoxState.h);
+      let x2 = Math.max(state.startX, state.startX + state.startBoxState.w);
+      let y2 = Math.max(state.startY, state.startY + state.startBoxState.h);
+
+      // Clamp to canvas boundaries
+      x1 = Math.max(0, x1);
+      y1 = Math.max(0, y1);
+      x2 = Math.min(canvas.width, x2);
+      y2 = Math.min(canvas.height, y2);
+
+      // Normalize to [0, 1] range
+      const bx = x1 / canvas.width;
+      const by = y1 / canvas.height;
+      const bw = (x2 - x1) / canvas.width;
+      const bh = (y2 - y1) / canvas.height;
+
       const payload = {
         image_asset_id: state.selectedImageId,
         bbox_x: bx, bbox_y: by,
-        bbox_width: w / canvas.width, bbox_height: h / canvas.height
+        bbox_width: bw, bbox_height: bh
       };
       
       // --- OPTIMISTIC UI UPDATE ---
