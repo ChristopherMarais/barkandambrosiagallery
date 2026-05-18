@@ -33,20 +33,21 @@ jobs:
             # 2. Safely dump the database
             cd /opt/barkandambrosiagallery || exit 1
             echo "Dumping PostgreSQL database..."
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_dump -U beetles_user beetles_db > /root/barkandambrosia_data/media/db_full_backup.sql
+            # UPDATED: Pointing to /opt/ instead of /root/
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_dump -U beetles_user beetles_db > /opt/barkandambrosia_data/media/db_full_backup.sql
 
             # 3. Execute Rclone based on workflow input
             if [ "${{ inputs.backup_type }}" == "full" ]; then
               echo "Running FULL backup (including all images)..."
-              # Excludes the live raw postgres files to prevent corruption, relies on the .sql dump
-              rclone copy /root/barkandambrosia_data "$DROPBOX_PATH/" \
+              # UPDATED: Pointing to /opt/ instead of /root/
+              rclone copy /opt/barkandambrosia_data "$DROPBOX_PATH/" \
                 --exclude "postgres/**" \
                 --verbose
             
             else
               echo "Running FAST backup (excluding images)..."
-              # Excludes image directories and live db files, keeping only the DB dump and small text/csv files
-              rclone copy /root/barkandambrosia_data "$DROPBOX_PATH/" \
+              # UPDATED: Pointing to /opt/ instead of /root/
+              rclone copy /opt/barkandambrosia_data "$DROPBOX_PATH/" \
                 --exclude "postgres/**" \
                 --exclude "media/originals/**" \
                 --exclude "media/display/**" \
