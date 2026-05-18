@@ -1,0 +1,57 @@
+name: Dropbox Backup
+
+on:
+  workflow_dispatch:
+    inputs:
+      backup_type:
+        description: 'Choose backup size'
+        required: true
+        default: 'fast'
+        type: choice
+        options:
+          - fast
+          - full
+
+jobs:
+  backup-to-dropbox:
+    name: Run Backup Script
+    runs-on: ubuntu-latest
+    steps:
+      - name: Execute Backup via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # 1. Generate a date string for the Dropbox folder (YYYYMMDD_HHMM)
+            BACKUP_DATE=$(date +%Y%m%d_%H%M)
+            DROPBOX_PATH="dropbox:Bark_Beetle_Images/barkandambrosiagallery_backups/$BACKUP_DATE"
+
+            echo "Starting backup for date: $BACKUP_DATE"
+
+            # 2. Safely dump the database
+            cd /opt/barkandambrosiagallery || exit 1
+            echo "Dumping PostgreSQL database..."
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_dump -U beetles_user beetles_db > /root/barkandambrosia_data/media/db_full_backup.sql
+
+            # 3. Execute Rclone based on workflow input
+            if [ "${{ inputs.backup_type }}" == "full" ]; then
+              echo "Running FULL backup (including all images)..."
+              # Excludes the live raw postgres files to prevent corruption, relies on the .sql dump
+              rclone copy /root/barkandambrosia_data "$DROPBOX_PATH/" \
+                --exclude "postgres/**" \
+                --verbose
+            
+            else
+              echo "Running FAST backup (excluding images)..."
+              # Excludes image directories and live db files, keeping only the DB dump and small text/csv files
+              rclone copy /root/barkandambrosia_data "$DROPBOX_PATH/" \
+                --exclude "postgres/**" \
+                --exclude "media/originals/**" \
+                --exclude "media/display/**" \
+                --exclude "media/thumbnails/**" \
+                --verbose
+            fi
+
+            echo "Backup successfully completed to $DROPBOX_PATH"
