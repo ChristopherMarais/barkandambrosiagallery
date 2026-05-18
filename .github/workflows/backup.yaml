@@ -1,6 +1,11 @@
 name: Dropbox Backup
 
 on:
+  schedule:
+    # FAST BACKUP: Runs every Sunday at 2:00 AM UTC
+    - cron: '0 2 * * 0'
+    # FULL BACKUP: Runs on the 1st of every month at 1:00 AM UTC
+    - cron: '0 1 1 * *'
   workflow_dispatch:
     inputs:
       backup_type:
@@ -25,26 +30,47 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 120m
           script: |
-            # 1. Generate a date string for the Dropbox folder (YYYYMMDD_HHMM)
+            # 1. Determine if this is a Fast or Full backup
+            BACKUP_TYPE="${{ inputs.backup_type }}"
+            
+            # If BACKUP_TYPE is empty, this was triggered automatically by the schedule
+            if [ -z "$BACKUP_TYPE" ]; then
+              if [ "$(date +%d)" == "01" ]; then
+                BACKUP_TYPE="full"
+              else
+                BACKUP_TYPE="fast"
+              fi
+            fi
+
             BACKUP_DATE=$(date +%Y%m%d_%H%M)
             DROPBOX_PATH="dropbox:Bark_Beetle_Images/barkandambrosiagallery_backups/$BACKUP_DATE"
 
-            echo "Starting backup for date: $BACKUP_DATE"
+            echo "================================================="
+            echo "Starting $BACKUP_TYPE backup for date: $BACKUP_DATE"
+            echo "================================================="
 
             # 2. Safely dump the database
             cd /opt/barkandambrosiagallery || exit 1
             echo "Dumping PostgreSQL database..."
             docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_dump -U beetles_user beetles_db > /opt/barkandambrosia_data/media/db_full_backup.sql
 
-            # 3. Execute Rclone based on workflow input
-            if [ "${{ inputs.backup_type }}" == "full" ]; then
-              echo "Running FULL backup (including all images)..."
-              rclone copy /opt/barkandambrosia_data "$DROPBOX_PATH/" \
+            # 3. Execute Backup Logic
+            if [ "$BACKUP_TYPE" == "full" ]; then
+              echo "Triggering FULL backup in the background..."
+              echo "Because this takes days, GitHub Actions will disconnect now."
+              
+              # 'nohup' and '&' force the task to run invisibly in the server's background
+              # The output is saved to a log file so SSH doesn't hang waiting for it
+              nohup rclone copy /opt/barkandambrosia_data "$DROPBOX_PATH/" \
                 --exclude "postgres/**" \
-                --verbose
+                --verbose > /opt/barkandambrosiagallery/full_backup_progress.log 2>&1 < /dev/null &
+              
+              echo "✅ Process successfully pushed to the background."
+              echo "You can check the live progress anytime by SSHing into your server and running:"
+              echo "tail -f /opt/barkandambrosiagallery/full_backup_progress.log"
             
             else
-              echo "Running FAST backup (excluding all media and zips)..."
+              echo "Running FAST backup synchronously..."
               rclone copy /opt/barkandambrosia_data "$DROPBOX_PATH/" \
                 --exclude "postgres/**" \
                 --exclude "media/originals/**" \
@@ -54,6 +80,6 @@ jobs:
                 --exclude "media/tmp_uploads/**" \
                 --exclude "*.zip" \
                 --verbose
+                
+              echo "✅ Fast Backup successfully completed to $DROPBOX_PATH"
             fi
-
-            echo "Backup successfully completed to $DROPBOX_PATH"
