@@ -509,6 +509,13 @@ def gallery(request):
     except EmptyPage:
         beetles_page = paginator.page(paginator.num_pages)
 
+    from django.utils.safestring import mark_safe
+    current_page = beetles_page.number
+    page_options_html = mark_safe("".join(
+        f'<option value="{p}"{" selected" if p == current_page else ""}>{p}</option>'
+        for p in range(1, paginator.num_pages + 1)
+    ))
+
     # --- helper functions OUTSIDE the loop to prevent O(N) memory allocation ---
     def clean_val(val):
         return val if val and str(val).lower() != "unknown" else None
@@ -573,9 +580,10 @@ def gallery(request):
             "paginator": paginator,
             "page_obj": beetles_page,
             "is_paginated": beetles_page.has_other_pages(),
+            "page_options_html": page_options_html,
             "q": raw_q,
             "ignored_tokens": ignored_tokens,
-            "total_matches": final_qs.count(),
+            "total_matches": paginator.count,
             "warn_size_bytes": WARN_IMAGE_SIZE_BYTES,
             "filter_groups": filter_context,
             "selected_filters": active_filters,

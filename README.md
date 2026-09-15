@@ -62,7 +62,7 @@ docker compose run --rm web pixi run python manage.py createsuperuser
 To view the website, start the containers. This runs the database and the Django web server.
 
 ```bash
-docker compose up
+docker compose up -d
 
 ```
 
