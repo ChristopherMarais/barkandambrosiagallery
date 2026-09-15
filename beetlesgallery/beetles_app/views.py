@@ -489,6 +489,8 @@ def gallery(request):
     # 3. Final Results
     final_qs = apply_filters(base_search_qs, active_filters, exclude_param=None)
 
+    is_ajax = request.headers.get("x-requested-with") == "XMLHttpRequest"
+
     # 4. Build Dynamic Options & Cache
     # Build a stable signature of the query state (filters + search), excluding page number
     import hashlib
@@ -505,10 +507,13 @@ def gallery(request):
         filters_cache_key = f"gallery:filters:{query_sig_hash}"
         filters_cache_ttl = 60 * 15  # 15 minutes for specific filtered sets
 
-    filter_context = cache.get(filters_cache_key)
-    if filter_context is None:
-        filter_context = _build_gallery_filter_context(base_search_qs, active_filters)
-        cache.set(filters_cache_key, filter_context, filters_cache_ttl)
+    # On AJAX pagination requests, skip building the heavy filter dropdowns (saves ~9MB of HTML)
+    filter_context = None
+    if not is_ajax:
+        filter_context = cache.get(filters_cache_key)
+        if filter_context is None:
+            filter_context = _build_gallery_filter_context(base_search_qs, active_filters)
+            cache.set(filters_cache_key, filter_context, filters_cache_ttl)
 
     # 5. Pagination
     final_qs = final_qs.order_by("image_asset", "id").distinct("image_asset")
@@ -574,7 +579,9 @@ def gallery(request):
         b.warn_large = False
 
         if b.image_asset:
-            siblings = [s for s in b.image_asset.specimens.all() if not s.is_deleted]
+            siblings = getattr(b.image_asset, 'active_siblings', None)
+            if siblings is None:
+                siblings = [s for s in b.image_asset.specimens.all() if not s.is_deleted]
             b.siblings_count = len(siblings)
 
             # Only calculate multiple attributes if there is more than 1 sibling
@@ -598,28 +605,29 @@ def gallery(request):
             b.siblings_count = 0
             b.warn_large = False
 
-    return render(
-        request,
-        "beetles/image_browser.html", 
-        {
-            "beetles": beetles_page,
-            "paginator": paginator,
-            "page_obj": beetles_page,
-            "is_paginated": beetles_page.has_other_pages(),
-            "page_options_html": page_options_html,
-            "q": raw_q,
-            "ignored_tokens": ignored_tokens,
-            "total_matches": paginator.count,
-            "warn_size_bytes": WARN_IMAGE_SIZE_BYTES,
-            "filter_groups": filter_context,
-            "selected_filters": active_filters,
-            "per_page": page_size,
-            "size_min": size_min,
-            "size_max": size_max,
-            "res_min": res_min,
-            "res_max": res_max,
-        },
-    )
+    context = {
+        "beetles": beetles_page,
+        "paginator": paginator,
+        "page_obj": beetles_page,
+        "is_paginated": beetles_page.has_other_pages(),
+        "page_options_html": page_options_html,
+        "q": raw_q,
+        "ignored_tokens": ignored_tokens,
+        "total_matches": paginator.count,
+        "warn_size_bytes": WARN_IMAGE_SIZE_BYTES,
+        "filter_groups": filter_context,
+        "selected_filters": active_filters,
+        "per_page": page_size,
+        "size_min": size_min,
+        "size_max": size_max,
+        "res_min": res_min,
+        "res_max": res_max,
+    }
+
+    if is_ajax:
+        return render(request, "beetles/includes/gallery_results.html", context)
+
+    return render(request, "beetles/image_browser.html", context)
 
 
 def beetle_detail(request, beetle_id):
