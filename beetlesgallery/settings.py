@@ -107,19 +107,9 @@ WSGI_APPLICATION = 'beetlesgallery.wsgi.application'
 DATABASES = {
     'default': dj_database_url.config(
         default=f"postgres://{os.environ.get('POSTGRES_USER', 'beetles_user')}:{os.environ.get('POSTGRES_PASSWORD', 'devpass')}@{os.environ.get('POSTGRES_HOST', 'db')}:{os.environ.get('POSTGRES_PORT', '5432')}/{os.environ.get('POSTGRES_DB', 'beetles_db')}",
-        conn_max_age=0
+        conn_max_age=600,
+        conn_health_checks=True
     )
-}
-
-# Cache Configuration (Use Redis)
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0"),
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        }
-    }
 }
 
 # Password validation

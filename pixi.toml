@@ -20,7 +20,7 @@ watch-css = "npx tailwindcss -i ./beetlesgallery/static/css/input.css -o ./beetl
 start = "python manage.py runserver 0.0.0.0:8000"
 migrate = "python manage.py migrate"
 collectstatic = "python manage.py collectstatic --noinput"
-gunicorn = "gunicorn beetlesgallery.wsgi:application --bind 0.0.0.0:8000"
+gunicorn = "gunicorn beetlesgallery.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 4 --worker-class gthread"
 
 # Run this to build the taxonomy tree
 build-tree = "python manage.py build_taxonomy_tree"

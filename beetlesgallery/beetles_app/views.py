@@ -489,23 +489,26 @@ def gallery(request):
     # 3. Final Results
     final_qs = apply_filters(base_search_qs, active_filters, exclude_param=None)
 
-    # 4. Build Dynamic Options
-    # When no search or filters are active (the default view), cache the expensive dropdown context
-    # in Redis (30-minute TTL). When filters ARE active, compute live so options narrow down hierarchically.
+    # 4. Build Dynamic Options & Cache
+    # Build a stable signature of the query state (filters + search), excluding page number
+    import hashlib
+    from django.core.cache import cache
+
     is_default_view = not raw_q and not active_filters and not any((size_min, size_max, res_min, res_max))
-    GALLERY_DEFAULT_FILTERS_CACHE_KEY = "gallery:default_filters:v2"
-    GALLERY_DEFAULT_FILTERS_TTL = 60 * 30  # 30 minutes
+    query_sig_raw = f"q={raw_q}|f={sorted(active_filters.items())}|smin={size_min}|smax={size_max}|rmin={res_min}|rmax={res_max}"
+    query_sig_hash = hashlib.md5(query_sig_raw.encode("utf-8")).hexdigest()
 
-    filter_context = None
     if is_default_view:
-        from django.core.cache import cache
-        filter_context = cache.get(GALLERY_DEFAULT_FILTERS_CACHE_KEY)
+        filters_cache_key = "gallery:default_filters:v2"
+        filters_cache_ttl = 60 * 30  # 30 minutes for default view
+    else:
+        filters_cache_key = f"gallery:filters:{query_sig_hash}"
+        filters_cache_ttl = 60 * 15  # 15 minutes for specific filtered sets
 
+    filter_context = cache.get(filters_cache_key)
     if filter_context is None:
         filter_context = _build_gallery_filter_context(base_search_qs, active_filters)
-        if is_default_view:
-            from django.core.cache import cache
-            cache.set(GALLERY_DEFAULT_FILTERS_CACHE_KEY, filter_context, GALLERY_DEFAULT_FILTERS_TTL)
+        cache.set(filters_cache_key, filter_context, filters_cache_ttl)
 
     # 5. Pagination
     final_qs = final_qs.order_by("image_asset", "id").distinct("image_asset")
@@ -513,7 +516,17 @@ def gallery(request):
     # Critical: Fetch taxon in the same SQL call to guarantee O(1) performance
     final_qs = final_qs.select_related("image_asset", "taxon").prefetch_related("image_asset__specimens__taxon")
     
+    # Cache total count by query signature to bypass expensive COUNT(*) SQL query on page flips
+    count_cache_key = f"gallery:count:{query_sig_hash}"
+    cached_total_count = cache.get(count_cache_key)
+
     paginator = Paginator(final_qs, page_size)
+    if cached_total_count is not None:
+        paginator.count = cached_total_count
+    else:
+        cached_total_count = paginator.count
+        cache.set(count_cache_key, cached_total_count, filters_cache_ttl)
+
     page = request.GET.get("page", 1)
     try:
         beetles_page = paginator.page(page)

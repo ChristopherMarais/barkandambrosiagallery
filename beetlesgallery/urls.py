@@ -51,9 +51,15 @@ urlpatterns = [
     path('api/v1/', include('beetlesgallery.beetles_app.api.urls')),
 ]
 
+def media_serve_with_cache(request, path, document_root=None, show_indexes=False):
+    response = serve(request, path, document_root, show_indexes)
+    # Cache thumbnails and images for 30 days in browser & Cloudflare CDN
+    response["Cache-Control"] = "public, max-age=2592000, immutable"
+    return response
+
 # Serve Media Files (User Uploads) manually since we don't have Nginx
 urlpatterns += [
-    re_path(r'^media/(?P<path>.*)$', serve, {
+    re_path(r'^media/(?P<path>.*)$', media_serve_with_cache, {
         'document_root': settings.MEDIA_ROOT,
     }),
 ]
