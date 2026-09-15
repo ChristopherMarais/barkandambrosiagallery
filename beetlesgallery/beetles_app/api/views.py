@@ -310,7 +310,7 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         """
         Unified API Feed for the Annotation Tool.
         """
-        from django.db.models import Count, Q, Exists, OuterRef
+        from django.db.models import Count, Q, Exists, OuterRef, Prefetch
         from django.core.paginator import Paginator
         from beetlesgallery.beetles_app.utils import build_query_q, filter_beetles_queryset, FILTERS_CONFIG
 
@@ -339,7 +339,11 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         # Enforce is_deleted=False across the board
         valid_image_ids = beetles_qs.filter(is_deleted=False).values('image_asset_id')
 
-        image_qs = ImageAsset.objects.filter(id__in=valid_image_ids, is_deleted=False).select_related('active_lock__locked_by')
+        image_qs = ImageAsset.objects.filter(
+            id__in=valid_image_ids, is_deleted=False
+        ).select_related('active_lock__locked_by').prefetch_related(
+            Prefetch('specimens', queryset=Beetles.objects.filter(is_deleted=False).only('id', 'image_asset_id'))
+        )
 
         unvalidated_rois = Beetles.objects.filter(
             image_asset_id=OuterRef('pk'),
@@ -396,9 +400,12 @@ class BeetlesViewSet(viewsets.ModelViewSet):
                         'locked_at': lock.locked_at.isoformat()
                     }
 
+            specimens = list(img.specimens.all())
+            first_specimen = specimens[0] if specimens else None
+
             images.append({
                 'image_asset_id': str(img.id),
-                'beetle_id': str(img.specimens.first().id) if img.specimens.exists() else None, 
+                'beetle_id': str(first_specimen.id) if first_specimen else None, 
                 'filename': os.path.basename(img.image_file.name) if img.image_file else 'unknown',
                 'thumbnail_url': img.thumb_small.url if img.thumb_small else None,
                 'full_image_url': img.display_url,

@@ -334,9 +334,7 @@
               <div class="flex items-center gap-2 text-sm text-text/70">
                 <span>Page</span>
                 <select form="main-form" onchange="this.name='page'; this.form.submit()" class="rounded border border-text/20 bg-background py-1.5 px-2 text-sm focus:ring-gray-400 cursor-pointer">
-                  {% for p in paginator.page_range %}
-                    <option value="{{ p }}" {% if p == page_obj.number %}selected{% endif %}>{{ p }}</option>
-                  {% endfor %}
+                  {{ page_options_html }}
                 </select>
                 <span>of {{ paginator.num_pages }}</span>
               </div>
@@ -665,9 +663,7 @@
               <div class="flex items-center gap-2 text-sm text-text/70">
                 <span>Page</span>
                 <select form="main-form" onchange="this.name='page'; this.form.submit()" class="rounded border border-text/20 bg-background py-1.5 px-2 text-sm focus:ring-gray-400 cursor-pointer">
-                  {% for p in paginator.page_range %}
-                    <option value="{{ p }}" {% if p == page_obj.number %}selected{% endif %}>{{ p }}</option>
-                  {% endfor %}
+                  {{ page_options_html }}
                 </select>
                 <span>of {{ paginator.num_pages }}</span>
               </div>
