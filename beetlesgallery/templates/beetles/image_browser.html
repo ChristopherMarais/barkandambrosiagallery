@@ -1145,8 +1145,8 @@
         const savedView = localStorage.getItem(VIEW_STORAGE_KEY) || 'card';
         setView(savedView);
 
-        // Smooth scroll to top of gallery results
-        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Smooth scroll to the full top of the page
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         window.location.href = targetUrl;
       }
@@ -1182,7 +1182,7 @@
         updateUI();
         const savedView = localStorage.getItem(VIEW_STORAGE_KEY) || 'card';
         setView(savedView);
-        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         window.location.reload();
       }
