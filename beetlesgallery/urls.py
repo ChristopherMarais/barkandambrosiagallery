@@ -31,6 +31,9 @@ urlpatterns = [
     path('taxonomy/species-images/', beetles_views.species_images, name='species_images'),
     path('taxonomy/search/', beetles_views.taxonomy_search, name='taxonomy_search'),
 
+    # 4. /interactions/ -> Ecological Interactions (Pathogen & Parasite Database Preview)
+    path('interactions/', beetles_views.interactions_preview, name='interactions_preview'),
+
     path('beetles/<uuid:beetle_id>/', beetles_views.beetle_detail, name='beetle_detail'),
     path("beetles/add_specimen/<uuid:image_id>/", beetles_views.create_specimen_for_image, name="create_specimen_for_image"),
 

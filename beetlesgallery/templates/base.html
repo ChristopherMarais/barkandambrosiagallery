@@ -129,6 +129,7 @@
   </style>
 
   <script src="{% static 'js/footer_basehtml.js' %}" defer></script>
+  {% block extra_css %}{% endblock %}
 </head>
 
 <body class="flex flex-col min-h-screen bg-white text-gray-800">
@@ -169,6 +170,13 @@
               class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'taxonomy_browser' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
               <i class="fi fi-rr-chart-tree text-xl text-gray-700 w-8 text-center"></i>
               <span class="font-medium text-gray-700 ml-1">Taxonomy Browser</span>
+            </a>
+
+            <a href="{% url 'interactions_preview' %}"
+              class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'interactions_preview' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+              <i class="fi fi-rr-diagram-project text-xl text-gray-700 w-8 text-center"></i>
+              <span class="font-medium text-gray-700 ml-1">Interactions</span>
+              <span class="ml-auto text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">Preview</span>
             </a>
 
             <a href="{% url 'tool_classify' %}"
@@ -252,6 +260,16 @@
             <i class="fi fi-rr-chart-tree text-xl text-gray-700 w-8 text-center"></i>
             <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
               Taxonomy Browser
+            </span>
+          </a>
+
+          <a href="{% url 'interactions_preview' %}"
+            class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'interactions_preview' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}"
+            title="Ecological Interactions">
+            <i class="fi fi-rr-diagram-project text-xl text-gray-700 w-8 text-center"></i>
+            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700 flex items-center gap-2">
+              Interactions
+              <span class="text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">Preview</span>
             </span>
           </a>
 
@@ -342,6 +360,7 @@
       </main>
     </div>
   </div>
+  {% block extra_js %}{% endblock %}
 </body>
 
 </html>
