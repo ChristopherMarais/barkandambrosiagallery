@@ -80,6 +80,49 @@
   .badge-virus { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
   .badge-unknown { background-color: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; }
 
+  /* Reliable Bar Chart Utilities (Immune to Tailwind CSS purge) */
+  .bar-fungi {
+    background-color: #d97706 !important; /* amber-600 */
+    min-width: 6px;
+  }
+  .bar-nematode {
+    background-color: #0284c7 !important; /* sky-600 */
+    min-width: 6px;
+  }
+  .bar-microsporidia {
+    background-color: #9333ea !important; /* purple-600 */
+    min-width: 6px;
+  }
+  .bar-protist {
+    background-color: #ea580c !important; /* orange-600 */
+    min-width: 6px;
+  }
+  .bar-bacteria {
+    background-color: #16a34a !important; /* emerald-600 */
+    min-width: 6px;
+  }
+  .bar-virus {
+    background-color: #dc2626 !important; /* red-600 */
+    min-width: 6px;
+  }
+  .bar-bark-beetle {
+    background-color: #0284c7 !important; /* sky-600 */
+    min-width: 6px;
+  }
+  .bar-ambrosia-beetle {
+    background-color: #16a34a !important; /* emerald-600 */
+    min-width: 6px;
+  }
+  .bar-validation {
+    background-color: #16a34a !important; /* emerald-600 */
+    min-width: 6px;
+  }
+
+  /* Consistent spacing helper */
+  .gap-consistent {
+    gap: 12px !important;
+  }
+
   /* Navigation Tabs */
   .nav-tab-btn {
     border-bottom: 2px solid transparent;
@@ -188,7 +231,7 @@
   <!-- Header & Status -->
   <div class="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-3">
     <div>
-      <div class="flex flex-wrap items-center gap-2.5 mb-1.5">
+      <div class="flex flex-wrap items-center gap-consistent mb-1.5">
         <h1 class="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight">
           {{ page_title }}
         </h1>
@@ -216,9 +259,6 @@
     <button type="button" id="tab-btn-groups" class="nav-tab-btn py-3 px-2 sm:px-3">
       Pathogen Groups <span class="text-[11px] text-gray-400 font-normal">(6)</span>
     </button>
-    <button type="button" id="tab-btn-validation" class="nav-tab-btn py-3 px-2 sm:px-3">
-      Evidence &amp; Validation <span class="text-[11px] text-gray-400 font-normal">(238)</span>
-    </button>
     <button type="button" id="tab-btn-refs" class="nav-tab-btn py-3 px-2 sm:px-3">
       References <span class="text-[11px] text-gray-400 font-normal">(281)</span>
     </button>
@@ -233,7 +273,7 @@
     <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm">
       <div class="space-y-3">
         <div>
-          <h2 class="text-base font-bold text-gray-900 flex items-center gap-2.5">
+          <h2 class="text-base font-bold text-gray-900 flex items-center gap-consistent">
             <i class="fi fi-rr-diagram-project text-xl text-gray-700"></i>
             <span>About the dataset</span>
           </h2>
@@ -289,8 +329,8 @@
       </div>
     </div>
 
-    <!-- Quick Navigation Jump Cards -->
-    <div class="grid-5-cols">
+    <!-- Quick Navigation Jump Cards (4 Columns) -->
+    <div class="grid-4-cols">
       <button type="button" onclick="window.switchPathogenTab('browse')" class="text-left group p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-gray-400 hover:shadow transition flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between">
@@ -321,17 +361,6 @@
           </div>
           <div class="text-[11px] text-gray-400 font-mono mt-0.5">6 groups</div>
           <p class="text-xs text-gray-500 mt-2 leading-relaxed">Fungi, Nematodes, Microsporidia, Protists, Bacteria, and Viruses.</p>
-        </div>
-      </button>
-
-      <button type="button" onclick="window.switchPathogenTab('validation')" class="text-left group p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-gray-400 hover:shadow transition flex flex-col justify-between">
-        <div>
-          <div class="flex items-center justify-between">
-            <span class="font-semibold text-gray-900 text-sm group-hover:text-blue-600 transition">Evidence</span>
-            <span class="text-xs text-gray-400 font-mono">&rarr;</span>
-          </div>
-          <div class="text-[11px] text-gray-400 font-mono mt-0.5">238 records</div>
-          <p class="text-xs text-gray-500 mt-2 leading-relaxed">Virulence tests, Koch's postulates, bioassays, and cross-infections.</p>
         </div>
       </button>
 
@@ -390,7 +419,7 @@
                 <span class="font-mono text-gray-600">64 taxa (409 records)</span>
               </div>
               <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                <div class="bg-amber-600 h-2.5 rounded-full" style="width: 100%;"></div>
+                <div class="bar-fungi h-2.5 rounded-full" style="width: 100%;"></div>
               </div>
             </div>
 
@@ -400,7 +429,7 @@
                 <span class="font-mono text-gray-600">123 taxa (221 records)</span>
               </div>
               <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                <div class="bg-sky-600 h-2.5 rounded-full" style="width: 54%;"></div>
+                <div class="bar-nematode h-2.5 rounded-full" style="width: 54%;"></div>
               </div>
             </div>
 
@@ -410,7 +439,7 @@
                 <span class="font-mono text-gray-600">30 taxa (144 records)</span>
               </div>
               <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                <div class="bg-purple-600 h-2.5 rounded-full" style="width: 35%;"></div>
+                <div class="bar-microsporidia h-2.5 rounded-full" style="width: 35%;"></div>
               </div>
             </div>
 
@@ -420,7 +449,7 @@
                 <span class="font-mono text-gray-600">23 taxa (141 records)</span>
               </div>
               <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                <div class="bg-orange-600 h-2.5 rounded-full" style="width: 34%;"></div>
+                <div class="bar-protist h-2.5 rounded-full" style="width: 34%;"></div>
               </div>
             </div>
 
@@ -430,7 +459,7 @@
                 <span class="font-mono text-gray-600">31 taxa (50 records)</span>
               </div>
               <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                <div class="bg-emerald-600 h-2.5 rounded-full" style="width: 12%;"></div>
+                <div class="bar-bacteria h-2.5 rounded-full" style="width: 12%;"></div>
               </div>
             </div>
 
@@ -440,7 +469,7 @@
                 <span class="font-mono text-gray-600">18 taxa (46 records)</span>
               </div>
               <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                <div class="bg-red-600 h-2.5 rounded-full" style="width: 11%;"></div>
+                <div class="bar-virus h-2.5 rounded-full" style="width: 11%;"></div>
               </div>
             </div>
           </div>
@@ -454,7 +483,7 @@
               <span class="text-sm font-bold text-gray-900">238 records (23.54%)</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden mb-3">
-              <div class="bg-emerald-600 h-4 rounded-full flex items-center justify-end pr-2 text-[10px] text-white font-bold" style="width: 23.54%;">23.5%</div>
+              <div class="bar-validation h-4 rounded-full flex items-center justify-end pr-2 text-[10px] text-white font-bold" style="width: 23.54%;">23.5%</div>
             </div>
 
             <div class="flex items-center justify-between text-xs text-gray-600 mb-1">
@@ -491,8 +520,8 @@
                     <span class="italic font-medium text-gray-900 truncate pr-2">Beauveria bassiana</span>
                     <span class="font-mono text-gray-700 text-[11px] font-semibold flex-shrink-0">206</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-amber-600 h-1.5 rounded-full" style="width: 100%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-fungi h-1.5 rounded-full" style="width: 100%;"></div>
                   </div>
                 </div>
                 <div>
@@ -500,8 +529,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">Metarhizium anisopliae</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">24</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-amber-500 h-1.5 rounded-full" style="width: 11.7%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-fungi h-1.5 rounded-full" style="width: 11.7%;"></div>
                   </div>
                 </div>
                 <div>
@@ -509,8 +538,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">Beauveria caledonica</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">19</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-amber-500 h-1.5 rounded-full" style="width: 9.2%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-fungi h-1.5 rounded-full" style="width: 9.2%;"></div>
                   </div>
                 </div>
                 <div>
@@ -518,8 +547,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">Lecanicillium lecanii</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">13</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-amber-500 h-1.5 rounded-full" style="width: 6.3%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-fungi h-1.5 rounded-full" style="width: 6.3%;"></div>
                   </div>
                 </div>
                 <div>
@@ -527,8 +556,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">Isaria farinosa</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">10</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-amber-500 h-1.5 rounded-full" style="width: 4.9%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-fungi h-1.5 rounded-full" style="width: 4.9%;"></div>
                   </div>
                 </div>
               </div>
@@ -548,8 +577,8 @@
                     <span class="italic font-medium text-gray-900 truncate pr-2">Nematoda (unspecified)</span>
                     <span class="font-mono text-gray-700 text-[11px] font-semibold flex-shrink-0">19</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-sky-600 h-1.5 rounded-full" style="width: 100%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-nematode h-1.5 rounded-full" style="width: 100%;"></div>
                   </div>
                 </div>
                 <div>
@@ -557,8 +586,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">Contortylenchus brevicomi</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">9</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-sky-500 h-1.5 rounded-full" style="width: 47.4%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-nematode h-1.5 rounded-full" style="width: 47.4%;"></div>
                   </div>
                 </div>
                 <div>
@@ -566,8 +595,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">Contortylenchus reversus</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">8</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-sky-500 h-1.5 rounded-full" style="width: 42.1%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-nematode h-1.5 rounded-full" style="width: 42.1%;"></div>
                   </div>
                 </div>
                 <div>
@@ -575,8 +604,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">Parasitaphelenchus sp.</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">7</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-sky-500 h-1.5 rounded-full" style="width: 36.8%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-nematode h-1.5 rounded-full" style="width: 36.8%;"></div>
                   </div>
                 </div>
                 <div>
@@ -584,8 +613,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">Contortylenchus diplogaster</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">6</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-sky-500 h-1.5 rounded-full" style="width: 31.6%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-nematode h-1.5 rounded-full" style="width: 31.6%;"></div>
                   </div>
                 </div>
               </div>
@@ -605,8 +634,8 @@
                     <span class="italic font-medium text-gray-900 truncate pr-2">Chytridiopsis typographi</span>
                     <span class="font-mono text-gray-700 text-[11px] font-semibold flex-shrink-0">46</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-purple-600 h-1.5 rounded-full" style="width: 100%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-microsporidia h-1.5 rounded-full" style="width: 100%;"></div>
                   </div>
                 </div>
                 <div>
@@ -614,8 +643,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">Chytridiopsis cf. typographi</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">15</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-purple-500 h-1.5 rounded-full" style="width: 32.6%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-microsporidia h-1.5 rounded-full" style="width: 32.6%;"></div>
                   </div>
                 </div>
                 <div>
@@ -623,8 +652,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">Nosema typographi</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">10</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-purple-500 h-1.5 rounded-full" style="width: 21.7%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-microsporidia h-1.5 rounded-full" style="width: 21.7%;"></div>
                   </div>
                 </div>
                 <div>
@@ -632,8 +661,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">Malamoeba scolyti</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">9</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-purple-500 h-1.5 rounded-full" style="width: 19.6%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-microsporidia h-1.5 rounded-full" style="width: 19.6%;"></div>
                   </div>
                 </div>
                 <div>
@@ -641,8 +670,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">Larssoniella duplicati</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">7</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-purple-500 h-1.5 rounded-full" style="width: 15.2%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-microsporidia h-1.5 rounded-full" style="width: 15.2%;"></div>
                   </div>
                 </div>
               </div>
@@ -662,8 +691,8 @@
                     <span class="italic font-medium text-gray-900 truncate pr-2">Gregarina typographi</span>
                     <span class="font-mono text-gray-700 text-[11px] font-semibold flex-shrink-0">55</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-orange-600 h-1.5 rounded-full" style="width: 100%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-protist h-1.5 rounded-full" style="width: 100%;"></div>
                   </div>
                 </div>
                 <div>
@@ -671,8 +700,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">Gregarina sp.</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">19</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-orange-500 h-1.5 rounded-full" style="width: 34.5%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-protist h-1.5 rounded-full" style="width: 34.5%;"></div>
                   </div>
                 </div>
                 <div>
@@ -680,8 +709,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">Gregarina cf. typographi</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">11</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-orange-500 h-1.5 rounded-full" style="width: 20.0%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-protist h-1.5 rounded-full" style="width: 20.0%;"></div>
                   </div>
                 </div>
                 <div>
@@ -689,8 +718,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">Malamoeba scolyti</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">10</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-orange-500 h-1.5 rounded-full" style="width: 18.2%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-protist h-1.5 rounded-full" style="width: 18.2%;"></div>
                   </div>
                 </div>
                 <div>
@@ -698,8 +727,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">Mattesia sp.</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">9</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-orange-500 h-1.5 rounded-full" style="width: 16.4%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-protist h-1.5 rounded-full" style="width: 16.4%;"></div>
                   </div>
                 </div>
               </div>
@@ -719,8 +748,8 @@
                     <span class="italic font-medium text-gray-900 truncate pr-2">Serratia marcescens</span>
                     <span class="font-mono text-gray-700 text-[11px] font-semibold flex-shrink-0">8</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-emerald-600 h-1.5 rounded-full" style="width: 100%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-bacteria h-1.5 rounded-full" style="width: 100%;"></div>
                   </div>
                 </div>
                 <div>
@@ -728,8 +757,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">Bacillus thuringiensis</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">7</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-emerald-500 h-1.5 rounded-full" style="width: 87.5%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-bacteria h-1.5 rounded-full" style="width: 87.5%;"></div>
                   </div>
                 </div>
                 <div>
@@ -737,8 +766,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">Bacillus cereus</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">4</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-emerald-500 h-1.5 rounded-full" style="width: 50.0%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-bacteria h-1.5 rounded-full" style="width: 50.0%;"></div>
                   </div>
                 </div>
                 <div>
@@ -746,8 +775,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">Pseudomonas aeruginosa</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">2</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-emerald-500 h-1.5 rounded-full" style="width: 25.0%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-bacteria h-1.5 rounded-full" style="width: 25.0%;"></div>
                   </div>
                 </div>
                 <div>
@@ -755,8 +784,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">B. thuringiensis var. thuringiensis</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">2</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-emerald-500 h-1.5 rounded-full" style="width: 25.0%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-bacteria h-1.5 rounded-full" style="width: 25.0%;"></div>
                   </div>
                 </div>
               </div>
@@ -776,8 +805,8 @@
                     <span class="italic font-medium text-gray-900 truncate pr-2">ItEPV (Entomopoxvirus)</span>
                     <span class="font-mono text-gray-700 text-[11px] font-semibold flex-shrink-0">26</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-red-600 h-1.5 rounded-full" style="width: 100%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-virus h-1.5 rounded-full" style="width: 100%;"></div>
                   </div>
                 </div>
                 <div>
@@ -785,8 +814,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">Entomopoxvirus</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">4</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-red-500 h-1.5 rounded-full" style="width: 15.4%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-virus h-1.5 rounded-full" style="width: 15.4%;"></div>
                   </div>
                 </div>
                 <div>
@@ -794,8 +823,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">similar to the ItEPV</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">1</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-red-500 h-1.5 rounded-full" style="width: 3.8%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-virus h-1.5 rounded-full" style="width: 3.8%;"></div>
                   </div>
                 </div>
                 <div>
@@ -803,8 +832,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">baculovirus-like particles</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">1</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-red-500 h-1.5 rounded-full" style="width: 3.8%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-virus h-1.5 rounded-full" style="width: 3.8%;"></div>
                   </div>
                 </div>
                 <div>
@@ -812,8 +841,8 @@
                     <span class="italic font-medium text-gray-800 truncate pr-2">Entomopoxvirus-like particles</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">1</span>
                   </div>
-                  <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-red-500 h-1.5 rounded-full" style="width: 3.8%;"></div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-virus h-1.5 rounded-full" style="width: 3.8%;"></div>
                   </div>
                 </div>
               </div>
@@ -842,7 +871,7 @@
               <span class="font-mono font-bold text-gray-800">253 records</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-              <div class="bg-sky-600 h-2.5 rounded-full" style="width: 100%;"></div>
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 100%;"></div>
             </div>
           </div>
 
@@ -856,7 +885,7 @@
               <span class="font-mono font-bold text-gray-800">56 records</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-              <div class="bg-sky-600 h-2.5 rounded-full" style="width: 22.1%;"></div>
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 22.1%;"></div>
             </div>
           </div>
 
@@ -870,7 +899,7 @@
               <span class="font-mono font-bold text-gray-800">45 records</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-              <div class="bg-sky-600 h-2.5 rounded-full" style="width: 17.8%;"></div>
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 17.8%;"></div>
             </div>
           </div>
 
@@ -884,7 +913,7 @@
               <span class="font-mono font-bold text-gray-800">36 records</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-              <div class="bg-sky-600 h-2.5 rounded-full" style="width: 14.2%;"></div>
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 14.2%;"></div>
             </div>
           </div>
 
@@ -898,7 +927,7 @@
               <span class="font-mono font-bold text-gray-800">31 records</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-              <div class="bg-sky-600 h-2.5 rounded-full" style="width: 12.2%;"></div>
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 12.2%;"></div>
             </div>
           </div>
 
@@ -912,7 +941,7 @@
               <span class="font-mono font-bold text-gray-800">30 records</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-              <div class="bg-sky-600 h-2.5 rounded-full" style="width: 11.8%;"></div>
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 11.8%;"></div>
             </div>
           </div>
 
@@ -926,7 +955,7 @@
               <span class="font-mono font-bold text-gray-800">27 records</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-              <div class="bg-sky-600 h-2.5 rounded-full" style="width: 10.7%;"></div>
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 10.7%;"></div>
             </div>
           </div>
 
@@ -940,7 +969,7 @@
               <span class="font-mono font-bold text-gray-800">23 records</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-              <div class="bg-sky-600 h-2.5 rounded-full" style="width: 9.1%;"></div>
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 9.1%;"></div>
             </div>
           </div>
 
@@ -954,7 +983,7 @@
               <span class="font-mono font-bold text-gray-800">22 records</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-              <div class="bg-sky-600 h-2.5 rounded-full" style="width: 8.7%;"></div>
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 8.7%;"></div>
             </div>
           </div>
 
@@ -968,9 +997,59 @@
               <span class="font-mono font-bold text-gray-800">20 records</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-              <div class="bg-emerald-600 h-2.5 rounded-full" style="width: 7.9%;"></div>
+              <div class="bar-ambrosia-beetle h-2.5 rounded-full" style="width: 7.9%;"></div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Evidence & Validation Section (Merged into About Tab) -->
+    <div id="about-evidence-section" class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h3 class="text-base font-bold text-gray-900">Experimental validation &amp; evidence types</h3>
+          <p class="text-xs text-gray-600 mt-1 leading-relaxed max-w-3xl">
+            Inclusion in the dataset does not necessarily indicate experimentally demonstrated pathogenicity. Some records document organisms reported as pathogens or parasites by the original authors based on natural surveys, whereas 238 records (23.54%) are supported by formal infection, pathogenicity, or virulence tests.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <button type="button" onclick="window.filterAndBrowseValidation('validated')"
+            class="h-9 px-3 bg-gray-900 text-white rounded-md text-xs font-medium hover:bg-gray-800 transition whitespace-nowrap shadow-sm">
+            Browse 238 Validated Records &rarr;
+          </button>
+          <a href="{% static 'data/pathogens_with_validation.csv' %}" download="pathogens_with_validation.csv"
+            class="btn-download"
+            title="Download validated records as CSV">
+            <i class="fi fi-rr-download text-gray-500"></i>
+            <span>Download CSV</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="grid-4-cols">
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div class="text-xs font-semibold text-gray-500 uppercase">Virulence Tests</div>
+          <div class="text-2xl font-bold text-gray-900 mt-1">178</div>
+          <p class="text-xs text-gray-600 mt-2">Dose-response mortality bioassays, topical application, and lethal concentration experiments.</p>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div class="text-xs font-semibold text-gray-500 uppercase">Koch's Postulates</div>
+          <div class="text-2xl font-bold text-gray-900 mt-1">29</div>
+          <p class="text-xs text-gray-600 mt-2">Complete isolation, culture, reinoculation, and re-isolation demonstrating disease causality.</p>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div class="text-xs font-semibold text-gray-500 uppercase">Cross-Infection</div>
+          <div class="text-2xl font-bold text-gray-900 mt-1">19</div>
+          <p class="text-xs text-gray-600 mt-2">Experimental inoculation across non-source scolytine species or alternative insect hosts.</p>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div class="text-xs font-semibold text-gray-500 uppercase">General Bioassays</div>
+          <div class="text-2xl font-bold text-gray-900 mt-1">12</div>
+          <p class="text-xs text-gray-600 mt-2">Laboratory petri dish exposure assays, fecundity impairment tests, and developmental tracking.</p>
         </div>
       </div>
     </div>
@@ -1322,61 +1401,7 @@
   </div>
 
   <!-- ============================================================== -->
-  <!-- TAB 5: EVIDENCE & VALIDATION (238 Validated Records) -->
-  <!-- ============================================================== -->
-  <div id="tab-pane-validation" class="tab-pane hidden space-y-5">
-    <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 class="text-base font-semibold text-gray-900">Experimental Validation &amp; Evidence Types</h2>
-          <p class="text-xs text-gray-600 mt-1 leading-relaxed max-w-3xl">
-            Inclusion in the dataset does not necessarily indicate experimentally demonstrated pathogenicity. Some records document organisms reported as pathogens or parasites by the original authors based on natural surveys, whereas 238 records (23.54%) are supported by formal infection, pathogenicity, or virulence tests.
-          </p>
-        </div>
-        <div class="flex items-center gap-2 flex-shrink-0">
-          <button type="button" onclick="window.filterAndBrowseValidation('validated')"
-            class="h-9 px-3 bg-gray-900 text-white rounded-md text-xs font-medium hover:bg-gray-800 transition whitespace-nowrap shadow-sm">
-            Browse 238 Validated Records &rarr;
-          </button>
-          <a href="{% static 'data/pathogens_with_validation.csv' %}" download="pathogens_with_validation.csv"
-            class="btn-download"
-            title="Download validated records as CSV">
-            <i class="fi fi-rr-download text-gray-500"></i>
-            <span>Download CSV</span>
-          </a>
-        </div>
-      </div>
-    </div>
-
-    <div class="grid-4-cols">
-      <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-        <div class="text-xs font-semibold text-gray-500 uppercase">Virulence Tests</div>
-        <div class="text-2xl font-bold text-gray-900 mt-1">178</div>
-        <p class="text-xs text-gray-600 mt-2">Dose-response mortality bioassays, topical application, and lethal concentration experiments.</p>
-      </div>
-
-      <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-        <div class="text-xs font-semibold text-gray-500 uppercase">Koch's Postulates</div>
-        <div class="text-2xl font-bold text-gray-900 mt-1">29</div>
-        <p class="text-xs text-gray-600 mt-2">Complete isolation, culture, reinoculation, and re-isolation demonstrating disease causality.</p>
-      </div>
-
-      <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-        <div class="text-xs font-semibold text-gray-500 uppercase">Cross-Infection</div>
-        <div class="text-2xl font-bold text-gray-900 mt-1">19</div>
-        <p class="text-xs text-gray-600 mt-2">Experimental inoculation across non-source scolytine species or alternative insect hosts.</p>
-      </div>
-
-      <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-        <div class="text-xs font-semibold text-gray-500 uppercase">General Bioassays</div>
-        <div class="text-2xl font-bold text-gray-900 mt-1">12</div>
-        <p class="text-xs text-gray-600 mt-2">Laboratory petri dish exposure assays, fecundity impairment tests, and developmental tracking.</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============================================================== -->
-  <!-- TAB 6: REFERENCES (281 Primary Publications) -->
+  <!-- TAB 5: REFERENCES (281 Primary Publications) -->
   <!-- ============================================================== -->
   <div id="tab-pane-refs" class="tab-pane hidden space-y-4">
     <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
@@ -1871,7 +1896,6 @@
     browse: document.getElementById("tab-btn-browse"),
     hosts: document.getElementById("tab-btn-hosts"),
     groups: document.getElementById("tab-btn-groups"),
-    validation: document.getElementById("tab-btn-validation"),
     refs: document.getElementById("tab-btn-refs")
   };
 
@@ -1880,11 +1904,20 @@
     browse: document.getElementById("tab-pane-browse"),
     hosts: document.getElementById("tab-pane-hosts"),
     groups: document.getElementById("tab-pane-groups"),
-    validation: document.getElementById("tab-pane-validation"),
     refs: document.getElementById("tab-pane-refs")
   };
 
   window.switchPathogenTab = function(tabName) {
+    if (tabName === "validation") {
+      tabName = "about";
+      var valSec = document.getElementById("about-evidence-section");
+      if (valSec) {
+        setTimeout(function() {
+          valSec.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 80);
+      }
+    }
+
     Object.keys(tabBtns).forEach(function(k) {
       if (tabBtns[k]) tabBtns[k].classList.remove("active");
     });
