@@ -1818,3 +1818,22 @@ def tool_annotate(request):
         'filter_groups': filter_context
     })
 
+
+def interactions_preview(request):
+    """
+    Serves the Bark and Ambrosia Beetle Pathogen Dataset page
+    backed by the Notion v1.0 export dataset.
+    """
+    context = {
+        'page_title': 'Bark and Ambrosia Beetle Pathogen Dataset',
+        'meta_description': 'A literature-derived resource compiling reported pathogens and parasites associated with bark and ambrosia beetles (Scolytinae).',
+        'total_records': 1011,
+        'total_hosts': 114,
+        'total_genera': 29,
+        'total_taxa': 289,
+        'total_sources': 281,
+        'total_validated': 238,
+    }
+    return render(request, 'beetles/interactions_preview.html', context)
+
+

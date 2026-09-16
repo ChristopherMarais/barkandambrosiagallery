@@ -1,0 +1,2115 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} | Bark & Ambrosia Beetle Gallery{% endblock %}
+
+{% block extra_css %}
+<!-- Local Tabulator Stylesheet -->
+<link rel="stylesheet" href="{% static 'css/tabulator_semanticui.min.css' %}">
+<style>
+  /* Minimalist Tabulator Custom Styling matching Gallery aesthetic */
+  .tabulator {
+    font-size: 0.8125rem;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 0.5rem;
+    background-color: #ffffff;
+    overflow: hidden;
+  }
+  .tabulator .tabulator-header {
+    background-color: #f9fafb !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    color: #374151 !important;
+    font-weight: 600;
+  }
+  .tabulator .tabulator-header .tabulator-col {
+    background-color: transparent !important;
+    border-right: 1px solid #f3f4f6 !important;
+  }
+  .tabulator .tabulator-header .tabulator-col .tabulator-col-content {
+    padding: 10px 12px !important;
+  }
+  .tabulator .tabulator-row {
+    border-bottom: 1px solid #f3f4f6 !important;
+    background-color: #ffffff;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+  }
+  .tabulator .tabulator-row:hover {
+    background-color: #f9fafb !important;
+  }
+  .tabulator .tabulator-cell {
+    padding: 9px 12px !important;
+    border-right: 1px solid #f9fafb !important;
+    vertical-align: middle;
+  }
+  .tabulator .tabulator-footer {
+    background-color: #f9fafb !important;
+    border-top: 1px solid #e5e7eb !important;
+    padding: 10px 14px !important;
+    font-size: 0.75rem;
+  }
+  .tabulator .tabulator-page {
+    border: 1px solid #d1d5db !important;
+    background: #ffffff !important;
+    border-radius: 0.375rem !important;
+    color: #374151 !important;
+    margin: 0 2px !important;
+    padding: 4px 8px !important;
+  }
+  .tabulator .tabulator-page.active {
+    background-color: #e5e7eb !important;
+    font-weight: 600 !important;
+    color: #111827 !important;
+  }
+
+  /* Category Badges */
+  .badge-cat {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .badge-fungi { background-color: #fef3c7; color: #78350f; border: 1px solid #fde68a; }
+  .badge-nematode { background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+  .badge-microsporidia { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+  .badge-protist { background-color: #ffedd5; color: #9a3412; border: 1px solid #fed7aa; }
+  .badge-bacteria { background-color: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+  .badge-virus { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+  .badge-unknown { background-color: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; }
+
+  /* Reliable Bar Chart Utilities (Immune to Tailwind CSS purge) */
+  .bar-fungi {
+    background-color: #d97706 !important; /* amber-600 */
+    min-width: 6px;
+  }
+  .bar-nematode {
+    background-color: #0284c7 !important; /* sky-600 */
+    min-width: 6px;
+  }
+  .bar-microsporidia {
+    background-color: #9333ea !important; /* purple-600 */
+    min-width: 6px;
+  }
+  .bar-protist {
+    background-color: #ea580c !important; /* orange-600 */
+    min-width: 6px;
+  }
+  .bar-bacteria {
+    background-color: #16a34a !important; /* emerald-600 */
+    min-width: 6px;
+  }
+  .bar-virus {
+    background-color: #dc2626 !important; /* red-600 */
+    min-width: 6px;
+  }
+  .bar-bark-beetle {
+    background-color: #0284c7 !important; /* sky-600 */
+    min-width: 6px;
+  }
+  .bar-ambrosia-beetle {
+    background-color: #16a34a !important; /* emerald-600 */
+    min-width: 6px;
+  }
+  .bar-validation {
+    background-color: #16a34a !important; /* emerald-600 */
+    min-width: 6px;
+  }
+
+  /* Consistent spacing helper */
+  .gap-consistent {
+    gap: 12px !important;
+  }
+
+  /* Navigation Tabs */
+  .nav-tab-btn {
+    border-bottom: 2px solid transparent;
+    color: #6b7280;
+    transition: all 0.15s ease;
+    cursor: pointer;
+  }
+  .nav-tab-btn:hover {
+    color: #111827;
+    border-bottom-color: #d1d5db;
+  }
+  .nav-tab-btn.active {
+    border-bottom-color: #111827;
+    color: #111827;
+    font-weight: 600;
+  }
+
+  /* Grid Layout Utilities (Self-contained, independent of uncompiled Tailwind grid classes) */
+  .grid-5-cols {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .grid-4-cols {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .grid-3-cols {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .grid-2-cols {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  @media (max-width: 1024px) {
+    .grid-5-cols {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .grid-4-cols {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .grid-3-cols {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 768px) {
+    .grid-2-cols {
+      grid-template-columns: 1fr;
+    }
+    .grid-3-cols {
+      grid-template-columns: 1fr;
+    }
+    .grid-4-cols {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .grid-5-cols {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Standardized Download Button Matching the Gallery Theme and Spacing */
+  .btn-download {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #374151;
+    background-color: #ffffff;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    text-decoration: none;
+    line-height: normal;
+  }
+  .btn-download:hover {
+    background-color: #f9fafb;
+    border-color: #9ca3af;
+    color: #111827;
+  }
+  .btn-download i {
+    font-size: 0.75rem;
+    line-height: 1;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="relative z-0 max-w-7xl mx-auto py-2">
+
+  <!-- Header & Status -->
+  <div class="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-3">
+    <div>
+      <div class="flex flex-wrap items-center gap-consistent mb-1.5">
+        <h1 class="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight">
+          {{ page_title }}
+        </h1>
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-900 border border-amber-300">
+          Under Construction
+        </span>
+      </div>
+      <p class="text-sm text-gray-600 max-w-4xl leading-relaxed">
+        A literature-derived resource compiling reported pathogens and parasites associated with bark and ambrosia beetles (Scolytinae). Version 1.0 contains 1,011 records extracted from 281 primary publications published between 1914 and 2026, representing 114 beetle species in 29 genera and 289 unique candidate pathogen or parasite taxa.
+      </p>
+    </div>
+  </div>
+
+  <!-- Top Navigation Menu Bar (Home & About merged into About) -->
+  <div class="flex items-center gap-1 sm:gap-4 border-b border-gray-200 mb-6 overflow-x-auto text-xs sm:text-sm font-medium whitespace-nowrap scrollbar-none">
+    <button type="button" id="tab-btn-about" class="nav-tab-btn active py-3 px-2 sm:px-3">
+      About
+    </button>
+    <button type="button" id="tab-btn-browse" class="nav-tab-btn py-3 px-2 sm:px-3">
+      Browse Dataset <span class="text-[11px] text-gray-400 font-normal">(1,011)</span>
+    </button>
+    <button type="button" id="tab-btn-hosts" class="nav-tab-btn py-3 px-2 sm:px-3">
+      Beetle Hosts <span class="text-[11px] text-gray-400 font-normal">(114)</span>
+    </button>
+    <button type="button" id="tab-btn-groups" class="nav-tab-btn py-3 px-2 sm:px-3">
+      Pathogen Groups <span class="text-[11px] text-gray-400 font-normal">(6)</span>
+    </button>
+    <button type="button" id="tab-btn-refs" class="nav-tab-btn py-3 px-2 sm:px-3">
+      References <span class="text-[11px] text-gray-400 font-normal">(281)</span>
+    </button>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- TAB 1: ABOUT (Merged Home & About with Balanced Spacing & Figures) -->
+  <!-- ============================================================== -->
+  <div id="tab-pane-about" class="tab-pane space-y-6">
+
+    <!-- About the Dataset & Literature Scope Banner -->
+    <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm">
+      <div class="space-y-3">
+        <div>
+          <h2 class="text-base font-bold text-gray-900 flex items-center gap-consistent">
+            <i class="fi fi-rr-diagram-project text-xl text-gray-700"></i>
+            <span>About the dataset</span>
+          </h2>
+          <p class="text-sm text-gray-700 leading-relaxed mt-2">
+            The Bark and Ambrosia Beetle Pathogen Dataset is a literature-derived resource compiling reported pathogens and parasites associated with bark and ambrosia beetles (Scolytinae). Version 1.0 contains 1,011 records extracted from 281 primary publications published between 1914 and 2026, representing 114 beetle species in 29 genera and 289 unique candidate pathogen or parasite taxa.
+          </p>
+        </div>
+        <p class="text-sm text-gray-700 leading-relaxed">
+          The dataset includes fungi, bacteria, viruses, nematodes, protists, and microsporidia, together with information on beetle hosts, geographic locations, infection sites, organism sources, identification methods, reported ecological relationships, experimental conditions, and evidence of infection, pathogenicity, or virulence.
+        </p>
+        <div class="pt-1 text-xs text-gray-500 font-medium">
+          Literature search for version 1.0 was completed on <strong>24 July 2026</strong>.
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary Metric Tiles -->
+    <div class="grid-5-cols">
+      <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col justify-between">
+        <span class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Total Records</span>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span class="text-2xl font-bold text-gray-900 leading-none">1,011</span>
+          <span class="text-[11px] text-gray-400 font-mono">1914–2026</span>
+        </div>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col justify-between">
+        <span class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Beetle Species</span>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span class="text-2xl font-bold text-gray-900 leading-none">114</span>
+          <span class="text-[11px] text-gray-400 font-mono">29 genera</span>
+        </div>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col justify-between">
+        <span class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Candidate Taxa</span>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span class="text-2xl font-bold text-gray-900 leading-none">289</span>
+          <span class="text-[11px] text-gray-400 font-mono">taxa</span>
+        </div>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col justify-between">
+        <span class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Publications</span>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span class="text-2xl font-bold text-gray-900 leading-none">281</span>
+          <span class="text-[11px] text-gray-400 font-mono">primary refs</span>
+        </div>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col justify-between">
+        <span class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Validated Tests</span>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span class="text-2xl font-bold text-gray-900 leading-none">238</span>
+          <span class="text-[11px] text-gray-400 font-mono">23.5% verified</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Navigation Jump Cards (4 Columns) -->
+    <div class="grid-4-cols">
+      <button type="button" onclick="window.switchPathogenTab('browse')" class="text-left group p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-gray-400 hover:shadow transition flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-gray-900 text-sm group-hover:text-blue-600 transition">Browse Dataset</span>
+            <span class="text-xs text-gray-400 font-mono">&rarr;</span>
+          </div>
+          <div class="text-[11px] text-gray-400 font-mono mt-0.5">1,011 records</div>
+          <p class="text-xs text-gray-500 mt-2 leading-relaxed">Explore all reported beetle-pathogen associations with filtering and export.</p>
+        </div>
+      </button>
+
+      <button type="button" onclick="window.switchPathogenTab('hosts')" class="text-left group p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-gray-400 hover:shadow transition flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-gray-900 text-sm group-hover:text-blue-600 transition">Beetle Hosts</span>
+            <span class="text-xs text-gray-400 font-mono">&rarr;</span>
+          </div>
+          <div class="text-[11px] text-gray-400 font-mono mt-0.5">114 species</div>
+          <p class="text-xs text-gray-500 mt-2 leading-relaxed">Summary of all 114 Scolytinae species and reported pathogen spectrum.</p>
+        </div>
+      </button>
+
+      <button type="button" onclick="window.switchPathogenTab('groups')" class="text-left group p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-gray-400 hover:shadow transition flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-gray-900 text-sm group-hover:text-blue-600 transition">Pathogen Groups</span>
+            <span class="text-xs text-gray-400 font-mono">&rarr;</span>
+          </div>
+          <div class="text-[11px] text-gray-400 font-mono mt-0.5">6 groups</div>
+          <p class="text-xs text-gray-500 mt-2 leading-relaxed">Fungi, Nematodes, Microsporidia, Protists, Bacteria, and Viruses.</p>
+        </div>
+      </button>
+
+      <button type="button" onclick="window.switchPathogenTab('refs')" class="text-left group p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-gray-400 hover:shadow transition flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-gray-900 text-sm group-hover:text-blue-600 transition">References</span>
+            <span class="text-xs text-gray-400 font-mono">&rarr;</span>
+          </div>
+          <div class="text-[11px] text-gray-400 font-mono mt-0.5">281 publications</div>
+          <p class="text-xs text-gray-500 mt-2 leading-relaxed">Complete primary literature bibliography from 1914 to 2026.</p>
+        </div>
+      </button>
+    </div>
+
+    <!-- Scope and Interpretation Card -->
+    <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-3">
+      <h3 class="text-base font-bold text-gray-900">Scope and interpretation</h3>
+      <p class="text-sm text-gray-700 leading-relaxed">
+        A record in this dataset represents a literature-derived pathogen- or parasite–beetle association reported in a specific publication and geographic context. Records should not be interpreted as independent biological observations or as estimates of natural pathogen prevalence.
+      </p>
+      <p class="text-sm text-gray-700 leading-relaxed">
+        Importantly, inclusion in the dataset does not necessarily indicate experimentally demonstrated pathogenicity. Some records document organisms reported as pathogens or parasites by the original authors, whereas others are supported by experimental infection, pathogenicity, or virulence tests. Evidence type and validation information are retained separately to allow users to distinguish reported associations from experimentally supported interactions.
+      </p>
+      <p class="text-sm text-gray-600 italic leading-relaxed pt-1">
+        Taxonomic names were reconciled to current accepted nomenclature where possible. Such standardization represents nomenclatural reconciliation rather than re-identification of the original biological material.
+      </p>
+    </div>
+
+    <!-- Dataset Overview & Figures Section -->
+    <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-6">
+      <div>
+        <h3 class="text-base font-bold text-gray-900 mb-2">Dataset overview</h3>
+        <p class="text-sm text-gray-700 leading-relaxed">
+          Fungi were the most frequently reported group, with 409 records across 64 taxa, while nematodes comprised the greatest taxonomic diversity with 123 unique taxa across 221 records. Viruses were the least represented category (18 taxa from 46 records). Only 238 records (23.54%) reported any experimental validation of infection, pathogenicity, or virulence.
+        </p>
+      </div>
+
+      <!-- Figure 1 -->
+      <div class="p-5 bg-gray-50 rounded-lg border border-gray-200">
+        <div class="mb-3">
+          <h4 class="text-xs font-semibold text-gray-900 uppercase tracking-wider">Figure 1. Taxonomic composition and validation evidence of candidate pathogens and parasites</h4>
+          <p class="text-xs text-gray-600 mt-1 leading-normal">
+            <strong>A)</strong> Number of unique candidate pathogen or parasite taxa within each category (labels indicate unique taxa, followed in parentheses by total dataset records). <strong>B)</strong> Proportion of dataset records reporting experimental validation (pathogenicity, virulence, or infection tests).
+          </p>
+        </div>
+
+        <div class="grid-2-cols mt-4">
+          <!-- Panel A: Composition -->
+          <div class="space-y-2.5">
+            <div class="text-[11px] font-semibold text-gray-500 uppercase">A) Taxa &amp; Record Breakdown</div>
+            
+            <div>
+              <div class="flex justify-between text-xs font-medium text-gray-800 mb-1">
+                <span>Fungi</span>
+                <span class="font-mono text-gray-600">64 taxa (409 records)</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                <div class="bar-fungi h-2.5 rounded-full" style="width: 100%;"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-medium text-gray-800 mb-1">
+                <span>Nematodes</span>
+                <span class="font-mono text-gray-600">123 taxa (221 records)</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                <div class="bar-nematode h-2.5 rounded-full" style="width: 54%;"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-medium text-gray-800 mb-1">
+                <span>Microsporidia</span>
+                <span class="font-mono text-gray-600">30 taxa (144 records)</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                <div class="bar-microsporidia h-2.5 rounded-full" style="width: 35%;"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-medium text-gray-800 mb-1">
+                <span>Protists</span>
+                <span class="font-mono text-gray-600">23 taxa (141 records)</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                <div class="bar-protist h-2.5 rounded-full" style="width: 34%;"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-medium text-gray-800 mb-1">
+                <span>Bacteria</span>
+                <span class="font-mono text-gray-600">31 taxa (50 records)</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                <div class="bar-bacteria h-2.5 rounded-full" style="width: 12%;"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-medium text-gray-800 mb-1">
+                <span>Viruses</span>
+                <span class="font-mono text-gray-600">18 taxa (46 records)</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                <div class="bar-virus h-2.5 rounded-full" style="width: 11%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel B: Validation Proportion -->
+          <div class="flex flex-col justify-center bg-white p-4 rounded-lg border border-gray-200">
+            <div class="text-[11px] font-semibold text-gray-500 uppercase mb-3">B) Experimental Validation Status</div>
+            
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-800">Any Validation Test</span>
+              <span class="text-sm font-bold text-gray-900">238 records (23.54%)</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden mb-3">
+              <div class="bar-validation h-4 rounded-full flex items-center justify-end pr-2 text-[10px] text-white font-bold" style="width: 23.54%;">23.5%</div>
+            </div>
+
+            <div class="flex items-center justify-between text-xs text-gray-600 mb-1">
+              <span>Natural Observations / Unvalidated</span>
+              <span class="font-mono">773 records (76.46%)</span>
+            </div>
+            <p class="text-[11px] text-gray-500 mt-2 leading-normal">
+              Validation tests include laboratory virulence tests, Koch's postulates verification, cross-infection assays, and bioassays.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Figure 2 -->
+      <div class="p-5 bg-gray-50 rounded-lg border border-gray-200">
+        <div class="mb-4">
+          <h4 class="text-xs font-semibold text-gray-900 uppercase tracking-wider">Figure 2. Five most frequently reported candidate pathogens or parasites within each pathogen category</h4>
+          <p class="text-xs text-gray-600 mt-1 leading-normal">
+            Bars represent the number of literature-derived records for each taxon in the dataset and do not represent pathogen prevalence or independent infection events.
+          </p>
+        </div>
+
+        <div class="grid-3-cols">
+          <!-- 1. Fungi -->
+          <div class="bg-white p-4 sm:p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between hover:border-gray-300 transition">
+            <div>
+              <div class="flex items-center justify-between pb-2.5 mb-3 border-b border-gray-100">
+                <span class="badge-cat badge-fungi">Fungi</span>
+                <span class="text-xs font-mono font-medium text-gray-500">409 records · 64 taxa</span>
+              </div>
+              <div class="space-y-2">
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-900 truncate pr-2">Beauveria bassiana</span>
+                    <span class="font-mono text-gray-700 text-[11px] font-semibold flex-shrink-0">206</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-fungi h-1.5 rounded-full" style="width: 100%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Metarhizium anisopliae</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">24</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-fungi h-1.5 rounded-full" style="width: 11.7%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Beauveria caledonica</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">19</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-fungi h-1.5 rounded-full" style="width: 9.2%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Lecanicillium lecanii</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">13</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-fungi h-1.5 rounded-full" style="width: 6.3%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Isaria farinosa</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">10</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-fungi h-1.5 rounded-full" style="width: 4.9%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Nematodes -->
+          <div class="bg-white p-4 sm:p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between hover:border-gray-300 transition">
+            <div>
+              <div class="flex items-center justify-between pb-2.5 mb-3 border-b border-gray-100">
+                <span class="badge-cat badge-nematode">Nematodes</span>
+                <span class="text-xs font-mono font-medium text-gray-500">221 records · 123 taxa</span>
+              </div>
+              <div class="space-y-2">
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-900 truncate pr-2">Nematoda (unspecified)</span>
+                    <span class="font-mono text-gray-700 text-[11px] font-semibold flex-shrink-0">19</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-nematode h-1.5 rounded-full" style="width: 100%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Contortylenchus brevicomi</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">9</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-nematode h-1.5 rounded-full" style="width: 47.4%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Contortylenchus reversus</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">8</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-nematode h-1.5 rounded-full" style="width: 42.1%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Parasitaphelenchus sp.</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">7</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-nematode h-1.5 rounded-full" style="width: 36.8%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Contortylenchus diplogaster</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">6</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-nematode h-1.5 rounded-full" style="width: 31.6%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Microsporidia -->
+          <div class="bg-white p-4 sm:p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between hover:border-gray-300 transition">
+            <div>
+              <div class="flex items-center justify-between pb-2.5 mb-3 border-b border-gray-100">
+                <span class="badge-cat badge-microsporidia">Microsporidia</span>
+                <span class="text-xs font-mono font-medium text-gray-500">144 records · 30 taxa</span>
+              </div>
+              <div class="space-y-2">
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-900 truncate pr-2">Chytridiopsis typographi</span>
+                    <span class="font-mono text-gray-700 text-[11px] font-semibold flex-shrink-0">46</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-microsporidia h-1.5 rounded-full" style="width: 100%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Chytridiopsis cf. typographi</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">15</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-microsporidia h-1.5 rounded-full" style="width: 32.6%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Nosema typographi</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">10</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-microsporidia h-1.5 rounded-full" style="width: 21.7%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Malamoeba scolyti</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">9</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-microsporidia h-1.5 rounded-full" style="width: 19.6%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Larssoniella duplicati</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">7</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-microsporidia h-1.5 rounded-full" style="width: 15.2%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Protists -->
+          <div class="bg-white p-4 sm:p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between hover:border-gray-300 transition">
+            <div>
+              <div class="flex items-center justify-between pb-2.5 mb-3 border-b border-gray-100">
+                <span class="badge-cat badge-protist">Protists</span>
+                <span class="text-xs font-mono font-medium text-gray-500">141 records · 23 taxa</span>
+              </div>
+              <div class="space-y-2">
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-900 truncate pr-2">Gregarina typographi</span>
+                    <span class="font-mono text-gray-700 text-[11px] font-semibold flex-shrink-0">55</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-protist h-1.5 rounded-full" style="width: 100%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Gregarina sp.</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">19</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-protist h-1.5 rounded-full" style="width: 34.5%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Gregarina cf. typographi</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">11</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-protist h-1.5 rounded-full" style="width: 20.0%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Malamoeba scolyti</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">10</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-protist h-1.5 rounded-full" style="width: 18.2%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Mattesia sp.</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">9</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-protist h-1.5 rounded-full" style="width: 16.4%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. Bacteria -->
+          <div class="bg-white p-4 sm:p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between hover:border-gray-300 transition">
+            <div>
+              <div class="flex items-center justify-between pb-2.5 mb-3 border-b border-gray-100">
+                <span class="badge-cat badge-bacteria">Bacteria</span>
+                <span class="text-xs font-mono font-medium text-gray-500">50 records · 31 taxa</span>
+              </div>
+              <div class="space-y-2">
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-900 truncate pr-2">Serratia marcescens</span>
+                    <span class="font-mono text-gray-700 text-[11px] font-semibold flex-shrink-0">8</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-bacteria h-1.5 rounded-full" style="width: 100%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Bacillus thuringiensis</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">7</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-bacteria h-1.5 rounded-full" style="width: 87.5%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Bacillus cereus</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">4</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-bacteria h-1.5 rounded-full" style="width: 50.0%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Pseudomonas aeruginosa</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">2</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-bacteria h-1.5 rounded-full" style="width: 25.0%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">B. thuringiensis var. thuringiensis</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">2</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-bacteria h-1.5 rounded-full" style="width: 25.0%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 6. Viruses -->
+          <div class="bg-white p-4 sm:p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between hover:border-gray-300 transition">
+            <div>
+              <div class="flex items-center justify-between pb-2.5 mb-3 border-b border-gray-100">
+                <span class="badge-cat badge-virus">Viruses</span>
+                <span class="text-xs font-mono font-medium text-gray-500">46 records · 18 taxa</span>
+              </div>
+              <div class="space-y-2">
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-900 truncate pr-2">ItEPV (Entomopoxvirus)</span>
+                    <span class="font-mono text-gray-700 text-[11px] font-semibold flex-shrink-0">26</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-virus h-1.5 rounded-full" style="width: 100%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Entomopoxvirus</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">4</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-virus h-1.5 rounded-full" style="width: 15.4%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">similar to the ItEPV</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">1</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-virus h-1.5 rounded-full" style="width: 3.8%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">baculovirus-like particles</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">1</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-virus h-1.5 rounded-full" style="width: 3.8%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Entomopoxvirus-like particles</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">1</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-virus h-1.5 rounded-full" style="width: 3.8%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Figure 3 -->
+      <div class="p-5 bg-gray-50 rounded-lg border border-gray-200">
+        <div class="mb-3">
+          <h4 class="text-xs font-semibold text-gray-900 uppercase tracking-wider">Figure 3. Ten bark and ambrosia beetle species with the greatest number of reported pathogen or parasite records</h4>
+          <p class="text-xs text-gray-600 mt-1 leading-normal">
+            Ambrosia beetles are highlighted in <span class="font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">green</span> and bark beetles in <span class="font-semibold text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-200">blue</span>. Numbers at the ends of the bars indicate the total number of literature-derived records associated with each beetle species. Record frequency reflects representation in the published literature, rather than pathogen prevalence or pathogen richness in natural populations.
+          </p>
+        </div>
+
+        <div class="space-y-2.5 mt-4 w-full">
+          <!-- 1. Ips typographus -->
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="italic font-medium text-gray-900 flex items-center gap-1.5">
+                Ips typographus
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-sky-50 text-sky-700 border border-sky-200 font-normal">Bark beetle</span>
+              </span>
+              <span class="font-mono font-bold text-gray-800">253 records</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 100%;"></div>
+            </div>
+          </div>
+
+          <!-- 2. Dendroctonus frontalis -->
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="italic font-medium text-gray-900 flex items-center gap-1.5">
+                Dendroctonus frontalis
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-sky-50 text-sky-700 border border-sky-200 font-normal">Bark beetle</span>
+              </span>
+              <span class="font-mono font-bold text-gray-800">56 records</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 22.1%;"></div>
+            </div>
+          </div>
+
+          <!-- 3. Ips amitinus -->
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="italic font-medium text-gray-900 flex items-center gap-1.5">
+                Ips amitinus
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-sky-50 text-sky-700 border border-sky-200 font-normal">Bark beetle</span>
+              </span>
+              <span class="font-mono font-bold text-gray-800">45 records</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 17.8%;"></div>
+            </div>
+          </div>
+
+          <!-- 4. Ips sexdentatus -->
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="italic font-medium text-gray-900 flex items-center gap-1.5">
+                Ips sexdentatus
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-sky-50 text-sky-700 border border-sky-200 font-normal">Bark beetle</span>
+              </span>
+              <span class="font-mono font-bold text-gray-800">36 records</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 14.2%;"></div>
+            </div>
+          </div>
+
+          <!-- 5. Dendroctonus micans -->
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="italic font-medium text-gray-900 flex items-center gap-1.5">
+                Dendroctonus micans
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-sky-50 text-sky-700 border border-sky-200 font-normal">Bark beetle</span>
+              </span>
+              <span class="font-mono font-bold text-gray-800">31 records</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 12.2%;"></div>
+            </div>
+          </div>
+
+          <!-- 6. Ips duplicatus -->
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="italic font-medium text-gray-900 flex items-center gap-1.5">
+                Ips duplicatus
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-sky-50 text-sky-700 border border-sky-200 font-normal">Bark beetle</span>
+              </span>
+              <span class="font-mono font-bold text-gray-800">30 records</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 11.8%;"></div>
+            </div>
+          </div>
+
+          <!-- 7. Dryocoetes autographus -->
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="italic font-medium text-gray-900 flex items-center gap-1.5">
+                Dryocoetes autographus
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-sky-50 text-sky-700 border border-sky-200 font-normal">Bark beetle</span>
+              </span>
+              <span class="font-mono font-bold text-gray-800">27 records</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 10.7%;"></div>
+            </div>
+          </div>
+
+          <!-- 8. Pityogenes chalcographus -->
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="italic font-medium text-gray-900 flex items-center gap-1.5">
+                Pityogenes chalcographus
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-sky-50 text-sky-700 border border-sky-200 font-normal">Bark beetle</span>
+              </span>
+              <span class="font-mono font-bold text-gray-800">23 records</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 9.1%;"></div>
+            </div>
+          </div>
+
+          <!-- 9. Scolytus multistriatus -->
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="italic font-medium text-gray-900 flex items-center gap-1.5">
+                Scolytus multistriatus
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-sky-50 text-sky-700 border border-sky-200 font-normal">Bark beetle</span>
+              </span>
+              <span class="font-mono font-bold text-gray-800">22 records</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 8.7%;"></div>
+            </div>
+          </div>
+
+          <!-- 10. Xylosandrus germanus (Ambrosia) -->
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="italic font-medium text-gray-900 flex items-center gap-1.5">
+                Xylosandrus germanus
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-normal">Ambrosia beetle</span>
+              </span>
+              <span class="font-mono font-bold text-gray-800">20 records</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+              <div class="bar-ambrosia-beetle h-2.5 rounded-full" style="width: 7.9%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Evidence & Validation Section (Merged into About Tab) -->
+    <div id="about-evidence-section" class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h3 class="text-base font-bold text-gray-900">Experimental validation &amp; evidence types</h3>
+          <p class="text-xs text-gray-600 mt-1 leading-relaxed max-w-3xl">
+            Inclusion in the dataset does not necessarily indicate experimentally demonstrated pathogenicity. Some records document organisms reported as pathogens or parasites by the original authors based on natural surveys, whereas 238 records (23.54%) are supported by formal infection, pathogenicity, or virulence tests.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <button type="button" onclick="window.filterAndBrowseValidation('validated')"
+            class="h-9 px-3 bg-gray-900 text-white rounded-md text-xs font-medium hover:bg-gray-800 transition whitespace-nowrap shadow-sm">
+            Browse 238 Validated Records &rarr;
+          </button>
+          <a href="{% static 'data/pathogens_with_validation.csv' %}" download="pathogens_with_validation.csv"
+            class="btn-download"
+            title="Download validated records as CSV">
+            <i class="fi fi-rr-download text-gray-500"></i>
+            <span>Download CSV</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="grid-4-cols">
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div class="text-xs font-semibold text-gray-500 uppercase">Virulence Tests</div>
+          <div class="text-2xl font-bold text-gray-900 mt-1">178</div>
+          <p class="text-xs text-gray-600 mt-2">Dose-response mortality bioassays, topical application, and lethal concentration experiments.</p>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div class="text-xs font-semibold text-gray-500 uppercase">Koch's Postulates</div>
+          <div class="text-2xl font-bold text-gray-900 mt-1">29</div>
+          <p class="text-xs text-gray-600 mt-2">Complete isolation, culture, reinoculation, and re-isolation demonstrating disease causality.</p>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div class="text-xs font-semibold text-gray-500 uppercase">Cross-Infection</div>
+          <div class="text-2xl font-bold text-gray-900 mt-1">19</div>
+          <p class="text-xs text-gray-600 mt-2">Experimental inoculation across non-source scolytine species or alternative insect hosts.</p>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div class="text-xs font-semibold text-gray-500 uppercase">General Bioassays</div>
+          <div class="text-2xl font-bold text-gray-900 mt-1">12</div>
+          <p class="text-xs text-gray-600 mt-2">Laboratory petri dish exposure assays, fecundity impairment tests, and developmental tracking.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- How to Cite This Dataset Card -->
+    <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-bold text-gray-900">How to cite this dataset</h3>
+        <button id="copy-citation-btn" type="button" class="text-xs text-blue-600 hover:text-blue-800 font-medium underline">
+          Copy Citation
+        </button>
+      </div>
+      <div id="citation-text" class="p-4 bg-gray-50 rounded-lg border border-gray-200 font-mono text-xs text-gray-800 select-all leading-relaxed break-all">
+        Dong Y. 2026. A global dataset of reported pathogens and parasites associated with bark and ambrosia beetles. Version 1.0. https://app.notion.com/p/ydcn/A-global-database-of-reported-pathogens-and-parasites-associated-with-bark-and-ambrosia-beetles-7e4970ea0cac8346b5a801e41dfd2f16 (date cited).
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- TAB 2: BROWSE DATASET (Interactive Tabulator Table + CSV Exporter) -->
+  <!-- ============================================================== -->
+  <div id="tab-pane-browse" class="tab-pane hidden space-y-4">
+
+    <!-- Controls Toolbar -->
+    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+      <div class="flex flex-col xl:flex-row gap-3 items-stretch xl:items-center justify-between">
+
+        <!-- Global Search Input -->
+        <div class="relative flex-1 min-w-[260px]">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </div>
+          <input id="global-search" type="text"
+            placeholder="Search by beetle host, pathogen taxon, country, author, or keyword…"
+            class="w-full h-9 pl-9 pr-8 border border-gray-300 rounded-md text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition" />
+          <button id="clear-search" type="button" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Filters & Action Buttons -->
+        <div class="flex flex-wrap items-center gap-2">
+
+          <!-- Category Filter -->
+          <div class="flex items-center gap-1.5">
+            <label for="category-filter" class="text-xs font-medium text-gray-600">Category:</label>
+            <select id="category-filter"
+              class="h-9 text-xs border border-gray-300 rounded-md px-2.5 bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-400 transition">
+              <option value="">All Categories (1,011)</option>
+              <option value="Fungi">Fungi (409 records / 64 taxa)</option>
+              <option value="Nematode">Nematodes (221 records / 123 taxa)</option>
+              <option value="Microsporidia">Microsporidia (144 records / 30 taxa)</option>
+              <option value="Protist">Protists (141 records / 23 taxa)</option>
+              <option value="Bacteria">Bacteria (50 records / 31 taxa)</option>
+              <option value="Virus">Viruses (46 records / 18 taxa)</option>
+            </select>
+          </div>
+
+          <!-- Evidence Filter -->
+          <div class="flex items-center gap-1.5">
+            <label for="validation-filter" class="text-xs font-medium text-gray-600">Evidence:</label>
+            <select id="validation-filter"
+              class="h-9 text-xs border border-gray-300 rounded-md px-2.5 bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-400 transition">
+              <option value="">All Evidence Types</option>
+              <option value="validated">Experimental Validation (238)</option>
+              <option value="virulence test">Virulence Test</option>
+              <option value="Koch's postulates">Koch's Postulates</option>
+              <option value="cross-infection">Cross-Infection</option>
+              <option value="bioassay">Bioassay</option>
+              <option value="unvalidated">Natural Survey / Unvalidated</option>
+            </select>
+          </div>
+
+          <!-- Reset Filter -->
+          <button id="reset-filters" type="button"
+            class="h-9 text-xs px-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md border border-gray-300 transition whitespace-nowrap">
+            Reset
+          </button>
+
+          <!-- Divider -->
+          <div class="h-5 w-px bg-gray-200 hidden sm:block mx-0.5"></div>
+
+          <!-- Download CSV Button (Matching the exact theme, spacing, and icon of other pages) -->
+          <button id="download-active-csv-btn" type="button"
+            class="btn-download"
+            title="Download active records as CSV">
+            <i class="fi fi-rr-download text-gray-500"></i>
+            <span>Download CSV</span>
+          </button>
+
+          <!-- Download Excel (.xlsx) Button (Same theme, spacing, and height) -->
+          <a href="{% static 'data/bark_beetle_pathogen_database.xlsx' %}" download="bark_beetle_pathogen_dataset.xlsx"
+            class="btn-download"
+            title="Download full multi-sheet Excel workbook">
+            <i class="fi fi-rr-document text-emerald-600"></i>
+            <span>Download Excel</span>
+          </a>
+
+        </div>
+
+      </div>
+
+      <!-- Status Bar -->
+      <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+        <div id="record-count-display">Loading master records…</div>
+        <div class="text-[11px] text-gray-400 hidden sm:block">Click any row to inspect complete literature extraction details</div>
+      </div>
+    </div>
+
+    <!-- Table Loading State -->
+    <div id="table-loading-indicator" class="p-12 text-center bg-white rounded-lg border border-gray-200">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-3"></div>
+      <p class="text-sm font-medium text-gray-700">Loading master pathogen dataset…</p>
+      <p class="text-xs text-gray-500 mt-1">Reading 1,011 association records</p>
+    </div>
+
+    <!-- Master Tabulator Table -->
+    <div id="interactions-table-wrapper" class="hidden">
+      <div id="interactions-table" class="w-full"></div>
+    </div>
+
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- TAB 3: BEETLE HOSTS (114 Scolytinae Species Summary) -->
+  <!-- ============================================================== -->
+  <div id="tab-pane-hosts" class="tab-pane hidden space-y-4">
+    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="relative flex-1 w-full max-w-md">
+          <input id="hosts-search" type="text" placeholder="Search beetle species (e.g., Ips typographus, Dendroctonus)…"
+            class="w-full h-9 pl-3 pr-3 border border-gray-300 rounded-md text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 transition" />
+        </div>
+        <div class="flex items-center gap-2">
+          <a href="{% static 'data/beetle_hosts_summary.csv' %}" download="beetle_hosts_summary.csv"
+            class="btn-download"
+            title="Download beetle hosts summary as CSV">
+            <i class="fi fi-rr-download text-gray-500"></i>
+            <span>Download Hosts CSV</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div id="hosts-table-wrapper">
+      <div id="hosts-table" class="w-full"></div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- TAB 4: PATHOGEN GROUPS (6 Categories) -->
+  <!-- ============================================================== -->
+  <div id="tab-pane-groups" class="tab-pane hidden space-y-5">
+    <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+      <h2 class="text-base font-semibold text-gray-900 mb-1">Browse by Pathogen &amp; Parasite Category</h2>
+      <p class="text-xs text-gray-600 leading-relaxed">
+        The dataset compiles reported candidate taxa across 6 major biological groups. Select any category below to inspect key statistics, top reported taxa, or filter the master dataset to that category.
+      </p>
+    </div>
+
+    <div class="grid-3-cols">
+      
+      <!-- Fungi -->
+      <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col justify-between hover:border-gray-400 transition">
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="badge-cat badge-fungi text-xs px-2.5 py-1">Fungi</span>
+            <span class="text-xs font-mono text-gray-500">409 records</span>
+          </div>
+          <h3 class="text-lg font-bold text-gray-900">64 Unique Taxa</h3>
+          <p class="text-xs text-gray-600 mt-2 leading-relaxed">
+            Major entomopathogenic and associated fungal species, including extensively tested biocontrol agents and natural epizootic isolates.
+          </p>
+          <div class="mt-4 p-3 bg-gray-50 rounded border border-gray-200 text-xs">
+            <div class="font-semibold text-gray-800 mb-1">Frequently Reported Taxa:</div>
+            <ul class="text-gray-600 space-y-0.5 italic">
+              <li>• Beauveria bassiana (206)</li>
+              <li>• Metarhizium anisopliae (24)</li>
+              <li>• Beauveria caledonica (19)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="mt-5 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
+          <button type="button" onclick="window.filterAndBrowseCategory('Fungi')"
+            class="text-xs font-medium text-amber-700 hover:text-amber-900 hover:underline">
+            View 409 Records in Dataset &rarr;
+          </button>
+          <a href="{% static 'data/pathogens_fungi.csv' %}" download="pathogens_fungi.csv"
+            class="text-[11px] text-gray-500 hover:text-gray-800 underline">CSV</a>
+        </div>
+      </div>
+
+      <!-- Nematodes -->
+      <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col justify-between hover:border-gray-400 transition">
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="badge-cat badge-nematode text-xs px-2.5 py-1">Nematodes</span>
+            <span class="text-xs font-mono text-gray-500">221 records</span>
+          </div>
+          <h3 class="text-lg font-bold text-gray-900">123 Unique Taxa</h3>
+          <p class="text-xs text-gray-600 mt-2 leading-relaxed">
+            Diverse group representing 123 distinct taxa. Includes phoretic, intestinal, and parasitic nematodes documented from cuticular folds, body cavities, and galleries.
+          </p>
+          <div class="mt-4 p-3 bg-gray-50 rounded border border-gray-200 text-xs">
+            <div class="font-semibold text-gray-800 mb-1">Frequently Reported Taxa:</div>
+            <ul class="text-gray-600 space-y-0.5 italic">
+              <li>• Contortylenchus brevicomi (9)</li>
+              <li>• Contortylenchus reversus (8)</li>
+              <li>• Parasitaphelenchus sp. (7)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="mt-5 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
+          <button type="button" onclick="window.filterAndBrowseCategory('Nematode')"
+            class="text-xs font-medium text-sky-700 hover:text-sky-900 hover:underline">
+            View 221 Records in Dataset &rarr;
+          </button>
+          <a href="{% static 'data/pathogens_nematodes.csv' %}" download="pathogens_nematodes.csv"
+            class="text-[11px] text-gray-500 hover:text-gray-800 underline">CSV</a>
+        </div>
+      </div>
+
+      <!-- Microsporidia -->
+      <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col justify-between hover:border-gray-400 transition">
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="badge-cat badge-microsporidia text-xs px-2.5 py-1">Microsporidia</span>
+            <span class="text-xs font-mono text-gray-500">144 records</span>
+          </div>
+          <h3 class="text-lg font-bold text-gray-900">30 Unique Taxa</h3>
+          <p class="text-xs text-gray-600 mt-2 leading-relaxed">
+            Obligate intracellular parasites causing chronic debilitation, reduced fecundity, and mortality in bark beetle populations.
+          </p>
+          <div class="mt-4 p-3 bg-gray-50 rounded border border-gray-200 text-xs">
+            <div class="font-semibold text-gray-800 mb-1">Frequently Reported Taxa:</div>
+            <ul class="text-gray-600 space-y-0.5 italic">
+              <li>• Chytridiopsis typographi (46)</li>
+              <li>• Nosema typographi (10)</li>
+              <li>• Malamoeba scolyti (9)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="mt-5 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
+          <button type="button" onclick="window.filterAndBrowseCategory('Microsporidia')"
+            class="text-xs font-medium text-purple-700 hover:text-purple-900 hover:underline">
+            View 144 Records in Dataset &rarr;
+          </button>
+          <a href="{% static 'data/pathogens_microsporidia.csv' %}" download="pathogens_microsporidia.csv"
+            class="text-[11px] text-gray-500 hover:text-gray-800 underline">CSV</a>
+        </div>
+      </div>
+
+      <!-- Protists -->
+      <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col justify-between hover:border-gray-400 transition">
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="badge-cat badge-protist text-xs px-2.5 py-1">Protists</span>
+            <span class="text-xs font-mono text-gray-500">141 records</span>
+          </div>
+          <h3 class="text-lg font-bold text-gray-900">23 Unique Taxa</h3>
+          <p class="text-xs text-gray-600 mt-2 leading-relaxed">
+            Includes intestinal gregarines and amoeboid pathogens infecting midgut epithelium and Malpighian tubules.
+          </p>
+          <div class="mt-4 p-3 bg-gray-50 rounded border border-gray-200 text-xs">
+            <div class="font-semibold text-gray-800 mb-1">Frequently Reported Taxa:</div>
+            <ul class="text-gray-600 space-y-0.5 italic">
+              <li>• Gregarina typographi (55)</li>
+              <li>• Gregarina sp. (19)</li>
+              <li>• Mattesia sp. (9)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="mt-5 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
+          <button type="button" onclick="window.filterAndBrowseCategory('Protist')"
+            class="text-xs font-medium text-orange-700 hover:text-orange-900 hover:underline">
+            View 141 Records in Dataset &rarr;
+          </button>
+          <a href="{% static 'data/pathogens_protists.csv' %}" download="pathogens_protists.csv"
+            class="text-[11px] text-gray-500 hover:text-gray-800 underline">CSV</a>
+        </div>
+      </div>
+
+      <!-- Bacteria -->
+      <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col justify-between hover:border-gray-400 transition">
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="badge-cat badge-bacteria text-xs px-2.5 py-1">Bacteria</span>
+            <span class="text-xs font-mono text-gray-500">50 records</span>
+          </div>
+          <h3 class="text-lg font-bold text-gray-900">31 Unique Taxa</h3>
+          <p class="text-xs text-gray-600 mt-2 leading-relaxed">
+            Bacterial isolates associated with septicemia, gut symbiosis, or opportunistic infection following physical host stress.
+          </p>
+          <div class="mt-4 p-3 bg-gray-50 rounded border border-gray-200 text-xs">
+            <div class="font-semibold text-gray-800 mb-1">Frequently Reported Taxa:</div>
+            <ul class="text-gray-600 space-y-0.5 italic">
+              <li>• Serratia marcescens (8)</li>
+              <li>• Bacillus thuringiensis (7)</li>
+              <li>• Bacillus cereus (4)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="mt-5 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
+          <button type="button" onclick="window.filterAndBrowseCategory('Bacteria')"
+            class="text-xs font-medium text-emerald-700 hover:text-emerald-900 hover:underline">
+            View 50 Records in Dataset &rarr;
+          </button>
+          <a href="{% static 'data/pathogens_bacteria.csv' %}" download="pathogens_bacteria.csv"
+            class="text-[11px] text-gray-500 hover:text-gray-800 underline">CSV</a>
+        </div>
+      </div>
+
+      <!-- Viruses -->
+      <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col justify-between hover:border-gray-400 transition">
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="badge-cat badge-virus text-xs px-2.5 py-1">Viruses</span>
+            <span class="text-xs font-mono text-gray-500">46 records</span>
+          </div>
+          <h3 class="text-lg font-bold text-gray-900">18 Unique Taxa</h3>
+          <p class="text-xs text-gray-600 mt-2 leading-relaxed">
+            Least represented category in published literature. Primarily comprised of entomopoxviruses and cypoviruses detected via TEM or bioassay.
+          </p>
+          <div class="mt-4 p-3 bg-gray-50 rounded border border-gray-200 text-xs">
+            <div class="font-semibold text-gray-800 mb-1">Frequently Reported Taxa:</div>
+            <ul class="text-gray-600 space-y-0.5 italic">
+              <li>• ItEPV (26)</li>
+              <li>• Entomopoxvirus (4)</li>
+              <li>• Baculovirus-like particles (1)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="mt-5 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
+          <button type="button" onclick="window.filterAndBrowseCategory('Virus')"
+            class="text-xs font-medium text-red-700 hover:text-red-900 hover:underline">
+            View 46 Records in Dataset &rarr;
+          </button>
+          <a href="{% static 'data/pathogens_viruses.csv' %}" download="pathogens_viruses.csv"
+            class="text-[11px] text-gray-500 hover:text-gray-800 underline">CSV</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- TAB 5: REFERENCES (281 Primary Publications) -->
+  <!-- ============================================================== -->
+  <div id="tab-pane-refs" class="tab-pane hidden space-y-4">
+    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="relative flex-1 w-full max-w-md">
+          <input id="refs-search" type="text" placeholder="Search publications by author, title, or year (1914–2026)…"
+            class="w-full h-9 pl-3 pr-3 border border-gray-300 rounded-md text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 transition" />
+        </div>
+        <div class="flex items-center gap-2">
+          <a href="{% static 'data/references.csv' %}" download="references.csv"
+            class="btn-download"
+            title="Download references bibliography as CSV">
+            <i class="fi fi-rr-download text-gray-500"></i>
+            <span>Download References CSV</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div id="refs-table-wrapper">
+      <div id="refs-table" class="w-full"></div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ============================================================== -->
+<!-- DETAIL MODAL (Inspect complete record on row click) -->
+<!-- ============================================================== -->
+<div id="detail-modal" class="fixed inset-0 z-50 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+  <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
+    <!-- Backdrop -->
+    <div id="detail-modal-backdrop" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+
+    <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+
+    <!-- Modal Card -->
+    <div class="inline-block align-middle bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:max-w-2xl sm:w-full border border-gray-200 z-10">
+      
+      <!-- Modal Header -->
+      <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <h3 class="text-base font-semibold text-gray-900" id="modal-title">Record Details</h3>
+          <span id="modal-record-id" class="font-mono text-xs text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded">ID #—</span>
+        </div>
+        <button id="close-modal-btn" type="button" class="text-gray-400 hover:text-gray-600 focus:outline-none">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="px-6 py-5 space-y-4 text-sm text-gray-700 max-h-[75vh] overflow-y-auto">
+        
+        <!-- Taxon Pair Summary -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-lg bg-gray-50 border border-gray-200">
+          <div>
+            <div class="text-xs font-medium text-gray-500 uppercase tracking-wider">Beetle Host</div>
+            <div id="modal-host" class="text-base font-semibold italic text-gray-900 mt-0.5">—</div>
+          </div>
+          <div>
+            <div class="text-xs font-medium text-gray-500 uppercase tracking-wider">Pathogen / Associate</div>
+            <div id="modal-pathogen" class="text-base font-semibold italic text-gray-900 mt-0.5">—</div>
+          </div>
+        </div>
+
+        <!-- Association Details Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-y-3.5 gap-x-4 text-xs">
+          <div>
+            <span class="text-gray-500 block">Category</span>
+            <span id="modal-category" class="font-medium text-gray-900 mt-0.5 block">—</span>
+          </div>
+          <div>
+            <span class="text-gray-500 block">Relationship</span>
+            <span id="modal-relationship" class="font-medium text-gray-900 mt-0.5 block">—</span>
+          </div>
+          <div>
+            <span class="text-gray-500 block">Country / Region</span>
+            <span id="modal-country" class="font-medium text-gray-900 mt-0.5 block">—</span>
+          </div>
+          <div>
+            <span class="text-gray-500 block">Infection Site</span>
+            <span id="modal-site" class="font-medium text-gray-900 mt-0.5 block">—</span>
+          </div>
+          <div>
+            <span class="text-gray-500 block">Validation Type</span>
+            <span id="modal-validation" class="font-medium text-gray-900 mt-0.5 block">—</span>
+          </div>
+          <div>
+            <span class="text-gray-500 block">Experimental Conditions</span>
+            <span id="modal-conditions" class="font-medium text-gray-900 mt-0.5 block">—</span>
+          </div>
+          <div>
+            <span class="text-gray-500 block">Organism Source</span>
+            <span id="modal-source-org" class="font-medium text-gray-900 mt-0.5 block">—</span>
+          </div>
+          <div>
+            <span class="text-gray-500 block">Identification Method</span>
+            <span id="modal-method" class="font-medium text-gray-900 mt-0.5 block">—</span>
+          </div>
+          <div>
+            <span class="text-gray-500 block">Publication Year</span>
+            <span id="modal-year" class="font-medium text-gray-900 mt-0.5 block">—</span>
+          </div>
+        </div>
+
+        <!-- Bibliographic Citation -->
+        <div class="pt-3 border-t border-gray-200">
+          <div class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Bibliographic Citation</div>
+          <div id="modal-citation" class="text-xs leading-relaxed text-gray-800 bg-gray-50 p-3 rounded border border-gray-200">
+            —
+          </div>
+          <div id="modal-doi-wrap" class="mt-2.5">
+            <a id="modal-doi-link" href="#" target="_blank" rel="noopener"
+              class="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 hover:underline">
+              <span>View Source Publication / DOI Link</span>
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="bg-gray-50 px-6 py-3 border-t border-gray-200 flex justify-end">
+        <button id="close-modal-bottom-btn" type="button"
+          class="px-4 py-1.5 text-xs font-medium rounded-md border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 transition">
+          Close
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Load Tabulator JS Locally from Static Files -->
+<script src="{% static 'js/tabulator.min.js' %}"></script>
+
+<script>
+(function() {
+  "use strict";
+
+  // Data URLs
+  var MASTER_DATA_URL = "{% static 'data/bark_beetle_pathogens_master.json' %}";
+  var HOSTS_DATA_URL  = "{% static 'data/beetle_hosts_summary.json' %}";
+  var REFS_DATA_URL   = "{% static 'data/references.json' %}";
+
+  var masterRecords = [];
+  var hostsRecords  = [];
+  var refsRecords   = [];
+
+  var masterTable = null;
+  var hostsTable  = null;
+  var refsTable   = null;
+
+  // DOM Elements
+  var searchInput       = document.getElementById("global-search");
+  var clearSearchBtn    = document.getElementById("clear-search");
+  var categoryFilter    = document.getElementById("category-filter");
+  var validationFilter  = document.getElementById("validation-filter");
+  var resetBtn          = document.getElementById("reset-filters");
+  var countDisplay      = document.getElementById("record-count-display");
+  var downloadActiveCsvBtn = document.getElementById("download-active-csv-btn");
+
+  var loadingIndicator  = document.getElementById("table-loading-indicator");
+  var tableWrapper      = document.getElementById("interactions-table-wrapper");
+
+  // Modal Elements
+  var modal             = document.getElementById("detail-modal");
+  var modalBackdrop     = document.getElementById("detail-modal-backdrop");
+  var closeModalBtn     = document.getElementById("close-modal-btn");
+  var closeModalBottomBtn = document.getElementById("close-modal-bottom-btn");
+
+  // Copy Citation Button
+  var copyCitationBtn   = document.getElementById("copy-citation-btn");
+  if (copyCitationBtn) {
+    copyCitationBtn.addEventListener("click", function() {
+      var citationElem = document.getElementById("citation-text");
+      if (citationElem) {
+        navigator.clipboard.writeText(citationElem.textContent.trim()).then(function() {
+          copyCitationBtn.textContent = "Copied to clipboard!";
+          setTimeout(function() { copyCitationBtn.textContent = "Copy Citation"; }, 2500);
+        });
+      }
+    });
+  }
+
+  // Native CSV Exporter Function with UTF-8 BOM
+  function exportRecordsToCsv(filename, records) {
+    if (!records || !records.length) {
+      alert("No records currently available to export.");
+      return;
+    }
+    var headers = [
+      "Records ID",
+      "Beetle Host",
+      "pathogens",
+      "categories",
+      "ecological relationship",
+      "validation type",
+      "country or region",
+      "infection site",
+      "organism source",
+      "identification method",
+      "experimental conditions",
+      "year",
+      "source",
+      "title",
+      "doi or full text"
+    ];
+
+    var csvRows = [];
+    csvRows.push(headers.map(function(h) { return '"' + h.replace(/"/g, '""') + '"'; }).join(","));
+
+    records.forEach(function(r) {
+      var row = headers.map(function(h) {
+        var val = (r[h] === undefined || r[h] === null) ? "" : String(r[h]);
+        return '"' + val.replace(/"/g, '""') + '"';
+      });
+      csvRows.push(row.join(","));
+    });
+
+    var blob = new Blob(["\uFEFF" + csvRows.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function triggerActiveCsvExport() {
+    var activeData = masterRecords;
+    if (masterTable && typeof masterTable.getData === "function") {
+      try {
+        var filtered = masterTable.getData("active");
+        if (filtered && filtered.length > 0) {
+          activeData = filtered;
+        }
+      } catch (e) {
+        activeData = masterRecords;
+      }
+    }
+    exportRecordsToCsv("bark_beetle_pathogen_dataset.csv", activeData);
+  }
+
+  if (downloadActiveCsvBtn) {
+    downloadActiveCsvBtn.addEventListener("click", triggerActiveCsvExport);
+  }
+
+  // Modal Functions
+  function openModal(data) {
+    document.getElementById("modal-record-id").textContent = "ID #" + (data["Records ID"] || "—");
+    document.getElementById("modal-host").textContent = data["Beetle Host"] || "Not stated";
+    document.getElementById("modal-pathogen").textContent = data["pathogens"] || "Not stated";
+    document.getElementById("modal-category").textContent = data["categories"] || "—";
+    document.getElementById("modal-relationship").textContent = data["ecological relationship"] || "—";
+    document.getElementById("modal-country").textContent = data["country or region"] || "—";
+    document.getElementById("modal-site").textContent = data["infection site"] || "Not stated";
+    document.getElementById("modal-validation").textContent = data["validation type"] || "None reported";
+    document.getElementById("modal-conditions").textContent = data["experimental conditions"] || "—";
+    document.getElementById("modal-source-org").textContent = data["organism source"] || "—";
+    document.getElementById("modal-method").textContent = data["identification method"] || "—";
+    document.getElementById("modal-year").textContent = data["year"] || "—";
+
+    var citation = data["title"] || data["source"] || "Citation not provided";
+    document.getElementById("modal-citation").textContent = citation;
+
+    var doiUrl = data["doi or full text"];
+    var doiWrap = document.getElementById("modal-doi-wrap");
+    var doiLink = document.getElementById("modal-doi-link");
+    if (doiUrl && (doiUrl.startsWith("http://") || doiUrl.startsWith("https://"))) {
+      doiLink.href = doiUrl;
+      doiWrap.classList.remove("hidden");
+    } else {
+      doiWrap.classList.add("hidden");
+    }
+
+    modal.classList.remove("hidden");
+  }
+
+  function closeModal() {
+    modal.classList.add("hidden");
+  }
+
+  if (closeModalBtn) closeModalBtn.addEventListener("click", closeModal);
+  if (closeModalBottomBtn) closeModalBottomBtn.addEventListener("click", closeModal);
+  if (modalBackdrop) modalBackdrop.addEventListener("click", closeModal);
+
+  // Initialize Master Table
+  function initMasterTable(data) {
+    loadingIndicator.classList.add("hidden");
+    tableWrapper.classList.remove("hidden");
+    countDisplay.textContent = "Showing " + data.length.toLocaleString() + " of 1,011 records";
+
+    masterTable = new Tabulator("#interactions-table", {
+      data: data,
+      layout: "fitColumns",
+      responsiveLayout: "collapse",
+      pagination: "local",
+      paginationSize: 25,
+      paginationSizeSelector: [25, 50, 100, 500, true],
+      placeholder: "<div class='p-8 text-center text-gray-500'>No ecological interactions found matching the selected filters.</div>",
+      initialSort: [
+        { column: "Beetle Host", dir: "asc" }
+      ],
+      columns: [
+        {
+          title: "Beetle Host",
+          field: "Beetle Host",
+          minWidth: 150,
+          formatter: function(cell) {
+            return '<span class="italic font-medium text-gray-900">' + (cell.getValue() || "—") + '</span>';
+          }
+        },
+        {
+          title: "Pathogen / Associate",
+          field: "pathogens",
+          minWidth: 160,
+          formatter: function(cell) {
+            return '<span class="italic font-medium text-gray-800">' + (cell.getValue() || "—") + '</span>';
+          }
+        },
+        {
+          title: "Category",
+          field: "categories",
+          width: 120,
+          formatter: function(cell) {
+            var val = cell.getValue() || "Unknown";
+            var key = val.toLowerCase().trim();
+            var cls = "badge-" + key;
+            if (!["badge-fungi", "badge-nematode", "badge-microsporidia", "badge-protist", "badge-bacteria", "badge-virus"].includes(cls)) {
+              cls = "badge-unknown";
+            }
+            return '<span class="badge-cat ' + cls + '">' + val + '</span>';
+          }
+        },
+        {
+          title: "Relationship",
+          field: "ecological relationship",
+          width: 130,
+          formatter: function(cell) {
+            return '<span class="text-xs text-gray-600">' + (cell.getValue() || "—") + '</span>';
+          }
+        },
+        {
+          title: "Validation",
+          field: "validation type",
+          width: 135,
+          formatter: function(cell) {
+            var val = cell.getValue();
+            if (!val || val.trim() === "" || val.toLowerCase() === "none") {
+              return '<span class="text-gray-300">—</span>';
+            }
+            return '<span class="inline-flex items-center gap-1 text-xs font-medium text-gray-800 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded">' +
+                   '<svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>' +
+                   val + '</span>';
+          }
+        },
+        {
+          title: "Country / Region",
+          field: "country or region",
+          width: 130,
+          formatter: function(cell) {
+            return '<span class="text-xs text-gray-600">' + (cell.getValue() || "—") + '</span>';
+          }
+        },
+        {
+          title: "Source Reference",
+          field: "source",
+          width: 160,
+          formatter: function(cell) {
+            var rowData = cell.getRow().getData();
+            var label = cell.getValue() || "Reference";
+            var rawLink = (rowData["doi or full text"] || "").trim();
+            if (rawLink) {
+              try {
+                var parsed = new URL(rawLink);
+                if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+                  var safeLink = parsed.href;
+                  return '<a href="' + safeLink + '" target="_blank" rel="noopener noreferrer" class="text-gray-700 hover:text-blue-700 hover:underline inline-flex items-center gap-1" onclick="event.stopPropagation();">' +
+                         '<span>' + label + '</span>' +
+                         '<svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>' +
+                         '</a>';
+                }
+              } catch (e) {}
+            }
+            return '<span class="text-xs text-gray-600">' + label + '</span>';
+          }
+        }
+      ]
+    });
+
+    masterTable.on("rowClick", function(e, row) {
+      openModal(row.getData());
+    });
+
+    masterTable.on("dataFiltered", function(filters, rows) {
+      countDisplay.textContent = "Showing " + rows.length.toLocaleString() + " of 1,011 records";
+    });
+  }
+
+  // Combined Filters Logic
+  function applyCombinedFilters() {
+    if (!masterTable) return;
+    var searchTerm = (searchInput.value || "").trim().toLowerCase();
+    var categoryVal = categoryFilter.value;
+    var validationVal = validationFilter.value;
+
+    if (searchTerm !== "") {
+      clearSearchBtn.classList.remove("hidden");
+    } else {
+      clearSearchBtn.classList.add("hidden");
+    }
+
+    masterTable.setFilter(function(row) {
+      if (categoryVal && row["categories"] !== categoryVal) {
+        return false;
+      }
+      if (validationVal) {
+        var v = (row["validation type"] || "").trim().toLowerCase();
+        if (validationVal === "validated") {
+          if (!v || v === "none") return false;
+        } else if (validationVal === "unvalidated") {
+          if (v && v !== "none") return false;
+        } else {
+          if (!v.includes(validationVal.toLowerCase())) return false;
+        }
+      }
+      if (searchTerm) {
+        var host = (row["Beetle Host"] || "").toLowerCase();
+        var pathogen = (row["pathogens"] || "").toLowerCase();
+        var country = (row["country or region"] || "").toLowerCase();
+        var source = (row["source"] || "").toLowerCase();
+        var site = (row["infection site"] || "").toLowerCase();
+        var rel = (row["ecological relationship"] || "").toLowerCase();
+        var title = (row["title"] || "").toLowerCase();
+
+        var matches = host.includes(searchTerm) ||
+                      pathogen.includes(searchTerm) ||
+                      country.includes(searchTerm) ||
+                      source.includes(searchTerm) ||
+                      site.includes(searchTerm) ||
+                      rel.includes(searchTerm) ||
+                      title.includes(searchTerm);
+        if (!matches) return false;
+      }
+      return true;
+    });
+  }
+
+  if (searchInput) searchInput.addEventListener("input", applyCombinedFilters);
+  if (categoryFilter) categoryFilter.addEventListener("change", applyCombinedFilters);
+  if (validationFilter) validationFilter.addEventListener("change", applyCombinedFilters);
+
+  if (clearSearchBtn) {
+    clearSearchBtn.addEventListener("click", function() {
+      searchInput.value = "";
+      applyCombinedFilters();
+      searchInput.focus();
+    });
+  }
+
+  if (resetBtn) {
+    resetBtn.addEventListener("click", function() {
+      searchInput.value = "";
+      categoryFilter.value = "";
+      validationFilter.value = "";
+      applyCombinedFilters();
+    });
+  }
+
+  // Load Master JSON Data
+  fetch(MASTER_DATA_URL)
+    .then(function(res) {
+      if (!res.ok) throw new Error("HTTP error " + res.status);
+      return res.json();
+    })
+    .then(function(data) {
+      masterRecords = data;
+      initMasterTable(data);
+    })
+    .catch(function(err) {
+      console.error("Error loading master dataset:", err);
+      loadingIndicator.innerHTML = "<div class='text-red-600 font-medium'>Failed to load pathogen dataset records.</div><p class='text-xs text-gray-500 mt-1'>" + err.message + "</p>";
+    });
+
+  // Tab Navigation Handling (Home & About merged into About)
+  var tabBtns = {
+    about: document.getElementById("tab-btn-about"),
+    browse: document.getElementById("tab-btn-browse"),
+    hosts: document.getElementById("tab-btn-hosts"),
+    groups: document.getElementById("tab-btn-groups"),
+    refs: document.getElementById("tab-btn-refs")
+  };
+
+  var tabPanes = {
+    about: document.getElementById("tab-pane-about"),
+    browse: document.getElementById("tab-pane-browse"),
+    hosts: document.getElementById("tab-pane-hosts"),
+    groups: document.getElementById("tab-pane-groups"),
+    refs: document.getElementById("tab-pane-refs")
+  };
+
+  window.switchPathogenTab = function(tabName) {
+    if (tabName === "validation") {
+      tabName = "about";
+      var valSec = document.getElementById("about-evidence-section");
+      if (valSec) {
+        setTimeout(function() {
+          valSec.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 80);
+      }
+    }
+
+    Object.keys(tabBtns).forEach(function(k) {
+      if (tabBtns[k]) tabBtns[k].classList.remove("active");
+    });
+    Object.keys(tabPanes).forEach(function(k) {
+      if (tabPanes[k]) tabPanes[k].classList.add("hidden");
+    });
+
+    if (tabBtns[tabName]) tabBtns[tabName].classList.add("active");
+    if (tabPanes[tabName]) tabPanes[tabName].classList.remove("hidden");
+
+    // Lazy load or resize tables when switched to
+    if (tabName === "browse" && masterTable) {
+      setTimeout(function() { masterTable.redraw(true); }, 50);
+    } else if (tabName === "hosts") {
+      if (!hostsTable) {
+        loadHostsData();
+      } else {
+        setTimeout(function() { hostsTable.redraw(true); }, 50);
+      }
+    } else if (tabName === "refs") {
+      if (!refsTable) {
+        loadRefsData();
+      } else {
+        setTimeout(function() { refsTable.redraw(true); }, 50);
+      }
+    }
+  };
+
+  Object.keys(tabBtns).forEach(function(tabName) {
+    if (tabBtns[tabName]) {
+      tabBtns[tabName].addEventListener("click", function() {
+        window.switchPathogenTab(tabName);
+      });
+    }
+  });
+
+  // Helper to filter and jump to Browse
+  window.filterAndBrowseCategory = function(cat) {
+    window.switchPathogenTab("browse");
+    if (categoryFilter) {
+      categoryFilter.value = cat;
+      applyCombinedFilters();
+    }
+  };
+
+  window.filterAndBrowseValidation = function(valType) {
+    window.switchPathogenTab("browse");
+    if (validationFilter) {
+      validationFilter.value = valType;
+      applyCombinedFilters();
+    }
+  };
+
+  // Load Hosts Tab Data with Normalized Keys (avoiding dot notation issue in Tabulator)
+  function loadHostsData() {
+    fetch(HOSTS_DATA_URL)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        data.forEach(function(d) {
+          d.num_records = d["No. records"] || d["No. Records"] || 0;
+          d.num_taxa    = d["No. pathogen taxa"] || 0;
+          d.num_countries = d["No. countries"] || 0;
+        });
+
+        hostsRecords = data;
+        hostsTable = new Tabulator("#hosts-table", {
+          data: data,
+          layout: "fitColumns",
+          pagination: "local",
+          paginationSize: 20,
+          paginationSizeSelector: [20, 50, 100, true],
+          columns: [
+            {
+              title: "Beetle Species",
+              field: "Beetle Species",
+              formatter: function(c) { return '<span class="italic font-medium text-gray-900">' + c.getValue() + '</span>'; },
+              widthGrow: 2
+            },
+            {
+              title: "No. Records",
+              field: "num_records",
+              sorter: "number",
+              width: 120,
+              formatter: function(c) { return '<span class="font-semibold text-gray-800">' + c.getValue() + '</span>'; }
+            },
+            {
+              title: "Pathogen Taxa",
+              field: "num_taxa",
+              sorter: "number",
+              width: 130
+            },
+            {
+              title: "Countries",
+              field: "num_countries",
+              sorter: "number",
+              width: 110
+            },
+            {
+              title: "Associated Pathogens",
+              field: "Associated Pathogens",
+              formatter: function(c) {
+                var val = c.getValue() || "";
+                return '<span class="text-xs text-gray-600 truncate block" title="' + val.replace(/"/g, '&quot;') + '">' + val + '</span>';
+              },
+              widthGrow: 4
+            }
+          ]
+        });
+
+        document.getElementById("hosts-search").addEventListener("input", function(e) {
+          var val = (e.target.value || "").toLowerCase();
+          hostsTable.setFilter("Beetle Species", "like", val);
+        });
+      });
+  }
+
+  // Load References Tab Data
+  function loadRefsData() {
+    fetch(REFS_DATA_URL)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        refsRecords = data;
+        refsTable = new Tabulator("#refs-table", {
+          data: data,
+          layout: "fitColumns",
+          pagination: "local",
+          paginationSize: 25,
+          paginationSizeSelector: [25, 50, 100, true],
+          columns: [
+            {
+              title: "#",
+              field: "Reference No.",
+              width: 70,
+              sorter: "number",
+              hozAlign: "center",
+              headerHozAlign: "center"
+            },
+            {
+              title: "Publication Citation",
+              field: "Citation",
+              formatter: function(c) {
+                var text = c.getValue() || "";
+                return '<span class="text-xs text-gray-800 leading-relaxed block py-1">' + text + '</span>';
+              },
+              widthGrow: 4
+            },
+            {
+              title: "Article Link / DOI",
+              field: "Link",
+              width: 150,
+              hozAlign: "center",
+              headerHozAlign: "center",
+              formatter: function(c) {
+                var rawUrl = (c.getValue() || "").trim();
+                if (!rawUrl) {
+                  return '<span class="text-xs text-gray-400 italic">No online link</span>';
+                }
+                try {
+                  var parsed = new URL(rawUrl);
+                  if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+                    var isDoi = parsed.hostname === "doi.org" || parsed.hostname.endsWith(".doi.org");
+                    var label = isDoi ? "DOI Link" : "View Source";
+                    var safeUrl = parsed.href;
+                    return '<a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 hover:text-blue-800 transition whitespace-nowrap shadow-xs" title="' + safeUrl + '"><span>' + label + '</span><svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></a>';
+                  }
+                } catch (e) {
+                  // Fallback for non-standard URL strings
+                }
+                return '<span class="text-xs text-gray-400 italic">No online link</span>';
+              }
+            }
+          ]
+        });
+
+        document.getElementById("refs-search").addEventListener("input", function(e) {
+          var val = (e.target.value || "").toLowerCase();
+          refsTable.setFilter(function(row) {
+            var citation = (row.Citation || "").toLowerCase();
+            var link = (row.Link || "").toLowerCase();
+            var refNo = String(row["Reference No."] || "");
+            return citation.indexOf(val) !== -1 || link.indexOf(val) !== -1 || refNo.indexOf(val) !== -1;
+          });
+        });
+      });
+  }
+
+})();
+</script>
+{% endblock %}

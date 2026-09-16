@@ -1056,3 +1056,45 @@ def update_image_asset_validation_status(sender, instance, **kwargs):
     if image_asset.is_validated != should_be_validated:
         image_asset.is_validated = should_be_validated
         image_asset.save(update_fields=['is_validated'])
+
+
+# -----------------------------
+# Ecological Interaction Models (Isolated Dataset)
+# -----------------------------
+class PathogenInteraction(models.Model):
+    """
+    Standalone table for reported pathogens and parasites associated with bark and ambrosia beetles.
+    Kept completely isolated from production ImageAsset and Beetles models.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    record_block_id = models.CharField(max_length=64, blank=True, null=True, db_index=True)
+    record_number = models.CharField(max_length=32, blank=True, null=True)
+    beetle_host = models.CharField(max_length=255, db_index=True, help_text="Scientific name of beetle host")
+    beetle_host_id = models.CharField(max_length=64, blank=True, null=True)
+    pathogen = models.CharField(max_length=255, db_index=True, help_text="Pathogen or parasite taxon")
+    category = models.CharField(max_length=64, db_index=True, help_text="Fungi, Nematode, Microsporidia, etc.")
+    organism_source = models.CharField(max_length=255, blank=True, null=True)
+    infection_site = models.CharField(max_length=255, blank=True, null=True)
+    ecological_relationship = models.CharField(max_length=128, blank=True, null=True, db_index=True)
+    identification_method = models.CharField(max_length=255, blank=True, null=True)
+    validation_type = models.CharField(max_length=128, blank=True, null=True)
+    experimental_conditions = models.CharField(max_length=255, blank=True, null=True)
+    country_or_region = models.CharField(max_length=128, blank=True, null=True, db_index=True)
+    year = models.CharField(max_length=16, blank=True, null=True)
+    source = models.CharField(max_length=255, blank=True, null=True)
+    title = models.TextField(blank=True, null=True)
+    doi_or_full_text = models.TextField(blank=True, null=True)
+    full_text_status = models.CharField(max_length=64, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "pathogen_interactions"
+        ordering = ["beetle_host", "pathogen"]
+        verbose_name = "Pathogen Interaction"
+        verbose_name_plural = "Pathogen Interactions"
+
+    def __str__(self):
+        return f"{self.beetle_host} - {self.pathogen} ({self.category})"
+
