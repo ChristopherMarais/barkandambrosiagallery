@@ -1822,17 +1822,17 @@ def tool_annotate(request):
 def interactions_preview(request):
     """
     Serves the Bark and Ambrosia Beetle Pathogen Dataset page
-    backed by the Notion v1.0 export dataset.
+    backed by the Version 1.0 dataset (DOI: 10.6084/m9.figshare.33869104).
     """
     context = {
         'page_title': 'Bark and Ambrosia Beetle Pathogen Dataset',
         'meta_description': 'A literature-derived resource compiling reported pathogens and parasites associated with bark and ambrosia beetles (Scolytinae).',
-        'total_records': 1011,
-        'total_hosts': 114,
-        'total_genera': 29,
-        'total_taxa': 289,
+        'total_records': 1015,
+        'total_hosts': 108,
+        'total_genera': 28,
+        'total_taxa': 274,
         'total_sources': 281,
-        'total_validated': 238,
+        'total_validated': 245,
     }
     return render(request, 'beetles/interactions_preview.html', context)
 
