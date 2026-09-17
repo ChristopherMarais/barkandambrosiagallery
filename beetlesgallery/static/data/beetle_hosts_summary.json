@@ -1,26 +1,26 @@
 [
   {
-    "Beetle Host ID": "3cd970ea-0cac-81e7-bd37-c7209a5601d7",
+    "Beetle Host ID": "1733",
     "Beetle Species": "Ips typographus",
-    "No. records": 253,
-    "No. pathogen taxa": 84,
+    "No. records": 257,
+    "No. pathogen taxa": 82,
     "No. countries": 15,
-    "Associated Pathogens": "Acinetobacter sp.; Aspergilus flavus; Aspergilus oryzae; Bacillus sphaericus; Bacillus thuringiensis; Bacillus thuringiensis var. tenebrionis; Beauveria; Beauveria bassiana; Beauveria brongniarti; Beauveria brongniartii; Beauveria caledonica; Beauveria pseudobassiana; Beauveria sp.; Bursaphelenchus eidmani; Bursaphelenchus sp.; Bursaphelenchus teratospicularis; Chytridiopsis cf. typographi; Chytridiopsis typographi; Contortylenchus diphogaster; Contortylenchus diplogaster; Contortylenchus dispar; Cryptaphelenchus bicoloris; Cryptaphelenchus macrogaster; Cryptaphelenchus macrogaster macrogaster; Diplochis omnivorus; Diplogaster hütchlii; Ektaphelenchus typographi; Entomopoxvirus; Entomopoxvirus group A; Fusarium sp.; Gregarina cf. typographi; Gregarina sp.; Gregarina spp.; Gregarina typographi; Isaria farinosa; Isaria fumosorosea; Isaria penicillatus; Isaria sp; ItEPV; Lecanicillium lecanii; Malamoeba scolyti; Mattesia cf. schwenke; Mattesia schwenkei; Mattesia sp.; Menzbieria chalcographi; Menzbieria sp.; Metapochonia bulbillosa; Metarhizium anisopliae; Metarhizium sp.; Metschnikowia cf. bicuspidata; Metschnikowia cf. typographi; Metschnikowia sp.; Metschnikowia typographi; Micoletzkya buetschlii; Nematodan; Neoparasitylenchus sp.; Nosema sp.; Nosema typographi; Paecilomyces farinosus; Panagrolaimus scheucherae; Parasitaphelenchus bicoloris; Parasitorhabditis bellifonti; Parasitorhabditis bicoloris; Parasitorhabditis obtusa; Parasitorhabditis sp.; Parasitorhabditis subelongati; Penicillium ochrochloron; Pichia sp.; Polymorphotylenchus typographi; Proteus vulgaris; Rhabditis obtusa; Rhabditolaimus halleri; Serratia liquifaciens; Telosporidium typographi; Tylenchus contortus typographi; Tylenchus dispar curvidentis; Tylenchus macrogaster; Tylenchus major; Unikaryon montanum; Verticillium lecanii; gut nematodes; nematodes; un identified entomopathogenic fungus; unidentified nematode species",
+    "Associated Pathogens": "Acinetobacter sp.; Aspergillus flavus; Aspergilus oryzae; Bacillus sphaericus; Bacillus thuringiensis; Bacillus thuringiensis var. tenebrionis; Beauveria; Beauveria bassiana; Beauveria brongniartii; Beauveria caledonica; Beauveria pseudobassiana; Beauveria sp.; Bursaphelenchus eidmani; Bursaphelenchus sp.; Bursaphelenchus teratospicularis; Chytridiopsis cf. typographi; Chytridiopsis typographi; Contortylenchus diplogaster; Contortylenchus dispar; Cryptaphelenchus bicoloris; Cryptaphelenchus macrogaster; Cryptaphelenchus macrogaster macrogaster; Diplochis omnivorus; Diplogaster hütchlii; Ektaphelenchus typographi; Entomopoxvirus; Entomopoxvirus group A; Fusarium sp.; Gregarina cf. typographi; Gregarina sp.; Gregarina spp.; Gregarina typographi; Isaria farinosa; Isaria fumosorosea; Isaria penicillatus; Isaria sp.; ItEPV; Lecanicillium lecanii; Malamoeba scolyti; Mattesia cf. schwenke; Mattesia schwenkei; Mattesia sp.; Menzbieria chalcographi; Menzbieria sp.; Metapochonia bulbillosa; Metarhizium anisopliae; Metarhizium sp.; Metschnikowia cf. bicuspidata; Metschnikowia cf. typographi; Metschnikowia sp.; Metschnikowia typographi; Micoletzkya buetschlii; Nematodan; Neoparasitylenchus sp.; Nosema sp.; Nosema typographi; Paecilomyces farinosus; Panagrolaimus scheucherae; Parasitaphelenchus bicoloris; Parasitorhabditis bellifonti; Parasitorhabditis bicoloris; Parasitorhabditis obtusa; Parasitorhabditis sp.; Parasitorhabditis subelongati; Penicillium ochrochloron; Pichia sp.; Polymorphotylenchus typographi; Proteus vulgaris; Rhabditis obtusa; Rhabditolaimus halleri; Serratia liquifaciens; Telosporidium typographi; Tylenchus contortus typographi; Tylenchus dispar curvidentis; Tylenchus macrogaster; Tylenchus major; Unikaryon montanum; Verticillium lecanii; gut nematodes; nematodes; un identified entomopathogenic fungus; unidentified nematode species",
     "Associated Countries": "Austria; Bulgaria; Czech Republic; Czech Republic; Slovakia; Europe; Finland; France; Georgia; Germany; Poland; Romania; Serbia; Slovakia; Switzerland; Turkey",
-    "Pathogen Record IDs": "1, 28, 68, 70, 71, 72, 73, 74, 75, 76, 77, 85, 86, 87, 88, 89, 90, 91, 92, 94, 96, 97, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 160, 161, 164, 173, 174, 180, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 196, 202, 203, 204, 205, 206, 225, 231, 232, 235, 236, 237, 238, 239, 240, 241, 242, 262, 272, 273, 274, 276, 278, 280, 282, 283, 285, 334, 335, 336, 337, 344, 345, 353, 354, 355, 365, 366, 367, 368, 369, 370, 371, 388, 398, 412, 421, 422, 423, 424, 446, 447, 448, 449, 450, 451, 452, 454, 455, 466, 467, 487, 488, 489, 490, 491, 492, 499, 500, 501, 502, 510, 511, 512, 513, 582, 583, 584, 585, 586, 587, 588, 589, 590, 624, 625, 626, 627, 628, 629, 630, 631, 632, 645, 668, 669, 672, 678, 686, 692, 745, 748, 749, 750, 751, 752, 753, 754, 755, 756, 758, 759, 760, 774, 789, 805, 809, 810, 814, 815, 853, 854, 855, 856, 857, 858, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 904, 905, 906, 907, 908, 909, 910, 911, 912, 913, 914, 915, 916, 917, 918, 919, 920, 921, 922, 923, 924, 925, 932, 933, 934, 935, 938, 940, 941, 943, 945, 947, 949, 950, 951, 952, 953, 958, 959, 977, 978, 1014, 1015"
+    "Pathogen Record IDs": "1, 28, 68, 70, 71, 72, 73, 74, 75, 76, 77, 85, 86, 87, 88, 89, 90, 91, 92, 94, 96, 97, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 160, 161, 164, 173, 174, 180, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 196, 202, 203, 204, 205, 206, 225, 231, 232, 235, 236, 237, 238, 239, 240, 241, 242, 262, 272, 273, 274, 276, 278, 280, 282, 283, 285, 334, 335, 336, 337, 344, 345, 353, 354, 355, 365, 366, 367, 368, 369, 370, 371, 388, 398, 412, 421, 422, 423, 424, 446, 447, 448, 449, 450, 451, 452, 453, 454, 455, 466, 467, 487, 488, 489, 490, 491, 492, 499, 500, 501, 502, 510, 511, 512, 513, 582, 583, 584, 585, 586, 587, 588, 589, 590, 624, 625, 626, 627, 628, 629, 630, 631, 632, 645, 668, 669, 672, 678, 686, 692, 744, 745, 748, 749, 750, 751, 752, 753, 754, 755, 756, 758, 759, 760, 774, 789, 805, 809, 810, 814, 815, 853, 854, 855, 856, 857, 858, 863, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 904, 905, 906, 907, 908, 909, 910, 911, 912, 913, 914, 915, 916, 917, 918, 919, 920, 921, 922, 923, 924, 925, 932, 933, 934, 935, 938, 940, 941, 943, 945, 947, 949, 950, 951, 952, 953, 958, 959, 977, 978, 1014, 1015"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81b5-b18d-f10167e662e3",
+    "Beetle Host ID": "479",
     "Beetle Species": "Dendroctonus frontalis",
     "No. records": 56,
-    "No. pathogen taxa": 34,
-    "No. countries": 2,
-    "Associated Pathogens": "Aerobacter aerogenes; Alcaligenes faecalis; Alphelenchulus barberus; Aphthoviruses; Aspergillus favus; Aspergillus flavus; Bacillus cereus; Bacillus thuringiensis; Bacillus thuringiensis var. kenyae; Bacillus thuringiensis var. thuringiensis; Baculovirus, granulosis viruses; Baculovirus, nonoccluded rod-shaped nuclear viruses; Baculovirus, nuclear polyhedrosis viruses; Beauveria baasiana; Beauveria bassiana; Beauveria sp.; Bunyaviruses; Cardioviruses; Cephalosporium sp.; Contortylenchus brevicomi; Enteroviruses; Flacherie virus; Flavobacterium sp.; Fusarium solani; Metarhizium anisopliae; Paecilomyces sp.; Paecilomyces viridis; Pseudomonas aeruginosa; Pseudomonas fluorescens; Rhinoviruses; Scopulariopsis sp.; Serratia marcescens; Unikaryon minutum; Unknown small RNA viruses",
-    "Associated Countries": "Florida, United States; United States",
+    "No. pathogen taxa": 32,
+    "No. countries": 1,
+    "Associated Pathogens": "Aerobacter aerogenes; Alcaligenes faecalis; Alphelenchulus barberus; Aphthoviruses; Aspergillus flavus; Bacillus cereus; Bacillus thuringiensis; Bacillus thuringiensis var. kenyae; Bacillus thuringiensis var. thuringiensis; Baculovirus, granulosis viruses; Baculovirus, nonoccluded rod-shaped nuclear viruses; Baculovirus, nuclear polyhedrosis viruses; Beauveria bassiana; Beauveria sp.; Bunyaviruses; Cardioviruses; Cephalosporium sp.; Contortylenchus brevicomi; Enteroviruses; Flacherie virus ; Flavobacterium sp.; Fusarium solani; Metarhizium anisopliae; Paecilomyces sp.; Paecilomyces viridis; Pseudomonas aeruginosa; Pseudomonas fluorescens; Rhinoviruses; Scopulariopsis sp.; Serratia marcescens; Unikaryon minutum; Unknown small RNA viruses",
+    "Associated Countries": "United States",
     "Pathogen Record IDs": "4, 5, 82, 113, 264, 381, 414, 506, 507, 517, 555, 592, 593, 594, 595, 596, 597, 598, 599, 600, 601, 602, 603, 604, 605, 606, 607, 608, 609, 610, 611, 612, 613, 614, 615, 616, 617, 618, 619, 620, 621, 622, 623, 651, 652, 653, 726, 727, 728, 729, 730, 731, 732, 733, 734, 735"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-815a-a757-ffcc6a0735b5",
+    "Beetle Host ID": "1696",
     "Beetle Species": "Ips amitinus",
     "No. records": 45,
     "No. pathogen taxa": 21,
@@ -30,7 +30,7 @@
     "Pathogen Record IDs": "27, 40, 54, 64, 222, 223, 224, 226, 227, 228, 229, 233, 248, 249, 250, 251, 252, 263, 297, 298, 299, 300, 301, 302, 303, 304, 305, 306, 307, 338, 339, 493, 494, 495, 496, 497, 498, 655, 813, 817, 902, 903, 944, 946, 948"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81b2-b8a3-d4a7253b9941",
+    "Beetle Host ID": "1728",
     "Beetle Species": "Ips sexdentatus",
     "No. records": 36,
     "No. pathogen taxa": 14,
@@ -40,7 +40,7 @@
     "Pathogen Record IDs": "93, 98, 159, 162, 165, 346, 397, 404, 405, 406, 407, 408, 416, 465, 468, 469, 470, 471, 472, 473, 670, 739, 743, 746, 757, 761, 773, 788, 807, 811, 816, 861, 862, 992, 993, 994"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-818b-bd09-d27467805361",
+    "Beetle Host ID": "3927",
     "Beetle Species": "Dendroctonus micans",
     "No. records": 31,
     "No. pathogen taxa": 28,
@@ -50,7 +50,7 @@
     "Pathogen Record IDs": "78, 79, 80, 81, 343, 415, 647, 648, 649, 720, 721, 722, 723, 724, 725, 821, 822, 823, 824, 825, 979, 980, 981, 982, 983, 984, 985, 986, 987, 988, 989"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-8141-8c9c-eda2a1055c4c",
+    "Beetle Host ID": "5921",
     "Beetle Species": "Ips duplicatus",
     "No. records": 30,
     "No. pathogen taxa": 9,
@@ -60,7 +60,7 @@
     "Pathogen Record IDs": "147, 269, 270, 271, 275, 277, 279, 281, 284, 286, 737, 864, 954, 955, 956, 957, 1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010, 1011, 1012, 1013"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81b6-87c6-e583eea30425",
+    "Beetle Host ID": "1837",
     "Beetle Species": "Dryocoetes autographus",
     "No. records": 27,
     "No. pathogen taxa": 13,
@@ -70,7 +70,7 @@
     "Pathogen Record IDs": "25, 38, 52, 62, 132, 158, 166, 215, 216, 217, 260, 261, 352, 382, 384, 386, 395, 673, 684, 687, 690, 691, 693, 694, 695, 699, 784"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81ae-b124-f43044691162",
+    "Beetle Host ID": "1739",
     "Beetle Species": "Pityogenes chalcographus",
     "No. records": 23,
     "No. pathogen taxa": 16,
@@ -80,7 +80,7 @@
     "Pathogen Record IDs": "219, 220, 221, 243, 244, 245, 246, 247, 340, 341, 342, 390, 401, 413, 679, 680, 764, 765, 777, 796, 899, 900, 901"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81d9-bda0-ca455fdf65b6",
+    "Beetle Host ID": "1147",
     "Beetle Species": "Scolytus multistriatus",
     "No. records": 22,
     "No. pathogen taxa": 17,
@@ -90,7 +90,7 @@
     "Pathogen Record IDs": "18, 31, 45, 55, 148, 149, 150, 151, 323, 324, 325, 326, 327, 328, 329, 330, 349, 476, 480, 548, 580, 666"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-8125-a3b0-e16e95c7e865",
+    "Beetle Host ID": "2185",
     "Beetle Species": "Xylosandrus germanus",
     "No. records": 20,
     "No. pathogen taxa": 12,
@@ -100,27 +100,27 @@
     "Pathogen Record IDs": "123, 124, 127, 128, 356, 357, 358, 359, 360, 425, 427, 430, 433, 437, 441, 443, 445, 849, 859, 860"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-816f-b74a-dc5ef373dcda",
+    "Beetle Host ID": "409",
     "Beetle Species": "Hylurgops palliatus",
     "No. records": 19,
     "No. pathogen taxa": 8,
     "No. countries": 5,
-    "Associated Pathogens": "Beauveria bassiana; Beauveria brongniarti; Beauveria caledonica; Malamoeba scolyti; Nematodan; Nosema cf. typographi; Nosema-type microsporidium; unidentified microsporidia",
+    "Associated Pathogens": "Beauveria bassiana; Beauveria brongniartii; Beauveria caledonica; Malamoeba scolyti; Nematodan; Nosema cf. typographi; Nosema-type microsporidium; unidentified microsporidia",
     "Associated Countries": "Austria; Bulgaria; Europe; Germany; Poland",
     "Pathogen Record IDs": "23, 36, 50, 60, 163, 214, 255, 256, 383, 387, 396, 674, 688, 696, 700, 772, 785, 806, 808"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-8190-bc06-f7745f245114",
+    "Beetle Host ID": "484",
     "Beetle Species": "Dendroctonus ponderosae",
     "No. records": 17,
     "No. pathogen taxa": 14,
-    "No. countries": 4,
+    "No. countries": 2,
     "Associated Pathogens": "Anguillulina magnicauda; Anguillulina pinophila; Aphelenchoides brachycephalus; Aphelenchoides latus; Aphelenchoides talonus; Aphelenchoides tenuidens; Aphelenchulus reversus; Beauveria bassiana; Contortylenchus reversus; Diplogaster pinicola; Gemycircularvirus sp.; Gemykibivirus sp.; Panagrodontus dentatus; Rhabditis obtusa",
-    "Associated Countries": "Arizona, United States; Canada; United States; Utah, United States",
+    "Associated Countries": "Canada; United States",
     "Pathogen Record IDs": "114, 333, 419, 420, 464, 556, 718, 839, 840, 841, 842, 843, 844, 845, 846, 847, 848"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-818b-a96b-ee29650d93b8",
+    "Beetle Host ID": "1172",
     "Beetle Species": "Scolytus scolytus",
     "No. records": 16,
     "No. pathogen taxa": 9,
@@ -130,7 +130,17 @@
     "Pathogen Record IDs": "20, 33, 47, 57, 69, 152, 153, 154, 155, 156, 157, 348, 478, 482, 689, 961"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-8168-b077-f1c598e6fefd",
+    "Beetle Host ID": "488",
+    "Beetle Species": "Dendroctonus rufipennis",
+    "No. records": 15,
+    "No. pathogen taxa": 10,
+    "No. countries": 2,
+    "Associated Pathogens": "Aglenchus exignus; Beauveria bassiana; Contortylenchus reversus; Ektaphelenchus obtusus; Ektaphelenchus riograndensis; Neoditylenchus yasinskii; Neotylenchus nitidus; Parasitorhabditis obtusa; Sphaerularia dendroctoni; Sphaerulariopsis dendroetoni",
+    "Associated Countries": "British Columbia; United States",
+    "Pathogen Record IDs": "115, 143, 144, 509, 514, 515, 537, 547, 550, 551, 559, 560, 834, 835, 836"
+  },
+  {
+    "Beetle Host ID": "502",
     "Beetle Species": "Hylurgus ligniperda",
     "No. records": 15,
     "No. pathogen taxa": 7,
@@ -140,27 +150,7 @@
     "Pathogen Record IDs": "145, 146, 170, 171, 172, 195, 331, 704, 705, 706, 708, 771, 781, 786, 998"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-8134-a2c9-c7fa5c20155e",
-    "Beetle Species": "Dendroctonus rufipennis",
-    "No. records": 15,
-    "No. pathogen taxa": 10,
-    "No. countries": 3,
-    "Associated Pathogens": "Aglenchus exignus; Beauveria bassiana; Contortylenchus reversus; Ektaphelenchus obtusus; Ektaphelenchus riograndensis; Neoditylenchus yasinskii; Neotylenchus nitidus; Parasitorhabditis obtusa; Sphaerularia dendroctoni; Sphaerulariopsis dendroetoni",
-    "Associated Countries": "British Columbia; United States; Wyoming, United States",
-    "Pathogen Record IDs": "115, 143, 144, 509, 514, 515, 537, 547, 550, 551, 559, 560, 834, 835, 836"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8130-bbd3-e29afac9abf6",
-    "Beetle Species": "Tomicus piniperda",
-    "No. records": 15,
-    "No. pathogen taxa": 9,
-    "No. countries": 5,
-    "Associated Pathogens": "Beauveria bassiana; Beauveria velata; Canningia tomici; Chytridiopsis typographi; Fusarium concolor; Metarhizium anisopliae; Nematodan; Paecilomyces farinosus; Penicillium sp.",
-    "Associated Countries": "Bulgaria; China; Finland; Georgia; Latvia",
-    "Pathogen Record IDs": "95, 111, 175, 417, 418, 459, 460, 461, 462, 463, 646, 736, 801, 803, 972"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8198-96bc-d4687d039075",
+    "Beetle Host ID": "3365",
     "Beetle Species": "Polygraphus poligraphus",
     "No. records": 15,
     "No. pathogen taxa": 9,
@@ -170,17 +160,27 @@
     "Pathogen Record IDs": "22, 35, 43, 49, 59, 234, 258, 259, 391, 402, 409, 411, 936, 937, 942"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-8188-8580-c20e1d961821",
+    "Beetle Host ID": "1186",
     "Beetle Species": "Scolytus ventralis",
     "No. records": 15,
     "No. pathogen taxa": 13,
-    "No. countries": 2,
+    "No. countries": 1,
     "Associated Pathogens": "Bunonema newmexicana; Bursaphelenchus wilfordi; Ektaphelenchus sandiaensis; Panagrobelus scolyti; Panagrolaimus concolor; Panagrolaimus judithae; Panagromacra margaretae; Parasitylenchus elongatus; Parasitylenchus scrutillus; Plectonchus wyganti; Plectus eurycerus; Plectus makrodemas; Sulphuretylenchus elongatus",
-    "Associated Countries": "New Mexico, United States; United States",
+    "Associated Countries": "United States",
     "Pathogen Record IDs": "2, 3, 525, 526, 527, 528, 529, 530, 531, 532, 533, 534, 535, 536, 581"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-818b-8879-fe03575b52dd",
+    "Beetle Host ID": "521",
+    "Beetle Species": "Tomicus piniperda",
+    "No. records": 15,
+    "No. pathogen taxa": 9,
+    "No. countries": 5,
+    "Associated Pathogens": "Beauveria bassiana; Beauveria velata; Canningia tomici; Chytridiopsis typographi; Fusarium concolor; Metarhizium anisopliae; Nematodan; Paecilomyces farinosus; Penicillium sp.",
+    "Associated Countries": "Bulgaria; China; Finland; Georgia; Latvia",
+    "Pathogen Record IDs": "95, 111, 175, 417, 418, 459, 460, 461, 462, 463, 646, 736, 801, 803, 972"
+  },
+  {
+    "Beetle Host ID": "485",
     "Beetle Species": "Dendroctonus pseudotsugae",
     "No. records": 14,
     "No. pathogen taxa": 12,
@@ -190,8 +190,8 @@
     "Pathogen Record IDs": "546, 557, 558, 827, 828, 829, 830, 831, 832, 833, 962, 963, 964, 965"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-8194-8ff7-e26f1f5f57a2",
-    "Beetle Species": "Xyleborus dispar",
+    "Beetle Host ID": "2083",
+    "Beetle Species": "Anisandrus dispar",
     "No. records": 13,
     "No. pathogen taxa": 12,
     "No. countries": 3,
@@ -200,17 +200,7 @@
     "Pathogen Record IDs": "410, 426, 429, 432, 435, 436, 439, 440, 442, 444, 633, 634, 850"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81f7-998c-d66f5aa14d2a",
-    "Beetle Species": "Hypothenemus hampei",
-    "No. records": 12,
-    "No. pathogen taxa": 1,
-    "No. countries": 10,
-    "Associated Pathogens": "Beauveria bassiana",
-    "Associated Countries": "Cameroon; China; Colombia; Côte d’Ivoire; Hawaii, United States; Ivory Coast; Kenya; Mexico; Nicaragua; Togo",
-    "Pathogen Record IDs": "129, 486, 591, 709, 710, 711, 712, 713, 714, 715, 716, 820"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81ae-9426-f1fe79be2612",
+    "Beetle Host ID": "390",
     "Beetle Species": "Hylastes ater",
     "No. records": 12,
     "No. pathogen taxa": 5,
@@ -220,7 +210,27 @@
     "Pathogen Record IDs": "83, 84, 167, 168, 169, 194, 456, 667, 701, 702, 703, 707"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81f6-9fae-dff5cefc9112",
+    "Beetle Host ID": "2273",
+    "Beetle Species": "Hypothenemus hampei",
+    "No. records": 12,
+    "No. pathogen taxa": 1,
+    "No. countries": 10,
+    "Associated Pathogens": "Beauveria bassiana",
+    "Associated Countries": " Ivory Coast; Cameroon; China; Colombia; Côte d’Ivoire; Kenya; Mexico; Nicaragua; Togo; United States",
+    "Pathogen Record IDs": "129, 486, 591, 709, 710, 711, 712, 713, 714, 715, 716, 820"
+  },
+  {
+    "Beetle Host ID": "1736",
+    "Beetle Species": "Orthotomicus laricis",
+    "No. records": 11,
+    "No. pathogen taxa": 8,
+    "No. countries": 6,
+    "Associated Pathogens": "Beauveria bassiana; Beauveria caledonica; Chytridiopsis sp.; Contortylenchus laricis; Gregarina sp.; Nematodan; gut nematodes; hemolymph nematodes",
+    "Associated Countries": "Austria; Bulgaria; Czech Republic; Europe; Poland; Slovenia",
+    "Pathogen Record IDs": "314, 315, 316, 317, 318, 319, 320, 351, 389, 400, 791"
+  },
+  {
+    "Beetle Host ID": "1874",
     "Beetle Species": "Trypodendron lineatum",
     "No. records": 11,
     "No. pathogen taxa": 6,
@@ -230,27 +240,7 @@
     "Pathogen Record IDs": "403, 505, 508, 675, 676, 677, 838, 928, 929, 930, 931"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-815a-9fd8-cc7d9a98ef8b",
-    "Beetle Species": "Orthotomicus laricis",
-    "No. records": 11,
-    "No. pathogen taxa": 8,
-    "No. countries": 6,
-    "Associated Pathogens": "Beauveria bassiana; Beauveria caledonica; Chytridiopsis sp.; Contortylenchus laricis; Gregarina sp.; Nematodan; gut nematodes; haemolyph nematodes",
-    "Associated Countries": "Austria; Bulgaria; Czech Republic; Europe; Poland; Slovenia",
-    "Pathogen Record IDs": "314, 315, 316, 317, 318, 319, 320, 351, 389, 400, 791"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8143-a5db-e349263ac456",
-    "Beetle Species": "Ips cembrae",
-    "No. records": 10,
-    "No. pathogen taxa": 5,
-    "No. countries": 4,
-    "Associated Pathogens": "Chytridiopsis typographi; Fusarium sp.; Gregarina typographi; Mattesia schwenkei; Nosema sp.",
-    "Associated Countries": "Austria; Czech Republic; Hungary; Poland",
-    "Pathogen Record IDs": "287, 288, 289, 290, 291, 292, 293, 294, 295, 296"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81e3-9078-eb847964ce01",
+    "Beetle Host ID": "1695",
     "Beetle Species": "Ips acuminatus",
     "No. records": 10,
     "No. pathogen taxa": 9,
@@ -260,7 +250,27 @@
     "Pathogen Record IDs": "29, 30, 671, 747, 762, 763, 783, 787, 990, 991"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-815f-8d62-ff317aff923c",
+    "Beetle Host ID": "5919",
+    "Beetle Species": "Ips cembrae",
+    "No. records": 10,
+    "No. pathogen taxa": 5,
+    "No. countries": 4,
+    "Associated Pathogens": "Chytridiopsis typographi; Fusarium sp.; Gregarina typographi; Mattesia schwenkei; Nosema sp.",
+    "Associated Countries": "Austria; Czech Republic; Hungary; Poland",
+    "Pathogen Record IDs": "287, 288, 289, 290, 291, 292, 293, 294, 295, 296"
+  },
+  {
+    "Beetle Host ID": "1725",
+    "Beetle Species": "Ips pini",
+    "No. records": 10,
+    "No. pathogen taxa": 9,
+    "No. countries": 1,
+    "Associated Pathogens": "Alphelenchulus spirus; Contortylenchus reversus; Contortylenchus sp1.; Contortylenchus sp2.; Contortylenchus spirus; Ektaphelenchus riograndensis; Parasitaphelenchus sp.; Parasitylenchus ipinius; Parasitylenchus ovarius",
+    "Associated Countries": "United States",
+    "Pathogen Record IDs": "138, 139, 140, 141, 142, 519, 542, 569, 570, 571"
+  },
+  {
+    "Beetle Host ID": "491",
     "Beetle Species": "Dendroctonus valens",
     "No. records": 9,
     "No. pathogen taxa": 5,
@@ -270,7 +280,7 @@
     "Pathogen Record IDs": "562, 641, 642, 643, 644, 974, 975, 995, 997"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81dc-bbc7-ee2c469f8ddf",
+    "Beetle Host ID": "1706",
     "Beetle Species": "Ips confusus",
     "No. records": 8,
     "No. pathogen taxa": 7,
@@ -280,27 +290,27 @@
     "Pathogen Record IDs": "521, 522, 523, 524, 565, 637, 639, 970"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81d4-bd25-d278cfe41fda",
+    "Beetle Host ID": "1708",
     "Beetle Species": "Orthotomicus erosus",
     "No. records": 8,
     "No. pathogen taxa": 6,
     "No. countries": 3,
-    "Associated Pathogens": "Chytridiopsis sp.; Gregarina sp.; Mattesia sp.; Nematodan; gut nematodes; haemolyph nematodes",
+    "Associated Pathogens": "Chytridiopsis sp.; Gregarina sp.; Mattesia sp.; Nematodan; gut nematodes; hemolymph nematodes",
     "Associated Countries": "Austria; Bulgaria; Hungary",
     "Pathogen Record IDs": "308, 309, 310, 311, 312, 313, 780, 790"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81f0-9fd5-cb33623bff72",
-    "Beetle Species": "Ips pini",
-    "No. records": 8,
-    "No. pathogen taxa": 7,
-    "No. countries": 1,
-    "Associated Pathogens": "Contortylenchus reversus; Contortylenchus sp1.; Contortylenchus sp2.; Contortylenchus spirus; Parasitaphelenchus sp.; Parasitylenchus ipinius; Parasitylenchus ovarius",
-    "Associated Countries": "United States",
-    "Pathogen Record IDs": "138, 139, 140, 141, 142, 569, 570, 571"
+    "Beetle Host ID": "445",
+    "Beetle Species": "Hylesinus varius",
+    "No. records": 7,
+    "No. pathogen taxa": 3,
+    "No. countries": 3,
+    "Associated Pathogens": "Beauveria bassiana; Ophryocystis hylesini; Paecilomyces variotii",
+    "Associated Countries": "Europe; Germany; Poland",
+    "Pathogen Record IDs": "26, 39, 53, 63, 131, 399, 682"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-8114-b685-f25497a409df",
+    "Beetle Host ID": "5192",
     "Beetle Species": "Hylurgops glabratus",
     "No. records": 7,
     "No. pathogen taxa": 7,
@@ -310,7 +320,17 @@
     "Pathogen Record IDs": "210, 211, 212, 213, 257, 697, 698"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-815f-84ee-ec79540cabee",
+    "Beetle Host ID": "1747",
+    "Beetle Species": "Pityokteines curvidens",
+    "No. records": 7,
+    "No. pathogen taxa": 6,
+    "No. countries": 3,
+    "Associated Pathogens": "Beauveria bassiana; Chytridiopsis cf. typographi; Gregarina sp.; Nosema curvidentis; Serratia marcescens; Tylenchus dispar curvidentis",
+    "Associated Countries": "Croatia; Germany; Slovakia",
+    "Pathogen Record IDs": "181, 503, 504, 656, 657, 664, 960"
+  },
+  {
+    "Beetle Host ID": "2182",
     "Beetle Species": "Xylosandrus crassiusculus",
     "No. records": 7,
     "No. pathogen taxa": 3,
@@ -320,27 +340,7 @@
     "Pathogen Record IDs": "9, 10, 11, 121, 122, 125, 126"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-8193-91d3-d4f783a52218",
-    "Beetle Species": "Pityokteines spinidens",
-    "No. records": 6,
-    "No. pathogen taxa": 5,
-    "No. countries": 2,
-    "Associated Pathogens": "Beauveria bassiana; Canningia spinidentis; Chytridiopsis cf. typographi; Gregarina sp.; Menzbieria sp.",
-    "Associated Countries": "Austria; Croatia",
-    "Pathogen Record IDs": "658, 659, 660, 661, 665, 939"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81f8-9105-d2ffa788e0b5",
-    "Beetle Species": "Pityokteines curvidens",
-    "No. records": 6,
-    "No. pathogen taxa": 6,
-    "No. countries": 2,
-    "Associated Pathogens": "Beauveria bassiana; Chytridiopsis cf. typographi; Gregarina sp.; Nosema curvidens; Nosema curvidentis; Serratia marcescens",
-    "Associated Countries": "Croatia; Slovakia",
-    "Pathogen Record IDs": "503, 504, 656, 657, 664, 960"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8107-bd7c-ffe754efa813",
+    "Beetle Host ID": "5178",
     "Beetle Species": "Hylastes cunicularius",
     "No. records": 6,
     "No. pathogen taxa": 6,
@@ -350,17 +350,27 @@
     "Pathogen Record IDs": "207, 208, 209, 253, 254, 685"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-8173-bd2a-d18690870555",
+    "Beetle Host ID": "1704",
     "Beetle Species": "Ips calligraphus",
     "No. records": 6,
     "No. pathogen taxa": 6,
-    "No. countries": 3,
+    "No. countries": 1,
     "Associated Pathogens": "Bacillus thuringiensis; Contortylenchus elongatus; Contortylenchus grandicolli; Ektaphelenchus riograndensis; Parasitaphelenchus sp.; Serratia marcescens",
-    "Associated Countries": "Florida, United States; Texas, United States; United States",
+    "Associated Countries": "United States",
     "Pathogen Record IDs": "112, 266, 267, 350, 540, 564"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81b8-bdb2-d0d58ae1dd6f",
+    "Beetle Host ID": "1754",
+    "Beetle Species": "Pityokteines spinidens",
+    "No. records": 6,
+    "No. pathogen taxa": 5,
+    "No. countries": 2,
+    "Associated Pathogens": "Beauveria bassiana; Canningia spinidentis; Chytridiopsis cf. typographi; Gregarina sp.; Menzbieria sp.",
+    "Associated Countries": "Austria; Croatia",
+    "Pathogen Record IDs": "658, 659, 660, 661, 665, 939"
+  },
+  {
+    "Beetle Host ID": "478",
     "Beetle Species": "Dendroctonus brevicomis",
     "No. records": 5,
     "No. pathogen taxa": 2,
@@ -370,37 +380,7 @@
     "Pathogen Record IDs": "518, 554, 638, 826, 837"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81b7-b512-e9576c08933b",
-    "Beetle Species": "Xyleborinus saxesenii",
-    "No. records": 5,
-    "No. pathogen taxa": 5,
-    "No. countries": 2,
-    "Associated Pathogens": "Akanthomyces lecanii; Beauveria bassiana; Beauveria pseudobassiana; Cordyceps fumosorosea; Nematodan",
-    "Associated Countries": "Bulgaria; Turkey",
-    "Pathogen Record IDs": "428, 431, 434, 438, 802"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81e2-af3f-e4a87a58cfcb",
-    "Beetle Species": "Polygraphus proximus",
-    "No. records": 5,
-    "No. pathogen taxa": 4,
-    "No. countries": 1,
-    "Associated Pathogens": "Beauveria bassiana; Beauveria pseudobassiana; Isaria farinosa; Lecanicillium attenuatum",
-    "Associated Countries": "Russia",
-    "Pathogen Record IDs": "361, 362, 363, 364, 654"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-812e-8ec2-e73472efb5ce",
-    "Beetle Species": "Ips subelongatus",
-    "No. records": 5,
-    "No. pathogen taxa": 2,
-    "No. countries": 0,
-    "Associated Pathogens": "Bacillus thuringiensis var. insectus; Beauveria bassiana",
-    "Associated Countries": "",
-    "Pathogen Record IDs": "197, 198, 199, 200, 201"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81c2-bcf5-c84972c89298",
+    "Beetle Host ID": "1718",
     "Beetle Species": "Ips paraconfusus",
     "No. records": 5,
     "No. pathogen taxa": 5,
@@ -410,7 +390,27 @@
     "Pathogen Record IDs": "133, 134, 135, 136, 137"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81a2-9878-da1338425f66",
+    "Beetle Host ID": "10456",
+    "Beetle Species": "Ips subelongatus",
+    "No. records": 5,
+    "No. pathogen taxa": 2,
+    "No. countries": 0,
+    "Associated Pathogens": "Bacillus thuringiensis var. insectus; Beauveria bassiana",
+    "Associated Countries": "",
+    "Pathogen Record IDs": "197, 198, 199, 200, 201"
+  },
+  {
+    "Beetle Host ID": "8944",
+    "Beetle Species": "Polygraphus proximus",
+    "No. records": 5,
+    "No. pathogen taxa": 4,
+    "No. countries": 1,
+    "Associated Pathogens": "Beauveria bassiana; Beauveria pseudobassiana; Isaria farinosa; Lecanicillium attenuatum",
+    "Associated Countries": "Russia",
+    "Pathogen Record IDs": "361, 362, 363, 364, 654"
+  },
+  {
+    "Beetle Host ID": "1167",
     "Beetle Species": "Scolytus ratzeburgi",
     "No. records": 5,
     "No. pathogen taxa": 2,
@@ -420,7 +420,17 @@
     "Pathogen Record IDs": "19, 32, 44, 46, 56"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81b5-913d-d75e0febd6ed",
+    "Beetle Host ID": "2037",
+    "Beetle Species": "Xyleborinus saxesenii",
+    "No. records": 5,
+    "No. pathogen taxa": 5,
+    "No. countries": 2,
+    "Associated Pathogens": "Akanthomyces lecanii; Beauveria bassiana; Beauveria pseudobassiana; Cordyceps fumosorosea; Nematodan",
+    "Associated Countries": "Bulgaria; Turkey",
+    "Pathogen Record IDs": "428, 431, 434, 438, 802"
+  },
+  {
+    "Beetle Host ID": "2093",
     "Beetle Species": "Xyleborus glabratus",
     "No. records": 5,
     "No. pathogen taxa": 3,
@@ -430,67 +440,17 @@
     "Pathogen Record IDs": "6, 7, 8, 116, 117"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-819c-8ea1-e4b3fb0ecf1c",
-    "Beetle Species": "Orthotomicus longicollis",
-    "No. records": 4,
-    "No. pathogen taxa": 4,
-    "No. countries": 1,
-    "Associated Pathogens": "Beauveria bassiana; Chytridiopsis sp.; Gregarina spp.; Nematodan",
-    "Associated Countries": "Bulgaria",
-    "Pathogen Record IDs": "792, 804, 812, 818"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8154-a60b-ddce71aa9d0d",
-    "Beetle Species": "Orthotomicus proximus",
-    "No. records": 4,
-    "No. pathogen taxa": 4,
-    "No. countries": 1,
-    "Associated Pathogens": "Chytridiopsis cf.  typographi; Gregarina cf. typographi; Gregarina sp.; Nematodan",
-    "Associated Countries": "Bulgaria",
-    "Pathogen Record IDs": "766, 767, 779, 793"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81fa-a396-df87a2420c72",
+    "Beetle Host ID": "476",
     "Beetle Species": "Dendroctonus adjunctus",
     "No. records": 4,
     "No. pathogen taxa": 2,
-    "No. countries": 2,
+    "No. countries": 1,
     "Associated Pathogens": "Parasitaphelenchus dendroctoni; Parasitylenchus stipatus",
-    "Associated Countries": "New Mexico, United States; United States",
+    "Associated Countries": "United States",
     "Pathogen Record IDs": "544, 545, 552, 553"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-8166-a655-c3abab767baf",
-    "Beetle Species": "Tomicus minor",
-    "No. records": 4,
-    "No. pathogen taxa": 3,
-    "No. countries": 4,
-    "Associated Pathogens": "Beauveria bassiana; Metarhizium anisopliae; Nematodan",
-    "Associated Countries": "Bulgaria; China; Italy; Latvia",
-    "Pathogen Record IDs": "347, 719, 800, 973"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-815e-9824-c468cb48f77b",
-    "Beetle Species": "Xyleborus affinis",
-    "No. records": 4,
-    "No. pathogen taxa": 2,
-    "No. countries": 2,
-    "Associated Pathogens": "Beauveria bassiana; Metarhizium robertsii",
-    "Associated Countries": "Mexico; México",
-    "Pathogen Record IDs": "118, 119, 120, 717"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81e8-b348-cc3ce20b5b95",
-    "Beetle Species": "Leperesinus fraxini",
-    "No. records": 4,
-    "No. pathogen taxa": 1,
-    "No. countries": 1,
-    "Associated Pathogens": "Beauveria bassiana",
-    "Associated Countries": "Poland",
-    "Pathogen Record IDs": "26, 39, 53, 63"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8157-8634-c2f4a969b71c",
+    "Beetle Host ID": "399",
     "Beetle Species": "Hylastes opacus",
     "No. records": 4,
     "No. pathogen taxa": 1,
@@ -500,7 +460,27 @@
     "Pathogen Record IDs": "24, 37, 51, 61"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-8119-a403-c6e226165996",
+    "Beetle Host ID": "5940",
+    "Beetle Species": "Orthotomicus longicollis",
+    "No. records": 4,
+    "No. pathogen taxa": 4,
+    "No. countries": 1,
+    "Associated Pathogens": "Beauveria bassiana; Chytridiopsis sp.; Gregarina spp.; Nematodan",
+    "Associated Countries": "Bulgaria",
+    "Pathogen Record IDs": "792, 804, 812, 818"
+  },
+  {
+    "Beetle Host ID": "5944",
+    "Beetle Species": "Orthotomicus proximus",
+    "No. records": 4,
+    "No. pathogen taxa": 4,
+    "No. countries": 1,
+    "Associated Pathogens": "Chytridiopsis cf. typographi; Gregarina cf. typographi; Gregarina sp.; Nematodan",
+    "Associated Countries": "Bulgaria",
+    "Pathogen Record IDs": "766, 767, 779, 793"
+  },
+  {
+    "Beetle Host ID": "1142",
     "Beetle Species": "Scolytus laevis",
     "No. records": 4,
     "No. pathogen taxa": 1,
@@ -510,127 +490,27 @@
     "Pathogen Record IDs": "21, 34, 48, 58"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-8111-9407-c5f2c0f947a5",
-    "Beetle Species": "Pityophthorus juglandis",
-    "No. records": 3,
+    "Beetle Host ID": "520",
+    "Beetle Species": "Tomicus minor",
+    "No. records": 4,
     "No. pathogen taxa": 3,
-    "No. countries": 1,
-    "Associated Pathogens": "Bursaphlenhus juglandis; Panagrolaimus multidentatus; Panagrolaimus sp.",
-    "Associated Countries": "Russia",
-    "Pathogen Record IDs": "967, 968, 969"
+    "No. countries": 4,
+    "Associated Pathogens": "Beauveria bassiana; Metarhizium anisopliae; Nematodan",
+    "Associated Countries": "Bulgaria; China; Italy; Latvia",
+    "Pathogen Record IDs": "347, 719, 800, 973"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81fe-bf65-c7f2d8493349",
-    "Beetle Species": "Taphrorychus villifrons",
-    "No. records": 3,
-    "No. pathogen taxa": 3,
-    "No. countries": 1,
-    "Associated Pathogens": "Gregarina sp.; Nematodan; Nosema sp.",
-    "Associated Countries": "Bulgaria",
-    "Pathogen Record IDs": "775, 782, 799"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81a1-a326-ca085b8928a8",
-    "Beetle Species": "Dendroctonus simplex",
-    "No. records": 3,
-    "No. pathogen taxa": 3,
-    "No. countries": 1,
-    "Associated Pathogens": "Beauveria bassiana; Lecanicillium attenuatum; Metarhizium anisopliae",
-    "Associated Countries": "Canada",
-    "Pathogen Record IDs": "740, 741, 742"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-813e-ad04-c07f365002ca",
-    "Beetle Species": "Pityophthorus sp.",
-    "No. records": 3,
-    "No. pathogen taxa": 3,
-    "No. countries": 1,
-    "Associated Pathogens": "Contortylenchus pityophthori; Parasitaphelenchus sp.; Parasitylenchus sp.",
-    "Associated Countries": "United States",
-    "Pathogen Record IDs": "576, 577, 578"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-819e-862c-c359beedb806",
-    "Beetle Species": "Pityogenes scitus",
-    "No. records": 3,
-    "No. pathogen taxa": 3,
-    "No. countries": 1,
-    "Associated Pathogens": "Beauveria bassiana; Lecanicillium lecanii; Metarhizium anisopliae",
-    "Associated Countries": "India",
-    "Pathogen Record IDs": "378, 379, 380"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-816f-ba1e-f5c72273ea51",
-    "Beetle Species": "Polygraphus major",
-    "No. records": 3,
-    "No. pathogen taxa": 3,
-    "No. countries": 1,
-    "Associated Pathogens": "Beauveria bassiana; Lecanicillium lecanii; Metarhizium anisopliae",
-    "Associated Countries": "India",
-    "Pathogen Record IDs": "375, 376, 377"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8100-b437-d247ebd09746",
-    "Beetle Species": "Ips stebbingi",
-    "No. records": 3,
-    "No. pathogen taxa": 3,
-    "No. countries": 1,
-    "Associated Pathogens": "Beauveria bassiana; Lecanicillium lecanii; Metarhizium anisopliae",
-    "Associated Countries": "India",
-    "Pathogen Record IDs": "372, 373, 374"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8137-bbc3-c4b8caee0230",
-    "Beetle Species": "Scolytidae sp.",
-    "No. records": 3,
-    "No. pathogen taxa": 3,
-    "No. countries": 1,
-    "Associated Pathogens": "Beauveria bassiana; Beauveria caledonica; Metarhizium anisopliae",
-    "Associated Countries": "China",
-    "Pathogen Record IDs": "332, 976, 999"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8100-b325-daf2aaa8c8b8",
-    "Beetle Species": "Ips grandicollis",
-    "No. records": 3,
+    "Beetle Host ID": "2046",
+    "Beetle Species": "Xyleborus affinis",
+    "No. records": 4,
     "No. pathogen taxa": 2,
     "No. countries": 2,
-    "Associated Pathogens": "Alphelenchulus grandicolli; Contortylenchus grandicolli",
-    "Associated Countries": "Texas, United States; United States",
-    "Pathogen Record IDs": "268, 520, 567"
+    "Associated Pathogens": "Beauveria bassiana; Metarhizium robertsii",
+    "Associated Countries": "Mexico; México",
+    "Pathogen Record IDs": "118, 119, 120, 717"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81c2-b4d1-f11ed6ee8189",
-    "Beetle Species": "Ips avulsus",
-    "No. records": 3,
-    "No. pathogen taxa": 2,
-    "No. countries": 3,
-    "Associated Pathogens": "Beauveria bassiana; Parasitylenchus avulsi",
-    "Associated Countries": "Los Angeles, United States; Texas, United States; United States",
-    "Pathogen Record IDs": "265, 563, 650"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-819f-a858-d3ccf8a3d570",
-    "Beetle Species": "Pityogenes conjunctus",
-    "No. records": 3,
-    "No. pathogen taxa": 2,
-    "No. countries": 2,
-    "Associated Pathogens": "Gregarina sp.; Nematodan",
-    "Associated Countries": "Austria; Bulgaria",
-    "Pathogen Record IDs": "230, 776, 797"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8188-a8e6-d0e90bf8bf56",
-    "Beetle Species": "Scolytus schevyrewi",
-    "No. records": 3,
-    "No. pathogen taxa": 3,
-    "No. countries": 1,
-    "Associated Pathogens": "Beauveria bassiana; Metarhizium anisopliae; Paecilomyces cateni",
-    "Associated Countries": "China",
-    "Pathogen Record IDs": "177, 178, 179"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81dc-ae3a-e71210daa3de",
+    "Beetle Host ID": "1868",
     "Beetle Species": "Crypturgus pusillus",
     "No. records": 3,
     "No. pathogen taxa": 3,
@@ -640,7 +520,127 @@
     "Pathogen Record IDs": "41, 385, 394"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81d8-845a-eb65503f6b35",
+    "Beetle Host ID": "489",
+    "Beetle Species": "Dendroctonus simplex",
+    "No. records": 3,
+    "No. pathogen taxa": 3,
+    "No. countries": 1,
+    "Associated Pathogens": "Beauveria bassiana; Lecanicillium attenuatum; Metarhizium anisopliae",
+    "Associated Countries": "Canada",
+    "Pathogen Record IDs": "740, 741, 742"
+  },
+  {
+    "Beetle Host ID": "1698",
+    "Beetle Species": "Ips avulsus",
+    "No. records": 3,
+    "No. pathogen taxa": 2,
+    "No. countries": 1,
+    "Associated Pathogens": "Beauveria bassiana; Parasitylenchus avulsi",
+    "Associated Countries": "United States",
+    "Pathogen Record IDs": "265, 563, 650"
+  },
+  {
+    "Beetle Host ID": "1709",
+    "Beetle Species": "Ips grandicollis",
+    "No. records": 3,
+    "No. pathogen taxa": 2,
+    "No. countries": 1,
+    "Associated Pathogens": "Alphelenchulus grandicolli; Contortylenchus grandicolli",
+    "Associated Countries": "United States",
+    "Pathogen Record IDs": "268, 520, 567"
+  },
+  {
+    "Beetle Host ID": "5932",
+    "Beetle Species": "Ips stebbingi",
+    "No. records": 3,
+    "No. pathogen taxa": 3,
+    "No. countries": 1,
+    "Associated Pathogens": "Beauveria bassiana; Lecanicillium lecanii; Metarhizium anisopliae",
+    "Associated Countries": "India",
+    "Pathogen Record IDs": "372, 373, 374"
+  },
+  {
+    "Beetle Host ID": "5951",
+    "Beetle Species": "Pityogenes conjunctus",
+    "No. records": 3,
+    "No. pathogen taxa": 2,
+    "No. countries": 2,
+    "Associated Pathogens": "Gregarina sp.; Nematodan",
+    "Associated Countries": "Austria; Bulgaria",
+    "Pathogen Record IDs": "230, 776, 797"
+  },
+  {
+    "Beetle Host ID": "5959",
+    "Beetle Species": "Pityogenes scitus",
+    "No. records": 3,
+    "No. pathogen taxa": 3,
+    "No. countries": 1,
+    "Associated Pathogens": "Beauveria bassiana; Lecanicillium lecanii; Metarhizium anisopliae",
+    "Associated Countries": "India",
+    "Pathogen Record IDs": "378, 379, 380"
+  },
+  {
+    "Beetle Host ID": "2686",
+    "Beetle Species": "Pityophthorus juglandis",
+    "No. records": 3,
+    "No. pathogen taxa": 3,
+    "No. countries": 1,
+    "Associated Pathogens": "Bursaphlenhus juglandis; Panagrolaimus multidentatus; Panagrolaimus sp.",
+    "Associated Countries": "Russia",
+    "Pathogen Record IDs": "967, 968, 969"
+  },
+  {
+    "Beetle Host ID": "2799",
+    "Beetle Species": "Pityophthorus sp. undetermined",
+    "No. records": 3,
+    "No. pathogen taxa": 3,
+    "No. countries": 1,
+    "Associated Pathogens": "Contortylenchus pityophthori; Parasitaphelenchus sp.; Parasitylenchus sp.",
+    "Associated Countries": "United States",
+    "Pathogen Record IDs": "576, 577, 578"
+  },
+  {
+    "Beetle Host ID": "1036",
+    "Beetle Species": "Polygraphus major",
+    "No. records": 3,
+    "No. pathogen taxa": 3,
+    "No. countries": 1,
+    "Associated Pathogens": "Beauveria bassiana; Lecanicillium lecanii; Metarhizium anisopliae",
+    "Associated Countries": "India",
+    "Pathogen Record IDs": "375, 376, 377"
+  },
+  {
+    "Beetle Host ID": "199184",
+    "Beetle Species": "Scolytinae sp. undetermined",
+    "No. records": 3,
+    "No. pathogen taxa": 3,
+    "No. countries": 1,
+    "Associated Pathogens": "Beauveria bassiana; Beauveria caledonica; Metarhizium anisopliae",
+    "Associated Countries": "China",
+    "Pathogen Record IDs": "332, 976, 999"
+  },
+  {
+    "Beetle Host ID": "1171",
+    "Beetle Species": "Scolytus schevyrewi",
+    "No. records": 3,
+    "No. pathogen taxa": 3,
+    "No. countries": 1,
+    "Associated Pathogens": "Beauveria bassiana; Metarhizium anisopliae; Paecilomyces cateni",
+    "Associated Countries": "China",
+    "Pathogen Record IDs": "177, 178, 179"
+  },
+  {
+    "Beetle Host ID": "6268",
+    "Beetle Species": "Taphrorychus villifrons",
+    "No. records": 3,
+    "No. pathogen taxa": 3,
+    "No. countries": 1,
+    "Associated Pathogens": "Gregarina sp.; Nematodan; Nosema sp.",
+    "Associated Countries": "Bulgaria",
+    "Pathogen Record IDs": "775, 782, 799"
+  },
+  {
+    "Beetle Host ID": "3350",
     "Beetle Species": "Xyleborus bispinatus",
     "No. records": 3,
     "No. pathogen taxa": 3,
@@ -650,7 +650,7 @@
     "Pathogen Record IDs": "15, 16, 17"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-8173-91cf-d920cf5f5be9",
+    "Beetle Host ID": "2179",
     "Beetle Species": "Xyleborus volvulus",
     "No. records": 3,
     "No. pathogen taxa": 3,
@@ -660,167 +660,7 @@
     "Pathogen Record IDs": "12, 13, 14"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-8126-bcd3-db91d266547f",
-    "Beetle Species": "Hylurgopinus rufipes",
-    "No. records": 2,
-    "No. pathogen taxa": 2,
-    "No. countries": 1,
-    "Associated Pathogens": "Parasitaphelenchus oldhami; Rod-like bacteria",
-    "Associated Countries": "Canada",
-    "Pathogen Record IDs": "851, 852"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-813c-9776-cbeccb266260",
-    "Beetle Species": "Pityogenes bistridentatus",
-    "No. records": 2,
-    "No. pathogen taxa": 2,
-    "No. countries": 1,
-    "Associated Pathogens": "Gregarina sp.; Nematodan",
-    "Associated Countries": "Bulgaria",
-    "Pathogen Record IDs": "778, 795"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8190-8717-c8fec4caa117",
-    "Beetle Species": "Trypodendron domesticum",
-    "No. records": 2,
-    "No. pathogen taxa": 2,
-    "No. countries": 2,
-    "Associated Pathogens": "Nematodes; Pleistophora xyloteri",
-    "Associated Countries": "Germany; Poland",
-    "Pathogen Record IDs": "683, 927"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81bb-8fe5-c0bb4463e14e",
-    "Beetle Species": "Pityokteines vorontzovi",
-    "No. records": 2,
-    "No. pathogen taxa": 2,
-    "No. countries": 1,
-    "Associated Pathogens": "Chytridiopsis cf. typographi; Gregarina sp.",
-    "Associated Countries": "Croatia",
-    "Pathogen Record IDs": "662, 663"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81b5-84b2-dd068c7cc706",
-    "Beetle Species": "Euwallacea fornicatus",
-    "No. records": 2,
-    "No. pathogen taxa": 2,
-    "No. countries": 1,
-    "Associated Pathogens": "Beauveria bassiana; Metarhizium anisopliae",
-    "Associated Countries": "South Africa",
-    "Pathogen Record IDs": "635, 636"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8119-93e9-c9a99ba03ca3",
-    "Beetle Species": "Hylurgops pinifex",
-    "No. records": 2,
-    "No. pathogen taxa": 2,
-    "No. countries": 1,
-    "Associated Pathogens": "Contortylenchus sp.; Parasitylenchus coronatus",
-    "Associated Countries": "United States",
-    "Pathogen Record IDs": "572, 573"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8181-aa46-cd00f7c990d9",
-    "Beetle Species": "Dryocoetes confusus",
-    "No. records": 2,
-    "No. pathogen taxa": 2,
-    "No. countries": 2,
-    "Associated Pathogens": "Beauveria bassiana; Ektaphelenchus prolobos",
-    "Associated Countries": "Canada; United States",
-    "Pathogen Record IDs": "543, 966"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-813c-9bab-da0ca998a960",
-    "Beetle Species": "Dendroctonus barberi",
-    "No. records": 2,
-    "No. pathogen taxa": 2,
-    "No. countries": 1,
-    "Associated Pathogens": "Alphelenchulus barberus; Ektaphelenchus riograndensis",
-    "Associated Countries": "United States",
-    "Pathogen Record IDs": "516, 538"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8117-bedf-cb56ff9ac831",
-    "Beetle Species": "Euwallacea interjectus",
-    "No. records": 2,
-    "No. pathogen taxa": 2,
-    "No. countries": 1,
-    "Associated Pathogens": "Beauveria bassiana; Serratia marcescens",
-    "Associated Countries": "China",
-    "Pathogen Record IDs": "484, 485"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81c0-8077-c62f1276c5ad",
-    "Beetle Species": "Scolytus pygmaeus",
-    "No. records": 2,
-    "No. pathogen taxa": 2,
-    "No. countries": 1,
-    "Associated Pathogens": "Nosema scolyti; Stempellia scolyti",
-    "Associated Countries": "Germany",
-    "Pathogen Record IDs": "477, 481"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8103-9dd8-d0b2bb1ebf26",
-    "Beetle Species": "Scolytus ensifer",
-    "No. records": 2,
-    "No. pathogen taxa": 2,
-    "No. countries": 1,
-    "Associated Pathogens": "Nosema scolyti; Stempellia scolyti",
-    "Associated Countries": "Germany",
-    "Pathogen Record IDs": "475, 479"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-813f-951a-e6419048d400",
-    "Beetle Species": "Phloeosinus sinensis",
-    "No. records": 2,
-    "No. pathogen taxa": 2,
-    "No. countries": 1,
-    "Associated Pathogens": "Beauveria bassiana; Beauveria brongniartii",
-    "Associated Countries": "China",
-    "Pathogen Record IDs": "474, 483"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81ab-baaa-ebe54b4f855f",
-    "Beetle Species": "Hylastinus obscurus",
-    "No. records": 2,
-    "No. pathogen taxa": 2,
-    "No. countries": 1,
-    "Associated Pathogens": "Beauveria bassiana; Beauveria pseudobassiana",
-    "Associated Countries": "Oregon, United States",
-    "Pathogen Record IDs": "457, 458"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81a9-88a2-fe7f33707b1c",
-    "Beetle Species": "Hylesinus fraxini",
-    "No. records": 2,
-    "No. pathogen taxa": 2,
-    "No. countries": 2,
-    "Associated Pathogens": "Beauveria bassiana; Ophryocystis hylesini",
-    "Associated Countries": "Europe; Germany",
-    "Pathogen Record IDs": "399, 682"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81f0-9ca9-e7109828cf4c",
-    "Beetle Species": "Orthotomicus nobilis",
-    "No. records": 2,
-    "No. pathogen taxa": 2,
-    "No. countries": 1,
-    "Associated Pathogens": "gut nematodes; haemolyph nematodes",
-    "Associated Countries": "Spain",
-    "Pathogen Record IDs": "321, 322"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8146-8693-dd98d3a384a6",
-    "Beetle Species": "Pityophthorus pityographus",
-    "No. records": 2,
-    "No. pathogen taxa": 2,
-    "No. countries": 2,
-    "Associated Pathogens": "Chytridiopsis cf. typographi; Malamoeba scolyti",
-    "Associated Countries": "Austria; Bulgaria",
-    "Pathogen Record IDs": "218, 768"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8127-8699-fc85f19203f8",
+    "Beetle Host ID": "2218",
     "Beetle Species": "Cryphalus piceae",
     "No. records": 2,
     "No. pathogen taxa": 2,
@@ -830,7 +670,7 @@
     "Pathogen Record IDs": "182, 392"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-818e-9b30-f4eeca5ef54d",
+    "Beetle Host ID": "8867",
     "Beetle Species": "Dendroctonus armandi",
     "No. records": 2,
     "No. pathogen taxa": 1,
@@ -840,217 +680,167 @@
     "Pathogen Record IDs": "176, 819"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-817f-a71a-cfac7dcd9152",
-    "Beetle Species": "Scolytus amygdali",
-    "No. records": 1,
-    "No. pathogen taxa": 1,
-    "No. countries": 0,
-    "Associated Pathogens": "Aspergillus sp.",
-    "Associated Countries": "",
-    "Pathogen Record IDs": "996"
+    "Beetle Host ID": "9676",
+    "Beetle Species": "Dendroctonus barberi",
+    "No. records": 2,
+    "No. pathogen taxa": 2,
+    "No. countries": 1,
+    "Associated Pathogens": "Alphelenchulus barberus; Ektaphelenchus riograndensis",
+    "Associated Countries": "United States",
+    "Pathogen Record IDs": "516, 538"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-8154-8dbb-c853d52748a8",
-    "Beetle Species": "Xyleborus aquilus",
-    "No. records": 1,
-    "No. pathogen taxa": 1,
+    "Beetle Host ID": "1840",
+    "Beetle Species": "Dryocoetes confusus",
+    "No. records": 2,
+    "No. pathogen taxa": 2,
+    "No. countries": 2,
+    "Associated Pathogens": "Beauveria bassiana; Ektaphelenchus prolobos",
+    "Associated Countries": "Canada; United States",
+    "Pathogen Record IDs": "543, 966"
+  },
+  {
+    "Beetle Host ID": "1964",
+    "Beetle Species": "Euwallacea fornicatus",
+    "No. records": 2,
+    "No. pathogen taxa": 2,
     "No. countries": 1,
-    "Associated Pathogens": "Metarhizium anisopliae",
+    "Associated Pathogens": "Beauveria bassiana; Metarhizium anisopliae",
+    "Associated Countries": "South Africa",
+    "Pathogen Record IDs": "635, 636"
+  },
+  {
+    "Beetle Host ID": "1966",
+    "Beetle Species": "Euwallacea interjectus",
+    "No. records": 2,
+    "No. pathogen taxa": 2,
+    "No. countries": 1,
+    "Associated Pathogens": "Beauveria bassiana; Serratia marcescens",
     "Associated Countries": "China",
-    "Pathogen Record IDs": "971"
+    "Pathogen Record IDs": "484, 485"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81cd-8a34-df358113d159",
-    "Beetle Species": "Trypodendron laeve",
-    "No. records": 1,
-    "No. pathogen taxa": 1,
+    "Beetle Host ID": "426",
+    "Beetle Species": "Hylastinus obscurus",
+    "No. records": 2,
+    "No. pathogen taxa": 2,
     "No. countries": 1,
-    "Associated Pathogens": "Nematodes",
-    "Associated Countries": "Czech Republic",
-    "Pathogen Record IDs": "926"
+    "Associated Pathogens": "Beauveria bassiana; Beauveria pseudobassiana",
+    "Associated Countries": "United States",
+    "Pathogen Record IDs": "457, 458"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-815d-aae3-c51debcdb938",
-    "Beetle Species": "Pityogenes quadridens",
-    "No. records": 1,
-    "No. pathogen taxa": 1,
+    "Beetle Host ID": "501",
+    "Beetle Species": "Hylurgopinus rufipes",
+    "No. records": 2,
+    "No. pathogen taxa": 2,
     "No. countries": 1,
-    "Associated Pathogens": "Nematodan",
+    "Associated Pathogens": "Parasitaphelenchus oldhami; Rod-like bacteria",
+    "Associated Countries": "Canada",
+    "Pathogen Record IDs": "851, 852"
+  },
+  {
+    "Beetle Host ID": "413",
+    "Beetle Species": "Hylurgops pinifex",
+    "No. records": 2,
+    "No. pathogen taxa": 2,
+    "No. countries": 1,
+    "Associated Pathogens": "Contortylenchus sp.; Parasitylenchus coronatus",
+    "Associated Countries": "United States",
+    "Pathogen Record IDs": "572, 573"
+  },
+  {
+    "Beetle Host ID": "5927",
+    "Beetle Species": "Orthotomicus nobilis",
+    "No. records": 2,
+    "No. pathogen taxa": 2,
+    "No. countries": 1,
+    "Associated Pathogens": "gut nematodes; hemolymph nematodes",
+    "Associated Countries": "Spain",
+    "Pathogen Record IDs": "321, 322"
+  },
+  {
+    "Beetle Host ID": "5592",
+    "Beetle Species": "Phloeosinus sinensis",
+    "No. records": 2,
+    "No. pathogen taxa": 2,
+    "No. countries": 1,
+    "Associated Pathogens": "Beauveria bassiana; Beauveria brongniartii",
+    "Associated Countries": "China",
+    "Pathogen Record IDs": "474, 483"
+  },
+  {
+    "Beetle Host ID": "5949",
+    "Beetle Species": "Pityogenes bistridentatus",
+    "No. records": 2,
+    "No. pathogen taxa": 2,
+    "No. countries": 1,
+    "Associated Pathogens": "Gregarina sp.; Nematodan",
     "Associated Countries": "Bulgaria",
-    "Pathogen Record IDs": "798"
+    "Pathogen Record IDs": "778, 795"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81b7-87c0-c10ed8aa9e9b",
-    "Beetle Species": "Pityogenes bidentatus",
-    "No. records": 1,
-    "No. pathogen taxa": 1,
+    "Beetle Host ID": "1755",
+    "Beetle Species": "Pityokteines vorontzowi",
+    "No. records": 2,
+    "No. pathogen taxa": 2,
     "No. countries": 1,
-    "Associated Pathogens": "Nematodan",
-    "Associated Countries": "Bulgaria",
-    "Pathogen Record IDs": "794"
+    "Associated Pathogens": "Chytridiopsis cf. typographi; Gregarina sp.",
+    "Associated Countries": "Croatia",
+    "Pathogen Record IDs": "662, 663"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81a4-9524-f284cd88bb72",
+    "Beetle Host ID": "2755",
+    "Beetle Species": "Pityophthorus pityographus",
+    "No. records": 2,
+    "No. pathogen taxa": 2,
+    "No. countries": 2,
+    "Associated Pathogens": "Chytridiopsis cf. typographi; Malamoeba scolyti",
+    "Associated Countries": "Austria; Bulgaria",
+    "Pathogen Record IDs": "218, 768"
+  },
+  {
+    "Beetle Host ID": "5697",
+    "Beetle Species": "Scolytus ensifer",
+    "No. records": 2,
+    "No. pathogen taxa": 2,
+    "No. countries": 1,
+    "Associated Pathogens": "Nosema scolyti; Stempellia scolyti",
+    "Associated Countries": "Germany",
+    "Pathogen Record IDs": "475, 479"
+  },
+  {
+    "Beetle Host ID": "1165",
+    "Beetle Species": "Scolytus pygmaeus",
+    "No. records": 2,
+    "No. pathogen taxa": 2,
+    "No. countries": 1,
+    "Associated Pathogens": "Nosema scolyti; Stempellia scolyti",
+    "Associated Countries": "Germany",
+    "Pathogen Record IDs": "477, 481"
+  },
+  {
+    "Beetle Host ID": "1873",
+    "Beetle Species": "Trypodendron domesticum",
+    "No. records": 2,
+    "No. pathogen taxa": 2,
+    "No. countries": 2,
+    "Associated Pathogens": "Nematodes; Pleistophora xyloteri",
+    "Associated Countries": "Germany; Poland",
+    "Pathogen Record IDs": "683, 927"
+  },
+  {
+    "Beetle Host ID": "8189",
     "Beetle Species": "Cryphalus saltuarius",
     "No. records": 1,
     "No. pathogen taxa": 1,
     "No. countries": 1,
-    "Associated Pathogens": "Chytridiopsis cf.  typographi",
+    "Associated Pathogens": "Chytridiopsis cf. typographi",
     "Associated Countries": "Bulgaria",
     "Pathogen Record IDs": "770"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81f8-a187-df92c9f080b8",
-    "Beetle Species": "Polygraphus subopacus",
-    "No. records": 1,
-    "No. pathogen taxa": 1,
-    "No. countries": 1,
-    "Associated Pathogens": "Gregarina cf. typographi",
-    "Associated Countries": "Bulgaria",
-    "Pathogen Record IDs": "769"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81a1-85d5-c577d71fc539",
-    "Beetle Species": "Hylurgops starki",
-    "No. records": 1,
-    "No. pathogen taxa": 1,
-    "No. countries": 0,
-    "Associated Pathogens": "Contortylenchus rarus",
-    "Associated Countries": "",
-    "Pathogen Record IDs": "738"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81a5-bfc2-d7b37e65edfb",
-    "Beetle Species": "Pityogenes calcaratus",
-    "No. records": 1,
-    "No. pathogen taxa": 1,
-    "No. countries": 1,
-    "Associated Pathogens": "Nosema calcarati",
-    "Associated Countries": "Israel",
-    "Pathogen Record IDs": "681"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-814e-8699-ee61886bc086",
-    "Beetle Species": "Scolytus rugulosus",
-    "No. records": 1,
-    "No. pathogen taxa": 1,
-    "No. countries": 1,
-    "Associated Pathogens": "Neoparasitylenchus rugulosi",
-    "Associated Countries": "United States",
-    "Pathogen Record IDs": "640"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8193-8064-d33a9fe2fb7f",
-    "Beetle Species": "Polygraphus hoppingi",
-    "No. records": 1,
-    "No. pathogen taxa": 1,
-    "No. countries": 1,
-    "Associated Pathogens": "Parasitylenchus parasitus",
-    "Associated Countries": "United States",
-    "Pathogen Record IDs": "579"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81b6-a356-f37efda65afd",
-    "Beetle Species": "Orthotomicus caelatus",
-    "No. records": 1,
-    "No. pathogen taxa": 1,
-    "No. countries": 1,
-    "Associated Pathogens": "Parasitylenchus oriundus",
-    "Associated Countries": "United States",
-    "Pathogen Record IDs": "575"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81bc-886e-ed9b9d343391",
-    "Beetle Species": "Hylesinus aculeatus",
-    "No. records": 1,
-    "No. pathogen taxa": 1,
-    "No. countries": 1,
-    "Associated Pathogens": "Parasitylenchus lepersini",
-    "Associated Countries": "United States",
-    "Pathogen Record IDs": "574"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81aa-ae2b-d637066a700f",
-    "Beetle Species": "Ips pilifrons",
-    "No. records": 1,
-    "No. pathogen taxa": 1,
-    "No. countries": 1,
-    "Associated Pathogens": "Contortylenchus spirus",
-    "Associated Countries": "United States",
-    "Pathogen Record IDs": "568"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81de-9495-db898682da04",
-    "Beetle Species": "Ips cribricollis",
-    "No. records": 1,
-    "No. pathogen taxa": 1,
-    "No. countries": 1,
-    "Associated Pathogens": "Contortylenchus cribicolli",
-    "Associated Countries": "United States",
-    "Pathogen Record IDs": "566"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8159-abaa-d4cae3c8c14e",
-    "Beetle Species": "Dendroctonus terebrans",
-    "No. records": 1,
-    "No. pathogen taxa": 1,
-    "No. countries": 1,
-    "Associated Pathogens": "Contortylenchus terebranus",
-    "Associated Countries": "United States",
-    "Pathogen Record IDs": "561"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-81cc-9af4-d3e0b9bed7ce",
-    "Beetle Species": "Phloeosinus sp.",
-    "No. records": 1,
-    "No. pathogen taxa": 1,
-    "No. countries": 1,
-    "Associated Pathogens": "Sychnotylenchus phloeosini",
-    "Associated Countries": "United States",
-    "Pathogen Record IDs": "549"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8192-974d-d9a06e7893c5",
-    "Beetle Species": "Ips oregonis",
-    "No. records": 1,
-    "No. pathogen taxa": 1,
-    "No. countries": 1,
-    "Associated Pathogens": "Ektaphelenchus riograndensis",
-    "Associated Countries": "United States",
-    "Pathogen Record IDs": "542"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-811d-944d-f6a33c686871",
-    "Beetle Species": "Ips lecontei",
-    "No. records": 1,
-    "No. pathogen taxa": 1,
-    "No. countries": 1,
-    "Associated Pathogens": "Ektaphelenchus riograndensis",
-    "Associated Countries": "United States",
-    "Pathogen Record IDs": "541"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8150-8570-d0e2a0293166",
-    "Beetle Species": "Ips integer",
-    "No. records": 1,
-    "No. pathogen taxa": 1,
-    "No. countries": 1,
-    "Associated Pathogens": "Ektaphelenchus riograndensis",
-    "Associated Countries": "United States",
-    "Pathogen Record IDs": "539"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-817f-bf7a-ea40459aee1f",
-    "Beetle Species": "Ips oregoni",
-    "No. records": 1,
-    "No. pathogen taxa": 1,
-    "No. countries": 1,
-    "Associated Pathogens": "Alphelenchulus spirus",
-    "Associated Countries": "United States",
-    "Pathogen Record IDs": "519"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8154-a74d-e3d36f4fa42e",
+    "Beetle Host ID": "6387",
     "Beetle Species": "Crypturgus cinereus",
     "No. records": 1,
     "No. pathogen taxa": 1,
@@ -1060,27 +850,17 @@
     "Pathogen Record IDs": "393"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-81b3-8b05-ddcf26762825",
-    "Beetle Species": "Ips curvidens",
+    "Beetle Host ID": "490",
+    "Beetle Species": "Dendroctonus terebrans",
     "No. records": 1,
     "No. pathogen taxa": 1,
     "No. countries": 1,
-    "Associated Pathogens": "Tylenchus dispar curvidentis",
-    "Associated Countries": "Germany",
-    "Pathogen Record IDs": "181"
+    "Associated Pathogens": "Contortylenchus terebranus",
+    "Associated Countries": "United States",
+    "Pathogen Record IDs": "561"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-8100-81ec-dbe86183c712",
-    "Beetle Species": "Hylesinus varius",
-    "No. records": 1,
-    "No. pathogen taxa": 1,
-    "No. countries": 0,
-    "Associated Pathogens": "Paecilomyces variotii",
-    "Associated Countries": "",
-    "Pathogen Record IDs": "131"
-  },
-  {
-    "Beetle Host ID": "3cd970ea-0cac-8162-9a6c-dec68931958c",
+    "Beetle Host ID": "9688",
     "Beetle Species": "Euwallacea perbrevis",
     "No. records": 1,
     "No. pathogen taxa": 1,
@@ -1090,7 +870,17 @@
     "Pathogen Record IDs": "130"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-8117-aea2-f2c33e7501ce",
+    "Beetle Host ID": "432",
+    "Beetle Species": "Hylesinus aculeatus",
+    "No. records": 1,
+    "No. pathogen taxa": 1,
+    "No. countries": 1,
+    "Associated Pathogens": "Parasitylenchus lepersini",
+    "Associated Countries": "United States",
+    "Pathogen Record IDs": "574"
+  },
+  {
+    "Beetle Host ID": "438",
     "Beetle Species": "Hylesinus crenatus",
     "No. records": 1,
     "No. pathogen taxa": 1,
@@ -1100,17 +890,137 @@
     "Pathogen Record IDs": "67"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-812e-a54f-e420e30dae09",
-    "Beetle Species": "Scolytus kirschii",
+    "Beetle Host ID": "199007",
+    "Beetle Species": "Hylurgops starki",
+    "No. records": 1,
+    "No. pathogen taxa": 1,
+    "No. countries": 0,
+    "Associated Pathogens": "Contortylenchus rarus",
+    "Associated Countries": "",
+    "Pathogen Record IDs": "738"
+  },
+  {
+    "Beetle Host ID": "3730",
+    "Beetle Species": "Ips cribricollis",
     "No. records": 1,
     "No. pathogen taxa": 1,
     "No. countries": 1,
-    "Associated Pathogens": "Lecanicillium lecanii",
-    "Associated Countries": "Poland",
-    "Pathogen Record IDs": "66"
+    "Associated Pathogens": "Contortylenchus cribicolli",
+    "Associated Countries": "United States",
+    "Pathogen Record IDs": "566"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-811a-a0d7-fd35a671459e",
+    "Beetle Host ID": "1712",
+    "Beetle Species": "Ips integer",
+    "No. records": 1,
+    "No. pathogen taxa": 1,
+    "No. countries": 1,
+    "Associated Pathogens": "Ektaphelenchus riograndensis",
+    "Associated Countries": "United States",
+    "Pathogen Record IDs": "539"
+  },
+  {
+    "Beetle Host ID": "1715",
+    "Beetle Species": "Ips lecontei",
+    "No. records": 1,
+    "No. pathogen taxa": 1,
+    "No. countries": 1,
+    "Associated Pathogens": "Ektaphelenchus riograndensis",
+    "Associated Countries": "United States",
+    "Pathogen Record IDs": "541"
+  },
+  {
+    "Beetle Host ID": "1721",
+    "Beetle Species": "Ips pilifrons",
+    "No. records": 1,
+    "No. pathogen taxa": 1,
+    "No. countries": 1,
+    "Associated Pathogens": "Contortylenchus spirus",
+    "Associated Countries": "United States",
+    "Pathogen Record IDs": "568"
+  },
+  {
+    "Beetle Host ID": "1735",
+    "Beetle Species": "Orthotomicus caelatus",
+    "No. records": 1,
+    "No. pathogen taxa": 1,
+    "No. countries": 1,
+    "Associated Pathogens": "Parasitylenchus oriundus",
+    "Associated Countries": "United States",
+    "Pathogen Record IDs": "575"
+  },
+  {
+    "Beetle Host ID": "3341",
+    "Beetle Species": "Phloeosinus sp. undetermined",
+    "No. records": 1,
+    "No. pathogen taxa": 1,
+    "No. countries": 1,
+    "Associated Pathogens": "Sychnotylenchus phloeosini",
+    "Associated Countries": "United States",
+    "Pathogen Record IDs": "549"
+  },
+  {
+    "Beetle Host ID": "1737",
+    "Beetle Species": "Pityogenes bidentatus",
+    "No. records": 1,
+    "No. pathogen taxa": 1,
+    "No. countries": 1,
+    "Associated Pathogens": "Nematodan",
+    "Associated Countries": "Bulgaria",
+    "Pathogen Record IDs": "794"
+  },
+  {
+    "Beetle Host ID": "5950",
+    "Beetle Species": "Pityogenes calcaratus",
+    "No. records": 1,
+    "No. pathogen taxa": 1,
+    "No. countries": 1,
+    "Associated Pathogens": "Nosema calcarati",
+    "Associated Countries": "Israel",
+    "Pathogen Record IDs": "681"
+  },
+  {
+    "Beetle Host ID": "1746",
+    "Beetle Species": "Pityogenes quadridens",
+    "No. records": 1,
+    "No. pathogen taxa": 1,
+    "No. countries": 1,
+    "Associated Pathogens": "Nematodan",
+    "Associated Countries": "Bulgaria",
+    "Pathogen Record IDs": "798"
+  },
+  {
+    "Beetle Host ID": "1035",
+    "Beetle Species": "Polygraphus hoppingi",
+    "No. records": 1,
+    "No. pathogen taxa": 1,
+    "No. countries": 1,
+    "Associated Pathogens": "Parasitylenchus parasitus",
+    "Associated Countries": "United States",
+    "Pathogen Record IDs": "579"
+  },
+  {
+    "Beetle Host ID": "8959",
+    "Beetle Species": "Polygraphus subopacus",
+    "No. records": 1,
+    "No. pathogen taxa": 1,
+    "No. countries": 1,
+    "Associated Pathogens": "Gregarina cf. typographi",
+    "Associated Countries": "Bulgaria",
+    "Pathogen Record IDs": "769"
+  },
+  {
+    "Beetle Host ID": "5680",
+    "Beetle Species": "Scolytus amygdali",
+    "No. records": 1,
+    "No. pathogen taxa": 1,
+    "No. countries": 0,
+    "Associated Pathogens": "Aspergillus sp.",
+    "Associated Countries": "",
+    "Pathogen Record IDs": "996"
+  },
+  {
+    "Beetle Host ID": "1139",
     "Beetle Species": "Scolytus intricatus",
     "No. records": 1,
     "No. pathogen taxa": 1,
@@ -1120,8 +1030,28 @@
     "Pathogen Record IDs": "65"
   },
   {
-    "Beetle Host ID": "3cd970ea-0cac-8141-bf1b-c91cdd7db33f",
-    "Beetle Species": "Scolytus spp.",
+    "Beetle Host ID": "1140",
+    "Beetle Species": "Scolytus kirschii",
+    "No. records": 1,
+    "No. pathogen taxa": 1,
+    "No. countries": 1,
+    "Associated Pathogens": "Lecanicillium lecanii",
+    "Associated Countries": "Poland",
+    "Pathogen Record IDs": "66"
+  },
+  {
+    "Beetle Host ID": "1170",
+    "Beetle Species": "Scolytus rugulosus",
+    "No. records": 1,
+    "No. pathogen taxa": 1,
+    "No. countries": 1,
+    "Associated Pathogens": "Neoparasitylenchus rugulosi",
+    "Associated Countries": "United States",
+    "Pathogen Record IDs": "640"
+  },
+  {
+    "Beetle Host ID": "1173",
+    "Beetle Species": "Scolytus sp. undetermined",
     "No. records": 1,
     "No. pathogen taxa": 1,
     "No. countries": 1,
@@ -1130,13 +1060,23 @@
     "Pathogen Record IDs": "42"
   },
   {
-    "Beetle Host ID": "7e4970ea-0cac-8346-b5a8-01e41dfd2f16",
-    "Beetle Species": "A global database of reported pathogens and parasites associated with bark and ambrosia beetles",
-    "No. records": 0,
-    "No. pathogen taxa": 0,
-    "No. countries": 0,
-    "Associated Pathogens": "",
-    "Associated Countries": "",
-    "Pathogen Record IDs": ""
+    "Beetle Host ID": "6405",
+    "Beetle Species": "Trypodendron laeve",
+    "No. records": 1,
+    "No. pathogen taxa": 1,
+    "No. countries": 1,
+    "Associated Pathogens": "Nematodes",
+    "Associated Countries": "Czech Republic",
+    "Pathogen Record IDs": "926"
+  },
+  {
+    "Beetle Host ID": "7453",
+    "Beetle Species": "Xyleborus aquilus",
+    "No. records": 1,
+    "No. pathogen taxa": 1,
+    "No. countries": 1,
+    "Associated Pathogens": "Metarhizium anisopliae",
+    "Associated Countries": "China",
+    "Pathogen Record IDs": "971"
   }
 ]

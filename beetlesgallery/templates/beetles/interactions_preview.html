@@ -42,6 +42,20 @@
     border-right: 1px solid #f9fafb !important;
     vertical-align: middle;
   }
+  /* References Table - ensure citations wrap text cleanly without horizontal overflow */
+  #refs-table .tabulator-cell {
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    line-height: 1.5 !important;
+    height: auto !important;
+  }
+  #refs-table .tabulator-row {
+    height: auto !important;
+  }
+  #refs-table .tabulator-tableholder {
+    overflow-x: hidden !important;
+  }
   .tabulator .tabulator-footer {
     background-color: #f9fafb !important;
     border-top: 1px solid #e5e7eb !important;
@@ -240,7 +254,7 @@
         </span>
       </div>
       <p class="text-sm text-gray-600 max-w-4xl leading-relaxed">
-        A literature-derived resource compiling reported pathogens and parasites associated with bark and ambrosia beetles (Scolytinae). Version 1.0 contains 1,011 records extracted from 281 primary publications published between 1914 and 2026, representing 114 beetle species in 29 genera and 289 unique candidate pathogen or parasite taxa.
+        A literature-derived resource compiling reported pathogens and parasites associated with bark and ambrosia beetles (Scolytinae). Version 1.0 contains 1,015 records extracted from 281 primary publications published between 1914 and 2026, representing 108 beetle species in 28 genera and 274 unique candidate pathogen or parasite taxa.
       </p>
     </div>
   </div>
@@ -251,10 +265,10 @@
       About
     </button>
     <button type="button" id="tab-btn-browse" class="nav-tab-btn py-3 px-2 sm:px-3">
-      Browse Dataset <span class="text-[11px] text-gray-400 font-normal">(1,011)</span>
+      Browse Dataset <span class="text-[11px] text-gray-400 font-normal">(1,015)</span>
     </button>
     <button type="button" id="tab-btn-hosts" class="nav-tab-btn py-3 px-2 sm:px-3">
-      Beetle Hosts <span class="text-[11px] text-gray-400 font-normal">(114)</span>
+      Beetle Hosts <span class="text-[11px] text-gray-400 font-normal">(108)</span>
     </button>
     <button type="button" id="tab-btn-groups" class="nav-tab-btn py-3 px-2 sm:px-3">
       Pathogen Groups <span class="text-[11px] text-gray-400 font-normal">(6)</span>
@@ -278,13 +292,13 @@
             <span>About the dataset</span>
           </h2>
           <p class="text-sm text-gray-700 leading-relaxed mt-2">
-            The Bark and Ambrosia Beetle Pathogen Dataset is a literature-derived resource compiling reported pathogens and parasites associated with bark and ambrosia beetles (Scolytinae). Version 1.0 contains 1,011 records extracted from 281 primary publications published between 1914 and 2026, representing 114 beetle species in 29 genera and 289 unique candidate pathogen or parasite taxa.
+            The Bark and Ambrosia Beetle Pathogen Dataset is a literature-derived resource compiling reported pathogens and parasites associated with bark and ambrosia beetles (Scolytinae). Version 1.0 contains 1,015 records extracted from 281 primary publications published between 1914 and 2026, representing 108 beetle species in 28 genera and 274 unique candidate pathogen or parasite taxa.
           </p>
         </div>
         <p class="text-sm text-gray-700 leading-relaxed">
           The dataset includes fungi, bacteria, viruses, nematodes, protists, and microsporidia, together with information on beetle hosts, geographic locations, infection sites, organism sources, identification methods, reported ecological relationships, experimental conditions, and evidence of infection, pathogenicity, or virulence.
         </p>
-        <div class="pt-1 text-xs text-gray-500 font-medium">
+        <div class="pt-1 text-xs text-gray-500">
           Literature search for version 1.0 was completed on <strong>24 July 2026</strong>.
         </div>
       </div>
@@ -295,21 +309,21 @@
       <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col justify-between">
         <span class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Total Records</span>
         <div class="mt-2 flex items-baseline gap-2">
-          <span class="text-2xl font-bold text-gray-900 leading-none">1,011</span>
+          <span class="text-2xl font-bold text-gray-900 leading-none">1,015</span>
           <span class="text-[11px] text-gray-400 font-mono">1914–2026</span>
         </div>
       </div>
       <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col justify-between">
         <span class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Beetle Species</span>
         <div class="mt-2 flex items-baseline gap-2">
-          <span class="text-2xl font-bold text-gray-900 leading-none">114</span>
-          <span class="text-[11px] text-gray-400 font-mono">29 genera</span>
+          <span class="text-2xl font-bold text-gray-900 leading-none">108</span>
+          <span class="text-[11px] text-gray-400 font-mono">28 genera</span>
         </div>
       </div>
       <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col justify-between">
         <span class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Candidate Taxa</span>
         <div class="mt-2 flex items-baseline gap-2">
-          <span class="text-2xl font-bold text-gray-900 leading-none">289</span>
+          <span class="text-2xl font-bold text-gray-900 leading-none">274</span>
           <span class="text-[11px] text-gray-400 font-mono">taxa</span>
         </div>
       </div>
@@ -323,8 +337,8 @@
       <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col justify-between">
         <span class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Validated Tests</span>
         <div class="mt-2 flex items-baseline gap-2">
-          <span class="text-2xl font-bold text-gray-900 leading-none">238</span>
-          <span class="text-[11px] text-gray-400 font-mono">23.5% verified</span>
+          <span class="text-2xl font-bold text-gray-900 leading-none">245</span>
+          <span class="text-[11px] text-gray-400 font-mono">24.1% verified</span>
         </div>
       </div>
     </div>
@@ -337,8 +351,8 @@
             <span class="font-semibold text-gray-900 text-sm group-hover:text-blue-600 transition">Browse Dataset</span>
             <span class="text-xs text-gray-400 font-mono">&rarr;</span>
           </div>
-          <div class="text-[11px] text-gray-400 font-mono mt-0.5">1,011 records</div>
-          <p class="text-xs text-gray-500 mt-2 leading-relaxed">Explore all reported beetle-pathogen associations with filtering and export.</p>
+          <div class="text-[11px] text-gray-400 font-mono mt-0.5">1,015 records</div>
+          <p class="text-xs text-gray-500 mt-2 leading-relaxed">Explore all reported beetle-pathogen associations with filtering and details.</p>
         </div>
       </button>
 
@@ -348,8 +362,8 @@
             <span class="font-semibold text-gray-900 text-sm group-hover:text-blue-600 transition">Beetle Hosts</span>
             <span class="text-xs text-gray-400 font-mono">&rarr;</span>
           </div>
-          <div class="text-[11px] text-gray-400 font-mono mt-0.5">114 species</div>
-          <p class="text-xs text-gray-500 mt-2 leading-relaxed">Summary of all 114 Scolytinae species and reported pathogen spectrum.</p>
+          <div class="text-[11px] text-gray-400 font-mono mt-0.5">108 species</div>
+          <p class="text-xs text-gray-500 mt-2 leading-relaxed">Summary of all 108 Scolytinae species and reported pathogen spectrum.</p>
         </div>
       </button>
 
@@ -395,7 +409,7 @@
       <div>
         <h3 class="text-base font-bold text-gray-900 mb-2">Dataset overview</h3>
         <p class="text-sm text-gray-700 leading-relaxed">
-          Fungi were the most frequently reported group, with 409 records across 64 taxa, while nematodes comprised the greatest taxonomic diversity with 123 unique taxa across 221 records. Viruses were the least represented category (18 taxa from 46 records). Only 238 records (23.54%) reported any experimental validation of infection, pathogenicity, or virulence.
+          Fungi were the most frequently reported group, with 408 records across 59 taxa, while nematodes comprised the greatest taxonomic diversity with 121 unique taxa across 221 records. Viruses were the least represented category (18 taxa from 47 records). Only 245 records (24.14%) reported any experimental validation of infection, pathogenicity, or virulence.
         </p>
       </div>
 
@@ -416,7 +430,7 @@
             <div>
               <div class="flex justify-between text-xs font-medium text-gray-800 mb-1">
                 <span>Fungi</span>
-                <span class="font-mono text-gray-600">64 taxa (409 records)</span>
+                <span class="font-mono text-gray-600">59 taxa (408 records)</span>
               </div>
               <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
                 <div class="bar-fungi h-2.5 rounded-full" style="width: 100%;"></div>
@@ -426,50 +440,50 @@
             <div>
               <div class="flex justify-between text-xs font-medium text-gray-800 mb-1">
                 <span>Nematodes</span>
-                <span class="font-mono text-gray-600">123 taxa (221 records)</span>
+                <span class="font-mono text-gray-600">121 taxa (221 records)</span>
               </div>
               <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                <div class="bar-nematode h-2.5 rounded-full" style="width: 54%;"></div>
-              </div>
-            </div>
-
-            <div>
-              <div class="flex justify-between text-xs font-medium text-gray-800 mb-1">
-                <span>Microsporidia</span>
-                <span class="font-mono text-gray-600">30 taxa (144 records)</span>
-              </div>
-              <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                <div class="bar-microsporidia h-2.5 rounded-full" style="width: 35%;"></div>
+                <div class="bar-nematode h-2.5 rounded-full" style="width: 54.2%;"></div>
               </div>
             </div>
 
             <div>
               <div class="flex justify-between text-xs font-medium text-gray-800 mb-1">
                 <span>Protists</span>
-                <span class="font-mono text-gray-600">23 taxa (141 records)</span>
+                <span class="font-mono text-gray-600">21 taxa (146 records)</span>
               </div>
               <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                <div class="bar-protist h-2.5 rounded-full" style="width: 34%;"></div>
+                <div class="bar-protist h-2.5 rounded-full" style="width: 35.8%;"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-medium text-gray-800 mb-1">
+                <span>Microsporidia</span>
+                <span class="font-mono text-gray-600">25 taxa (142 records)</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                <div class="bar-microsporidia h-2.5 rounded-full" style="width: 34.8%;"></div>
               </div>
             </div>
 
             <div>
               <div class="flex justify-between text-xs font-medium text-gray-800 mb-1">
                 <span>Bacteria</span>
-                <span class="font-mono text-gray-600">31 taxa (50 records)</span>
+                <span class="font-mono text-gray-600">30 taxa (49 records)</span>
               </div>
               <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                <div class="bar-bacteria h-2.5 rounded-full" style="width: 12%;"></div>
+                <div class="bar-bacteria h-2.5 rounded-full" style="width: 12.0%;"></div>
               </div>
             </div>
 
             <div>
               <div class="flex justify-between text-xs font-medium text-gray-800 mb-1">
                 <span>Viruses</span>
-                <span class="font-mono text-gray-600">18 taxa (46 records)</span>
+                <span class="font-mono text-gray-600">18 taxa (47 records)</span>
               </div>
               <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                <div class="bar-virus h-2.5 rounded-full" style="width: 11%;"></div>
+                <div class="bar-virus h-2.5 rounded-full" style="width: 11.5%;"></div>
               </div>
             </div>
           </div>
@@ -480,15 +494,15 @@
             
             <div class="flex items-center justify-between mb-2">
               <span class="text-sm font-medium text-gray-800">Any Validation Test</span>
-              <span class="text-sm font-bold text-gray-900">238 records (23.54%)</span>
+              <span class="text-sm font-bold text-gray-900">245 records (24.14%)</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden mb-3">
-              <div class="bar-validation h-4 rounded-full flex items-center justify-end pr-2 text-[10px] text-white font-bold" style="width: 23.54%;">23.5%</div>
+              <div class="bar-validation h-4 rounded-full flex items-center justify-end pr-2 text-[10px] text-white font-bold" style="width: 24.14%;">24.1%</div>
             </div>
 
             <div class="flex items-center justify-between text-xs text-gray-600 mb-1">
               <span>Natural Observations / Unvalidated</span>
-              <span class="font-mono">773 records (76.46%)</span>
+              <span class="font-mono">770 records (75.86%)</span>
             </div>
             <p class="text-[11px] text-gray-500 mt-2 leading-normal">
               Validation tests include laboratory virulence tests, Koch's postulates verification, cross-infection assays, and bioassays.
@@ -512,13 +526,13 @@
             <div>
               <div class="flex items-center justify-between pb-2.5 mb-3 border-b border-gray-100">
                 <span class="badge-cat badge-fungi">Fungi</span>
-                <span class="text-xs font-mono font-medium text-gray-500">409 records · 64 taxa</span>
+                <span class="text-xs font-mono font-medium text-gray-500">408 records · 59 taxa</span>
               </div>
               <div class="space-y-2">
                 <div>
                   <div class="flex justify-between items-center text-xs mb-0.5">
                     <span class="italic font-medium text-gray-900 truncate pr-2">Beauveria bassiana</span>
-                    <span class="font-mono text-gray-700 text-[11px] font-semibold flex-shrink-0">206</span>
+                    <span class="font-mono text-gray-700 text-[11px] font-semibold flex-shrink-0">207</span>
                   </div>
                   <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
                     <div class="bar-fungi h-1.5 rounded-full" style="width: 100%;"></div>
@@ -530,7 +544,7 @@
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">24</span>
                   </div>
                   <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                    <div class="bar-fungi h-1.5 rounded-full" style="width: 11.7%;"></div>
+                    <div class="bar-fungi h-1.5 rounded-full" style="width: 11.6%;"></div>
                   </div>
                 </div>
                 <div>
@@ -557,7 +571,7 @@
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">10</span>
                   </div>
                   <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                    <div class="bar-fungi h-1.5 rounded-full" style="width: 4.9%;"></div>
+                    <div class="bar-fungi h-1.5 rounded-full" style="width: 4.8%;"></div>
                   </div>
                 </div>
               </div>
@@ -569,12 +583,12 @@
             <div>
               <div class="flex items-center justify-between pb-2.5 mb-3 border-b border-gray-100">
                 <span class="badge-cat badge-nematode">Nematodes</span>
-                <span class="text-xs font-mono font-medium text-gray-500">221 records · 123 taxa</span>
+                <span class="text-xs font-mono font-medium text-gray-500">221 records · 121 taxa</span>
               </div>
               <div class="space-y-2">
                 <div>
                   <div class="flex justify-between items-center text-xs mb-0.5">
-                    <span class="italic font-medium text-gray-900 truncate pr-2">Nematoda (unspecified)</span>
+                    <span class="italic font-medium text-gray-900 truncate pr-2">Nematodan</span>
                     <span class="font-mono text-gray-700 text-[11px] font-semibold flex-shrink-0">19</span>
                   </div>
                   <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
@@ -601,20 +615,20 @@
                 </div>
                 <div>
                   <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">hemolymph nematodes</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">8</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-nematode h-1.5 rounded-full" style="width: 42.1%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
                     <span class="italic font-medium text-gray-800 truncate pr-2">Parasitaphelenchus sp.</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">7</span>
                   </div>
                   <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
                     <div class="bar-nematode h-1.5 rounded-full" style="width: 36.8%;"></div>
-                  </div>
-                </div>
-                <div>
-                  <div class="flex justify-between items-center text-xs mb-0.5">
-                    <span class="italic font-medium text-gray-800 truncate pr-2">Contortylenchus diplogaster</span>
-                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">6</span>
-                  </div>
-                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                    <div class="bar-nematode h-1.5 rounded-full" style="width: 31.6%;"></div>
                   </div>
                 </div>
               </div>
@@ -626,13 +640,13 @@
             <div>
               <div class="flex items-center justify-between pb-2.5 mb-3 border-b border-gray-100">
                 <span class="badge-cat badge-microsporidia">Microsporidia</span>
-                <span class="text-xs font-mono font-medium text-gray-500">144 records · 30 taxa</span>
+                <span class="text-xs font-mono font-medium text-gray-500">142 records · 25 taxa</span>
               </div>
               <div class="space-y-2">
                 <div>
                   <div class="flex justify-between items-center text-xs mb-0.5">
                     <span class="italic font-medium text-gray-900 truncate pr-2">Chytridiopsis typographi</span>
-                    <span class="font-mono text-gray-700 text-[11px] font-semibold flex-shrink-0">46</span>
+                    <span class="font-mono text-gray-700 text-[11px] font-semibold flex-shrink-0">49</span>
                   </div>
                   <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
                     <div class="bar-microsporidia h-1.5 rounded-full" style="width: 100%;"></div>
@@ -641,10 +655,10 @@
                 <div>
                   <div class="flex justify-between items-center text-xs mb-0.5">
                     <span class="italic font-medium text-gray-800 truncate pr-2">Chytridiopsis cf. typographi</span>
-                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">15</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">17</span>
                   </div>
                   <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                    <div class="bar-microsporidia h-1.5 rounded-full" style="width: 32.6%;"></div>
+                    <div class="bar-microsporidia h-1.5 rounded-full" style="width: 34.7%;"></div>
                   </div>
                 </div>
                 <div>
@@ -653,25 +667,25 @@
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">10</span>
                   </div>
                   <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                    <div class="bar-microsporidia h-1.5 rounded-full" style="width: 21.7%;"></div>
+                    <div class="bar-microsporidia h-1.5 rounded-full" style="width: 20.4%;"></div>
                   </div>
                 </div>
                 <div>
                   <div class="flex justify-between items-center text-xs mb-0.5">
-                    <span class="italic font-medium text-gray-800 truncate pr-2">Malamoeba scolyti</span>
-                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">9</span>
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Unikaryon montanum</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">8</span>
                   </div>
                   <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                    <div class="bar-microsporidia h-1.5 rounded-full" style="width: 19.6%;"></div>
+                    <div class="bar-microsporidia h-1.5 rounded-full" style="width: 16.3%;"></div>
                   </div>
                 </div>
                 <div>
                   <div class="flex justify-between items-center text-xs mb-0.5">
                     <span class="italic font-medium text-gray-800 truncate pr-2">Larssoniella duplicati</span>
-                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">7</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">8</span>
                   </div>
                   <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                    <div class="bar-microsporidia h-1.5 rounded-full" style="width: 15.2%;"></div>
+                    <div class="bar-microsporidia h-1.5 rounded-full" style="width: 16.3%;"></div>
                   </div>
                 </div>
               </div>
@@ -683,7 +697,7 @@
             <div>
               <div class="flex items-center justify-between pb-2.5 mb-3 border-b border-gray-100">
                 <span class="badge-cat badge-protist">Protists</span>
-                <span class="text-xs font-mono font-medium text-gray-500">141 records · 23 taxa</span>
+                <span class="text-xs font-mono font-medium text-gray-500">146 records · 21 taxa</span>
               </div>
               <div class="space-y-2">
                 <div>
@@ -698,6 +712,15 @@
                 <div>
                   <div class="flex justify-between items-center text-xs mb-0.5">
                     <span class="italic font-medium text-gray-800 truncate pr-2">Gregarina sp.</span>
+                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">20</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bar-protist h-1.5 rounded-full" style="width: 36.4%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center text-xs mb-0.5">
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Malamoeba scolyti</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">19</span>
                   </div>
                   <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
@@ -711,15 +734,6 @@
                   </div>
                   <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
                     <div class="bar-protist h-1.5 rounded-full" style="width: 20.0%;"></div>
-                  </div>
-                </div>
-                <div>
-                  <div class="flex justify-between items-center text-xs mb-0.5">
-                    <span class="italic font-medium text-gray-800 truncate pr-2">Malamoeba scolyti</span>
-                    <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">10</span>
-                  </div>
-                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                    <div class="bar-protist h-1.5 rounded-full" style="width: 18.2%;"></div>
                   </div>
                 </div>
                 <div>
@@ -740,7 +754,7 @@
             <div>
               <div class="flex items-center justify-between pb-2.5 mb-3 border-b border-gray-100">
                 <span class="badge-cat badge-bacteria">Bacteria</span>
-                <span class="text-xs font-mono font-medium text-gray-500">50 records · 31 taxa</span>
+                <span class="text-xs font-mono font-medium text-gray-500">49 records · 30 taxa</span>
               </div>
               <div class="space-y-2">
                 <div>
@@ -772,7 +786,7 @@
                 </div>
                 <div>
                   <div class="flex justify-between items-center text-xs mb-0.5">
-                    <span class="italic font-medium text-gray-800 truncate pr-2">Pseudomonas aeruginosa</span>
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Pseudomonas fluorescens</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">2</span>
                   </div>
                   <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
@@ -781,7 +795,7 @@
                 </div>
                 <div>
                   <div class="flex justify-between items-center text-xs mb-0.5">
-                    <span class="italic font-medium text-gray-800 truncate pr-2">B. thuringiensis var. thuringiensis</span>
+                    <span class="italic font-medium text-gray-800 truncate pr-2">Pseudomonas aeruginosa</span>
                     <span class="font-mono text-gray-500 text-[11px] flex-shrink-0">2</span>
                   </div>
                   <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
@@ -797,7 +811,7 @@
             <div>
               <div class="flex items-center justify-between pb-2.5 mb-3 border-b border-gray-100">
                 <span class="badge-cat badge-virus">Viruses</span>
-                <span class="text-xs font-mono font-medium text-gray-500">46 records · 18 taxa</span>
+                <span class="text-xs font-mono font-medium text-gray-500">47 records · 18 taxa</span>
               </div>
               <div class="space-y-2">
                 <div>
@@ -868,7 +882,7 @@
                 Ips typographus
                 <span class="text-[10px] px-1.5 py-0.2 rounded bg-sky-50 text-sky-700 border border-sky-200 font-normal">Bark beetle</span>
               </span>
-              <span class="font-mono font-bold text-gray-800">253 records</span>
+              <span class="font-mono font-bold text-gray-800">257 records</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
               <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 100%;"></div>
@@ -885,7 +899,7 @@
               <span class="font-mono font-bold text-gray-800">56 records</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 22.1%;"></div>
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 21.8%;"></div>
             </div>
           </div>
 
@@ -899,7 +913,7 @@
               <span class="font-mono font-bold text-gray-800">45 records</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 17.8%;"></div>
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 17.5%;"></div>
             </div>
           </div>
 
@@ -913,7 +927,7 @@
               <span class="font-mono font-bold text-gray-800">36 records</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 14.2%;"></div>
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 14.0%;"></div>
             </div>
           </div>
 
@@ -927,7 +941,7 @@
               <span class="font-mono font-bold text-gray-800">31 records</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 12.2%;"></div>
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 12.1%;"></div>
             </div>
           </div>
 
@@ -941,7 +955,7 @@
               <span class="font-mono font-bold text-gray-800">30 records</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 11.8%;"></div>
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 11.7%;"></div>
             </div>
           </div>
 
@@ -955,7 +969,7 @@
               <span class="font-mono font-bold text-gray-800">27 records</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 10.7%;"></div>
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 10.5%;"></div>
             </div>
           </div>
 
@@ -969,7 +983,7 @@
               <span class="font-mono font-bold text-gray-800">23 records</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 9.1%;"></div>
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 8.9%;"></div>
             </div>
           </div>
 
@@ -983,7 +997,7 @@
               <span class="font-mono font-bold text-gray-800">22 records</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 8.7%;"></div>
+              <div class="bar-bark-beetle h-2.5 rounded-full" style="width: 8.6%;"></div>
             </div>
           </div>
 
@@ -997,7 +1011,7 @@
               <span class="font-mono font-bold text-gray-800">20 records</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-              <div class="bar-ambrosia-beetle h-2.5 rounded-full" style="width: 7.9%;"></div>
+              <div class="bar-ambrosia-beetle h-2.5 rounded-full" style="width: 7.8%;"></div>
             </div>
           </div>
         </div>
@@ -1010,46 +1024,48 @@
         <div>
           <h3 class="text-base font-bold text-gray-900">Experimental validation &amp; evidence types</h3>
           <p class="text-xs text-gray-600 mt-1 leading-relaxed max-w-3xl">
-            Inclusion in the dataset does not necessarily indicate experimentally demonstrated pathogenicity. Some records document organisms reported as pathogens or parasites by the original authors based on natural surveys, whereas 238 records (23.54%) are supported by formal infection, pathogenicity, or virulence tests.
+            Inclusion in the dataset does not necessarily indicate experimentally demonstrated pathogenicity. Some records document organisms reported as pathogens or parasites by the original authors based on natural surveys, whereas 245 records (24.14%) are supported by formal infection, pathogenicity, or virulence tests.
           </p>
         </div>
         <div class="flex items-center gap-2 flex-shrink-0">
           <button type="button" onclick="window.filterAndBrowseValidation('validated')"
             class="h-9 px-3 bg-gray-900 text-white rounded-md text-xs font-medium hover:bg-gray-800 transition whitespace-nowrap shadow-sm">
-            Browse 238 Validated Records &rarr;
+            Browse 245 Validated Records &rarr;
           </button>
+          <!-- Temporarily commented out for public release during final dataset review/QC
           <a href="{% static 'data/pathogens_with_validation.csv' %}" download="pathogens_with_validation.csv"
             class="btn-download"
             title="Download validated records as CSV">
             <i class="fi fi-rr-download text-gray-500"></i>
             <span>Download CSV</span>
           </a>
+          -->
         </div>
       </div>
 
       <div class="grid-4-cols">
         <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div class="text-xs font-semibold text-gray-500 uppercase">Pathogenicity Tests</div>
+          <div class="text-2xl font-bold text-gray-900 mt-1">142</div>
+          <p class="text-xs text-gray-600 mt-2">Inoculation bioassays, mortality assays, and host pathogenicity verification.</p>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
           <div class="text-xs font-semibold text-gray-500 uppercase">Virulence Tests</div>
-          <div class="text-2xl font-bold text-gray-900 mt-1">178</div>
+          <div class="text-2xl font-bold text-gray-900 mt-1">89</div>
           <p class="text-xs text-gray-600 mt-2">Dose-response mortality bioassays, topical application, and lethal concentration experiments.</p>
         </div>
 
         <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-          <div class="text-xs font-semibold text-gray-500 uppercase">Koch's Postulates</div>
-          <div class="text-2xl font-bold text-gray-900 mt-1">29</div>
-          <p class="text-xs text-gray-600 mt-2">Complete isolation, culture, reinoculation, and re-isolation demonstrating disease causality.</p>
+          <div class="text-xs font-semibold text-gray-500 uppercase">Infection Tests</div>
+          <div class="text-2xl font-bold text-gray-900 mt-1">7</div>
+          <p class="text-xs text-gray-600 mt-2">Experimental cross-infections and laboratory transmission assays.</p>
         </div>
 
         <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-          <div class="text-xs font-semibold text-gray-500 uppercase">Cross-Infection</div>
-          <div class="text-2xl font-bold text-gray-900 mt-1">19</div>
-          <p class="text-xs text-gray-600 mt-2">Experimental inoculation across non-source scolytine species or alternative insect hosts.</p>
-        </div>
-
-        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-          <div class="text-xs font-semibold text-gray-500 uppercase">General Bioassays</div>
-          <div class="text-2xl font-bold text-gray-900 mt-1">12</div>
-          <p class="text-xs text-gray-600 mt-2">Laboratory petri dish exposure assays, fecundity impairment tests, and developmental tracking.</p>
+          <div class="text-xs font-semibold text-gray-500 uppercase">Morphological &amp; Other</div>
+          <div class="text-2xl font-bold text-gray-900 mt-1">7</div>
+          <p class="text-xs text-gray-600 mt-2">Diagnostic spore or virion examinations and transmission tests.</p>
         </div>
       </div>
     </div>
@@ -1062,9 +1078,10 @@
           Copy Citation
         </button>
       </div>
-      <div id="citation-text" class="p-4 bg-gray-50 rounded-lg border border-gray-200 font-mono text-xs text-gray-800 select-all leading-relaxed break-all">
-        Dong Y. 2026. A global dataset of reported pathogens and parasites associated with bark and ambrosia beetles. Version 1.0. https://app.notion.com/p/ydcn/A-global-database-of-reported-pathogens-and-parasites-associated-with-bark-and-ambrosia-beetles-7e4970ea0cac8346b5a801e41dfd2f16 (date cited).
-      </div>
+      <div id="citation-text" class="p-4 bg-gray-50 rounded-lg border border-gray-200 font-mono text-xs text-gray-800 select-all leading-relaxed whitespace-pre-line break-words">Dong Y. 2026. A global dataset of reported pathogens and parasites associated with bark and ambrosia beetles. Version 1.0.
+
+Data repository:
+Dong Y. 2026. A global dataset of reported pathogens and parasites associated with bark and ambrosia beetles. Figshare. https://doi.org/10.6084/m9.figshare.33869104</div>
     </div>
 
   </div>
@@ -1103,13 +1120,13 @@
             <label for="category-filter" class="text-xs font-medium text-gray-600">Category:</label>
             <select id="category-filter"
               class="h-9 text-xs border border-gray-300 rounded-md px-2.5 bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-400 transition">
-              <option value="">All Categories (1,011)</option>
-              <option value="Fungi">Fungi (409 records / 64 taxa)</option>
-              <option value="Nematode">Nematodes (221 records / 123 taxa)</option>
-              <option value="Microsporidia">Microsporidia (144 records / 30 taxa)</option>
-              <option value="Protist">Protists (141 records / 23 taxa)</option>
-              <option value="Bacteria">Bacteria (50 records / 31 taxa)</option>
-              <option value="Virus">Viruses (46 records / 18 taxa)</option>
+              <option value="">All Categories (1,015)</option>
+              <option value="Fungi">Fungi (408 records / 59 taxa)</option>
+              <option value="Nematode">Nematodes (221 records / 121 taxa)</option>
+              <option value="Protist">Protists (146 records / 21 taxa)</option>
+              <option value="Microsporidia">Microsporidia (142 records / 25 taxa)</option>
+              <option value="Bacteria">Bacteria (49 records / 30 taxa)</option>
+              <option value="Virus">Viruses (47 records / 18 taxa)</option>
             </select>
           </div>
 
@@ -1119,11 +1136,10 @@
             <select id="validation-filter"
               class="h-9 text-xs border border-gray-300 rounded-md px-2.5 bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-400 transition">
               <option value="">All Evidence Types</option>
-              <option value="validated">Experimental Validation (238)</option>
+              <option value="validated">Experimental Validation (245)</option>
+              <option value="pathogenicity test">Pathogenicity Test</option>
               <option value="virulence test">Virulence Test</option>
-              <option value="Koch's postulates">Koch's Postulates</option>
-              <option value="cross-infection">Cross-Infection</option>
-              <option value="bioassay">Bioassay</option>
+              <option value="infection test">Infection Test</option>
               <option value="unvalidated">Natural Survey / Unvalidated</option>
             </select>
           </div>
@@ -1137,7 +1153,7 @@
           <!-- Divider -->
           <div class="h-5 w-px bg-gray-200 hidden sm:block mx-0.5"></div>
 
-          <!-- Download CSV Button (Matching the exact theme, spacing, and icon of other pages) -->
+          <!-- Download buttons temporarily commented out for public release during final dataset review/QC
           <button id="download-active-csv-btn" type="button"
             class="btn-download"
             title="Download active records as CSV">
@@ -1145,13 +1161,13 @@
             <span>Download CSV</span>
           </button>
 
-          <!-- Download Excel (.xlsx) Button (Same theme, spacing, and height) -->
           <a href="{% static 'data/bark_beetle_pathogen_database.xlsx' %}" download="bark_beetle_pathogen_dataset.xlsx"
             class="btn-download"
             title="Download full multi-sheet Excel workbook">
             <i class="fi fi-rr-document text-emerald-600"></i>
             <span>Download Excel</span>
           </a>
+          -->
 
         </div>
 
@@ -1168,7 +1184,7 @@
     <div id="table-loading-indicator" class="p-12 text-center bg-white rounded-lg border border-gray-200">
       <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-3"></div>
       <p class="text-sm font-medium text-gray-700">Loading master pathogen dataset…</p>
-      <p class="text-xs text-gray-500 mt-1">Reading 1,011 association records</p>
+      <p class="text-xs text-gray-500 mt-1">Reading 1,015 association records</p>
     </div>
 
     <!-- Master Tabulator Table -->
@@ -1179,7 +1195,7 @@
   </div>
 
   <!-- ============================================================== -->
-  <!-- TAB 3: BEETLE HOSTS (114 Scolytinae Species Summary) -->
+  <!-- TAB 3: BEETLE HOSTS (108 Scolytinae Species Summary) -->
   <!-- ============================================================== -->
   <div id="tab-pane-hosts" class="tab-pane hidden space-y-4">
     <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
@@ -1188,6 +1204,7 @@
           <input id="hosts-search" type="text" placeholder="Search beetle species (e.g., Ips typographus, Dendroctonus)…"
             class="w-full h-9 pl-3 pr-3 border border-gray-300 rounded-md text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 transition" />
         </div>
+        <!-- Temporarily commented out for public release during final dataset review/QC
         <div class="flex items-center gap-2">
           <a href="{% static 'data/beetle_hosts_summary.csv' %}" download="beetle_hosts_summary.csv"
             class="btn-download"
@@ -1196,6 +1213,7 @@
             <span>Download Hosts CSV</span>
           </a>
         </div>
+        -->
       </div>
     </div>
 
@@ -1222,16 +1240,16 @@
         <div>
           <div class="flex items-center justify-between mb-3">
             <span class="badge-cat badge-fungi text-xs px-2.5 py-1">Fungi</span>
-            <span class="text-xs font-mono text-gray-500">409 records</span>
+            <span class="text-xs font-mono text-gray-500">408 records</span>
           </div>
-          <h3 class="text-lg font-bold text-gray-900">64 Unique Taxa</h3>
+          <h3 class="text-lg font-bold text-gray-900">59 Unique Taxa</h3>
           <p class="text-xs text-gray-600 mt-2 leading-relaxed">
             Major entomopathogenic and associated fungal species, including extensively tested biocontrol agents and natural epizootic isolates.
           </p>
           <div class="mt-4 p-3 bg-gray-50 rounded border border-gray-200 text-xs">
             <div class="font-semibold text-gray-800 mb-1">Frequently Reported Taxa:</div>
             <ul class="text-gray-600 space-y-0.5 italic">
-              <li>• Beauveria bassiana (206)</li>
+              <li>• Beauveria bassiana (207)</li>
               <li>• Metarhizium anisopliae (24)</li>
               <li>• Beauveria caledonica (19)</li>
             </ul>
@@ -1240,10 +1258,12 @@
         <div class="mt-5 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
           <button type="button" onclick="window.filterAndBrowseCategory('Fungi')"
             class="text-xs font-medium text-amber-700 hover:text-amber-900 hover:underline">
-            View 409 Records in Dataset &rarr;
+            View 408 Records in Dataset &rarr;
           </button>
+          <!-- Temporarily commented out for public release during final dataset review/QC
           <a href="{% static 'data/pathogens_fungi.csv' %}" download="pathogens_fungi.csv"
             class="text-[11px] text-gray-500 hover:text-gray-800 underline">CSV</a>
+          -->
         </div>
       </div>
 
@@ -1254,9 +1274,9 @@
             <span class="badge-cat badge-nematode text-xs px-2.5 py-1">Nematodes</span>
             <span class="text-xs font-mono text-gray-500">221 records</span>
           </div>
-          <h3 class="text-lg font-bold text-gray-900">123 Unique Taxa</h3>
+          <h3 class="text-lg font-bold text-gray-900">121 Unique Taxa</h3>
           <p class="text-xs text-gray-600 mt-2 leading-relaxed">
-            Diverse group representing 123 distinct taxa. Includes phoretic, intestinal, and parasitic nematodes documented from cuticular folds, body cavities, and galleries.
+            Diverse group representing 121 distinct taxa. Includes phoretic, intestinal, and parasitic nematodes documented from cuticular folds, body cavities, and galleries.
           </p>
           <div class="mt-4 p-3 bg-gray-50 rounded border border-gray-200 text-xs">
             <div class="font-semibold text-gray-800 mb-1">Frequently Reported Taxa:</div>
@@ -1272,8 +1292,10 @@
             class="text-xs font-medium text-sky-700 hover:text-sky-900 hover:underline">
             View 221 Records in Dataset &rarr;
           </button>
+          <!-- Temporarily commented out for public release during final dataset review/QC
           <a href="{% static 'data/pathogens_nematodes.csv' %}" download="pathogens_nematodes.csv"
             class="text-[11px] text-gray-500 hover:text-gray-800 underline">CSV</a>
+          -->
         </div>
       </div>
 
@@ -1282,28 +1304,30 @@
         <div>
           <div class="flex items-center justify-between mb-3">
             <span class="badge-cat badge-microsporidia text-xs px-2.5 py-1">Microsporidia</span>
-            <span class="text-xs font-mono text-gray-500">144 records</span>
+            <span class="text-xs font-mono text-gray-500">142 records</span>
           </div>
-          <h3 class="text-lg font-bold text-gray-900">30 Unique Taxa</h3>
+          <h3 class="text-lg font-bold text-gray-900">25 Unique Taxa</h3>
           <p class="text-xs text-gray-600 mt-2 leading-relaxed">
             Obligate intracellular parasites causing chronic debilitation, reduced fecundity, and mortality in bark beetle populations.
           </p>
           <div class="mt-4 p-3 bg-gray-50 rounded border border-gray-200 text-xs">
             <div class="font-semibold text-gray-800 mb-1">Frequently Reported Taxa:</div>
             <ul class="text-gray-600 space-y-0.5 italic">
-              <li>• Chytridiopsis typographi (46)</li>
+              <li>• Chytridiopsis typographi (49)</li>
+              <li>• Chytridiopsis cf. typographi (17)</li>
               <li>• Nosema typographi (10)</li>
-              <li>• Malamoeba scolyti (9)</li>
             </ul>
           </div>
         </div>
         <div class="mt-5 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
           <button type="button" onclick="window.filterAndBrowseCategory('Microsporidia')"
             class="text-xs font-medium text-purple-700 hover:text-purple-900 hover:underline">
-            View 144 Records in Dataset &rarr;
+            View 142 Records in Dataset &rarr;
           </button>
+          <!-- Temporarily commented out for public release during final dataset review/QC
           <a href="{% static 'data/pathogens_microsporidia.csv' %}" download="pathogens_microsporidia.csv"
             class="text-[11px] text-gray-500 hover:text-gray-800 underline">CSV</a>
+          -->
         </div>
       </div>
 
@@ -1312,9 +1336,9 @@
         <div>
           <div class="flex items-center justify-between mb-3">
             <span class="badge-cat badge-protist text-xs px-2.5 py-1">Protists</span>
-            <span class="text-xs font-mono text-gray-500">141 records</span>
+            <span class="text-xs font-mono text-gray-500">146 records</span>
           </div>
-          <h3 class="text-lg font-bold text-gray-900">23 Unique Taxa</h3>
+          <h3 class="text-lg font-bold text-gray-900">21 Unique Taxa</h3>
           <p class="text-xs text-gray-600 mt-2 leading-relaxed">
             Includes intestinal gregarines and amoeboid pathogens infecting midgut epithelium and Malpighian tubules.
           </p>
@@ -1322,18 +1346,20 @@
             <div class="font-semibold text-gray-800 mb-1">Frequently Reported Taxa:</div>
             <ul class="text-gray-600 space-y-0.5 italic">
               <li>• Gregarina typographi (55)</li>
-              <li>• Gregarina sp. (19)</li>
-              <li>• Mattesia sp. (9)</li>
+              <li>• Gregarina sp. (20)</li>
+              <li>• Malamoeba scolyti (19)</li>
             </ul>
           </div>
         </div>
         <div class="mt-5 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
           <button type="button" onclick="window.filterAndBrowseCategory('Protist')"
             class="text-xs font-medium text-orange-700 hover:text-orange-900 hover:underline">
-            View 141 Records in Dataset &rarr;
+            View 146 Records in Dataset &rarr;
           </button>
+          <!-- Temporarily commented out for public release during final dataset review/QC
           <a href="{% static 'data/pathogens_protists.csv' %}" download="pathogens_protists.csv"
             class="text-[11px] text-gray-500 hover:text-gray-800 underline">CSV</a>
+          -->
         </div>
       </div>
 
@@ -1342,9 +1368,9 @@
         <div>
           <div class="flex items-center justify-between mb-3">
             <span class="badge-cat badge-bacteria text-xs px-2.5 py-1">Bacteria</span>
-            <span class="text-xs font-mono text-gray-500">50 records</span>
+            <span class="text-xs font-mono text-gray-500">49 records</span>
           </div>
-          <h3 class="text-lg font-bold text-gray-900">31 Unique Taxa</h3>
+          <h3 class="text-lg font-bold text-gray-900">30 Unique Taxa</h3>
           <p class="text-xs text-gray-600 mt-2 leading-relaxed">
             Bacterial isolates associated with septicemia, gut symbiosis, or opportunistic infection following physical host stress.
           </p>
@@ -1360,10 +1386,12 @@
         <div class="mt-5 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
           <button type="button" onclick="window.filterAndBrowseCategory('Bacteria')"
             class="text-xs font-medium text-emerald-700 hover:text-emerald-900 hover:underline">
-            View 50 Records in Dataset &rarr;
+            View 49 Records in Dataset &rarr;
           </button>
+          <!-- Temporarily commented out for public release during final dataset review/QC
           <a href="{% static 'data/pathogens_bacteria.csv' %}" download="pathogens_bacteria.csv"
             class="text-[11px] text-gray-500 hover:text-gray-800 underline">CSV</a>
+          -->
         </div>
       </div>
 
@@ -1372,7 +1400,7 @@
         <div>
           <div class="flex items-center justify-between mb-3">
             <span class="badge-cat badge-virus text-xs px-2.5 py-1">Viruses</span>
-            <span class="text-xs font-mono text-gray-500">46 records</span>
+            <span class="text-xs font-mono text-gray-500">47 records</span>
           </div>
           <h3 class="text-lg font-bold text-gray-900">18 Unique Taxa</h3>
           <p class="text-xs text-gray-600 mt-2 leading-relaxed">
@@ -1390,10 +1418,12 @@
         <div class="mt-5 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
           <button type="button" onclick="window.filterAndBrowseCategory('Virus')"
             class="text-xs font-medium text-red-700 hover:text-red-900 hover:underline">
-            View 46 Records in Dataset &rarr;
+            View 47 Records in Dataset &rarr;
           </button>
+          <!-- Temporarily commented out for public release during final dataset review/QC
           <a href="{% static 'data/pathogens_viruses.csv' %}" download="pathogens_viruses.csv"
             class="text-[11px] text-gray-500 hover:text-gray-800 underline">CSV</a>
+          -->
         </div>
       </div>
 
@@ -1410,6 +1440,7 @@
           <input id="refs-search" type="text" placeholder="Search publications by author, title, or year (1914–2026)…"
             class="w-full h-9 pl-3 pr-3 border border-gray-300 rounded-md text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 transition" />
         </div>
+        <!-- Temporarily commented out for public release during final dataset review/QC
         <div class="flex items-center gap-2">
           <a href="{% static 'data/references.csv' %}" download="references.csv"
             class="btn-download"
@@ -1418,6 +1449,7 @@
             <span>Download References CSV</span>
           </a>
         </div>
+        -->
       </div>
     </div>
 
@@ -1614,8 +1646,7 @@
       "experimental conditions",
       "year",
       "source",
-      "title",
-      "doi or full text"
+      "title"
     ];
 
     var csvRows = [];
@@ -1702,7 +1733,7 @@
   function initMasterTable(data) {
     loadingIndicator.classList.add("hidden");
     tableWrapper.classList.remove("hidden");
-    countDisplay.textContent = "Showing " + data.length.toLocaleString() + " of 1,011 records";
+    countDisplay.textContent = "Showing " + data.length.toLocaleString() + " of 1,015 records";
 
     masterTable = new Tabulator("#interactions-table", {
       data: data,
@@ -1807,7 +1838,7 @@
     });
 
     masterTable.on("dataFiltered", function(filters, rows) {
-      countDisplay.textContent = "Showing " + rows.length.toLocaleString() + " of 1,011 records";
+      countDisplay.textContent = "Showing " + rows.length.toLocaleString() + " of 1,015 records";
     });
   }
 
@@ -2054,46 +2085,13 @@
           paginationSizeSelector: [25, 50, 100, true],
           columns: [
             {
-              title: "#",
-              field: "Reference No.",
-              width: 70,
-              sorter: "number",
-              hozAlign: "center",
-              headerHozAlign: "center"
-            },
-            {
               title: "Publication Citation",
               field: "Citation",
               formatter: function(c) {
                 var text = c.getValue() || "";
-                return '<span class="text-xs text-gray-800 leading-relaxed block py-1">' + text + '</span>';
+                return '<div class="text-xs text-gray-800 leading-relaxed py-1 whitespace-normal break-words">' + text + '</div>';
               },
-              widthGrow: 4
-            },
-            {
-              title: "Article Link / DOI",
-              field: "Link",
-              width: 150,
-              hozAlign: "center",
-              headerHozAlign: "center",
-              formatter: function(c) {
-                var rawUrl = (c.getValue() || "").trim();
-                if (!rawUrl) {
-                  return '<span class="text-xs text-gray-400 italic">No online link</span>';
-                }
-                try {
-                  var parsed = new URL(rawUrl);
-                  if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-                    var isDoi = parsed.hostname === "doi.org" || parsed.hostname.endsWith(".doi.org");
-                    var label = isDoi ? "DOI Link" : "View Source";
-                    var safeUrl = parsed.href;
-                    return '<a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 hover:text-blue-800 transition whitespace-nowrap shadow-xs" title="' + safeUrl + '"><span>' + label + '</span><svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></a>';
-                  }
-                } catch (e) {
-                  // Fallback for non-standard URL strings
-                }
-                return '<span class="text-xs text-gray-400 italic">No online link</span>';
-              }
+              variableHeight: true
             }
           ]
         });
@@ -2102,9 +2100,8 @@
           var val = (e.target.value || "").toLowerCase();
           refsTable.setFilter(function(row) {
             var citation = (row.Citation || "").toLowerCase();
-            var link = (row.Link || "").toLowerCase();
             var refNo = String(row["Reference No."] || "");
-            return citation.indexOf(val) !== -1 || link.indexOf(val) !== -1 || refNo.indexOf(val) !== -1;
+            return citation.indexOf(val) !== -1 || refNo.indexOf(val) !== -1;
           });
         });
       });
