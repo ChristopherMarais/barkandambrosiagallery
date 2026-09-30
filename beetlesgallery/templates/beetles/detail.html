@@ -9,6 +9,16 @@
       <h1 class="text-2xl font-bold text-text">
         {{ ref_species.scientificName|default:"Unidentified" }}
       </h1>
+      {% if suggestion %}
+      {# A classifier's guess for an ROI nobody has identified yet. Never presented as an identification. #}
+      <p class="mt-1 text-sm text-text/70" data-testid="model-suggestion">
+        <i class="fi fi-rr-sparkles"></i>
+        Model suggestion (unverified):
+        <a href="{% url 'taxonomy_browser' %}?species={{ suggestion.valid_species_id|urlencode }}" class="italic hover:underline hover:text-black">{{ suggestion.scientific_name }}</a>
+        {% widthratio suggestion.confidence 1 100 as confidence_pct %}({{ confidence_pct }}%)
+        <span class="text-text/50">&middot; {{ suggestion.model_name }}{% if suggestion.model_version %} {{ suggestion.model_version }}{% endif %}</span>
+      </p>
+      {% endif %}
       {# --- Record ID Row --- #}
       <div class="flex items-center gap-2 mt-3">
         <span class="font-bold text-sm text-text/50 mr-1">Region of Interest (ROI) ID:</span>

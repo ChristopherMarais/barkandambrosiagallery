@@ -33,7 +33,7 @@ from django.core.management import call_command
 from .models import Beetles, UploadBatch, DownloadJob, UpdateBatch, ImageAsset
 from .schema import REQUIRED_COLS, MAX_ROWS
 from .forms import TailwindUserCreationForm, ProfileForm, PasswordChangeFormStyled, ValidSpeciesUploadForm, DescribedNamesUploadForm, UpdateBatchUploadForm
-from .predictions import import_predictions
+from .predictions import import_predictions, suggestions_for
 from .tasks import process_upload_task, process_update_task, build_downloads_task
 
 import pandas as pd
@@ -723,6 +723,11 @@ def beetle_detail(request, beetle_id):
             "authorityYear": beetle.taxon.authority_year,
             "originalGenus": beetle.taxon.original_genus,
         }
+    # An unidentified ROI shows the best classifier suggestion, marked as unverified.
+    suggestion = None
+    if not beetle.depicts_valid_name_id:
+        suggestion = next(iter(suggestions_for([beetle.id]).get(beetle.id, [])), None)
+
     # Restore Data Provenance: Extract the latest modification timestamp from the Taxon table
     from beetlesgallery.beetles_app.models import Taxon
     latest_taxon_update = Taxon.objects.order_by("-updated_at").values_list("updated_at", flat=True).first()
@@ -738,6 +743,7 @@ def beetle_detail(request, beetle_id):
             "beetle": beetle, 
             "ref_species": ref_species, 
             "ref_version": ref_version,
+            "suggestion": suggestion,
             "siblings": siblings,
             "total_siblings": total_siblings,
             "current_sibling_index": current_index,

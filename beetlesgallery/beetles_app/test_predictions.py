@@ -3,11 +3,13 @@ import io
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import CommandError, call_command
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from beetlesgallery.beetles_app.models import ModelPrediction, RoiDifficulty
-from beetlesgallery.beetles_app.predictions import import_predictions, parse_top_k, parse_confidence
-from beetlesgallery.beetles_app.testing import PageBehaviourCase, make_beetle, make_taxon
+from beetlesgallery.beetles_app.predictions import import_predictions, parse_top_k, parse_confidence, suggestions_for
+from beetlesgallery.beetles_app.testing import PageBehaviourCase, make_beetle, make_image, make_taxon
 
 HEADER = "record_id,valid_species_id,confidence,model_name,model_version,top_k"
 
@@ -228,3 +230,92 @@ class CommandAndPageTests(PredictionCase):
         with self.settings(MAX_UPLOAD_SIZE_PREDICTIONS=10):
             response = self.post(csv_text(f"{self.roi.id},1733,0.9,ibbi,v1,"))
         self.assertContains(response, "too large")
+
+
+class SuggestionTests(PredictionCase):
+    """Predictions as suggestions: the helper, the annotator's endpoint and the detail page."""
+
+    def upload(self, *rows):
+        result = self.load(csv_text(*rows))
+        self.assertTrue(result.ok, result.errors)
+
+    def test_one_suggestion_per_model_from_its_latest_upload_best_first(self):
+        self.upload(f"{self.roi.id},2210,0.30,old-model,v1,")
+        self.upload(f"{self.roi.id},1733,0.60,other-model,v1,")
+        self.upload(f"{self.roi.id},1733,0.80,old-model,v2,2210:0.10")
+        found = suggestions_for([self.roi.id])[self.roi.id]
+        self.assertEqual([(s["model_name"], s["model_version"], s["valid_species_id"]) for s in found],
+                         [("old-model", "v2", "1733"), ("other-model", "v1", "1733")])
+        self.assertEqual(found[0]["scientific_name"], "Xyleborus affinis")
+        self.assertEqual(found[0]["alternatives"],
+                         [{"valid_species_id": "2210", "scientific_name": "Xyleborus ferrugineus", "confidence": 0.1}])
+
+    def test_rois_without_predictions_are_left_out(self):
+        self.upload(f"{self.roi.id},1733,0.9,ibbi,v1,")
+        self.assertEqual(list(suggestions_for([self.roi.id, self.other.id])), [self.roi.id])
+        self.assertEqual(suggestions_for([]), {})
+
+    def test_query_count_does_not_grow_with_the_number_of_rois(self):
+        def queries_for(rois):
+            with CaptureQueriesContext(connection) as ctx:
+                suggestions_for([r.id for r in rois])
+            return len(ctx)
+
+        image = make_image()
+        few = [make_beetle(image=image) for _ in range(2)]
+        many = few + [make_beetle(image=image) for _ in range(8)]
+        self.upload(*[f"{r.id},1733,0.5,ibbi,v1,2210:0.2" for r in many])
+        self.assertEqual(queries_for(few), queries_for(many))
+
+    def test_annotator_endpoint_returns_predictions_for_the_image(self):
+        image = make_image()
+        here = make_beetle(image=image)
+        make_beetle(image=image)
+        self.upload(f"{here.id},1733,0.9,ibbi,v1,", f"{self.roi.id},2210,0.9,ibbi,v1,")
+        url = reverse("game_proposals")
+
+        self.client.force_login(self.user)
+        self.assertRedirectsToLogin(self.client.get(url, {"image_asset": image.id}))
+
+        self.client.force_login(self.staff)
+        data = self.client.get(url, {"image_asset": image.id}).json()
+        self.assertEqual(list(data["predictions"]), [str(here.id)])
+        [suggestion] = data["predictions"][str(here.id)]
+        self.assertEqual((suggestion["scientific_name"], suggestion["confidence"]), ("Xyleborus affinis", 0.9))
+
+    def test_annotator_endpoint_query_count_ignores_the_number_of_rois(self):
+        def queries_for(image):
+            for _ in range(2):  # the second, warm request: the game's consensus is cached
+                with CaptureQueriesContext(connection) as ctx:
+                    response = self.client.get(reverse("game_proposals"), {"image_asset": image.id})
+                self.assertEqual(response.status_code, 200)
+            return len(ctx)
+
+        self.client.force_login(self.staff)
+        small, large = make_image(), make_image()
+        self.upload(*[f"{make_beetle(image=small).id},1733,0.5,ibbi,v1,2210:0.2" for _ in range(2)])
+        self.upload(*[f"{make_beetle(image=large).id},1733,0.5,ibbi,v1,2210:0.2" for _ in range(9)])
+        self.assertEqual(queries_for(small), queries_for(large))
+
+    def test_annotator_page_offers_the_suggestion(self):
+        self.client.force_login(self.staff)
+        self.assertContains(self.client.get(reverse("tool_annotate")), "useModelSuggestion")
+
+    def detail(self, roi):
+        self.client.force_login(self.user)
+        return self.client.get(reverse("beetle_detail", args=[roi.id]))
+
+    def test_detail_page_marks_the_suggestion_as_unverified(self):
+        self.upload(f"{self.roi.id},1733,0.876,ibbi,v1,")
+        response = self.detail(self.roi)
+        self.assertContains(response, "Model suggestion (unverified)")
+        self.assertContains(response, "Xyleborus affinis")
+        self.assertContains(response, "(88%)")
+        self.assertContains(response, "ibbi v1")
+        self.assertContains(response, "Unidentified")  # the ROI itself is still unidentified
+
+    def test_detail_page_shows_nothing_for_an_identified_roi_or_without_predictions(self):
+        identified = make_beetle(taxon=self.ferr)
+        self.upload(f"{identified.id},1733,0.9,ibbi,v1,")
+        self.assertNotContains(self.detail(identified), "Model suggestion")
+        self.assertNotContains(self.detail(self.other), "Model suggestion")

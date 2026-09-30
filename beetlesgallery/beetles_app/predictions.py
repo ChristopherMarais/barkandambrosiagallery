@@ -254,3 +254,49 @@ def import_predictions(source, user=None, default_model="", default_version="", 
                 update_fields=["model_difficulty", "model_name", "model_updated_at", "updated_at"],
             )
     return result
+
+
+MAX_ALTERNATIVES_SHOWN = 3
+
+
+def suggestions_for(roi_ids):
+    """
+    Model suggestions for some ROIs, as ``{roi_id: [suggestion, ...]}`` (ROIs without any are left out).
+
+    Each ROI gets one suggestion per model, from that model's most recent upload, best first.
+    Runs a fixed number of queries however many ROIs are asked for. A suggestion is a dict:
+    model_name, model_version, valid_species_id, scientific_name, confidence,
+    alternatives (up to three of {valid_species_id, scientific_name, confidence}).
+    """
+    roi_ids = list(roi_ids)
+    if not roi_ids:
+        return {}
+    rows = []
+    for chunk in _chunks(roi_ids, 5000):
+        rows.extend(ModelPrediction.objects.filter(roi_id__in=chunk).select_related("taxon").order_by("-created_at", "-confidence"))
+
+    latest = {}  # (roi, model) -> newest upload; rows are newest first
+    for row in rows:
+        latest.setdefault((row.roi_id, row.model_name), row)
+
+    alternative_ids = {a["valid_species_id"] for row in latest.values() for a in row.top_k[:MAX_ALTERNATIVES_SHOWN]}
+    names = dict(Taxon.objects.filter(valid_species_id__in=alternative_ids).values_list("valid_species_id", "scientific_name"))
+
+    out = {}
+    for row in latest.values():
+        out.setdefault(row.roi_id, []).append({
+            "model_name": row.model_name,
+            "model_version": row.model_version,
+            "valid_species_id": row.valid_species_id,
+            "scientific_name": (row.taxon.scientific_name if row.taxon else "") or row.valid_species_id,
+            "confidence": row.confidence,
+            "alternatives": [
+                {"valid_species_id": a["valid_species_id"],
+                 "scientific_name": names.get(a["valid_species_id"]) or a["valid_species_id"],
+                 "confidence": a["confidence"]}
+                for a in row.top_k[:MAX_ALTERNATIVES_SHOWN]
+            ],
+        })
+    for suggestions in out.values():
+        suggestions.sort(key=lambda s: -s["confidence"])
+    return out

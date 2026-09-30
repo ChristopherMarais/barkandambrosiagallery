@@ -21,6 +21,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from . import game, game_feedback, game_trust
 from .models import Beetles, GameAnswer, GameReport, GameRound, ImageLock, LabelReview, Taxon
+from .predictions import suggestions_for
 
 MODES = {m.value: m.label for m in GameRound.Mode}
 PAIR_CHOICES = [(c.value, c.label) for c in GameAnswer.PairAnswer]
@@ -389,7 +390,10 @@ def _proposal_json(entry, review):
 @staff_member_required
 @require_GET
 def game_proposals(request):
-    """Game label proposals for the ROIs of one image, keyed by ROI id."""
+    """
+    Suggestions for the ROIs of one image, keyed by ROI id: game label proposals, open player
+    reports and classifier predictions (the annotator only offers a prediction while an ROI has no species).
+    """
     image_id = request.GET.get("image_asset")
     if not image_id:
         return JsonResponse({"error": "image_asset is required"}, status=400)
@@ -410,7 +414,8 @@ def game_proposals(request):
             "reason": r.get_reason_display(), "note": r.note, "reporter": r.reporter.username,
             "created_at": r.created_at.isoformat(), "was_validated": r.was_validated,
         })
-    return JsonResponse({"proposals": proposals, "reports": reports})
+    predictions = {str(roi_id): found for roi_id, found in suggestions_for(roi_ids).items()}
+    return JsonResponse({"proposals": proposals, "reports": reports, "predictions": predictions})
 
 
 @staff_member_required
