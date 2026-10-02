@@ -209,13 +209,6 @@ class PlayPageTests(GameCase):
         self.assertIn('(hover: hover) and (pointer: fine)', page)   # shortcuts only shown on a computer
         self.assertIn('addEventListener("popstate"', page)          # the phone's back button acts like Exit
         self.assertIn('id="community"', page)                        # what others said stays until closed
-    def test_box_shows_on_any_photo_and_the_photo_edge_is_marked(self):
-        self.client.force_login(self.user)
-        page = self.client.get(reverse("game_play", args=["classify"])).content.decode()
-        self.assertIn("#lightbox-box { border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.7)", page)   # white with a dark edge
-        self.assertIn("const CROP_PAD = 0.15;", page)        # more context around the beetle
-        self.assertIn('edge.dataset.testid = "photo-edge"', page)   # a crop that meets the photo's edge says so
-
     def test_family_ties_is_a_ladder_from_strangers_to_the_same_species_with_a_not_sure_button(self):
         page = self.page("pair")
         order = [page.index(f'data-choice="{c}"') for c in ("different", "subfamily", "tribe", "genus", "species")]
@@ -266,6 +259,13 @@ class OnboardingTests(GameCase):
         for days_ago in (1, 2, 3):
             self.answer_once(days_ago)
         self.assertIn('data-report-tip="0"', self.page())
+
+    def test_box_shows_on_any_photo_and_the_photo_edge_is_marked(self):
+        self.client.force_login(self.user)
+        page = self.client.get(reverse("game_play", args=["classify"])).content.decode()
+        self.assertIn("#lightbox-box { border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.7)", page)   # white with a dark edge
+        self.assertIn("const CROP_PAD = 0.15;", page)        # more context around the beetle
+        self.assertIn('edge.dataset.testid = "photo-edge"', page)   # a crop that meets the photo's edge says so
 
     def test_the_report_button_is_labelled(self):
         self.assertIn("<span>Report</span>", self.page())
