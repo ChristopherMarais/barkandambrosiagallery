@@ -13,6 +13,7 @@
 
   const STEPS = [
     { el: "photos", text: "This is the beetle. Tap it to see the whole photo." },
+    { el: "light-btn", text: "Photo too dark? Light makes it brighter or sharper." },
     { el: "ranks", text: "Name it as far as you're sure: subfamily, tribe, genus, species. Stop where you're unsure." },
     { el: "ladder", text: "Are A and B related? Pick the lowest line you're sure of." },
     { el: "open-search", text: "Know the name? Search for it." },

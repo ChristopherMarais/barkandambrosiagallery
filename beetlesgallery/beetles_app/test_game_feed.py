@@ -253,6 +253,14 @@ class OnboardingTests(GameCase):
         self.assertIn('data-first="1"', self.page("?tour=1"))
         self.assertIn("?tour=1", self.client.get(reverse("game_how")).content.decode())
 
+    def test_photos_can_be_made_brighter(self):
+        page = self.page()
+        self.assertIn('id="light-btn"', page)
+        self.assertIn('id="light-brightness"', page)
+        self.assertIn('id="light-contrast"', page)
+        self.assertIn("#photos canvas, #lightbox-img { filter: var(--photo-filter, none); }", page)   # crops and whole photo alike
+        self.assertIn("resetLight();", page)                                                         # back to normal for the next beetle
+
     def test_the_report_tip_is_for_the_first_few_days_only(self):
         self.answer_once()
         self.assertIn('data-report-tip="1"', self.page())
