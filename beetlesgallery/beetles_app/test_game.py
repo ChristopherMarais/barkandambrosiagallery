@@ -274,11 +274,10 @@ class TaxaApiTests(GameCase):
         self.assertEqual(self.client.get(url, {"rank": "species"}).json()["options"], [])
         self.assertEqual(self.client.get(url, {"rank": "kingdom"}).status_code, 400)
 
-    def test_search(self):
+    def test_no_global_search(self):
+        # Each list has its own search box in the page; there is no jump-to-any-name search.
         self.client.force_login(self.user)
-        results = self.client.get(reverse("game_taxa_search"), {"q": "xyl"}).json()["results"]
-        self.assertEqual(results[0]["kind"], "genus")
-        self.assertEqual({r["label"] for r in results[1:]}, {"Xyleborus affinis", "Xyleborus ferrugineus"})
+        self.assertEqual(self.client.get("/game/api/taxa/search/", {"q": "xyl"}).status_code, 404)
 
 
 class ConsensusTests(GameCase):

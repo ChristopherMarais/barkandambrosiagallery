@@ -785,41 +785,6 @@ def game_taxa(request):
     return JsonResponse({"options": options})
 
 
-@login_required
-@require_GET
-def game_taxa_search(request):
-    """Jump straight to a genus or species by typing part of its name."""
-    q = (request.GET.get("q") or "").strip()
-    if len(q) < 2:
-        return JsonResponse({"results": []})
-    complete = Taxon.objects.filter(game.COMPLETE_TAXON)
-    results = []
-    for genus, subfamily, tribe in (
-        complete.filter(genus__istartswith=q)
-        .values_list("genus", "subfamily", "tribe").distinct().order_by("genus")[:5]
-    ):
-        results.append({
-            "label": genus, "kind": "genus",
-            "subfamily": subfamily or "", "tribe": tribe or "", "genus": genus, "species": "",
-        })
-    seen = set()
-    species_qs = (
-        complete.filter(scientific_name__icontains=q)
-        .exclude(species__isnull=True).exclude(species="")
-        .values_list("subfamily", "tribe", "genus", "species")
-        .order_by("genus", "species")[:30]
-    )
-    for subfamily, tribe, genus, species in species_qs:
-        if (genus, species) in seen:  # subspecies share genus + species
-            continue
-        seen.add((genus, species))
-        results.append({
-            "label": f"{genus} {species}", "kind": "species",
-            "subfamily": subfamily or "", "tribe": tribe or "", "genus": genus, "species": species,
-        })
-    return JsonResponse({"results": results[:20]})
-
-
 # ---------------------------------------------------------------------------
 # Label proposals (annotation page)
 # ---------------------------------------------------------------------------

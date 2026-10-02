@@ -40,6 +40,20 @@
     .rank-row select option:checked { background: #e5e7eb; font-weight: 600; }
   }
   .rank-row .chev { position: absolute; right: 0.875rem; pointer-events: none; color: #9ca3af; font-size: 0.75rem; }
+  /* Long lists get their own search: a magnifier in the row opens a filter box over the list */
+  .rank-row .find { display: none; flex: 0 0 2.5rem; height: 100%; align-items: center; justify-content: center; color: #6b7280; border-left: 1px solid #e5e7eb; }
+  .rank-row.findable .find { display: inline-flex; }
+  .rank-row.findable .chev { right: 3.25rem; }
+  .rank-row .finder { position: absolute; inset: 0 2.5rem 0 6.25rem; display: none; }
+  .rank-row.finding .finder { display: block; }
+  .rank-row.finding select, .rank-row.finding .chev { visibility: hidden; }
+  .finder input { width: 100%; height: 100%; padding: 0 0.25rem; font-size: 1rem; color: #111827; background: #fff; border: 0; outline: none; }
+  .find-list { max-height: 35vh; overflow-y: auto; padding: 0.25rem; border: 1px solid #d1d5db; border-radius: 0.75rem; background: #fff; }
+  .find-list.hidden { display: none; }
+  .find-list button { display: block; width: 100%; text-align: left; padding: 0.5rem 0.75rem; border-radius: 0.5rem; font-size: 0.9375rem; color: #111827; }
+  .find-list button.active, .find-list button:hover { background: #f3f4f6; }
+  .find-list mark { background: none; color: inherit; font-weight: 700; }
+  .find-list .none { padding: 0.5rem 0.75rem; font-size: 0.875rem; color: #9ca3af; }
 
   /* The relatedness ladder: a meter that fills from "strangers" down to "same species" */
   #ladder.hidden, #ranks.hidden { display: none; }   /* the panel of the other game, while this one is on screen */
@@ -59,8 +73,6 @@
   #actions { position: sticky; bottom: 0; z-index: 2; display: flex; gap: 0.5rem; margin-top: 0.5rem; padding: 0 0 calc(0.625rem + env(safe-area-inset-bottom)); background: #fff; }
   #actions button { height: 3rem; border-radius: 0.75rem; font-size: 1rem; }
   #skip { flex: 0 0 30%; font-weight: 500; color: #4b5563; border: 1px solid #d1d5db; background: #fff; }
-  #open-search { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; padding: 0 0.875rem; font-weight: 500; color: #374151; border: 1px solid #d1d5db; background: #fff; }
-  #open-search.hidden { display: none; }
   #submit { flex: 1 1 auto; font-weight: 600; color: #fff; background: #6b7280; }
   #submit:disabled { background: #d1d5db; }
   #actions button:active:not(:disabled) { transform: scale(0.98); }
@@ -129,7 +141,6 @@
   data-exit-url="{% url 'game_exit' %}"
   data-home-url="{% url 'game_home' %}"
   data-taxa-url="{% url 'game_taxa' %}"
-  data-search-url="{% url 'game_taxa_search' %}"
   data-prefs-url="{% url 'game_prefs' %}"
   data-report-url="{% url 'game_report_item' %}">
 
@@ -188,7 +199,11 @@
           <label for="pick-{{ rank }}">{{ label }}</label>
           <select id="pick-{{ rank }}" data-rank="{{ rank }}"></select>
           <i class="fi fi-rr-angle-small-down chev"></i>
+          <div class="finder"><input type="text" inputmode="search" enterkeyhint="search" data-find="{{ rank }}" autocomplete="off" autocapitalize="off" spellcheck="false"
+            placeholder="Type to search&hellip;" aria-label="Search {{ label|lower }}" role="combobox" aria-expanded="false" aria-controls="find-{{ rank }}"></div>
+          <button type="button" class="find" id="find-btn-{{ rank }}" data-open-find="{{ rank }}" aria-label="Search {{ label|lower }}"><i class="fi fi-rr-search"></i></button>
         </div>
+        <ul id="find-{{ rank }}" class="find-list hidden" role="listbox" aria-label="{{ label }} matches"></ul>
         {% endfor %}
       </div>
       <div id="ladder" class="hidden" role="radiogroup" aria-label="How closely related are these two beetles?">
@@ -199,7 +214,6 @@
 
       <div id="actions">
         <button type="button" id="skip"><span id="skip-text">Skip</span><kbd class="kbd">S</kbd></button>
-        <button type="button" id="open-search" class="hidden" aria-label="Search for a name"><i class="fi fi-rr-search"></i><span>Search</span><kbd class="kbd">/</kbd></button>
         <button type="button" id="submit" disabled>Next<kbd class="kbd">Enter</kbd></button>
       </div>
     </div>
@@ -219,16 +233,6 @@
       <a id="review-link" href="#" class="px-6 py-3.5 text-base font-semibold text-white bg-gray-500 hover:bg-gray-500 rounded-xl"><i class="fi fi-rr-list-check"></i> See the answers</a>
       <a href="{% url 'game_home' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl">Back to the game home</a>
     </div>
-  </div>
-
-  <!-- Search (Name That Beetle): jump straight to a genus or species -->
-  <div id="search-sheet" class="hidden absolute inset-0 z-10 bg-white flex-col">
-    <div class="flex items-center gap-2 px-2 h-14 border-b border-gray-200">
-      <button type="button" id="close-search" class="icon-btn" aria-label="Close search"><i class="fi fi-rr-cross text-lg"></i></button>
-      <input id="search" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Search a genus or species&hellip;"
-        class="flex-1 h-10 px-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-600">
-    </div>
-    <ul id="search-results" class="flex-1 overflow-y-auto"></ul>
   </div>
 
   <!-- How it works (Family Ties) -->
@@ -583,7 +587,6 @@
     $("ladder").classList.toggle("hidden", mode !== "pair");
     $("skip-text").textContent = mode === "pair" ? "Not sure" : "Skip";
     $("game-title").textContent = GAME_NAMES[mode];
-    $("open-search").classList.toggle("hidden", mode !== "classify");
     $("open-help").classList.toggle("hidden", mode !== "pair");
   }
 
@@ -921,8 +924,12 @@
     return optionCache.get(key);
   }
 
+  const FIND_MIN = 12;   // lists longer than this get their own search box
+  const listed = {};     // rank -> [{value, label}] as last shown in that list
+
   function fill(rank, opts, value, labelFn) {
     const select = selects[rank];
+    listed[rank] = opts.map((o) => ({ value: o.value, label: labelFn ? labelFn(o) : o.value }));
     select.innerHTML = "";
     const none = document.createElement("option");
     none.value = "";
@@ -939,6 +946,8 @@
     const row = select.closest(".rank-row");
     row.classList.toggle("has-value", !!value);
     row.classList.toggle("is-disabled", !opts.length);
+    row.classList.toggle("findable", opts.length > FIND_MIN);
+    if (finding === rank && opts.length <= FIND_MIN) closeFinder();
   }
 
   // Reload every list for the current picks. The token drops stale responses.
@@ -982,56 +991,113 @@
     });
   });
 
-  // Search sheet
-  const search = $("search");
-  const results = $("search-results");
-  let searchTimer = null;
-  function openSearch(open) {
-    const sheet = $("search-sheet");
-    sheet.classList.toggle("hidden", !open);
-    sheet.classList.toggle("flex", open);
-    if (open) { search.value = ""; results.innerHTML = ""; setTimeout(() => search.focus(), 50); }
+  // Search inside one list: type part of a name, pick from the matches. The list itself still works by clicking.
+  let finding = null;
+  let findActive = 0;
+  function findParts(rank) {
+    return { row: selects[rank].closest(".rank-row"), input: document.querySelector(`[data-find="${rank}"]`), list: $("find-" + rank) };
   }
-  {
-    $("open-search").addEventListener("click", () => openSearch(true));
-    $("close-search").addEventListener("click", () => openSearch(false));
-    search.addEventListener("input", () => {
-      clearTimeout(searchTimer);
-      const q = search.value.trim();
-      if (q.length < 2) { results.innerHTML = ""; return; }
-      searchTimer = setTimeout(async () => {
-        try {
-          const data = await api(root.dataset.searchUrl + "?q=" + encodeURIComponent(q));
-          results.innerHTML = "";
-          if (!data.results.length) {
-            results.innerHTML = '<li class="px-5 py-4 text-sm text-gray-400">No matches</li>';
-          }
-          data.results.forEach((r) => {
-            const li = document.createElement("li");
-            const btn = document.createElement("button");
-            btn.type = "button";
-            btn.className = "w-full text-left px-5 py-3.5 active:bg-gray-100 border-b border-gray-100";
-            const name = document.createElement("span");
-            name.className = r.kind === "species" ? "italic" : "font-semibold";
-            name.textContent = r.label;
-            const sub = document.createElement("span");
-            sub.className = "block text-xs text-gray-400";
-            sub.textContent = [r.subfamily, r.tribe].filter(Boolean).join(" › ") + (r.kind === "genus" ? " · genus" : "");
-            btn.append(name, sub);
-            btn.addEventListener("click", () => {
-              pick = { subfamily: r.subfamily, tribe: r.tribe, genus: r.genus, species: r.species };
-              openSearch(false);
-              renderPickers();
-            });
-            li.appendChild(btn);
-            results.appendChild(li);
-          });
-        } catch (e) {
-          showError(e.message);
-        }
-      }, 250);
+  function renderFinder() {
+    if (!finding) return;
+    const { input, list } = findParts(finding);
+    const q = input.value.trim().toLowerCase();
+    const matches = (listed[finding] || []).filter((o) => !q || o.label.toLowerCase().includes(q));
+    findActive = Math.min(findActive, Math.max(0, matches.length - 1));
+    list.innerHTML = "";
+    if (!matches.length) {
+      const li = document.createElement("li");
+      li.className = "none";
+      li.textContent = "No matches in this list";
+      list.appendChild(li);
+    }
+    matches.forEach((o, i) => {
+      const li = document.createElement("li");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.setAttribute("role", "option");
+      btn.dataset.value = o.value;
+      if (i === findActive) btn.classList.add("active");
+      const at = q ? o.label.toLowerCase().indexOf(q) : -1;
+      if (at >= 0) {
+        const mark = document.createElement("mark");
+        mark.textContent = o.label.slice(at, at + q.length);
+        btn.append(o.label.slice(0, at), mark, o.label.slice(at + q.length));
+      } else {
+        btn.textContent = o.label;
+      }
+      btn.addEventListener("mousedown", (e) => e.preventDefault());   // keep focus in the box until the pick lands
+      btn.addEventListener("click", () => choose(finding, o.value));
+      li.appendChild(btn);
+      list.appendChild(li);
     });
   }
+  function openFinder(rank, text) {
+    if (finding && finding !== rank) closeFinder();
+    finding = rank;
+    findActive = 0;
+    const { row, input, list } = findParts(rank);
+    row.classList.add("finding");
+    list.classList.remove("hidden");
+    input.setAttribute("aria-expanded", "true");
+    input.value = text || "";
+    renderFinder();
+    input.focus();
+  }
+  function closeFinder() {
+    if (!finding) return;
+    const { row, input, list } = findParts(finding);
+    row.classList.remove("finding");
+    list.classList.add("hidden");
+    list.innerHTML = "";
+    input.setAttribute("aria-expanded", "false");
+    input.value = "";
+    finding = null;
+  }
+  function choose(rank, value) {
+    closeFinder();
+    const select = selects[rank];
+    select.value = value;
+    select.dispatchEvent(new Event("change"));
+    select.focus();
+  }
+  document.querySelectorAll("[data-open-find]").forEach((btn) => {
+    btn.addEventListener("click", () => (finding === btn.dataset.openFind ? closeFinder() : openFinder(btn.dataset.openFind)));
+  });
+  document.querySelectorAll("[data-find]").forEach((input) => {
+    input.addEventListener("input", () => { findActive = 0; renderFinder(); });
+    input.addEventListener("keydown", (e) => {
+      const buttons = findParts(input.dataset.find).list.querySelectorAll("button");
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        if (!buttons.length) return;
+        findActive = (findActive + (e.key === "ArrowDown" ? 1 : buttons.length - 1)) % buttons.length;
+        renderFinder();
+        const on = findParts(input.dataset.find).list.querySelector("button.active");
+        if (on) on.scrollIntoView({ block: "nearest" });
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (buttons[findActive]) buttons[findActive].click();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        if (input.value) { input.value = ""; findActive = 0; renderFinder(); } else { const r = input.dataset.find; closeFinder(); selects[r].focus(); }
+      }
+    });
+    input.addEventListener("blur", () => setTimeout(() => {
+      if (finding === input.dataset.find && document.activeElement !== input) closeFinder();
+    }, 150));
+  });
+  // On a computer, typing a letter on a long list opens its search with that letter
+  Object.entries(selects).forEach(([rank, select]) => {
+    select.addEventListener("keydown", (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (/^[a-z]$/i.test(e.key) && select.closest(".rank-row").classList.contains("findable")) {
+        e.preventDefault();
+        e.stopPropagation();
+        openFinder(rank, e.key);
+      }
+    });
+  });
 
   // ---------- shared ----------
   function currentAnswer() {
@@ -1053,9 +1119,9 @@
 
   // Close whatever sits on top of the game. True if something was open.
   function closeOverlays() {
-    const open = [["lightbox"], ["search-sheet"], ["focus-sheet"], ["help-sheet"]].filter(([id]) => $(id) && !$(id).classList.contains("hidden"));
+    const open = [["lightbox"], ["focus-sheet"], ["help-sheet"]].filter(([id]) => $(id) && !$(id).classList.contains("hidden"));
+    if (finding) { open.push(["finder"]); closeFinder(); }
     $("lightbox").classList.add("hidden");
-    openSearch(false);
     if ($("focus-sheet")) openFocus(false);
     if ($("help-sheet")) { $("help-sheet").classList.add("hidden"); $("help-sheet").classList.remove("flex"); }
     document.dispatchEvent(new CustomEvent("game:close-overlays"));
@@ -1072,27 +1138,21 @@
     $("exit").click();
   });
 
-  // Keyboard shortcuts on a computer: Enter next, S skip / not sure, / search, 1-6 or the arrows on the ladder,
+  // Keyboard shortcuts on a computer: Enter next, S skip / not sure, a letter searches a long list, 1-6 or the arrows on the ladder,
   // V the whole photo, Esc closes
   function isTyping(el) { return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable); }
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") { closeOverlays(); return; }
     if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
     const t = e.target;
-    if (isTyping(t)) {
-      if (t.id === "search" && e.key === "Enter") {
-        const first = results.querySelector("button");
-        if (first) { e.preventDefault(); first.click(); }
-      }
-      return;
-    }
+    if (isTyping(t)) return;
     if (t && t.tagName === "OPTION") return;   // choosing in an open list
     if (!$("recap").classList.contains("hidden")) {
       if (e.key === "Enter") { e.preventDefault(); $("recap-more").click(); }
       return;
     }
     if (!$("lightbox").classList.contains("hidden") || document.querySelector("[data-overlay-open]")) return;
-    if ($("stage").classList.contains("hidden") || $("search-sheet").classList.contains("flex") || ($("focus-sheet") && $("focus-sheet").classList.contains("flex"))) return;
+    if ($("stage").classList.contains("hidden") || ($("focus-sheet") && $("focus-sheet").classList.contains("flex"))) return;
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
     if (key === "Enter") {
       e.preventDefault();   // also keeps a focused list from opening
@@ -1100,9 +1160,6 @@
     } else if (key === "s") {
       e.preventDefault();
       if (!$("skip").disabled) $("skip").click();
-    } else if (key === "/" && MODE === "classify") {
-      e.preventDefault();
-      openSearch(true);
     } else if (key === "v" && item && item.images.length) {
       const im = item.images[0];
       openLightbox(im.url, im.box, 0);

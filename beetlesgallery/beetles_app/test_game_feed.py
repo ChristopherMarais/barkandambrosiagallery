@@ -199,16 +199,26 @@ class PlayPageTests(GameCase):
         self.assertIn('id="submit"', page)
 
 
-    def test_keyboard_hints_back_button_and_search_sit_with_the_answer_buttons(self):
+    def test_keyboard_hints_and_back_button_sit_with_the_answer_buttons(self):
         self.client.force_login(self.user)
         page = self.client.get(reverse("game_play", args=["classify"])).content.decode()
         actions = page[page.index('<div id="actions">'):]
         actions = actions[:actions.index("</div>")]
-        for part in ('id="skip"', 'id="open-search"', 'id="submit"', '<kbd class="kbd">Enter</kbd>'):
+        for part in ('id="skip"', 'id="submit"', '<kbd class="kbd">Enter</kbd>'):
             self.assertIn(part, actions)
+        self.assertNotIn('id="open-search"', page)
         self.assertIn('(hover: hover) and (pointer: fine)', page)   # shortcuts only shown on a computer
         self.assertIn('addEventListener("popstate"', page)          # the phone's back button acts like Exit
         self.assertIn('id="community"', page)                        # what others said stays until closed
+
+    def test_each_rank_list_has_its_own_search(self):
+        self.client.force_login(self.user)
+        page = self.client.get(reverse("game_play", args=["classify"])).content.decode()
+        for rank in ("subfamily", "tribe", "genus", "species"):
+            self.assertIn(f'data-open-find="{rank}"', page)
+            self.assertIn(f'data-find="{rank}"', page)
+            self.assertIn(f'id="find-{rank}"', page)
+
     def test_family_ties_is_a_ladder_from_strangers_to_the_same_species_with_a_not_sure_button(self):
         page = self.page("pair")
         order = [page.index(f'data-choice="{c}"') for c in ("different", "subfamily", "tribe", "genus", "species")]
