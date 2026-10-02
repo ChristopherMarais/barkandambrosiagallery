@@ -110,6 +110,11 @@
   @media (min-width: 700px) { #panel { padding-left: calc((100% - 38rem) / 2); padding-right: calc((100% - 38rem) / 2); } }
   @media (prefers-reduced-motion: reduce) { #photos canvas { transition: none; } #chip.pop { animation: none; } }
   /* More photos of the same beetle (an unlock): a chip on the photo, and arrows in the photo viewer */
+  /* The beetle sits at the edge of the photo: say so, so a cut-off crop isn't mistaken for a bad box */
+  .edge-chip { position: absolute; left: 0.375rem; bottom: 0.375rem; z-index: 2; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem;
+               border-radius: 9999px; background: rgba(255,255,255,.92); border: 1px solid #d1d5db; color: #374151; font-size: 0.6875rem; font-weight: 600; pointer-events: none; }
+  /* The box on the whole photo: white with a dark edge so it shows on light and dark photos, the rest dimmed */
+  #lightbox-box { border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.7), inset 0 0 0 1px rgba(0,0,0,.7), 0 0 0 9999px rgba(0,0,0,.35); }
   .more-chip { position: absolute; right: 0.375rem; bottom: 0.375rem; z-index: 2; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem;
                border-radius: 9999px; background: rgba(17,24,39,.78); color: #fff; font-size: 0.75rem; font-weight: 600; }
   .more-chip.locked { background: rgba(255,255,255,.92); color: #6b7280; border: 1px solid #d1d5db; }
@@ -289,9 +294,9 @@
 <!-- Full image viewer -->
 <div id="lightbox" class="hidden fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-3" role="dialog" aria-label="Whole image">
   <button type="button" class="absolute top-3 right-3 p-3 text-white text-xl" aria-label="Close"><i class="fi fi-rr-cross"></i></button>
-  <div class="relative inline-block">
+  <div class="relative inline-block overflow-hidden">
     <img id="lightbox-img" alt="Whole image" class="block max-w-[94vw] max-h-[85vh] object-contain">
-    <div id="lightbox-box" class="absolute border-2 border-white rounded-sm pointer-events-none"></div>
+    <div id="lightbox-box" class="absolute rounded-sm pointer-events-none"></div>
   </div>
   <button type="button" id="lb-prev" class="lb-nav hidden" aria-label="Previous photo of this beetle"><i class="fi fi-rr-angle-left"></i></button>
   <button type="button" id="lb-next" class="lb-nav hidden" aria-label="Next photo of this beetle"><i class="fi fi-rr-angle-right"></i></button>
@@ -364,18 +369,49 @@
     });
   }
 
-  // Draw the bounding box region (plus a little context) onto a canvas.
+  // Draw the bounding box region (plus some context) onto a canvas. Where the crop runs into the edge of the
+  // photo, that side gets a striped band, so a beetle cut off by the photo isn't taken for a bad box.
+  // Returns the sides that meet the photo's edge.
+  const CROP_PAD = 0.15;   // context around the box, as a share of the box on each side
   function drawCrop(canvas, img, box) {
     const W = img.naturalWidth, H = img.naturalHeight;
     const [bx, by, bw, bh] = box;
-    const pad = 0.08;
-    const x0 = Math.max(0, bx - bw * pad), y0 = Math.max(0, by - bh * pad);
-    const x1 = Math.min(1, bx + bw * (1 + pad)), y1 = Math.min(1, by + bh * (1 + pad));
+    const x0 = Math.max(0, bx - bw * CROP_PAD), y0 = Math.max(0, by - bh * CROP_PAD);
+    const x1 = Math.min(1, bx + bw * (1 + CROP_PAD)), y1 = Math.min(1, by + bh * (1 + CROP_PAD));
     const sx = x0 * W, sy = y0 * H, sw = Math.max(1, (x1 - x0) * W), sh = Math.max(1, (y1 - y0) * H);
     const scale = Math.min(1, 1400 / Math.max(sw, sh));
     canvas.width = Math.round(sw * scale);
     canvas.height = Math.round(sh * scale);
-    canvas.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    // A side meets the edge when the box itself comes within half the padding of it
+    const near = (gap, size) => gap < size * CROP_PAD / 2;
+    const edges = [];
+    if (near(bx, bw)) edges.push("left");
+    if (near(1 - bx - bw, bw)) edges.push("right");
+    if (near(by, bh)) edges.push("top");
+    if (near(1 - by - bh, bh)) edges.push("bottom");
+    const t = Math.max(6, Math.round(Math.max(canvas.width, canvas.height) * 0.014));
+    edges.forEach((side) => {
+      const r = { left: [0, 0, t, canvas.height], right: [canvas.width - t, 0, t, canvas.height],
+                  top: [0, 0, canvas.width, t], bottom: [0, canvas.height - t, canvas.width, t] }[side];
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(...r);
+      ctx.clip();
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(...r);
+      ctx.strokeStyle = "#111827";
+      ctx.lineWidth = t / 2;
+      for (let d = -canvas.height; d < canvas.width + canvas.height; d += t * 1.5) {
+        ctx.beginPath();
+        ctx.moveTo(d, 0);
+        ctx.lineTo(d + canvas.height, canvas.height);
+        ctx.stroke();
+      }
+      ctx.restore();
+    });
+    return edges;
   }
 
   function loadImage(url) {
@@ -719,8 +755,17 @@
       frame.className = "frame";
       frame.setAttribute("aria-label", "See the whole image");
       const canvas = document.createElement("canvas");
-      if (images) drawCrop(canvas, images[i], im.box);
+      const edges = images ? drawCrop(canvas, images[i], im.box) : [];
       frame.appendChild(canvas);
+      if (edges.length) {
+        const edge = document.createElement("span");
+        edge.className = "edge-chip";
+        edge.dataset.testid = "photo-edge";
+        edge.textContent = "Photo edge";
+        edge.title = "The beetle reaches the edge of the photo (striped side). Tap to see the whole photo.";
+        frame.appendChild(edge);
+        frame.setAttribute("aria-label", "See the whole image. The beetle reaches the edge of the photo on the " + edges.join(" and ") + ".");
+      }
       if (MODE === "pair") {
         const tag = document.createElement("span");
         tag.className = "absolute top-1 left-1 px-2 py-0.5 text-xs font-bold bg-white/90 rounded-md text-gray-900";
