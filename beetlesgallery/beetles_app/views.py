@@ -1326,7 +1326,7 @@ UPDATE_ALLOWED_FIELDS = [
     "bbox_is_validated", "is_validated"
 ]
 UPDATE_REQUIRED_COLS = {"record_id"} | set(UPDATE_ALLOWED_FIELDS)
-UPDATE_OPTIONAL_COLS = {"update_notes"}
+UPDATE_OPTIONAL_COLS = {"update_notes", "label_source", "label_source_detail"}
 UPDATE_IGNORED_COLS = {
     "image_id", "taxonomy_scientific_name", "taxonomy_subfamily", 
     "taxonomy_tribe", "taxonomy_genus", "taxonomy_species"
