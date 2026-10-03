@@ -465,6 +465,12 @@ class BeetlesViewSet(viewsets.ModelViewSet):
             from beetlesgallery.beetles_app.models import GameReport
             image_qs = image_qs.filter(id__in=GameReport.objects.filter(status=GameReport.Status.OPEN)
                                        .values('roi__image_asset_id'))
+        elif game_filter == 'disputed':
+            # validated labels most reliable players dispute (game_label_check): likely mislabelled
+            from beetlesgallery.beetles_app.game_label_check import LABEL_CHECK_USER
+            from beetlesgallery.beetles_app.models import GameReport
+            image_qs = image_qs.filter(id__in=GameReport.objects.filter(
+                status=GameReport.Status.OPEN, reporter__username=LABEL_CHECK_USER).values('roi__image_asset_id'))
 
         # PERFORMANCE: Only compute heavy aggregate stats on initial page load (page 1)
         stats_data = None

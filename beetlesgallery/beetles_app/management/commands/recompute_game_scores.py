@@ -13,7 +13,7 @@ yet (game_trust.auto_apply_expert_labels; those stay unvalidated for a curator t
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 
-from beetlesgallery.beetles_app import game_scoring
+from beetlesgallery.beetles_app import game_label_check, game_scoring
 from beetlesgallery.beetles_app.game_discoveries import find as find_discoveries
 from beetlesgallery.beetles_app.game_trust import auto_apply_expert_labels, recompute_skills
 
@@ -40,6 +40,7 @@ class Command(BaseCommand):
         n = game_scoring.recompute(ids)
         applied = [] if ids else auto_apply_expert_labels()
         found = find_discoveries(ids or None)
+        disputed = [] if ids else game_label_check.check()   # likely mislabelled validated beetles, for curators
         self.stdout.write(self.style.SUCCESS(
             f"Re-scored {n} player{'s' if n != 1 else ''}. Experts named {len(applied)} beetle{'s' if len(applied) != 1 else ''}. "
-            f"New species found: {len(found)}."))
+            f"New species found: {len(found)}. Disputed labels flagged: {len(disputed)}."))

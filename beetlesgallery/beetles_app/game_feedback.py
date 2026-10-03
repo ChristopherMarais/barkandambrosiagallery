@@ -313,12 +313,18 @@ def resolve_reports(roi, outcome, staff, note=""):
                (voided if it is no longer validated).
     confirmed  the label was right: the reporters' held answers count again.
     """
-    reports = list(GameReport.objects.filter(roi=roi, status=GameReport.Status.OPEN))
+    from .game_label_check import LABEL_CHECK_USER
+
+    reports = list(GameReport.objects.filter(roi=roi, status=GameReport.Status.OPEN).select_related("reporter"))
     if outcome == GameReport.Status.CORRECTED:
         players = rescore_roi(roi)
     elif outcome == GameReport.Status.CONFIRMED:
-        players = {r.reporter_id for r in reports}
-        GameAnswer.objects.filter(_hold_filter(roi), player_id__in=players).update(score_hold=False)
+        held = GameAnswer.objects.filter(_hold_filter(roi))
+        # The automatic label check (game_label_check) held everyone's answers; a player's report only their own
+        if not any(r.reporter.username == LABEL_CHECK_USER for r in reports):
+            held = held.filter(player_id__in={r.reporter_id for r in reports})
+        players = set(held.values_list("player_id", flat=True))
+        held.update(score_hold=False)
     else:
         raise ValueError(outcome)
     GameReport.objects.filter(id__in=[r.id for r in reports]).update(
