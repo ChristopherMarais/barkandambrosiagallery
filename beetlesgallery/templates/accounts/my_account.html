@@ -44,6 +44,11 @@
   </div>
   {% endif %}
 
+  {% if request.user.is_superuser %}
+  <p class="mb-10 -mt-6 text-sm"><a href="{% url 'site_notice' %}" class="underline text-gray-700 hover:text-black" data-testid="site-notice-link">Site notice</a>
+    <span class="text-gray-500">: a one-line message at the top of every page, e.g. during a stress test.</span></p>
+  {% endif %}
+
   {# --- SECTION 3: USER LIST (Superusers Only) --- #}
   {% if request.user.is_superuser %}
   <div class="bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm">

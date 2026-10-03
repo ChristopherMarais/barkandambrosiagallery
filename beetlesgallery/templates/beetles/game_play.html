@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 
+{# The game is one fixed screen: the site notice shows on the game home instead #}
+{% block site_notice %}{% endblock %}
+
 {% block extra_css %}
 <style>
   /* The game is one fixed screen: header, photos, answer panel. Nothing moves between beetles, so the buttons are

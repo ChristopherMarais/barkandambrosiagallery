@@ -6,6 +6,7 @@ from django.views.static import serve
 
 from beetlesgallery.beetles_app import views as beetles_views
 from beetlesgallery.beetles_app import game_views
+from beetlesgallery.beetles_app import site_notice
 from beetlesgallery.beetles_app import interaction_views
 from beetlesgallery.beetles_app import interaction_proposals_views
 from beetlesgallery.beetles_app import interaction_upload_views
@@ -74,6 +75,7 @@ urlpatterns = [
     path('tools/annotate/', beetles_views.tool_annotate, name='tool_annotate'),
     path('tools/predictions/', beetles_views.upload_predictions, name='upload_predictions'),
     path('tools/access-requests/', access_views.access_requests, name='access_requests'),
+    path('tools/site-notice/', site_notice.edit, name='site_notice'),
 
     # --- Beetle ID game ---
     path('game/', game_views.game_home, name='game_home'),

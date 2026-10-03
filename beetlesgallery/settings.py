@@ -95,6 +95,7 @@ TEMPLATES = [
                 "beetlesgallery.beetles_app.context_processors.species_ref_status",
                 "beetlesgallery.beetles_app.areas.areas_for_templates",
                 "beetlesgallery.beetles_app.context_processors.game_player",
+                "beetlesgallery.beetles_app.site_notice.context",
             ],
         },
     },
