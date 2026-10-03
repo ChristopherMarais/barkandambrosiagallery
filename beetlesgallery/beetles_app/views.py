@@ -181,6 +181,18 @@ def _pending_access_requests(user):
     return AccessRequest.objects.filter(status=AccessRequest.Status.PENDING, email_verified_at__isnull=False).count()
 
 
+def account_reset_notice():
+    """
+    True while the sign-in page should say that accounts were reset (issue #393): until the date in
+    ACCOUNT_RESET_NOTICE_UNTIL (YYYY-MM-DD, empty turns it off).
+    """
+    until = getattr(settings, "ACCOUNT_RESET_NOTICE_UNTIL", "")
+    try:
+        return bool(until) and timezone.localdate() <= date.fromisoformat(until)
+    except ValueError:
+        return False
+
+
 class ApprovalAwareAuthenticationForm(AuthenticationForm):
     """The normal sign-in form, except that someone whose request is still waiting is told so instead of "wrong password"."""
 
@@ -203,6 +215,9 @@ class ApprovalAwareAuthenticationForm(AuthenticationForm):
 class LoginViewWithRedirectMessage(DjangoLoginView):
     template_name = "accounts/signin.html"
     authentication_form = ApprovalAwareAuthenticationForm
+
+    def get_context_data(self, **kwargs):
+        return dict(super().get_context_data(**kwargs), reset_notice=account_reset_notice())
 
     def get(self, request, *args, **kwargs):
         # self.redirect_field_name is "next" by default

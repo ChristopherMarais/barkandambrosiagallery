@@ -7,10 +7,15 @@
 
     <div class="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
       <div class="w-full p-4 sm:p-12.5">
-        <p class="mb-6 block font-medium text-black">
-          New here? <a href="{% url 'request_access' %}" class="inline-block py-2 font-bold underline hover:text-gray-600">Request access</a>.
-          Accounts are given by approval.
+        {% if reset_notice %}
+        <p class="mb-4 p-4 rounded-lg bg-gray-100 text-sm text-gray-800" data-testid="reset-notice">
+          <strong>Accounts were reset recently.</strong> Had an account before? Please request access again.
         </p>
+        {% endif %}
+        <div class="mb-6 flex flex-wrap items-center gap-3">
+          <a href="{% url 'request_access' %}" class="inline-flex items-center px-4 py-2 rounded-lg border border-gray-900 font-semibold text-gray-900 hover:bg-gray-50" data-testid="request-access">Request access</a>
+          <span class="text-sm text-gray-600">Confirm your email &rarr; we approve you &rarr; you get an email.</span>
+        </div>
         <form method="POST" action="{% url 'login' %}">
           {% csrf_token %}
 
