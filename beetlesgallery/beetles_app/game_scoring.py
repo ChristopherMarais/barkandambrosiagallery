@@ -49,7 +49,7 @@ from django.db.models import F, Q, Value
 from django.db.models.functions import Greatest
 from django.utils import timezone
 
-from . import game
+from . import game, game_reference
 from .game import PAIR_DEPTH, RANKS, game_setting
 from .models import AnswerPoints, Beetles, GameAnswer, PlayerScore, RetroCredit
 
@@ -289,13 +289,14 @@ def consensus_points(answer, votes, judges):
 # ---------------------------------------------------------------------------
 # One answer
 # ---------------------------------------------------------------------------
-def score(answer, votes_for, judges):
+def score(answer, votes_for, judges, model_refs=None):
     """
-    (points, basis, detail). ``votes_for(roi_id)`` gives the judges' votes on an unvalidated beetle.
+    (points, basis, detail). ``votes_for(roi_id)`` gives the judges' votes on an unvalidated beetle; ``model_refs``
+    the classifier's trusted names for unvalidated beetles (game_reference.model_references).
     Every real answer also earns a small participation point (GAME_POINTS_PARTICIPATION), so the score grows the
     more you play; accuracy still decides most of it.
     """
-    points, basis, detail = _score(answer, votes_for, judges)
+    points, basis, detail = _score(answer, votes_for, judges, model_refs or {})
     if basis in (AnswerPoints.Basis.TRUTH, AnswerPoints.Basis.CONSENSUS, AnswerPoints.Basis.NONE) and not answer.skipped \
             and not answer.score_hold:
         bonus = setting("GAME_POINTS_PARTICIPATION", 0.5)
@@ -304,7 +305,7 @@ def score(answer, votes_for, judges):
     return points, basis, detail
 
 
-def _score(answer, votes_for, judges):
+def _score(answer, votes_for, judges, model_refs):
     if answer.score_hold:
         return 0.0, AnswerPoints.Basis.NONE, {"held": True}
     if answer.skipped or (answer.mode == "pair" and answer.pair_answer == "unsure"):
@@ -317,7 +318,11 @@ def _score(answer, votes_for, judges):
             for rank in detail["ranks"].values():
                 rank["points"] = round(rank["points"] * weight, 2)
             return points * weight * retry, AnswerPoints.Basis.TRUTH, dict(detail, retry=answer.is_retry, weight=weight)
-        points, detail = consensus_points(answer, votes_for(answer.roi_id), judges)
+        votes = votes_for(answer.roi_id)
+        points, detail = consensus_points(answer, votes, judges)
+        reference = game_reference.reference_for(answer, votes, judges, model_refs)
+        if reference:
+            points, detail = _with_reference(answer, reference, detail)
         return points * weight, AnswerPoints.Basis.CONSENSUS, dict(detail, weight=weight)
     a, b = answer.roi, answer.roi_b
     if b is not None and is_truth(a) and is_truth(b):
@@ -329,6 +334,21 @@ def _score(answer, votes_for, judges):
         points, detail = consensus_points(answer, votes_for(answer.roi_id), judges)
         return points, AnswerPoints.Basis.CONSENSUS, detail
     return 0.0, AnswerPoints.Basis.NONE, {}
+
+
+def _with_reference(answer, reference, detail):
+    """
+    Agreement points per rank, raised to the reference's where the answer matches what proven experts or a trusted
+    model say (game_reference). The best of the two per rank, so nothing is counted twice; never negative.
+    """
+    claims = game.implied_labels(answer)
+    cap = setting("GAME_POINTS_CONSENSUS_CAP", 0.6)
+    agreed = {r: cap * RANK_POINTS[r] * max(0.0, detail["agreement"].get(r, 0.0)) for r in claims}
+    matched = game_reference.reference_points(claims, reference, RANK_POINTS)
+    points = sum(max(agreed.get(r, 0.0), matched.get(r, 0.0)) for r in claims)
+    shown = {r: {"name": name, "source": source, "match": r in matched}
+             for r, (name, source) in reference.items() if r in claims}
+    return points, dict(detail, reference=shown)
 
 
 def votes_on(roi_ids):
@@ -440,6 +460,7 @@ def recompute(player_ids=None):
     answers = list(answers)
     open_rois = {a.roi_id for a in answers if not is_truth(a.roi)}
     votes = votes_on(open_rois)
+    model_refs = game_reference.model_references(open_rois)
 
     old = {
         aid: (p, b) for aid, p, b in AnswerPoints.objects.filter(answer__in=[a.id for a in answers if a.validated_later])
@@ -448,7 +469,7 @@ def recompute(player_ids=None):
     credited = set(RetroCredit.objects.filter(answer__in=list(old)).values_list("answer_id", flat=True))
     rows, by_player, credits = [], defaultdict(list), []
     for ans in answers:
-        points, basis, detail = score(ans, lambda rid: votes.get(rid, []), judges)
+        points, basis, detail = score(ans, lambda rid: votes.get(rid, []), judges, model_refs)
         rows.append(AnswerPoints(answer=ans, points=round(points, 3), basis=basis, detail=detail))
         by_player[ans.player_id].append((ans, points))
         if ans.validated_later and basis == AnswerPoints.Basis.TRUTH and ans.id not in credited:
@@ -489,7 +510,8 @@ def score_new_answer(answer):
     roi_ids = {answer.roi_id}
     votes = votes_on(roi_ids) if not is_truth(answer.roi) else {}
     judges = Judges(cached_ratings()) if votes else _NoJudges()
-    points, basis, detail = score(answer, lambda rid: votes.get(rid, []), judges)
+    model_refs = game_reference.model_references(roi_ids) if not is_truth(answer.roi) else {}
+    points, basis, detail = score(answer, lambda rid: votes.get(rid, []), judges, model_refs)
     for attempt in range(2):   # a recompute may have re-created the row in between: try once more
         try:
             with transaction.atomic():
