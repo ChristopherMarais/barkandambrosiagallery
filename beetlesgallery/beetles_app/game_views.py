@@ -16,7 +16,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
-from django.db.models import Max
+from django.db.models import Max, Q
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -689,10 +689,23 @@ def game_answer(request, round_id):
     return JsonResponse(dict(extra, item=_item_payload(rnd, nxt)))
 
 
+def _ahead_of(player):
+    """Players ranked above this one: a higher all-time score, or (both rated) a higher overall accuracy."""
+    min_judged = game.game_setting("GAME_MIN_JUDGED_FOR_ACCURACY", 10)
+    me = PlayerScore.objects.filter(player=player).first()
+    my_score, my_acc = (me.score, me.accuracy if me.judged >= min_judged else None) if me else (0.0, None)
+    ahead = Q(score__gt=my_score)
+    if my_acc is not None:
+        ahead |= Q(judged__gte=min_judged, accuracy__gt=my_acc)
+    return set(PlayerScore.objects.filter(ahead).exclude(player=player).values_list("player_id", flat=True))
+
+
 def _community(record):
     """
-    What other players said about the beetle just answered (Name That Beetle): the most common name at the most
-    specific rank most of them gave, and whether this player agrees. Their latest answer each, never the truth.
+    What players ranked above this one said about the beetle just answered (Name That Beetle), rank by rank, and
+    how far they agree with this player: "Players ahead of you agree with you to tribe; on genus, 3 of 4 said
+    Xylosandrus." Only players ahead count, so newcomers learn from better players, not from each other. Their
+    latest answer each, never the truth.
     """
     if record.mode != GameRound.Mode.CLASSIFY:
         return None
@@ -702,22 +715,55 @@ def _community(record):
         latest[ans.player_id] = ans
     if not latest:
         return {"players": 0}
+    ahead = _ahead_of(record.player)
+    above = [a for pid, a in latest.items() if pid in ahead]
+    out = {"players": len(latest), "ahead": len(above), "ranks": []}
+    if not above:
+        out["text"] = (f"{len(latest)} other player{'s' if len(latest) != 1 else ''} named it, "
+                       "none of them ranked above you yet.")
+        return out
     mine = game.answer_values({r: getattr(record, r) for r in game.RANKS})
-    for rank in reversed(game.RANKS):
+    for rank in game.RANKS:
         names = {}
-        for ans in latest.values():
+        for ans in above:
             value = game.answer_values({r: getattr(ans, r) for r in game.RANKS})[rank]
             if value:
                 display = f"{ans.genus} {ans.species}" if rank == "species" else getattr(ans, rank)
                 names.setdefault(value, [display, 0])[1] += 1
-        answered = sum(n for _, n in names.values())
-        if answered >= max(1, (len(latest) + 1) // 2):   # most of them went at least this far
-            value, (display, count) = max(names.items(), key=lambda kv: kv[1][1])
-            return {
-                "players": len(latest), "rank": rank, "name": display, "count": count, "of": answered,
-                "agree": (mine[rank] == value) if mine[rank] else None,
-            }
-    return {"players": len(latest)}
+        named = sum(n for _, n in names.values())
+        if not named:
+            break   # nobody ahead went this deep
+        value, (display, count) = max(names.items(), key=lambda kv: kv[1][1])
+        majority = count * 2 > named
+        out["ranks"].append({
+            "rank": rank, "name": display if majority else "", "count": count, "of": named, "split": not majority,
+            "agree": (mine[rank] == value) if (mine[rank] and majority) else None,
+        })
+    agreed = [r for r in _leading(out["ranks"], lambda r: r["agree"] is True)]
+    rest = out["ranks"][len(agreed):]
+    who = "Players ahead of you"
+    if agreed and not rest:
+        out["text"] = f"{who} agree with you to {agreed[-1]['rank']}."
+        out["agree"] = True
+        return out
+    lead = f"{who} agree with you to {agreed[-1]['rank']}; " if agreed else f"{who}: "
+    nxt = rest[0]
+    if nxt["split"]:
+        out["text"] = lead + f"they're split on {nxt['rank']}."
+    elif nxt["agree"] is None and agreed:
+        out["text"] = lead + f"{nxt['count']} of {nxt['of']} went on to {nxt['rank']} {nxt['name']}."
+    else:
+        out["text"] = lead + f"on {nxt['rank']}, {nxt['count']} of {nxt['of']} said {nxt['name']}."
+    out["agree"] = False if nxt["agree"] is False else None
+    return out
+
+
+def _leading(items, ok):
+    """The items from the start for which ok() holds, up to the first that fails."""
+    for item in items:
+        if not ok(item):
+            return
+        yield item
 
 
 def _worth_celebrating(record, scores):
