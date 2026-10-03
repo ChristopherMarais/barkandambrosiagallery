@@ -51,4 +51,4 @@ class SpecimenPhotoTests(GameCase):
 
     def test_it_is_a_level_unlock(self):
         self.assertIn(game_levels.SPECIMEN_PHOTOS, game_levels.PERKS)
-        self.assertEqual(game_levels.perk_level(game_levels.SPECIMEN_PHOTOS), 7)
+        self.assertEqual(game_levels.perk_level(game_levels.SPECIMEN_PHOTOS), 3)   # early: other angles help from the start (#362)
