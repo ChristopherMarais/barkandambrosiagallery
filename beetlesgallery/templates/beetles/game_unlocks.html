@@ -20,6 +20,7 @@
       Level {{ info.next.level }}: {% if info.next.points_needed %}{{ info.next.points_needed|digit_groups }} pts{% endif %}{% if info.next.points_needed and info.next.rating_short %} + {% endif %}{% if info.next.rating_short %}{% widthratio info.next.rating_needed 1 100 %}% reliability{% endif %}{% if not info.next.points_needed and not info.next.rating_short %}almost there{% endif %}
     </p>
     {% endif %}
+    {% if ranks.next %}<p class="mt-2 text-xs text-gray-500" data-testid="rank-next"><i class="fi fi-rr-lock"></i> You name up to the {{ ranks.rank }} for now. The {{ ranks.next.rank }} opens after {{ ranks.next.needed }} more beetle{{ ranks.next.needed|pluralize }}.</p>{% endif %}
   </div>
 
   <!-- The ladder -->

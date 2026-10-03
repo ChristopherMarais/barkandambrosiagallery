@@ -55,6 +55,8 @@ class ScoringTests(SimpleTestCase):
         self.assertTrue(game.shared_ranks(a, b)["tribe"])
 
 
+# Most game tests answer at species with a brand-new player: every rank open (the rank steps have their own tests)
+@override_settings(GAME_RANK_UNLOCK_ANSWERS={"tribe": 0, "genus": 0, "species": 0})
 class GameCase(PageBehaviourCase):
     def setUp(self):
         super().setUp()

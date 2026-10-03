@@ -16,6 +16,7 @@
     { el: "light-btn", text: "Photo too dark? Light makes it brighter or sharper." },
     { el: "ranks", text: "Name it as far as you're sure: subfamily, tribe, genus, species. Stop where you're unsure." },
     { el: "ladder", text: "Are A and B related? Pick the lowest line you're sure of." },
+    { el: "rank-lock", text: "Start with the big groups. Tribe, genus and species open one by one after a few beetles." },
     { el: "find-btn-genus", text: "Long list? Tap the magnifier, or just start typing, to search it." },
     { el: "skip", text: () => (mode() === "pair" ? "Not sure? Tap Not sure. It costs very little." : "Not sure? Skip it. It costs very little.") },
     { el: "submit", text: "Next saves your answer and brings the next beetle. Naming a beetle earns the most points, but a sure tribe beats a wrong genus." },
