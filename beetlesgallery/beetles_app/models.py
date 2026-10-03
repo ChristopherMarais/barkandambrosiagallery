@@ -176,6 +176,22 @@ class Beetles(models.Model):
     depicts_described_name_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     depicts_name_verbatim = models.CharField(max_length=255, null=True, blank=True)
 
+    # --- Where the name came from (#390): how far a verified label can be trusted ---
+    class LabelSource(models.TextChoices):
+        VIAL_LABEL = "vial_label", "Vial / specimen label"
+        TAXONOMIST = "taxonomist", "Taxonomist examined it"
+        EXTERNAL = "external", "External database or website"
+        GAME_CONSENSUS = "game_consensus", "Game consensus accepted by a curator"
+
+    label_source = models.CharField(
+        max_length=20, choices=LabelSource.choices, blank=True, default="",
+        help_text="Where the name came from. Blank: not recorded (names given before this was kept).",
+    )
+    label_source_detail = models.CharField(
+        max_length=255, blank=True, default="",
+        help_text="Who examined it, or which database or website (name or URL).",
+    )
+
     # --- Collection / specimen metadata ---
     collection_country = models.CharField(max_length=100, null=True, blank=True)
     collection_stateProvince = models.CharField(max_length=100, null=True, blank=True)

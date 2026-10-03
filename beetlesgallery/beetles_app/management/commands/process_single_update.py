@@ -38,8 +38,10 @@ BEETLE_FIELDS = {
     "collection_stateProvince", "specimen_sex", 
     "specimen_type_status", "specimen_notes",
     "bbox_x", "bbox_y", "bbox_width", "bbox_height", "bbox_label",
-    "bbox_is_validated"
+    "bbox_is_validated", "label_source", "label_source_detail",
 }
+# label_source: one of these keys, or its label (any case); blank clears it
+LABEL_SOURCES = {k: k for k, _ in Beetles.LabelSource.choices} | {v.lower(): k for k, v in Beetles.LabelSource.choices}
 UPDATE_IGNORED_COLS = {
     "image_id", "taxonomy_scientific_name", "taxonomy_subfamily", 
     "taxonomy_tribe", "taxonomy_genus", "taxonomy_species", "update_notes"
@@ -206,6 +208,14 @@ class Command(BaseCommand):
                 errors.append(f"Row {row_num}: {col} '{raw}' must be true or false.")
                 continue
 
+            if "label_source" in b_updates and not is_blank(b_updates["label_source"]):
+                source = LABEL_SOURCES.get(str(b_updates["label_source"]).strip().lower())
+                if source is None:
+                    errors.append(f"Row {row_num}: label_source '{b_updates['label_source']}' must be one of "
+                                  f"{', '.join(k for k, _ in Beetles.LabelSource.choices)} (or blank).")
+                    continue
+                b_updates["label_source"] = source
+
             # 3. Bounding box rules (same as the annotator API). Only what this row changes is checked,
             # so old data that predates the rules does not block unrelated edits.
             current_cells = [None if is_new else getattr(beetle_obj, c) for c in BOX_COLUMNS]
@@ -304,6 +314,8 @@ class Command(BaseCommand):
                             if val is False:
                                 obj.bbox_validated_by = None
                                 obj.bbox_validated_at = None
+                        elif k in ("label_source", "label_source_detail"):
+                            val = "" if is_blank(v) else str(v).strip()[:255]   # these are never NULL
                         elif k in ["depicts_valid_name_id", "depicts_described_name_id"]:
                             val = _none(v)
                             if val is not None:

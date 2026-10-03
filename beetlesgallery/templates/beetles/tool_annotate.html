@@ -1622,6 +1622,18 @@ function renderRoiAccordions() {
                 <div id="dropdown-tax-${i}" class="hidden absolute top-full left-0 z-50 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-64 overflow-y-auto">
                    </div>
               </div>
+              <div class="grid grid-cols-2 gap-3 mt-3" data-testid="label-source">
+                <div>
+                  <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-wide">Name source</label>
+                  <select name="label_source" class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                    ${LABEL_SOURCES.map(([v, l]) => `<option value="${v}" ${(b.label_source || '') === v ? 'selected' : ''}>${l}</option>`).join('')}
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-wide">Source detail</label>
+                  <input type="text" name="label_source_detail" maxlength="255" placeholder="Who, or which database / URL" value="${escHtml(b.label_source_detail || '')}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-xs focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                </div>
+              </div>
               <div class="grid grid-cols-2 gap-3 mt-3">
                 <div>
                   <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-wide">Described Name ID</label>
@@ -1795,6 +1807,10 @@ function updateBboxFromInput(idx) {
   drawCanvas(); // Force canvas redraw instantly
 }
 
+// Where a name came from (Beetles.LabelSource); blank means not recorded
+const LABEL_SOURCES = [["", "Not recorded"], ["vial_label", "Vial / specimen label"], ["taxonomist", "Taxonomist examined it"],
+  ["external", "External database or website"], ["game_consensus", "Game consensus accepted by a curator"]];
+
 function getRoiPayloadFromForm(idx) {
     const form = document.getElementById(`form-roi-${idx}`);
     if (!form) return {};
@@ -1816,6 +1832,8 @@ function getRoiPayloadFromForm(idx) {
         bbox_y: form.elements['bbox_y'].value !== "" ? parseFloat(form.elements['bbox_y'].value) : null,
         bbox_width: form.elements['bbox_width'].value !== "" ? parseFloat(form.elements['bbox_width'].value) : null,
         bbox_height: form.elements['bbox_height'].value !== "" ? parseFloat(form.elements['bbox_height'].value) : null,
+        label_source: form.elements['label_source'].value,
+        label_source_detail: form.elements['label_source_detail'].value,
     };
 }
 
