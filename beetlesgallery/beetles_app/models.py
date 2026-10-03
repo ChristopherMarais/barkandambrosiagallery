@@ -1471,6 +1471,9 @@ class GamePreference(models.Model):
         help_text="Unlocks a superuser granted whatever the player's level (game_levels.PERKS keys, or \"all\"). "
                   "For people who need the features, and for testing.",
     )
+    proposals_notice_seen_at = models.DateTimeField(
+        null=True, blank=True, help_text="When the player saw 'Your labels now go to the curators' (shown once)."
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

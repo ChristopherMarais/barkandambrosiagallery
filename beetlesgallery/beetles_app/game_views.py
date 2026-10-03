@@ -67,11 +67,13 @@ def game_home(request):
     board, board_period = game_board.board(limit=5), "week"
     if not board:
         board, board_period = game_board.board(period="all", limit=5), "all"
+    rewards = game_rewards.progress(request.user)
     return render(request, "beetles/game_home.html", {
         "checked": checked, "checked_new": checked_new,
+        "proposals_notice": rewards["proposals"] and _first_sight_of_proposals(request.user),
         "discoveries": game_discoveries.pop_unseen(request.user),
         "score": game_scoring.score_for(request.user),
-        "rewards": game_rewards.progress(request.user),
+        "rewards": rewards,
         "board": board, "board_period": board_period,
         "standing": game_board.accuracy_standing(request.user),
         "goal_floor": game_rewards.daily_goal(),
@@ -81,6 +83,17 @@ def game_home(request):
                       else settings.SITE_URL.rstrip("/") + reverse("game_home")),
         "discussions": discussions_url(),
     })
+
+
+def _first_sight_of_proposals(player):
+    """True the first time a player whose labels now go to the curators sees the game home (the notice shows once)."""
+    from .models import GamePreference
+
+    pref, _ = GamePreference.objects.get_or_create(player=player)
+    if pref.proposals_notice_seen_at:
+        return False
+    GamePreference.objects.filter(pk=pref.pk).update(proposals_notice_seen_at=timezone.now())
+    return True
 
 
 @login_required
@@ -223,6 +236,8 @@ def game_unlocks(request):
         "trust_accuracy": game_trust.min_accuracy(),
         "min_experts": game.game_setting("GAME_AUTO_APPLY_MIN_EXPERTS", 2),
         "ranks": game_levels.rank_for(request.user),
+        # opened from the "your labels now go to the curators" notice: the box lights up briefly, then looks normal
+        "labels_new": bool(info["proposals"]) and request.GET.get("new") == "labels",
     })
 
 
