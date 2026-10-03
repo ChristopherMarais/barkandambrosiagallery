@@ -655,19 +655,10 @@
   let combo = 0;
   function showCommunity(c) {
     if (!c) return;
-    let text;
-    let agree = false;
-    if (!c.players) {
-      text = "Last beetle: you're the first to name it.";
-    } else if (!c.name) {
-      text = "Last beetle: " + c.players + " other player" + (c.players === 1 ? "" : "s") + " named it, no clear majority yet.";
-    } else {
-      text = "Last beetle: others said " + c.name + " (" + c.count + " of " + c.of + ").";
-      if (c.agree === true) { agree = true; text += " You agree."; }
-      else if (c.agree === false) text += " You said something else.";
-    }
-    // green only when it means something: you agree with most players
-    $("community").classList.toggle("agree", agree);
+    // c.text says how far players ranked above you agree with you (game_views._community)
+    const text = c.players ? "Last beetle: " + c.text : "Last beetle: you're the first to name it.";
+    // green only when it means something: everyone ahead of you who went that far agrees
+    $("community").classList.toggle("agree", c.agree === true);
     $("community-text").textContent = text;
     $("community").classList.remove("hidden");
   }

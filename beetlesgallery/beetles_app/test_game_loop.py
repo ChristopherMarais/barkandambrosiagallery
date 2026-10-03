@@ -4,37 +4,89 @@ import json
 from django.test import override_settings
 
 from beetlesgallery.beetles_app import game, game_scoring as scoring
-from beetlesgallery.beetles_app.models import AnswerPoints, GameAnswer
+from beetlesgallery.beetles_app.models import AnswerPoints, GameAnswer, PlayerScore
 from beetlesgallery.beetles_app.test_game import AFFINIS, FERR
 from beetlesgallery.beetles_app.test_game_scoring import PLAT, ScoringCase
 
 
 class CommunityTests(ScoringCase):
+    """After each answer: how far players ranked above you agree with you, rank by rank (#357)."""
+
     def answer_in_feed(self, fields):
         self.client.force_login(self.user)
         rnd, item = self.play("classify")
         return item, self.post("game_answer", dict(fields, index=item["index"]), rnd.id).json()
 
-    @override_settings(GAME_ROUND_SIZE=1)
-    def test_after_answering_you_see_what_most_others_said_and_whether_you_agree(self):
-        target = self.roi(self.t_affinis, validated=False)
-        for name, fields in (("a", AFFINIS), ("b", AFFINIS), ("c", FERR)):
-            self.answer(self.player(name), target, fields)
-        item, res = self.answer_in_feed(AFFINIS)
-        self.assertEqual(item["others"], 3)          # before answering: only how many
-        c = res["community"]
-        self.assertEqual((c["players"], c["rank"], c["name"], c["count"], c["of"], c["agree"]),
-                         (3, "species", "Xyleborus affinis", 2, 3, True))
+    def ahead(self, name, score=1000):
+        player = self.player(name)
+        PlayerScore.objects.update_or_create(player=player, defaults={"score": score})
+        return player
 
     @override_settings(GAME_ROUND_SIZE=1)
-    def test_it_falls_back_to_the_rank_most_of_them_reached(self):
+    def test_players_ahead_agreeing_all_the_way(self):
         target = self.roi(self.t_affinis, validated=False)
-        genus_only = dict(AFFINIS, species="")
-        for name in ("a", "b", "c"):
-            self.answer(self.player(name), target, genus_only)
-        _, res = self.answer_in_feed(PLAT)
+        for name in ("a", "b"):
+            self.answer(self.ahead(name), target, AFFINIS)
+        item, res = self.answer_in_feed(AFFINIS)
+        self.assertEqual(item["others"], 2)          # before answering: only how many
         c = res["community"]
-        self.assertEqual((c["rank"], c["name"], c["agree"]), ("genus", "Xyleborus", False))
+        self.assertEqual((c["players"], c["ahead"], c["agree"]), (2, 2, True))
+        self.assertEqual(c["text"], "Players ahead of you agree with you to species.")
+
+    @override_settings(GAME_ROUND_SIZE=1)
+    def test_it_says_how_far_they_agree_and_where_they_part(self):
+        target = self.roi(self.t_affinis, validated=False)
+        for name, fields in (("a", FERR), ("b", FERR), ("c", AFFINIS)):
+            self.answer(self.ahead(name), target, fields)
+        _, res = self.answer_in_feed(AFFINIS)
+        c = res["community"]
+        self.assertEqual(c["text"], "Players ahead of you agree with you to genus; on species, 2 of 3 said Xyleborus ferrugineus.")
+        self.assertIs(c["agree"], False)
+
+    @override_settings(GAME_ROUND_SIZE=1)
+    def test_a_split_is_called_a_split_not_a_disagreement(self):
+        target = self.roi(self.t_affinis, validated=False)
+        for name, fields in (("a", FERR), ("b", AFFINIS)):
+            self.answer(self.ahead(name), target, fields)
+        _, res = self.answer_in_feed(dict(AFFINIS, species=""))
+        self.assertEqual(res["community"]["text"], "Players ahead of you agree with you to genus; they're split on species.")
+
+    @override_settings(GAME_ROUND_SIZE=1)
+    def test_it_tells_you_how_far_they_went_beyond_you(self):
+        target = self.roi(self.t_affinis, validated=False)
+        for name in ("a", "b"):
+            self.answer(self.ahead(name), target, AFFINIS)
+        _, res = self.answer_in_feed(dict(AFFINIS, species=""))
+        self.assertEqual(res["community"]["text"],
+                         "Players ahead of you agree with you to genus; 2 of 2 went on to species Xyleborus affinis.")
+
+    @override_settings(GAME_ROUND_SIZE=1)
+    def test_only_players_ranked_above_you_count(self):
+        PlayerScore.objects.update_or_create(player=self.user, defaults={"score": 500})
+        target = self.roi(self.t_affinis, validated=False)
+        self.answer(self.ahead("low", score=100), target, PLAT)       # below you: ignored
+        self.answer(self.ahead("high", score=900), target, AFFINIS)
+        _, res = self.answer_in_feed(AFFINIS)
+        c = res["community"]
+        self.assertEqual((c["players"], c["ahead"], c["text"]), (2, 1, "Players ahead of you agree with you to species."))
+
+    @override_settings(GAME_ROUND_SIZE=1, GAME_MIN_JUDGED_FOR_ACCURACY=10)
+    def test_a_higher_accuracy_also_counts_as_ahead(self):
+        PlayerScore.objects.update_or_create(player=self.user, defaults={"score": 500, "accuracy": 0.6, "judged": 20})
+        target = self.roi(self.t_affinis, validated=False)
+        sharp = self.ahead("sharp", score=100)
+        PlayerScore.objects.filter(player=sharp).update(accuracy=0.9, judged=20)
+        self.answer(sharp, target, AFFINIS)
+        _, res = self.answer_in_feed(AFFINIS)
+        self.assertEqual(res["community"]["ahead"], 1)
+
+    @override_settings(GAME_ROUND_SIZE=1)
+    def test_nobody_ahead_yet(self):
+        PlayerScore.objects.update_or_create(player=self.user, defaults={"score": 500})
+        target = self.roi(self.t_affinis, validated=False)
+        self.answer(self.ahead("low", score=10), target, FERR)
+        _, res = self.answer_in_feed(AFFINIS)
+        self.assertEqual(res["community"]["text"], "1 other player named it, none of them ranked above you yet.")
 
     @override_settings(GAME_ROUND_SIZE=1)
     def test_the_first_to_name_a_beetle_is_told_so(self):
@@ -46,7 +98,7 @@ class CommunityTests(ScoringCase):
     @override_settings(GAME_ROUND_SIZE=1)
     def test_it_never_carries_the_truth(self):
         target = self.roi(self.t_affinis)   # validated
-        self.answer(self.player("a"), target, FERR)
+        self.answer(self.ahead("a"), target, FERR)
         _, res = self.answer_in_feed(AFFINIS)
         text = json.dumps(res["community"]).lower()
         self.assertIn("ferrugineus", text)    # what the other player said, even though it is wrong
