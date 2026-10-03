@@ -322,3 +322,58 @@ def import_predictions(source, user=None, default_model="", default_version="", 
                 update_fields=["model_difficulty", "model_name", "model_updated_at", "updated_at"],
             )
     return result
+
+
+MAX_MODELS_SHOWN = 3
+
+
+def suggestions_for(rois):
+    """
+    What the models said about these ROIs, for curators and viewers: {roi_id: [suggestion, ...]}, newest model
+    first. Each suggestion has the model and version, one line per rank (subfamily, tribe, genus, species) with the
+    model's name and confidence and whether the ROI's current label agrees, and the species runners-up.
+    """
+    rois = list(rois)
+    preds = list(ModelPrediction.objects.filter(roi_id__in=[r.id for r in rois]).order_by("-created_at"))
+    if not preds:
+        return {}
+    ids = {p.valid_species_id for p in preds} | {c["valid_species_id"] for p in preds for c in p.top_k or []}
+    taxa = {t.valid_species_id: t for t in Taxon.objects.filter(valid_species_id__in=ids)}
+    labels = {r.id: r.taxon for r in rois}
+
+    def species_name(species_id):
+        t = taxa.get(species_id)
+        return f"{t.genus} {t.species}" if t and t.genus and t.species else (t.scientific_name if t else species_id)
+
+    out = {}
+    for p in preds:
+        shown = out.setdefault(p.roi_id, [])
+        if len(shown) >= MAX_MODELS_SHOWN:
+            continue
+        label = labels.get(p.roi_id)
+        given = p.rank_confidence or {}
+        levels = []
+        tips = rank_tips(p) if any(not given.get(rank) for rank in UPPER_RANKS) else {}
+        for rank in UPPER_RANKS:
+            if given.get(rank):
+                value, conf, source = given[rank]["value"], given[rank]["confidence"], "model"
+            else:   # the model gave no number for this rank: add up its species candidates (a lower bound)
+                tip = tips.get(rank)
+                if not tip:
+                    continue
+                value, conf, source = tip["value"], tip["confidence"], "species"
+            current = getattr(label, rank, "") if label else ""
+            levels.append({"rank": rank, "value": value, "confidence": conf, "source": source,
+                           "agrees": (current.lower() == value.lower()) if current else None})
+        levels.append({"rank": "species", "value": species_name(p.valid_species_id), "confidence": p.confidence,
+                       "source": "model",
+                       "agrees": (label.valid_species_id == p.valid_species_id) if label else None})
+        shown.append({
+            "model_name": p.model_name,
+            "model_version": p.model_version,
+            "created_at": p.created_at,
+            "levels": levels,
+            "runners_up": [{"value": species_name(c["valid_species_id"]), "confidence": c["confidence"]}
+                           for c in (p.top_k or [])[:3]],
+        })
+    return out
