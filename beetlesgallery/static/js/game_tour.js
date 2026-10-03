@@ -15,7 +15,7 @@
     { el: "photos", text: "This is the beetle. Tap it to see the whole photo." },
     { el: "ranks", text: "Name it as far as you're sure: subfamily, tribe, genus, species. Stop where you're unsure." },
     { el: "ladder", text: "Are A and B related? Pick the lowest line you're sure of." },
-    { el: "open-search", text: "Know the name? Search for it." },
+    { el: "find-btn-genus", text: "Long list? Tap the magnifier, or just start typing, to search it." },
     { el: "skip", text: () => (mode() === "pair" ? "Not sure? Tap Not sure. It costs very little." : "Not sure? Skip it. It costs very little.") },
     { el: "submit", text: "Next saves your answer and brings the next beetle. Naming a beetle earns the most points." },
     { el: "chip", text: "Beetles today against your daily goal. The flame is your day streak: it lights up when the goal is done." },

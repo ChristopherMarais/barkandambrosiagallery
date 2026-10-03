@@ -100,7 +100,6 @@ urlpatterns = [
     path('game/api/proposals/<uuid:roi_id>/review/', game_views.game_proposal_review, name='game_proposal_review'),
     path('game/api/round/<uuid:round_id>/answer/', game_views.game_answer, name='game_answer'),
     path('game/api/taxa/', game_views.game_taxa, name='game_taxa'),
-    path('game/api/taxa/search/', game_views.game_taxa_search, name='game_taxa_search'),
     path('game/review/', game_views.game_review, name='game_review'),
     path('game/review/<str:kind>.csv', game_views.game_export, name='game_export'),
 
