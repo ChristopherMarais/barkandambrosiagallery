@@ -153,6 +153,48 @@ def for_player(player):
     return info
 
 
+# ---------------------------------------------------------------------------
+# Rank steps: newcomers first name only the subfamily, then the tribe, the genus and the species open after a few
+# beetles (answers given, right or wrong), usually within the first session. Players from level
+# RANKS_ALL_FROM_LEVEL, or with unlocks granted by a superuser, have every rank.
+# ---------------------------------------------------------------------------
+RANK_ORDER = ("subfamily", "tribe", "genus", "species")
+RANK_STEPS = {"tribe": 5, "genus": 15, "species": 30}
+RANKS_ALL_FROM_LEVEL = 3
+
+
+def rank_steps():
+    """{rank: answers needed} for the ranks below subfamily (GAME_RANK_UNLOCK_ANSWERS)."""
+    return dict(RANK_STEPS, **(game_setting("GAME_RANK_UNLOCK_ANSWERS", {}) or {}))
+
+
+def rank_unlock(level, answered, granted_any=False):
+    """
+    {"rank": deepest rank the player may name, "next": {"rank", "at", "needed"} or None}. Similarity follows it too:
+    its rungs go no deeper than this rank.
+    """
+    if level >= RANKS_ALL_FROM_LEVEL or granted_any:
+        return {"rank": "species", "next": None}
+    steps = rank_steps()
+    deepest, nxt = "subfamily", None
+    for rank in RANK_ORDER[1:]:
+        if answered >= steps[rank]:
+            deepest = rank
+        else:
+            nxt = {"rank": rank, "at": steps[rank], "needed": steps[rank] - answered}
+            break
+    return {"rank": deepest, "next": nxt}
+
+
+def rank_for(player):
+    """rank_unlock() for this player."""
+    from .models import GameAnswer
+
+    info = for_player(player)
+    answered = GameAnswer.objects.filter(player=player, skipped=False).count()
+    return rank_unlock(info["level"], answered, bool(info.get("granted")))
+
+
 def table():
     """The level ladder for the unlocks page."""
     return [

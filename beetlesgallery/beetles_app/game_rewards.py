@@ -108,7 +108,9 @@ def progress(player):
     today = labelled(player, answered_at__date=timezone.localdate()).count()
     goal = player_goal(player)
     level = game_levels.for_player(player)
+    ranks = game_levels.rank_unlock(level["level"], total, bool(level.get("granted")))
     return {
+        "rank": ranks["rank"], "rank_next": ranks["next"],
         "total": total, "today": today, "goal": goal, "goal_met": today >= goal,
         "streak": streak_days(active_days(player)),
         "level": level["level"], "level_name": level["name"], "proposals": level["proposals"],
@@ -332,6 +334,12 @@ def play_events(player, before):
         events.append({"kind": "level", "title": f"Level {now['level']}", "text": f"You are now a {now['level_name']}.{unlocked}"})
         if PROPOSALS in gained:
             events.append({"kind": "proposals", "title": "Your labels now count", "text": PERKS[PROPOSALS][1]})
+    if before.get("rank") and now["rank"] != before["rank"]:
+        from .game_levels import RANK_ORDER
+        if RANK_ORDER.index(now["rank"]) > RANK_ORDER.index(before["rank"]):
+            events.append({"kind": "rank", "title": f"{now['rank'].capitalize()} unlocked",
+                           "text": f"You can now name the {now['rank']} too." if now["rank"] != "species"
+                           else "You can now name the species: every rank is open."})
     if now["goal_met"] and not before["goal_met"]:
         events.append({"kind": "goal", "title": "Daily goal reached", "text": f"{now['goal']} beetles today. Keep going!"})
     if now["streak"] > before["streak"] and now["today"] == 1:

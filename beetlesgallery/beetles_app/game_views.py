@@ -211,6 +211,7 @@ def game_unlocks(request):
         "per_species": game_trust.per_species(),
         "trust_accuracy": game_trust.min_accuracy(),
         "min_experts": game.game_setting("GAME_AUTO_APPLY_MIN_EXPERTS", 2),
+        "ranks": game_levels.rank_for(request.user),
     })
 
 
@@ -256,6 +257,7 @@ def game_how(request):
         "cap": int(game.game_setting("GAME_POINTS_CONSENSUS_CAP", 0.6) * 100),
         "unsure": game.game_setting("GAME_POINTS_UNSURE", 0.25),
         "retry_days": game.game_setting("GAME_RETRY_AFTER_DAYS", 2),
+        "rank_steps": game_levels.rank_steps(), "ranks_all_level": game_levels.RANKS_ALL_FROM_LEVEL,
     })
 
 
@@ -575,7 +577,8 @@ def game_prefs(request):
 def _chip(player):
     """The small counters in the feed's header: today's beetles against the daily goal, and the day streak."""
     state = game_rewards.progress(player)
-    chip = {k: state[k] for k in ("today", "goal", "goal_met", "streak", "level", "score", "next_at", "level_progress")}
+    chip = {k: state[k] for k in ("today", "goal", "goal_met", "streak", "level", "score", "next_at", "level_progress",
+                                  "rank", "rank_next")}
     chip["level_icon"] = game_levels.level_icon(state["level"])
     return chip
 
@@ -590,6 +593,11 @@ def _clean_classification(body):
     if not taxa_tree.known(answer):
         return None
     return answer
+
+
+def _deeper_than(rank, depth):
+    """True if a rank depth (subfamily 0 ... species 3) is past the deepest rank the player has open yet."""
+    return depth > game_levels.RANK_ORDER.index(rank)
 
 
 def _response_ms(body):
@@ -638,6 +646,8 @@ def game_answer(request, round_id):
             answer = _clean_classification(body)
             if answer is None:
                 return JsonResponse({"error": "Please choose a name from the lists."}, status=400)
+            if any(answer[r] and _deeper_than(before["rank"], game.RANKS.index(r)) for r in game.RANKS):
+                return JsonResponse({"error": "That rank isn't open yet."}, status=400)
             for r, v in answer.items():
                 setattr(record, r, v)
             if not record.is_check and record.genus and record.species:
@@ -648,6 +658,8 @@ def game_answer(request, round_id):
             choice = body.get("pair_answer")
             if choice not in dict(PAIR_CHOICES):
                 return JsonResponse({"error": "Please choose an answer."}, status=400)
+            if choice in game.PAIR_DEPTH and _deeper_than(before["rank"], game.PAIR_DEPTH[choice]):
+                return JsonResponse({"error": "That rung isn't open yet."}, status=400)
             record.pair_answer = choice
             if record.is_check:
                 scores = game.score_pair(choice, roi_a.taxon, roi_b.taxon)

@@ -36,6 +36,10 @@
   .rank-row select:disabled { color: #9ca3af; }
   .rank-row.has-value { border-color: #4b5563; }
   .rank-row.is-disabled { background: #f9fafb; border-color: #e5e7eb; }
+  /* Rank steps: newcomers name the broad groups first; the deeper lists and rungs stay out of sight until they open */
+  .rank-row.locked, .rung.locked { display: none; }
+  .rank-lock { display: flex; align-items: center; gap: 0.375rem; margin-top: 0.5rem; font-size: 0.75rem; color: #6b7280; }
+  .rank-lock.hidden { display: none; }
   .rank-row:focus-within { box-shadow: 0 0 0 2px #4b5563; }
   /* Grey, not the browser's blue: the focus ring, and the open list where the browser lets us style it */
   #game select { accent-color: #4b5563; }
@@ -237,6 +241,7 @@
         <button type="button" role="radio" aria-checked="false" data-choice="{{ value }}" class="rung">{{ label }}<small>{{ hint }}</small><kbd class="kbd">{{ forloop.counter }}</kbd></button>
         {% endfor %}
       </div>
+      <p id="rank-lock" class="rank-lock hidden" data-testid="rank-lock"><i class="fi fi-rr-lock"></i><span id="rank-lock-text"></span></p>
 
       <div id="actions">
         <button type="button" id="skip"><span id="skip-text">Skip</span><kbd class="kbd">S</kbd></button>
@@ -576,6 +581,7 @@
   // ---------- the chip and the toasts: counts and celebrations, never the score ----------
   function updateChip(chip) {
     if (!chip) return;
+    if (chip.rank) setRankCap(chip.rank, chip.rank_next);
     const el = $("chip");
     el.classList.remove("hidden");
     el.classList.add("inline-flex");
@@ -972,7 +978,7 @@
   let pairChoice = null;
   const rungs = Array.from(document.querySelectorAll(".rung"));
   function setRung(index) {
-    if (index < 0 || index >= rungs.length) return;
+    if (index < 0 || index >= rungs.length || rungs[index].classList.contains("locked")) return;
     pairChoice = rungs[index].dataset.choice;
     rungs.forEach((r, i) => {
       r.classList.toggle("selected", i === index);
@@ -1191,6 +1197,38 @@
     });
   });
 
+  // ---------- rank steps: the deepest rank this player may name yet (both games) ----------
+  let rankCap = "species";
+  let rankNext = null;
+  // the Similarity rung for each choice: "different" and "subfamily" are always open
+  const RUNG_DEPTH = { different: -1, subfamily: 0, tribe: 1, genus: 2, species: 3 };
+  function setRankCap(rank, next) {
+    rankCap = rank;
+    rankNext = next || null;
+    const cap = RANKS.indexOf(rank);
+    RANKS.forEach((r, i) => {
+      if (!selects[r]) return;
+      selects[r].closest(".rank-row").classList.toggle("locked", i > cap);
+      if (i > cap && pick[r]) pick[r] = "";
+    });
+    rungs.forEach((r) => {
+      const locked = RUNG_DEPTH[r.dataset.choice] > cap;
+      r.classList.toggle("locked", locked);
+      if (locked && r.classList.contains("selected")) { pairChoice = null; r.classList.remove("selected"); }
+    });
+    if (finding && RANKS.indexOf(finding) > cap) closeFinder();
+    renderRankLock();
+    updateSubmit();
+  }
+  function renderRankLock() {
+    const line = $("rank-lock");
+    if (!line) return;
+    line.classList.toggle("hidden", !rankNext);
+    if (!rankNext) return;
+    const name = rankNext.rank.charAt(0).toUpperCase() + rankNext.rank.slice(1);
+    $("rank-lock-text").textContent = name + " opens after " + rankNext.needed + " more beetle" + (rankNext.needed === 1 ? "" : "s");
+  }
+
   // ---------- shared ----------
   function currentAnswer() {
     return MODE === "classify" ? Object.assign({}, pick) : { pair_answer: pairChoice };
@@ -1263,7 +1301,8 @@
     } else if (MODE === "pair" && (key === "ArrowDown" || key === "ArrowUp")) {
       e.preventDefault();
       const now = rungs.findIndex((r) => r.classList.contains("selected"));
-      setRung(key === "ArrowDown" ? Math.min(rungs.length - 1, now + 1) : Math.max(0, now - 1));
+      const open = rungs.filter((r) => !r.classList.contains("locked")).length;
+      setRung(key === "ArrowDown" ? Math.min(open - 1, now + 1) : Math.max(0, now - 1));
     }
   });
 
