@@ -1,0 +1,38 @@
+{% comment %}
+What classifier models said about this ROI, one line per rank with the model's confidence (predictions.suggestions_for).
+A suggestion only: it never sets the label. ✓ / ≠ compare it with the current label.
+{% endcomment %}
+{% if suggestions %}
+<div class="group-section mt-4" data-testid="ai-suggestion">
+  <h3 class="mb-1 text-md font-semibold tracking-wide text-text/70 uppercase">AI suggestion</h3>
+  <p class="mb-2 text-xs text-text/60">From a classifier model, not checked by a person.</p>
+  {% for s in suggestions %}
+  <div class="rounded-lg border border-gray-200 bg-white p-3 {% if not forloop.last %}mb-2{% endif %}">
+    <table class="w-full text-sm">
+      <tbody>
+      {% for l in s.levels %}
+        <tr data-rank="{{ l.rank }}">
+          <td class="py-1 pr-2 text-text/60 capitalize" style="width:5.5rem">{{ l.rank }}</td>
+          <td class="py-1 pr-2 text-text/80 {% if l.rank == 'genus' or l.rank == 'species' %}italic{% endif %}">{{ l.value }}</td>
+          <td class="py-1" style="width:8.5rem">
+            <div style="display:flex;align-items:center;gap:0.5rem" title="{% if l.source == 'species' %}Added up from the species candidates (a lower bound){% else %}The model's confidence{% endif %}">
+              <div style="flex:1;height:6px;border-radius:9999px;background:#e5e7eb"><div style="height:6px;border-radius:9999px;background:#4b5563;width:{% widthratio l.confidence 1 100 %}%"></div></div>
+              <span class="text-xs tabular-nums text-text/80" style="width:2.5rem;text-align:right">{% widthratio l.confidence 1 100 %}%</span>
+            </div>
+          </td>
+          <td class="py-1 pl-2 text-xs" style="width:1.25rem">
+            {% if l.agrees is True %}<span style="color:#16a34a" title="Matches the current label">&#10003;</span>
+            {% elif l.agrees is False %}<span style="color:#b45309" title="Differs from the current label">&ne;</span>{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% if s.runners_up %}
+    <p class="mt-2 text-xs text-text/60">Also possible: {% for r in s.runners_up %}<i>{{ r.value }}</i> {% widthratio r.confidence 1 100 %}%{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+    {% endif %}
+    <p class="mt-1 text-text/50 break-all" style="font-size:11px">{{ s.model_name }}{% if s.model_version %} · {{ s.model_version }}{% endif %} · {{ s.created_at|date:"Y-m-d" }}</p>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

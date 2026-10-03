@@ -36,7 +36,7 @@ from .areas import ANNOTATE, UPLOAD, INTERACTIONS, AREAS, area_required, has_are
 from .models import Beetles, UploadBatch, DownloadJob, UpdateBatch, ImageAsset
 from .schema import REQUIRED_COLS, MAX_ROWS
 from .forms import TailwindUserCreationForm, ProfileForm, PasswordChangeFormStyled, ValidSpeciesUploadForm, DescribedNamesUploadForm, UpdateBatchUploadForm
-from .predictions import import_predictions
+from .predictions import import_predictions, suggestions_for
 from .tasks import process_upload_task, process_update_task, build_downloads_task
 
 import pandas as pd
@@ -812,6 +812,7 @@ def beetle_detail(request, beetle_id):
             "prev_sibling": prev_sibling,
             "next_sibling": next_sibling,
             "related_specimens": related_specimens,
+            "ai_suggestions": suggestions_for([beetle]).get(beetle.id, []),
         },
     )
 

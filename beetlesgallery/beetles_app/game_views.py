@@ -27,6 +27,7 @@ from . import game, game_board, game_checked, game_discoveries, game_feedback, g
 from . import game_taxa as taxa_tree
 from .areas import ANNOTATE, area_required
 from .models import Beetles, GameAnswer, GameReport, GameRound, ImageLock, LabelReview, PlayerScore, Taxon
+from .predictions import suggestions_for
 
 MODES = {m.value: m.label for m in GameRound.Mode}
 # What players see. (The model keeps its own plain labels; changing those would need a migration.)
@@ -822,7 +823,10 @@ def game_proposals(request):
             "created_at": r.created_at.isoformat(), "was_validated": r.was_validated,
         })
     tips = {str(roi_id): items for roi_id, items in game_tips.tips(roi_ids).items()}
-    return JsonResponse({"proposals": proposals, "reports": reports, "tips": tips})
+    # What classifier models said, per rank with their confidence (shown under "AI suggestion")
+    rois = Beetles.objects.filter(id__in=roi_ids).select_related("taxon")
+    ai = {str(roi_id): items for roi_id, items in suggestions_for(rois).items()}
+    return JsonResponse({"proposals": proposals, "reports": reports, "tips": tips, "ai": ai})
 
 
 @area_required(ANNOTATE)
