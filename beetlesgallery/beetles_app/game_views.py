@@ -756,13 +756,16 @@ def _community(record):
                 names.setdefault(value, [display, 0])[1] += 1
         named = sum(n for _, n in names.values())
         if not named:
-            break   # nobody ahead went this deep
+            continue   # nobody ahead named this rank (some name only the genus, say)
         value, (display, count) = max(names.items(), key=lambda kv: kv[1][1])
         majority = count * 2 > named
         out["ranks"].append({
             "rank": rank, "name": display if majority else "", "count": count, "of": named, "split": not majority,
             "agree": (mine[rank] == value) if (mine[rank] and majority) else None,
         })
+    if not out["ranks"]:
+        out["text"] = f"{len(above)} player{'s' if len(above) != 1 else ''} ahead of you named it."
+        return out
     agreed = [r for r in _leading(out["ranks"], lambda r: r["agree"] is True)]
     rest = out["ranks"][len(agreed):]
     who = "Players ahead of you"
