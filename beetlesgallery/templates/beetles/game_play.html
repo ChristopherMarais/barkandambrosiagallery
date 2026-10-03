@@ -127,6 +127,10 @@
                background: #fff; color: #374151; font-size: 0.8125rem; line-height: 1.35; }
   #community.agree { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
   #community.hidden { display: none; }
+  /* After a long session: a gentle, dismissible suggestion to take a break */
+  #break-nudge { margin-bottom: 0.5rem; padding: 0.625rem 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.75rem; background: #f9fafb; color: #374151; font-size: 0.8125rem; }
+  #break-nudge.hidden { display: none; }
+  #break-nudge button { margin-top: 0.5rem; margin-right: 0.5rem; padding: 0.3rem 0.75rem; border-radius: 0.5rem; border: 1px solid #d1d5db; background: #fff; font-weight: 600; font-size: 0.8125rem; }
   #community button { flex: 0 0 auto; width: 1.75rem; height: 1.75rem; margin-top: -0.125rem; border-radius: 0.5rem; color: inherit; opacity: 0.6; }
   #community button:hover { opacity: 1; background: rgba(0,0,0,.05); }
   /* On a phone the two photos of Family Ties sit one above the other so each gets the full width */
@@ -156,6 +160,7 @@
 <div id="game" data-mode="{{ mode }}"
   data-start-url="{% url 'game_start' %}"
   data-answer-url="{% url 'game_answer' '00000000-0000-0000-0000-000000000000' %}"
+  data-break-minutes="{{ break_minutes }}"
   data-exit-url="{% url 'game_exit' %}"
   data-home-url="{% url 'game_home' %}"
   data-taxa-url="{% url 'game_taxa' %}"
@@ -217,6 +222,10 @@
     </div>
 
     <div id="panel">
+      <div id="break-nudge" class="hidden" role="status" data-testid="break-nudge">
+        <div><span class="font-semibold" id="break-title">Nice session.</span> <span id="break-text"></span></div>
+        <button type="button" id="break-done">Done for today</button><button type="button" id="break-more">Keep going</button>
+      </div>
       <div id="community" class="hidden" role="status" data-testid="community"><span id="community-text" class="flex-1 min-w-0 pt-0.5"></span>
         <button type="button" id="community-close" aria-label="Close"><i class="fi fi-rr-cross-small"></i></button></div>
       <div class="space-y-2 hidden" id="ranks">
@@ -622,6 +631,26 @@
     if (event.kind === "level" || event.kind === "goal") confetti();
   }
 
+  // ---------- after a long session: suggest a break (never blocks, never nags twice in an hour) ----------
+  const BREAK_MS = Number(root.dataset.breakMinutes || 0) * 60000;
+  const IDLE_MS = 10 * 60000;            // a pause this long starts a new session
+  let sessionStart = Date.now(), lastAnswerAt = Date.now(), sessionCount = 0, nextNudgeAt = BREAK_MS;
+  let goalMet = false;
+  function noteAnswerForBreak() {
+    const now = Date.now();
+    if (now - lastAnswerAt > IDLE_MS) { sessionStart = now; sessionCount = 0; nextNudgeAt = BREAK_MS; }
+    lastAnswerAt = now;
+    sessionCount += 1;
+    if (!BREAK_MS || now - sessionStart < nextNudgeAt) return;
+    nextNudgeAt += BREAK_MS;             // "Keep going" or not, the next suggestion is an hour later
+    const minutes = Math.round((now - sessionStart) / 60000);
+    $("break-text").textContent = sessionCount + (sessionCount === 1 ? " beetle in " : " beetles in ") + (minutes >= 90 ? Math.round(minutes / 6) / 10 + " hours" : minutes + " minutes") +
+      ". Take a break? " + (goalMet ? "Your streak is safe for today." : "Everything you've done is saved.");
+    $("break-nudge").classList.remove("hidden");
+  }
+  $("break-more").addEventListener("click", () => $("break-nudge").classList.add("hidden"));
+  $("break-done").addEventListener("click", () => { $("break-nudge").classList.add("hidden"); $("exit").click(); });
+
   // ---------- after each answer: what others said, and the combo ----------
   let combo = 0;
   function showCommunity(c) {
@@ -893,6 +922,8 @@
         Object.assign({ index: item.index, elapsed_ms: Date.now() - shownAt }, extra)
       );
       answered += 1;
+      if (data.chip) goalMet = !!data.chip.goal_met;
+      noteAnswerForBreak();
       if (data.celebrate) confetti();
       updateChip(data.chip);
       if (data.prefs) renderPrefs(data.prefs);   // a new level: its unlocks show (and work) straight away

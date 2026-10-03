@@ -270,6 +270,7 @@ def game_play(request, mode):
                            ("bad_image", "Bad photo"), ("other", "Something else")],
         "mode": mode,
         "mode_label": GAME_NAMES[mode],
+        "break_minutes": game.game_setting("GAME_BREAK_NUDGE_MINUTES", 60),   # 0 turns the break nudge off
         "ranks": [(r, r.capitalize()) for r in game.RANKS],
         "rungs": RUNGS,
         **_onboarding(request),
