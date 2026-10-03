@@ -28,12 +28,12 @@ class BoardTests(ScoringCase):
         by_game = defaultdict(lambda: stats(None, None), {
             self.ann.id: stats(0.9, 0.4), self.bob.id: stats(0.6, 0.95), self.cy.id: stats(None, 0.7)})
         with mock.patch.object(game_board, "mode_stats", return_value=by_game):
-            self.assertEqual(self.names(game_board.board()), ["cy", "ann", "bob"])
+            self.assertEqual(self.names(game_board.board(period="all")), ["cy", "ann", "bob"])
             # cy has too few judged identifications for an accuracy, so goes last on that board
-            self.assertEqual(self.names(game_board.board(sort="identification")), ["ann", "bob", "cy"])
-            self.assertEqual(self.names(game_board.board(sort="similarity")), ["bob", "cy", "ann"])
-            self.assertEqual(self.names(game_board.board(sort="viewed")), ["bob", "ann", "cy"])
-            self.assertIsNone(game_board.board()[0]["id_accuracy"])
+            self.assertEqual(self.names(game_board.board(sort="identification", period="all")), ["ann", "bob", "cy"])
+            self.assertEqual(self.names(game_board.board(sort="similarity", period="all")), ["bob", "cy", "ann"])
+            self.assertEqual(self.names(game_board.board(sort="viewed", period="all")), ["bob", "ann", "cy"])
+            self.assertIsNone(game_board.board(period="all")[0]["id_accuracy"])
 
     def test_identification_and_similarity_are_counted_apart(self):
         from beetlesgallery.beetles_app.test_game_scoring import AFFINIS
@@ -51,11 +51,11 @@ class BoardTests(ScoringCase):
         self.assertIn('data-testid="game-split"', self.client.get("/game/").content.decode())
 
     def test_it_can_be_searched(self):
-        self.assertEqual(self.names(game_board.board(q="BO")), ["bob"])
+        self.assertEqual(self.names(game_board.board(q="BO", period="all")), ["bob"])
 
     def test_players_who_have_not_played_are_left_out(self):
         PlayerScore.objects.create(player=self.player("idle"), score=0, viewed=0)
-        self.assertNotIn("idle", self.names(game_board.board()))
+        self.assertNotIn("idle", self.names(game_board.board(period="all")))
 
     def test_the_branch_board_ranks_experts_in_one_part_of_the_tree(self):
         PlayerSkill.objects.create(player=self.ann, rank="species", branch="Xyleborus", correct=18, judged=20, lower_bound=0.7)
@@ -68,7 +68,7 @@ class BoardTests(ScoringCase):
 
     def test_the_leaderboard_page_links_names_to_profiles(self):
         self.client.force_login(self.ann)
-        page = self.client.get(reverse("game_leaderboard"), {"sort": "viewed", "q": "a"}).content.decode()
+        page = self.client.get(reverse("game_leaderboard"), {"sort": "viewed", "q": "a", "period": "all"}).content.decode()
         self.assertIn(reverse("game_profile", args=[self.ann.id]), page)
         self.assertNotIn(">bob<", page)
         home = self.client.get(reverse("game_home")).content.decode()

@@ -180,7 +180,7 @@ class BadgeTests(GameCase):
         PlayerScore.objects.create(player=self.user, score=30000, rating=0.95, viewed=5)
         SpeciesDiscovery.objects.create(player=self.user, roi=self.roi(self.t_affinis), genus="Xyleborus", species="affinis")
         self.client.force_login(self.user)
-        page = self.client.get(reverse("game_leaderboard")).content.decode()
+        page = self.client.get(reverse("game_leaderboard"), {"period": "all"}).content.decode()
         self.assertIn('data-testid="level-badge"', page)
         self.assertIn("fi-rr-crown", page)              # level 10
         self.assertIn('data-testid="finder-badge"', page)

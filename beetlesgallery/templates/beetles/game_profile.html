@@ -36,6 +36,14 @@
   {% endif %}
   <a href="{% url 'game_player_expertise' player.id %}" class="inline-block mb-8 text-sm underline text-gray-600 hover:text-gray-900">See the whole expertise tree</a>
 
+  {% if p.weekly.podiums %}
+  <h2 class="text-lg font-semibold text-gray-900 mb-2">Weekly leaderboard</h2>
+  <p class="text-sm text-gray-600 mb-2" data-testid="weekly-wins">{% if p.weekly.wins %}<i class="fi fi-rr-trophy text-gray-700"></i> 1st {{ p.weekly.wins }} week{{ p.weekly.wins|pluralize }} &middot; {% endif %}top 3 {{ p.weekly.podiums }} week{{ p.weekly.podiums|pluralize }}</p>
+  <ul class="mb-8 flex flex-wrap gap-2">
+    {% for w in p.weekly.weeks %}<li class="px-3 py-1 rounded-full border border-gray-300 bg-white text-sm text-gray-800">{% if w.place == 1 %}<i class="fi fi-rr-trophy"></i> 1st{% elif w.place == 2 %}2nd{% else %}3rd{% endif %} &middot; week of {{ w.week|date:"j M Y" }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+
   {% if p.discoveries %}
   <h2 class="text-lg font-semibold text-gray-900 mb-2">New species found</h2>
   <p class="text-sm text-gray-500 mb-2">Species {% if is_self %}you{% else %}they{% endif %} named before the gallery had any validated image of them, later confirmed by a curator.</p>
