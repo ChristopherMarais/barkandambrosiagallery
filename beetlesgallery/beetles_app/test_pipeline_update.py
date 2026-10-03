@@ -82,13 +82,13 @@ class ProcessSingleUpdateTests(PageBehaviourCase):
 
         batch = self.run_rows(download_row(
             target,
-            collection_country="Peru", specimen_sex="Female", alternative_id="ALT-9",
+            collection_country="Peru", specimen_sex="Female", alias_id="ALT-9",
             photographer="B. New", image_notes="retouched",
         ))
 
         target = fresh(target)
         self.assertEqual(
-            (target.collection_country, target.specimen_sex, target.alternative_id),
+            (target.collection_country, target.specimen_sex, target.alias_id),
             ("Peru", "Female", "ALT-9"),
         )
         self.assertEqual((target.image_asset.photographer, target.image_asset.image_notes), ("B. New", "retouched"))

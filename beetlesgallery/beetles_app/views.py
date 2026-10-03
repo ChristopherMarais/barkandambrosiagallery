@@ -33,6 +33,7 @@ from django.core.files.storage import default_storage
 from django.core.management import call_command
 
 from .areas import ANNOTATE, UPLOAD, INTERACTIONS, AREAS, area_required, has_area
+from .csv_columns import modern_columns
 from .models import Beetles, UploadBatch, DownloadJob, UpdateBatch, ImageAsset
 from .schema import REQUIRED_COLS, MAX_ROWS
 from .forms import TailwindUserCreationForm, ProfileForm, PasswordChangeFormStyled, ValidSpeciesUploadForm, DescribedNamesUploadForm, UpdateBatchUploadForm
@@ -391,7 +392,7 @@ def upload_file(request):
     errors = []
     try:
         df = pd.read_csv(batch.file.path)
-        df.columns = [c.strip() for c in df.columns]
+        df.columns = modern_columns(df.columns)
     except Exception as e:
         batch.mark_rejected_and_move(f"Cannot open CSV: {e}")
         messages.error(request, "Upload rejected: cannot open CSV.")
@@ -1315,7 +1316,7 @@ def admin_described_names(request):
     return render(request, "admin/tools_described_names.html", {"form": form, "status": current_status})
     
 UPDATE_ALLOWED_FIELDS = [
-    "alternative_id", "image_institution", "photographer", "image_email", 
+    "alias_id", "image_institution", "photographer", "image_email", 
     "photo_usage_statement", "aspect", "resolution_in_ppmm", "image_notes", 
     "image_date_taken", "image_has_multiple_individuals", "depicts_specimen", 
     "depicts_valid_name_id", "depicts_described_name_id", "depicts_name_verbatim", 
@@ -1383,7 +1384,7 @@ def update_upload(request):
     try:
         df = pd.read_csv(batch.file.path)
         # normalize headers (strip whitespace and UTF-8 BOM)
-        df.columns = [str(c).strip().lstrip('\ufeff') for c in df.columns]
+        df.columns = modern_columns(df.columns)
     except Exception as e:
         batch.mark_rejected_and_move(f"Cannot open CSV: {e}")
         messages.error(request, "Update rejected: cannot open CSV.")
@@ -1446,7 +1447,7 @@ def update_single_beetle(request, beetle_id):
     # Combined list of fields form detail.html
     fields = [
         "depicts_specimen", "depicts_valid_name_id", "depicts_described_name_id", 
-        "alternative_id", "depicts_name_verbatim", "image_institution", 
+        "alias_id", "depicts_name_verbatim", "image_institution", 
         "photographer", "image_email", "photo_usage_statement", "aspect", 
         "resolution_in_ppmm", "image_date_taken", "image_has_multiple_individuals", 
         "collection_country", "collection_stateProvince", "specimen_sex", 
@@ -1558,7 +1559,7 @@ def create_specimen_for_image(request, image_id):
     # Capture only Beetle-specific fields from the form
     beetle_fields = [
         "depicts_specimen", "depicts_valid_name_id", "depicts_described_name_id", 
-        "alternative_id", "depicts_name_verbatim", "aspect", 
+        "alias_id", "depicts_name_verbatim", "aspect", 
         "collection_country", "collection_stateProvince", "specimen_sex", 
         "specimen_type_status", "specimen_notes"
     ]

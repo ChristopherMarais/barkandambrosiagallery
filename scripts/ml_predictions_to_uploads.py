@@ -88,7 +88,7 @@ def clean_box(row):
 # Columns of the Update dialog (views.UPDATE_* ); a download has exactly these.
 IMAGE_COLUMNS = ["image_institution", "photographer", "image_email", "photo_usage_statement", "resolution_in_ppmm",
                  "image_notes", "image_date_taken", "image_has_multiple_individuals", "is_validated"]
-RECORD_COLUMNS = ["alternative_id", "aspect", "depicts_specimen", "depicts_valid_name_id", "depicts_described_name_id",
+RECORD_COLUMNS = ["alias_id", "aspect", "depicts_specimen", "depicts_valid_name_id", "depicts_described_name_id",
                   "depicts_name_verbatim", "collection_country", "collection_stateProvince", "specimen_sex",
                   "specimen_type_status", "specimen_notes", "bbox_is_validated"]
 UPDATE_COLUMNS = ["record_id", "image_id", *IMAGE_COLUMNS, *RECORD_COLUMNS, *BOX]
@@ -96,7 +96,7 @@ UPDATE_COLUMNS = ["record_id", "image_id", *IMAGE_COLUMNS, *RECORD_COLUMNS, *BOX
 
 def read_download(path):
     dl = pd.read_csv(path, dtype=str, keep_default_na=False, encoding="utf-8-sig")
-    dl.columns = [c.strip() for c in dl.columns]
+    dl.columns = [{"alternative_id": "alias_id"}.get(c.strip(), c.strip()) for c in dl.columns]   # old name
     missing = [c for c in UPDATE_COLUMNS if c not in dl.columns]
     if missing:
         sys.exit(f"{path} is not a gallery metadata download: it has no {', '.join(missing)} column(s).")

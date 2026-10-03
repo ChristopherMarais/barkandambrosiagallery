@@ -366,7 +366,7 @@ class Command(BaseCommand):
             headers = [
                 "record_id",
                 "image_id",
-                "alternative_id",
+                "alias_id",
                 "image_institution",
                 "photographer",
                 "image_email",
@@ -433,7 +433,7 @@ class Command(BaseCommand):
                 writer.writerow([
                     str(b.id),                                      # record_id
                     str(img.id) if img else "",                     # image_id
-                    b.alternative_id or "",
+                    b.alias_id or "",
                     img.image_institution if img else "",
                     img.photographer if img else "",
                     img.image_email if img else "",

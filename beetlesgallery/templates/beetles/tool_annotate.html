@@ -1643,8 +1643,8 @@ function renderRoiAccordions() {
                     <input type="text" name="depicts_specimen" value="${b.depicts_specimen || ''}" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
                   </div>
                   <div>
-                    <label class="block text-xs text-gray-600 mb-1">Alternative ID</label>
-                    <input type="text" name="alternative_id" value="${b.alternative_id || ''}" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                    <label class="block text-xs text-gray-600 mb-1" title="Your own ID for this record, e.g. a catalogue number or file name from your database. Optional; we keep it unchanged and include it in every download so you can link our records back to yours.">Alias ID <span class="text-gray-400">(your own ID for it)</span></label>
+                    <input type="text" name="alias_id" value="${b.alias_id || ''}" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
                   </div>
                 </div>
                 <div class="grid grid-cols-3 gap-3">
@@ -1804,7 +1804,7 @@ function getRoiPayloadFromForm(idx) {
         depicts_described_name_id: form.elements['depicts_described_name_id'].value || null,
         depicts_name_verbatim: form.elements['depicts_name_verbatim'].value || null,
         depicts_specimen: form.elements['depicts_specimen'].value || null,
-        alternative_id: form.elements['alternative_id'].value || null,
+        alias_id: form.elements['alias_id'].value || null,
         aspect: form.elements['aspect'].value || null,
         specimen_sex: form.elements['specimen_sex'].value || null,
         specimen_type_status: form.elements['specimen_type_status'].value || null,

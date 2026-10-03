@@ -11,6 +11,7 @@ from datetime import date, datetime
 import math
 import io
 import csv
+from beetlesgallery.beetles_app.csv_columns import modern_columns
 
 try:
     import pandas as pd
@@ -26,7 +27,7 @@ IMAGE_FIELDS = {
 }
 
 BEETLE_FIELDS = {
-    "alternative_id", "aspect", "depicts_specimen", "depicts_valid_name_id",
+    "alias_id", "aspect", "depicts_specimen", "depicts_valid_name_id",
     "depicts_described_name_id", "depicts_name_verbatim", "collection_country",
     "collection_stateProvince", "specimen_sex", "specimen_type_status", "specimen_notes",
     "bbox_x", "bbox_y", "bbox_width", "bbox_height", "bbox_is_validated"
@@ -150,7 +151,7 @@ class Command(BaseCommand):
 
         try:
             df = pd.read_csv(batch.file.path)
-            df.columns = [str(c).strip().lstrip('\ufeff') for c in df.columns]
+            df.columns = modern_columns(df.columns)
         except Exception as e:
             errors.append(f"Cannot open CSV: {e}")
             return self._finalize(batch, errors, dry_run)
@@ -225,7 +226,7 @@ class Command(BaseCommand):
 
         # Length Limits
         MAXLEN = {
-            "alternative_id": 255, 
+            "alias_id": 255, 
             "image_institution": 255, 
             "photographer": 255,
             "image_email": 254, 

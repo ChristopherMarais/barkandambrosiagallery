@@ -18,6 +18,7 @@ except ImportError:
 
 from beetlesgallery.beetles_app.schema import REQUIRED_COLS, MAX_ROWS, IMAGE_EXTENSIONS, MANIFEST_NAME, MANIFEST_VERSION
 from beetlesgallery.beetles_app.bbox_rules import BOX_COLUMNS, is_blank, parse_box
+from beetlesgallery.beetles_app.csv_columns import modern_columns
 
 # Spellings of a boolean cell (same as import_validated._to_bool)
 _TRUE = {"1", "true", "t", "yes", "y"}
@@ -141,7 +142,7 @@ class Command(BaseCommand):
             errors.append(f"Cannot open CSV: {e}")
             return self._finalize(batch, errors, dry_run)
 
-        df.columns = [c.strip() for c in df.columns]
+        df.columns = modern_columns(df.columns)
         missing = REQUIRED_COLS - set(df.columns)
         if missing:
             errors.append(f"Missing required columns: {sorted(missing)}")

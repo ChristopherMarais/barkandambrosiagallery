@@ -12,7 +12,8 @@ FIELD_MAP = {
     "described name id": "depicts_described_name_id",
 
     # Short text (icontains)
-    "alternative id": "alternative_id",
+    "alias id": "alias_id",
+    "alternative id": "alias_id",   # its old name, still understood
     "image institution": "image_asset__image_institution",
     "photographer": "image_asset__photographer",
     "email": "image_asset__image_email",
@@ -45,7 +46,7 @@ OPERATORS = set(OP_PRECEDENCE.keys())
 # Fields to search when user provides "free text" (not Field:Value)
 # Note: Image ID (UUID) is handled separately in build_query_q() for exact matches
 FREE_TEXT_FIELDS = [
-    "alternative_id",
+    "alias_id",
     "image_asset__image_institution",
     "image_asset__photographer",
     "image_asset__image_email",

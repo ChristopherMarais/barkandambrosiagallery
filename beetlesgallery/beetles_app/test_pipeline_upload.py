@@ -124,7 +124,7 @@ class ValidBatchImportTests(UploadPipelineCase):
             "depicts_described_name_id": "DN-7",
             "depicts_specimen": "SPEC-001",
             "depicts_name_verbatim": "Xyleborus sp.",
-            "alternative_id": "ALT-1",
+            "alias_id": "ALT-1",
             "aspect": "dorsal",
             "collection_country": "Costa Rica",
             "collection_stateProvince": "Heredia",
@@ -153,7 +153,7 @@ class ValidBatchImportTests(UploadPipelineCase):
         self.assertEqual(beetle.taxon, taxon)
         self.assertEqual(
             (beetle.depicts_valid_name_id, beetle.depicts_described_name_id, beetle.depicts_specimen,
-             beetle.depicts_name_verbatim, beetle.alternative_id, beetle.aspect),
+             beetle.depicts_name_verbatim, beetle.alias_id, beetle.aspect),
             ("TAX-1", "DN-7", "SPEC-001", "Xyleborus sp.", "ALT-1", "dorsal"),
         )
         self.assertEqual(

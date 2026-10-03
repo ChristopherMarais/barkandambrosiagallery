@@ -10,7 +10,7 @@ from .models import Beetles
 SPECIES_FIELDS = ("taxon", "depicts_valid_name_id", "depicts_described_name_id", "depicts_name_verbatim")
 # Everything else that describes the specimen and how it was collected
 SPECIMEN_FIELDS = (
-    "aspect", "depicts_specimen", "alternative_id", "collection_country", "collection_stateProvince",
+    "aspect", "depicts_specimen", "alias_id", "collection_country", "collection_stateProvince",
     "specimen_sex", "specimen_type_status", "specimen_notes",
 )
 
