@@ -14,7 +14,6 @@ from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Max
@@ -25,6 +24,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from . import game, game_board, game_checked, game_discoveries, game_feedback, game_queue, game_levels, game_rewards, game_scoring, game_tips, game_trust
+from . import game_taxa as taxa_tree
 from .areas import ANNOTATE, area_required
 from .models import Beetles, GameAnswer, GameReport, GameRound, ImageLock, LabelReview, PlayerScore, Taxon
 
@@ -45,7 +45,6 @@ RUNGS = [
     ("genus", "Same genus", "siblings"),
     ("species", "Same species", "twins"),
 ]
-TAXA_CACHE_SECONDS = 600
 MAX_RESPONSE_MS = 60 * 60 * 1000
 DISCUSSIONS_URL = "https://github.com/ChristopherMarais/barkandambrosiagallery/discussions/categories/beetle-id-game"
 
@@ -587,8 +586,7 @@ def _clean_classification(body):
         return None
     if not any(answer.values()):
         return None
-    filters = {f"{r}__iexact": v for r, v in answer.items() if v}
-    if not Taxon.objects.filter(game.COMPLETE_TAXON, **filters).exists():
+    if not taxa_tree.known(answer):
         return None
     return answer
 
@@ -759,7 +757,7 @@ def game_taxa(request):
     """
     Options for one picker. ``rank`` is the list wanted; the chosen higher ranks
     narrow it. Genus options also carry their subfamily and tribe so picking a genus
-    can fill those in. Only well-formed taxa are offered.
+    can fill those in. Only names that belong at that rank are offered (see game_taxa.py).
     """
     rank = request.GET.get("rank")
     if rank not in game.RANKS:
@@ -768,21 +766,7 @@ def game_taxa(request):
     if rank == "species" and not parents.get("genus"):
         return JsonResponse({"options": []})
 
-    key = "game_taxa:v2:" + rank + ":" + "|".join(parents.get(r, "").lower() for r in game.RANKS[:3])
-    options = cache.get(key)
-    if options is None:
-        qs = Taxon.objects.filter(game.COMPLETE_TAXON).exclude(**{f"{rank}__isnull": True}).exclude(**{rank: ""})
-        qs = qs.filter(**{f"{r}__iexact": v for r, v in parents.items() if v})
-        if rank == "genus":
-            seen = {}
-            for genus, subfamily, tribe in qs.values_list("genus", "subfamily", "tribe").order_by("genus"):
-                seen.setdefault(genus, {"value": genus, "subfamily": subfamily or "", "tribe": tribe or ""})
-            options = list(seen.values())
-        else:
-            values = qs.values_list(rank, flat=True).distinct().order_by(rank)
-            options = [{"value": v} for v in values]
-        cache.set(key, options, TAXA_CACHE_SECONDS)
-    return JsonResponse({"options": options})
+    return JsonResponse({"options": taxa_tree.options(rank, parents)})
 
 
 @login_required
