@@ -215,5 +215,5 @@ class FeedAndHomeTests(RewardsCase):
         from beetlesgallery.beetles_app import game_scoring
         game_scoring.recompute([self.user.id])
         week = self.client.get(reverse("game_leaderboard") + "?period=week").context["rows"]
-        everything = self.client.get(reverse("game_leaderboard")).context["rows"]
+        everything = self.client.get(reverse("game_leaderboard") + "?period=all").context["rows"]
         self.assertEqual((week[0]["viewed"], everything[0]["viewed"]), (2, 7))

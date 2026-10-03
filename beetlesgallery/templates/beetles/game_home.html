@@ -72,7 +72,7 @@
 
   <div class="mb-6">
     <div class="flex items-baseline justify-between mb-2">
-      <h2 class="text-lg font-semibold text-gray-900">Top players</h2>
+      <h2 class="text-lg font-semibold text-gray-900">Top players {% if board_period == 'week' %}this week{% else %}of all time{% endif %}</h2>
       <a href="{% url 'game_leaderboard' %}" class="text-sm underline text-gray-600 hover:text-gray-900">All</a>
     </div>
     {% include "beetles/includes/game_board_table.html" with rows=board %}

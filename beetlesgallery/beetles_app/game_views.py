@@ -63,12 +63,16 @@ def game_home(request):
     game.close_idle_rounds(request.user)   # anything they left open counts now
     game_discoveries.find([request.user.id])
     checked, checked_new = game_checked.pop_unseen(request.user)
+    # this week's top players; at the start of a quiet week, all time instead
+    board, board_period = game_board.board(limit=5), "week"
+    if not board:
+        board, board_period = game_board.board(period="all", limit=5), "all"
     return render(request, "beetles/game_home.html", {
         "checked": checked, "checked_new": checked_new,
         "discoveries": game_discoveries.pop_unseen(request.user),
         "score": game_scoring.score_for(request.user),
         "rewards": game_rewards.progress(request.user),
-        "board": game_board.board(limit=5),
+        "board": board, "board_period": board_period,
         "standing": game_board.accuracy_standing(request.user),
         "goal_floor": game_rewards.daily_goal(),
         "games": game_board.mode_stats([request.user.id])[request.user.id],
@@ -154,17 +158,24 @@ def game_history(request):
 
 @login_required
 def game_leaderboard(request):
-    """The full leaderboard: by score, accuracy or beetles seen, all time or this week, searchable, and per branch."""
+    """The full leaderboard: by score, accuracy or beetles seen, this week (default), this month or all time,
+    searchable, and per branch."""
     sort = {"accuracy": "identification"}.get(request.GET.get("sort"), request.GET.get("sort"))   # old links
     sort = sort if sort in game_board.SORTS else "score"
-    period = "week" if request.GET.get("period") == "week" else "all"
+    period = request.GET.get("period") if request.GET.get("period") in game_board.PERIODS else "week"
+    last_week = game_board.weekly_wins()[:1]
+    names = dict(get_user_model().objects.filter(id__in=[p for w in last_week for p, _ in w["places"]])
+                 .values_list("id", "username"))
     q = (request.GET.get("q") or "").strip()[:50]
     branch_rank = request.GET.get("rank") if request.GET.get("rank") in game_board.BRANCH_SKILL else ""
     branch_value = (request.GET.get("branch") or "").strip()[:100]
     return render(request, "beetles/game_leaderboard.html", {
         "rows": game_board.board(sort=sort, period=period, q=q, limit=100),
         "branch_rows": game_board.branch_board(branch_rank, branch_value) if branch_rank and branch_value else None,
-        "sort": sort, "period": period, "q": q, "sorts": game_board.SORTS,
+        "sort": sort, "period": period, "q": q, "sorts": game_board.SORTS, "periods": game_board.PERIODS,
+        "resets_at": game_board.period_end(period),
+        "last_week": [{"position": i, "player_id": p, "username": names.get(p, ""), "points": round(pts)}
+                      for i, (p, pts) in enumerate(last_week[0]["places"], start=1)] if last_week else [],
         "branch_rank": branch_rank, "branch_value": branch_value,
     })
 

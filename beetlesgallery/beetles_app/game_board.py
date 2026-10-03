@@ -1,18 +1,25 @@
 """
 The leaderboard and player profiles for the Beetle ID game.
 
-The main board ranks by score, accuracy or beetles seen, all time or this week, and can be searched by name.
+The main board ranks by score, accuracy or beetles seen, this week (the default), this month or all time, and can
+be searched by name. Only the board's points start again each week or month: levels, reliability, expertise,
+badges and streaks never reset. Past weeks' winners are kept on players' profiles (weekly_wins).
 The expertise board ranks players inside one part of the tree (a subfamily, tribe or genus) by how well they
 identify what is in it, which is where people specialise and compete.
 """
+from datetime import datetime, timedelta
+
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Q, Sum
+from django.db.models.functions import TruncWeek
+from django.utils import timezone
 
 from . import game, game_levels, game_rewards
 from .models import AnswerPoints, GameAnswer, PlayerScore, PlayerSkill, SpeciesDiscovery
 
 SORTS = {"score": "Score", "identification": "Identification accuracy", "similarity": "Similarity accuracy",
          "viewed": "Beetles seen"}
+PERIODS = {"week": "This week", "month": "This month", "all": "All time"}
 GAMES = ("classify", "pair")   # Identification (Name That Beetle) and Similarity (Family Ties)
 # a branch of the tree -> the skill that measures it (see game_trust.BRANCH_OF)
 BRANCH_SKILL = {"subfamily": "tribe", "tribe": "genus", "genus": "species"}
@@ -57,7 +64,49 @@ def mode_stats(player_ids=None):
     return out
 
 
-def board(sort="score", period="all", q="", limit=50):
+def period_start(period, now=None):
+    """When the board's period began: Monday 00:00 for "week", the 1st for "month" (server time), None for all time."""
+    if period == "week":
+        return game.week_start(now)
+    if period == "month":
+        today = (now or timezone.now()).astimezone(timezone.get_current_timezone()).date()
+        return timezone.make_aware(datetime(today.year, today.month, 1))
+    return None
+
+
+def period_end(period, now=None):
+    """When the period's points start again (None for all time)."""
+    start = period_start(period, now)
+    if period == "week":
+        return start + timedelta(days=7)
+    if period == "month":
+        return timezone.make_aware(datetime(start.year + start.month // 12, start.month % 12 + 1, 1))
+    return None
+
+
+def weekly_wins(player_id=None, top=3, now=None):
+    """
+    The top players of every finished week, best first: [{"week": Monday, "places": [(player_id, points), ...]}],
+    newest week first. Worked out from the answers' points, so it follows the same rules as the board
+    (and moves with it if a beetle is re-scored later). With player_id, only the weeks where they placed.
+    """
+    this_week = game.week_start(now)
+    rows = (AnswerPoints.objects.filter(answer__answered_at__lt=this_week)
+            .annotate(week=TruncWeek("answer__answered_at", tzinfo=timezone.get_current_timezone()))
+            .values("week", "answer__player").annotate(points=Sum("points")))
+    by_week = {}
+    for r in rows:
+        if r["points"] and r["points"] > 0:
+            by_week.setdefault(r["week"], []).append((r["answer__player"], r["points"]))
+    out = []
+    for week in sorted(by_week, reverse=True):
+        places = sorted(by_week[week], key=lambda pp: (-pp[1], pp[0]))[:top]
+        if player_id is None or player_id in [p for p, _ in places]:
+            out.append({"week": week, "places": places})
+    return out
+
+
+def board(sort="score", period="week", q="", limit=50):
     """
     Rows: position, player_id, username, level, level_name, score, accuracy, id_accuracy, sim_accuracy, viewed,
     is_expert, discoveries. Sort by score, identification or similarity accuracy, or beetles seen.
@@ -66,8 +115,8 @@ def board(sort="score", period="all", q="", limit=50):
     names = dict(get_user_model().objects.filter(id__in=scores).values_list("id", "username"))
     experts = set(PlayerSkill.objects.filter(proven=True).values_list("player_id", flat=True))
     finds = dict(SpeciesDiscovery.objects.values("player").annotate(n=Count("id")).values_list("player", "n"))
-    if period == "week":
-        since = game.week_start()
+    since = period_start(period)
+    if since is not None:
         week_points = dict(
             AnswerPoints.objects.filter(answer__answered_at__gte=since).values("answer__player")
             .annotate(s=Sum("points")).values_list("answer__player", "s")
@@ -83,8 +132,8 @@ def board(sort="score", period="all", q="", limit=50):
         if q and q.lower() not in names[pid].lower():
             continue
         level = game_levels.describe(s.score, s.rating)
-        score, viewed = (max(0.0, week_points.get(pid, 0.0)), week_viewed.get(pid, 0)) if period == "week" else (s.score, s.viewed)
-        if period == "week" and not viewed:
+        score, viewed = (max(0.0, week_points.get(pid, 0.0)), week_viewed.get(pid, 0)) if since else (s.score, s.viewed)
+        if since and not viewed:
             continue
         rows.append({
             "player_id": pid, "username": names[pid], "level": level["level"], "level_name": level["name"],
@@ -141,7 +190,17 @@ def profile(player):
         "discoveries": list(player.species_discoveries.order_by("genus", "species")),
         "modes": dict(GameAnswer.objects.filter(player=player, skipped=False).values_list("mode").annotate(n=Count("id"))),
         "games": mode_stats([player.id])[player.id],
+        "weekly": _player_weeks(player.id),
     }
+
+
+def _player_weeks(player_id):
+    """A player's past weekly places: how often 1st and in the top 3, and the weeks themselves (newest first)."""
+    weeks = []
+    for w in weekly_wins(player_id):
+        place = [p for p, _ in w["places"]].index(player_id) + 1
+        weeks.append({"week": w["week"], "place": place, "points": round(dict(w["places"])[player_id])})
+    return {"wins": sum(1 for w in weeks if w["place"] == 1), "podiums": len(weeks), "weeks": weeks[:10]}
 
 
 # Accuracy tiers by percentile among rated players, in RPG rarity colours (see includes/game_accuracy.html)

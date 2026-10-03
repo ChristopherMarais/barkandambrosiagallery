@@ -12,14 +12,25 @@
     <select name="sort" class="select-chevron h-10 px-3 border border-gray-300 rounded-lg bg-white" aria-label="Sort by">
       {% for key, label in sorts.items %}<option value="{{ key }}" {% if sort == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
     </select>
-    <select name="period" class="select-chevron h-10 px-3 border border-gray-300 rounded-lg bg-white" aria-label="Period">
-      <option value="all" {% if period == 'all' %}selected{% endif %}>All time</option>
-      <option value="week" {% if period == 'week' %}selected{% endif %}>This week</option>
-    </select>
+    <input type="hidden" name="period" value="{{ period }}">
     <button type="submit" class="btn-primary h-10">Show</button>
   </form>
-  {% if period == 'week' %}<p class="text-xs text-gray-500 mb-2">This week: points and beetles since Monday. Accuracy is all time.</p>{% endif %}
+  <nav class="flex gap-1 mb-2" aria-label="Period" data-testid="periods">
+    {% for key, label in periods.items %}
+    <a href="?period={{ key }}&sort={{ sort }}{% if q %}&q={{ q|urlencode }}{% endif %}"
+       class="px-3 py-1.5 rounded-full text-sm border {% if period == key %}bg-gray-800 border-gray-800 text-white font-semibold{% else %}border-gray-300 text-gray-700 hover:bg-gray-50{% endif %}"
+       {% if period == key %}aria-current="page"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </nav>
+  {% if resets_at %}
+  <p class="text-xs text-gray-500 mb-2" data-testid="resets">Points since {% if period == 'week' %}Monday{% else %}the 1st{% endif %}; they start again in {{ resets_at|timeuntil }} ({{ resets_at|date:"D j M" }}). Levels, expertise and badges never reset. Accuracy is all time.</p>
+  {% endif %}
   {% include "beetles/includes/game_board_table.html" with rows=rows %}
+  {% if period == 'week' and last_week %}
+  <p class="mt-2 text-sm text-gray-600" data-testid="last-week">Last week:
+    {% for w in last_week %}<span class="whitespace-nowrap">{% if w.position == 1 %}<i class="fi fi-rr-trophy text-gray-700"></i>{% else %}{{ w.position }}.{% endif %} <a href="{% url 'game_profile' w.player_id %}" class="underline decoration-gray-300 hover:decoration-gray-900">{{ w.username }}</a> ({{ w.points|digit_groups }})</span>{% if not forloop.last %} &middot; {% endif %}{% endfor %}
+  </p>
+  {% endif %}
 
   <!-- Specialists -->
   <h2 class="text-lg font-semibold text-gray-900 mt-10 mb-1">Specialists</h2>
