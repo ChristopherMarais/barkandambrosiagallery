@@ -9,7 +9,7 @@ levels are kept only while the answers stay good.
     level  name                         points  reliability  unlocks
     1      Egg                               0       -
     2      Larva                            50       -       the identification game, and choosing your game
-    3      Pupa                            150      35%      focus on one subfamily
+    3      Pupa                            150      35%      focus on one subfamily; more photos of each beetle
     4      Teneral                     400      50%      focus on one tribe
     5      Beetle scout                    800      60%      focus on one genus
     6      Field entomologist             1500      70%      your labels go to curators as suggestions
@@ -50,11 +50,11 @@ PERKS = {
 LEVELS = [
     (0, 0.0, "Egg", []),
     (50, 0.0, "Larva", [CHOOSE_GAME]),
-    (150, 0.35, "Pupa", ["focus_subfamily"]),
+    (150, 0.35, "Pupa", ["focus_subfamily", SPECIMEN_PHOTOS]),
     (400, 0.5, "Teneral", ["focus_tribe"]),
     (800, 0.6, "Beetle scout", ["focus_genus"]),
     (1500, 0.7, "Field entomologist", [PROPOSALS]),
-    (3000, 0.75, "Taxonomist", [SPECIMEN_PHOTOS]),
+    (3000, 0.75, "Taxonomist", []),
     (6000, 0.8, "Beetle master", []),
     (10000, 0.85, "Coleopterist", []),
     (25000, 0.92, "King of Bark and Ambrosia", []),

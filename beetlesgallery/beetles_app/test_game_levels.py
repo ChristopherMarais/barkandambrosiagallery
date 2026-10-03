@@ -28,7 +28,7 @@ class LevelTests(ScoringCase):
     def test_perks_build_up(self):
         self.assertEqual(levels.describe(0, 0)["perks"], set())
         self.assertEqual(levels.describe(60, 0)["perks"], {"choose_game"})   # level 2: choose your game
-        self.assertEqual(levels.describe(200, 0.4)["perks"], {"choose_game", "focus_subfamily"})
+        self.assertEqual(levels.describe(200, 0.4)["perks"], {"choose_game", "focus_subfamily", "specimen_photos"})
         self.assertTrue(levels.describe(1600, 0.75)["proposals"])
         self.assertFalse(levels.describe(1600, 0.65)["proposals"])   # reliability matters for it
         self.assertEqual(levels.proposal_level(), 6)
