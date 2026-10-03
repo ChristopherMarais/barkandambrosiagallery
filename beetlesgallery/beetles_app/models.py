@@ -1804,3 +1804,21 @@ class AreaGrant(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.area}"
+
+
+class SiteNotice(models.Model):
+    """
+    A one-line notice shown at the top of every page while it is switched on, e.g. during a stress test (issue #383).
+    There is only ever one row; a superuser edits it on Tools -> Site notice.
+    """
+
+    text = models.CharField(max_length=300, blank=True)
+    active = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
+    class Meta:
+        db_table = "site_notice"
+
+    def __str__(self):
+        return f"{'on' if self.active else 'off'}: {self.text}"

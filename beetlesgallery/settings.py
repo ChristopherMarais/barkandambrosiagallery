@@ -95,6 +95,7 @@ TEMPLATES = [
                 "beetlesgallery.beetles_app.context_processors.species_ref_status",
                 "beetlesgallery.beetles_app.areas.areas_for_templates",
                 "beetlesgallery.beetles_app.context_processors.game_player",
+                "beetlesgallery.beetles_app.site_notice.context",
             ],
         },
     },
@@ -286,6 +287,16 @@ CELERY_RESULT_BACKEND = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+# Heavy jobs (CSV uploads and updates, building downloads) go to their own queue, which production runs one at a
+# time at low CPU priority (the worker-heavy service), so they never hold up the game's quick background work
+# (issue #383). A worker started without -Q only takes the default queue: in development run it with -Q celery,heavy.
+CELERY_TASK_DEFAULT_QUEUE = "celery"
+HEAVY_QUEUE = "heavy"
+CELERY_TASK_ROUTES = {
+    "beetlesgallery.beetles_app.tasks.process_upload_task": {"queue": HEAVY_QUEUE},
+    "beetlesgallery.beetles_app.tasks.process_update_task": {"queue": HEAVY_QUEUE},
+    "beetlesgallery.beetles_app.tasks.build_downloads_task": {"queue": HEAVY_QUEUE},
+}
 
 # --- Cache Configuration ---
 CACHES = {

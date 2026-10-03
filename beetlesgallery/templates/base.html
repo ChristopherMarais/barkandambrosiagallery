@@ -482,6 +482,9 @@
     </div>
 
     <div class="flex-1 overflow-x-hidden">
+      {% block site_notice %}{% if site_notice %}
+      <div class="px-6 py-2 bg-gray-800 text-white text-sm text-center" role="status" data-testid="site-notice">{{ site_notice }}</div>
+      {% endif %}{% endblock %}
       <main class="max-w-7xl mx-auto px-6 py-8 min-h-[80vh]">
         {% if messages %}
         <div class="mb-6 space-y-2">
