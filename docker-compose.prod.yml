@@ -33,10 +33,29 @@ services:
   worker:
     build: .
     restart: always
-    command: pixi run celery -A beetlesgallery worker -l info --concurrency=2
+    # Quick background work (game re-scoring). Heavy jobs have their own worker below.
+    command: pixi run celery -A beetlesgallery worker -l info --concurrency=2 -Q celery -n quick@%h
     volumes:
       - /opt/barkandambrosia_data/media:/app/media
     env_file:
+      - .env.prod
+      - .env.version
+    depends_on:
+      - db
+      - redis
+
+  worker-heavy:
+    build: .
+    restart: always
+    # CSV uploads/updates and downloads: one at a time, at low CPU priority, so the site stays quick while they run
+    command: nice -n 10 pixi run celery -A beetlesgallery worker -l info --concurrency=1 --prefetch-multiplier=1 -Q heavy -n heavy@%h
+    # The same code, environment and files as the worker above gets from docker-compose.yml plus this file
+    volumes:
+      - .:/app
+      - /app/.pixi
+      - /opt/barkandambrosia_data/media:/app/media
+    env_file:
+      - .env
       - .env.prod
       - .env.version
     depends_on:

@@ -40,7 +40,8 @@ services:
       - .:/app                # Maps your code
       - /app/.pixi            # Internal Linux environment
       - media_data:/app/media # <--- NEW: Must match 'web' exactly
-    command: pixi run celery -A beetlesgallery worker -l info
+    # Both queues in development (production splits them: see docker-compose.prod.yml)
+    command: pixi run celery -A beetlesgallery worker -l info -Q celery,heavy
     env_file:
       - .env
     depends_on:

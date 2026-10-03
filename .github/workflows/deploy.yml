@@ -54,7 +54,7 @@ jobs:
             echo "APP_VERSION=$RELEASE_TAG" > .env.version
 
             # 2. Build the new images. The running containers are not touched yet.
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml build web worker
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml build web worker worker-heavy
 
             # 3. Pre-flight in a throw-away container with the new code: settings load, and the database accepts
             #    the site's password (this is where a password mismatch is caught, before anything changes).
@@ -75,8 +75,8 @@ jobs:
             # (The taxonomy is loaded by an admin with `manage.py migrate_taxonomy_to_db`.
             # It purges and reloads the taxonomy tables, so it is never part of a deploy.)
 
-            # 5. Switch the site and the worker to the new version
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps web worker
+            # 5. Switch the site and the workers (quick jobs, and heavy uploads/downloads) to the new version
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps web worker worker-heavy
 
             # 6. Health check: the public home page (which reads the database) must answer 200 within two minutes.
             #    The public address, not localhost, so ALLOWED_HOSTS and the proxy in front are checked too.
