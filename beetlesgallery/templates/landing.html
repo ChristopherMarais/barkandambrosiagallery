@@ -27,6 +27,12 @@
             </a>
           </span>
         </p>
+        {% if not user.is_authenticated %}
+        <div class="pt-2 flex flex-col items-center gap-2" data-testid="landing-request-access">
+          <a href="{% url 'request_access' %}" class="inline-flex items-center px-5 py-2.5 rounded-xl border border-gray-900 font-semibold text-gray-900 hover:bg-gray-50">Request access</a>
+          <span class="text-sm text-gray-500">Confirm your email &rarr; we approve you &rarr; you get an email.</span>
+        </div>
+        {% endif %}
       </header>
 
       <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-16 items-center px-4 pb-12">

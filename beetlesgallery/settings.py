@@ -188,6 +188,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "image_browser"
 LOGOUT_REDIRECT_URL = "image_browser"
+# The sign-in page says accounts were reset (they were, for the new access-request system) until this date.
+# Empty turns the notice off.
+ACCOUNT_RESET_NOTICE_UNTIL = os.environ.get("ACCOUNT_RESET_NOTICE_UNTIL", "2026-10-31")
 
 # Access requests (beetles_app/access.py): who is emailed when someone asks for an account.
 # They read and decide the requests on My Account -> Access Requests, so they need superuser accounts.
