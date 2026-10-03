@@ -270,6 +270,13 @@ class OnboardingTests(GameCase):
             self.answer_once(days_ago)
         self.assertIn('data-report-tip="0"', self.page())
 
+    def test_box_shows_on_any_photo_and_the_photo_edge_is_marked(self):
+        self.client.force_login(self.user)
+        page = self.client.get(reverse("game_play", args=["classify"])).content.decode()
+        self.assertIn("#lightbox-box { border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.7)", page)   # white with a dark edge
+        self.assertIn("const CROP_PAD = 0.15;", page)        # more context around the beetle
+        self.assertIn('edge.dataset.testid = "photo-edge"', page)   # a crop that meets the photo's edge says so
+
     def test_the_report_button_is_labelled(self):
         self.assertIn("<span>Report</span>", self.page())
 
