@@ -243,7 +243,7 @@ GET /api/v1/beetles/f24e1be6-fac9-4b38-b5d1-fd5eaff4ce5e/
     "specimen_sex": null,
     "specimen_type_status": "syntype of Platypus incompertus",
     "specimen_notes": null,
-    "alternative_id": "lrXdUvwycEGw",
+    "alias_id": "lrXdUvwycEGw",
     "last_updated_at": "2026-01-14T22:54:13.243392Z",
     "update_notes": null,
     "last_updated_by": null,
@@ -288,7 +288,7 @@ GET /api/v1/beetles/f24e1be6-fac9-4b38-b5d1-fd5eaff4ce5e/
 - `specimen_sex` - Sex (male, female, unknown)
 - `specimen_type_status` - Type status (holotype, paratype, syntype, etc.)
 - `specimen_notes` - Additional notes
-- `alternative_id` - Alternative identifier
+- `alias_id` - Alternative identifier
 
 **Taxonomy fields (from CSV lookup):**
 

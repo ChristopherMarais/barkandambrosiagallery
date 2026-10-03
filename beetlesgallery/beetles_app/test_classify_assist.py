@@ -120,7 +120,7 @@ class ClassifyTests(ClassifyCase):
 
 
 SPECIMEN = dict(aspect="dorsal", collection_country="Brazil", collection_stateProvince="Sao Paulo",
-                specimen_sex="female", specimen_notes="from the gallery", alternative_id="ALT-7")
+                specimen_sex="female", specimen_notes="from the gallery", alias_id="ALT-7")
 
 
 class ProposedRoiMetadataTests(ClassifyCase):

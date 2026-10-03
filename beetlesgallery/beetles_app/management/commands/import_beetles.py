@@ -21,6 +21,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from beetlesgallery.beetles_app.models import Beetles, UploadBatch, ImageAsset, Taxon
+from beetlesgallery.beetles_app.csv_columns import modern_columns
 
 try:
     import pandas as pd
@@ -150,7 +151,7 @@ class Command(BaseCommand):
             raise CommandError(f"Error reading Excel: {e}")
 
         # Normalize column names (trim)
-        df.columns = [c.strip() for c in df.columns]
+        df.columns = modern_columns(df.columns)
         
         # Required columns
         required_cols = {"full_path_at_import", "depicts_valid_name_id"}
@@ -166,7 +167,7 @@ class Command(BaseCommand):
 
         # Field max lengths
         MAXLEN = {
-            "alternative_id": 255,
+            "alias_id": 255,
             "image_institution": 255,
             "photographer": 255,
             "image_email": 254,  # EmailField default
@@ -232,7 +233,7 @@ class Command(BaseCommand):
 
                 # B. Fields that belong to Beetles
                 beetle_fields_map = [
-                    ("alternative_id", MAXLEN["alternative_id"]),
+                    ("alias_id", MAXLEN["alias_id"]),
                     ("aspect", MAXLEN["aspect"]), # Kept on Beetles!
                     ("depicts_specimen", MAXLEN["depicts_specimen"]),
                     ("depicts_described_name_id", MAXLEN["depicts_described_name_id"]),

@@ -14,6 +14,7 @@ from django.core.files.base import ContentFile
 
 from beetlesgallery.beetles_app.models import UpdateBatch, Beetles, ImageAsset, Taxon
 from beetlesgallery.beetles_app.bbox_rules import BOX_COLUMNS, is_blank, parse_box
+from beetlesgallery.beetles_app.csv_columns import modern_columns
 
 try:
     import pandas as pd
@@ -31,7 +32,7 @@ IMAGE_FIELDS = {
 
 # Fields that live on the Beetles model
 BEETLE_FIELDS = {
-    "alternative_id", "aspect", "depicts_specimen", 
+    "alias_id", "aspect", "depicts_specimen", 
     "depicts_valid_name_id", "depicts_described_name_id", 
     "depicts_name_verbatim", "collection_country", 
     "collection_stateProvince", "specimen_sex", 
@@ -125,7 +126,7 @@ class Command(BaseCommand):
 
         try:
             df = pd.read_csv(batch.file.path)
-            df.columns = [str(c).strip().lstrip('\ufeff') for c in df.columns]
+            df.columns = modern_columns(df.columns)
         except Exception as e:
             self._fail(batch, f"Cannot read CSV: {e}")
             return

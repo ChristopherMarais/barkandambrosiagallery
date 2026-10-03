@@ -19,6 +19,7 @@ import io
 from PIL import Image, ImageOps
 from beetlesgallery.beetles_app.image_pipeline import write_original_and_thumb96
 from .validate_uploads import _normalize_valid_id
+from beetlesgallery.beetles_app.csv_columns import modern_columns
 
 try:
     import pandas as pd
@@ -281,7 +282,7 @@ class Command(BaseCommand):
             except Exception as e:
                 raise CommandError(f"{batch.id}: cannot open CSV: {e}")
 
-            df.columns = [c.strip() for c in df.columns]
+            df.columns = modern_columns(df.columns)
             missing = REQUIRED_COLS - set(df.columns)
             if missing:
                 raise CommandError(f"{batch.id}: CSV missing required columns: {sorted(missing)}")
@@ -314,7 +315,7 @@ class Command(BaseCommand):
 
             # Limits copied from your model
             MAXLEN = {
-                "alternative_id": 255,
+                "alias_id": 255,
                 "image_institution": 255,
                 "photographer": 255,
                 "image_email": 254,
@@ -382,7 +383,7 @@ class Command(BaseCommand):
 
                     # CharFields (no clipping)
                     char_fields = [
-                        ("alternative_id", MAXLEN["alternative_id"]),
+                        ("alias_id", MAXLEN["alias_id"]),
                         ("image_institution", MAXLEN["image_institution"]),
                         ("photographer", MAXLEN["photographer"]),
                         ("image_email", MAXLEN["image_email"]),
@@ -507,7 +508,7 @@ class Command(BaseCommand):
                                 depicts_described_name_id=values.get('depicts_described_name_id'),
                                 depicts_specimen=values.get('depicts_specimen'),
                                 depicts_name_verbatim=values.get('depicts_name_verbatim'),
-                                alternative_id=values.get('alternative_id'),
+                                alias_id=values.get('alias_id'),
                                 aspect=values.get('aspect'),
                                 collection_country=values.get('collection_country'),
                                 collection_stateProvince=values.get('collection_stateProvince'),
@@ -560,7 +561,7 @@ class Command(BaseCommand):
                                 "depicts_valid_name_id": ln(depicts_valid_name_id),
                                 "depicts_described_name_id": ln(values.get("depicts_described_name_id")),
                                 "depicts_name_verbatim": ln(values.get("depicts_name_verbatim")),
-                                "alternative_id": ln(values.get("alternative_id")),
+                                "alias_id": ln(values.get("alias_id")),
                             }
 
                             raise CommandError(f"{batch.id}: Row {row_num} failed DB insert: {e}") from e

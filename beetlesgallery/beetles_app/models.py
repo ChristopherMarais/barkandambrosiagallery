@@ -184,7 +184,10 @@ class Beetles(models.Model):
     specimen_notes = models.TextField(null=True, blank=True)
 
     # --- Alternative identifiers ---
-    alternative_id = models.CharField(max_length=255, null=True, blank=True)
+    alias_id = models.CharField(
+        max_length=255, null=True, blank=True,
+        help_text="Your own ID for this record, e.g. a catalogue number or file name from your database. Optional; we keep it unchanged and include it in every download so you can link our records back to yours. (Was called alternative_id.)",
+    )
 
     # --- Bulk update attribution & concurrency ---
     last_updated_by = models.ForeignKey(
@@ -315,8 +318,8 @@ class Beetles(models.Model):
         ]
 
     def __str__(self):
-        # Prefer a human-friendly alternative_id if present; else a short UUID
-        label = self.alternative_id or str(self.id)[:8].strip()
+        # Prefer a human-friendly alias_id if present; else a short UUID
+        label = self.alias_id or str(self.id)[:8].strip()
         return f"{label} | {self.depicts_valid_name_id}"
 
     # ---------

@@ -9,6 +9,7 @@ from beetlesgallery.beetles_app.utils import get_system_user
 import math
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import date, datetime
+from beetlesgallery.beetles_app.csv_columns import modern_columns
 
 try:
     import pandas as pd
@@ -29,7 +30,7 @@ IMAGE_FIELDS = {
 }
 
 BEETLE_FIELDS = {
-    "alternative_id",
+    "alias_id",
     "aspect",
     "depicts_specimen",
     "depicts_valid_name_id",
@@ -147,7 +148,7 @@ class Command(BaseCommand):
                 df = pd.read_excel(batch.file.path)
             else:
                 df = pd.read_csv(batch.file.path)
-            df.columns = [str(c).strip().lstrip('\ufeff') for c in df.columns]
+            df.columns = modern_columns(df.columns)
         except Exception as e:
             self._fail_apply(batch, f"Cannot open file: {e}")
             return
@@ -169,7 +170,7 @@ class Command(BaseCommand):
 
         # Max lengths
         MAXLEN = {
-            "alternative_id": 255,
+            "alias_id": 255,
             "image_institution": 255,
             "photographer": 255,
             "image_email": 254,

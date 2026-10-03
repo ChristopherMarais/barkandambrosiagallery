@@ -227,10 +227,10 @@
                     <span class="view-val">{{ beetle.depicts_described_name_id|default:"—" }}</span>
                     <input type="text" name="depicts_described_name_id" value="{{ beetle.depicts_described_name_id|default:'' }}" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
                 </dd>
-                <dt class="col-span-1 text-text/60">Alternative ID</dt>
+                <dt class="col-span-1 text-text/60" title="Your own ID for this record, e.g. a catalogue number or file name from your database. Optional; we keep it unchanged and include it in every download so you can link our records back to yours.">Alias ID</dt>
                 <dd class="col-span-2">
-                    <span class="view-val">{{ beetle.alternative_id|default:"—" }}</span>
-                    <input type="text" name="alternative_id" value="{{ beetle.alternative_id|default:'' }}" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
+                    <span class="view-val">{{ beetle.alias_id|default:"—" }}</span>
+                    <input type="text" name="alias_id" value="{{ beetle.alias_id|default:'' }}" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
                 </dd>
               </dl>
           </div>
