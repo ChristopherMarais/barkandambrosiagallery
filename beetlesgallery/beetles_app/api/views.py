@@ -63,8 +63,11 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
     def classify(self, request, pk=None):
         """
         "Classify with AI": add the classifier's boxes and species to this image as new, unvalidated ROIs.
-        POST /api/v1/image-assets/{uuid}/classify/  {"architecture": "rtdetr", "box_threshold": 0.25}
+        POST /api/v1/image-assets/{uuid}/classify/  {"architecture": "ibbi_dinov3", "box_threshold": 0.25}
+        (the model keys are in beetlesgallery/tools/ibbi_models.py; the names from before ibbi 0.3 still work)
         """
+        from beetlesgallery.tools import ibbi_models
+
         from ..classify_assist import ClassifyError, add_rois, call_classifier
         asset = self.get_object()
         if not asset.image_file:
@@ -80,7 +83,7 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
             with asset.image_file.open('rb') as fh:
                 data = fh.read()
             result = call_classifier(data, os.path.basename(asset.image_file.name), 'image/jpeg',
-                                     request.data.get('architecture', 'rtdetr'), threshold)
+                                     request.data.get('architecture') or ibbi_models.DEFAULT, threshold)
             created, skipped = add_rois(asset, result, request.user)
         except ClassifyError as exc:
             return Response({'error': str(exc)}, status=502)

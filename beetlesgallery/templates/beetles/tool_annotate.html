@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static ibbi_tags %}
 
 {% block content %}
 <style>
@@ -371,12 +371,7 @@
           <p class="text-[11px] text-gray-500 mb-2">Adds boxes and a proposed species for beetles the classifier finds. They are added to the existing ROIs, never validated, and boxes that overlap an existing ROI are skipped.</p>
           <div class="flex gap-2">
             <select id="classify-model" class="flex-1 rounded border border-gray-300 bg-white px-2 py-1.5 text-xs">
-              <option value="rtdetr">RT-DETR (recommended)</option>
-              <option value="yolov12">YOLO v12</option>
-              <option value="yolov11">YOLO v11</option>
-              <option value="yolov10">YOLO v10</option>
-              <option value="yolov9">YOLO v9</option>
-              <option value="yolov8">YOLO v8</option>
+              {% ibbi_model_options %}
             </select>
             <button type="button" id="classify-btn" onclick="classifyCurrentImage()"
               class="px-3 py-1.5 text-xs font-semibold text-white bg-gray-800 rounded hover:bg-gray-900 disabled:opacity-50">Classify</button>

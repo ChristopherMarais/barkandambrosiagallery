@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static ibbi_tags %}
 
 {% block content %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -47,18 +47,13 @@
                 {% csrf_token %}
                 
                 <div>
-                    <label for="modelSelect" class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Model Architecture</label>
+                    <label for="modelSelect" class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Model</label>
                     <p class="text-[10px] text-gray-500 mb-2 leading-tight">
-                        Different architectures offer varying trade-offs in speed and capability, even when trained on the same data.
+                        The recommended model finds each beetle, then names it rank by rank and says when it is not sure of the species.
                     </p>
                     <div class="relative">
-                        <select name="architecture" id="modelSelect" class="block w-full pl-3 pr-8 py-2.5 text-sm border-gray-300 focus:outline-none focus:ring-gray-500 focus:border-gray-500 rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer appearance-none">
-                            <option value="rtdetr" selected>RT-DETR (Recommended)</option>
-                            <option value="yolov12">YOLO v12</option>
-                            <option value="yolov11">YOLO v11</option>
-                            <option value="yolov10">YOLO v10</option>
-                            <option value="yolov9">YOLO v9</option>
-                            <option value="yolov8">YOLO v8</option>
+                        <select name="architecture" id="modelSelect" class="block w-full pl-3 pr-8 py-2.5 text-sm border-gray-300 focus:outline-none focus:ring-gray-500 focus:border-gray-500 rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer appearance-none" data-testid="model-select">
+                            {% ibbi_model_options %}
                         </select>
                         <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
                             <i class="fi fi-rr-angle-small-down text-lg"></i>
@@ -162,10 +157,12 @@
 
             <div id="analysisDetails" class="hidden bg-white p-6 rounded-xl border border-gray-200 shadow-sm transition-all">
                 <div class="flex items-center justify-between mb-4 border-b border-gray-100 pb-2">
-                    <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Top 10 Predictions</h3>
+                    <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Identification</h3>
                     <span id="chartLabel" class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded">Select a detection</span>
                 </div>
                 
+                <div id="ranksPanel" class="hidden mb-4 divide-y divide-gray-100 text-sm" data-testid="ranks-panel"></div>
+
                 <div class="relative w-full" id="chartWrapper" style="height: 400px;">
                     <canvas id="probsChart"></canvas>
                 </div>
@@ -290,19 +287,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (index === -1 || !state.detections[index]) return;
         
         const det = state.detections[index];
-        const probs = det.probs;
-        
+        renderRanks(det);
+
         // Update Chart Label
-        ui.chartLabel.innerText = `${det.label} (${Math.round(det.score * 100)}%)`;
+        ui.chartLabel.innerText = `${det.label} (${Math.round(confidenceOf(det) * 100)}%)`;
         ui.chartLabel.className = "text-xs font-bold text-white px-2 py-1 rounded shadow-sm transition-colors";
         ui.chartLabel.style.backgroundColor = getBoxColor(index);
 
-        // Sort and Filter: Show top 10 probabilities > 0
-        const sorted = probs
-            .map((p, i) => ({ p, name: state.classNames[i] || `Class ${i}` }))
+        // The most likely species, best first (the newer service sends them as candidates)
+        const candidates = det.candidates
+            ? det.candidates.map(c => ({ p: c.prob, name: c.name }))
+            : (det.probs || []).map((p, i) => ({ p, name: state.classNames[i] || `Class ${i}` }));
+        const sorted = candidates
             .filter(item => item.p > 0)
             .sort((a, b) => b.p - a.p)
-            .slice(0, 10); // LIMIT TOP 10
+            .slice(0, 10);
 
         state.chart.data.labels = sorted.map(i => i.name);
         state.chart.data.datasets[0].data = sorted.map(i => i.p * 100);
@@ -314,6 +313,35 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.chartWrapper.style.height = `${newHeight}px`;
         
         state.chart.update();
+    }
+
+    function confidenceOf(det) {
+        return det.confidence ?? det.score;
+    }
+
+    // Subfamily to species: what the model says at each rank, greyed where it is not sure
+    function renderRanks(det) {
+        const panel = document.getElementById('ranksPanel');
+        if (!det.levels) { panel.classList.add('hidden'); panel.innerHTML = ''; return; }
+        panel.innerHTML = '';
+        ['subfamily', 'tribe', 'genus', 'species'].forEach(rank => {
+            const level = det.levels[rank];
+            if (!level) return;
+            const row = document.createElement('div');
+            row.className = 'flex items-baseline justify-between gap-3 py-1.5' + (level.known ? '' : ' text-gray-400');
+            const name = document.createElement('span');
+            name.innerHTML = `<span class="text-[10px] uppercase tracking-wide text-gray-500 mr-2">${rank}</span>`;
+            const taxon = document.createElement('span');
+            taxon.className = rank === 'genus' || rank === 'species' ? 'italic' : '';
+            taxon.textContent = level.taxon + (level.known ? '' : ' ?');
+            name.appendChild(taxon);
+            const pct = document.createElement('span');
+            pct.className = 'tabular-nums text-xs';
+            pct.textContent = `${Math.round(level.prob * 100)}%`;
+            row.append(name, pct);
+            panel.appendChild(row);
+        });
+        panel.classList.remove('hidden');
     }
 
     // --- Canvas & Interaction Logic ---
@@ -385,7 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Text Setup
                 ctx.font = `bold ${fontSize}px sans-serif`; 
-                const label = `${det.label} ${Math.round(det.score * 100)}%`;
+                const label = `${det.label} ${Math.round(confidenceOf(det) * 100)}%`;
                 const textMetrics = ctx.measureText(label);
                 
                 // Background Dimensions
@@ -722,7 +750,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const btn = document.createElement('button');
                     btn.className = "flex items-center gap-2 px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-medium transition-colors border border-transparent focus:border-gray-500 focus:ring-1 focus:ring-gray-500";
                     const color = getBoxColor(i);
-                    btn.innerHTML = `<span class="w-2.5 h-2.5 rounded-full" style="background-color:${color}"></span> ${det.label} <span class="text-gray-400">${Math.round(det.score*100)}%</span>`;
+                    btn.innerHTML = `<span class="w-2.5 h-2.5 rounded-full" style="background-color:${color}"></span> ${det.label} <span class="text-gray-400">${Math.round(confidenceOf(det)*100)}%</span>`;
                     btn.onclick = () => {
                         state.selectedIndex = i;
                         updateChartData(i);

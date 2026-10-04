@@ -21,7 +21,9 @@ from . import roi_defaults
 from .bbox_rules import TOLERANCE
 from .models import Beetles, ModelPrediction, Taxon
 
-ARCHITECTURES = ("rtdetr", "yolov12", "yolov11", "yolov10", "yolov9", "yolov8")
+from beetlesgallery.tools import ibbi_models  # the models on offer (one list for the service and the site)
+
+ARCHITECTURES = tuple(ibbi_models.MODELS) + tuple(ibbi_models.LEGACY)
 SAME_BOX_IOU = 0.5
 
 
@@ -56,7 +58,8 @@ def _norm(name):
 
 def call_classifier(image_bytes, filename, content_type, architecture, box_threshold):
     """The Modal service's answer for one image, or ClassifyError."""
-    if architecture not in ARCHITECTURES:
+    architecture = ibbi_models.resolve(architecture)
+    if architecture is None:
         raise ClassifyError("Unknown model.")
     try:
         response = requests.post(
@@ -75,6 +78,27 @@ def call_classifier(image_bytes, filename, content_type, architecture, box_thres
     return data
 
 
+def known_rank_names():
+    """{rank: {lower-cased name: name as in the species list}} for subfamily, tribe and genus."""
+    known = {rank: {} for rank in ("subfamily", "tribe", "genus")}
+    for values in Taxon.objects.values_list(*known):
+        for rank, value in zip(known, values):
+            if value:
+                known[rank].setdefault(value.lower(), value)
+    return known
+
+
+def rank_confidence(levels, known):
+    """What a hierarchical classifier said above the species, as ModelPrediction.rank_confidence."""
+    out = {}
+    for rank, names in known.items():
+        level = (levels or {}).get(rank) or {}
+        name = names.get(_norm(level.get("taxon")))
+        if name:
+            out[rank] = {"value": name, "confidence": round(min(1.0, max(0.0, float(level.get("prob") or 0))), 4)}
+    return out
+
+
 def add_rois(asset, result, user):
     """Create unvalidated ROIs from the classifier's ``result``. Returns (created, skipped_as_existing)."""
     width, height = asset.image_width, asset.image_height
@@ -83,6 +107,7 @@ def add_rois(asset, result, user):
         with asset.image_file.open("rb") as fh:
             width, height = Image.open(fh).size
     names = {_norm(t.scientific_name): t for t in Taxon.objects.exclude(scientific_name__isnull=True)}
+    ranks = known_rank_names()
     class_names = result.get("class_names") or []
     model = result.get("model_used") or "classifier"
     now = timezone.now()
@@ -103,7 +128,11 @@ def add_rois(asset, result, user):
             if any(iou(box, other) >= SAME_BOX_IOU for other in existing):
                 skipped += 1
                 continue
-            taxon = names.get(_norm(det.get("label")))
+            # The species the model names: a pipeline only labels the box when it is sure down to the species
+            # (depth 4); its best species still becomes the prediction, with the ranks above it.
+            best = names.get(_norm(det.get("species") or det.get("label")))
+            sure = det.get("depth", 4) >= 4
+            taxon = best if sure else None
             audit = dict(
                 bbox_x=box[0], bbox_y=box[1], bbox_width=box[2], bbox_height=box[3],
                 bbox_is_validated=False, bbox_created_by=user, bbox_created_at=now, last_updated_by=user,
@@ -121,16 +150,22 @@ def add_rois(asset, result, user):
                     image_asset=asset, depicts_valid_name_id=taxon.valid_species_id if taxon else None,
                     **inherited, **audit,
                 )
-            if taxon:
-                probs = det.get("probs") or []
+            if best:
+                if det.get("candidates") is not None:
+                    pairs = [(c.get("name"), c.get("prob")) for c in det["candidates"]]
+                else:   # a service from before ibbi 0.3
+                    pairs = list(zip(class_names, det.get("probs") or []))
                 runners = sorted(
-                    ((names.get(_norm(n)), p) for n, p in zip(class_names, probs) if names.get(_norm(n)) not in (None, taxon)),
+                    ((names.get(_norm(n)), p) for n, p in pairs if names.get(_norm(n)) not in (None, best)),
                     key=lambda item: -item[1],
                 )[:5]
+                species_level = (det.get("levels") or {}).get("species") or {}
+                confidence = species_level.get("prob", det.get("confidence", det.get("score")))
                 ModelPrediction.objects.create(
-                    roi=roi, valid_species_id=taxon.valid_species_id, taxon=taxon,
-                    confidence=min(1.0, max(0.0, float(det.get("score") or 0))),
+                    roi=roi, valid_species_id=best.valid_species_id, taxon=best,
+                    confidence=min(1.0, max(0.0, float(confidence or 0))),
                     top_k=[{"valid_species_id": t.valid_species_id, "confidence": round(float(p), 4)} for t, p in runners],
+                    rank_confidence=rank_confidence(det.get("levels"), ranks),
                     model_name=f"annotator:{model}"[:100], uploaded_by=user,
                 )
             existing.append(box)

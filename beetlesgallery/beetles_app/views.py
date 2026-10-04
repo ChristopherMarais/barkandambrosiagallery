@@ -10,6 +10,7 @@ import math
 import requests
 import time
 import logging
+from beetlesgallery.tools import ibbi_models
 from datetime import date, timedelta
 from io import BytesIO
 
@@ -1661,8 +1662,9 @@ def tool_classify(request):
             image_file = request.FILES['image']
             
             # Extract form data
+            architecture = ibbi_models.resolve(request.POST.get('architecture')) or ibbi_models.DEFAULT
             payload = {
-                'architecture': request.POST.get('architecture', 'rtdetr'),
+                'architecture': architecture,
                 'box_threshold': request.POST.get('box_threshold', 0.25),
             }
             

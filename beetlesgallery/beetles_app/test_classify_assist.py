@@ -66,7 +66,7 @@ class ClassifyTests(ClassifyCase):
         prediction = ModelPrediction.objects.get(roi=roi)
         self.assertEqual((prediction.valid_species_id, prediction.confidence, prediction.model_name), ("2210", 0.91, "annotator:ibbi-test"))
         self.assertEqual(prediction.top_k, [{"valid_species_id": "1733", "confidence": 0.06}])  # unlisted species left out
-        self.assertEqual(post.call_args.kwargs["data"]["architecture"], "rtdetr")
+        self.assertEqual(post.call_args.kwargs["data"]["architecture"], "rtdetrx")   # the pre-0.3 name, as its new key
 
     def test_existing_rois_are_kept_and_an_overlapping_box_is_skipped(self):
         existing = make_beetle(image=self.asset, taxon=self.typo, bbox="validated")
