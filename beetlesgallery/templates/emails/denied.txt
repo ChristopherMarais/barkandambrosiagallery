@@ -1,8 +1,8 @@
 {% autoescape off %}Hello {{ name }},
 
-Thank you for your interest in the Bark & Ambrosia Beetle Gallery, and for taking the time to ask for an account.
+Thank you for your interest in the Bark & Ambrosia Beetle Gallery, and for taking the time to ask.
 
-After looking at your request, we are not able to give you an account right now.
+{% if keeps_account %}After looking at your request, we are not able to give you the extra access you asked for right now. Your account keeps working as before.{% else %}After looking at your request, we are not able to give you an account right now.{% endif %}
 {% if note %}
 A note from the reviewer:
 {{ note }}

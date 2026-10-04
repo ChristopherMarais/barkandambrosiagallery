@@ -145,7 +145,18 @@ class MyDownloadsTests(PageBehaviourCase):
 
 
 class ReferenceDownloadTests(PageBehaviourCase):
-    """The taxonomy reference CSVs served from storage."""
+    """The taxonomy reference CSVs served from storage, to people with the species tables area."""
+
+    def setUp(self):
+        super().setUp()
+        from beetlesgallery.beetles_app.models import AreaGrant
+        AreaGrant.objects.create(user=self.user, area="species_tables")
+
+    def test_people_without_the_species_tables_area_are_turned_away(self):
+        self.client.force_login(self.staff)
+        for name in ("download_taxonomy_ref", "download_described_names_ref"):
+            with self.subTest(page=name):
+                self.assertEqual(self.client.get(reverse(name)).status_code, 403)
 
     def store(self, path, content=b"id,name\n1,Ips\n"):
         default_storage.save(path, ContentFile(content))

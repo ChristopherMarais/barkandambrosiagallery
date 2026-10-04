@@ -1,8 +1,8 @@
 {% extends "emails/base.html" %}
 {% block content %}
 <p style="margin:0 0 16px;">Hello {{ name }},</p>
-<p style="margin:0 0 16px;">Thank you for your interest in the Bark &amp; Ambrosia Beetle Gallery, and for taking the time to ask for an account.</p>
-<p style="margin:0 0 16px;">After looking at your request, we are not able to give you an account right now.</p>
+<p style="margin:0 0 16px;">Thank you for your interest in the Bark &amp; Ambrosia Beetle Gallery, and for taking the time to ask.</p>
+<p style="margin:0 0 16px;">{% if keeps_account %}After looking at your request, we are not able to give you the extra access you asked for right now. Your account keeps working as before.{% else %}After looking at your request, we are not able to give you an account right now.{% endif %}</p>
 {% include "emails/_note.html" %}
 <p style="margin:0 0 16px;">If you think we have missed something, or your situation changes, you are very welcome to reply to this email or to ask again.</p>
 <p style="margin:0 0 16px;">With best wishes,<br>The Bark &amp; Ambrosia Beetle Gallery team</p>

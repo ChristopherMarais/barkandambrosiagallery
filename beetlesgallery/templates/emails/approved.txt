@@ -1,8 +1,10 @@
 {% autoescape off %}Hello {{ name }},
 
-Welcome to the Bark & Ambrosia Beetle Gallery! Your request was approved and your account is ready.
+Welcome to the Bark & Ambrosia Beetle Gallery! Your account is ready.
 
-You have {{ role }} access: {{ summary }}.
+Every account can use {{ summary }}.{% if granted %}
+You also have: {{ granted|join:", " }}.{% endif %}{% if waiting %}
+You also asked for: {{ waiting|join:", " }}. A curator will review that and we will email you.{% endif %}
 {% if note %}
 A note from the reviewer:
 {{ note }}

@@ -168,7 +168,7 @@
           <div class="flex items-center justify-between mb-4 h-8 border-b border-text/10 pb-2">
               <h2 id="form-title" class="text-md font-semibold uppercase tracking-wider text-text/80">Image Details</h2>
               
-              {% if request.user.is_staff %}
+              {% if areas.annotate %}
                   <div class="flex items-center gap-2">
                       {# ANNOTATE BUTTON (opens this image in the full Annotation Tool) #}
                       {% if beetle.image_asset %}
@@ -382,7 +382,7 @@
                         <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>Not validated
                       {% endif %}
                     </span>
-                    {% if request.user.is_staff and beetle.image_asset %}
+                    {% if areas.annotate and beetle.image_asset %}
                       {% if beetle.image_asset.is_validated %}
                         <button type="submit" form="image-validation-form" name="state" value="unvalidate"
                                 onclick="return confirm('Move this image and all of its ROIs back to unvalidated?');"
@@ -406,7 +406,7 @@
                         <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>Not validated
                       {% endif %}
                     </span>
-                    {% if request.user.is_staff and beetle.bbox_x is not None %}
+                    {% if areas.annotate and beetle.bbox_x is not None %}
                       {% if beetle.bbox_is_validated %}
                         <button type="submit" form="roi-validation-form" name="state" value="unvalidate"
                                 onclick="return confirm('Move this ROI back to unvalidated? The image will also become unvalidated.');"
@@ -420,7 +420,7 @@
                     {% endif %}
                 </dd>
               </dl>
-              {% if request.user.is_staff %}
+              {% if areas.annotate %}
               <p class="edit-action hidden mt-2 text-xs text-text/50">
                   Validation changes apply immediately. An image is only validated when all of its ROIs are.
               </p>
@@ -444,7 +444,7 @@
         </div>
       </form>
 
-      {% if request.user.is_staff %}
+      {% if areas.annotate %}
         {% if beetle.image_asset %}
         <form id="image-validation-form" method="post" action="{% url 'toggle_image_validation' beetle.image_asset.id %}" class="hidden">{% csrf_token %}</form>
         {% endif %}

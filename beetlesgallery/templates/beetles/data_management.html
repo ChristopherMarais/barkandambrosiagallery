@@ -90,6 +90,10 @@
     </a>
   </div>
 
+  {% endif %}
+
+  {# The ground-truth species tables: their own permission (areas.SPECIES) #}
+  {% if areas.species_tables %}
   <div class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm">
     <h2 class="text-2xl font-bold mb-6 text-gray-800">Taxonomy Reference Management</h2>
 

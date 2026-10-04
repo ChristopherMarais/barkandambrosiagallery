@@ -107,11 +107,12 @@ class AccountPageTests(AreaCase):
 
     def test_unknown_areas_are_ignored(self):
         self.edit(self.superuser, self.user, areas=["superuser", "annotate"])
-        self.assertEqual(list(AreaGrant.objects.values_list("area", flat=True)), ["annotate"])
+        self.assertEqual(list(AreaGrant.objects.filter(user=self.user).values_list("area", flat=True)), ["annotate"])
 
     def test_staff_cannot_change_grants(self):
+        before = set(AreaGrant.objects.filter(user=self.user).values_list("area", flat=True))
         self.edit(self.staff, self.user, areas=["annotate"])
-        self.assertFalse(AreaGrant.objects.exists())
+        self.assertEqual(set(AreaGrant.objects.filter(user=self.user).values_list("area", flat=True)), before)
 
     def test_the_page_offers_the_choices_to_superusers_only(self):
         self.client.force_login(self.superuser)
@@ -122,7 +123,7 @@ class AccountPageTests(AreaCase):
     def test_a_users_grants_are_passed_to_the_edit_dialog(self):
         self.grant(self.user, "upload", "annotate")
         self.client.force_login(self.superuser)
-        self.assertContains(self.client.get(reverse("my_account")), "'annotate,upload'")
+        self.assertContains(self.client.get(reverse("my_account")), "'annotate,details,download,upload'")
 
 
 class EditingUsersIsForSuperusersTests(AreaCase):

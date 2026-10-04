@@ -80,8 +80,17 @@ class PageTestCase(TestCase):
         cls.user = User.objects.create_user("user", password="pw")
         cls.staff = User.objects.create_user("staff", password="pw", is_staff=True)
         cls.superuser = User.objects.create_superuser("super", password="pw")
+        # what a member and a curator had before access was granted area by area (migration 0036)
+        from beetlesgallery.beetles_app.areas import CURATOR_AREAS, MEMBER_AREAS
+        from beetlesgallery.beetles_app.models import AreaGrant
+        AreaGrant.objects.bulk_create([AreaGrant(user=cls.user, area=a) for a in MEMBER_AREAS]
+                                      + [AreaGrant(user=cls.staff, area=a) for a in CURATOR_AREAS])
 
     def assertRedirectsToLogin(self, response):
+        """Turned away: sent to sign in, or (signed in, without the area) shown the "needs access" page."""
+        if response.status_code == 403:
+            self.assertContains(response, 'data-testid="needs-access"', status_code=403)
+            return
         self.assertEqual(response.status_code, 302)
         self.assertIn("login", response["Location"])
 

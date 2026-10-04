@@ -21,7 +21,7 @@
              <div class="flex items-center gap-4">
                 
                 {# --- 1. DOWNLOAD SELECTED --- #}
-                {% if request.user.is_staff %}
+                {% if areas.annotate and areas.download %}
                     {# STAFF: Dropdown Menu #}
                     <div class="relative inline-block text-left">
                         <button type="button" 
@@ -49,7 +49,7 @@
                         </div>
                     </div>
 
-                {% else %}
+                {% elif areas.download %}
                     {# NORMAL USER: Single Button (Forces Package) #}
                     <button type="submit" 
                             form="download-selected-form" 
@@ -68,7 +68,7 @@
 
                 {# --- 2. DOWNLOAD ALL --- #}
                 {% if total_matches > 0 and request.user.is_authenticated %}
-                    {% if request.user.is_staff %}
+                    {% if areas.annotate and areas.download %}
                         {# STAFF: Dropdown Menu for ALL #}
                         <div class="relative inline-block text-left">
                             <button type="button" 
@@ -95,7 +95,7 @@
                             </div>
                         </div>
 
-                    {% else %}
+                    {% elif areas.download %}
                         {# NORMAL USER: Single Button for ALL #}
                         <button type="submit" 
                                 form="download-all-form" 
@@ -149,7 +149,7 @@
        <div class="group relative flex flex-row rounded-lg border border-text/10 bg-primary2 overflow-hidden hover:shadow-md transition h-auto min-h-40">
            
             <div class="w-32 sm:w-36 shrink-0 flex flex-col justify-center p-3">
-              <a href="{% url 'beetle_detail' beetle_id=b.id %}" 
+              <a {% if areas.details or not user.is_authenticated %}href="{% url 'beetle_detail' beetle_id=b.id %}"{% endif %} 
                 class="flex items-center justify-center w-full h-32 bg-black/5 rounded-xl overflow-hidden border border-black/5 shadow-sm">
                 {% if b.image_asset and b.image_asset.thumb_small %}
                   <img src="{{ b.image_asset.thumb_small.url }}" alt="{{ b.ref_scientificName }}" loading="lazy" decoding="async" class="w-full h-full object-contain" />
@@ -163,7 +163,7 @@
              <div class="flex justify-between items-start gap-2 mb-2">
                <div class="min-w-0 flex-1">
                  <h3 class="font-bold text-base text-text leading-tight truncate">
-                   <a href="{% url 'beetle_detail' beetle_id=b.id %}" class="hover:text-gray-600 hover:underline">
+                   <a {% if areas.details or not user.is_authenticated %}href="{% url 'beetle_detail' beetle_id=b.id %}"{% endif %} class="hover:text-gray-600 hover:underline">
                      {{ b.ref_scientificName|default:"Unidentified" }}
                    </a>
                  </h3>
@@ -313,7 +313,7 @@
     <div id="gallery-view" class="hidden grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
       {% for b in beetles %}
         <div class="gallery-item group relative">
-          <a href="{% url 'beetle_detail' beetle_id=b.id %}" class="block aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200 hover:border-gray-500 hover:shadow-lg transition-all">
+          <a {% if areas.details or not user.is_authenticated %}href="{% url 'beetle_detail' beetle_id=b.id %}"{% endif %} class="block aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200 hover:border-gray-500 hover:shadow-lg transition-all">
             {% if b.image_asset and b.image_asset.thumb_small %}
               <img src="{{ b.image_asset.thumb_small.url }}" alt="{{ b.ref_scientificName|default:'Unidentified' }}" loading="lazy" decoding="async" class="w-full h-full object-cover" />
             {% else %}
@@ -352,7 +352,7 @@
              <div class="flex items-center gap-4">
                 
                 {# --- 1. DOWNLOAD SELECTED --- #}
-                {% if request.user.is_staff %}
+                {% if areas.annotate and areas.download %}
                     {# STAFF: Dropdown Menu #}
                     <div class="relative inline-block text-left">
                         <button type="button" 
@@ -380,7 +380,7 @@
                         </div>
                     </div>
 
-                {% else %}
+                {% elif areas.download %}
                     {# NORMAL USER: Single Button (Forces Package) #}
                     <button type="submit" 
                             form="download-selected-form" 
@@ -399,7 +399,7 @@
 
                 {# --- 2. DOWNLOAD ALL --- #}
                 {% if total_matches > 0 and request.user.is_authenticated %}
-                    {% if request.user.is_staff %}
+                    {% if areas.annotate and areas.download %}
                         {# STAFF: Dropdown Menu for ALL #}
                         <div class="relative inline-block text-left">
                             <button type="button" 
@@ -426,7 +426,7 @@
                             </div>
                         </div>
 
-                    {% else %}
+                    {% elif areas.download %}
                         {# NORMAL USER: Single Button for ALL #}
                         <button type="submit" 
                                 form="download-all-form" 
