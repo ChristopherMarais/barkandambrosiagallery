@@ -72,10 +72,11 @@ class MessyTaxaTests(GameCase):
 
     def test_audit_lists_the_problems(self):
         report = game_taxa.audit()
-        self.assertIn(("Phloeosinini", ["genus", "tribe"]), report["names_at_several_ranks"])
-        self.assertIn("Xyleborina", report["bad_tribes"])
+        # the tribe-only row's genus column is a placeholder, not a second rank for the name (#420)
+        self.assertNotIn("Phloeosinini", [n for n, _ in report["names_at_several_ranks"]])
+        self.assertIn(("Xyleborina", ["subtribe", "tribe"]), report["names_at_several_ranks"])
         self.assertIn("Xyleborus", [g for g, _ in report["genera_with_several_parents"]])
         self.assertIn("Xyleborini", [t for t, _ in report["tribes_in_several_subfamilies"]])
         out = StringIO()
         call_command("audit_taxa", stdout=out)
-        self.assertIn("Phloeosinini: genus, tribe", out.getvalue())
+        self.assertIn("Xyleborina: subtribe; tribe", out.getvalue())
