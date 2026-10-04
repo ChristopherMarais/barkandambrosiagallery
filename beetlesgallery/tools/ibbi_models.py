@@ -4,7 +4,7 @@ The IBBI models the site offers, and how their output becomes the classifier ser
 Shared by the Modal service (modal_ibbi_api.py, which ships this file with it) and the site (the classifier page,
 "Classify with AI" on the annotation page), so the model list lives in one place. Plain Python, no dependencies.
 
-Two kinds of model (ibbi 0.3.1):
+Two kinds of model (ibbi 0.3.2; on a GPU it decodes, crops and classifies on the GPU by itself):
 
 * "pipeline": the arthropod detector finds every specimen, then a hierarchical classifier names it rank by rank
   (subfamily, tribe, genus, species) with a probability at each rank, and says how deep it is sure
@@ -23,7 +23,7 @@ and per detection:
      "candidates": [{"name", "prob"}] (species, best first), "probs": [...] (aligned with class_names)}
 """
 
-IBBI_VERSION = "0.3.1"
+IBBI_VERSION = "0.3.2"
 LEVELS = ("subfamily", "tribe", "genus", "species")
 
 # key -> what the site shows and which ibbi models it runs. Order = the order of the options.

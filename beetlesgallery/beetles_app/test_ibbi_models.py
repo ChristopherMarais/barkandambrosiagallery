@@ -1,5 +1,5 @@
 """
-IBBI 0.3.1 on the site: the model list, the service's answer (beetlesgallery/tools/ibbi_models.py), and how the
+IBBI 0.3.2 on the site: the model list, the service's answer (beetlesgallery/tools/ibbi_models.py), and how the
 hierarchical classifier's ranks reach Classify with AI and the classifier page.
 """
 from unittest import mock
@@ -18,7 +18,7 @@ def level(taxon, prob, known=True, top3=None):
 
 
 def record(depth=4, species="Xyleborus_affinis", species_prob=0.82):
-    """A record as ibbi 0.3.1's HierarchicalClassifier._record makes it."""
+    """A record as ibbi 0.3.2's HierarchicalClassifier._record makes it (unchanged since 0.3.1)."""
     return {
         "subfamily": level("Scolytinae", 0.99), "tribe": level("Xyleborini", 0.97), "genus": level("Xyleborus", 0.93),
         "species": level(species, species_prob, known=depth == 4,
@@ -36,6 +36,7 @@ def pipeline_output(*records):
 
 class CatalogueTests(ClassifyCase):
     def test_the_models_and_the_old_names(self):
+        self.assertEqual(ibbi_models.IBBI_VERSION, "0.3.2")   # pinned in the Modal image
         self.assertEqual(ibbi_models.DEFAULT, "ibbi_dinov3")
         self.assertEqual(ibbi_models.resolve("rtdetr"), "rtdetrx")
         self.assertEqual(ibbi_models.resolve("yolov8"), "yolov8x")
