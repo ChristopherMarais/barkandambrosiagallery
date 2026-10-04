@@ -1,54 +1,52 @@
-import modal
+"""
+The AI classifier service on Modal (GPU). The site posts an image and a model key; the answer is described in
+ibbi_models.py, which also lists the models (ibbi 0.3.2).
+
+    Deploy:        pixi run modal deploy beetlesgallery/tools/modal_ibbi_api.py   (the "Deploy App" workflow, target modal)
+    Pre-download:  pixi run modal run beetlesgallery/tools/modal_ibbi_api.py::download_all_models
+"""
 import sys
-import io
-import base64
-import os
-from fastapi import FastAPI, File, UploadFile, Form
-from fastapi.responses import JSONResponse
+from pathlib import Path
+
+import modal
+from fastapi import FastAPI, File, Form, UploadFile
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))   # ibbi_models sits next to this file, here and in the container (/root)
+import ibbi_models  # noqa: E402
 
 # --- Configuration ---
 CACHE_DIR = "/model_cache"
 
-# 1. Define the Container Environment
+# 1. The container: ibbi brings torch, ultralytics, transformers and timm with it
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .apt_install("libgl1-mesa-glx", "libglib2.0-0")
-    .pip_install(
-        "ibbi",
-        "fastapi",
-        "python-multipart",
-        "opencv-python-headless",
-        "numpy",
-        "pillow",
-        "matplotlib",
-        "torch",
-        "torchvision",
-        "transformers",
-        "huggingface_hub",
-        "supervision",
-        "scipy",
-        "timm",
-        "einops"
-    )
+    .apt_install("libgl1", "libglib2.0-0")
+    .pip_install(f"ibbi=={ibbi_models.IBBI_VERSION}", "fastapi", "python-multipart", "pillow")
     .env({
-        "HF_image_browser": CACHE_DIR,
-        "TORCH_image_browser": CACHE_DIR,
-        "MPLCONFIGDIR": f"{CACHE_DIR}/matplotlib"
+        # Every model download lands on the volume below, so a cold start does not fetch the weights again
+        "IBBI_CACHE_DIR": f"{CACHE_DIR}/ibbi",
+        "HF_HOME": f"{CACHE_DIR}/huggingface",
+        "TORCH_HOME": f"{CACHE_DIR}/torch",
+        "YOLO_CONFIG_DIR": f"{CACHE_DIR}/ultralytics",
+        "MPLCONFIGDIR": f"{CACHE_DIR}/matplotlib",
     })
+    .add_local_file(HERE / "ibbi_models.py", "/root/ibbi_models.py")
 )
 
 app = modal.App("ibbi-api")
 
-# --- Define a Volume to persist model weights ---
+# --- A volume that keeps the model weights between containers ---
 cache_volume = modal.Volume.from_name("ibbi-cache", create_if_missing=True)
 
-# 2. Define the Model Service
+
+# 2. The model service
 @app.cls(
     image=image,
     gpu="any",
     scaledown_window=300,
     timeout=600,
-    volumes={CACHE_DIR: cache_volume} 
+    volumes={CACHE_DIR: cache_volume},
 )
 class ModelService:
     @modal.enter()
@@ -56,130 +54,71 @@ class ModelService:
         """Runs once when the container starts."""
         import ibbi
         self.ibbi = ibbi
-        self.loaded_models = {} 
-        print("✅ IBBI Package loaded. Cache initialized.")
+        self.loaded = {}   # ibbi model name -> model, kept in memory while the container lives
+        print(f"IBBI {ibbi.__version__} loaded.")
 
-    def _get_model_name(self, architecture):
-        """Maps UI selection to internal IBBI model names (Multi-Class Only)"""
-        REGISTRY = {
-            "rtdetr": "rtdetrx_bb_multi_class_detect_model",
-            "yolov12": "yolov12x_bb_multi_class_detect_model",
-            "yolov11": "yolov11x_bb_multi_class_detect_model",
-            "yolov10": "yolov10x_bb_multi_class_detect_model",
-            "yolov9": "yolov9e_bb_multi_class_detect_model",
-            "yolov8": "yolov8x_bb_multi_class_detect_model",
-        }
-        return REGISTRY.get(architecture)
+    def _model(self, name):
+        if name not in self.loaded:
+            print(f"Loading {name}")
+            self.loaded[name] = self.ibbi.create_model(name, pretrained=True)
+        return self.loaded[name]
 
     @modal.method()
     def process_image(self, image_bytes, architecture, box_threshold=0.25):
-        from PIL import Image
         import io
 
-        print(f"Processing Arch: {architecture}")
-        
+        from PIL import Image
+
+        key = ibbi_models.resolve(architecture)
+        if key is None:
+            return {"status": "error", "message": f"Unknown model: {architecture}"}
+        spec = ibbi_models.MODELS[key]
         try:
             img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-            
-            model_name = self._get_model_name(architecture)
-            if not model_name:
-                raise ValueError(f"Invalid model architecture: {architecture}")
-
-            # --- RAM Cache Check ---
-            if model_name in self.loaded_models:
-                print(f"⚡ Using cached model from RAM: {model_name}")
-                model = self.loaded_models[model_name]
+            conf = float(box_threshold)
+            if spec["kind"] == "pipeline":
+                pipe = self.ibbi.IdentificationPipeline(self._model(spec["detector"]), self._model(spec["classifier"]),
+                                                        det_conf=conf)
+                detections = ibbi_models.from_pipeline(pipe.predict(img))
             else:
-                print(f"💾 Loading model from Disk/Vol: {model_name}")
-                model = self.ibbi.create_model(model_name, pretrained=True)
-                self.loaded_models[model_name] = model
-            
-            # Inference with Full Probabilities
-            # This is critical for the "Distribution Plot" feature
-            results = model.predict(img, include_full_probabilities=True)
-            
-            detections = []
-            class_names = results.get("class_names", [])
-
-            # Extract data from the IBBI 'full_results' list
-            # Format: [{'bbox': [], 'confidence': 0.9, 'class_probabilities': [...]}, ...]
-            if results and "full_results" in results:
-                full_res = results.get("full_results", [])
-                
-                for item in full_res:
-                    score = item.get("confidence", 0.0)
-                    if score < float(box_threshold): 
-                        continue
-                        
-                    detections.append({
-                        "box": item.get("bbox"),
-                        "score": float(score),
-                        "label": item.get("predicted_class"),
-                        "probs": item.get("class_probabilities", [])
-                    })
-
-            return {
-                "status": "success",
-                "detections": detections,
-                "class_names": class_names,
-                "model_used": model_name
-            }
-
+                detections = ibbi_models.from_detector(self._model(spec["detector"]).predict(img, conf=conf))
+            return ibbi_models.response(key, detections)
         except Exception as e:
             import traceback
             traceback.print_exc()
-            print(f"❌ Error: {str(e)}")
-            return {"status": "error", "message": f"Server Error: {str(e)}"}
+            return {"status": "error", "message": f"Server Error: {e}"}
 
-# 3. Batch Download Function (All Multi-Class Models)
-@app.function(
-    image=image,
-    volumes={CACHE_DIR: cache_volume}, 
-    timeout=3600
-)
+
+# 3. Download every model's weights to the volume once
+@app.function(image=image, volumes={CACHE_DIR: cache_volume}, timeout=3600)
 def download_all_models():
-    """
-    RUN MANUALLY: pixi run modal run beetlesgallery/tools/modal_ibbi_api.py::download_all_models
-    """
+    """RUN MANUALLY: pixi run modal run beetlesgallery/tools/modal_ibbi_api.py::download_all_models"""
     import ibbi
-    print(f"⬇️ Starting bulk download of all CLASSIFIER models to {CACHE_DIR}...")
-    
-    all_models = [
-        "rtdetrx_bb_multi_class_detect_model",
-        "yolov12x_bb_multi_class_detect_model",
-        "yolov11x_bb_multi_class_detect_model",
-        "yolov10x_bb_multi_class_detect_model",
-        "yolov9e_bb_multi_class_detect_model",
-        "yolov8x_bb_multi_class_detect_model",
-    ]
-
-    for model_name in all_models:
-        print(f"📦 Downloading/Checking {model_name}...")
+    for name in ibbi_models.all_ibbi_models():
+        print(f"Downloading {name}...")
         try:
-            ibbi.create_model(model_name, pretrained=True)
-            print(f"✅ {model_name} ready.")
+            ibbi.create_model(name, pretrained=True)
+            print(f"{name} ready.")
         except Exception as e:
-            print(f"❌ Failed to download {model_name}: {e}")
-    
-    print("🎉 All classifier models downloaded to 'ibbi-cache' volume!")
+            print(f"Failed to download {name}: {e}")
+    cache_volume.commit()
 
-# 4. Web Endpoint
+
+# 4. Web endpoint
 web_app = FastAPI()
+
 
 @app.function(image=image)
 @modal.asgi_app()
 def fastapi_app():
     return web_app
 
+
 @web_app.post("/analyze")
 async def analyze(
-    architecture: str = Form(...),
+    architecture: str = Form(ibbi_models.DEFAULT),
     box_threshold: float = Form(0.25),
-    image: UploadFile = File(...)
+    image: UploadFile = File(...),
 ):
     content = await image.read()
-    service = ModelService()
-    result = service.process_image.remote(
-        content, architecture, box_threshold
-    )
-    return result
+    return ModelService().process_image.remote(content, architecture, box_threshold)
