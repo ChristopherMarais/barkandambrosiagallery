@@ -1,7 +1,10 @@
+import re
+
 from django.contrib import admin
 from django.urls import path, re_path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import Http404
 from django.views.static import serve
 
 from beetlesgallery.beetles_app import views as beetles_views
@@ -109,7 +112,14 @@ urlpatterns = [
     path('api/v1/', include('beetlesgallery.beetles_app.api.urls')),
 ]
 
+# Files in the media folder that are never served: database dumps, logs and hidden files.
+# (The backup used to write its database dump into the media folder, where this view would have served it.)
+PRIVATE_MEDIA = re.compile(r"(^|/)\.|\.(sql|sql\.gz|dump|log)$", re.I)
+
+
 def media_serve_with_cache(request, path, document_root=None, show_indexes=False):
+    if PRIVATE_MEDIA.search(path):
+        raise Http404
     response = serve(request, path, document_root, show_indexes)
     # Cache thumbnails and images for 30 days in browser & Cloudflare CDN
     response["Cache-Control"] = "public, max-age=2592000, immutable"

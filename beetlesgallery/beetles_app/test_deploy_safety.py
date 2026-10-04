@@ -183,10 +183,13 @@ class BackupCoversTheInteractionsTests(SimpleTestCase):
         options = dump[0].split("pg_dump", 1)[1]   # (the " -T " before it is docker's "no terminal", not a table filter)
         for narrowing in (" -t ", "--table", "--exclude-table", " -T ", "--schema-only", "--data-only"):
             self.assertNotIn(narrowing, options, "the dump must cover every table, pathogen_interactions included")
-        # the dump is written into the data folder that is copied to Dropbox, and the fast backup does not exclude .sql files
-        self.assertIn("/opt/barkandambrosia_data/media/db_full_backup.sql", dump[0])
+        # the dump is written into the data folder that is copied to Dropbox (but not into media/, which the site
+        # serves), and the fast backup does not exclude .sql files
+        self.assertIn("> /opt/barkandambrosia_data/db_backup/db_full_backup.sql", dump[0])
+        self.assertNotIn("/media/", dump[0])
+        self.assertIn("rclone copy /opt/barkandambrosia_data ", backup)
         self.assertNotIn('--exclude "*.sql"', backup)
-        self.assertNotIn('--exclude "media/db_full_backup.sql"', backup)
+        self.assertNotIn('--exclude "db_backup/', backup)
 
     def test_the_interactions_table_is_an_ordinary_table_of_the_database(self):
         from beetlesgallery.beetles_app.models import PathogenInteraction
