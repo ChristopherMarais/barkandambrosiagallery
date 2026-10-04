@@ -8,7 +8,7 @@ access request).
   access. Superusers have everything.
 
 Accounts that existed before this split keep what they had: members got "details" and "download", curators every
-area except the species tables (migration 0036).
+area except the species tables (migration 0037).
 """
 from functools import wraps
 

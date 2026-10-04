@@ -80,7 +80,7 @@ class PageTestCase(TestCase):
         cls.user = User.objects.create_user("user", password="pw")
         cls.staff = User.objects.create_user("staff", password="pw", is_staff=True)
         cls.superuser = User.objects.create_superuser("super", password="pw")
-        # what a member and a curator had before access was granted area by area (migration 0036)
+        # what a member and a curator had before access was granted area by area (migration 0037)
         from beetlesgallery.beetles_app.areas import CURATOR_AREAS, MEMBER_AREAS
         from beetlesgallery.beetles_app.models import AreaGrant
         AreaGrant.objects.bulk_create([AreaGrant(user=cls.user, area=a) for a in MEMBER_AREAS]

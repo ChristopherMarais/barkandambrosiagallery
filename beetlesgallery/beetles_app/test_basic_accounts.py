@@ -78,7 +78,7 @@ class ExistingAccountsKeepTheirAccessTests(PageTestCase):
         curator = User.objects.create_user("old-curator", password="pw", is_staff=True)
         waiting = User.objects.create_user("waiting", password="pw", is_active=False)
         boss = User.objects.create_superuser("old-boss", password="pw")
-        migration = importlib.import_module("beetlesgallery.beetles_app.migrations.0036_area_grants_for_existing_accounts")
+        migration = importlib.import_module("beetlesgallery.beetles_app.migrations.0037_area_grants_for_existing_accounts")
         migration.grant(apps, None)
         migration.grant(apps, None)   # running it again adds nothing twice
         have = lambda u: sorted(AreaGrant.objects.filter(user=u).values_list("area", flat=True))   # noqa: E731

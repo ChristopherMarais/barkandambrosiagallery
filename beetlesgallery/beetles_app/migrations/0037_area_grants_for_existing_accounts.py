@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
                                "the areas its role already gave it, so access is unchanged.")
 
     dependencies = [
-        ("beetles_app", "0035_site_notice"),
+        ("beetles_app", "0036_proposals_notice_seen"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 

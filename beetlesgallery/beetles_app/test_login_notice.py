@@ -32,9 +32,8 @@ class LoginNoticeTests(PageTestCase):
         self.assertContains(res, 'data-testid="request-access"')
         self.assertContains(res, reverse("request_access"))
 
-    def test_the_home_page_offers_it_to_visitors_only(self):
-        self.assertContains(self.client.get(reverse("image_browser")), 'data-testid="landing-request-access"')
-        self.client.force_login(self.user)
+    def test_the_home_page_leaves_it_to_the_sign_in_page(self):
+        # #418: sign-in appears whenever someone opens a members-only page, so the home page doesn't repeat it
         self.assertNotContains(self.client.get(reverse("image_browser")), 'data-testid="landing-request-access"')
 
     def test_a_wrong_password_still_says_nothing_about_the_account(self):
