@@ -14,16 +14,19 @@
   #photos .cell { position: relative; flex: 1 1 0; min-width: 0; min-height: 0; overflow: hidden; height: 100%; display: flex; align-items: center; justify-content: center; }
   #photos button.frame { position: relative; width: 100%; height: 100%; display: block; padding: 0; border: 0; background: none; }
   /* The crop fills its cell and keeps its proportions, whatever the shape of the photo or the screen */
-  #photos canvas { display: block; width: 100%; height: 100%; object-fit: contain; }
+  #photos canvas { display: block; width: 100%; height: 100%; object-fit: contain; transform-origin: 0 0; }
+  /* Zoom into the crop: double-tap or double-click, pinch, or the mouse wheel; drag to look around */
+  #photos .frame.zoomed { cursor: grab; touch-action: none; }
   #photos.fade canvas { opacity: 0; }
   #photos canvas { transition: opacity 0.15s ease; }
   /* Brighter / more contrast for dark photos: one control for every photo on screen, back to normal for the next beetle */
   #photos canvas, #lightbox-img { filter: var(--photo-filter, none); }
-  #light-btn { position: absolute; left: 50%; bottom: 0.375rem; transform: translateX(-50%); z-index: 3; display: inline-flex; align-items: center; gap: 0.3rem;
+  #light-btn { position: absolute; left: 0.375rem; bottom: 0.375rem; z-index: 3; display: inline-flex; align-items: center; gap: 0.3rem;
                height: 1.875rem; padding: 0 0.7rem; border-radius: 9999px; background: #fff; border: 1px solid #d1d5db; box-shadow: 0 1px 3px rgba(0,0,0,.15);
                color: #374151; font-size: 0.75rem; font-weight: 600; }
   #light-btn.on { border-color: #4b5563; color: #111827; }
-  #light-panel { position: absolute; left: 50%; bottom: 2.75rem; transform: translateX(-50%); z-index: 4; width: min(18rem, calc(100% - 1rem)); padding: 0.75rem;
+  #light-btn.hidden { display: none; }
+  #light-panel { position: absolute; left: 0.375rem; bottom: 2.75rem; z-index: 4; width: min(18rem, calc(100% - 1rem)); padding: 0.75rem;
                  background: #fff; border: 1px solid #d1d5db; border-radius: 0.75rem; box-shadow: 0 8px 24px rgba(0,0,0,.15); }
   #light-panel.hidden { display: none; }
   #light-panel label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; font-weight: 600; color: #4b5563; }
@@ -147,9 +150,12 @@
   @media (prefers-reduced-motion: reduce) { #photos canvas { transition: none; } #chip.pop { animation: none; } }
   /* More photos of the same beetle (an unlock): a chip on the photo, and arrows in the photo viewer */
   /* The beetle sits at the edge of the photo: say so, so a cut-off crop isn't mistaken for a bad box */
-  .edge-chip { position: absolute; left: 0.375rem; bottom: 0.375rem; z-index: 2; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem;
                border-radius: 9999px; background: rgba(255,255,255,.92); border: 1px solid #d1d5db; color: #374151; font-size: 0.6875rem; font-weight: 600; pointer-events: none; }
   /* The box on the whole photo: white with a dark edge so it shows on light and dark photos, the rest dimmed */
+  /* the photo to name, when a beetle's other photos are open too */
+  #lb-primary { position: absolute; top: 0.5rem; left: 0.5rem; z-index: 2; width: 1.75rem; height: 1.75rem; border-radius: 9999px;
+                display: inline-flex; align-items: center; justify-content: center; background: #fff; color: #111827; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+  #lb-primary.hidden { display: none; }
   #lightbox-box { border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.7), inset 0 0 0 1px rgba(0,0,0,.7), 0 0 0 9999px rgba(0,0,0,.35); }
   .more-chip { position: absolute; right: 0.375rem; bottom: 0.375rem; z-index: 2; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem;
                border-radius: 9999px; background: rgba(17,24,39,.78); color: #fff; font-size: 0.75rem; font-weight: 600; }
@@ -220,7 +226,7 @@
   <div id="stage" class="hidden flex-1 min-h-0 flex flex-col">
     <div class="relative flex-1 min-h-0 flex flex-col">
       <div id="photos"></div>
-      <button type="button" id="light-btn" aria-expanded="false" aria-controls="light-panel" title="Make the photo brighter or sharper (L)"><i class="fi fi-rr-brightness"></i><span>Light</span></button>
+      <button type="button" id="light-btn" class="hidden" aria-expanded="false" aria-controls="light-panel" title="Make the photo brighter or sharper (L)"><i class="fi fi-rr-brightness"></i><span>Light</span></button>
       <div id="light-panel" class="hidden" role="group" aria-label="Photo brightness and contrast">
         <label><span>Brightness</span><input type="range" id="light-brightness" min="50" max="250" step="5" value="100" aria-label="Brightness"></label>
         <label><span>Contrast</span><input type="range" id="light-contrast" min="50" max="200" step="5" value="100" aria-label="Contrast"></label>
@@ -338,6 +344,7 @@
   <button type="button" class="absolute top-3 right-3 p-3 text-white text-xl" aria-label="Close"><i class="fi fi-rr-cross"></i></button>
   <div class="relative inline-block overflow-hidden">
     <img id="lightbox-img" alt="Whole image" class="block max-w-[94vw] max-h-[85vh] object-contain">
+    <span id="lb-primary" class="hidden" title="The photo to name" aria-label="The photo to name" data-testid="primary-photo"><i class="fi fi-rr-bullseye"></i></span>
     <div id="lightbox-box" class="absolute rounded-sm pointer-events-none"></div>
   </div>
   <button type="button" id="lb-prev" class="lb-nav hidden" aria-label="Previous photo of this beetle"><i class="fi fi-rr-angle-left"></i></button>
@@ -411,49 +418,95 @@
     });
   }
 
-  // Draw the bounding box region (plus some context) onto a canvas. Where the crop runs into the edge of the
-  // photo, that side gets a striped band, so a beetle cut off by the photo isn't taken for a bad box.
-  // Returns the sides that meet the photo's edge.
-  const CROP_PAD = 0.15;   // context around the box, as a share of the box on each side
+  // Draw the beetle with some of the photo around it and its box outlined, so the player sees how the crop sits
+  // in the photo. Where the window runs past the photo's edge it is plain grey, which shows the edge without a label.
+  const CROP_PAD = 0.25;   // context around the box, as a share of the box on each side
   function drawCrop(canvas, img, box) {
     const W = img.naturalWidth, H = img.naturalHeight;
     const [bx, by, bw, bh] = box;
-    const x0 = Math.max(0, bx - bw * CROP_PAD), y0 = Math.max(0, by - bh * CROP_PAD);
-    const x1 = Math.min(1, bx + bw * (1 + CROP_PAD)), y1 = Math.min(1, by + bh * (1 + CROP_PAD));
-    const sx = x0 * W, sy = y0 * H, sw = Math.max(1, (x1 - x0) * W), sh = Math.max(1, (y1 - y0) * H);
-    const scale = Math.min(1, 1400 / Math.max(sw, sh));
-    canvas.width = Math.round(sw * scale);
-    canvas.height = Math.round(sh * scale);
+    const x0 = bx - bw * CROP_PAD, y0 = by - bh * CROP_PAD;                 // the window, in photo fractions
+    const ww = bw * (1 + 2 * CROP_PAD), wh = bh * (1 + 2 * CROP_PAD);
+    const scale = Math.min(1, 1400 / Math.max(ww * W, wh * H));
+    canvas.width = Math.max(1, Math.round(ww * W * scale));
+    canvas.height = Math.max(1, Math.round(wh * H * scale));
     const ctx = canvas.getContext("2d");
-    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-    // A side meets the edge when the box itself comes within half the padding of it
-    const near = (gap, size) => gap < size * CROP_PAD / 2;
-    const edges = [];
-    if (near(bx, bw)) edges.push("left");
-    if (near(1 - bx - bw, bw)) edges.push("right");
-    if (near(by, bh)) edges.push("top");
-    if (near(1 - by - bh, bh)) edges.push("bottom");
-    const t = Math.max(6, Math.round(Math.max(canvas.width, canvas.height) * 0.014));
-    edges.forEach((side) => {
-      const r = { left: [0, 0, t, canvas.height], right: [canvas.width - t, 0, t, canvas.height],
-                  top: [0, 0, canvas.width, t], bottom: [0, canvas.height - t, canvas.width, t] }[side];
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(...r);
-      ctx.clip();
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(...r);
-      ctx.strokeStyle = "#111827";
-      ctx.lineWidth = t / 2;
-      for (let d = -canvas.height; d < canvas.width + canvas.height; d += t * 1.5) {
-        ctx.beginPath();
-        ctx.moveTo(d, 0);
-        ctx.lineTo(d + canvas.height, canvas.height);
-        ctx.stroke();
+    ctx.fillStyle = "#e5e7eb";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const px = (fx) => (fx - x0) / ww * canvas.width, py = (fy) => (fy - y0) / wh * canvas.height;
+    const sx0 = Math.max(0, x0), sy0 = Math.max(0, y0), sx1 = Math.min(1, x0 + ww), sy1 = Math.min(1, y0 + wh);
+    ctx.drawImage(img, sx0 * W, sy0 * H, (sx1 - sx0) * W, (sy1 - sy0) * H, px(sx0), py(sy0), px(sx1) - px(sx0), py(sy1) - py(sy0));
+    const lw = Math.max(2, Math.round(Math.max(canvas.width, canvas.height) * 0.004));
+    const r = [px(bx), py(by), px(bx + bw) - px(bx), py(by + bh) - py(by)];
+    ctx.lineWidth = lw * 2;
+    ctx.strokeStyle = "rgba(17,24,39,.7)";
+    ctx.strokeRect(...r);
+    ctx.lineWidth = lw;
+    ctx.strokeStyle = "#fff";
+    ctx.strokeRect(...r);
+  }
+
+  // Zoom into a crop: double-tap or double-click toggles 2.5x at that spot, the wheel and a pinch zoom smoothly,
+  // and a zoomed crop can be dragged around. A single tap (not zoomed) still opens the whole photo.
+  function makeZoomable(frame, canvas, onTap) {
+    let z = 1, tx = 0, ty = 0, lastTap = 0, tapTimer = null, drag = null, pinch = null;
+    const pointers = new Map();
+    const apply = () => {
+      const w = frame.clientWidth, h = frame.clientHeight;
+      tx = Math.min(0, Math.max(w - w * z, tx));
+      ty = Math.min(0, Math.max(h - h * z, ty));
+      canvas.style.transform = z > 1 ? `translate(${tx}px, ${ty}px) scale(${z})` : "";
+      frame.classList.toggle("zoomed", z > 1);
+    };
+    const zoomAt = (nz, cx, cy) => {
+      nz = Math.min(5, Math.max(1, nz));
+      tx = cx - (cx - tx) * nz / z;
+      ty = cy - (cy - ty) * nz / z;
+      z = nz;
+      if (z === 1) { tx = 0; ty = 0; }
+      apply();
+    };
+    const local = (e) => { const r = frame.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    frame.addEventListener("wheel", (e) => { e.preventDefault(); zoomAt(z * (e.deltaY < 0 ? 1.15 : 1 / 1.15), ...local(e)); }, { passive: false });
+    frame.addEventListener("pointerdown", (e) => {
+      pointers.set(e.pointerId, local(e));
+      if (pointers.size === 2) {
+        const [a, b] = [...pointers.values()];
+        pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z };
+      } else if (z > 1) {
+        drag = { x: e.clientX - tx, y: e.clientY - ty, moved: false };
+        frame.setPointerCapture(e.pointerId);
       }
-      ctx.restore();
     });
-    return edges;
+    frame.addEventListener("pointermove", (e) => {
+      if (!pointers.has(e.pointerId)) return;
+      pointers.set(e.pointerId, local(e));
+      if (pinch && pointers.size === 2) {
+        const [a, b] = [...pointers.values()];
+        zoomAt(pinch.z * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+      } else if (drag) {
+        tx = e.clientX - drag.x;
+        ty = e.clientY - drag.y;
+        drag.moved = true;
+        apply();
+      }
+    });
+    const up = (e) => { pointers.delete(e.pointerId); if (pointers.size < 2) pinch = null; if (!pointers.size) setTimeout(() => { drag = null; }, 0); };
+    ["pointerup", "pointercancel", "pointerleave"].forEach((t) => frame.addEventListener(t, up));
+    frame.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (drag && drag.moved) return;
+      const now = Date.now();
+      if (now - lastTap < 300) {
+        clearTimeout(tapTimer);
+        lastTap = 0;
+        const [cx, cy] = local(e);
+        zoomAt(z > 1 ? 1 : 2.5, cx, cy);
+        return;
+      }
+      lastTap = now;
+      tapTimer = setTimeout(() => { if (z === 1) onTap(); }, 300);
+    });
+    return { reset: () => { z = 1; tx = 0; ty = 0; apply(); } };
   }
 
   // Brightness and contrast, for dark or flat photos. Applies to the crops and the whole photo alike.
@@ -505,8 +558,7 @@
     galleryAt = (galleryAt + step + gallery.length) % gallery.length;
     showPhoto(gallery[galleryAt].url, gallery[galleryAt].box);
     $("lb-count").textContent = (galleryAt + 1) + " / " + gallery.length + (gallery[galleryAt].aspect ? " · " + gallery[galleryAt].aspect : "");
-    // only the photo being played can be reported from here
-    $("report-cog").classList.toggle("hidden", galleryAt !== 0);
+    $("lb-primary").classList.toggle("hidden", galleryAt !== 0);   // the photo to name, among its other photos
     $("report-menu").classList.add("hidden");
   }
   function openLightbox(url, box, which, photos) {
@@ -516,6 +568,7 @@
     $("report-menu").classList.add("hidden");
     $("report-cog").classList.remove("hidden");
     showPhoto(url, box);
+    $("lb-primary").classList.toggle("hidden", gallery.length < 2);
     ["lb-prev", "lb-next", "lb-count"].forEach((id) => $(id).classList.toggle("hidden", gallery.length < 2));
     if (gallery.length > 1) $("lb-count").textContent = "1 / " + gallery.length;
     $("lightbox").classList.remove("hidden");
@@ -532,7 +585,8 @@
   $("report-menu").addEventListener("click", (e) => e.stopPropagation());
   document.querySelectorAll(".report-reason").forEach((btn) => btn.addEventListener("click", async () => {
     try {
-      await api(root.dataset.reportUrl, { round: roundId, index: item.index, image: lightboxImage, reason: btn.dataset.reason });
+      // galleryAt > 0: one of the beetle's other photos (the server finds it the same way it listed them)
+      await api(root.dataset.reportUrl, { round: roundId, index: item.index, image: lightboxImage, photo: galleryAt, reason: btn.dataset.reason });
       $("lightbox").classList.add("hidden");
       toast({ kind: "report", title: "Thanks!", text: "Sent to the curators to check." });
       send({ skipped: true, reported: true });   // on to the next beetle, no points lost
@@ -703,6 +757,7 @@
   // ---------- unlocks in the feed: which game, and focus ----------
   let prefs = null;
   function renderPrefs(p) {
+    if (p && $("light-btn")) $("light-btn").classList.toggle("hidden", !p.light);   // Light unlocks at a level
     prefs = p;
     if (!p || !$("toolbar")) return;
     $("toolbar").classList.remove("hidden");
@@ -832,24 +887,15 @@
       frame.className = "frame";
       frame.setAttribute("aria-label", "See the whole image");
       const canvas = document.createElement("canvas");
-      const edges = images ? drawCrop(canvas, images[i], im.box) : [];
+      if (images) drawCrop(canvas, images[i], im.box);
       frame.appendChild(canvas);
-      if (edges.length) {
-        const edge = document.createElement("span");
-        edge.className = "edge-chip";
-        edge.dataset.testid = "photo-edge";
-        edge.textContent = "Photo edge";
-        edge.title = "The beetle reaches the edge of the photo (striped side). Tap to see the whole photo.";
-        frame.appendChild(edge);
-        frame.setAttribute("aria-label", "See the whole image. The beetle reaches the edge of the photo on the " + edges.join(" and ") + ".");
-      }
       if (MODE === "pair") {
         const tag = document.createElement("span");
         tag.className = "absolute top-1 left-1 px-2 py-0.5 text-xs font-bold bg-white/90 rounded-md text-gray-900";
         tag.textContent = i === 0 ? "A" : "B";
         frame.appendChild(tag);
       }
-      frame.addEventListener("click", () => openLightbox(im.url, im.box, i));
+      makeZoomable(frame, canvas, () => openLightbox(im.url, im.box, i));
       cell.appendChild(frame);
       if (im.more) {
         // Other photos of exactly this beetle: open them, or (still locked) say which level opens them
@@ -1047,7 +1093,7 @@
     return optionCache.get(key);
   }
 
-  const FIND_MIN = 12;   // lists longer than this get their own search box
+  const FIND_MIN = 0;   // every list gets its own search box, whatever its length
   const listed = {};     // rank -> [{value, label}] as last shown in that list
 
   function fill(rank, opts, value, labelFn) {
@@ -1319,7 +1365,7 @@
     } else if (key === "v" && item && item.images.length) {
       const im = item.images[0];
       openLightbox(im.url, im.box, 0);
-    } else if (key === "l") {   // L: brightness and contrast
+    } else if (key === "l" && !$("light-btn").classList.contains("hidden")) {   // L: brightness and contrast, once unlocked
       toggleLight();
     } else if (MODE === "pair" && /^[1-9]$/.test(key)) {
       setRung(Number(key) - 1);
