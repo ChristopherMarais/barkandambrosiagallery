@@ -254,16 +254,16 @@
                 <dd class="col-span-2 text-text/80">{% if beetle.depicts_valid_name_id and ref_species.authority %}<a href="{% url 'taxonomy_browser' %}?species={{ beetle.depicts_valid_name_id|urlencode }}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.authority }}</a>{% else %}{{ ref_species.authority|default:"—" }}{% endif %}</dd>
 
                 <dt class="col-span-1 text-text/60">Subfamily</dt>
-                <dd class="col-span-2 text-text/80">{% if beetle.depicts_valid_name_id and ref_species.subfamily %}<a href="{% url 'taxonomy_browser' %}?species={{ beetle.depicts_valid_name_id|urlencode }}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.subfamily }}</a>{% else %}{{ ref_species.subfamily|default:"—" }}{% endif %}</dd>
+                <dd class="col-span-2 text-text/80">{% if beetle.depicts_valid_name_id and ref_species.subfamily %}<a href="{% taxon_url ref_species.subfamily %}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.subfamily }}</a>{% else %}{{ ref_species.subfamily|default:"—" }}{% endif %}</dd>
 
                 <dt class="col-span-1 text-text/60">Tribe</dt>
-                <dd class="col-span-2 text-text/80">{% if beetle.depicts_valid_name_id and ref_species.tribe %}<a href="{% url 'taxonomy_browser' %}?species={{ beetle.depicts_valid_name_id|urlencode }}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.tribe }}</a>{% else %}{{ ref_species.tribe|default:"—" }}{% endif %}</dd>
+                <dd class="col-span-2 text-text/80">{% if beetle.depicts_valid_name_id and ref_species.tribe %}<a href="{% taxon_url ref_species.subfamily ref_species.tribe %}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.tribe }}</a>{% else %}{{ ref_species.tribe|default:"—" }}{% endif %}</dd>
 
                 <dt class="col-span-1 text-text/60">Subtribe</dt>
-                <dd class="col-span-2 text-text/80">{% if beetle.depicts_valid_name_id and ref_species.subtribe %}<a href="{% url 'taxonomy_browser' %}?species={{ beetle.depicts_valid_name_id|urlencode }}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.subtribe }}</a>{% else %}{{ ref_species.subtribe|default:"—" }}{% endif %}</dd>
+                <dd class="col-span-2 text-text/80">{% if beetle.depicts_valid_name_id and ref_species.subtribe %}<a href="{% taxon_url ref_species.subfamily ref_species.tribe %}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.subtribe }}</a>{% else %}{{ ref_species.subtribe|default:"—" }}{% endif %}</dd>
 
                 <dt class="col-span-1 text-text/60">Genus</dt>
-                <dd class="col-span-2 text-text/80 italic">{% if beetle.depicts_valid_name_id and ref_species.genus %}<a href="{% url 'taxonomy_browser' %}?species={{ beetle.depicts_valid_name_id|urlencode }}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.genus }}</a>{% else %}{{ ref_species.genus|default:"—" }}{% endif %}</dd>
+                <dd class="col-span-2 text-text/80 italic">{% if beetle.depicts_valid_name_id and ref_species.genus %}<a href="{% taxon_url ref_species.subfamily ref_species.tribe ref_species.genus %}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.genus }}</a>{% else %}{{ ref_species.genus|default:"—" }}{% endif %}</dd>
 
                 <dt class="col-span-1 text-text/60">Species</dt>
                 <dd class="col-span-2 text-text/80 italic">{% if beetle.depicts_valid_name_id and ref_species.species %}<a href="{% url 'taxonomy_browser' %}?species={{ beetle.depicts_valid_name_id|urlencode }}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.species }}</a>{% else %}{{ ref_species.species|default:"—" }}{% endif %}</dd>
