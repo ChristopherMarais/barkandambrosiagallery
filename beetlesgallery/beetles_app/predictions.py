@@ -16,6 +16,16 @@ The CSV has one row per ROI and model:
     subfamily, tribe,   what the model said at that rank, if it says so, each with      optional
     genus               a <rank>_confidence column (0 to 1); kept in rank_confidence
 
+A box the model found can come in the same file: leave record_id empty and give
+
+    image_id            the image's id (the image_id column of a gallery download)
+    bbox_x, bbox_y,     the box as fractions of the image, top-left corner (as in a download)
+    bbox_width, bbox_height
+
+The box goes to the ROI already on the image with the same box (overlap of half or more), else to the image's
+ROI that has no box yet, else to a new ROI with the image's details and no species label. Rows of the same file
+with the same box (e.g. two models) share it. With a record_id, the box columns are not used.
+
 The whole file is checked before anything is written; if any row is wrong nothing is saved and
 every problem is reported with its row number. Uploading the same model version again replaces
 its predictions. Predictions never change an ROI's label.
@@ -29,7 +39,10 @@ from dataclasses import dataclass, field
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Beetles, ModelPrediction, RoiDifficulty, Taxon
+from . import roi_defaults
+from .bbox_rules import BOX_COLUMNS, is_blank, parse_box
+from .classify_assist import SAME_BOX_IOU, iou
+from .models import Beetles, ImageAsset, ModelPrediction, RoiDifficulty, Taxon
 
 COLUMN_ALIASES = {
     "predicted_valid_species_id": "valid_species_id",
@@ -38,7 +51,7 @@ COLUMN_ALIASES = {
     "model": "model_name",
     "version": "model_version",
 }
-REQUIRED_COLUMNS = ("record_id", "valid_species_id", "confidence")
+REQUIRED_COLUMNS = ("valid_species_id", "confidence")   # and record_id, or image_id with a box
 UPPER_RANKS = ("subfamily", "tribe", "genus")   # optional per-rank columns, each with <rank>_confidence
 RANKS = UPPER_RANKS + ("species",)
 MAX_ERRORS_SHOWN = 30
@@ -53,6 +66,8 @@ class ImportResult:
     errors: list = field(default_factory=list)
     error_count: int = 0
     dry_run: bool = False
+    boxes_matched: int = 0     # rows without a record_id whose box was already on the image
+    boxes_created: int = 0     # new boxes (a box-less ROI filled in, or a new ROI)
 
     @property
     def ok(self):
@@ -214,6 +229,9 @@ def import_predictions(source, user=None, default_model="", default_version="", 
 
     columns, rows = read_rows(source)
     missing = [c for c in REQUIRED_COLUMNS if c not in columns]
+    has_boxes = "image_id" in columns and all(c in columns for c in BOX_COLUMNS)
+    if "record_id" not in columns and not has_boxes:
+        missing.insert(0, "record_id (or image_id with bbox_x, bbox_y, bbox_width, bbox_height)")
     if missing:
         problem(0, f"missing column(s): {', '.join(missing)}. The columns are record_id, valid_species_id, "
                    "confidence, model_name (or a default for the whole file), model_version and top_k")
@@ -239,6 +257,7 @@ def import_predictions(source, user=None, default_model="", default_version="", 
     found = set()
     for chunk in _chunks({w for w in wanted.values() if w}, 5000):
         found.update(Beetles.objects.filter(id__in=chunk, is_deleted=False).values_list("id", flat=True))
+    boxes = BoxPlanner([row for row in rows if not row.get("record_id")])
 
     now = timezone.now()
     keys, pending, best = {}, [], {}
@@ -246,8 +265,16 @@ def import_predictions(source, user=None, default_model="", default_version="", 
         row_num = i + 2
         before = result.error_count
 
-        roi_id = wanted[i]
-        if roi_id is None:
+        roi_id, plan = wanted[i], None
+        if not row.get("record_id"):
+            target, error = boxes.resolve(row_num, row)
+            if error:
+                problem(row_num, error)
+            elif isinstance(target, NewBox):
+                plan = target
+            else:
+                roi_id = target
+        elif roi_id is None:
             problem(row_num, f"record_id '{row.get('record_id', '')}' is not a valid id")
         elif roi_id not in found:
             problem(row_num, f"record_id {roi_id} is not an ROI in the gallery (or it was deleted)")
@@ -279,31 +306,42 @@ def import_predictions(source, user=None, default_model="", default_version="", 
 
         if result.error_count != before:
             continue
-        key = (roi_id, model_name, model_version)
+        target = plan or roi_id
+        key = (target, model_name, model_version)
         if key in keys:
-            problem(row_num, f"repeats row {keys[key]} (same record_id, model_name and model_version)")
+            problem(row_num, f"repeats row {keys[key]} (same record_id or box, model_name and model_version)")
             continue
         keys[key] = row_num
-        pending.append(ModelPrediction(
+        prediction = ModelPrediction(
             roi_id=roi_id, valid_species_id=species, taxon_id=species_ids[species], confidence=confidence,
             top_k=top_k, rank_confidence=ranks, model_name=model_name, model_version=model_version, uploaded_by=user,
-        ))
-        if roi_id not in best or confidence > best[roi_id][0]:
-            best[roi_id] = (confidence, model_name)
+        )
+        pending.append((prediction, plan))
+        if target not in best or confidence > best[target][0]:
+            best[target] = (confidence, model_name)
 
     if not result.ok:
         return result
 
+    result.boxes_matched = boxes.matched_rows
+    result.boxes_created = len(boxes.new)
     existing = 0
-    for chunk in _chunks({p.roi_id for p in pending}):
+    on_known = [p for p, plan in pending if plan is None]
+    for chunk in _chunks({p.roi_id for p in on_known}):
         stored = set(ModelPrediction.objects.filter(roi_id__in=chunk).values_list("roi_id", "model_name", "model_version"))
-        existing += sum(1 for p in pending if (p.roi_id, p.model_name, p.model_version) in stored)
+        existing += sum(1 for p in on_known if (p.roi_id, p.model_name, p.model_version) in stored)
     result.updated = existing
     result.created = len(pending) - existing
     if dry_run:
         return result
 
     with transaction.atomic():
+        boxes.create(user, now)
+        for prediction, plan in pending:
+            if plan is not None:
+                prediction.roi_id = plan.roi_id
+        best = {(t.roi_id if isinstance(t, NewBox) else t): v for t, v in best.items()}
+        pending = [prediction for prediction, _ in pending]
         for chunk in _chunks(pending):
             ModelPrediction.objects.bulk_create(
                 chunk, update_conflicts=True,
@@ -322,6 +360,83 @@ def import_predictions(source, user=None, default_model="", default_version="", 
                 update_fields=["model_difficulty", "model_name", "model_updated_at", "updated_at"],
             )
     return result
+
+
+class NewBox:
+    """A box from the file that is not on its image yet; roi_id is set once it is saved."""
+
+    def __init__(self, image_id, box, row_num):
+        self.image_id, self.box, self.row_num, self.roi_id = image_id, box, row_num, None
+
+
+class BoxPlanner:
+    """Finds, for rows without a record_id, the ROI their box belongs to, or plans a new one (see the docstring)."""
+
+    def __init__(self, rows):
+        ids = set()
+        for row in rows:
+            try:
+                ids.add(uuid.UUID(row.get("image_id", "")))
+            except ValueError:
+                pass
+        self.images = set()
+        self.boxes = {}       # image id -> [(box, roi id)] on the site
+        for chunk in _chunks(ids, 5000):
+            self.images.update(ImageAsset.objects.filter(id__in=chunk).values_list("id", flat=True))
+            for roi_id, image_id, *box in Beetles.objects.filter(
+                    image_asset_id__in=chunk, is_deleted=False, bbox_x__isnull=False).values_list(
+                    "id", "image_asset_id", "bbox_x", "bbox_y", "bbox_width", "bbox_height"):
+                self.boxes.setdefault(image_id, []).append((tuple(box), roi_id))
+        self.new = []         # NewBox, in file order
+        self.matched_rows = 0
+
+    def resolve(self, row_num, row):
+        """(roi id or NewBox, None), or (None, what is wrong)."""
+        try:
+            image_id = uuid.UUID(row.get("image_id", ""))
+        except ValueError:
+            if is_blank(row.get("image_id")):
+                return None, "give a record_id, or an image_id with the box (bbox_x, bbox_y, bbox_width, bbox_height)"
+            return None, f"image_id '{row.get('image_id')}' is not a valid id"
+        if image_id not in self.images:
+            return None, f"image_id {image_id} is not an image in the gallery"
+        box, error = parse_box(*(row.get(c) for c in BOX_COLUMNS))
+        if error:
+            return None, error
+        if box is None:
+            return None, "a row without a record_id needs the box (bbox_x, bbox_y, bbox_width, bbox_height)"
+        on_site = [(iou(box, other), roi_id) for other, roi_id in self.boxes.get(image_id, [])]
+        overlap, roi_id = max(on_site, default=(0, None))
+        if overlap >= SAME_BOX_IOU:
+            self.matched_rows += 1
+            return roi_id, None
+        for planned in self.new:
+            if planned.image_id == image_id and iou(box, planned.box) >= SAME_BOX_IOU:
+                return planned, None   # the same box as an earlier row (another model, say)
+        planned = NewBox(image_id, box, row_num)
+        self.new.append(planned)
+        return planned, None
+
+    def create(self, user, now):
+        """Save the planned boxes: the image's box-less ROI takes the first, the rest are new ROIs."""
+        by_image = {}
+        for planned in self.new:
+            by_image.setdefault(planned.image_id, []).append(planned)
+        for image_id, planned_boxes in by_image.items():
+            asset = ImageAsset.objects.get(id=image_id)
+            template = roi_defaults.template_roi(asset)
+            inherited = roi_defaults.inherited_fields(roi_defaults.latest_roi(asset), species=False)
+            for planned in planned_boxes:
+                audit = dict(zip(BOX_COLUMNS, planned.box), bbox_is_validated=False, bbox_created_by=user,
+                             bbox_created_at=now, last_updated_by=user)
+                if template is not None:
+                    roi, template = template, None
+                    for name, value in audit.items():
+                        setattr(roi, name, value)
+                    roi.save()
+                else:
+                    roi = Beetles.objects.create(image_asset=asset, **inherited, **audit)
+                planned.roi_id = roi.id
 
 
 MAX_MODELS_SHOWN = 3

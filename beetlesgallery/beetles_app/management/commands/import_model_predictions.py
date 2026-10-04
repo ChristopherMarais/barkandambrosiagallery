@@ -41,4 +41,6 @@ class Command(BaseCommand):
         verb = "Would save" if result.dry_run else "Saved"
         self.stdout.write(self.style.SUCCESS(
             f"{verb} {result.rows} predictions: {result.created} new, {result.updated} replacing an earlier upload."
+            + (f" Boxes: {result.boxes_created} new, {result.boxes_matched} already on the site."
+               if result.boxes_created or result.boxes_matched else "")
         ))
