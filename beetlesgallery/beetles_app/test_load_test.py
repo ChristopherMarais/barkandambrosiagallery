@@ -5,7 +5,6 @@ import io
 import os
 from unittest import mock
 
-import yaml
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
@@ -32,20 +31,22 @@ class HeavyQueueTests(SimpleTestCase):
         self.assertEqual(app.amqp.router.route({}, tasks.recompute_game_players_task.name)["queue"].name, "celery")
 
     def test_production_runs_a_worker_for_each_queue_and_the_deploy_starts_both(self):
-        prod = yaml.safe_load((BASE / "docker-compose.prod.yml").read_text())["services"]
-        self.assertIn("-Q celery", prod["worker"]["command"])
-        heavy = prod["worker-heavy"]["command"]
-        self.assertIn("-Q heavy", heavy)
+        # (read as text: PyYAML is not one of the site's dependencies)
+        prod = (BASE / "docker-compose.prod.yml").read_text()
+        worker = prod.split("\n  worker:\n", 1)[1].split("\n  worker-heavy:\n", 1)[0]
+        heavy = prod.split("\n  worker-heavy:\n", 1)[1]
+        self.assertIn("-Q celery", worker)
+        self.assertIn("command: nice -n 10 pixi run celery", heavy)
         self.assertIn("--concurrency=1", heavy)
-        self.assertTrue(heavy.startswith("nice "))
-        self.assertIn("/opt/barkandambrosia_data/media:/app/media", prod["worker-heavy"]["volumes"])
+        self.assertIn("-Q heavy", heavy)
+        self.assertIn("/opt/barkandambrosia_data/media:/app/media", heavy)
         deploy = (BASE / ".github" / "workflows" / "deploy.yml").read_text()
         self.assertIn("build web worker worker-heavy", deploy)
         self.assertIn("up -d --no-deps web worker worker-heavy", deploy)
 
     def test_the_development_worker_takes_both_queues(self):
-        dev = yaml.safe_load((BASE / "docker-compose.yml").read_text())["services"]
-        self.assertIn("-Q celery,heavy", dev["worker"]["command"])
+        dev = (BASE / "docker-compose.yml").read_text().split("\n  worker:\n", 1)[1]
+        self.assertIn("-Q celery,heavy", dev)
 
     def test_the_locustfile_is_valid_python(self):
         compile((BASE / "loadtest" / "locustfile.py").read_text(), "locustfile.py", "exec")
