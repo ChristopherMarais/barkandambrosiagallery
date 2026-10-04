@@ -25,6 +25,7 @@
       <p class="text-sm text-green-900">
         {{ result.rows }} row{{ result.rows|pluralize }}:
         {{ result.created }} new, {{ result.updated }} replacing an earlier upload.
+        {% if result.boxes_created or result.boxes_matched %}Boxes: {{ result.boxes_created }} new, {{ result.boxes_matched }} already on the site.{% endif %}
         {% if result.dry_run %}This was a check only, so nothing was saved.{% endif %}
       </p>
     {% else %}
@@ -75,7 +76,8 @@
   <div class="rounded-xl border border-gray-200 bg-white overflow-x-auto">
     <table class="w-full text-sm">
       <tbody class="divide-y divide-gray-100">
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">record_id</td><td class="px-4 py-2 text-gray-600">The ROI's id (the record_id column of a gallery download). Required.</td></tr>
+        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">record_id</td><td class="px-4 py-2 text-gray-600">The ROI's id (the record_id column of a gallery download). Leave it empty for a box the model found.</td></tr>
+        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">image_id, bbox_x, bbox_y, bbox_width, bbox_height</td><td class="px-4 py-2 text-gray-600">Only when record_id is empty: the image and the box (fractions of the image, top-left corner). The same box already on the image is used; otherwise the box is added, with no species label.</td></tr>
         <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">valid_species_id</td><td class="px-4 py-2 text-gray-600">The predicted species, as in the species list. Required.</td></tr>
         <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">confidence</td><td class="px-4 py-2 text-gray-600">0 to 1 (0.87, not 87). Required.</td></tr>
         <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">model_name</td><td class="px-4 py-2 text-gray-600">Or give one name for the whole file above.</td></tr>
