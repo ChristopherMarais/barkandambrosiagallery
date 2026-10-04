@@ -1,4 +1,4 @@
-{% load beetle_tags %}{# The top three of a week, month or year that just ended (game_podium.py). Needs ``podiums``. #}
+{% load beetle_tags %}{% if podiums %}{# The top three of a week, month or year that just ended (game_podium.py). Needs ``podiums``. #}
 <div id="podium" class="fixed inset-0 z-[110] flex items-center justify-center p-4" style="background:rgba(17,24,39,.55)" role="dialog" aria-modal="true" aria-labelledby="podium-title" data-testid="podium">
   <div class="w-full max-w-md bg-white rounded-2xl shadow-xl p-5">
     {% for p in podiums %}
@@ -55,3 +55,4 @@
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.getElementById("podium").classList.add("hidden"); });
 })();
 </script>
+{% endif %}

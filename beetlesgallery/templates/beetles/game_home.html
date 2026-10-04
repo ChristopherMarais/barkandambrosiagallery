@@ -120,5 +120,5 @@
   </a>
   {% endif %}
 </div>
-{% if podiums %}{% include "beetles/includes/game_podium.html" %}{% endif %}
+{% load game_podium_tags %}{% podium_popup %}
 {% endblock %}
