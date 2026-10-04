@@ -181,7 +181,7 @@ def profile(player):
     proven = list(PlayerSkill.objects.filter(player=player, proven=True).order_by("rank", "branch"))
     return {
         "score": s, "level": game_levels.describe(s.score, s.rating), "badges": game_rewards.badge_cards(player),
-        "streak": game_rewards.streak_days(game_rewards.active_days(player)),
+        "streak": game_rewards.streak_days(game_rewards.goal_days(player)),
         "accuracy": s.accuracy if s.judged >= game.game_setting("GAME_MIN_JUDGED_FOR_ACCURACY", 10) else None,
         "expert_in": [
             {"what": {"tribe": "tribes of", "genus": "genera of", "species": "species of", "subfamily": "subfamilies"}[k.rank],
