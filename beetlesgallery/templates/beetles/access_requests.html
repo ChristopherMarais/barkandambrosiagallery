@@ -7,11 +7,9 @@
   <a href="{% url 'my_account' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Account Management</a>
   <h1 class="page-title">Access requests</h1>
   <p class="text-gray-600 mb-8">
-    People ask for access on the
-    <a href="{% url 'request_access' %}" class="underline hover:text-black">request access</a> page.
-    <strong>Member</strong> is a normal account (gallery, downloads, taxonomy, AI classifier, game).
-    <strong>Curator</strong> also annotates, validates, and uploads and updates data. You can change anyone's role later under My Account.
-    Approving activates the account they made and emails them; they sign in with their own username and password and can reset it themselves. Only requests whose email is confirmed appear here.
+    Everyone who confirms their email gets a <strong>Basic</strong> account straight away (image browser, taxonomy
+    browser, interactions, AI classifier and game). Requests here asked for more: tick what to grant (what they asked
+    for is ticked already) and save, or deny to leave them on Basic. Each area can be changed later per person under My Account.
   </p>
 
   <h2 class="text-xl font-semibold text-gray-900 mb-3">Waiting <span class="text-gray-400 font-normal">({{ pending|length }})</span></h2>
@@ -23,19 +21,28 @@
       <h3 class="text-lg font-semibold text-gray-900">{{ r.name }}</h3>
       <span class="text-xs text-gray-500">{{ r.created_at|date:"j M Y H:i" }} UTC</span>
     </div>
-    {% if r.user %}<p class="text-xs text-gray-500">Account: <strong>{{ r.user.username }}</strong> (chosen by them, {% if r.user.is_active %}already active{% else %}activated when you approve{% endif %}); email confirmed {{ r.email_verified_at|date:"j M H:i" }} UTC</p>{% endif %}
+    {% if r.user %}<p class="text-xs text-gray-500">Account: <strong>{{ r.user.username }}</strong> ({% if r.user.is_active %}working as Basic{% else %}activated when you save{% endif %}); email confirmed {{ r.email_verified_at|date:"j M H:i" }} UTC</p>{% endif %}
     <p class="text-sm text-gray-700"><a href="mailto:{{ r.email }}" class="underline hover:text-black">{{ r.email }}</a> &middot; {{ r.affiliation|default:"no affiliation given" }}</p>
     {% if r.existing_users %}
     <p class="mt-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2">
       This email already has an account:
       {% for u in r.existing_users %}<strong>{{ u.username }}</strong> ({% if u.is_superuser %}superuser{% elif u.is_staff %}curator{% else %}member{% endif %}){% if not forloop.last %}, {% endif %}{% endfor %}.
-      Approving raises that account; it never lowers it.
+      Granting adds to that account; it never takes anything away.
     </p>
     {% endif %}
-    <p class="mt-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Wants to use</p>
-    <ul class="text-sm text-gray-800 list-disc pl-5">{% for label in r.area_labels %}<li>{{ label }}</li>{% endfor %}</ul>
     <p class="mt-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Why</p>
-    <p class="text-sm text-gray-800 whitespace-pre-line">{{ r.reason }}</p>
+    <p class="text-sm text-gray-800 whitespace-pre-line">{{ r.reason|default:"(no reason given)" }}</p>
+    <fieldset class="mt-3" data-testid="grant-areas">
+      <legend class="text-xs font-bold text-gray-500 uppercase tracking-wide">Grant</legend>
+      <div class="mt-1 grid sm:grid-cols-2 gap-1">
+        {% for key, label, description in areas %}
+        <label class="flex items-start gap-2 text-sm text-gray-800" title="{{ description }}">
+          <input type="checkbox" name="areas" value="{{ key }}" class="mt-0.5 rounded border-gray-300" {% if key in r.wanted %}checked{% endif %}>
+          <span>{{ label }}{% if key in r.wanted %} <span class="text-xs text-gray-500">(asked)</span>{% endif %}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
     {% if r.notify_error %}
     <p class="mt-3 text-xs text-red-700">The approvers' email could not be sent ({{ r.notify_error }}), so this request only shows here.</p>
     {% endif %}
@@ -45,15 +52,12 @@
       class="mt-1 w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400"></textarea>
 
     <div class="mt-3 flex flex-wrap gap-2">
-      <button type="submit" name="decision" value="member"
-        class="px-4 py-2 text-sm font-semibold rounded-lg border {% if r.suggested_role == 'member' %}bg-gray-600 border-gray-600 text-white hover:bg-gray-700{% else %}bg-white border-gray-300 text-gray-700 hover:bg-gray-100{% endif %}">
-        Approve as Member</button>
-      <button type="submit" name="decision" value="curator"
-        class="px-4 py-2 text-sm font-semibold rounded-lg border {% if r.suggested_role == 'curator' %}bg-gray-600 border-gray-600 text-white hover:bg-gray-700{% else %}bg-white border-gray-300 text-gray-700 hover:bg-gray-100{% endif %}">
-        Approve as Curator</button>
+      <button type="submit" name="decision" value="grant"
+        class="px-4 py-2 text-sm font-semibold rounded-lg border bg-gray-600 border-gray-600 text-white hover:bg-gray-700">
+        Save: grant the ticked areas</button>
       <button type="submit" name="decision" value="deny"
         class="px-4 py-2 text-sm font-semibold rounded-lg border bg-white border-gray-300 text-red-700 hover:bg-red-50">
-        Deny</button>
+        Deny (stays Basic)</button>
     </div>
   </form>
   {% empty %}
@@ -71,7 +75,7 @@
         {% for r in decided %}
         <tr>
           <td class="px-4 py-2"><span class="font-semibold text-gray-900">{{ r.name }}</span><br><span class="text-xs text-gray-500">{{ r.email }}</span></td>
-          <td class="px-4 py-2">{% if r.status == "approved" %}Approved as {{ r.granted_role|title }}{% if r.user %} ({{ r.user.username }}){% endif %}{% else %}Denied{% endif %}</td>
+          <td class="px-4 py-2">{% if r.status == "approved" %}{% if r.granted_role == "basic" %}Basic{% if not r.decided_by %} (automatic){% endif %}{% elif r.granted_role == "areas" %}Granted {{ r.granted_areas|join:", " }}{% else %}Approved as {{ r.granted_role|title }}{% endif %}{% if r.user %} ({{ r.user.username }}){% endif %}{% else %}Denied{% endif %}</td>
           <td class="px-4 py-2 text-gray-600">{{ r.decided_by.username|default:"-" }}</td>
           <td class="px-4 py-2 text-gray-600 whitespace-nowrap">{{ r.decided_at|date:"j M Y H:i" }}</td>
         </tr>

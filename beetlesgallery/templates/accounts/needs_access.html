@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-lg mx-auto py-10 text-center" data-testid="needs-access">
+  <i class="fi fi-rr-lock block mb-3 text-3xl text-gray-400"></i>
+  <h1 class="page-title">{{ area }}</h1>
+  <p class="text-gray-600">Your account doesn't include this yet. Ask for it and a curator will review your request.</p>
+  <a href="{% url 'request_access' %}" class="inline-flex items-center mt-5 px-4 py-2 rounded-lg border border-gray-900 font-semibold text-gray-900 hover:bg-gray-50">Ask for more access</a>
+</div>
+{% endblock %}

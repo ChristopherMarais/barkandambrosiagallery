@@ -100,14 +100,14 @@ class AccessRequestForm(forms.Form):
     name = forms.CharField(label="Your name", max_length=200)
     email = forms.EmailField(label="Email", max_length=254)
     affiliation = forms.CharField(label="Institution or affiliation", max_length=200)
+    # Every account is Basic once the email is confirmed; these are the extras a curator reviews (optional).
     areas = forms.MultipleChoiceField(
-        label="What do you want to use?",
-        choices=[(key, label) for key, label, _, _ in access.AREAS],
-        widget=forms.CheckboxSelectMultiple,
-        error_messages={"required": "Choose at least one part of the site."},
+        label="Anything more you'd like?",
+        choices=[(key, label) for key, label, _ in access.AREAS],
+        widget=forms.CheckboxSelectMultiple, required=False,
     )
     reason = forms.CharField(
-        label="What will you use it for?", max_length=2000, widget=forms.Textarea(attrs={"rows": 4}),
+        label="What will you use it for?", max_length=2000, widget=forms.Textarea(attrs={"rows": 4}), required=False,
     )
     # Someone without an account chooses their own (they are left out when asking while signed in).
     username = forms.CharField(label="Username", max_length=150, required=False)

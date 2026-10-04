@@ -89,7 +89,7 @@ def _with_context(requests):
         users.setdefault(user.email_lower, []).append(user)
     for r in requests:
         r.area_labels = access.area_labels(r.areas)
-        r.suggested_role = access.role_needed(r.areas)
+        r.wanted = set(access.extras(r.areas))
         r.existing_users = [u for u in users.get(r.email.lower(), []) if u != r.user]
     return requests
 
@@ -100,7 +100,7 @@ def access_requests(request):
         try:
             decision = access.decide(
                 request.POST.get("request_id"), request.POST.get("decision"), request.user,
-                request.POST.get("note"), request.build_absolute_uri,
+                request.POST.get("note"), request.build_absolute_uri, areas=request.POST.getlist("areas"),
             )
         except access.AccessError as exc:
             messages.error(request, str(exc))
@@ -109,8 +109,8 @@ def access_requests(request):
             if decision.access_request.status == AccessRequest.Status.DENIED:
                 messages.success(request, f"Denied {who}'s request.")
             else:
-                role = access.ROLE_LABELS[decision.access_request.granted_role]
-                messages.success(request, f"Approved {who} as {role}.")
+                granted = ", ".join(access.area_labels(decision.granted)) or "nothing more (Basic)"
+                messages.success(request, f"{who}: granted {granted}.")
             if decision.email_error:
                 messages.error(request, f"{who} could not be emailed ({decision.email_error}). Tell them their account is ready: username {decision.user.username}.")
         return redirect("access_requests")
@@ -126,5 +126,5 @@ def access_requests(request):
     return render(request, "beetles/access_requests.html", {
         "pending": _with_context(pending),
         "decided": decided,
-        "roles": access.ROLE_LABELS,
+        "areas": access.AREAS,
     })

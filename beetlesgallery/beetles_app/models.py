@@ -1763,7 +1763,8 @@ class AccessRequest(models.Model):
     reason = models.TextField(blank=True)
     areas = models.JSONField(default=list, blank=True, help_text="Keys of the parts of the site they asked for.")
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING, db_index=True)
-    granted_role = models.CharField(max_length=10, blank=True, help_text="member or curator, once approved.")
+    granted_role = models.CharField(max_length=10, blank=True, help_text="basic, or areas (see granted_areas), once approved. Older requests: member or curator.")
+    granted_areas = models.JSONField(default=list, blank=True, help_text="The areas granted when it was decided (areas.py keys).")
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="access_requests",
         help_text="The account created or updated when approved.",

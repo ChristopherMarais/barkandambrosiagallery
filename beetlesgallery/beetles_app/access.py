@@ -1,22 +1,14 @@
 """
-Requests for access to the site.
+Accounts and requests for more access.
 
-Someone fills in /accounts/request-access/ with who they are, which parts of the site they want, and the username
-and password they want to use. They get an inactive account and an email with a link to confirm their address.
-Once it is confirmed the approvers (every superuser, plus settings.ACCESS_REQUEST_RECIPIENTS) are emailed a link to
-My Account -> Access Requests, where a superuser approves the request as a Member or a Curator, or denies it.
-Approving activates the account and emails the applicant; they sign in as usual and can reset their own password.
-A denied applicant's unused account is removed.
+Someone fills in /accounts/request-access/ with who they are, the username and password they want and, optionally,
+what more than a Basic account they would like (and why). They get an inactive account and an email with a link to
+confirm their address. Confirming it **activates the account straight away as Basic** (areas.py): the image
+browser, taxonomy browser, interactions page, AI classifier and Beetle ID game.
 
-Someone who already has an account can ask for more access the same way: their email is already confirmed, so
-the approvers are told straight away.
-
-Roles are the ones the site already has:
-
-    Member    a normal account: gallery and downloads, taxonomy, AI classifier, Beetle ID game
-    Curator   is_staff: also annotate and validate, upload and update data
-
-Superuser is never granted through a request. Finer access is set per person on My Account (see areas.py).
+If they asked for more, the request stays open for a superuser on My Account -> Access Requests, who grants the
+areas they think right, one by one (or none). Their Basic account works meanwhile. Someone already signed in can
+ask for more the same way; the approvers are told straight away. Superuser is never granted through a request.
 """
 import logging
 import re
@@ -40,23 +32,16 @@ from .models import AccessRequest
 
 logger = logging.getLogger(__name__)
 
-MEMBER, CURATOR, DENY = "member", "curator", "deny"
-ROLE_LABELS = {MEMBER: "Member", CURATOR: "Curator"}
+from . import areas as site_areas
 
-# key, label shown on the form, what it covers, the role it needs
-AREAS = [
-    ("browse", "Browse and download images", "The image gallery, the taxonomy browser and batch downloads.", MEMBER),
-    ("classify", "AI species classifier", "Identify a beetle from a photo.", MEMBER),
-    ("game", "Beetle ID game", "Play the identification game and see your own results.", MEMBER),
-    ("annotate", "Annotate and validate", "Draw bounding boxes, label and validate records.", CURATOR),
-    ("upload", "Upload and update data", "Add new images and their metadata, or correct existing records.", CURATOR),
-]
-AREA_LABELS = {key: label for key, label, _, _ in AREAS}
-AREA_ROLES = {key: role for key, _, _, role in AREAS}
-ROLE_SUMMARY = {
-    MEMBER: "the image gallery and downloads, the taxonomy browser, the AI classifier and the Beetle ID game",
-    CURATOR: "everything a Member can use, plus annotating and validating records and uploading and updating data",
-}
+BASIC, DENY = "basic", "deny"
+BASIC_SUMMARY = "the image browser, the taxonomy browser, the interactions page, the AI classifier and the Beetle ID game"
+# What can be asked for beyond Basic: the areas (key, label, description)
+AREAS = site_areas.AREAS
+AREA_LABELS = dict(site_areas.LABELS)
+# keys used on the form before Basic accounts (old requests still show readable labels)
+AREA_LABELS.update({"browse": "Browse and download images", "classify": "AI species classifier", "game": "Beetle ID game"})
+
 
 THROTTLE_PER_IP = 5      # requests per hour from one address
 THROTTLE_IN_TOTAL = 30   # requests per hour in all, so approvers' inboxes cannot be flooded
@@ -71,9 +56,9 @@ def area_labels(keys):
     return [AREA_LABELS[k] for k in keys if k in AREA_LABELS]
 
 
-def role_needed(keys):
-    """The lowest role that covers every requested area."""
-    return CURATOR if any(AREA_ROLES.get(k) == CURATOR for k in keys) else MEMBER
+def extras(keys):
+    """The requested areas a superuser has to decide on (everything beyond Basic)."""
+    return [k for k in keys if k in site_areas.KEYS]
 
 
 def throttled(request):
@@ -196,8 +181,36 @@ def confirm_email(request, uidb64, token):
     if access_request.email_verified_at is None:
         access_request.email_verified_at = timezone.now()
         access_request.save(update_fields=["email_verified_at"])
-        notify_approvers(access_request, absolute_url(request, "access_requests"))
+        open_basic_account(access_request, request.build_absolute_uri)
     return access_request
+
+
+def open_basic_account(access_request, absolute_uri):
+    """
+    The address is confirmed: the account works at once as Basic. With nothing more asked for, the request is done;
+    otherwise it stays open and the approvers are told. The applicant is emailed either way.
+    """
+    user = access_request.user
+    if not user.is_active:
+        user.is_active = True
+        user.save(update_fields=["is_active"])
+    wanted = extras(access_request.areas)
+    if not wanted:
+        access_request.status = AccessRequest.Status.APPROVED
+        access_request.granted_role = BASIC
+        access_request.decided_at = timezone.now()
+        access_request.decision_note = "Basic account, approved automatically when the email was confirmed."
+        access_request.save(update_fields=["status", "granted_role", "decided_at", "decision_note"])
+    else:
+        notify_approvers(access_request, absolute_uri(reverse("access_requests")))
+    try:
+        send_email("Welcome to the Bark & Ambrosia Beetle Gallery!", "approved", {
+            "name": access_request.name, "username": user.username, "summary": BASIC_SUMMARY,
+            "waiting": area_labels(wanted), "granted": [], "note": "",
+            "login_url": absolute_uri(reverse("login")), "reset_url": absolute_uri(reverse("password_reset")),
+        }, [access_request.email])
+    except Exception:
+        logger.exception("Could not send the welcome email for access request %s", access_request.pk)
 
 
 def approver_recipients():
@@ -269,41 +282,42 @@ class Decision:
     access_request: AccessRequest
     user: object = None
     email_error: str = ""
+    granted: list = None
 
 
-def _grant(access_request, role):
-    """Activate the requester's account (the one they made, or the one they already had) at ``role``, never lowering it."""
+def _grant(access_request, areas, decided_by):
+    """Activate the requester's account if needed and grant these areas (adding to what they have, never removing)."""
+    from .models import AreaGrant
+
     user = access_request.user
     if user is None:
         raise AccessError("This request has no account attached.")
     if access_request.email_verified_at is None:
         raise AccessError(f"{access_request.name} has not confirmed their email address yet.")
-    changed = []
     if not user.is_active:
         user.is_active = True
-        changed.append("is_active")
-    if role == CURATOR and not user.is_staff:
-        user.is_staff = True
-        changed.append("is_staff")
-    if changed:
-        user.save(update_fields=changed)
+        user.save(update_fields=["is_active"])
+    for area in areas:
+        AreaGrant.objects.get_or_create(user=user, area=area, defaults={"granted_by": decided_by})
     return user
 
 
 def _discard_unused_account(access_request):
-    """A denied applicant's account (made for this request, never signed in to) is removed so the username is free."""
+    """A denied applicant's account that never worked (made for this request, never signed in) is removed."""
     user = access_request.user
     if user is not None and not user.is_active and user.last_login is None and not user.is_staff:
         user.delete()
 
 
-def decide(request_id, choice, decided_by, note, absolute_uri):
+def decide(request_id, choice, decided_by, note, absolute_uri, areas=None):
     """
-    Approve (choice "member" or "curator") or deny (choice "deny") a pending request, then email the applicant.
+    Decide an open request: ``choice`` "grant" gives the account the chosen ``areas`` (any of areas.KEYS; none means
+    it stays Basic), "deny" gives nothing more (a working account stays Basic). Then the applicant is emailed.
     ``absolute_uri`` is request.build_absolute_uri. Raises AccessError with a message for the approver.
     """
-    if choice not in (MEMBER, CURATOR, DENY):
-        raise AccessError("Choose Member, Curator or Deny.")
+    if choice not in ("grant", DENY):
+        raise AccessError("Choose what to grant, or Deny.")
+    areas = [a for a in (areas or []) if a in site_areas.KEYS]
     note = (note or "").strip()[:1000]
 
     with transaction.atomic():
@@ -313,9 +327,10 @@ def decide(request_id, choice, decided_by, note, absolute_uri):
             raise AccessError("That request no longer exists.")
         if access_request.status != AccessRequest.Status.PENDING:
             raise AccessError(f"{access_request.name}'s request was already {access_request.status}.")
-        user = None if choice == DENY else _grant(access_request, choice)
+        user = None if choice == DENY else _grant(access_request, areas, decided_by)
         access_request.status = AccessRequest.Status.DENIED if choice == DENY else AccessRequest.Status.APPROVED
-        access_request.granted_role = "" if choice == DENY else choice
+        access_request.granted_role = "" if choice == DENY else ("areas" if areas else BASIC)
+        access_request.granted_areas = [] if choice == DENY else areas
         access_request.decided_by = decided_by
         access_request.decided_at = timezone.now()
         access_request.decision_note = note
@@ -325,6 +340,7 @@ def decide(request_id, choice, decided_by, note, absolute_uri):
             _discard_unused_account(access_request)
 
     decision = Decision(access_request, user=user or applicant)
+    decision.granted = areas if choice != DENY else []
     try:
         _email_applicant(decision, absolute_uri(reverse("login")), absolute_uri(reverse("password_reset")))
     except Exception as exc:  # the decision stands; the approver is told to pass it on
@@ -337,9 +353,9 @@ def _email_applicant(decision, login_url, reset_url):
     access_request = decision.access_request
     context = {"name": access_request.name, "note": access_request.decision_note}
     if access_request.status == AccessRequest.Status.DENIED:
+        context["keeps_account"] = decision.user is not None and decision.user.is_active
         send_email("About your Bark & Ambrosia Beetle Gallery request", "denied", context, [access_request.email])
         return
-    role = access_request.granted_role
-    context.update(role=ROLE_LABELS[role], summary=ROLE_SUMMARY[role], username=decision.user.username,
-                   login_url=login_url, reset_url=reset_url)
-    send_email("Welcome to the Bark & Ambrosia Beetle Gallery!", "approved", context, [access_request.email])
+    context.update(summary=BASIC_SUMMARY, granted=area_labels(decision.granted), waiting=[],
+                   username=decision.user.username, login_url=login_url, reset_url=reset_url)
+    send_email("Your Bark & Ambrosia Beetle Gallery access", "approved", context, [access_request.email])

@@ -32,7 +32,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.files.storage import default_storage
 from django.core.management import call_command
 
-from .areas import ANNOTATE, UPLOAD, INTERACTIONS, AREAS, area_required, has_area
+from .areas import ANNOTATE, DETAILS, DOWNLOAD, SPECIES, UPLOAD, INTERACTIONS, AREAS, area_required, has_area
 from .csv_columns import modern_columns
 from .models import Beetles, UploadBatch, DownloadJob, UpdateBatch, ImageAsset
 from .schema import REQUIRED_COLS, MAX_ROWS
@@ -742,9 +742,8 @@ def gallery(request):
     return render(request, "beetles/image_browser.html", context)
 
 
+@area_required(DETAILS)
 def beetle_detail(request, beetle_id):
-    if not request.user.is_authenticated:
-        return redirect_to_login(request.get_full_path(), login_url=reverse("login"))
 
     # Fetch main object, aggressively joining the taxon relationship to prevent N+1 queries
     beetle = get_object_or_404(Beetles.objects.filter(is_deleted=False).select_related("taxon"), pk=beetle_id)
@@ -852,7 +851,7 @@ def signup(request):
         form = TailwindUserCreationForm()
     return render(request, "accounts/signup.html", {"form": form})
 
-@login_required
+@area_required(DOWNLOAD)
 def start_batch_download(request):
     # --- Handle GET requests gracefully (Fixes Login Redirect 405) ---
     if request.method != "POST":
@@ -874,8 +873,8 @@ def start_batch_download(request):
     q_str = (request.POST.get("q") or "").strip()
 
     include_images = True
-    # Only staff can opt-out of images
-    if request.user.is_staff:
+    # Only people who edit records can opt out of images
+    if has_area(request.user, ANNOTATE):
         # Front-end will send value="metadata_only" if the checkbox is unchecked
         if request.POST.get("download_type") == "metadata_only":
             include_images = False
@@ -1198,7 +1197,7 @@ def tool_annotate(request):
         'species_map_json': json.dumps(species_map, cls=DjangoJSONEncoder, ensure_ascii=False),
     })
 
-@login_required(login_url='login')
+@area_required(SPECIES)
 def download_taxonomy_ref(request):
     storage_key = getattr(settings, "VALID_SPECIES_PATH", "reference/valid_species.csv")
     try:
@@ -1211,7 +1210,7 @@ def download_taxonomy_ref(request):
     resp["Content-Disposition"] = f'attachment; filename="{filename}"'
     return resp
 
-@login_required(login_url='login')
+@area_required(SPECIES)
 def download_described_names_ref(request):
     storage_key = getattr(settings, "DESCRIBED_NAMES_PATH", "reference/described_names.csv")
     try:
@@ -1224,7 +1223,7 @@ def download_described_names_ref(request):
     resp["Content-Disposition"] = f'attachment; filename="{filename}"'
     return resp
 
-@superuser_required
+@area_required(SPECIES)
 def download_taxonomy_archive(request, ref_type, filename):
     """
     Download an archived version of a taxonomy reference CSV.
@@ -1257,7 +1256,7 @@ def download_taxonomy_archive(request, ref_type, filename):
 
     return resp
 
-@superuser_required
+@area_required(SPECIES)
 def admin_valid_species(request):
     current_status = {'label': 'Database Managed (v2.0)', 'version': 'v2.0'}
 
@@ -1293,7 +1292,7 @@ def admin_valid_species(request):
     return render(request, "admin/tools_valid_species.html", {"form": form, "status": current_status})
 
 
-@superuser_required
+@area_required(SPECIES)
 def admin_described_names(request):
     current_status = {'label': 'Database Managed (v2.0)', 'version': 'v2.0'}
 
@@ -1747,7 +1746,7 @@ def stream_updates(request):
         }
 
     # --- C. UPDATE BATCHES ---
-    if request.user.is_staff:
+    if has_area(request.user, UPLOAD):
         updates = UpdateBatch.objects.filter(uploaded_by=request.user).filter(
             ~Q(status__in=FINAL_STATES) | 
             Q(updated_at__gte=recent_cutoff)
