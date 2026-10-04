@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load beetle_tags %}
+{% load beetle_tags static %}
 
 {% block content %}
 <div class="max-w-xl mx-auto">
@@ -10,7 +10,7 @@
     <a href="?tab=sessions" role="tab" aria-selected="{% if tab == 'sessions' %}true{% else %}false{% endif %}"
       class="flex-1 py-2 text-center rounded-lg {% if tab == 'sessions' %}bg-white shadow-sm text-gray-900{% else %}text-gray-500{% endif %}">Sessions</a>
     <a href="?tab=checked" role="tab" aria-selected="{% if tab == 'checked' %}true{% else %}false{% endif %}" data-testid="checked-tab"
-      class="flex-1 py-2 text-center rounded-lg {% if tab == 'checked' %}bg-white shadow-sm text-gray-900{% else %}text-gray-500{% endif %}">Checked later{% if checked_total %} <span class="font-normal text-gray-400">({{ checked_total|digit_groups }})</span>{% endif %}</a>
+      class="flex-1 py-2 text-center rounded-lg {% if tab == 'checked' %}bg-white shadow-sm text-gray-900{% else %}text-gray-500{% endif %}">Checked later{% if checked_total %} <span class="font-normal text-gray-400">({{ checked_total|digit_groups }})</span>{% endif %}{% if new_checked and tab != 'checked' %} <span class="inline-block w-2 h-2 rounded-full bg-gray-900 align-middle" title="{{ new_checked }} new" data-testid="checked-new-dot"></span>{% endif %}</a>
   </div>
 
   {% if tab == 'sessions' %}
@@ -39,6 +39,7 @@
 
   {% else %}
   <p class="text-sm text-gray-500 mb-3">Beetles a curator checked after you answered them: what you said, what they are, and the points that moved.</p>
+  {% if new_gain > 0 %}<p class="mb-3 text-sm font-semibold text-gray-900" data-testid="new-later-points">+{{ new_gain|floatformat:1 }} pts came in later</p>{% endif %}
   {% if checked.paginator.count %}
   {% include "beetles/includes/game_checked_list.html" %}
   {% include "beetles/includes/game_history_pager.html" with page=checked %}
@@ -47,4 +48,12 @@
   {% endif %}
   {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% if tab == 'checked' and new_gain > 0 %}
+<canvas id="confetti" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:95"></canvas>
+<script src="{% static 'js/beetle_confetti.js' %}"></script>
+<script>window.addEventListener("load", () => window.beetleConfetti(document.getElementById("confetti"), "beetles"));</script>
+{% endif %}
 {% endblock %}

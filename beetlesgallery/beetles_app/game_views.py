@@ -26,7 +26,7 @@ from django.views.decorators.http import require_GET, require_POST
 from . import game, game_board, game_checked, game_discoveries, game_feedback, game_queue, game_levels, game_rewards, game_scoring, game_tips, game_trust
 from . import game_taxa as taxa_tree
 from .areas import ANNOTATE, area_required
-from .models import Beetles, GameAnswer, GameReport, GameRound, ImageLock, LabelReview, PlayerScore, Taxon
+from .models import Beetles, GameAnswer, GameReport, GameRound, ImageLock, LabelReview, PlayerScore, RetroCredit, Taxon
 from .predictions import suggestions_for
 
 MODES = {m.value: m.label for m in GameRound.Mode}
@@ -149,10 +149,15 @@ def game_history(request):
         .filter(labelled__gt=0).order_by("-finished_at")
     )
     checked = game_checked.items(request.user, limit=500)
+    # points that came later, new since they last looked: a small pop on each, and beetles if they gained (#425)
+    new_gain = sum(c["change"] for c in checked if c["new"] and c["change"] > 0)
+    if tab == "checked" and any(c["new"] for c in checked):   # seen once the Checked later tab is open
+        RetroCredit.objects.filter(player=request.user, seen_at__isnull=True).update(seen_at=timezone.now())
     sessions = Paginator(rounds, HISTORY_PER_PAGE).get_page(request.GET.get("page") if tab == "sessions" else 1)
     checked_page = Paginator(checked, HISTORY_PER_PAGE).get_page(request.GET.get("page") if tab == "checked" else 1)
     return render(request, "beetles/game_history.html", {
         "tab": tab, "sessions": sessions, "checked": checked_page, "checked_total": len(checked),
+        "new_gain": round(new_gain, 1), "new_checked": sum(1 for c in checked if c["new"]),
     })
 
 
@@ -792,15 +797,31 @@ def _leading(items, ok):
 
 def _worth_celebrating(record, scores):
     """
-    Confetti for a scored item the player got right: the species, or a pair with every judged claim right.
-    It says nothing on other items, so it is the only hint that an item was scored, and only when they won.
+    What to celebrate after an answer (#425): "validated" (beetle confetti) for a checked beetle the player got right,
+    the species or a pair with every judged claim right; "strong" (ordinary confetti) for an Identification answer
+    on an unchecked beetle that proven experts or a trusted model back to genus or species, or that most reliable
+    players agree with at species; otherwise False. Validated and strong look different, but neither shows on a
+    wrong or weak answer, so it hints at little.
     """
-    if not record.is_check or record.skipped:
+    if record.skipped:
         return False
-    if record.mode == GameRound.Mode.CLASSIFY:
-        return scores.get("species") is True
-    judged = [ok for ok in scores.values() if ok is not None]
-    return bool(judged) and all(judged)
+    if record.is_check:
+        if record.mode == GameRound.Mode.CLASSIFY:
+            return "validated" if scores.get("species") is True else False
+        judged = [ok for ok in scores.values() if ok is not None]
+        return "validated" if judged and all(judged) else False
+    return "strong" if record.mode == GameRound.Mode.CLASSIFY and _strong_unvalidated(record) else False
+
+
+def _strong_unvalidated(record):
+    """An unchecked beetle's answer that the references (experts, a trusted model) or a clear consensus back."""
+    from .models import AnswerPoints
+
+    row = AnswerPoints.objects.filter(answer=record).values_list("detail", flat=True).first() or {}
+    reference = row.get("reference") or {}
+    if any(reference.get(r, {}).get("match") for r in ("genus", "species")):
+        return True
+    return (row.get("agreement") or {}).get("species", 0) >= game.game_setting("GAME_CELEBRATE_AGREEMENT", 0.75)
 
 
 @login_required

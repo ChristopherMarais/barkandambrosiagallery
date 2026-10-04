@@ -1,7 +1,7 @@
 {# Checked beetles (game_checked.items): the crop, what you said, what it is, and the points. Needs the crop script below. #}
 <ul class="space-y-2">
   {% for c in checked %}
-  <li class="flex gap-3 p-3 bg-white border {% if c.change >= 0 %}border-green-200{% else %}border-red-200{% endif %} rounded-2xl" data-testid="checked-item">
+  <li class="flex gap-3 p-3 bg-white border {% if c.change >= 0 %}border-green-200{% else %}border-red-200{% endif %} rounded-2xl{% if c.new %} checked-new{% endif %}" data-testid="checked-item">
     <div class="flex gap-1 shrink-0">
       {% for im in c.images %}<canvas class="game-crop w-16 h-16 rounded-lg bg-gray-100 object-cover" data-src="{{ im.url }}" data-box="{{ im.box|join:',' }}" width="64" height="64"></canvas>{% endfor %}
     </div>
@@ -16,6 +16,12 @@
   </li>
   {% endfor %}
 </ul>
+<style>
+  /* points that arrived since the player last looked: a small pop as the page opens (#425) */
+  .checked-new { animation: checked-new .6s ease .2s both; }
+  @keyframes checked-new { 0% { transform: scale(.96); opacity: .4; } 60% { transform: scale(1.02); opacity: 1; } 100% { transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .checked-new { animation: none; } }
+</style>
 <script>
 document.querySelectorAll("canvas.game-crop").forEach((canvas) => {
   const img = new Image();
