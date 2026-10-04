@@ -118,9 +118,6 @@ DATABASES = {
     )
 }
 
-# Usernames sign in whatever their case (phones capitalise the first letter); see auth_backends.py
-AUTHENTICATION_BACKENDS = ["beetlesgallery.beetles_app.auth_backends.CaseInsensitiveModelBackend"]
-
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
