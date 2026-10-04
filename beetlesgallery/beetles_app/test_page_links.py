@@ -33,10 +33,10 @@ class GalleryTaxonomyLinkTests(PageBehaviourCase):
 
     def test_taxonomy_terms_link_to_that_species_in_the_taxonomy_browser(self):
         html = self.gallery_html()
-        link = f'{TAXONOMY_URL}?species=T-IPS'
-        self.assertIn(link, html)
-        # every rank shown for this beetle points at the same species node
-        self.assertGreaterEqual(html.count(link), 2)
+        self.assertIn(f'{TAXONOMY_URL}?species=T-IPS', html)
+        # higher ranks open the tree only as deep as themselves (#419)
+        self.assertIn(f'{TAXONOMY_URL}?subfamily=Scolytinae"', html)
+        self.assertIn(f'{TAXONOMY_URL}?subfamily=Scolytinae&amp;tribe=Ipini&amp;genus=Ips"', html)
 
     def test_unidentified_specimens_get_no_taxonomy_link(self):
         # nothing in the fixture links to a blank species id
