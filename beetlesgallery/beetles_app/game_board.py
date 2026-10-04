@@ -19,18 +19,18 @@ from .models import AnswerPoints, GameAnswer, PlayerScore, PlayerSkill, SpeciesD
 
 SORTS = {"score": "Score", "identification": "Identification accuracy", "similarity": "Similarity accuracy",
          "viewed": "Beetles seen"}
-PERIODS = {"week": "This week", "month": "This month", "all": "All time"}
+PERIODS = {"week": "This week", "month": "This month", "year": "This year", "all": "All time"}
 GAMES = ("classify", "pair")   # Identification (Name That Beetle) and Similarity (Family Ties)
 # a branch of the tree -> the skill that measures it (see game_trust.BRANCH_OF)
 BRANCH_SKILL = {"subfamily": "tribe", "tribe": "genus", "genus": "species"}
 
 
-def mode_stats(player_ids=None):
+def mode_stats(player_ids=None, since=None):
     """
     Identification and Similarity kept apart: {player_id: {"classify": {...}, "pair": {...}}}, each with
     ``accuracy`` (None until GAME_MIN_JUDGED_FOR_ACCURACY ranks were judged), ``judged``, ``correct`` and ``points``.
     Accuracy is counted as for the overall rating (game_scoring.ratings): the first time a player saw a validated
-    beetle, rank by rank.
+    beetle, rank by rank. With ``since``, only answers given from then on (a leaderboard period).
     """
     from collections import defaultdict
 
@@ -39,6 +39,9 @@ def mode_stats(player_ids=None):
     answers = GameAnswer.objects.filter(Q(is_check=True) | Q(validated_later=True), is_retry=False, skipped=False,
                                         score_hold=False)
     points = AnswerPoints.objects.all()
+    if since is not None:
+        answers = answers.filter(answered_at__gte=since)
+        points = points.filter(answer__answered_at__gte=since)
     if player_ids is not None:
         answers = answers.filter(player_id__in=list(player_ids))
         points = points.filter(answer__player_id__in=list(player_ids))
@@ -64,13 +67,22 @@ def mode_stats(player_ids=None):
     return out
 
 
+def _accuracy(score, games, since, min_judged):
+    """All time: the overall rating's accuracy. For a period: both games' judged ranks in that period together."""
+    if since is None:
+        return score.accuracy if score.judged >= min_judged else None
+    correct = sum(g["correct"] for g in games.values())
+    judged = sum(g["judged"] for g in games.values())
+    return correct / judged if judged >= min_judged else None
+
+
 def period_start(period, now=None):
     """When the board's period began: Monday 00:00 for "week", the 1st for "month" (server time), None for all time."""
     if period == "week":
         return game.week_start(now)
-    if period == "month":
+    if period in ("month", "year"):
         today = (now or timezone.now()).astimezone(timezone.get_current_timezone()).date()
-        return timezone.make_aware(datetime(today.year, today.month, 1))
+        return timezone.make_aware(datetime(today.year, today.month if period == "month" else 1, 1))
     return None
 
 
@@ -81,6 +93,8 @@ def period_end(period, now=None):
         return start + timedelta(days=7)
     if period == "month":
         return timezone.make_aware(datetime(start.year + start.month // 12, start.month % 12 + 1, 1))
+    if period == "year":
+        return timezone.make_aware(datetime(start.year + 1, 1, 1))
     return None
 
 
@@ -110,12 +124,14 @@ def board(sort="score", period="week", q="", limit=50):
     """
     Rows: position, player_id, username, level, level_name, score, accuracy, id_accuracy, sim_accuracy, viewed,
     is_expert, discoveries. Sort by score, identification or similarity accuracy, or beetles seen.
+    Everything but the level and the expert mark follows the period: points, beetles seen, accuracy and finds.
     """
     scores = {s.player_id: s for s in PlayerScore.objects.all()}
     names = dict(get_user_model().objects.filter(id__in=scores).values_list("id", "username"))
     experts = set(PlayerSkill.objects.filter(proven=True).values_list("player_id", flat=True))
-    finds = dict(SpeciesDiscovery.objects.values("player").annotate(n=Count("id")).values_list("player", "n"))
     since = period_start(period)
+    found = SpeciesDiscovery.objects.all() if since is None else SpeciesDiscovery.objects.filter(created_at__gte=since)
+    finds = dict(found.values("player").annotate(n=Count("id")).values_list("player", "n"))
     if since is not None:
         week_points = dict(
             AnswerPoints.objects.filter(answer__answered_at__gte=since).values("answer__player")
@@ -124,7 +140,8 @@ def board(sort="score", period="week", q="", limit=50):
         week_viewed = dict(
             GameAnswer.objects.filter(answered_at__gte=since).values("player").annotate(n=Count("id")).values_list("player", "n")
         )
-    by_game = mode_stats()
+    by_game = mode_stats(since=since)
+    min_judged = game.game_setting("GAME_MIN_JUDGED_FOR_ACCURACY", 10)
     rows = []
     for pid, s in scores.items():
         if pid not in names or (s.viewed == 0):
@@ -137,7 +154,7 @@ def board(sort="score", period="week", q="", limit=50):
             continue
         rows.append({
             "player_id": pid, "username": names[pid], "level": level["level"], "level_name": level["name"],
-            "score": round(score), "accuracy": s.accuracy if s.judged >= game.game_setting("GAME_MIN_JUDGED_FOR_ACCURACY", 10) else None,
+            "score": round(score), "accuracy": _accuracy(s, by_game[pid], since, min_judged),
             "viewed": viewed, "is_expert": pid in experts, "discoveries": finds.get(pid, 0),
             "id_accuracy": by_game[pid]["classify"]["accuracy"], "sim_accuracy": by_game[pid]["pair"]["accuracy"],
         })
