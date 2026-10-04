@@ -33,7 +33,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.files.storage import default_storage
 from django.core.management import call_command
 
-from .areas import ANNOTATE, DETAILS, DOWNLOAD, SPECIES, UPLOAD, INTERACTIONS, AREAS, area_required, has_area
+from .areas import ANNOTATE, BOXES, DETAILS, DOWNLOAD, SPECIES, UPLOAD, INTERACTIONS, AREAS, area_required, has_area
 from .csv_columns import modern_columns
 from .models import Beetles, UploadBatch, DownloadJob, UpdateBatch, ImageAsset
 from .schema import REQUIRED_COLS, MAX_ROWS
@@ -1085,7 +1085,7 @@ def data_management(request):
     )
 
 
-@area_required(ANNOTATE)
+@area_required(BOXES)
 def tool_annotate(request):
     """
     Data annotation tool page (staff only).
@@ -1193,6 +1193,8 @@ def tool_annotate(request):
     tree_dict_clean = default_to_regular(tree_dict)
 
     return render(request, 'beetles/tool_annotate.html', {
+        # someone who may only edit boxes sees names and details read-only (the API refuses changes to them)
+        'can_edit_records': has_area(request.user, ANNOTATE),
         'filter_groups': filter_context,
         'taxonomy_tree_json': json.dumps(tree_dict_clean, cls=DjangoJSONEncoder, ensure_ascii=False),
         'species_map_json': json.dumps(species_map, cls=DjangoJSONEncoder, ensure_ascii=False),
@@ -2048,7 +2050,7 @@ def _build_annotate_filter_context():
     return filter_context
 
 
-@area_required(ANNOTATE)
+@area_required(BOXES)
 def tool_annotate(request):
     """
     Data annotation tool page (staff only).
@@ -2062,6 +2064,8 @@ def tool_annotate(request):
         cache.set(filters_cache_key, filter_context, 60 * 30)
 
     return render(request, 'beetles/tool_annotate.html', {
+        # someone who may only edit boxes sees names and details read-only (the API refuses changes to them)
+        'can_edit_records': has_area(request.user, ANNOTATE),
         'filter_groups': filter_context
     })
 

@@ -2,8 +2,9 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from ..areas import ANNOTATE, has_area
+from ..areas import ANNOTATE, BOXES, has_area
 from django.http import FileResponse
 from django.db import transaction
 from django.utils import timezone
@@ -27,12 +28,34 @@ class _RollBack(Exception):
 
 class IsStaffUser(IsAuthenticated):
     """
-    Permission class: the user has the annotate area (staff and superusers always do; others by grant).
+    Permission class for the annotation API: the user may at least edit boxes (areas.BOXES; "edit names and
+    records" includes it). Everything beyond boxes also needs areas.ANNOTATE, checked with require_records().
     """
     def has_permission(self, request, view):
         is_authenticated = super().has_permission(request, view)
-        # Authorize if the user is staff OR an administrative superuser
-        return bool(is_authenticated and has_area(request.user, ANNOTATE))
+        return bool(is_authenticated and has_area(request.user, BOXES))
+
+
+# What someone who may only edit boxes can send for an ROI
+BOX_FIELDS = {"bbox_x", "bbox_y", "bbox_width", "bbox_height"}
+BOX_ONLY_ALLOWED = BOX_FIELDS | {"id", "image_asset", "image_asset_id"}
+
+
+def require_records(request):
+    """Names, metadata, validation and deleting records need "edit names and records" (areas.ANNOTATE)."""
+    if not has_area(request.user, ANNOTATE):
+        raise PermissionDenied("Your account can edit boxes only.")
+
+
+def require_box_fields_only(request, data):
+    """Someone who may only edit boxes can change nothing but the box (and say which image a new box is on)."""
+    if has_area(request.user, ANNOTATE):
+        return
+    # (removing the last box sends bbox_is_validated false with it: that is part of removing a box)
+    extra = sorted(k for k, v in (data or {}).items()
+                   if k not in BOX_ONLY_ALLOWED and not (k == "bbox_is_validated" and v is False))
+    if extra:
+        raise PermissionDenied(f"Your account can edit boxes only (not {', '.join(extra)}).")
 
 
 class ImageAssetViewSet(viewsets.ModelViewSet):
@@ -46,11 +69,17 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
 
     # --> NEW: Soft delete attribution
     def perform_destroy(self, instance):
+        require_records(self.request)
         instance.delete(deleted_by=self.request.user)
 
     def perform_update(self, serializer):
+        require_records(self.request)
         # Automatically track who updated/validated the image
         serializer.save(last_updated_by=self.request.user)
+
+    def perform_create(self, serializer):
+        require_records(self.request)
+        serializer.save()
 
     @action(detail=True, methods=['get'])
     def download(self, request, pk=None):
@@ -69,6 +98,7 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
         from beetlesgallery.tools import ibbi_models
 
         from ..classify_assist import ClassifyError, add_rois, call_classifier
+        require_records(request)   # it adds species names too
         asset = self.get_object()
         if not asset.image_file:
             return Response({'error': 'This image has no file.'}, status=400)
@@ -202,6 +232,7 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
         Staff endpoint to unvalidate an image and all its ROIs.
         POST /api/v1/image-assets/{uuid}/unvalidate/
         """
+        require_records(request)
         asset = self.get_object()
         asset.unvalidate(user=request.user)
         return Response({
@@ -216,6 +247,7 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
         Staff endpoint to validate an image and all its ROIs.
         POST /api/v1/image-assets/{uuid}/validate/
         """
+        require_records(request)
         asset = self.get_object()
         is_validated = asset.validate(user=request.user)
         return Response({
@@ -255,6 +287,9 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_destroy(self, instance):
+        # Someone who edits boxes only may remove a box that is nothing more: no name, not validated.
+        if not has_area(self.request.user, ANNOTATE) and (instance.depicts_valid_name_id or instance.bbox_is_validated):
+            raise PermissionDenied("Your account can edit boxes only: this ROI has a name or is validated.")
         instance.delete(deleted_by=self.request.user)
 
     def perform_create(self, serializer):
@@ -262,6 +297,7 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         Create a new bbox annotation or update an existing template beetle.
         Delegates all database writes strictly to serializer.save().
         """
+        require_box_fields_only(self.request, serializer.initial_data)
         # Base audit fields for any creation or update
         save_kwargs = {
             'last_updated_by': self.request.user
@@ -292,6 +328,7 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         serializer.save(**save_kwargs)
 
     def perform_update(self, serializer):
+        require_box_fields_only(self.request, serializer.initial_data)
         # 3. If frontend sends a PATCH setting bbox to null (Last ROI Deletion)
         if 'bbox_x' in serializer.validated_data and serializer.validated_data.get('bbox_x') is None:
             # We DO NOT delete the record. We keep the Ghost ROI alive.
@@ -327,6 +364,7 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         Staff endpoint to unvalidate a specific ROI.
         POST /api/v1/beetles/{uuid}/unvalidate/
         """
+        require_records(request)
         beetle = self.get_object()
         beetle.unvalidate(user=request.user)
         return Response({
@@ -342,6 +380,7 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         Staff endpoint to validate a specific ROI.
         POST /api/v1/beetles/{uuid}/validate/
         """
+        require_records(request)
         beetle = self.get_object()
         beetle.validate(user=request.user)
         return Response({
@@ -393,6 +432,8 @@ class BeetlesViewSet(viewsets.ModelViewSet):
                 {"error": "Invalid data; nothing was saved.", "details": invalid},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        except PermissionDenied as exc:
+            return Response({"error": f"{exc.detail} Nothing was saved."}, status=status.HTTP_403_FORBIDDEN)
         except Exception:
             # Anything else is a server-side problem: log it, don't echo it to the client.
             logger.exception("Bulk update failed in BeetlesViewSet.bulk_update")
