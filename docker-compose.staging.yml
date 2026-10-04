@@ -1,0 +1,66 @@
+# The staging site (docs/staging.md): `main`, running next to production on the same server, on its own database,
+# Redis and worker. It is used on its own, never together with docker-compose.yml or docker-compose.prod.yml:
+#     docker compose -f docker-compose.staging.yml -p barkandambrosia-staging ...
+# Its checkout lives in /opt/barkandambrosia_staging/app and its data in /opt/barkandambrosia_staging.
+name: barkandambrosia-staging
+
+services:
+  web:
+    build: .
+    command: sh -c "pixi run gunicorn --workers 2"
+    restart: always
+    ports:
+      - "8080:8000"
+    volumes:
+      - .:/app
+      - /app/.pixi
+      - media:/app/media
+    env_file:
+      - .env.staging
+      - .env.version
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:15
+    restart: always
+    volumes:
+      - /opt/barkandambrosia_staging/postgres:/var/lib/postgresql/data
+    env_file:
+      - .env.staging
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+
+  worker:
+    build: .
+    restart: always
+    # Both queues, one job at a time, at low CPU priority, so staging never slows the live site down
+    command: nice -n 15 pixi run celery -A beetlesgallery worker -l info --concurrency=1 -Q celery,heavy -n staging@%h
+    volumes:
+      - .:/app
+      - /app/.pixi
+      - media:/app/media
+    env_file:
+      - .env.staging
+      - .env.version
+    depends_on:
+      - db
+      - redis
+
+volumes:
+  # The live site's images, seen through a copy-on-write layer: staging sees every production image without a copy,
+  # and whatever staging adds, changes or deletes goes to media-upper only. Production's folder is never written to.
+  media:
+    driver: local
+    driver_opts:
+      type: overlay
+      device: overlay
+      o: lowerdir=/opt/barkandambrosia_data/media,upperdir=/opt/barkandambrosia_staging/media-upper,workdir=/opt/barkandambrosia_staging/media-work

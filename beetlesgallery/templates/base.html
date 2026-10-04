@@ -6,6 +6,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="csrf-token" content="{{ csrf_token }}">
+  {% if staging %}<meta name="robots" content="noindex, nofollow">{% endif %}
   <title>Bark and Ambrosia Gallery</title>
 
   <link rel="icon" type="image/png" href="{% static 'img/IMG_5557.PNG' %}" />
@@ -482,6 +483,9 @@
     </div>
 
     <div class="flex-1 overflow-x-hidden">
+      {% if staging %}
+      <div class="px-6 py-1.5 bg-black text-white text-xs font-semibold text-center tracking-wide" role="status" data-testid="staging-banner">STAGING: a test copy. Nothing here reaches the real site.</div>
+      {% endif %}
       {% block site_notice %}{% if site_notice %}
       <div class="px-6 py-2 bg-gray-800 text-white text-sm text-center" role="status" data-testid="site-notice">{{ site_notice }}</div>
       {% endif %}{% endblock %}

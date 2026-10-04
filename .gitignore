@@ -4,6 +4,7 @@
 .env.prod
 .env.dev
 .env.version
+.env.staging
 
 # --- 2. The Heavy Data (Your specific requirement) ---
 # We ignore the actual media folder so developers don't download 500GB of beetles.
