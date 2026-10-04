@@ -14,6 +14,7 @@ from django.utils import timezone
 from django.conf import settings
 from django.core.files import File
 
+from beetlesgallery.beetles_app import storage_cleanup
 from beetlesgallery.beetles_app.models import Beetles, DownloadJob
 
 class Command(BaseCommand):
@@ -54,41 +55,9 @@ class Command(BaseCommand):
         # This runs opportunistically each time build_downloads is invoked.
         # ------------------------------------------------------------------
         
-        now = timezone.now()
-        expired_qs = DownloadJob.objects.filter(
-            status=DownloadJob.Status.READY,
-            expires_at__isnull=False,
-            expires_at__lt=now,
-        )
-
-        expired_count = expired_qs.count()
-        for job in expired_qs:
-            # Best-effort file deletion; ignore if already missing
-            try:
-                if job.csv_file:
-                    job.csv_file.delete(save=False)
-            except Exception:
-                pass
-            try:
-                if job.zip_file:
-                    job.zip_file.delete(save=False)
-            except Exception:
-                pass
-
-            job.status = DownloadJob.Status.EXPIRED
-            # Keep any existing error_message if present; otherwise set a default note.
-            if not job.error_message:
-                job.error_message = "Files expired and removed after retention period."
-            # Keep existing finished_at if set; otherwise stamp now.
-            if not job.finished_at:
-                job.finished_at = now
-
-            job.save(update_fields=["status", "error_message", "csv_file", "zip_file", "finished_at"])
-
-        if expired_count:
-            self.stdout.write(
-                self.style.WARNING(f"Expired {expired_count} READY download job(s) with past expires_at.")
-            )      
+        freed = storage_cleanup.expire_downloads()
+        if freed.files:
+            self.stdout.write(self.style.WARNING(f"Removed {freed.files} expired download file(s)."))
 
         processed = 0
         while processed < limit:

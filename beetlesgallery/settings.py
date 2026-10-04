@@ -266,6 +266,11 @@ MAX_UPLOAD_TOTAL_BYTES = 2 * 1024 * 1024 * 1024  # CSV + ZIP together; keep in s
 DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 FILE_UPLOAD_TEMP_DIR = MEDIA_ROOT / "tmp_uploads"
+# How long files that are no longer needed stay on disk (beetles_app/storage_cleanup.py, run nightly)
+DOWNLOAD_RETENTION_DAYS = 14   # a finished download can be fetched for this long, then it is rebuilt on request
+UPLOAD_ZIP_KEEP_DAYS = 7       # an imported upload's ZIP, once every image in it is in the gallery
+FAILED_UPLOAD_KEEP_DAYS = 30   # ZIPs of rejected, failed or unfinished uploads
+TEMP_FILE_KEEP_HOURS = 24      # leftovers of interrupted uploads and download builds
 
 # Create temp dir if it doesn't exist
 os.makedirs(FILE_UPLOAD_TEMP_DIR, exist_ok=True)
