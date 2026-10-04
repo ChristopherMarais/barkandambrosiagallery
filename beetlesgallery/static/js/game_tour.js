@@ -20,7 +20,7 @@
     { el: "find-btn-genus", text: "Long list? Tap the magnifier, or just start typing, to search it." },
     { el: "skip", text: () => (mode() === "pair" ? "Not sure? Tap Not sure. It costs very little." : "Not sure? Skip it. It costs very little.") },
     { el: "submit", text: "Next saves your answer and brings the next beetle. Naming a beetle earns the most points, but a sure tribe beats a wrong genus." },
-    { el: "chip", text: "Beetles today against your daily goal. The flame is your day streak: it lights up when the goal is done." },
+    { el: "chip", text: "Beetles today against your daily goal. The flame is your streak: days in a row you reached the goal." },
     { el: "level-chip", text: "Your level and points. New levels unlock more of the game." },
     { el: "toolbar", text: "Pick the game and a focus here once you've unlocked them." },
     { el: "report-chip-0", text: "Photo looks wrong (wrong name, bad box, blurry)? Tap Report here, at the top right of the photo, and pick what's wrong. You lose no points." },

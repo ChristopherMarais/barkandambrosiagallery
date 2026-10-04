@@ -90,6 +90,18 @@ def active_days(player):
     return set(days)
 
 
+def goal_days(player):
+    """
+    The days on which the player reached that day's daily goal (each day against its own goal, see goal_history).
+    Only these days make a streak (issue #423): playing a few beetles doesn't keep it going, reaching the goal does.
+    """
+    counts = _day_counts(player)
+    if not counts:
+        return set()
+    goals = goal_history(counts, max(counts))
+    return {day for day, n in counts.items() if n >= goals.get(day, daily_goal())}
+
+
 def streak_days(days, today=None):
     """Consecutive days ending today (or yesterday: the streak is still alive until the day is over)."""
     today = today or timezone.localdate()
@@ -112,7 +124,7 @@ def progress(player):
     return {
         "rank": ranks["rank"], "rank_next": ranks["next"],
         "total": total, "today": today, "goal": goal, "goal_met": today >= goal,
-        "streak": streak_days(active_days(player)),
+        "streak": streak_days(goal_days(player)),
         "level": level["level"], "level_name": level["name"], "proposals": level["proposals"],
         "perks": sorted(level["perks"]),
         "to_next": level["next"]["points_needed"] if level["next"] else None,
@@ -132,9 +144,9 @@ BADGES = OrderedDict([
     ("ten", ("Warming up", "Label 10 beetles", "fi-rr-fire-flame-curved", True)),
     ("hundred", ("Centurion", "Label 100 beetles", "fi-rr-medal", True)),
     ("thousand", ("Thousand eyes", "Label 1,000 beetles", "fi-rr-eye", True)),
-    ("streak3", ("On a roll", "Play 3 days in a row", "fi-rr-calendar", True)),
-    ("streak7", ("Week warrior", "Play 7 days in a row", "fi-rr-calendar-check", True)),
-    ("streak30", ("Habitat regular", "Play 30 days in a row", "fi-rr-trophy", True)),
+    ("streak3", ("On a roll", "Reach your daily goal 3 days in a row", "fi-rr-calendar", True)),
+    ("streak7", ("Week warrior", "Reach your daily goal 7 days in a row", "fi-rr-calendar-check", True)),
+    ("streak30", ("Habitat regular", "Reach your daily goal 30 days in a row", "fi-rr-trophy", True)),
     ("goal", ("Goal getter", "Reach the daily goal", "fi-rr-bullseye-arrow", True)),
     ("both", ("All-rounder", "Play both games", "fi-rr-apps", True)),
     ("species1", ("Species spotter", "Name a species we know the answer to", "fi-rr-search", False)),
@@ -143,8 +155,8 @@ BADGES = OrderedDict([
     # harder, and some very specific
     ("fivehundred", ("Field season", "Label 500 beetles", "fi-rr-leaf", True)),
     ("tenthousand", ("Ten thousand eyes", "Label 10,000 beetles", "fi-rr-binoculars", True)),
-    ("streak100", ("Centennial", "Play 100 days in a row", "fi-rr-calendar-star", True)),
-    ("streak365", ("Year of the beetle", "Play 365 days in a row", "fi-rr-sun", True)),
+    ("streak100", ("Centennial", "Reach your daily goal 100 days in a row", "fi-rr-calendar-star", True)),
+    ("streak365", ("Year of the beetle", "Reach your daily goal 365 days in a row", "fi-rr-sun", True)),
     ("marathon", ("Marathon", "Label 200 beetles in one day", "fi-rr-running", True)),
     ("goal7", ("Creature of habit", "Reach the daily goal on 7 days", "fi-rr-calendar-check", True)),
     ("nightowl", ("Night owl", "Play between midnight and 4 am", "fi-rr-moon", True)),
@@ -173,17 +185,14 @@ def earned_badges(player, before=None):
         answers = answers.filter(answered_at__lt=before)
     done = answers.filter(skipped=False)
     total = done.count()
-    days = set(
-        done.annotate(day=TruncDate("answered_at", tzinfo=timezone.get_current_timezone())).values_list("day", flat=True).distinct()
-    )
-    # the streak they had at the end of their last day of play before the cut-off
-    best = _best_streak(days)
     per_day = done.annotate(day=TruncDate("answered_at", tzinfo=timezone.get_current_timezone())).values("day").annotate(n=Count("id"))
     # each day is judged against that day's own goal (it adapts, see goal_history)
     counts = {row["day"]: row["n"] for row in per_day}
     goals = goal_history(counts, max(counts)) if counts else {}
     per_day = [dict(row, goal=goals.get(row["day"], daily_goal())) for row in per_day]
     goal_days = any(row["n"] >= row["goal"] for row in per_day)
+    # the longest run of days with the goal reached, up to the cut-off (only goal days make a streak, #423)
+    best = _best_streak({row["day"] for row in per_day if row["n"] >= row["goal"]})
     right_species = answers.filter(is_check=True, is_retry=False, correct_species=True, score_hold=False).count()
     have = set()
     for key, needed in (("first", 1), ("ten", 10), ("hundred", 100), ("thousand", 1000)):
@@ -341,9 +350,9 @@ def play_events(player, before):
                            "text": f"You can now name the {now['rank']} too." if now["rank"] != "species"
                            else "You can now name the species: every rank is open."})
     if now["goal_met"] and not before["goal_met"]:
-        events.append({"kind": "goal", "title": "Daily goal reached", "text": f"{now['goal']} beetles today. Keep going!"})
-    if now["streak"] > before["streak"] and now["today"] == 1:
-        events.append({"kind": "streak", "title": f"{now['streak']}-day streak", "text": "Come back tomorrow to keep it alive."})
+        # reaching the goal is also what grows the streak: one toast for both
+        streak = f" {now['streak']}-day streak!" if now["streak"] > 1 else ""
+        events.append({"kind": "goal", "title": "Daily goal reached", "text": f"{now['goal']} beetles today.{streak}"})
     for milestone in MILESTONES:
         if before["total"] < milestone <= now["total"]:
             events.append({"kind": "milestone", "title": f"{milestone:,} beetles", "text": "That's a lot of beetles."})

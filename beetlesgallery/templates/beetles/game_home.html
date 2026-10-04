@@ -33,7 +33,7 @@
 
   <div class="grid grid-cols-2 gap-3 mb-5">
     <div class="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex items-center gap-2 text-sm">
-      {% include "beetles/includes/game_streak.html" with days=rewards.streak alive=rewards.today %}
+      {% include "beetles/includes/game_streak.html" with days=rewards.streak alive=rewards.goal_met %}
     </div>
     <div class="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex items-center gap-2" title="Your daily goal adapts to how much you play, like a step goal: it rises when you beat it and eases when you don't (never below {{ goal_floor }})." data-testid="daily-goal">
       <i class="fi fi-rr-bullseye-arrow {% if rewards.goal_met %}text-green-600{% else %}text-gray-400{% endif %}"></i>
