@@ -6,6 +6,7 @@ A dedicated web platform for storing, browsing, and managing large datasets of a
 
 Developer setup, the daily dev workflow, git/PR conventions, and the production deployment guide all live in the **[project wiki](https://github.com/ChristopherMarais/barkandambrosiagallery/wiki)**:
 
+- **[Contributing](https://github.com/ChristopherMarais/barkandambrosiagallery/wiki/Contributing)** — how to contribute, from issue to merged PR, and the house rules.
 - **[Getting Started](https://github.com/ChristopherMarais/barkandambrosiagallery/wiki/Getting-Started)** — prerequisites, first-time setup, running the app locally, editing code/CSS/models, running tests.
 - **[Git Workflow](https://github.com/ChristopherMarais/barkandambrosiagallery/wiki/Git-Workflow)** — how we branch, commit, and open PRs.
 - **[Deployment](https://github.com/ChristopherMarais/barkandambrosiagallery/wiki/Deployment)** — the production server, logs, and how deploys happen.
