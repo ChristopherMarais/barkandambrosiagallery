@@ -385,7 +385,8 @@ def game_report_item(request):
     """
     A player reports a photo straight from the feed (the cog in the full-image view): the beetle goes to the
     curators on the Image Annotation page and stays out of the game until they deal with it.
-    Body: {"round", "index", "image": 0 or 1 (A or B, as shown), "reason", "note"}.
+    Body: {"round", "index", "image": 0 or 1 (A or B, as shown), "reason", "note"}, and "photo": n to report the
+    beetle's n-th other photo (the "More photos" gallery, 1 = its first) instead of the one in play.
     """
     body = _json_body(request) or {}
     rnd = GameRound.objects.filter(id=body.get("round"), player=request.user).first() if _is_uuid(body.get("round")) else None
@@ -403,7 +404,14 @@ def game_report_item(request):
     reason = body.get("reason")
     if reason not in GameReport.Reason.values:
         return JsonResponse({"error": "Please choose a reason."}, status=400)
-    report = game_feedback.create_report(request.user, shown[which], reason, str(body.get("note") or ""))
+    roi = shown[which]
+    photo = body.get("photo") or 0
+    if photo:
+        others = game.specimen_photos(roi) if isinstance(photo, int) else []
+        if not 1 <= photo <= len(others):
+            return JsonResponse({"error": "Unknown photo."}, status=400)
+        roi = others[photo - 1]
+    report = game_feedback.create_report(request.user, roi, reason, str(body.get("note") or ""))
     return JsonResponse({"status": report.status, "reason": report.get_reason_display()})
 
 
@@ -551,6 +559,7 @@ def _prefs(player):
         "level": info["level"],
         "play_mode": game.play_mode(player),
         "choose_game": game_levels.CHOOSE_GAME in info["perks"],
+        "light": game_levels.LIGHT in info["perks"],
         "choose_game_level": game_levels.perk_level(game_levels.CHOOSE_GAME),
         "focus": {"rank": focus[0], "value": focus[1]} if focus else None,
         "focus_ranks": [
