@@ -51,6 +51,8 @@ class LevelAndGoalTests(RewardsCase):
         self.assertEqual(rewards.progress(self.user)["today"], 0)
 
 
+# A day counts towards the streak once that day's goal is reached (#423); with a goal of 1, every day played does
+@override_settings(GAME_DAILY_GOAL=1)
 class StreakTests(RewardsCase):
     def test_consecutive_days_make_a_streak(self):
         for d in (0, 1, 2):
@@ -70,6 +72,14 @@ class StreakTests(RewardsCase):
     def test_no_play_no_streak(self):
         self.assertEqual(rewards.progress(self.user)["streak"], 0)
 
+    @override_settings(GAME_DAILY_GOAL=3)
+    def test_a_day_below_the_goal_does_not_count(self):
+        self.answers(3, days_ago=2)
+        self.answers(1, days_ago=1)         # played, but short of the goal: the streak stops here
+        self.answers(3, days_ago=0)
+        self.assertEqual(rewards.progress(self.user)["streak"], 1)
+        self.assertEqual(len(rewards.goal_days(self.user)), 2)
+
 
 class BadgeTests(RewardsCase):
     def test_a_new_player_has_none_and_the_list_shows_them_all_locked(self):
@@ -83,6 +93,7 @@ class BadgeTests(RewardsCase):
         self.assertTrue({"first", "ten"} <= have)
         self.assertNotIn("hundred", have)
 
+    @override_settings(GAME_DAILY_GOAL=1)
     def test_streak_badge(self):
         for d in range(3):
             self.answers(1, days_ago=d)
@@ -116,7 +127,16 @@ class PlayEventsTests(RewardsCase):
     def test_nothing_to_celebrate_midway(self):
         before = rewards.progress(self.user)
         self.answers(1)
-        self.assertEqual([e["kind"] for e in rewards.play_events(self.user, before)], ["streak"])   # the first of the day
+        self.assertEqual(rewards.play_events(self.user, before), [])   # the streak waits for the goal (#423)
+
+    @override_settings(GAME_DAILY_GOAL=2)
+    def test_reaching_the_goal_grows_the_streak_in_one_toast(self):
+        self.answers(2, days_ago=1)
+        self.answers(1)
+        before = rewards.progress(self.user)
+        self.answers(1)
+        [event] = rewards.play_events(self.user, before)
+        self.assertEqual((event["kind"], event["text"]), ("goal", "2 beetles today. 2-day streak!"))
 
     def set_score(self, score, rating=0.0):
         from beetlesgallery.beetles_app.models import PlayerScore
@@ -185,9 +205,9 @@ class FeedAndHomeTests(RewardsCase):
         rnd, item = self.play("classify")
         res = self.post("game_answer", dict(AFFINIS, index=item["index"]), rnd.id).json()
         self.assertEqual({k: res["chip"][k] for k in ("today", "goal", "goal_met", "streak")},
-                         {"today": 1, "goal": 20, "goal_met": False, "streak": 1})
+                         {"today": 1, "goal": 20, "goal_met": False, "streak": 0})
         self.assertEqual((res["chip"]["level"], res["chip"]["next_at"]), (1, 50))   # the level bar in the top bar
-        self.assertEqual([e["kind"] for e in res["events"]], ["streak"])
+        self.assertEqual(res["events"], [])   # the streak only grows once the day's goal is reached
         self.assertNotIn("accuracy", json.dumps(res))
 
     def test_the_start_response_carries_the_chip(self):
