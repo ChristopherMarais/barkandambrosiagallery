@@ -465,6 +465,10 @@ class BeetlesViewSet(viewsets.ModelViewSet):
             from beetlesgallery.beetles_app.models import GameReport
             image_qs = image_qs.filter(id__in=GameReport.objects.filter(status=GameReport.Status.OPEN)
                                        .values('roi__image_asset_id'))
+        elif game_filter == 'applied':
+            # labels the game wrote into the database (curator-accepted or automatic), to check or revert (#427)
+            from beetlesgallery.beetles_app.game_applied import applied_rois
+            image_qs = image_qs.filter(id__in=applied_rois().values('image_asset_id'))
         elif game_filter == 'disputed':
             # validated labels most reliable players dispute (game_label_check): likely mislabelled
             from beetlesgallery.beetles_app.game_label_check import LABEL_CHECK_USER
