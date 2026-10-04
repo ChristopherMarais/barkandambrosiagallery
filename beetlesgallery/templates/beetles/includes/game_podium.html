@@ -1,0 +1,58 @@
+{% load beetle_tags %}{% if podiums %}{# The top three of a week, month or year that just ended (game_podium.py). Needs ``podiums``. #}
+<div id="podium" class="fixed inset-0 z-[110] flex items-center justify-center p-4" style="background:rgba(17,24,39,.55)" role="dialog" aria-modal="true" aria-labelledby="podium-title" data-testid="podium">
+  <div class="w-full max-w-md bg-white rounded-2xl shadow-xl p-5">
+    {% for p in podiums %}
+    <section class="podium-page{% if not forloop.first %} hidden{% endif %}" data-kind="{{ p.kind }}">
+      <h2 {% if forloop.first %}id="podium-title"{% endif %} class="text-lg font-bold text-gray-900 text-center">{{ p.title }}'s top players</h2>
+      <p class="text-xs text-gray-500 text-center mb-4">{{ p.start|date:"j M" }} &ndash; {{ p.end|date:"j M Y" }} &middot; {{ p.players|digit_groups }} player{{ p.players|pluralize }}</p>
+      <ol class="grid grid-cols-3 items-end gap-2 text-center">
+        {% for row in p.top %}
+        <li class="podium-place podium-{{ row.place }}" style="order:{% if row.place == 1 %}2{% elif row.place == 2 %}1{% else %}3{% endif %}">
+          <span class="podium-medal">{{ row.place }}</span>
+          <a href="{% url 'game_profile' row.player_id %}" class="block mt-1 text-sm font-semibold text-gray-900 truncate hover:underline">{{ row.username }}</a>
+          <div class="podium-step">
+            <div class="text-base font-bold tabular-nums">{{ row.points|digit_groups }} pts</div>
+            <div class="text-[11px] text-gray-600 tabular-nums">{{ row.beetles|digit_groups }} beetles</div>
+            {% if row.species %}<div class="text-[11px] text-gray-600 tabular-nums">{{ row.species|digit_groups }} species right</div>{% endif %}
+            {% if row.accuracy is not None %}<div class="text-[11px] text-gray-600 tabular-nums">{% widthratio row.accuracy 1 100 %}% right</div>{% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ol>
+      {% if p.me %}<p class="mt-3 text-center text-sm text-gray-700" data-testid="podium-me">You: {{ p.me.place_text }} &middot; {{ p.me.points|digit_groups }} pts</p>{% endif %}
+    </section>
+    {% endfor %}
+    <div class="flex justify-center mt-5">
+      <button type="button" id="podium-next" class="px-5 py-2 rounded-lg bg-gray-600 text-white text-sm font-semibold hover:bg-gray-700">{% if podiums|length > 1 %}Next{% else %}Nice!{% endif %}</button>
+    </div>
+  </div>
+</div>
+<style>
+  #podium.hidden, .podium-page.hidden { display: none; }
+  .podium-medal { display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; border-radius: 9999px;
+                  font-weight: 800; color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.2); }
+  /* gold, silver and bronze: colour here means the place */
+  .podium-1 .podium-medal { background: #d4a017; width: 2.75rem; height: 2.75rem; font-size: 1.125rem; }
+  .podium-2 .podium-medal { background: #9ca3af; }
+  .podium-3 .podium-medal { background: #b45309; }
+  .podium-step { margin-top: 0.375rem; padding: 0.5rem 0.25rem; border-radius: 0.75rem 0.75rem 0 0; background: #f3f4f6; color: #111827; }
+  .podium-1 .podium-step { padding-top: 1.5rem; background: #fef3c7; }
+  .podium-2 .podium-step { padding-top: 0.875rem; }
+  .podium-3 .podium-step { padding-top: 0.5rem; background: #fde9d9; }
+</style>
+<script>
+(function () {
+  const pages = Array.from(document.querySelectorAll("#podium .podium-page"));
+  let at = 0;
+  const btn = document.getElementById("podium-next");
+  btn.addEventListener("click", () => {
+    pages[at].classList.add("hidden");
+    at += 1;
+    if (at >= pages.length) { document.getElementById("podium").classList.add("hidden"); return; }
+    pages[at].classList.remove("hidden");
+    if (at === pages.length - 1) btn.textContent = "Nice!";
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.getElementById("podium").classList.add("hidden"); });
+})();
+</script>
+{% endif %}
