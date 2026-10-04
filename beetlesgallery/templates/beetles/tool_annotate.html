@@ -220,6 +220,7 @@
                   <option value="expert">Expert-backed proposals only</option>
                   <option value="reported">Reported by players</option>
                   <option value="disputed">Validated labels players dispute</option>
+                  <option value="applied">Labels applied from the game</option>
                 </select>
                 <p class="text-[10px] text-gray-400">Proposals a curator already accepted or dismissed drop out until new answers arrive.</p>
               </div>
@@ -1354,6 +1355,7 @@ async function loadGameProposals(imageId) {
   state.gameReports = {};
   state.gameTips = {};
   state.aiSuggestions = {};
+  state.gameApplied = {};
   try {
     const res = await fetch(`/game/api/proposals/?image_asset=${imageId}`, { headers: { 'X-CSRFToken': csrftoken } });
     if (res.ok) {
@@ -1362,6 +1364,7 @@ async function loadGameProposals(imageId) {
       state.gameReports = data.reports || {};
       state.gameTips = data.tips || {};
       state.aiSuggestions = data.ai || {};
+      state.gameApplied = data.applied || {};
     }
   } catch (e) { /* proposals are optional */ }
 }
@@ -1467,6 +1470,44 @@ function aiSuggestionHtml(b) {
       <div class="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-2"><i class="fi fi-rr-microchip-ai"></i> AI suggestion</div>
       ${blocks}
     </div>`;
+}
+
+// A label the game wrote into the database (#427): who or what applied it, and a way to take it back.
+function gameAppliedHtml(b, i) {
+  const a = (state.gameApplied || {})[b.id];
+  if (!a) return '';
+  const who = a.automatic ? 'automatically (proven experts agreed)' : `by ${escHtml(a.by)}`;
+  const when = new Date(a.at).toLocaleDateString();
+  const locked = state.isLockedByOther ? 'disabled' : '';
+  const action = a.current
+    ? `<button type="button" onclick="revertGameLabel(${i})" ${locked} data-testid="revert-game-label"
+         class="mt-2 px-3 py-1.5 text-xs text-gray-700 border border-gray-300 rounded bg-white hover:bg-gray-100 disabled:opacity-50">
+         <i class="fi fi-rr-undo"></i> Revert to the earlier label</button>`
+    : `<div class="text-[10px] text-gray-500 mt-1">The label has been changed since.</div>`;
+  return `
+    <div class="rounded-lg border border-gray-200 bg-white p-3" data-testid="game-applied">
+      <div class="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1"><i class="fi fi-rr-gamepad"></i> Label from the game</div>
+      <div class="text-xs text-gray-700"><span class="italic">${escHtml(a.name)}</span> applied ${who} on ${escHtml(when)}.</div>
+      ${action}
+    </div>`;
+}
+
+async function revertGameLabel(idx) {
+  if (state.isLockedByOther) return;
+  const b = state.bboxes[idx];
+  if (!confirm('Put back the label this ROI had before the game set it?')) return;
+  try {
+    const res = await fetch(`/game/api/applied/${b.id}/revert/`, { method: 'POST', headers: { 'X-CSRFToken': csrftoken } });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not revert the label.');
+    const fresh = await fetch(`/api/v1/beetles/${b.id}/`, { headers: { 'X-CSRFToken': csrftoken } });
+    if (fresh.ok) state.bboxes[idx] = await fresh.json();
+    await loadGameProposals(state.selectedImageId);
+    renderRoiAccordions();
+    drawCanvas();
+  } catch (e) {
+    alert(e.message);
+  }
 }
 
 function gameProposalHtml(b, i) {
@@ -1605,6 +1646,7 @@ function renderRoiAccordions() {
             ${gameReportsHtml(b)}
             ${gameTipsHtml(b)}
             ${aiSuggestionHtml(b)}
+            ${gameAppliedHtml(b, i)}
             ${gameProposalHtml(b, i)}
             <div class="">
               <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase tracking-wide">Taxonomy</label>

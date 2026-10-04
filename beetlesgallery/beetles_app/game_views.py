@@ -24,6 +24,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from . import game, game_board, game_checked, game_discoveries, game_feedback, game_queue, game_levels, game_rewards, game_scoring, game_tips, game_trust
+from . import game_applied
 from . import game_taxa as taxa_tree
 from .areas import ANNOTATE, area_required
 from .models import Beetles, GameAnswer, GameReport, GameRound, ImageLock, LabelReview, PlayerScore, Taxon
@@ -923,7 +924,35 @@ def game_proposals(request):
     # What classifier models said, per rank with their confidence (shown under "AI suggestion")
     rois = Beetles.objects.filter(id__in=roi_ids).select_related("taxon")
     ai = {str(roi_id): items for roi_id, items in suggestions_for(rois).items()}
-    return JsonResponse({"proposals": proposals, "reports": reports, "tips": tips, "ai": ai})
+    # labels the game wrote into the database and a curator can take back (#427)
+    applied = {
+        str(roi_id): {
+            "automatic": review.reviewed_by_id is None,
+            "by": review.reviewed_by.username if review.reviewed_by else "",
+            "at": review.reviewed_at.isoformat(),
+            "name": review.taxon.scientific_name if review.taxon else " ".join(
+                v for v in (review.genus, review.species) if v),
+            "current": bool(review.taxon) and str(review.roi.depicts_valid_name_id or "") == review.taxon.valid_species_id,
+        }
+        for roi_id, review in game_applied.applied_for(roi_ids).items()
+    }
+    return JsonResponse({"proposals": proposals, "reports": reports, "tips": tips, "ai": ai, "applied": applied})
+
+
+@area_required(ANNOTATE)
+@require_POST
+def game_applied_revert(request, roi_id):
+    """Take back a label the game wrote onto this beetle: its earlier label comes back (game_applied.revert)."""
+    roi = get_object_or_404(Beetles, id=roi_id, is_deleted=False)
+    lock = ImageLock.objects.filter(image_asset_id=roi.image_asset_id).select_related("locked_by").first()
+    if lock and lock.locked_by_id != request.user.id and not lock.is_expired():
+        return JsonResponse({"error": f"{lock.locked_by.username} is editing this image."}, status=409)
+    try:
+        before = game_applied.revert(roi, request.user)
+    except game_applied.RevertError as e:
+        return JsonResponse({"error": str(e)}, status=409)
+    game_queue.forget()
+    return JsonResponse({"depicts_valid_name_id": before["depicts_valid_name_id"]})
 
 
 @area_required(ANNOTATE)
