@@ -1,0 +1,37 @@
+name: Nightly storage cleanup
+
+# Every night, free disk space on the server: expired downloads, leftovers of interrupted uploads and download
+# builds, and upload ZIPs whose images are all in the gallery already (beetles_app/storage_cleanup.py says exactly
+# what goes when). The gallery's images and the species tables are never touched.
+# Run it by hand from the Actions tab with "Dry run" ticked to see what it would remove.
+on:
+  schedule:
+    - cron: '41 4 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only report what would be removed"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    name: Clean up storage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run on the server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 60m
+          script: |
+            cd /opt/barkandambrosiagallery || exit 1
+            FLAGS=""
+            if [ "${{ inputs.dry_run }}" = "true" ]; then FLAGS="--dry-run"; fi
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web nice -n 15 pixi run cleanup-storage $FLAGS
