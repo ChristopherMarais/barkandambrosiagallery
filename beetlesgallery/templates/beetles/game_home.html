@@ -55,9 +55,9 @@
   </section>
   {% endif %}
 
-  {% if rewards.proposals %}
-  <p class="mb-5 px-4 py-3 text-sm text-gray-700 bg-green-50 border border-green-200 rounded-2xl" data-testid="proposals-banner">
-    <i class="fi fi-rr-check-circle text-green-700"></i> Your labels now go to the curators. <a href="{% url 'game_unlocks' %}#labels" class="underline">More</a>
+  {% if proposals_notice %}
+  <p class="mb-5 px-4 py-3 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-2xl" data-testid="proposals-banner">
+    <i class="fi fi-rr-check-circle"></i> Your labels now go to the curators. <a href="{% url 'game_unlocks' %}?new=labels#labels" class="underline">More</a>
   </p>
   {% endif %}
 
