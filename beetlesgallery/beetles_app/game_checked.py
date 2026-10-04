@@ -40,7 +40,7 @@ def items(player, unseen_only=False, limit=None):
         row = {
             "id": c.id, "mode": a.mode, "said": _said(a), "truth": c.validated_name,
             "change": c.change, "after": round(c.points_after, 1), "validated_at": c.validated_at,
-            "answered_at": a.answered_at, "images": [_roi_image(a.roi)],
+            "answered_at": a.answered_at, "images": [_roi_image(a.roi)], "new": c.seen_at is None,
             "right": all(getattr(a, f"correct_{r}") is not False for r in RANKS),
         }
         if a.mode == "pair" and a.roi_b is not None and a.roi_b.has_bbox():
