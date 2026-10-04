@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {# The game is one fixed screen: the site notice shows on the game home instead #}
 {% block site_notice %}{% endblock %}
@@ -357,6 +358,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/beetle_confetti.js' %}"></script>
 <script>
 (function () {
   const root = document.getElementById("game");
@@ -550,44 +552,11 @@
 
   // ---------- confetti (only ever for a right answer on a beetle we know) ----------
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  function confetti() {
-    if (reduceMotion) return;
-    const canvas = $("confetti");
-    const ctx = canvas.getContext("2d");
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = innerWidth * dpr;
-    canvas.height = innerHeight * dpr;
-    ctx.scale(dpr, dpr);
-    const colours = ["#111827", "#374151", "#9ca3af", "#d1d5db", "#ffffff", "#16a34a"];
-    const pieces = Array.from({ length: 70 }, () => ({
-      x: innerWidth / 2 + (Math.random() - 0.5) * 80,
-      y: innerHeight * 0.55,
-      vx: (Math.random() - 0.5) * 9,
-      vy: -Math.random() * 11 - 4,
-      size: 5 + Math.random() * 6,
-      spin: Math.random() * Math.PI,
-      vs: (Math.random() - 0.5) * 0.4,
-      colour: colours[(Math.random() * colours.length) | 0],
-    }));
-    const start = performance.now();
-    (function frame(now) {
-      const t = now - start;
-      ctx.clearRect(0, 0, innerWidth, innerHeight);
-      pieces.forEach((p) => {
-        p.vy += 0.35; p.x += p.vx; p.y += p.vy; p.spin += p.vs;
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.spin);
-        ctx.globalAlpha = Math.max(0, 1 - t / 1600);
-        ctx.fillStyle = p.colour;
-        ctx.strokeStyle = "#9ca3af";
-        ctx.lineWidth = 0.5;
-        ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
-        if (p.colour === "#ffffff") ctx.strokeRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
-        ctx.restore();
-      });
-      if (t < 1600) requestAnimationFrame(frame); else ctx.clearRect(0, 0, innerWidth, innerHeight);
-    })(start);
+  // "validated": little bark beetles for a validated beetle named right; "strong": ordinary confetti for a
+  // strong answer on a beetle nobody has checked yet (#425). See static/js/beetle_confetti.js.
+  function confetti(kind) {
+    if (reduceMotion || !window.beetleConfetti) return;
+    window.beetleConfetti($("confetti"), kind === "strong" ? "plain" : "beetles");
   }
 
   // ---------- the chip and the toasts: counts and celebrations, never the score ----------
@@ -924,7 +893,7 @@
       answered += 1;
       if (data.chip) goalMet = !!data.chip.goal_met;
       noteAnswerForBreak();
-      if (data.celebrate) confetti();
+      if (data.celebrate) confetti(data.celebrate);
       updateChip(data.chip);
       if (data.prefs) renderPrefs(data.prefs);   // a new level: its unlocks show (and work) straight away
       (data.events || []).forEach(toast);
