@@ -528,6 +528,18 @@ const state = {
 
 let canvas, ctx, wrapper;
 const csrftoken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+// An account that may only edit boxes sees names and details read-only; the API refuses changes to them too.
+const CAN_EDIT_RECORDS = {{ can_edit_records|yesno:"true,false" }};
+if (!CAN_EDIT_RECORDS) {
+  document.addEventListener("DOMContentLoaded", () => {
+    const style = document.createElement("style");
+    // no saving names or details, validating, deleting images or classifying (boxes can still be drawn, moved and removed)
+    style.textContent = "body.boxes-only #image-form-actions, body.boxes-only #classify-btn { display: none !important; }";
+    document.head.appendChild(style);
+    document.body.classList.add("boxes-only");
+    document.querySelectorAll("#form-image-details input, #form-image-details select, #form-image-details textarea").forEach((el) => { el.disabled = true; });
+  });
+}
 let searchDebounceTimer = null;
 
 // ---------------------------------------------------------
@@ -1202,7 +1214,7 @@ function setLockState(isLockedByOther, msg = '') {
         document.getElementById('image-form-actions').classList.add('hidden');
     } else {
         warningEl.classList.add('hidden');
-        imageFormFields.forEach(el => el.disabled = false);
+        imageFormFields.forEach(el => el.disabled = !CAN_EDIT_RECORDS);   // boxes-only accounts: read-only
         globalValidateBtn.disabled = false;
         globalValidateBtn.classList.replace('bg-gray-300', 'bg-gray-500');
         document.getElementById('image-form-actions').classList.remove('hidden');
@@ -1598,8 +1610,8 @@ function renderRoiAccordions() {
     const isSelected = (i === state.selectedBoxIndex);
     const isSyncing = b.is_syncing === true;
     
-    // Disable inputs if locked by another user OR if this specific box is waiting on the network
-    const disabledAttr = (state.isLockedByOther || isSyncing) ? 'disabled' : '';
+    // Disable inputs if locked by another user, if this box is waiting on the network, or for a boxes-only account
+    const disabledAttr = (state.isLockedByOther || isSyncing || !CAN_EDIT_RECORDS) ? 'disabled' : '';
 
     let badgeHtml = '';
     if (isSyncing) {
@@ -1776,7 +1788,7 @@ function renderRoiAccordions() {
                   <i class="fi fi-rr-check-circle"></i> Validate
                 </button>
               `}
-              <button type="button" onclick="deleteBoxUi(${i})" class="w-full bg-white hover:bg-red-50 border border-red-200 text-red-600 font-medium py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2 mt-1" ${disabledAttr}>
+              <button type="button" onclick="deleteBoxUi(${i})" class="w-full bg-white hover:bg-red-50 border border-red-200 text-red-600 font-medium py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2 mt-1" ${(state.isLockedByOther || isSyncing || (!CAN_EDIT_RECORDS && (b.depicts_valid_name_id || b.bbox_is_validated))) ? 'disabled' : ''}>
                 <i class="fi fi-rr-trash"></i> Delete Box
               </button>
             </div>
