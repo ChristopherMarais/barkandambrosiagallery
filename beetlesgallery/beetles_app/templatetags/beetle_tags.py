@@ -119,3 +119,18 @@ def sort_link(context, param, key, label, anchor=""):
     arrow = (" \u2193" if descending else " \u2191") if active else ""
     return format_html('<a href="?{}{}" class="hover:text-gray-900 {}" data-sort="{}">{}{}</a>', query.urlencode(),
                        f"#{anchor}" if anchor else "", "text-gray-900" if active else "", key, label, arrow)
+
+
+@register.simple_tag
+def taxon_url(subfamily="", tribe="", genus=""):
+    """
+    A link into the taxonomy browser that opens the tree only as deep as the taxon named (issue #419): pass the
+    subfamily for a subfamily link, subfamily and tribe for a tribe, and all three for a genus. A species links by
+    its id instead (?species=...).
+    """
+    from urllib.parse import urlencode
+
+    from django.urls import reverse
+
+    params = [(k, (v or "").strip()) for k, v in (("subfamily", subfamily), ("tribe", tribe), ("genus", genus))]
+    return reverse("taxonomy_browser") + "?" + urlencode([(k, v) for k, v in params if v])

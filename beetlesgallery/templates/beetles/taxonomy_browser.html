@@ -159,6 +159,9 @@
 
   /* Horizontal tick from the vertical line to each child – removed */
 
+  /* the taxon a link opened the tree at */
+  .tree-node-container--focus { background: #f3f4f6; border-radius: 0.375rem; }
+
   /* ---------- leaf (species) ---------- */
   .tree-leaf {
     position: relative;
@@ -491,6 +494,8 @@
   function buildBranchNode(node) {
     const li = document.createElement("li");
     li.className = "tree-branch";
+    li.dataset.level = node.level;   // for links that open the tree at this taxon (?subfamily=&tribe=&genus=)
+    li.dataset.name = node.name;
 
     // Container div for toggle button and browse link
     const container = document.createElement("div");
@@ -867,6 +872,29 @@
 
     btn.click(); // same as a user click: highlights it and shows the detail panel
     btn.scrollIntoView({ block: "center" });
+  })();
+
+  // ---------- deep link: open the tree at a subfamily, tribe or genus, and no deeper (issue #419) ----------
+  // ?subfamily=Platypodinae opens Platypodinae to show its tribes; add &tribe= and &genus= to go further down.
+  (function focusBranchFromUrl() {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get("species")) return;   // a species link is handled above
+    var scope = rootEl, target = null;
+    ["subfamily", "tribe", "genus"].forEach(function (level) {
+      var name = params.get(level);
+      if (!name || !scope) return;
+      var found = Array.prototype.find.call(scope.querySelectorAll('li.tree-branch[data-level="' + level + '"]'),
+        function (li) { return li.dataset.name === name; });
+      if (!found) return;   // unknown at this rank: stay at the deepest one found
+      var toggle = found.querySelector(":scope > .tree-node-container > .tree-toggle");
+      if (toggle && toggle.getAttribute("aria-expanded") !== "true") toggle.click();
+      target = found;
+      scope = found;
+    });
+    if (!target) return;
+    var row = target.querySelector(":scope > .tree-node-container");
+    row.classList.add("tree-node-container--focus");
+    row.scrollIntoView({ block: "center" });
   })();
 
   // ---------- filter controls with autocomplete ----------

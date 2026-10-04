@@ -241,7 +241,7 @@
                   {% if b.has_multiple_subfamily %}
                       <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
                   {% elif b.ref_subfamily %}
-                      <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <a href="{% url 'taxonomy_browser' %}?species={{ b.depicts_valid_name_id|urlencode }}" class="ml-1 hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_subfamily }}</a></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <a href="{% taxon_url b.ref_subfamily %}" class="ml-1 hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_subfamily }}</a></div>
                   {% elif not b.depicts_valid_name_id %}
                       <div class="truncate"><span class="font-semibold text-text/50">Subfamily:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
                   {% endif %}
@@ -250,7 +250,7 @@
                   {% if b.has_multiple_tribe %}
                       <div class="truncate"><span class="font-semibold text-text/50">Tribe:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
                   {% elif b.ref_tribe %}
-                      <div class="truncate"><span class="font-semibold text-text/50">Tribe:</span> <a href="{% url 'taxonomy_browser' %}?species={{ b.depicts_valid_name_id|urlencode }}" class="ml-1 hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_tribe }}</a></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Tribe:</span> <a href="{% taxon_url b.ref_subfamily b.ref_tribe %}" class="ml-1 hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_tribe }}</a></div>
                   {% elif not b.depicts_valid_name_id %}
                       <div class="truncate"><span class="font-semibold text-text/50">Tribe:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
                   {% endif %}
@@ -259,7 +259,7 @@
                   {% if b.has_multiple_subtribe %}
                       <div class="truncate"><span class="font-semibold text-text/50">Subtribe:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
                   {% elif b.ref_subtribe %}
-                      <div class="truncate"><span class="font-semibold text-text/50">Subtribe:</span> <a href="{% url 'taxonomy_browser' %}?species={{ b.depicts_valid_name_id|urlencode }}" class="ml-1 hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_subtribe }}</a></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Subtribe:</span> <a href="{% taxon_url b.ref_subfamily b.ref_tribe %}" class="ml-1 hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_subtribe }}</a></div>
                   {% elif not b.depicts_valid_name_id %}
                       <div class="truncate"><span class="font-semibold text-text/50">Subtribe:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
                   {% endif %}
@@ -268,7 +268,7 @@
                   {% if b.has_multiple_genus %}
                       <div class="truncate"><span class="font-semibold text-text/50">Genus:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
                   {% elif b.ref_genus %}
-                      <div class="truncate"><span class="font-semibold text-text/50">Genus:</span> <a href="{% url 'taxonomy_browser' %}?species={{ b.depicts_valid_name_id|urlencode }}" class="ml-1 italic hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_genus }}</a></div>
+                      <div class="truncate"><span class="font-semibold text-text/50">Genus:</span> <a href="{% taxon_url b.ref_subfamily b.ref_tribe b.ref_genus %}" class="ml-1 italic hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_genus }}</a></div>
                   {% elif not b.depicts_valid_name_id %}
                       <div class="truncate"><span class="font-semibold text-text/50">Genus:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
                   {% endif %}
