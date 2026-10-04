@@ -1,0 +1,47 @@
+name: Deploy Staging
+
+# The staging site (docs/staging.md): every push to main is deployed to it. Production is untouched: it still
+# deploys only on a release. "Refresh data" (run by hand) also replaces staging's data with a scrubbed copy of
+# production's. Nothing runs until the repository variable STAGING_ENABLED is set to true.
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      refresh_data:
+        description: "Also replace the staging data with a fresh, scrubbed copy of production's"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: staging
+  cancel-in-progress: false
+
+jobs:
+  deploy-staging:
+    name: Deploy Staging (Contabo)
+    runs-on: ubuntu-latest
+    if: vars.STAGING_ENABLED == 'true'
+    steps:
+      - name: Deploy main to the staging site
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 60m
+          script: |
+            set -eu
+            # The staging checkout, never production's (/opt/barkandambrosiagallery)
+            cd /opt/barkandambrosia_staging/app || { echo "Staging is not set up: see docs/staging.md"; exit 1; }
+            git fetch origin main
+            git reset --hard origin/main
+            bash scripts/staging_deploy.sh
+            if [ "${{ inputs.refresh_data }}" = "true" ]; then
+              bash scripts/staging_refresh.sh
+            fi

@@ -75,6 +75,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'beetlesgallery.beetles_app.middleware.UserTimezoneMiddleware',  # Show times in the viewer's timezone
+    'beetlesgallery.beetles_app.staging.StagingGateMiddleware',  # Staging only: sign in as the shared account
 ]
 
 ROOT_URLCONF = 'beetlesgallery.urls'
@@ -96,6 +97,7 @@ TEMPLATES = [
                 "beetlesgallery.beetles_app.areas.areas_for_templates",
                 "beetlesgallery.beetles_app.context_processors.game_player",
                 "beetlesgallery.beetles_app.site_notice.context",
+                "beetlesgallery.beetles_app.staging.context",
             ],
         },
     },
@@ -328,6 +330,19 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # We read this from the environment so it doesn't break local development.
 SESSION_COOKIE_DOMAIN = os.environ.get('SESSION_COOKIE_DOMAIN', None)
 CSRF_COOKIE_DOMAIN = os.environ.get('SESSION_COOKIE_DOMAIN', None)
+
+# --- Staging site (docs/staging.md) ---
+# A copy of the site running `main` on its own database. Only the shared account below can sign in, nothing is
+# emailed, and its cookies are its own, so a production sign-in never mixes with a staging one.
+STAGING = os.environ.get("STAGING", "0") == "1"
+STAGING_ACCOUNT = os.environ.get("STAGING_ACCOUNT", "stagedtesting")
+STAGING_PASSWORD = os.environ.get("STAGING_PASSWORD", "gallerystaging")
+if STAGING:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+    SESSION_COOKIE_NAME = "staging_sessionid"
+    CSRF_COOKIE_NAME = "staging_csrftoken"
+    SESSION_COOKIE_DOMAIN = None
+    CSRF_COOKIE_DOMAIN = None
 
 # --- Django REST Framework Configuration ---
 REST_FRAMEWORK = {
