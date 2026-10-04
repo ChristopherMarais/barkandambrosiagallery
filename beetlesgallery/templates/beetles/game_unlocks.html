@@ -55,7 +55,7 @@
   </div>
 
   <!-- Your labels: short, with the details for those who want them -->
-  <div id="labels" class="p-4 border rounded-2xl mb-8 {% if info.proposals %}border-green-200 bg-green-50{% else %}border-gray-200 bg-white{% endif %}" data-testid="labels-status">
+  <div id="labels" class="p-4 border border-gray-200 bg-white rounded-2xl mb-8{% if labels_new %} labels-new{% endif %}" data-testid="labels-status">
     <h2 class="text-base font-semibold text-gray-900 mb-1">Your labels</h2>
     <p class="text-sm text-gray-700">{% if info.proposals %}Your labels go to the curators as suggestions.{% else %}From level {{ proposal_level }}, your labels go to the curators as suggestions.{% endif %} Only proven experts skip review.</p>
     <details class="mt-2 text-sm text-gray-700" data-testid="expert-rule">
@@ -70,6 +70,15 @@
     </details>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Just unlocked and opened from the notice: green for a moment, then the normal look */
+  .labels-new { animation: labels-new 3s ease-out 0.4s both; }
+  @keyframes labels-new { from { background: #f0fdf4; border-color: #86efac; } to { background: #fff; border-color: #e5e7eb; } }
+  @media (prefers-reduced-motion: reduce) { .labels-new { animation: none; } }
+</style>
 {% endblock %}
 
 {% block extra_js %}

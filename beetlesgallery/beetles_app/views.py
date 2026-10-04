@@ -219,11 +219,6 @@ class LoginViewWithRedirectMessage(DjangoLoginView):
     def get_context_data(self, **kwargs):
         return dict(super().get_context_data(**kwargs), reset_notice=account_reset_notice())
 
-    def get(self, request, *args, **kwargs):
-        # self.redirect_field_name is "next" by default
-        if request.GET.get(self.redirect_field_name):
-            messages.info(request, "Please log in to continue.")
-        return super().get(request, *args, **kwargs)
 
 class PostOnlyLogoutView(LogoutView):
     def dispatch(self, request, *args, **kwargs):
