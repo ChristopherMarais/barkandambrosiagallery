@@ -24,6 +24,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from . import game, game_board, game_checked, game_discoveries, game_feedback, game_queue, game_levels, game_rewards, game_scoring, game_tips, game_trust
+from . import game_podium
 from . import game_taxa as taxa_tree
 from .areas import ANNOTATE, area_required
 from .models import Beetles, GameAnswer, GameReport, GameRound, ImageLock, LabelReview, PlayerScore, Taxon
@@ -80,6 +81,7 @@ def game_home(request):
         "share_url": (request.build_absolute_uri(reverse("game_home")) if settings.DEBUG
                       else settings.SITE_URL.rstrip("/") + reverse("game_home")),
         "discussions": discussions_url(),
+        "podiums": game_podium.unseen(request),   # the top three of a week, month or year that just ended
     })
 
 
