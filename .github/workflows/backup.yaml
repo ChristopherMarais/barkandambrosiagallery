@@ -55,7 +55,12 @@ jobs:
             # 2. Safely dump the database
             cd /opt/barkandambrosiagallery || exit 1
             echo "Dumping PostgreSQL database..."
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_dump -U beetles_user beetles_db > /opt/barkandambrosia_data/media/db_full_backup.sql
+            # Outside the media folder, which the site serves to anyone; still inside the data folder copied to Dropbox
+            mkdir -p /opt/barkandambrosia_data/db_backup
+            chmod 700 /opt/barkandambrosia_data/db_backup
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_dump -U beetles_user beetles_db > /opt/barkandambrosia_data/db_backup/db_full_backup.sql
+            # An older dump the site could serve: remove it
+            rm -f /opt/barkandambrosia_data/media/db_full_backup.sql
 
             # 3. Execute Backup Logic
             if [ "$BACKUP_TYPE" == "full" ]; then
