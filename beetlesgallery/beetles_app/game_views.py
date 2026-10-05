@@ -1022,7 +1022,7 @@ def game_proposal_review(request, roi_id):
         if entry["taxon"] is None:
             return JsonResponse({"error": "Only species-level proposals can be accepted."}, status=400)
         roi.depicts_valid_name_id = entry["taxon"].valid_species_id
-        roi.label_source = Beetles.LabelSource.GAME_CONSENSUS
+        roi.label_source = Beetles.LabelSource.EXPERT   # a curator accepted the game's consensus
         roi.label_source_detail = f"{entry['answers']} game answers, accepted by {request.user.username}"[:255]
         roi.last_updated_by = request.user
         roi.save()

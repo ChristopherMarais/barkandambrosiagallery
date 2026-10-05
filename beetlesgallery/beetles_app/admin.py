@@ -4,7 +4,7 @@ from django.utils import timezone
 from .models import (
     UploadBatch, UpdateBatch, Beetles, ImageAsset, DownloadJob, ImageLock,
     Taxon, Synonym, CategoryMapping, GameRound, GameAnswer,
-    PlayerSkill, SpeciesDiscovery, RetroCredit, AnswerPoints, PlayerScore, GamePreference, LabelReview, RoiDifficulty, GameReport, ModelPrediction, PathogenInteraction, AccessRequest, InteractionProposal, AreaGrant, SiteNotice,
+    PlayerSkill, SpeciesDiscovery, RetroCredit, AnswerPoints, PlayerScore, GamePreference, LabelReview, RoiDifficulty, GameReport, ModelPrediction, PathogenInteraction, AccessRequest, InteractionProposal, AreaGrant, SiteNotice, RoiName,
 )
 from simple_history.admin import SimpleHistoryAdmin
 
@@ -938,3 +938,12 @@ class SiteNoticeAdmin(admin.ModelAdmin):
     """Usually edited on My account -> Site notice (it clears the cache there; here it shows within a minute)."""
     list_display = ("text", "active", "updated_by", "updated_at")
     raw_id_fields = ("updated_by",)
+
+
+@admin.register(RoiName)
+class RoiNameAdmin(admin.ModelAdmin):
+    """Every name an ROI was given, with its identification tier (the ROI shows the most reliable)."""
+    list_display = ("roi", "valid_species_id", "tier", "detail", "added_by", "created_at")
+    list_filter = ("tier",)
+    search_fields = ("valid_species_id", "detail")
+    raw_id_fields = ("roi", "taxon", "added_by")

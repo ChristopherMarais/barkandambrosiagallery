@@ -815,6 +815,8 @@ def beetle_detail(request, beetle_id):
         "beetles/detail.html",
         {
             "beetle": beetle, 
+            # every other name this ROI was given, most recent first (the shown one is the most reliable)
+            "other_names": list(beetle.names.exclude(valid_species_id=beetle.depicts_valid_name_id or "").select_related("taxon")[:20]),
             "ref_species": ref_species, 
             "ref_version": ref_version,
             "siblings": siblings,

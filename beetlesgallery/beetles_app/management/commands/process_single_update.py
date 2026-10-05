@@ -40,8 +40,8 @@ BEETLE_FIELDS = {
     "bbox_x", "bbox_y", "bbox_width", "bbox_height", "bbox_label",
     "bbox_is_validated", "label_source", "label_source_detail",
 }
-# label_source: one of these keys, or its label (any case); blank clears it
-LABEL_SOURCES = {k: k for k, _ in Beetles.LabelSource.choices} | {v.lower(): k for k, v in Beetles.LabelSource.choices}
+# label_source: an identification tier (key or label, any case, or an older source name); blank is No ID
+from beetlesgallery.beetles_app.identification import parse_tier
 UPDATE_IGNORED_COLS = {
     "image_id", "taxonomy_scientific_name", "taxonomy_subfamily", 
     "taxonomy_tribe", "taxonomy_genus", "taxonomy_species", "update_notes"
@@ -209,10 +209,10 @@ class Command(BaseCommand):
                 continue
 
             if "label_source" in b_updates and not is_blank(b_updates["label_source"]):
-                source = LABEL_SOURCES.get(str(b_updates["label_source"]).strip().lower())
-                if source is None:
+                source, ok = parse_tier(b_updates["label_source"])
+                if not ok:
                     errors.append(f"Row {row_num}: label_source '{b_updates['label_source']}' must be one of "
-                                  f"{', '.join(k for k, _ in Beetles.LabelSource.choices)} (or blank).")
+                                  f"{', '.join(k for k, _ in Beetles.LabelSource.choices)} (or blank for No ID).")
                     continue
                 b_updates["label_source"] = source
 
