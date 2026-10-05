@@ -1,4 +1,4 @@
-"""The house style written down in static/css/input.css: one main button style, dark-grey ticks."""
+"""The house style written down in static/css/input.css: three button looks, dark-grey ticks."""
 from django.conf import settings
 from django.test import SimpleTestCase
 
@@ -13,7 +13,7 @@ def read(*parts):
 class HouseStyleTests(SimpleTestCase):
     def test_the_rules_are_written_down_and_built(self):
         source = (CSS / "input.css").read_text()
-        self.assertIn("Each page has at most one main button", source)
+        self.assertIn("Buttons come in three looks", source)
         built = (CSS / "style.css").read_text()
         self.assertIn(".btn-main", built)
         self.assertIn('input[type="checkbox"], input[type="radio"], input[type="range"]', built)

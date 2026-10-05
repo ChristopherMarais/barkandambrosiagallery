@@ -13,7 +13,7 @@
       </p>
     </div>
     <div class="flex flex-wrap gap-2 text-sm">
-      <a href="{% url 'tool_annotate' %}" class="px-3 py-2 font-semibold text-white bg-gray-500 rounded-lg hover:bg-gray-500" data-testid="to-annotation"><i class="fi fi-rr-edit"></i> Review labels in Image Annotation</a>
+      <a href="{% url 'tool_annotate' %}" class="btn-primary px-3" data-testid="to-annotation"><i class="fi fi-rr-edit"></i> Review labels in Image Annotation</a>
       <a href="{% url 'game_scoring' %}" class="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50" data-testid="to-scoring"><i class="fi fi-rr-calculator"></i> Scoring: how it works and tuning</a>
       <a href="{% url 'game_export' 'labels' %}" class="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"><i class="fi fi-rr-download"></i> Label proposals CSV</a>
       <a href="{% url 'game_export' 'players' %}" class="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"><i class="fi fi-rr-download"></i> Player reliability CSV</a>

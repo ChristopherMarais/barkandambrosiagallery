@@ -1052,8 +1052,8 @@
         </div>
         <div class="flex items-center gap-2 flex-shrink-0">
           <button type="button" onclick="window.filterAndBrowseValidation('validated')"
-            class="h-9 px-3 bg-gray-600 text-white rounded-md text-xs font-medium hover:bg-gray-700 transition whitespace-nowrap shadow-sm">
-            Browse {{ stats.validated|digit_groups }} Validated Records &rarr;
+            class="btn-primary h-9 px-3 text-xs rounded-md whitespace-nowrap">
+            <span>Browse {{ stats.validated|digit_groups }} Validated Records &rarr;</span>
           </button>
           {% include "beetles/includes/interaction_download.html" with name="validated" ext="csv" label="Download CSV" title="Download validated records as CSV" %}
         </div>

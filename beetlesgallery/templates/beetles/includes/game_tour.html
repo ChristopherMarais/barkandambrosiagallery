@@ -7,7 +7,7 @@
       <span id="tour-count"></span>
       <button type="button" id="tour-skip">Skip tour</button>
       <button type="button" id="tour-back">Back</button>
-      <button type="button" id="tour-next">Next</button>
+      <button type="button" id="tour-next" class="btn-primary">Next</button>
     </div>
   </div>
 </div>
@@ -23,7 +23,7 @@
     <p class="tip-note" data-testid="report-tip-note">A clear photo that just shows too little isn't bad: name it as far as you can.</p>
     <div class="tour-row">
       <button type="button" id="report-tip-show">Show me</button>
-      <button type="button" id="report-tip-ok">Got it</button>
+      <button type="button" id="report-tip-ok" class="btn-primary">Got it</button>
     </div>
   </div>
 </div>
@@ -42,7 +42,6 @@
   #tour-skip { font-weight: 500; color: #6b7280; }
   #tour-back { color: #374151; border: 1px solid #d1d5db; }
   #tour-back:disabled { visibility: hidden; }
-  #tour-next, #report-tip-ok { color: #fff; background: #374151; }
   #report-tip { position: fixed; inset: 0; z-index: 110; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(17,24,39,.55); }
   .report-tip-card { width: min(22rem, 100%); padding: 1.25rem; background: #fff; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
   .report-tip-card h2 { margin: 0 0 0.75rem; font-size: 1.125rem; font-weight: 700; color: #111827; }

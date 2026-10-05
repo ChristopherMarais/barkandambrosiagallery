@@ -353,7 +353,7 @@
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="sum-accuracy">&ndash;</div><div class="text-xs text-gray-500">accuracy</div></div>
     </div>
     <div class="flex flex-col gap-3 max-w-sm mx-auto">
-      <a id="review-link" href="#" class="px-6 py-3.5 text-base font-semibold text-white bg-gray-500 hover:bg-gray-500 rounded-xl"><i class="fi fi-rr-list-check"></i> See the answers</a>
+      <a id="review-link" href="#" class="btn-primary px-6 py-3.5 text-base rounded-xl"><i class="fi fi-rr-list-check"></i> See the answers</a>
       <a href="{% url 'game_home' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl">Back to the game home</a>
     </div>
   </div>
@@ -392,7 +392,7 @@
       <p class="text-gray-900"><span class="text-gray-500">You said:</span> <strong id="previous-answer"></strong></p>
       <p id="previous-truth" class="text-sm text-gray-900" data-testid="previous-truth"></p>
       <p id="previous-community" class="text-sm text-gray-600"></p>
-      <button type="button" id="previous-done" class="w-full h-12 rounded-xl font-semibold text-white bg-gray-600">Current beetle</button>
+      <button type="button" id="previous-done" class="btn-primary w-full h-12 text-base rounded-xl">Current beetle</button>
     </div>
   </div>
 
@@ -406,8 +406,8 @@
       <div id="focus-ranks" class="grid grid-cols-3 gap-2"></div>
       <select id="focus-value" class="select-chevron w-full h-11 px-3 text-base border border-gray-300 rounded-xl bg-white" aria-label="Which one"></select>
       <div class="flex gap-2">
-        <button type="button" id="focus-clear" class="flex-1 h-11 rounded-xl border border-gray-300 text-gray-700 font-medium">Show everything</button>
-        <button type="button" id="focus-save" class="flex-1 h-11 rounded-xl bg-gray-500 text-white font-semibold disabled:bg-gray-300" disabled>Focus</button>
+        <button type="button" id="focus-clear" class="btn-secondary flex-1 h-11 text-base rounded-xl">Show everything</button>
+        <button type="button" id="focus-save" class="btn-primary flex-1 h-11 text-base rounded-xl" disabled>Focus</button>
       </div>
     </div>
   </div>
@@ -430,7 +430,7 @@
     </div>
     <div id="recap-badges" class="mb-6 space-y-2"></div>
     <div class="flex flex-col gap-3">
-      <button type="button" id="recap-more" class="px-6 py-3.5 text-base font-semibold text-white bg-gray-500 hover:bg-gray-500 rounded-xl">Keep playing</button>
+      <button type="button" id="recap-more" class="btn-primary px-6 py-3.5 text-base rounded-xl">Keep playing</button>
       <a href="{% url 'game_report' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl" data-testid="recap-learn"><i class="fi fi-rr-bulb"></i> Where I lost points</a>
       <a href="{% url 'game_home' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl">See my stats and the leaderboard</a>
     </div>
