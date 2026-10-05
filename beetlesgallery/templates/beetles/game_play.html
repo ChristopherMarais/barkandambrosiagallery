@@ -798,13 +798,23 @@
 
   // ---------- after each answer: what others said, and the combo ----------
   let combo = 0;
+  // c.text says how far players ranked above you agree with you; c.experts what proven experts said, c.model what the
+  // species classifier leans to (game_views._community). One line each.
+  function communityLines(c) {
+    return [c.players ? c.text : "you're the first to name it.", c.experts, c.model].filter(Boolean);
+  }
+  function linesOf(lines) {
+    const out = [];
+    lines.forEach((line, i) => { if (i) out.push(document.createElement("br")); out.push(line); });
+    return out;
+  }
   function showCommunity(c) {
     if (!c) return;
-    // c.text says how far players ranked above you agree with you (game_views._community)
-    const text = c.players ? "Last beetle: " + c.text : "Last beetle: you're the first to name it.";
+    const lines = communityLines(c);
+    lines[0] = "Last beetle: " + lines[0];
     // green only when it means something: everyone ahead of you who went that far agrees
     $("community").classList.toggle("agree", c.agree === true);
-    $("community-text").textContent = text;
+    $("community-text").replaceChildren(...linesOf(lines));
     $("community").classList.remove("hidden");
   }
   $("community-close").addEventListener("click", () => $("community").classList.add("hidden"));
@@ -1256,7 +1266,7 @@
       truth.push(label, name, " · " + v.tier);
     });
     $("previous-truth").replaceChildren(...truth);
-    $("previous-community").textContent = previous.community ? previous.community.text || "" : "";
+    $("previous-community").replaceChildren(...(previous.community ? linesOf(communityLines(previous.community)) : []));
     if (odd && previous.reveal) {
       $("previous-community").replaceChildren(...(previous.item.mode === "select"
         ? ["Tap every " + previous.reveal.target + ". ", ...selectLine(previous.reveal)] : oddLine(previous.reveal)));
