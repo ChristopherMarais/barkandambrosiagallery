@@ -1,10 +1,12 @@
 """
 Beetle ID game: picking items, scoring answers, player statistics and label consensus.
 
-Two modes:
+Three modes:
   classify  one region of interest (ROI) is shown; the player names its subfamily,
             tribe, genus and species, stopping at any rank.
   pair      two ROIs are shown; the player says the deepest rank they share.
+  odd       four or six ROIs are shown; all but one share a name at some rank, and the
+            player picks the one that doesn't belong (Odd One Out).
 
 Some items in every round are "checks": items with a validated answer
 (``Beetles.bbox_is_validated``). Only checks are scored, and the player is never told
@@ -125,9 +127,14 @@ def revealed_ids(player):
     player again, so feedback can't be memorised into a better score.
     """
     ids = set(GameAnswer.objects.filter(player=player, is_check=True).values_list("roi_id", flat=True))
+    # the validated partner of a pair, and the odd one an Odd One Out round was built around
     ids |= set(
-        GameAnswer.objects.filter(player=player, mode="pair", roi_b__isnull=False).values_list("roi_b_id", flat=True)
+        GameAnswer.objects.filter(player=player, mode__in=["pair", "odd"], roi_b__isnull=False)
+        .values_list("roi_b_id", flat=True)
     )
+    # an Odd One Out round at species names the rest's species too ("the rest: Xyleborus affinis")
+    for tiles in GameAnswer.objects.filter(player=player, mode="odd", odd_rank="species").values_list("tiles", flat=True):
+        ids |= {uuid.UUID(str(t)) for t in tiles or []}
     return ids
 
 
@@ -320,7 +327,7 @@ def peer_rois(player, pool):
     player has not: showing them to more people is how a name gets agreed on.
     """
     counts = (
-        GameAnswer.objects.filter(skipped=False, roi__in=pool).exclude(player=player)
+        GameAnswer.objects.filter(skipped=False, roi__in=pool).exclude(player=player).exclude(mode="odd")
         .values("roi_id").annotate(n=Count("player", distinct=True))
         .filter(n__lte=game_setting("GAME_PEER_MAX_OTHERS", 4)).values("roi_id")
     )
@@ -393,9 +400,9 @@ def retry_ids(player, room):
 RELATION_DIFFICULTY = {"different": 0.1, "subfamily": 0.35, "tribe": 0.55, "genus": 0.75, "species": 0.85}
 
 
-def _relation_order(target):
-    """The relations to try, the ones nearest the player's target difficulty most likely first."""
-    order, pool = [], dict(RELATION_DIFFICULTY)
+def _relation_order(target, table=RELATION_DIFFICULTY):
+    """The relations (or ranks) to try, the ones nearest the player's target difficulty most likely first."""
+    order, pool = [], dict(table)
     while pool:
         names = list(pool)
         weights = [math.exp(-((pool[n] - target) / 0.25) ** 2) + 0.05 for n in names]
@@ -494,6 +501,167 @@ def build_pair_items(player, size, fresh_only=False):
     return checks + opens
 
 
+# ---------------------------------------------------------------------------
+# Odd One Out (#369)
+# ---------------------------------------------------------------------------
+# How hard it is to spot the odd one by the rank at which it differs: another subfamily stands out, another species of
+# the same genus hardly at all.
+ODD_RANK_DIFFICULTY = {"subfamily": 0.15, "tribe": 0.4, "genus": 0.65, "species": 0.85}
+
+
+def odd_tile_count(level):
+    """Four beetles (2x2) to choose from, and six (2x3) from level GAME_ODD_SIX_FROM_LEVEL."""
+    return 6 if level >= game_setting("GAME_ODD_SIX_FROM_LEVEL", 5) else 4
+
+
+def odd_open_count(level, tiles):
+    """
+    How many of an item's beetles are not validated: a share that grows from GAME_ODD_OPEN_SHARE_START at level 1 to
+    GAME_ODD_OPEN_SHARE_END at the top, of all but the odd one, always leaving the odd one and one other validated.
+    """
+    from .game_levels import LEVELS
+
+    start = game_setting("GAME_ODD_OPEN_SHARE_START", 0.25)
+    end = game_setting("GAME_ODD_OPEN_SHARE_END", 0.5)
+    share = start + (end - start) * (level - 1) / (len(LEVELS) - 1)
+    return max(0, min(tiles - 2, round((tiles - 1) * share)))
+
+
+def lineage(taxon, rank):
+    """{rank: name} from subfamily down to ``rank`` (species as "Genus species"), or None if any of them is blank."""
+    out = {}
+    for r in RANKS[: RANKS.index(rank) + 1]:
+        if r == "species":
+            value = f"{taxon.genus} {taxon.species}" if taxon.genus and taxon.species else ""
+        else:
+            value = (getattr(taxon, r, "") or "").strip()
+        if not value:
+            return None
+        out[r] = value
+    return out
+
+
+def rank_q(rank, value, prefix="taxon__"):
+    """Q for beetles whose taxon is ``value`` at ``rank`` (species values are "Genus species")."""
+    if rank == "species":
+        genus, _, species = value.partition(" ")
+        return Q(**{f"{prefix}genus__iexact": genus, f"{prefix}species__iexact": species})
+    return Q(**{f"{prefix}{rank}__iexact": value})
+
+
+def _named_at(rank):
+    """Q for beetles whose taxon has a name at ``rank`` (and a genus, for species)."""
+    if rank == "species":
+        return ~Q(taxon__species="") & ~Q(taxon__species__isnull=True)
+    return ~Q(**{f"taxon__{rank}": ""}) & ~Q(**{f"taxon__{rank}__isnull": True})
+
+
+def _predicted(rank, value, low, high):
+    """
+    Q for unvalidated beetles a classifier puts at ``value`` at ``rank`` with a confidence in [low, high): what it
+    said for that rank, or else what its species implies, with the species' confidence.
+    """
+    if rank == "species":
+        return rank_q(rank, value, "predictions__taxon__") & Q(predictions__confidence__gte=low,
+                                                                predictions__confidence__lt=high)
+    said = Q(**{f"predictions__rank_confidence__{rank}__value__iexact": value,
+                f"predictions__rank_confidence__{rank}__confidence__gte": low,
+                f"predictions__rank_confidence__{rank}__confidence__lt": high})
+    implied = (Q(**{f"predictions__rank_confidence__{rank}__isnull": True}) & rank_q(rank, value, "predictions__taxon__")
+               & Q(predictions__confidence__gte=low, predictions__confidence__lt=high))
+    return said | implied
+
+
+def _distinct_photos(ids, taken, limit):
+    """
+    Up to ``limit`` of the ids, in order, each on a photo not used yet (``taken``: ImageAsset ids, which grows with
+    the ones kept), so no two beetles of an item come from one photo and give the odd one away by its background.
+    """
+    if limit <= 0 or not ids:
+        return []
+    photo = dict(Beetles.objects.filter(id__in=ids).values_list("id", "image_asset_id"))
+    out = []
+    for i in ids:
+        if len(out) >= limit:
+            break
+        if photo.get(i) is not None and photo[i] not in taken:
+            taken.add(photo[i])
+            out.append(i)
+    return out
+
+
+def _odd_item(tiles, n_open, target, deepest, check_pool, open_pool, avoid):
+    """One Odd One Out item, or None when no part of the tree has enough beetles for it."""
+    for rank in _relation_order(target, {r: d for r, d in ODD_RANK_DIFFICULTY.items()
+                                         if RANKS.index(r) <= RANKS.index(deepest)}):
+        anchors = _sample(check_pool.filter(_named_at(rank)).exclude(id__in=avoid), 3, target, allow_seen=False)
+        for anchor in Beetles.objects.select_related("taxon").filter(id__in=anchors):
+            group = lineage(anchor.taxon, rank) if anchor.taxon else None
+            if group is None:
+                continue
+            same = rank_q(rank, group[rank])
+            photos = {anchor.image_asset_id}
+            # The odd one: validated, so there is always a known answer; a near relative (the same parent) on harder rounds
+            odd_pool = check_pool.filter(_named_at(rank)).exclude(same).exclude(id__in=avoid)
+            parent = RANKS[RANKS.index(rank) - 1] if rank != "subfamily" else None
+            near = parent and random.random() < min(0.9, game_setting("GAME_ODD_NEAR_FLOOR", 0.3) + target)
+            odd = _distinct_photos(_sample(odd_pool.filter(rank_q(parent, group[parent])), 3, target, allow_seen=False),
+                                   photos, 1) if near else []
+            odd = odd or _distinct_photos(_sample(odd_pool, 3, target, allow_seen=False), photos, 1)
+            if not odd:
+                continue
+            # The rest: beetles the classifier is sure share the name (very sure on easy rounds), then validated ones
+            low, high = (0.9, 1.01) if target < game_setting("GAME_ODD_HARD_FROM", 0.5) else (0.6, 0.9)
+            opens = _distinct_photos(
+                _sample(open_pool.filter(_predicted(rank, group[rank], low, high)).exclude(id__in=avoid).distinct(),
+                        n_open * 2, target, allow_seen=False), photos, n_open)
+            need = tiles - 2 - len(opens)
+            rest = _distinct_photos(
+                _sample(check_pool.filter(same).exclude(id__in=avoid).exclude(id=anchor.id), need * 3, target,
+                        allow_seen=True), photos, need)
+            shown = [anchor.id, *rest, *opens, odd[0]]
+            if len(shown) < tiles:
+                continue
+            random.shuffle(shown)
+            return {"a": str(odd[0]), "b": None, "check": True, "mode": "odd",
+                    "tiles": [str(i) for i in shown], "rank": rank, "group": group}
+    return None
+
+
+def build_odd_items(player, size, fresh_only=False):
+    """
+    Odd One Out: each item shows four beetles (six at higher levels) of which all but one share a name at one rank,
+    and the player picks the one that doesn't belong. The rank follows the player's open ranks (game_levels rank steps)
+    and their target difficulty: subfamily first, then tribe, genus and species, and on harder rounds the odd one is a
+    near relative (the same tribe, say, but another genus).
+
+    The odd one and at least one of the rest are always validated, so every item has a known answer. A few of the
+    rest are not validated yet but a classifier is sure about them (GAME_ODD_OPEN_SHARE_*), more as the player rises:
+    a player who picks one of those says it does not belong, which is scored later by agreement, like a name.
+    Beetles whose answer the player has been shown are never used again for them (revealed_ids).
+    """
+    from .game_levels import for_player, rank_unlock
+
+    info = for_player(player)
+    answered = GameAnswer.objects.filter(player=player, skipped=False).count()
+    deepest = rank_unlock(info["level"], answered, bool(info.get("granted")))["rank"]
+    tiles = odd_tile_count(info["level"])
+    n_open = odd_open_count(info["level"], tiles)
+    check_pool, open_pool = pools(player)
+    target = target_difficulty(player)
+    avoid = set(revealed_ids(player))
+    items = []
+    for _ in range(size * 2):
+        if len(items) >= size:
+            break
+        item = _odd_item(tiles, n_open, target, deepest, check_pool, open_pool, avoid)
+        if item is None:
+            break
+        avoid.update(uuid.UUID(t) for t in item["tiles"])
+        items.append(item)
+    return items
+
+
 def resumable_round(player, mode):
     """The player's latest unfinished round in this mode, if recent enough to pick up again."""
     since = timezone.now() - timedelta(hours=game_setting("GAME_RESUME_HOURS", 12))
@@ -543,53 +711,80 @@ def start_round(player, mode, size=None, fresh_only=False):
     if mode == GameRound.Mode.MIXED:
         items = build_mixed_items(player, size, fresh_only=fresh_only)
     else:
-        builder = build_classify_items if mode == GameRound.Mode.CLASSIFY else build_pair_items
-        items = builder(player, size, fresh_only=fresh_only)
+        items = build(mode, player, size, fresh_only)
     if not items:
         return None
     return GameRound.objects.create(player=player, mode=mode, items=spread(items))
 
 
-def play_mode(player):
+BUILDERS = {"pair": "build_pair_items", "odd": "build_odd_items", "classify": "build_classify_items"}
+
+
+def build(game_key, player, size, fresh_only=False):
+    """Items for one game (looked up by name, so each builder can be swapped out on its own)."""
+    return globals()[BUILDERS[game_key]](player, size, fresh_only=fresh_only)
+
+
+def play_mode(player, info=None):
     """
-    Which game the player plays. New players start with Similarity only (the easier game); level 2 unlocks
-    Identification and the choice, and from then on the default is both.
+    Which game the player plays: one they chose, or "both", a mix of every game they have. New players have only
+    Similarity (the easiest); level 2 opens Odd One Out and the choice, level 4 Identification (game_levels.GAMES).
+    A chosen game the player no longer has (levels can go down) falls back to the mix.
     """
-    from .game_levels import CHOOSE_GAME, for_player
+    from .game_levels import CHOOSE_GAME, for_player, games
     from .models import GamePreference
 
-    if CHOOSE_GAME not in for_player(player)["perks"]:
-        return "pair"
+    info = info or for_player(player)
+    available = games(info["perks"])
+    if CHOOSE_GAME not in info["perks"]:
+        return available[0] if len(available) == 1 else "both"
     pref = GamePreference.objects.filter(player=player).values_list("play_mode", flat=True).first()
-    return pref or "both"
+    return pref if pref in available else "both"
 
 
 def build_mixed_items(player, size, fresh_only=False):
     """
-    One feed of both games, mixed at random. Beginners see mostly Family Ties and experts mostly Name That Beetle
-    (game_levels.pair_share); a player who chose one game sees only that one. Playing both, if one game runs out of
-    beetles the other fills the batch. Every item carries its own "mode".
+    One feed of every game the player has, mixed at random. Beginners see mostly Similarity and experts mostly
+    Identification, with Odd One Out beside them (game_levels.game_shares); a player who chose one game sees only that
+    one. In the mix, a game that runs out of beetles is filled in by the others. Every item carries its own "mode".
     """
-    from .game_levels import for_player, pair_share
+    from .game_levels import for_player, game_shares, games
 
-    chosen = play_mode(player)
-    if chosen == "pair":
-        pairs, names = build_pair_items(player, size, fresh_only=fresh_only), []
-    elif chosen == "classify":
-        pairs, names = [], build_classify_items(player, size, fresh_only=fresh_only)
-    else:
-        share = pair_share(for_player(player)["level"])
-        n_pair = sum(random.random() < share for _ in range(size))
-        pairs = build_pair_items(player, n_pair, fresh_only=fresh_only) if n_pair else []
-        # either game fills in when the other runs short of beetles
-        names = build_classify_items(player, size - len(pairs), fresh_only=fresh_only) if size > len(pairs) else []
-        if not names and len(pairs) < size:
-            pairs += build_pair_items(player, size - len(pairs), fresh_only=fresh_only)
-    for it in pairs:
-        it["mode"] = "pair"
-    for it in names:
-        it["mode"] = "classify"
-    return pairs + names
+    info = for_player(player)
+    chosen = play_mode(player, info)
+    if chosen in BUILDERS:
+        items = build(chosen, player, size, fresh_only)
+        for it in items:
+            it["mode"] = chosen
+        return items
+    shares = game_shares(info["level"], games(info["perks"]))
+    plan = defaultdict(int)
+    for game_key in random.choices(list(shares), weights=list(shares.values()), k=size):
+        plan[game_key] += 1
+    items, full = [], []
+    for game_key in shares:
+        got = build(game_key, player, plan[game_key], fresh_only) if plan[game_key] else []
+        for it in got:
+            it["mode"] = game_key
+        items += got
+        if len(got) == plan[game_key]:
+            full.append(game_key)   # had beetles to spare, so it can fill in for the others
+    shown = {i for it in items for i in _item_ids(it)}
+    for game_key in sorted(full, key=lambda g: -shares[g]):
+        if len(items) >= size:
+            break
+        for it in build(game_key, player, size - len(items), fresh_only):
+            ids = _item_ids(it)
+            if shown.isdisjoint(ids):   # never the same beetle twice in one batch
+                it["mode"] = game_key
+                items.append(it)
+                shown.update(ids)
+    return items
+
+
+def _item_ids(item):
+    """Every beetle an item shows."""
+    return set(item.get("tiles") or []) | {item["a"]} | ({item["b"]} if item.get("b") else set())
 
 
 def _in_background(player_ids):
@@ -723,6 +918,27 @@ def score_pair(pair_answer, taxon_a, taxon_b):
     }
 
 
+def group_taxon(group):
+    """A taxon-like object for an Odd One Out group ({rank: name} down to its rank), blank below it."""
+    from types import SimpleNamespace
+
+    genus_species = group.get("species", "")
+    return SimpleNamespace(subfamily=group.get("subfamily", ""), tribe=group.get("tribe", ""),
+                           genus=group.get("genus", ""), species=genus_species.partition(" ")[2])
+
+
+def score_odd(picked_taxon, rank, group):
+    """
+    Per-rank correctness of an Odd One Out pick: at the round's rank, True when the picked beetle is not one of the
+    group (rightly picked out) and False when it is; None everywhere else, or when it has no name at that rank.
+    """
+    out = {r: None for r in RANKS}
+    mine, theirs = rank_values(picked_taxon).get(rank, ""), _norm((group or {}).get(rank))
+    if rank in out and mine and theirs:
+        out[rank] = mine != theirs
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Player statistics
 # ---------------------------------------------------------------------------
@@ -797,7 +1013,7 @@ def leaderboard(limit=50, sort="labelled", since=None):
 def player_reliability(player_ids=None):
     """
     {player_id: {mode: {rank: {"ok", "n", "accuracy", "weight"}}}} from check answers,
-    plus mode "all" combining both modes.
+    plus mode "all" combining every game.
 
     ``weight`` is the Laplace-smoothed accuracy (ok + 1) / (n + 2): a player with no
     checks at a rank counts as a coin flip, and the weight moves toward their real
@@ -812,7 +1028,7 @@ def player_reliability(player_ids=None):
     result = {}
     for pid, modes in out.items():
         result[pid] = {}
-        for mode in ("classify", "pair", "all"):
+        for mode in ("classify", "pair", "odd", "all"):
             result[pid][mode] = {}
             for r in RANKS:
                 if mode == "all":
@@ -842,10 +1058,11 @@ def implied_labels(answer):
 
     Classify: what the player picked. Pair: the ranks the player says the unvalidated
     ROI shares with its validated partner, taken from the partner's taxon. "Different
-    subfamily" and "not sure" say nothing positive, so they imply nothing.
+    subfamily" and "not sure" say nothing positive, so they imply nothing, and nor does an Odd One Out pick (it
+    says what a beetle is not).
     Species values are "Genus species".
     """
-    if answer.skipped:
+    if answer.skipped or answer.mode == "odd":
         return {}
     if answer.mode == "classify":
         values = {
@@ -878,7 +1095,7 @@ def consensus(limit=None, roi_ids=None, voters=None):
     from .game_trust import TrustContext
 
     answers = (
-        GameAnswer.objects.filter(is_check=False, skipped=False)
+        GameAnswer.objects.filter(is_check=False, skipped=False).exclude(mode="odd")   # a pick is not a name
         .select_related("roi", "roi__taxon", "roi_b__taxon")
         .order_by("roi_id", "answered_at")
     )

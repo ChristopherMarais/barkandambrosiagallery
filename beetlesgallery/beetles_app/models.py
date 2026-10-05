@@ -1301,12 +1301,15 @@ class GameRound(models.Model):
     client never picks what it is shown. Each item is a dict:
     {"a": <Beetles id>, "b": <Beetles id or None>, "check": bool, "flip": bool}.
     "check" items have a validated answer and are scored; the client is never told which.
+    Odd One Out items also carry "tiles" (the Beetles ids shown, in order), "rank" (where the odd one differs) and
+    "group" (the others' names down to that rank); their "a" is the odd one.
     """
 
     class Mode(models.TextChoices):
         CLASSIFY = "classify", "Classify"
         PAIR = "pair", "Compare pairs"
-        MIXED = "mixed", "Mixed"   # one feed of both games; each item carries its own mode
+        ODD = "odd", "Odd One Out"
+        MIXED = "mixed", "Mixed"   # one feed of several games; each item carries its own mode
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     player = models.ForeignKey(
@@ -1333,6 +1336,9 @@ class GameAnswer(models.Model):
     (blank = the player stopped before that rank).
     Pair: ``roi`` and ``roi_b`` are the two regions and ``pair_answer`` is the deepest
     rank the player says they share. On unvalidated pairs ``roi`` is the unvalidated one.
+    Odd One Out: ``tiles`` are the regions shown, ``roi`` the one the player picked (the odd one itself when they
+    skipped) and ``roi_b`` the odd one the round was built around; the pick says "``roi`` is not in ``odd_group`` at
+    ``odd_rank``". ``is_check`` is set when the picked region is validated, and only ``correct_<odd_rank>`` is judged.
 
     ``correct_<rank>`` is only filled for check items: True/False when that rank was
     judged, None when it was not answered or has no reference value.
@@ -1366,6 +1372,12 @@ class GameAnswer(models.Model):
     genus = models.CharField(max_length=100, blank=True)
     species = models.CharField(max_length=100, blank=True)
     pair_answer = models.CharField(max_length=10, choices=PairAnswer.choices, blank=True)
+    tiles = models.JSONField(default=list, blank=True, help_text="Odd One Out: the regions shown, in order.")
+    odd_rank = models.CharField(max_length=10, blank=True, help_text="Odd One Out: the rank at which one region differs.")
+    odd_group = models.JSONField(
+        default=dict, blank=True,
+        help_text='Odd One Out: the names the others share, down to odd_rank, e.g. {"subfamily": "Scolytinae", "tribe": "Xyleborini"}.',
+    )
 
     correct_subfamily = models.BooleanField(null=True, blank=True)
     correct_tribe = models.BooleanField(null=True, blank=True)
@@ -1469,9 +1481,10 @@ class GamePreference(models.Model):
     """
 
     class PlayMode(models.TextChoices):
-        BOTH = "both", "Both"
+        BOTH = "both", "Both"   # every game the player has unlocked, mixed
         CLASSIFY = "classify", "Name That Beetle"
         PAIR = "pair", "Family Ties"
+        ODD = "odd", "Odd One Out"
 
     class FocusRank(models.TextChoices):
         NONE = "", "Everything"
@@ -1487,6 +1500,11 @@ class GamePreference(models.Model):
         default=list, blank=True,
         help_text="Unlocks a superuser granted whatever the player's level (game_levels.PERKS keys, or \"all\"). "
                   "For people who need the features, and for testing.",
+    )
+    kept_perks = models.JSONField(
+        default=list, blank=True,
+        help_text="Unlocks the player keeps from before the levels changed (game_levels.PERKS keys), e.g. "
+                  "Identification for players who had it when it moved from level 2 to level 4.",
     )
     proposals_notice_seen_at = models.DateTimeField(
         null=True, blank=True, help_text="When the player saw 'Your labels now go to the curators' (shown once)."

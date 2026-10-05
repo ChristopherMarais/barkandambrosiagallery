@@ -33,6 +33,20 @@ def _label(taxon):
     }
 
 
+def _rank_label(taxon, rank):
+    """
+    _label() down to ``rank`` only: what an Odd One Out round already said about one of the rest. Their deeper
+    names stay hidden, so they can still be scored for this player later (game.revealed_ids).
+    """
+    full = _label(taxon)
+    if full is None:
+        return None
+    keep = game.RANKS[: game.RANKS.index(rank) + 1] if rank in game.RANKS else ()
+    out = {r: full[r] if r in keep else "" for r in game.RANKS}
+    out["name"] = next((full[r] for r in reversed(keep) if full[r]), "")
+    return out
+
+
 def _answer_label(answer):
     return {
         "subfamily": answer.subfamily, "tribe": answer.tribe, "genus": answer.genus,
@@ -77,6 +91,10 @@ def round_feedback(rnd):
         .order_by("index")
     )
     roi_ids = {a.roi_id for a in answers} | {a.roi_b_id for a in answers if a.roi_b_id}
+    # Odd One Out: every beetle of the grid, in the order shown
+    tile_ids = {t for a in answers for t in (a.tiles or [])}
+    tiles = {str(k): v for k, v in Beetles.objects.select_related("taxon", "image_asset").in_bulk(list(tile_ids)).items()}
+    roi_ids |= {t.id for t in tiles.values()}
     player_reports = {
         r.roi_id: r for r in GameReport.objects.filter(reporter=rnd.player, roi_id__in=roi_ids).order_by("created_at")
     }
@@ -91,8 +109,23 @@ def round_feedback(rnd):
     items = []
     right = scored = 0
     for a in answers:
-        sides = [_side(a.roi, player_reports, others)]
-        if a.roi_b_id:
+        truth_odd = None
+        if a.mode == "odd":
+            sides = []
+            for tile_id in a.tiles or []:
+                if str(tile_id) in tiles:
+                    side = _side(tiles[str(tile_id)], player_reports, others)
+                    side["picked"] = not a.skipped and str(tile_id) == str(a.roi_id)
+                    side["odd"] = str(tile_id) == str(a.roi_b_id)
+                    if not (side["picked"] or side["odd"]):
+                        side["label"] = _rank_label(tiles[str(tile_id)].taxon, a.odd_rank)
+                    sides.append(side)
+            odd_names = game.lineage(a.roi_b.taxon, a.odd_rank) if a.roi_b and a.roi_b.taxon and a.odd_rank else None
+            truth_odd = {"rank": a.odd_rank, "group": (a.odd_group or {}).get(a.odd_rank, ""),
+                         "odd_name": (odd_names or {}).get(a.odd_rank, "")}
+        else:
+            sides = [_side(a.roi, player_reports, others)]
+        if a.mode != "odd" and a.roi_b_id:
             sides.append(_side(a.roi_b, player_reports, others))
             if rnd.items[a.index].get("flip"):
                 sides.reverse()
@@ -113,8 +146,11 @@ def round_feedback(rnd):
             "held": a.score_hold,
             "verdict": verdict,
             "results": _results(a),
-            "answer": _answer_label(a) if a.mode == "classify" else a.get_pair_answer_display(),
+            "answer": _answer_label(a) if a.mode == "classify" else (
+                ("The odd one" if a.roi_id == a.roi_b_id else "Another one") if a.mode == "odd"
+                else a.get_pair_answer_display()),
             "truth_pair": truth_pair,
+            "truth_odd": truth_odd,
             "sides": sides,
             "losses": answer_losses(a),
         })
@@ -141,6 +177,7 @@ def answer_losses(answer, points=None):
     state is "right", "wrong" (the first wrong rank, which also costs a penalty), "after" (wrong because a rank
     above it was), "stopped" (left blank though the beetle has one) or None (the label doesn't go that deep).
     Similarity: {"kind": "pair", "state": "right" | "cautious" | "too_close" | "wrong", "said", "truth", "earned", "lost"}.
+    Odd One Out: {"kind": "odd", "state": "right" | "wrong", "rank", "earned", "lost"}.
     """
     from .game_scoring import PAIR_POINTS, RANK_POINTS
     from .models import AnswerPoints
@@ -176,6 +213,10 @@ def answer_losses(answer, points=None):
             ranks[r] = {"state": state, "points": round(got, 1), "lost": round(miss, 1)}
             lost += miss
         return {"kind": "classify", "ranks": ranks, "earned": earned, "lost": round(lost, 1)}
+    if answer.mode == "odd":
+        worth = float(detail.get("worth", 0.0))
+        return {"kind": "odd", "state": "right" if detail.get("right") else "wrong", "rank": answer.odd_rank,
+                "earned": earned, "lost": round(max(0.0, worth - earned), 1)}
     truth = detail.get("truth")
     depth = {v: k for k, v in {-1: "different subfamilies", 0: "same subfamily", 1: "same tribe", 2: "same genus",
                                3: "same species"}.items()}.get(truth)
@@ -198,13 +239,18 @@ def loss_summary(answers):
     """
     ranks = {r: {"rank": r, "label": RANK_LABEL[r], "right": 0, "wrong": 0, "stopped": 0, "lost": 0.0} for r in game.RANKS}
     pair = {k: {"kind": k, "count": 0, "lost": 0.0} for k in ("right", "cautious", "too_close", "wrong")}
+    odd = {r: {"rank": r, "label": RANK_LABEL[r], "right": 0, "wrong": 0, "lost": 0.0} for r in game.RANKS}
     seen = 0
     for a in answers:
         loss = answer_losses(a)
         if loss is None:
             continue
         seen += 1
-        if loss["kind"] == "classify":
+        if loss["kind"] == "odd":
+            if loss["rank"] in odd:
+                odd[loss["rank"]][loss["state"]] += 1
+                odd[loss["rank"]]["lost"] += loss["lost"]
+        elif loss["kind"] == "classify":
             for r, cell in loss["ranks"].items():
                 if cell["state"] == "right":
                     ranks[r]["right"] += 1
@@ -220,6 +266,7 @@ def loss_summary(answers):
                         if row["right"] or row["wrong"] or row["stopped"]), key=lambda row: -row["lost"])
     pair_rows = sorted((dict(row, lost=round(row["lost"], 1)) for k, row in pair.items() if k != "right" and row["count"]),
                        key=lambda row: -row["lost"])
+    odd_rows = [dict(row, lost=round(row["lost"], 1)) for row in odd.values() if row["right"] or row["wrong"]]
     tip = None
     worst = next((row for row in rank_rows if row["lost"] > 0), None)
     if worst and worst["wrong"] >= worst["stopped"]:
@@ -230,8 +277,9 @@ def loss_summary(answers):
         tip = f"You often stopped before the {worst['rank']}. When you're fairly sure, name it: it's worth the most."
     elif pair_rows and pair_rows[0]["kind"] == "too_close":
         tip = "In Similarity you often called beetles closer relatives than they are. Pick the lowest line you're sure of."
-    return {"answers": seen, "ranks": rank_rows, "pair": pair_rows, "tip": tip,
-            "lost": round(sum(r["lost"] for r in rank_rows) + sum(r["lost"] for r in pair_rows), 1)}
+    return {"answers": seen, "ranks": rank_rows, "pair": pair_rows, "odd": odd_rows, "tip": tip,
+            "lost": round(sum(r["lost"] for r in rank_rows) + sum(r["lost"] for r in pair_rows)
+                          + sum(r["lost"] for r in odd_rows), 1)}
 
 
 # ---------------------------------------------------------------------------
@@ -286,6 +334,16 @@ def rescore_roi(roi):
             ans.ref_tribe = roi.taxon.tribe or ""
             ans.ref_genus = roi.taxon.genus or ""
             ans.ref_species = roi.taxon.species or ""
+        elif ans.mode == "odd":
+            # judged on the beetle picked; the odd one the round was built around only sets what a pick is worth
+            picked = roi.taxon if ans.roi_id == roi.id else (ans.roi.taxon if ans.roi else None)
+            if picked is None:
+                ans.score_hold = True
+                ans.save(update_fields=["score_hold"])
+                continue
+            scores = game.score_odd(picked, ans.odd_rank, ans.odd_group) if not ans.skipped else {
+                r: None for r in game.RANKS
+            }
         else:
             other = ans.roi_b if ans.roi_id == roi.id else ans.roi
             if other is None or other.taxon is None:
