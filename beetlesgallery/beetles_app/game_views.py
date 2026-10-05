@@ -32,7 +32,7 @@ from .predictions import suggestions_for
 
 MODES = {m.value: m.label for m in GameRound.Mode}
 # What players see. (The model keeps its own plain labels; changing those would need a migration.)
-GAME_NAMES = {"classify": "Name That Beetle", "pair": "Similarity", "mixed": "Beetle ID"}
+GAME_NAMES = {"classify": "Name That Beetle", "pair": "Similarity", "mixed": settings.GAME_DISPLAY_NAME}
 GAME_TAGLINES = {
     "classify": "One beetle, four guesses: subfamily, tribe, genus, species. Go as deep as you dare.",
     "pair": "Two beetles. How close is the family? From total strangers to the very same species.",

@@ -226,7 +226,7 @@ GAME_ROUND_SIZE = 10                  # items per round
 # Re-score other players on the Celery worker when someone finishes playing (on in production)
 GAME_RECOMPUTE_IN_BACKGROUND = os.environ.get("GAME_RECOMPUTE_IN_BACKGROUND", "0" if DEBUG else "1") == "1"
 # what the game is called on the site (one place to rename it)
-GAME_DISPLAY_NAME = "Beetle ID Game"
+GAME_DISPLAY_NAME = "Ambrosia Archive"
 # where players report bugs and suggest ideas for the game
 GAME_DISCUSSIONS_URL = "https://github.com/ChristopherMarais/barkandambrosiagallery/discussions/categories/beetle-id-game"
 GAME_CALIBRATION_CHECKS = 20          # scored answers before a player counts as calibrated

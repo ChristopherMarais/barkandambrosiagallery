@@ -35,7 +35,7 @@ def game_player(request):
     The signed-in user's game level and score for the sidebar and the home page, so the game is always one tap
     away. Read from the stored totals only (no recomputing), so it costs one small query per page.
     """
-    name = {"game_name": getattr(settings, "GAME_DISPLAY_NAME", "Beetle ID Game")}
+    name = {"game_name": getattr(settings, "GAME_DISPLAY_NAME", "Ambrosia Archive")}
     user = getattr(request, "user", None)
     if user is None or not user.is_authenticated:
         return name
