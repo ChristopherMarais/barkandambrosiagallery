@@ -10,6 +10,7 @@ from django.views.static import serve
 from beetlesgallery.beetles_app import views as beetles_views
 from beetlesgallery.beetles_app import game_views
 from beetlesgallery.beetles_app import site_notice
+from beetlesgallery.beetles_app import bulk_validate
 from beetlesgallery.beetles_app import interaction_views
 from beetlesgallery.beetles_app import interaction_proposals_views
 from beetlesgallery.beetles_app import interaction_upload_views
@@ -77,6 +78,7 @@ urlpatterns = [
     path('tools/classify/', beetles_views.tool_classify, name='tool_classify'),
     path('tools/annotate/', beetles_views.tool_annotate, name='tool_annotate'),
     path('tools/predictions/', beetles_views.upload_predictions, name='upload_predictions'),
+    path('tools/bulk-validate/', bulk_validate.bulk_validate, name='bulk_validate'),
     path('tools/access-requests/', access_views.access_requests, name='access_requests'),
     path('tools/site-notice/', site_notice.edit, name='site_notice'),
 
