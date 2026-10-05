@@ -34,7 +34,7 @@ import csv
 import io
 import json
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 
 from django.db import transaction
 from django.utils import timezone
@@ -42,7 +42,7 @@ from django.utils import timezone
 from . import roi_defaults
 from .bbox_rules import BOX_COLUMNS, is_blank, parse_box
 from .classify_assist import SAME_BOX_IOU, iou
-from .models import Beetles, ImageAsset, ModelPrediction, RoiDifficulty, Taxon
+from .models import Beetles, ImageAsset, ModelPrediction, PredictionUpload, RoiDifficulty, Taxon
 
 COLUMN_ALIASES = {
     "predicted_valid_species_id": "valid_species_id",
@@ -56,6 +56,7 @@ UPPER_RANKS = ("subfamily", "tribe", "genus")   # optional per-rank columns, eac
 RANKS = UPPER_RANKS + ("species",)
 MAX_ERRORS_SHOWN = 30
 CHUNK = 2000
+PROGRESS_EVERY = 500   # rows between progress reports while checking
 
 
 @dataclass
@@ -213,14 +214,16 @@ def _chunks(items, size=CHUNK):
         yield items[i:i + size]
 
 
-def import_predictions(source, user=None, default_model="", default_version="", dry_run=False):
+def import_predictions(source, user=None, default_model="", default_version="", dry_run=False, progress=None):
     """
     Validate a predictions CSV and, unless dry_run, save it. Returns an ImportResult.
 
     ``source`` is a file object, bytes or text. ``default_model`` / ``default_version`` fill
-    rows whose model_name / model_version cell is empty.
+    rows whose model_name / model_version cell is empty. ``progress(phase, fraction)``, if given,
+    hears how far along it is (checking is the first 70%, saving the rest).
     """
     result = ImportResult(dry_run=dry_run)
+    report = progress or (lambda phase, fraction: None)
 
     def problem(row_num, message):
         result.error_count += 1
@@ -264,6 +267,8 @@ def import_predictions(source, user=None, default_model="", default_version="", 
     for i, row in enumerate(rows):
         row_num = i + 2
         before = result.error_count
+        if i % PROGRESS_EVERY == 0:
+            report("Checking rows", 0.7 * i / len(rows))
 
         roi_id, plan = wanted[i], None
         if not row.get("record_id"):
@@ -335,6 +340,7 @@ def import_predictions(source, user=None, default_model="", default_version="", 
     if dry_run:
         return result
 
+    report("Saving", 0.7)
     with transaction.atomic():
         boxes.create(user, now)
         for prediction, plan in pending:
@@ -342,7 +348,8 @@ def import_predictions(source, user=None, default_model="", default_version="", 
                 prediction.roi_id = plan.roi_id
         best = {(t.roi_id if isinstance(t, NewBox) else t): v for t, v in best.items()}
         pending = [prediction for prediction, _ in pending]
-        for chunk in _chunks(pending):
+        for n, chunk in enumerate(_chunks(pending)):
+            report("Saving", 0.7 + 0.25 * n * CHUNK / len(pending))
             ModelPrediction.objects.bulk_create(
                 chunk, update_conflicts=True,
                 unique_fields=["roi", "model_name", "model_version"],
@@ -361,6 +368,35 @@ def import_predictions(source, user=None, default_model="", default_version="", 
             )
     return result
 
+
+
+def run_upload(job_id):
+    """Check and (unless it is a check only) save an uploaded predictions file, keeping the job's progress current."""
+    job = PredictionUpload.objects.get(pk=job_id)
+    job.status, job.phase, job.percent = PredictionUpload.Status.RUNNING, "Reading the file", 1
+    job.save(update_fields=["status", "phase", "percent"])
+
+    def progress(phase, fraction):
+        percent = max(1, min(99, int(fraction * 100)))
+        if (phase, percent) != (job.phase, job.percent):
+            job.phase, job.percent = phase, percent
+            job.save(update_fields=["phase", "percent"])
+
+    try:
+        with job.file.open("rb") as handle:
+            result = import_predictions(handle.read(), user=job.uploaded_by, default_model=job.model_name,
+                                        default_version=job.model_version, dry_run=job.dry_run, progress=progress)
+        job.result = asdict(result) | {"ok": result.ok, "hidden_errors": result.hidden_errors}
+        job.status = PredictionUpload.Status.DONE
+    except Exception as error:   # shown in the dialog; the worker log has the traceback
+        job.result = {"ok": False, "errors": [f"The file could not be processed: {error}"], "error_count": 1,
+                      "hidden_errors": 0}
+        job.status = PredictionUpload.Status.FAILED
+        raise
+    finally:
+        job.phase, job.percent, job.finished_at = "", 100, timezone.now()
+        job.save(update_fields=["status", "phase", "percent", "result", "finished_at"])
+    return job
 
 class NewBox:
     """A box from the file that is not on its image yet; roi_id is set once it is saved."""

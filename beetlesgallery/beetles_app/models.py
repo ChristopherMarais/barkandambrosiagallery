@@ -1826,3 +1826,37 @@ class SiteNotice(models.Model):
 
     def __str__(self):
         return f"{'on' if self.active else 'off'}: {self.text}"
+
+
+class PredictionUpload(models.Model):
+    """
+    A model predictions CSV uploaded on Data Management, checked and saved in the background (predictions.py), so a
+    big file never times out the page. The dialog polls ``percent`` / ``phase`` and then shows ``result``.
+    """
+
+    class Status(models.TextChoices):
+        QUEUED = "queued", "Waiting"
+        RUNNING = "running", "Working"
+        DONE = "done", "Done"
+        FAILED = "failed", "Failed"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    file = models.FileField(upload_to="prediction_uploads/")
+    original_filename = models.CharField(max_length=255)
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    model_name = models.CharField(max_length=100, blank=True)
+    model_version = models.CharField(max_length=50, blank=True)
+    dry_run = models.BooleanField(default=False)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.QUEUED)
+    phase = models.CharField(max_length=100, blank=True)
+    percent = models.PositiveSmallIntegerField(default=0)
+    result = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "prediction_upload"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.original_filename} ({self.status})"
