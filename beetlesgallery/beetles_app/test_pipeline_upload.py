@@ -10,7 +10,7 @@ from contextlib import redirect_stderr, redirect_stdout
 from datetime import date
 from decimal import Decimal
 from functools import partial
-from unittest import expectedFailure, mock
+from unittest import mock
 
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
@@ -201,9 +201,9 @@ class ValidBatchImportTests(UploadPipelineCase):
             self.assertTrue(field.name.startswith("uploads/archived/"), field.name)
             self.assertTrue(os.path.exists(field.path))
         archive_dir = os.path.dirname(batch.file.path)
-        with open(os.path.join(archive_dir, "manifest.json")) as fh:
+        with open(os.path.join(archive_dir, f"manifest_{batch.id}.json")) as fh:
             self.assertEqual([row["sha256"] for row in json.load(fh)["rows"]], [sha])
-        with open(os.path.join(archive_dir, "archive.json")) as fh:
+        with open(os.path.join(archive_dir, f"archive_{batch.id}.json")) as fh:
             archive = json.load(fh)
         self.assertEqual((archive["batch_id"], archive["imported_count"]), (str(batch.id), 1))
 
@@ -276,8 +276,6 @@ class ValidBatchImportTests(UploadPipelineCase):
             {"dated.jpg": date(2024, 5, 17), "timed.jpg": date(2024, 5, 18), "impossible.jpg": None},
         )
 
-    # KNOWN BUG: import_validated.py:492 looks up the ImageAsset by full_path_at_import, so a new photo with an already-imported path is linked to the old photo and its own file is left unreferenced.
-    @expectedFailure
     def test_new_photo_with_an_already_imported_path_gets_its_own_image(self):
         first, second = image_bytes(), image_bytes()
         self.run_pipeline(self.stage_batch([{"full_path_at_import": "IMG_0001.jpg"}], {"IMG_0001.jpg": first}))
@@ -399,8 +397,6 @@ class PipelineOrderTests(UploadPipelineCase):
                 self.assertEqual(batch.status, status)
         self.assertTrue(os.path.exists(os.path.join(self.media_root, "upload_pipeline.lock")))
 
-    # KNOWN BUG: validate_uploads.py:361-362 writes every batch's manifest to the shared uploads/validated/YYYY/MM/manifest.json, so the second batch validated overwrites the first and import_validated.py:243 reads the wrong manifest.
-    @expectedFailure
     def test_two_batches_validated_together_each_import_their_own_images(self):
         first, second = image_bytes(), image_bytes()
         batch_a = self.stage_batch([{"full_path_at_import": "a.jpg"}], {"a.jpg": first})
