@@ -1,7 +1,8 @@
 """
 #499: the three button looks are written into the theme (static/css/input.css) and the pages use them:
 .btn-main is light grey like the old Search, .btn-primary dark grey like the annotation page's Save,
-.btn-secondary white with a grey outline.
+.btn-secondary white with a grey outline. And the Tailwind config adds its own animations to Tailwind's
+instead of replacing them, so animate-spin (the loading spinners) is built.
 """
 import re
 
@@ -39,6 +40,28 @@ def opening_tag(html, marker):
     """The opening tag that holds ``marker``: one of its attributes, or the text right after it (">Search<")."""
     start = html.rfind("<", 0, html.index(marker))
     return html[start:html.index(">", start) + 1]
+
+
+def object_paths(source):
+    """Every key of a JavaScript object written as plain data (tailwind.config.js), as a path such as
+    ("theme", "extend", "animation"). Quoted text and comments are read as one token, so their braces don't count."""
+    tokens = re.findall(r"""//[^\n]*|/\*.*?\*/|"[^"]*"|'[^']*'|[{}\[\]:,]|[^\s{}\[\]:,'"]+""", source, re.S)
+    paths, stack, previous, key = set(), [], None, None
+    for token in tokens:
+        if token.startswith(("//", "/*")):
+            continue
+        if token == ":":
+            key = previous.strip("'\"")
+            paths.add(tuple(k for k in stack if k) + (key,))
+        elif token in ("{", "["):
+            stack.append(key)
+            key = None
+        elif token in ("}", "]"):
+            stack.pop()
+        elif token == ",":
+            key = None
+        previous = token
+    return paths
 
 
 class ThemeButtonTests(SimpleTestCase):
@@ -90,3 +113,13 @@ class ThemeButtonTests(SimpleTestCase):
                 if DARK.search(classes):
                     found.append(f"{name}: {' '.join(tag.split())[:120]}")
         self.assertEqual(found, [], "use .btn-primary (or .btn-main / .btn-secondary) instead")
+
+    def test_tailwind_keeps_its_own_animations(self):
+        paths = object_paths((ROOT / "tailwind.config.js").read_text(encoding="utf-8"))
+        for key in ("animation", "keyframes"):
+            with self.subTest(key=key):
+                self.assertNotIn(("theme", key), paths)   # would replace animate-spin, animate-pulse ...
+                self.assertIn(("theme", "extend", key), paths)
+        for name in ("blob", "tilt", "linspin", "easespin", "left-spin", "right-spin", "ping-once", "rotating",
+                     "topbottom", "bottomtop", "spin-1.5", "spin-2", "spin-3"):
+            self.assertIn(("theme", "extend", "animation", name), paths)
