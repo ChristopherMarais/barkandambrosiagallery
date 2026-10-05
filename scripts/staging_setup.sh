@@ -21,7 +21,7 @@ if [ -f "$APP/.env.staging" ]; then
   echo "$APP/.env.staging is already there: left as it is."
 else
   # Production's settings (e.g. the AI classifier keys) minus everything staging must have its own of
-  grep -vE '^(DJANGO_SECRET_KEY|DJANGO_DEBUG|DATABASE_URL|POSTGRES_[A-Z_]*|SITE_URL|ALLOWED_HOSTS|CSRF_TRUSTED_ORIGINS|SESSION_COOKIE_DOMAIN|EMAIL_[A-Z_]*|DEFAULT_FROM_EMAIL|ACCESS_REQUEST_RECIPIENTS|CELERY_BROKER_URL|REDIS_CACHE_URL|STAGING[A-Z_]*|APP_VERSION)=' \
+  grep -vE '^(DJANGO_SECRET_KEY|DJANGO_DEBUG|DATABASE_URL|POSTGRES_[A-Z_]*|SITE_URL|ALLOWED_HOSTS|CSRF_TRUSTED_ORIGINS|SESSION_COOKIE_DOMAIN|EMAIL_[A-Z_]*|DEFAULT_FROM_EMAIL|ACCESS_REQUEST_RECIPIENTS|CELERY_BROKER_URL|REDIS_CACHE_URL|STAGING[A-Z_]*|APP_VERSION|MODAL_API_URL)=' \
     "$PROD/.env.prod" > "$APP/.env.staging" || true
   cat >> "$APP/.env.staging" <<VARS
 
@@ -38,6 +38,8 @@ SITE_URL=https://$DOMAIN
 ALLOWED_HOSTS=$DOMAIN,localhost,127.0.0.1
 CSRF_TRUSTED_ORIGINS=https://$DOMAIN
 GAME_RECOMPUTE_IN_BACKGROUND=1
+# Staging's own AI service (the "Deploy Staging" workflow deploys it), never the live one
+MODAL_API_URL=https://christophermarais--ibbi-api-staging-fastapi-app.modal.run/analyze
 VARS
   chmod 600 "$APP/.env.staging"
   echo "Wrote $APP/.env.staging for https://$DOMAIN"

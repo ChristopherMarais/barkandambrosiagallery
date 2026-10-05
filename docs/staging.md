@@ -12,6 +12,7 @@ be tried there before a release. Production keeps deploying only when you publis
 | Containers | `docker compose -f docker-compose.yml -f docker-compose.prod.yml` | `docker compose -f docker-compose.staging.yml -p barkandambrosia-staging` |
 | Port | 80 | 8080 |
 | Email | sent | never sent (written to the log) |
+| AI classifier (Modal) | app `ibbi-api` | its own app, `ibbi-api-staging` |
 | Who can sign in | everyone with an account | only the shared account **stagedtesting** / **gallerystaging** |
 
 Every staging page has a black **STAGING** bar, asks search engines not to index it, and sends visitors who are not
@@ -57,6 +58,13 @@ port. Production would refuse it, because the address is not in its `ALLOWED_HOS
    *Destination Port → Rewrite to 8080*.
 
 Check it with `curl -sI https://staging.barkandambrosiagallery.org/`. It should answer with a redirect to `/accounts/login/`.
+
+### Staging's AI service
+
+Staging has its own copy of the AI classifier on Modal (`ibbi-api-staging`), so a change to the classifier can be
+tried on staging while the live site keeps using the released one. *Deploy Staging* deploys it whenever a push to
+`main` changes `beetlesgallery/tools/`, or when you run the workflow by hand with **"Also deploy staging's own AI service"** ticked
+(do that once after setting staging up). It costs nothing while nobody uses it.
 
 ### Deploys from GitHub
 

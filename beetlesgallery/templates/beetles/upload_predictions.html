@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load beetle_tags %}
 
 {% block title %}Model predictions | Bark & Ambrosia Beetle Gallery{% endblock %}
 
@@ -7,6 +8,7 @@
   <a href="{% url 'data_management' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Data Management</a>
   <h1 class="page-title">Model predictions</h1>
   <p class="text-gray-600 mb-8">
+    The usual way is the Upload Model Predictions button on Data Management, which shows its progress.
     Upload a classifier's species guesses for ROIs. They appear as an unverified suggestion on ROIs that
     have no species label yet, and they set how hard the game treats each image.
     A prediction never changes an ROI's label.
@@ -23,15 +25,15 @@
         {% if result.dry_run %}{{ filename }} is valid{% else %}Saved {{ filename }}{% endif %}
       </h2>
       <p class="text-sm text-green-900">
-        {{ result.rows }} row{{ result.rows|pluralize }}:
-        {{ result.created }} new, {{ result.updated }} replacing an earlier upload.
-        {% if result.boxes_created or result.boxes_matched %}Boxes: {{ result.boxes_created }} new, {{ result.boxes_matched }} already on the site.{% endif %}
+        {{ result.rows|digit_groups_text }} row{{ result.rows|pluralize }}:
+        {{ result.created|digit_groups_text }} new, {{ result.updated|digit_groups_text }} replacing an earlier upload.
+        {% if result.boxes_created or result.boxes_matched %}Boxes: {{ result.boxes_created|digit_groups_text }} new, {{ result.boxes_matched|digit_groups_text }} already on the site.{% endif %}
         {% if result.dry_run %}This was a check only, so nothing was saved.{% endif %}
       </p>
     {% else %}
       <h2 class="text-lg font-semibold text-red-900 mb-1">{{ filename }} was not saved</h2>
       <p class="text-sm text-red-900 mb-3">
-        {{ result.error_count }} problem{{ result.error_count|pluralize }} found, so nothing was saved.
+        {{ result.error_count|digit_groups_text }} problem{{ result.error_count|pluralize }} found, so nothing was saved.
         Fix them and upload the file again.
       </p>
       <ul class="text-sm text-red-900 list-disc pl-5 space-y-1">
@@ -72,7 +74,7 @@
     </button>
   </form>
 
-  <h2 class="text-xl font-semibold text-gray-900 mb-3">Columns</h2>
+  <h2 id="columns" class="text-xl font-semibold text-gray-900 mb-3">Columns</h2>
   <div class="rounded-xl border border-gray-200 bg-white overflow-x-auto">
     <table class="w-full text-sm">
       <tbody class="divide-y divide-gray-100">

@@ -22,7 +22,7 @@
 
   <div class="p-4 mb-4 bg-gray-50 border border-gray-200 rounded-lg">
     {% if feedback.scored %}
-    <p class="text-gray-900"><span class="text-2xl font-semibold tabular-nums">{{ feedback.right|digit_groups }}</span> of {{ feedback.scored|digit_groups }} verified beetles fully right.</p>
+    <p class="text-gray-900"><span class="text-2xl font-semibold tabular-nums">{{ feedback.right|digit_groups }}</span> of {{ feedback.scored|digit_groups }} verified beetles fully correct.</p>
     {% else %}
     <p class="text-gray-900">None of these beetles has a verified name yet, so there's nothing to score.</p>
     {% endif %}
@@ -38,7 +38,7 @@
 
   <div class="flex flex-col sm:flex-row gap-3 mt-6">
     {% if is_self %}
-    <a href="{% url 'game_play' round.mode %}" class="px-6 py-3.5 text-center text-base font-semibold text-white bg-gray-500 hover:bg-gray-500 rounded-xl">Keep playing</a>
+    <a href="{% url 'game_play' round.mode %}" class="btn-main px-6 py-3.5 text-base">Keep playing</a>
     {% endif %}
     <a href="{% url 'game_report' %}" class="px-6 py-3.5 text-center text-base font-medium text-gray-700 border border-gray-200 rounded-xl">My performance</a>
   </div>
@@ -64,7 +64,7 @@
     <p id="sheet-error" class="hidden text-sm text-red-700"></p>
     <div class="flex gap-3 pt-1">
       <button type="button" id="sheet-cancel" class="px-4 py-3 text-base text-gray-600 border border-gray-200 rounded-xl">Cancel</button>
-      <button type="submit" class="flex-1 px-4 py-3 text-base font-semibold text-white bg-gray-500 hover:bg-gray-500 rounded-xl">Send report</button>
+      <button type="submit" class="btn-main flex-1 px-4 py-3 text-base">Send report</button>
     </div>
   </form>
 </div>
@@ -99,8 +99,8 @@
   };
 
   const VERDICT = {
-    right: ['<i class="fi fi-rr-check"></i> Right', "bg-green-100 text-green-800 border-green-200"],
-    partly: ['<i class="fi fi-rr-minus"></i> Partly right', "bg-amber-100 text-amber-800 border-amber-200"],
+    right: ['<i class="fi fi-rr-check"></i> Correct', "bg-green-100 text-green-800 border-green-200"],
+    partly: ['<i class="fi fi-rr-minus"></i> Partly correct', "bg-amber-100 text-amber-800 border-amber-200"],
     wrong: ['<i class="fi fi-rr-cross-small"></i> Not quite', "bg-red-100 text-red-800 border-red-200"],
   };
 
@@ -137,7 +137,7 @@
   }
 
   function mark(ok) {
-    if (ok === true) return '<i class="fi fi-rr-check text-green-700" aria-label="right"></i>';
+    if (ok === true) return '<i class="fi fi-rr-check text-green-700" aria-label="correct"></i>';
     if (ok === false) return '<i class="fi fi-rr-cross-small text-red-700" aria-label="wrong"></i>';
     return "";
   }

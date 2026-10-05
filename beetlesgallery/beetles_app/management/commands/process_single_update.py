@@ -13,6 +13,7 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 
 from beetlesgallery.beetles_app.models import UpdateBatch, Beetles, ImageAsset, Taxon
+from beetlesgallery.beetles_app.areas import BULK_VALIDATE, has_area
 from beetlesgallery.beetles_app.bbox_rules import BOX_COLUMNS, is_blank, parse_box
 from beetlesgallery.beetles_app.csv_columns import modern_columns
 
@@ -40,8 +41,8 @@ BEETLE_FIELDS = {
     "bbox_x", "bbox_y", "bbox_width", "bbox_height", "bbox_label",
     "bbox_is_validated", "label_source", "label_source_detail",
 }
-# label_source: one of these keys, or its label (any case); blank clears it
-LABEL_SOURCES = {k: k for k, _ in Beetles.LabelSource.choices} | {v.lower(): k for k, v in Beetles.LabelSource.choices}
+# label_source: an identification tier (key or label, any case, or an older source name); blank is No ID
+from beetlesgallery.beetles_app.identification import parse_tier
 UPDATE_IGNORED_COLS = {
     "image_id", "taxonomy_scientific_name", "taxonomy_subfamily", 
     "taxonomy_tribe", "taxonomy_genus", "taxonomy_species", "update_notes"
@@ -143,6 +144,9 @@ class Command(BaseCommand):
         
         row_count = len(df)
         batch.rows_total = row_count
+        # Validating or un-validating through a spreadsheet is bulk validation: its own permission. Batches with
+        # no uploader were made by the owner on the server.
+        may_validate = batch.uploaded_by is None or has_area(batch.uploaded_by, BULK_VALIDATE)
         
         for i, row in df.iterrows():
             row_num = i + 2
@@ -209,10 +213,10 @@ class Command(BaseCommand):
                 continue
 
             if "label_source" in b_updates and not is_blank(b_updates["label_source"]):
-                source = LABEL_SOURCES.get(str(b_updates["label_source"]).strip().lower())
-                if source is None:
+                source, ok = parse_tier(b_updates["label_source"])
+                if not ok:
                     errors.append(f"Row {row_num}: label_source '{b_updates['label_source']}' must be one of "
-                                  f"{', '.join(k for k, _ in Beetles.LabelSource.choices)} (or blank).")
+                                  f"{', '.join(k for k, _ in Beetles.LabelSource.choices)} (or blank for No ID).")
                     continue
                 b_updates["label_source"] = source
 
@@ -238,6 +242,19 @@ class Command(BaseCommand):
                 was_validated = False if is_new else bool(beetle_obj.bbox_is_validated)
                 if wants_validated and not was_validated and final_box is None:
                     errors.append(f"Row {row_num}: bbox_is_validated is true but the row has no box.")
+                    continue
+
+            if not may_validate:
+                roi_wants = _to_bool(b_updates.get("bbox_is_validated"))
+                image_wants = _to_bool(i_updates.get("is_validated"))
+                image_was = bool(beetle_obj.image_asset.is_validated) if beetle_obj.image_asset_id else False
+                changes = [col for col, wants, was in (
+                    ("bbox_is_validated", roi_wants, False if is_new else bool(beetle_obj.bbox_is_validated)),
+                    ("is_validated", image_wants, image_was),
+                ) if wants is not None and wants != was and not (col == "bbox_is_validated" and final_box is None)]
+                if changes:
+                    errors.append(f"Row {row_num}: changing {' and '.join(changes)} needs the Bulk validate permission. "
+                                  "Validate on the annotation page, or leave the cell as downloaded.")
                     continue
 
             updates_plan.append({

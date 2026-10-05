@@ -11,11 +11,11 @@ levels are kept only while the answers stay good.
     2      Larva                            50       -       the identification game, and choosing your game
     3      Pupa                            150      35%      focus on one subfamily; more photos of each beetle
     4      Teneral                     400      50%      focus on one tribe
-    5      Beetle scout                    800      60%      focus on one genus
-    6      Field entomologist             1500      70%      your labels go to curators as suggestions
-    7      Taxonomist                     3000      75%
-    8      Beetle master                  6000      80%
-    9      Coleopterist                  10000      85%
+    5      Tunnel master                   800      60%      focus on one genus
+    6      Gallery engineer               1500      70%      your labels go to curators as suggestions
+    7      Fungus farmer                  3000      75%
+    8      Brood guardian                 6000      80%
+    9      Colony founder                10000      85%
     10     King of Bark and Ambrosia     25000      92%
 
 Separately from levels, a player who proves themselves on one part of the tree is an *expert* there (game_trust.py:
@@ -54,17 +54,19 @@ LEVELS = [
     (50, 0.0, "Larva", [CHOOSE_GAME]),
     (150, 0.35, "Pupa", ["focus_subfamily", SPECIMEN_PHOTOS]),
     (400, 0.5, "Teneral", ["focus_tribe", LIGHT]),
-    (800, 0.6, "Beetle scout", ["focus_genus"]),
-    (1500, 0.7, "Field entomologist", [PROPOSALS]),
-    (3000, 0.75, "Taxonomist", []),
-    (6000, 0.8, "Beetle master", []),
-    (10000, 0.85, "Coleopterist", []),
+    # After the teneral adult, a bark beetle's life: it bores in, carves its galleries, farms its fungus, guards its
+    # brood and founds a colony. (Not "Taxonomist": that word is kept for real taxonomists' identifications.)
+    (800, 0.6, "Tunnel master", ["focus_genus"]),
+    (1500, 0.7, "Gallery engineer", [PROPOSALS]),
+    (3000, 0.75, "Fungus farmer", []),
+    (6000, 0.8, "Brood guardian", []),
+    (10000, 0.85, "Colony founder", []),
     (25000, 0.92, "King of Bark and Ambrosia", []),
 ]
 FOCUS_PERK = {"subfamily": "focus_subfamily", "tribe": "focus_tribe", "genus": "focus_genus"}
 # One icon per level (Flaticon uicons, regular rounded), from egg to crown
-LEVEL_ICONS = ["fi-rr-egg", "fi-rr-worm", "fi-rr-hourglass", "fi-rr-bug", "fi-rr-binoculars", "fi-rr-tree-deciduous",
-               "fi-rr-book-open-cover", "fi-rr-microscope", "fi-rr-graduation-cap", "fi-rr-crown"]
+LEVEL_ICONS = ["fi-rr-egg", "fi-rr-worm", "fi-rr-hourglass", "fi-rr-bug", "fi-rr-pickaxe", "fi-rr-route",
+               "fi-rr-mushroom", "fi-rr-shield", "fi-rr-house-tree", "fi-rr-crown"]
 
 
 def level_icon(level):

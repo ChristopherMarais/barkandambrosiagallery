@@ -63,7 +63,8 @@ class ReportFromFeedTests(GameCase):
     def test_the_cog_is_in_the_full_image_view(self):
         page = self.client.get(reverse("game_play", args=["mixed"])).content.decode()
         self.assertIn('id="report-cog"', page)
-        self.assertIn('data-reason="wrong_label"', page)
+        self.assertIn('data-reason="bad_box"', page)
+        self.assertNotIn('data-reason="wrong_label"', page)   # only after answering (the round review)
 
     def test_the_annotation_list_can_show_only_reported_photos(self):
         self.report()

@@ -12,7 +12,7 @@
 
   <!-- One button: the feed mixes both games -->
   <a href="{% url 'game_play' 'mixed' %}" data-testid="play"
-    class="flex items-center justify-center gap-3 w-full py-6 mb-5 text-2xl font-bold text-white bg-gray-500 hover:bg-gray-500 active:scale-[0.99] rounded-2xl shadow-sm transition">
+    class="btn-main flex w-full py-6 mb-5 text-2xl rounded-2xl">
     <i class="fi fi-rr-play"></i> Play
   </a>
 
@@ -48,7 +48,7 @@
   <!-- Beetles checked by a curator since last time: what you said, what it is -->
   <section class="mb-5" data-testid="checked-recap">
     <div class="flex items-baseline justify-between mb-2">
-      <h2 class="text-lg font-semibold text-gray-900">Checked since you played{% if checked_new > checked|length %} <span class="text-sm font-normal text-gray-400">({{ checked_new }})</span>{% endif %}</h2>
+      <h2 class="text-lg font-semibold text-gray-900">Reviewed by curators{% if checked_new > checked|length %} <span class="text-sm font-normal text-gray-400">({{ checked_new }})</span>{% endif %}</h2>
       <a href="{% url 'game_history' %}?tab=checked" class="text-sm underline text-gray-600 hover:text-gray-900">All</a>
     </div>
     {% include "beetles/includes/game_checked_list.html" %}
@@ -106,7 +106,7 @@
       <p class="mt-2 text-sm text-gray-600">A curator confirmed your name for a species the gallery had never seen:</p>
       <ul class="mt-3 space-y-1 text-gray-900">{% for d in discoveries %}<li><em>{{ d.genus }} {{ d.species }}</em></li>{% endfor %}</ul>
       <p class="mt-3 text-xs text-gray-500">New badge: <strong>New species finder</strong></p>
-      <button type="button" onclick="document.getElementById('discovery').remove()" class="mt-5 w-full px-6 py-3 text-base font-semibold text-white bg-gray-500 hover:bg-gray-500 rounded-xl" autofocus>Brilliant</button>
+      <button type="button" onclick="document.getElementById('discovery').remove()" class="btn-main mt-5 w-full px-6 py-3 text-base" autofocus>Brilliant</button>
     </div>
   </div>
   {% endif %}

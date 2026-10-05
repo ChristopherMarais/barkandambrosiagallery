@@ -12,13 +12,13 @@ class AppliedLabelTests(GameCase):
     def setUp(self):
         super().setUp()
         self.beetle = make_beetle(image=make_image(), taxon=self.t_ferr, bbox="unvalidated",
-                                  label_source=Beetles.LabelSource.VIAL_LABEL)
+                                  label_source=Beetles.LabelSource.COMMUNITY)
         self.client.force_login(self.staff)
 
     def apply(self, by=None):
         """What accepting a proposal (by a curator) or auto-apply (by=None) does to the beetle."""
         self.beetle.depicts_valid_name_id = self.t_affinis.valid_species_id
-        self.beetle.label_source = Beetles.LabelSource.GAME_CONSENSUS
+        self.beetle.label_source = Beetles.LabelSource.EXPERT
         self.beetle.save()
         LabelReview.objects.create(roi=self.beetle, decision=LabelReview.Decision.ACCEPTED, reviewed_by=by,
                                    taxon=self.t_affinis, genus="Xyleborus", species="affinis", answers=4)
@@ -38,7 +38,7 @@ class AppliedLabelTests(GameCase):
         self.beetle.refresh_from_db()
         self.assertEqual(self.beetle.depicts_valid_name_id, self.t_ferr.valid_species_id)   # the earlier label is back
         self.assertEqual(self.beetle.taxon, self.t_ferr)
-        self.assertEqual(self.beetle.label_source, Beetles.LabelSource.VIAL_LABEL)
+        self.assertEqual(self.beetle.label_source, Beetles.LabelSource.COMMUNITY)
         newest = LabelReview.objects.filter(roi=self.beetle).first()
         self.assertEqual((newest.decision, newest.reviewed_by), (LabelReview.Decision.DISMISSED, self.staff))
         self.assertFalse(game_applied.applied_rois().filter(id=self.beetle.id).exists())

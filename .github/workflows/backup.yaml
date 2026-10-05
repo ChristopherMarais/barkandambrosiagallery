@@ -54,6 +54,9 @@ jobs:
 
             # 2. Safely dump the database
             cd /opt/barkandambrosiagallery || exit 1
+            COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+            # A notice at the top of every page while the backup runs (never blocks the backup)
+            $COMPOSE exec -T web pixi run backup-notice on || true
             echo "Dumping PostgreSQL database..."
             # Outside the media folder, which the site serves to anyone; still inside the data folder copied to Dropbox
             mkdir -p /opt/barkandambrosia_data/db_backup
@@ -69,9 +72,10 @@ jobs:
               
               # 'nohup' and '&' force the task to run invisibly in the server's background
               # The output is saved to a log file so SSH doesn't hang waiting for it
-              nohup rclone copy /opt/barkandambrosia_data "$DROPBOX_PATH/" \
-                --exclude "postgres/**" \
-                --verbose > /opt/barkandambrosiagallery/full_backup_progress.log 2>&1 < /dev/null &
+              # The notice goes off when the copy ends, whether it worked or not
+              nohup sh -c "rclone copy /opt/barkandambrosia_data '$DROPBOX_PATH/' --exclude 'postgres/**' --verbose; \
+                $COMPOSE exec -T web pixi run backup-notice off" \
+                > /opt/barkandambrosiagallery/full_backup_progress.log 2>&1 < /dev/null &
               
               echo "✅ Process successfully pushed to the background."
               echo "You can check the live progress anytime by SSHing into your server and running:"
@@ -79,6 +83,7 @@ jobs:
             
             else
               echo "Running FAST backup synchronously..."
+              trap '$COMPOSE exec -T web pixi run backup-notice off || true' EXIT
               rclone copy /opt/barkandambrosia_data "$DROPBOX_PATH/" \
                 --exclude "postgres/**" \
                 --exclude "media/originals/**" \

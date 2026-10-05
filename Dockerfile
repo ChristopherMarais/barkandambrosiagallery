@@ -12,7 +12,8 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Install Pixi
+# Install Pixi (pinned: the same version as the workflows, new enough for pixi.lock format v7)
+ENV PIXI_VERSION=v0.81.0
 RUN curl -fsSL https://pixi.sh/install.sh | bash
 ENV PATH="/root/.pixi/bin:$PATH"
 

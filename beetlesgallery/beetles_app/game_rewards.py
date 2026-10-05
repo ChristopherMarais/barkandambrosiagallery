@@ -162,14 +162,14 @@ BADGES = OrderedDict([
     ("nightowl", ("Night owl", "Play between midnight and 4 am", "fi-rr-moon", True)),
     ("earlybird", ("Early bird", "Play between 5 and 6 am", "fi-rr-sunrise", True)),
     ("species100", ("Eagle eye", "Name 100 species we know the answer to", "fi-rr-eye", False)),
-    ("flawless", ("Flawless", "20 checked beetles in a row, every rank right", "fi-rr-diamond", False)),
-    ("genera10", ("Genus hopper", "Name the right species in 10 different genera", "fi-rr-shuffle", False)),
-    ("genera50", ("Taxonomic tourist", "Name the right species in 50 different genera", "fi-rr-globe", False)),
-    ("platypod", ("Pinhole borer", "Name 25 Platypodinae species right", "fi-rr-bullseye", False)),
-    ("similar50", ("Family resemblance", "50 Similarity answers exactly right", "fi-rr-link", False)),
+    ("flawless", ("Flawless", "20 checked beetles in a row, every rank correct", "fi-rr-diamond", False)),
+    ("genera10", ("Genus hopper", "Name the correct species in 10 different genera", "fi-rr-shuffle", False)),
+    ("genera50", ("Taxonomic tourist", "Name the correct species in 50 different genera", "fi-rr-globe", False)),
+    ("platypod", ("Pinhole borer", "Name 25 Platypodinae species correctly", "fi-rr-bullseye", False)),
+    ("similar50", ("Family resemblance", "50 Similarity answers exactly correct", "fi-rr-link", False)),
     ("twins", ("Doppelganger", "Spot 10 pairs of the very same species", "fi-rr-copy", False)),
-    ("comeback", ("Comeback", "Get a beetle right the second time", "fi-rr-refresh", False)),
-    ("ahead", ("Ahead of the curators", "10 answers proven right after a curator checked them", "fi-rr-time-forward", False)),
+    ("comeback", ("Comeback", "Get a beetle correct the second time", "fi-rr-refresh", False)),
+    ("ahead", ("Ahead of the curators", "10 answers proven correct after curators reviewed them", "fi-rr-time-forward", False)),
     ("curator", ("Sharp-eyed", "3 of your reports led to a fix", "fi-rr-flag-alt", False)),
     ("discovery3", ("Explorer", "Find 3 new species", "fi-rr-compass", False)),
     ("expert5", ("Polymath", "Be a proven expert in 5 taxa", "fi-rr-graduation-cap", False)),
@@ -314,6 +314,20 @@ def badge_tier(key):
     return BADGE_TIER.get(key, "common")
 
 
+# A 0-1 value (accuracy, challenge) in the same rarity colours: the upper bound of each tier
+RARITY_STEPS = [(0.3, "common"), (0.5, "uncommon"), (0.7, "rare"), (0.85, "epic"), (0.95, "legendary")]
+
+
+def rarity_tier(value):
+    """The rarity tier for a 0-1 value, e.g. 0.92 accuracy -> "legendary"; None -> "common"."""
+    if value is None:
+        return "common"
+    for top, tier in RARITY_STEPS:
+        if value < top:
+            return tier
+    return "mythic"
+
+
 def badge_cards(player):
     """All badges for display: earned or not, with their rarity tier."""
     have = earned_badges(player)
@@ -376,7 +390,12 @@ def recap(player, since):
     from django.db.models import Sum
     from .models import AnswerPoints
     points = AnswerPoints.objects.filter(answer__in=sitting).aggregate(s=Sum("points"))["s"] or 0.0
+    from . import game
+    accuracy = right / scored.count() if scored.exists() else None
+    challenge = game.target_difficulty(player)
     return {
+        "accuracy": accuracy, "accuracy_tier": rarity_tier(accuracy),
+        "challenge": round(challenge * 100), "challenge_tier": rarity_tier(challenge),
         "points": round(points, 1),
         "labelled": done.count(), "skipped": sitting.filter(skipped=True).count(),
         "scored": scored.count(), "right": right,

@@ -17,6 +17,7 @@ from io import BytesIO
 from django.db.models import Q, Count, F
 from django.utils import timezone
 from django.urls import reverse
+from django.db import transaction
 from django.conf import settings
 from django.contrib import messages
 from django.utils.http import http_date, url_has_allowed_host_and_scheme
@@ -33,12 +34,15 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.files.storage import default_storage
 from django.core.management import call_command
 
+from . import chunked_upload
 from .areas import ANNOTATE, BOXES, DETAILS, DOWNLOAD, SPECIES, UPLOAD, INTERACTIONS, AREAS, area_required, has_area
+from .areas import CURATOR_AREAS, page_groups, AI_RECOMMEND, ANNOTATE, BOXES, BULK_VALIDATE, NOTICE, PREDICTIONS, UPDATE, VALIDATE, DETAILS, DOWNLOAD, SPECIES, UPLOAD, INTERACTIONS, AREAS, area_required, has_area
 from .csv_columns import modern_columns
 from .models import Beetles, UploadBatch, DownloadJob, UpdateBatch, ImageAsset
 from .schema import REQUIRED_COLS, MAX_ROWS
 from .forms import TailwindUserCreationForm, ProfileForm, PasswordChangeFormStyled, ValidSpeciesUploadForm, DescribedNamesUploadForm, UpdateBatchUploadForm
 from .predictions import import_predictions, suggestions_for
+from .roi_reports import REASONS as REPORT_REASONS
 from .tasks import process_upload_task, process_update_task, build_downloads_task
 
 import pandas as pd
@@ -166,6 +170,8 @@ def my_account(request):
         "accounts/my_account.html",
         {
             "area_choices": AREAS,
+            "permission_pages": page_groups(),
+            "curator_areas": json.dumps(CURATOR_AREAS),
             "password_form": password_form,
             "create_user_form": create_user_form,
             "active_modal": active_modal,
@@ -325,6 +331,14 @@ def upload_file(request):
     # --- require both files present ---
     csv_file = request.FILES.get("csv_file") or request.FILES.get("csv")
     zipf = request.FILES.get("zip")
+    # A big ZIP arrives in pieces first (chunked_upload.py) and the form names it by its upload id
+    chunked_id = request.POST.get("zip_upload_id")
+    if not zipf and chunked_id:
+        zipf = chunked_upload.take(request.user, chunked_id, request.POST.get("zip_total"),
+                                   name=os.path.basename(request.POST.get("zip_name") or "images.zip"))
+        if zipf is None:
+            messages.error(request, "The images ZIP did not arrive completely. Please upload it again.")
+            return redirect("data_management")
 
     print(f"DEBUG: Resolved csv_file: {csv_file}, zipf: {zipf}", flush=True)
 
@@ -385,6 +399,9 @@ def upload_file(request):
     # Saving will use your upload_to=staging_upload_path_csv/zip and name them <batch-id>.(csv|zip)
     batch.file.save(csv_file.name, csv_file, save=False)
     batch.zip_file.save(zipf.name, zipf, save=False)
+    if chunked_id and not request.FILES.get("zip"):
+        zipf.close()
+        chunked_upload.discard(request.user, chunked_id)   # it now lives with the batch
     batch.size_bytes = csv_file.size or 0
     # Compute checksum of the CSV (used by your existing admin display)
     try:
@@ -652,9 +669,11 @@ def gallery(request):
         beetles_page = paginator.page(paginator.num_pages)
 
     from django.utils.safestring import mark_safe
+
+    from .templatetags.beetle_tags import digit_groups_text
     current_page = beetles_page.number
     page_options_html = mark_safe("".join(
-        f'<option value="{p}"{" selected" if p == current_page else ""}>{p}</option>'
+        f'<option value="{p}"{" selected" if p == current_page else ""}>{digit_groups_text(p)}</option>'
         for p in range(1, paginator.num_pages + 1)
     ))
 
@@ -814,7 +833,10 @@ def beetle_detail(request, beetle_id):
         request,
         "beetles/detail.html",
         {
+            "report_reasons": REPORT_REASONS,
             "beetle": beetle, 
+            # every other name this ROI was given, most recent first (the shown one is the most reliable)
+            "other_names": list(beetle.names.exclude(valid_species_id=beetle.depicts_valid_name_id or "").select_related("taxon")[:20]),
             "ref_species": ref_species, 
             "ref_version": ref_version,
             "siblings": siblings,
@@ -1081,6 +1103,9 @@ def data_management(request):
             "described_names_ref_status": described_names_ref_status,
             "initial_archives": initial_archives,
             "initial_current": initial_current,
+            "chunk_bytes": chunked_upload.CHUNK_BYTES,
+            "predictions_max_bytes": getattr(settings, "MAX_UPLOAD_SIZE_PREDICTIONS", 50 * 1024 * 1024),
+            "predictions_max_mb": getattr(settings, "MAX_UPLOAD_SIZE_PREDICTIONS", 50 * 1024 * 1024) // (1024 * 1024),
         }
     )
 
@@ -1195,6 +1220,8 @@ def tool_annotate(request):
     return render(request, 'beetles/tool_annotate.html', {
         # someone who may only edit boxes sees names and details read-only (the API refuses changes to them)
         'can_edit_records': has_area(request.user, ANNOTATE),
+        'can_validate': has_area(request.user, VALIDATE),
+        'can_ai_recommend': has_area(request.user, AI_RECOMMEND),
         'filter_groups': filter_context,
         'taxonomy_tree_json': json.dumps(tree_dict_clean, cls=DjangoJSONEncoder, ensure_ascii=False),
         'species_map_json': json.dumps(species_map, cls=DjangoJSONEncoder, ensure_ascii=False),
@@ -1282,7 +1309,7 @@ def admin_valid_species(request):
             # Synchronously trigger the ETL pipeline
             try:
                 call_command('migrate_taxonomy_to_db')
-                messages.success(request, "Valid Species uploaded. Postgres database successfully rebuilt and beetles re-linked.")
+                messages.success(request, "Accepted species uploaded: the taxonomy was successfully rebuilt and every beetle re-linked.")
             except Exception as e:
                 messages.error(request, f"File saved, but database rebuild failed: {str(e)}")
 
@@ -1315,7 +1342,7 @@ def admin_described_names(request):
 
             try:
                 call_command('migrate_taxonomy_to_db')
-                messages.success(request, "Described Names uploaded. Postgres database successfully rebuilt and beetles re-linked.")
+                messages.success(request, "Synonyms and old names uploaded: the taxonomy was successfully rebuilt and every beetle re-linked.")
             except Exception as e:
                 messages.error(request, f"File saved, but database rebuild failed: {str(e)}")
 
@@ -1344,7 +1371,7 @@ UPDATE_IGNORED_COLS = {
     "taxonomy_tribe", "taxonomy_genus", "taxonomy_species"
 }
 
-@area_required(UPLOAD)
+@area_required(UPDATE)
 def update_upload(request):
     """
     Staff-only portal to submit a CSV of metadata updates by Record ID (UUID).
@@ -1702,7 +1729,7 @@ def tool_classify(request):
             }, status=500)
 
     # GET request: Render the page
-    return render(request, 'beetles/tool_classify.html', {'examples': CLASSIFIER_EXAMPLES})
+    return render(request, 'beetles/tool_classify.html', {'examples': CLASSIFIER_EXAMPLES, 'ibbi_docs_url': ibbi_models.IBBI_DOCS_URL})
 
 @login_required
 def stream_updates(request):
@@ -2066,6 +2093,8 @@ def tool_annotate(request):
     return render(request, 'beetles/tool_annotate.html', {
         # someone who may only edit boxes sees names and details read-only (the API refuses changes to them)
         'can_edit_records': has_area(request.user, ANNOTATE),
+        'can_validate': has_area(request.user, VALIDATE),
+        'can_ai_recommend': has_area(request.user, AI_RECOMMEND),
         'filter_groups': filter_context
     })
 
@@ -2093,10 +2122,10 @@ def interactions_preview(request):
 
 
 
-@superuser_required
+@area_required(PREDICTIONS)
 def upload_predictions(request):
     """
-    Superuser page to upload classifier predictions (species suggestions for ROIs) from a CSV.
+    Upload classifier predictions (species suggestions for ROIs) from a CSV (the "Model predictions" permission).
     Everything is checked first; if any row is wrong nothing is saved and each problem is listed.
     """
     context = {"max_mb": getattr(settings, "MAX_UPLOAD_SIZE_PREDICTIONS", 50 * 1024 * 1024) // (1024 * 1024)}
@@ -2110,6 +2139,8 @@ def upload_predictions(request):
         elif csv_file.size and csv_file.size > limit:
             context["error"] = f"The file is too large ({_format_size(csv_file.size)}); the limit is {_format_size(limit)}."
         else:
+            if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                return _start_prediction_upload(request, csv_file)
             context["result"] = import_predictions(
                 csv_file, user=request.user,
                 default_model=request.POST.get("model_name", "").strip(),
@@ -2117,4 +2148,34 @@ def upload_predictions(request):
                 dry_run=bool(request.POST.get("dry_run")),
             )
             context["filename"] = csv_file.name
+        if context.get("error") and request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": False, "error": context["error"]}, status=400)
     return render(request, "beetles/upload_predictions.html", context)
+
+
+def _start_prediction_upload(request, csv_file):
+    """The Data Management dialog: save the file, check and save it in the background, and say where to follow it."""
+    from .models import PredictionUpload
+    from .tasks import import_predictions_task
+    job = PredictionUpload(
+        original_filename=csv_file.name[:255], uploaded_by=request.user,
+        model_name=request.POST.get("model_name", "").strip()[:100],
+        model_version=request.POST.get("model_version", "").strip()[:50],
+        dry_run=bool(request.POST.get("dry_run")),
+    )
+    job.file.save(csv_file.name, csv_file, save=False)
+    job.save()
+    transaction.on_commit(lambda: import_predictions_task.delay(str(job.id)))
+    return JsonResponse({"success": True, "status_url": reverse("upload_predictions_status", args=[job.id])})
+
+
+@area_required(PREDICTIONS)
+def upload_predictions_status(request, job_id):
+    """How far a predictions upload is, and its result when done (the uploader's own, or any for a superuser)."""
+    from .models import PredictionUpload
+    jobs = PredictionUpload.objects.all() if request.user.is_superuser else PredictionUpload.objects.filter(uploaded_by=request.user)
+    job = get_object_or_404(jobs, pk=job_id)
+    return JsonResponse({
+        "status": job.status, "phase": job.phase, "percent": job.percent, "filename": job.original_filename,
+        "dry_run": job.dry_run, "done": job.status in ("done", "failed"), "result": job.result,
+    })

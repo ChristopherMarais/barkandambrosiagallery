@@ -62,6 +62,7 @@ def revert(roi, user):
     roi.label_source_detail = before["label_source_detail"] or ""
     roi.last_updated_by = user
     roi._change_reason = "Reverted a label applied from the game"
+    roi._name_by_hand = True   # a curator puts the earlier name back, whatever its tier (identification.py)
     roi.save()
     LabelReview.objects.create(
         roi=roi, decision=LabelReview.Decision.DISMISSED, reviewed_by=user, answers=review.answers,

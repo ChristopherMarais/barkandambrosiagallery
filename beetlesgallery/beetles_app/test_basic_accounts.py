@@ -61,11 +61,11 @@ class GranularStaffTests(PageTestCase):
     def test_the_species_tables_are_their_own_permission(self):
         self.client.force_login(self.staff)   # a curator with every other area
         self.assertEqual(self.client.get(reverse("admin_valid_species")).status_code, 403)
-        self.assertNotContains(self.client.get(reverse("data_management")), "Taxonomy Reference Management")
+        self.assertNotContains(self.client.get(reverse("data_management")), "Species Tables")
         AreaGrant.objects.create(user=self.staff, area=areas.SPECIES)
         self.client.force_login(self.staff)
         self.assertEqual(self.client.get(reverse("admin_valid_species")).status_code, 200)
-        self.assertContains(self.client.get(reverse("data_management")), "Taxonomy Reference Management")
+        self.assertContains(self.client.get(reverse("data_management")), "Species Tables")
 
     def test_superusers_have_everything(self):
         for key in areas.KEYS:
@@ -83,6 +83,6 @@ class ExistingAccountsKeepTheirAccessTests(PageTestCase):
         migration.grant(apps, None)   # running it again adds nothing twice
         have = lambda u: sorted(AreaGrant.objects.filter(user=u).values_list("area", flat=True))   # noqa: E731
         self.assertEqual(have(member), sorted(areas.MEMBER_AREAS))
-        self.assertEqual(have(curator), sorted(areas.CURATOR_AREAS))
+        self.assertEqual(have(curator), sorted(migration.CURATOR_AREAS))
         self.assertNotIn(areas.SPECIES, have(curator))
         self.assertEqual((have(waiting), have(boss)), ([], []))

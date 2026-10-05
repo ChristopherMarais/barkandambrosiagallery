@@ -96,8 +96,38 @@
 
   #actions { position: sticky; bottom: 0; z-index: 2; display: flex; gap: 0.5rem; margin-top: 0.5rem; padding: 0 0 calc(0.625rem + env(safe-area-inset-bottom)); background: #fff; }
   #actions button { height: 3rem; border-radius: 0.75rem; font-size: 1rem; }
-  #skip { flex: 0 0 30%; font-weight: 500; color: #4b5563; border: 1px solid #d1d5db; background: #fff; }
-  #submit { flex: 1 1 auto; font-weight: 600; color: #fff; background: #6b7280; }
+  /* Skip on its own at the left, away from Next; Back sits next to Next */
+  #skip { flex: 0 0 24%; font-weight: 500; color: #4b5563; border: 1px solid #d1d5db; background: #fff; }
+  #actions .gap { flex: 1 1 auto; min-width: 0.5rem; }
+  #back { flex: 0 0 22%; font-weight: 500; color: #374151; border: 1px solid #d1d5db; background: #fff; }
+  #back:disabled { color: #d1d5db; border-color: #e5e7eb; }
+  #submit { flex: 0 0 42%; font-weight: 600; color: #fff; background: #6b7280; }
+  /* Exit: big and plain, top left */
+  #exit { height: 2.5rem; padding: 0 1rem 0 0.75rem; gap: 0.375rem; border: 1px solid #d1d5db; border-radius: 9999px; font-size: 0.9375rem; font-weight: 600; color: #111827; background: #fff; }
+  #exit:hover { border-color: #6b7280; }
+  /* Rounder photos */
+  #photos .cell { border-radius: 1rem; }
+  /* A and B side by side: the letters at the corners that face each other, Report at the far corners.
+     On a phone they are stacked: A's letter at its bottom, B's at its top, Report at the outer corners. */
+  .ab-tag { position: absolute; z-index: 3; padding: 0.125rem 0.55rem; font-size: 0.875rem; font-weight: 700; color: #111827;
+            background: rgba(255,255,255,.92); border: 1px solid #d1d5db; border-radius: 0.5rem; pointer-events: none; }
+  #game[data-mode="pair"] #photos .cell:nth-child(1) .ab-tag { top: 0.375rem; right: 0.375rem; }
+  #game[data-mode="pair"] #photos .cell:nth-child(2) .ab-tag { top: 0.375rem; left: 0.375rem; }
+  #game[data-mode="pair"] #photos .cell:nth-child(1) .report-chip { right: auto; left: 0.375rem; }
+  @media (max-width: 639px) {
+    #game[data-mode="pair"] #photos .cell:nth-child(1) .ab-tag { top: auto; bottom: 0.375rem; right: auto; left: 0.375rem; }
+    #game[data-mode="pair"] #photos .cell:nth-child(1) .report-chip { left: auto; right: 0.375rem; }
+    #game[data-mode="pair"] #photos .cell:nth-child(2) .report-chip { top: auto; bottom: 0.375rem; }
+    #game[data-mode="pair"] #photos .cell:nth-child(2) .more-chip { bottom: auto; top: 0.375rem; }
+  }
+  /* The rank row the arrow keys (or WASD) are on */
+  .rank-row.cursor { box-shadow: 0 0 0 2px #9ca3af; }
+  /* The whole photo: zoom like the crops, and lighting */
+  #lb-zoom { transform-origin: 0 0; }
+  #lb-frame.zoomed { cursor: grab; touch-action: none; }
+  #lightbox #light-panel { position: fixed; left: auto; right: 0.75rem; bottom: 4rem; z-index: 101; }
+  /* Your last beetle (Back) */
+  #previous.hidden { display: none; }
   #submit:disabled { background: #d1d5db; }
   #actions button:active:not(:disabled) { transform: scale(0.98); }
   .icon-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 2.75rem; height: 2.75rem; border-radius: 0.75rem; color: #374151; }
@@ -157,7 +187,7 @@
   #lb-primary { position: absolute; top: 0.5rem; left: 0.5rem; z-index: 2; width: 1.75rem; height: 1.75rem; border-radius: 9999px;
                 display: inline-flex; align-items: center; justify-content: center; background: #fff; color: #111827; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
   #lb-primary.hidden { display: none; }
-  #lightbox-box { border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.7), inset 0 0 0 1px rgba(0,0,0,.7), 0 0 0 9999px rgba(0,0,0,.35); }
+  #lightbox-box { border-radius: 0.5rem; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.7), inset 0 0 0 1px rgba(0,0,0,.7), 0 0 0 9999px rgba(0,0,0,.35); }
   .more-chip { position: absolute; right: 0.375rem; bottom: 0.375rem; z-index: 2; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem;
                border-radius: 9999px; background: rgba(17,24,39,.78); color: #fff; font-size: 0.75rem; font-weight: 600; }
   .more-chip.locked { background: rgba(255,255,255,.92); color: #6b7280; border: 1px solid #d1d5db; }
@@ -183,8 +213,8 @@
 
   <!-- Header: leave any time; your score is on the game home, not here -->
   <header class="flex items-center gap-1 px-2 h-14 border-b border-gray-200 bg-white">
-    <button type="button" id="exit" class="icon-btn gap-1 pr-3 font-medium text-sm" aria-label="Exit the game">
-      <i class="fi fi-rr-angle-left text-lg"></i><span>Exit</span>
+    <button type="button" id="exit" class="inline-flex items-center" aria-label="Exit the game">
+      <i class="fi fi-rr-cross-small text-lg"></i><span>Exit</span><kbd class="kbd">Esc</kbd>
     </button>
     <div class="flex-1 min-w-0 text-center leading-tight">
       <h1 id="game-title" class="font-semibold text-gray-900 text-base tracking-tight truncate">{{ mode_label }}</h1>
@@ -227,7 +257,7 @@
   <div id="stage" class="hidden flex-1 min-h-0 flex flex-col">
     <div class="relative flex-1 min-h-0 flex flex-col">
       <div id="photos"></div>
-      <button type="button" id="light-btn" class="hidden" aria-expanded="false" aria-controls="light-panel" title="Make the photo brighter or sharper (L)"><i class="fi fi-rr-brightness"></i><span>Light</span></button>
+      <button type="button" id="light-btn" class="hidden" aria-expanded="false" aria-controls="light-panel" title="Make the photo brighter or sharper (E)"><i class="fi fi-rr-brightness"></i><span>Lighting</span></button>
       <div id="light-panel" class="hidden" role="group" aria-label="Photo brightness and contrast">
         <label><span>Brightness</span><input type="range" id="light-brightness" min="50" max="250" step="5" value="100" aria-label="Brightness"></label>
         <label><span>Contrast</span><input type="range" id="light-contrast" min="50" max="200" step="5" value="100" aria-label="Contrast"></label>
@@ -257,13 +287,15 @@
       </div>
       <div id="ladder" class="hidden" role="radiogroup" aria-label="How closely related are these two beetles?">
         {% for value, label, hint in rungs %}
-        <button type="button" role="radio" aria-checked="false" data-choice="{{ value }}" class="rung">{{ label }}<small>{{ hint }}</small><kbd class="kbd">{{ forloop.counter }}</kbd></button>
+        <button type="button" role="radio" aria-checked="false" data-choice="{{ value }}" class="rung">{{ label }}<small>{{ hint }}</small></button>
         {% endfor %}
       </div>
       <p id="rank-lock" class="rank-lock hidden" data-testid="rank-lock"><i class="fi fi-rr-lock"></i><span id="rank-lock-text"></span></p>
 
       <div id="actions">
-        <button type="button" id="skip"><span id="skip-text">Skip</span><kbd class="kbd">S</kbd></button>
+        <button type="button" id="skip"><span id="skip-text">Skip</span><kbd class="kbd">Del</kbd></button>
+        <span class="gap"></span>
+        <button type="button" id="back" disabled title="Your last beetle">Back<kbd class="kbd">&#9003;</kbd></button>
         <button type="button" id="submit" disabled>Next<kbd class="kbd">Enter</kbd></button>
       </div>
     </div>
@@ -293,7 +325,21 @@
     </div>
     <div class="p-5 text-gray-700 space-y-3 overflow-y-auto">
       <p>How related are <strong>A</strong> and <strong>B</strong>? Pick the lowest line you're sure of.</p>
-      <p>Unsure? Tap <strong>Not sure</strong>.</p>
+      <p>Unsure? Tap <strong>Skip</strong>.</p>
+    </div>
+  </div>
+
+  <!-- Back: your last beetle and what you answered (it is saved; this is to look, not to change it) -->
+  <div id="previous" class="hidden absolute inset-0 z-10 bg-white flex flex-col" data-testid="previous">
+    <div class="flex items-center gap-2 px-2 h-14 border-b border-gray-200">
+      <button type="button" id="close-previous" class="icon-btn" aria-label="Back to the current beetle"><i class="fi fi-rr-cross text-lg"></i></button>
+      <h2 class="font-semibold text-gray-900">Your last beetle</h2>
+    </div>
+    <div id="previous-photos" class="flex-1 min-h-0 flex items-center justify-center gap-2 p-2 bg-gray-100"></div>
+    <div class="p-4 space-y-2">
+      <p class="text-gray-900"><span class="text-gray-500">You said:</span> <strong id="previous-answer"></strong></p>
+      <p id="previous-community" class="text-sm text-gray-600"></p>
+      <button type="button" id="previous-done" class="w-full h-12 rounded-xl font-semibold text-white bg-gray-600">Back to the current beetle</button>
     </div>
   </div>
 
@@ -323,9 +369,10 @@
     <div class="inline-flex p-4 bg-gray-100 rounded-full mb-4"><i class="fi fi-rr-trophy text-3xl text-gray-700"></i></div>
     <h2 class="text-2xl font-bold text-gray-900">Nice session!</h2>
     <p class="mt-1 text-gray-500" id="recap-line"></p>
-    <div class="grid grid-cols-3 gap-2 my-6">
+    <div class="grid grid-cols-2 gap-2 my-6">
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="recap-points">0</div><div class="text-xs text-gray-500">points</div></div>
-      <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="recap-right">&ndash;</div><div class="text-xs text-gray-500">known beetles right</div></div>
+      <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="recap-right">&ndash;</div><div class="text-xs text-gray-500">known beetles correct</div></div>
+      <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="recap-challenge">&ndash;</div><div class="text-xs text-gray-500">challenge</div></div>
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="recap-streak">0</div><div class="text-xs text-gray-500">day streak</div></div>
     </div>
     <div id="recap-badges" class="mb-6 space-y-2"></div>
@@ -343,11 +390,14 @@
 <!-- Full image viewer -->
 <div id="lightbox" class="hidden fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-3" role="dialog" aria-label="Whole image">
   <button type="button" class="absolute top-3 right-3 p-3 text-white text-xl" aria-label="Close"><i class="fi fi-rr-cross"></i></button>
-  <div class="relative inline-block overflow-hidden">
-    <img id="lightbox-img" alt="Whole image" class="block max-w-[94vw] max-h-[85vh] object-contain">
-    <span id="lb-primary" class="hidden" title="The photo to name" aria-label="The photo to name" data-testid="primary-photo"><i class="fi fi-rr-bullseye"></i></span>
-    <div id="lightbox-box" class="absolute rounded-sm pointer-events-none"></div>
+  <div id="lb-frame" class="relative inline-block overflow-hidden rounded-lg" title="Scroll, pinch or double-click to zoom">
+    <div id="lb-zoom" class="relative">
+      <img id="lightbox-img" alt="Whole image" class="block max-w-[94vw] max-h-[85vh] object-contain">
+      <span id="lb-primary" class="hidden" title="The photo to name" aria-label="The photo to name" data-testid="primary-photo"><i class="fi fi-rr-bullseye"></i></span>
+      <div id="lightbox-box" class="absolute pointer-events-none"></div>
+    </div>
   </div>
+  <button type="button" id="lb-light" class="hidden absolute bottom-3 right-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white text-gray-900 text-sm font-semibold shadow-lg" aria-label="Lighting" data-testid="lightbox-lighting"><i class="fi fi-rr-brightness"></i><span>Lighting</span></button>
   <button type="button" id="lb-prev" class="lb-nav hidden" aria-label="Previous photo of this beetle"><i class="fi fi-rr-angle-left"></i></button>
   <button type="button" id="lb-next" class="lb-nav hidden" aria-label="Next photo of this beetle"><i class="fi fi-rr-angle-right"></i></button>
   <div id="lb-count" class="hidden" data-testid="gallery-count"></div>
@@ -365,6 +415,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>window.BEETLE_LOGO_URL = "{% static 'img/IMG_5557.PNG' %}";</script>
 <script src="{% static 'js/beetle_confetti.js' %}"></script>
 <script>
 (function () {
@@ -387,6 +438,8 @@
   let item = null;
   let busy = false;
   let shownAt = 0;
+  let readyAt = 0;               // performance.now() before which answers are ignored (button mashing)
+  const MASH_GUARD_MS = 400;
   let answered = 0;
   let openedAt = Date.now();
   const prefetched = [];
@@ -439,12 +492,15 @@
     ctx.drawImage(img, sx0 * W, sy0 * H, (sx1 - sx0) * W, (sy1 - sy0) * H, px(sx0), py(sy0), px(sx1) - px(sx0), py(sy1) - py(sy0));
     const lw = Math.max(2, Math.round(Math.max(canvas.width, canvas.height) * 0.004));
     const r = [px(bx), py(by), px(bx + bw) - px(bx), py(by + bh) - py(by)];
+    // a box with round corners (square where the browser cannot round them)
+    const radius = Math.min(lw * 4, Math.abs(r[2]) / 4, Math.abs(r[3]) / 4);
+    const outline = () => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(...r, radius); else ctx.rect(...r); ctx.stroke(); };
     ctx.lineWidth = lw * 2;
     ctx.strokeStyle = "rgba(17,24,39,.7)";
-    ctx.strokeRect(...r);
+    outline();
     ctx.lineWidth = lw;
     ctx.strokeStyle = "#fff";
-    ctx.strokeRect(...r);
+    outline();
   }
 
   // Zoom into a crop: double-tap or double-click toggles 2.5x at that spot, the wheel and a pinch zoom smoothly,
@@ -523,14 +579,20 @@
     $("light-contrast").value = 100;
     applyLight();
   }
+  const lightHome = $("light-panel").parentElement;
   function toggleLight(open) {
     const panel = $("light-panel");
+    // in the whole-photo view the sliders sit over the photo; otherwise under the crops
+    const host = $("lightbox").classList.contains("hidden") ? lightHome : $("lightbox");
+    if (panel.parentElement !== host) host.appendChild(panel);
     const show = open === undefined ? panel.classList.contains("hidden") : open;
     panel.classList.toggle("hidden", !show);
     $("light-btn").setAttribute("aria-expanded", String(show));
     if (show) $("light-brightness").focus();
   }
   $("light-btn").addEventListener("click", () => toggleLight());
+  $("lb-light").addEventListener("click", (e) => { e.stopPropagation(); toggleLight(); });
+  $("light-panel").addEventListener("click", (e) => e.stopPropagation());
   ["light-brightness", "light-contrast"].forEach((id) => $(id).addEventListener("input", applyLight));
   $("light-reset").addEventListener("click", resetLight);
   document.addEventListener("game:close-overlays", () => toggleLight(false));   // Esc
@@ -547,7 +609,11 @@
   let lightboxImage = 0;   // which photo of the item is open (A = 0, B = 1), for reporting it
   let gallery = [];         // with the unlock: this photo first, then other photos of the same beetle
   let galleryAt = 0;
+  // The whole photo zooms like the crops (scroll, pinch, double-click, drag); a single tap closes it
+  const lbZoom = makeZoomable($("lb-frame"), $("lb-zoom"), () => { $("lightbox").classList.add("hidden"); toggleLight(false); });
+  $("lb-frame").addEventListener("click", (e) => e.stopPropagation());
   function showPhoto(url, box) {
+    lbZoom.reset();
     $("lightbox-img").src = url;
     const b = $("lightbox-box");
     b.style.left = box[0] * 100 + "%";
@@ -604,13 +670,14 @@
     (urls || []).forEach((url) => { const img = new Image(); img.src = url; prefetched.push(img); });
   }
 
-  // ---------- confetti (only ever for a right answer on a beetle we know) ----------
+  // ---------- confetti (only ever for a correct answer, or a level) ----------
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  // "validated": little bark beetles for a validated beetle named right; "strong": ordinary confetti for a
-  // strong answer on a beetle nobody has checked yet (#425). See static/js/beetle_confetti.js.
-  function confetti(kind) {
+  // Logo beetles: "validated" (brown) for a checked beetle named correctly, "partial" (a few grey) for one named
+  // correctly to some rank, both scaled by the share of ranks correct; "strong": paper confetti for a strong answer
+  // on a beetle nobody has checked yet; "level": the gold level-up burst. See static/js/beetle_confetti.js.
+  function confetti(kind, size) {
     if (reduceMotion || !window.beetleConfetti) return;
-    window.beetleConfetti($("confetti"), kind === "strong" ? "plain" : "beetles");
+    window.beetleConfetti($("confetti"), kind === "strong" ? "plain" : (kind || "validated"), size);
   }
 
   // ---------- the chip and the toasts: counts and celebrations, never the score ----------
@@ -660,7 +727,8 @@
     $("toasts").appendChild(box);
     requestAnimationFrame(() => { box.style.opacity = "1"; box.style.transform = "none"; });
     setTimeout(() => { box.style.opacity = "0"; setTimeout(() => box.remove(), 450); }, 3200);
-    if (event.kind === "level" || event.kind === "goal") confetti();
+    if (event.kind === "level") confetti("level");
+    else if (event.kind === "goal") confetti("validated");
   }
 
   // ---------- after a long session: suggest a break (never blocks, never nags twice in an hour) ----------
@@ -718,7 +786,7 @@
     root.dataset.mode = mode;   // the photo layout follows it
     $("ranks").classList.toggle("hidden", mode !== "classify");
     $("ladder").classList.toggle("hidden", mode !== "pair");
-    $("skip-text").textContent = mode === "pair" ? "Not sure" : "Skip";
+    $("skip-text").textContent = "Skip";
     $("game-title").textContent = GAME_NAMES[mode];
     $("open-help").classList.toggle("hidden", mode !== "pair");
   }
@@ -726,7 +794,17 @@
   // ---------- unlocks in the feed: which game, and focus ----------
   let prefs = null;
   function renderPrefs(p) {
-    if (p && $("light-btn")) $("light-btn").classList.toggle("hidden", !p.light);   // Light unlocks at a level
+    if (p && $("light-btn")) $("light-btn").classList.toggle("hidden", !p.light);   // Lighting unlocks at a level
+    if (p) $("lb-light").classList.toggle("hidden", !p.light);
+    // Something just unlocked (a new level, mid-game): point it out once
+    if (prefs && p && window.gameTour && window.gameTour.unlocked) {
+      const anyFocus = (q) => (q.focus_ranks || []).some((r) => r.unlocked);
+      const tips = [];
+      if (!prefs.light && p.light) tips.push({ key: "light", el: "light-btn", text: "New: Lighting. Make a dark or flat photo brighter or sharper. Key: E (or L)." });
+      if (!prefs.choose_game && p.choose_game) tips.push({ key: "choose-game", el: "toolbar", text: "New: pick which game you play, Identification, Similarity or both." });
+      if (!anyFocus(prefs) && anyFocus(p)) tips.push({ key: "focus", el: "focus-btn", text: "New: Focus. Play only beetles from one group you want to learn." });
+      if (tips.length) window.gameTour.unlocked(tips);
+    }
     prefs = p;
     if (!p || !$("toolbar")) return;
     $("toolbar").classList.remove("hidden");
@@ -860,9 +938,10 @@
       frame.appendChild(canvas);
       if (MODE === "pair") {
         const tag = document.createElement("span");
-        tag.className = "absolute top-1 left-1 px-2 py-0.5 text-xs font-bold bg-white/90 rounded-md text-gray-900";
+        tag.className = "ab-tag";
+        tag.dataset.testid = "ab-tag";
         tag.textContent = i === 0 ? "A" : "B";
-        frame.appendChild(tag);
+        cell.appendChild(tag);
       }
       makeZoomable(frame, canvas, () => openLightbox(im.url, im.box, i));
       cell.appendChild(frame);
@@ -922,12 +1001,15 @@
     show("stage");
     document.dispatchEvent(new CustomEvent("game:item-shown"));   // the new-player tour waits for the first beetle
     shownAt = Date.now();
+    readyAt = performance.now() + MASH_GUARD_MS;
     prefetch(item.prefetch);
   }
 
   async function send(extra) {
-    if (busy) return;
+    // Button mashing: nothing counts until the new beetle has been on screen for a moment
+    if (busy || performance.now() < readyAt) return;
     busy = true;
+    const answeredItem = item;
     $("submit").disabled = true;
     $("skip").disabled = true;
     showError("");
@@ -939,11 +1021,12 @@
       answered += 1;
       if (data.chip) goalMet = !!data.chip.goal_met;
       noteAnswerForBreak();
-      if (data.celebrate) confetti(data.celebrate);
+      if (data.celebrate) confetti(data.celebrate, data.celebrate_size);
       updateChip(data.chip);
       if (data.prefs) renderPrefs(data.prefs);   // a new level: its unlocks show (and work) straight away
       (data.events || []).forEach(toast);
       showCommunity(data.community);
+      rememberPrevious(answeredItem, extra, data.community);
       bumpCombo(!extra.skipped && extra.pair_answer !== "unsure");
       if (data.done) {
         $("review-link").href = data.review_url;
@@ -970,6 +1053,47 @@
     }
   }
 
+  // ---------- Back: your last beetle and what you said ----------
+  let previous = null;
+  function describeAnswer(extra) {
+    if (extra.reported) return "Reported";
+    if (extra.skipped || extra.pair_answer === "unsure") return "Skipped";
+    if (extra.pair_answer) {
+      const rung = rungs.find((r) => r.dataset.choice === extra.pair_answer);
+      return rung ? rung.firstChild.textContent.trim() : extra.pair_answer;
+    }
+    const names = RANKS.map((r) => extra[r]).filter(Boolean);
+    return names.length ? names.join(" › ") : "Skipped";
+  }
+  function rememberPrevious(it, extra, community) {
+    previous = { item: it, answer: describeAnswer(extra), community };
+    $("back").disabled = false;
+  }
+  async function showPrevious() {
+    if (!previous) return false;
+    const box = $("previous-photos");
+    box.innerHTML = "";
+    previous.item.images.forEach((im, i) => {
+      const canvas = document.createElement("canvas");
+      canvas.className = "max-h-full max-w-full rounded-2xl";
+      box.appendChild(canvas);
+      loadImage(im.url).then((img) => drawCrop(canvas, img, im.box)).catch(() => {});
+      if (previous.item.images.length > 1) canvas.title = i === 0 ? "A" : "B";
+    });
+    $("previous-answer").textContent = previous.answer;
+    $("previous-community").textContent = previous.community ? previous.community.text || "" : "";
+    $("previous").classList.remove("hidden");
+    return true;
+  }
+  function hidePrevious() {
+    const open = !$("previous").classList.contains("hidden");
+    $("previous").classList.add("hidden");
+    return open;
+  }
+  $("back").addEventListener("click", showPrevious);
+  $("close-previous").addEventListener("click", hidePrevious);
+  $("previous-done").addEventListener("click", hidePrevious);
+
   $("skip").addEventListener("click", () => {
     send(MODE === "pair" ? { pair_answer: "unsure" } : { skipped: true });
   });
@@ -992,6 +1116,10 @@
     $("recap-points").textContent = (r.points > 0 ? "+" : "") + digitGroupsText(r.points);
     $("recap-right").textContent = r.scored ? digitGroupsText(r.right) + "/" + digitGroupsText(r.scored) : "–";
     $("recap-streak").textContent = r.streak;
+    // accuracy and challenge in rarity colours (grey, green, blue, purple, orange, gold), as levels and badges
+    $("recap-right").className = "text-2xl font-bold rarity-" + r.accuracy_tier;
+    $("recap-challenge").textContent = r.challenge + "/100";
+    $("recap-challenge").className = "text-2xl font-bold rarity-" + r.challenge_tier;
     $("recap-line").textContent = digitGroupsText(r.labelled) + " beetles labelled. Level " + r.level + ", " + r.level_name + ". " + r.today + " of " + r.goal + " beetles today.";
     const holder = $("recap-badges");
     holder.innerHTML = "";
@@ -1289,7 +1417,8 @@
 
   // Close whatever sits on top of the game. True if something was open.
   function closeOverlays() {
-    const open = [["lightbox"], ["focus-sheet"], ["help-sheet"]].filter(([id]) => $(id) && !$(id).classList.contains("hidden"));
+    const open = [["lightbox"], ["focus-sheet"], ["help-sheet"], ["previous"]].filter(([id]) => $(id) && !$(id).classList.contains("hidden"));
+    hidePrevious();
     if (finding) { open.push(["finder"]); closeFinder(); }
     $("lightbox").classList.add("hidden");
     if ($("focus-sheet")) openFocus(false);
@@ -1305,15 +1434,51 @@
     if (!$("recap").classList.contains("hidden")) { location.href = root.dataset.homeUrl; return; }
     history.pushState(BACK_STATE, "");
     if (!$("light-panel").classList.contains("hidden")) { toggleLight(false); return; }
+    // Back once shows your last beetle; back again (from there) leaves
+    if (!$("previous").classList.contains("hidden")) { hidePrevious(); $("exit").click(); return; }
     if (closeOverlays()) return;
+    if (previous) { showPrevious(); return; }
     $("exit").click();
   });
 
-  // Keyboard shortcuts on a computer: Enter next, S skip / not sure, a letter searches a long list, 1-6 or the arrows on the ladder,
-  // V the whole photo, Esc closes
+  // Keyboard shortcuts on a computer. Two hands' worth, so either works:
+  //   arrows                     WASD
+  //   Up/Down: rank or line      W/S: rank or line
+  //   Left/Right: change it      A/D: change it
+  //   Enter or Space: Next       Delete or End (or X): Skip       Backspace (or Z): Back, your last beetle
+  //   Home (or Q, V): whole photo    Page Up (or E, L): Lighting    Page Down (or R): Report    Esc: close, or exit
+  // A letter typed on a focused list still searches it (the lists keep their own keys).
   function isTyping(el) { return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable); }
+  let cursorRank = 0;
+  function openRows() { return RANKS.filter((r) => selects[r] && !selects[r].disabled && !$("pick-" + r).closest(".rank-row").classList.contains("locked")); }
+  function showCursor() {
+    const rows = openRows();
+    cursorRank = Math.max(0, Math.min(rows.length - 1, cursorRank));
+    document.querySelectorAll(".rank-row").forEach((row) => row.classList.toggle("cursor", row.dataset.row === rows[cursorRank]));
+    return rows[cursorRank];
+  }
+  function stepOption(rank, step) {
+    const sel = selects[rank];
+    if (!sel || !sel.options.length) return;
+    let i = sel.selectedIndex;
+    do { i += step; } while (i >= 0 && i < sel.options.length && sel.options[i].disabled);
+    if (i < 0 || i >= sel.options.length) return;
+    sel.selectedIndex = i;
+    sel.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  const KEYS = {
+    up: ["ArrowUp", "w"], down: ["ArrowDown", "s"], left: ["ArrowLeft", "a"], right: ["ArrowRight", "d"],
+    next: ["Enter", " "], skip: ["Delete", "End", "x"], back: ["Backspace", "z"],
+    photo: ["Home", "q", "v"], light: ["PageUp", "e", "l"], report: ["PageDown", "r"],
+  };
+  const is = (name, key) => KEYS[name].includes(key);
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") { closeOverlays(); return; }
+    if (e.key === "Escape") {
+      if (!$("recap").classList.contains("hidden")) return;
+      if (!$("light-panel").classList.contains("hidden")) { toggleLight(false); return; }
+      if (!closeOverlays()) $("exit").click();   // nothing open: Esc leaves
+      return;
+    }
     if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
     const t = e.target;
     if (isTyping(t)) return;
@@ -1322,27 +1487,41 @@
       if (e.key === "Enter") { e.preventDefault(); $("recap-more").click(); }
       return;
     }
-    if (!$("lightbox").classList.contains("hidden") || document.querySelector("[data-overlay-open]")) return;
-    if ($("stage").classList.contains("hidden") || ($("focus-sheet") && $("focus-sheet").classList.contains("flex"))) return;
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-    if (key === "Enter") {
-      e.preventDefault();   // also keeps a focused list from opening
-      if (!$("submit").disabled) $("submit").click();
-    } else if (key === "s") {
-      e.preventDefault();
-      if (!$("skip").disabled) $("skip").click();
-    } else if (key === "v" && item && item.images.length) {
-      const im = item.images[0];
-      openLightbox(im.url, im.box, 0);
-    } else if (key === "l" && !$("light-btn").classList.contains("hidden")) {   // L: brightness and contrast, once unlocked
-      toggleLight();
-    } else if (MODE === "pair" && /^[1-9]$/.test(key)) {
-      setRung(Number(key) - 1);
-    } else if (MODE === "pair" && (key === "ArrowDown" || key === "ArrowUp")) {
-      e.preventDefault();
+    if (!$("previous").classList.contains("hidden")) {
+      if (is("back", key) || is("next", key)) { e.preventDefault(); hidePrevious(); }
+      return;
+    }
+    if (!$("lightbox").classList.contains("hidden")) {
+      if (key === "a" || key === "d") stepGallery(key === "a" ? -1 : 1);
+      else if (is("light", key) && !$("lb-light").classList.contains("hidden")) toggleLight();
+      else if (is("report", key)) $("report-menu").classList.toggle("hidden");
+      else if (is("photo", key)) { $("lightbox").classList.add("hidden"); toggleLight(false); }
+      return;
+    }
+    if (document.querySelector("[data-overlay-open]")) return;
+    if ($("stage").classList.contains("hidden") || ($("focus-sheet") && $("focus-sheet").classList.contains("flex"))) return;
+    // a focused list keeps its letters (search) and its own arrows
+    const onList = t && t.tagName === "SELECT";
+    if (onList && (/^[a-z]$/.test(key) || key.startsWith("Arrow") || key === " ")) return;
+    const pressed = Object.keys(KEYS).find((name) => is(name, key));
+    if (!pressed) return;
+    e.preventDefault();   // also keeps a focused list from opening, and Space from scrolling
+    if ((pressed === "next" || pressed === "skip") && e.repeat) return;   // a held key is not a burst of answers
+    if (pressed === "next") { if (!$("submit").disabled) $("submit").click(); }
+    else if (pressed === "skip") { if (!$("skip").disabled) $("skip").click(); }
+    else if (pressed === "back") { if (!$("back").disabled) showPrevious(); }
+    else if (pressed === "photo") { if (item && item.images.length) openLightbox(item.images[0].url, item.images[0].box, 0); }
+    else if (pressed === "light") { if (!$("light-btn").classList.contains("hidden")) toggleLight(); }
+    else if (pressed === "report") {
+      if (item && item.images.length) { openLightbox(item.images[0].url, item.images[0].box, 0); $("report-menu").classList.remove("hidden"); }
+    } else if (MODE === "pair" && (pressed === "up" || pressed === "down")) {
       const now = rungs.findIndex((r) => r.classList.contains("selected"));
       const open = rungs.filter((r) => !r.classList.contains("locked")).length;
-      setRung(key === "ArrowDown" ? Math.min(open - 1, now + 1) : Math.max(0, now - 1));
+      setRung(pressed === "down" ? Math.min(open - 1, now + 1) : Math.max(0, now - 1));
+    } else if (MODE === "classify") {
+      if (pressed === "up" || pressed === "down") { cursorRank += pressed === "down" ? 1 : -1; showCursor(); }
+      else { const rank = showCursor(); if (rank) stepOption(rank, pressed === "right" ? 1 : -1); }
     }
   });
 

@@ -163,7 +163,7 @@ class ValidBatchImportTests(UploadPipelineCase):
         )
         self.assertEqual(
             (beetle.bbox_x, beetle.bbox_y, beetle.bbox_width, beetle.bbox_height, beetle.bbox_is_validated),
-            (0.1, 0.2, 0.3, 0.4, True),
+            (0.1, 0.2, 0.3, 0.4, False),   # uploads never arrive validated
         )
         history = beetle.history.first()
         self.assertEqual(history.history_user, self.staff)

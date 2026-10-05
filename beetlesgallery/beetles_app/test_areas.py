@@ -60,6 +60,10 @@ class EnforcementTests(AreaCase):
         self.grant(self.user, "annotate")
         self.client.force_login(self.user)
         self.assertEqual(self.client.get(reverse("tool_annotate")).status_code, 200)
+        # validating is its own grant now
+        self.assertEqual(self.client.post(f"/api/v1/beetles/{beetle.id}/validate/").status_code, 403)
+        self.grant(self.user, "validate")
+        self.client.force_login(self.user)
         self.assertNotEqual(self.client.post(f"/api/v1/beetles/{beetle.id}/validate/").status_code, 403)
 
     def test_upload_grant_opens_the_upload_handlers(self):
@@ -116,9 +120,9 @@ class AccountPageTests(AreaCase):
 
     def test_the_page_offers_the_choices_to_superusers_only(self):
         self.client.force_login(self.superuser)
-        self.assertContains(self.client.get(reverse("my_account")), "Extra access")
+        self.assertContains(self.client.get(reverse("my_account")), "Permissions</span>")
         self.client.force_login(self.staff)
-        self.assertNotContains(self.client.get(reverse("my_account")), "Extra access")
+        self.assertNotContains(self.client.get(reverse("my_account")), "Permissions</span>")
 
     def test_a_users_grants_are_passed_to_the_edit_dialog(self):
         self.grant(self.user, "upload", "annotate")

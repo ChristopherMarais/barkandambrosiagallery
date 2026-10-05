@@ -367,14 +367,14 @@
         </div>
 
         <div class="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
-          <div class="text-xs font-bold text-gray-500 uppercase mb-2">Classify with AI</div>
-          <p class="text-[11px] text-gray-500 mb-2">Adds boxes and a proposed species for beetles the classifier finds. They are added to the existing ROIs, never validated, and boxes that overlap an existing ROI are skipped.</p>
-          <div class="flex gap-2">
-            <select id="classify-model" class="flex-1 rounded border border-gray-300 bg-white px-2 py-1.5 text-xs">
+          <div class="text-xs font-bold text-gray-500 uppercase mb-1">Generate AI recommendation</div>
+          <p class="text-[11px] text-gray-500 mb-2">Finds the beetles in this image, adds a box for each new one and suggests its name. Nothing is validated; boxes over an existing ROI are skipped.</p>
+          <div class="space-y-2" data-testid="ai-recommendation">
+            <select id="classify-model" aria-label="AI model" class="block w-full min-w-0 rounded border border-gray-300 bg-white px-2 py-1.5 text-xs">
               {% ibbi_model_options %}
             </select>
             <button type="button" id="classify-btn" onclick="classifyCurrentImage()"
-              class="px-3 py-1.5 text-xs font-semibold text-white bg-gray-800 rounded hover:bg-gray-900 disabled:opacity-50">Classify</button>
+              class="btn-primary w-full py-1.5 text-xs"><i class="fi fi-rr-sparkles"></i><span>Generate</span></button>
           </div>
           <div id="classify-status" class="text-[11px] text-gray-600 mt-2 hidden"></div>
         </div>
@@ -528,13 +528,28 @@ const CAN_EDIT_RECORDS = {{ can_edit_records|yesno:"true,false" }};
 if (!CAN_EDIT_RECORDS) {
   document.addEventListener("DOMContentLoaded", () => {
     const style = document.createElement("style");
-    // no saving names or details, validating, deleting images or classifying (boxes can still be drawn, moved and removed)
+    // no saving names or details, validating, deleting images or AI recommendations (boxes can still be drawn, moved and removed)
     style.textContent = "body.boxes-only #image-form-actions, body.boxes-only #classify-btn { display: none !important; }";
     document.head.appendChild(style);
     document.body.classList.add("boxes-only");
     document.querySelectorAll("#form-image-details input, #form-image-details select, #form-image-details textarea").forEach((el) => { el.disabled = true; });
   });
 }
+// Validating and AI recommendations are separate permissions: without them the buttons are hidden (the API refuses too).
+const CAN_VALIDATE = {{ can_validate|yesno:"true,false" }};
+const CAN_AI_RECOMMEND = {{ can_ai_recommend|yesno:"true,false" }};
+document.addEventListener("DOMContentLoaded", () => {
+  const hide = [];
+  if (!CAN_VALIDATE) hide.push("#validate-all-btn", "#unvalidate-image-btn", "[id^='btn-val-roi-']");
+  if (!CAN_AI_RECOMMEND) hide.push(".ai-recommend-block");
+  const aiBlock = document.getElementById("classify-btn")?.closest(".mb-4");
+  if (aiBlock) aiBlock.classList.add("ai-recommend-block");
+  if (hide.length) {
+    const style = document.createElement("style");
+    style.textContent = hide.join(", ") + " { display: none !important; }";
+    document.head.appendChild(style);
+  }
+});
 let searchDebounceTimer = null;
 
 // ---------------------------------------------------------
@@ -941,11 +956,11 @@ async function loadAnnotatedImages(append = false) {
     const newImages = data.results || [];
 
     if (data.stats && !append) {
-        document.getElementById('stat-img-val').textContent = data.stats.images_validated;
-        document.getElementById('stat-img-unval').textContent = data.stats.images_unvalidated;
-        document.getElementById('stat-img-empty').textContent = data.stats.images_no_bbox;
-        document.getElementById('stat-roi-val').textContent = data.stats.rois_validated;
-        document.getElementById('stat-roi-unval').textContent = data.stats.rois_unvalidated;
+        document.getElementById('stat-img-val').textContent = digitGroupsText(data.stats.images_validated);
+        document.getElementById('stat-img-unval').textContent = digitGroupsText(data.stats.images_unvalidated);
+        document.getElementById('stat-img-empty').textContent = digitGroupsText(data.stats.images_no_bbox);
+        document.getElementById('stat-roi-val').textContent = digitGroupsText(data.stats.rois_validated);
+        document.getElementById('stat-roi-unval').textContent = digitGroupsText(data.stats.rois_unvalidated);
         document.getElementById('filter-stats').classList.remove('hidden');
     }
     
@@ -1012,7 +1027,7 @@ function renderImageList(imagesToRender, append = false) {
       </div>
       <div class="flex-shrink-0">
         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${img.annotation_count === 0 ? 'bg-gray-100 text-gray-600 border border-gray-200' : (img.has_unvalidated_boxes ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-green-100 text-green-800 border border-green-200')} shadow-sm" title="ROIs">
-          ${img.annotation_count}
+          ${digitGroupsText(img.annotation_count)}
         </span>
       </div>
     `;
@@ -1123,7 +1138,7 @@ async function selectImage(img) {
     state.bboxes = data.results || data;
     await loadGameProposals(img.image_asset_id);
     
-    document.getElementById('tab-bbox-count').textContent = state.bboxes.length;
+    document.getElementById('tab-bbox-count').textContent = digitGroupsText(state.bboxes.length);
     
     // Completely re-render the ROI Accordion list for the new image
     renderRoiAccordions();
@@ -1159,14 +1174,14 @@ async function classifyCurrentImage() {
   const status = document.getElementById('classify-status');
   const show = (text) => { status.textContent = text; status.classList.remove('hidden'); };
   btn.disabled = true;
-  show('Classifying... the first request can take a minute while the model wakes up.');
+  show('Generating... the first request can take a minute while the AI wakes up.');
   try {
     const res = await fetch(`/api/v1/image-assets/${state.selectedImageId}/classify/`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
       body: JSON.stringify({ architecture: document.getElementById('classify-model').value })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Classification failed.');
+    if (!res.ok) throw new Error(data.error || 'The AI recommendation failed.');
     const img = state.images.find(i => i.image_asset_id === state.selectedImageId) || { image_asset_id: state.selectedImageId };
     await selectImage(img);
     show(`${data.added} ROI${data.added === 1 ? '' : 's'} added (not validated)` + (data.already_boxed ? `, ${data.already_boxed} overlapped an existing ROI` : '') + '.');
@@ -1425,9 +1440,9 @@ function gameTipText(t) {
   const name = t.rank === 'species' || t.rank === 'genus' ? `<i>${escHtml(t.value)}</i>` : escHtml(t.value);
   if (t.kind === 'not') {
     const who = t.experts ? 'Experts and players are' : 'Players are';
-    return `${who} confident it is <b>not</b> in ${t.rank} ${name} <span class="text-gray-400">(${t.count} said so${t.against ? `, ${t.against} disagreed` : ''})</span>`;
+    return `${who} confident it is <b>not</b> in ${t.rank} ${name} <span class="text-gray-400">(${digitGroupsText(t.count)} said so${t.against ? `, ${digitGroupsText(t.against)} disagreed` : ''})</span>`;
   }
-  const who = t.kind === 'expert' ? `Expert${t.count > 1 ? 's' : ''} say` : `${t.count} reliable players say`;
+  const who = t.kind === 'expert' ? `Expert${t.count > 1 ? 's' : ''} say` : `${digitGroupsText(t.count)} reliable players say`;
   const clash = t.conflicts ? ` <span class="text-amber-800">· the current label says ${escHtml(t.current)}</span>` : '';
   return `${who} ${t.rank} <b>${name}</b> <span class="text-gray-400">(${Math.round(t.support * 100)}%)</span>${clash}`;
 }
@@ -1673,7 +1688,7 @@ function renderRoiAccordions() {
               </div>
               <div class="grid grid-cols-2 gap-3 mt-3" data-testid="label-source">
                 <div>
-                  <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-wide">Name source</label>
+                  <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-wide">Identification</label>
                   <select name="label_source" class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
                     ${LABEL_SOURCES.map(([v, l]) => `<option value="${v}" ${(b.label_source || '') === v ? 'selected' : ''}>${l}</option>`).join('')}
                   </select>
@@ -1856,9 +1871,10 @@ function updateBboxFromInput(idx) {
   drawCanvas(); // Force canvas redraw instantly
 }
 
-// Where a name came from (Beetles.LabelSource); blank means not recorded
-const LABEL_SOURCES = [["", "Not recorded"], ["vial_label", "Vial / specimen label"], ["taxonomist", "Taxonomist examined it"],
-  ["external", "External database or website"], ["game_consensus", "Game consensus accepted by a curator"]];
+// How reliable the name is (Beetles.LabelSource, identification.py), most reliable first. Only Taxonomist and Expert
+// IDs are validated: validating a lower one makes it your Expert ID. A vial label counts as a Taxonomist ID.
+const LABEL_SOURCES = [["taxonomist", "Taxonomist ID"], ["expert", "Expert ID"], ["community", "Community ID"],
+  ["external", "External ID"], ["", "No ID"]];
 
 function getRoiPayloadFromForm(idx) {
     const form = document.getElementById(`form-roi-${idx}`);
@@ -1948,7 +1964,7 @@ async function deleteBoxUi(idx) {
     }
     
     state.bboxes.splice(idx, 1);
-    document.getElementById('tab-bbox-count').textContent = state.bboxes.length;
+    document.getElementById('tab-bbox-count').textContent = digitGroupsText(state.bboxes.length);
     
     const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
     if(currentIndex > -1) {
@@ -2359,7 +2375,7 @@ async function onMouseUp(e) {
       .then(async (newBox) => {
         // 4. Once the server responds, seamlessly swap the temp box with the real database box
         state.bboxes[tempIndex] = newBox;
-        document.getElementById('tab-bbox-count').textContent = state.bboxes.length;
+        document.getElementById('tab-bbox-count').textContent = digitGroupsText(state.bboxes.length);
         
         const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
         if (currentIndex > -1) {

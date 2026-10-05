@@ -5,7 +5,7 @@
 <div class="max-w-3xl mx-auto">
   <a href="{% url 'game_home' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; {{ game_name }}</a>
   <h1 class="page-title">Levels and unlocks</h1>
-  <p class="text-gray-500 mb-5">Levels need points and reliability (how often you're right).</p>
+  <p class="text-gray-500 mb-5">Levels need points and reliability (how often you're correct).</p>
 
   <!-- Where you are -->
   <div class="p-4 bg-gray-50 border border-gray-200 rounded-2xl mb-5">
@@ -61,7 +61,7 @@
     <details class="mt-2 text-sm text-gray-700" data-testid="expert-rule">
       <summary class="cursor-pointer text-gray-500 underline">How experts are proven</summary>
       <ul class="mt-2 list-disc pl-5 space-y-1">
-        <li>Expertise is per taxon: answer {{ per_species }} checked images of every species in it, and get at least {% widthratio trust_accuracy 1 100 %}% right.</li>
+        <li>Expertise is per taxon: answer {{ per_species }} checked images of every species in it, and get at least {% widthratio trust_accuracy 1 100 %}% correct.</li>
         <li>Be among the most reliable players overall.</li>
         <li>Being good in neighbouring taxa is not enough to skip review.</li>
         <li>{{ min_experts }} experts must agree, and no proven player disagree.</li>

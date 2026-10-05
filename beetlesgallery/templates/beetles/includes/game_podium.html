@@ -13,8 +13,8 @@
           <div class="podium-step">
             <div class="text-base font-bold tabular-nums">{{ row.points|digit_groups }} pts</div>
             <div class="text-[11px] text-gray-600 tabular-nums">{{ row.beetles|digit_groups }} beetles</div>
-            {% if row.species %}<div class="text-[11px] text-gray-600 tabular-nums">{{ row.species|digit_groups }} species right</div>{% endif %}
-            {% if row.accuracy is not None %}<div class="text-[11px] text-gray-600 tabular-nums">{% widthratio row.accuracy 1 100 %}% right</div>{% endif %}
+            {% if row.species %}<div class="text-[11px] text-gray-600 tabular-nums">{{ row.species|digit_groups }} species correct</div>{% endif %}
+            {% if row.accuracy is not None %}<div class="text-[11px] text-gray-600 tabular-nums">{% widthratio row.accuracy 1 100 %}% correct</div>{% endif %}
           </div>
         </li>
         {% endfor %}

@@ -2,7 +2,7 @@
 Behaviour tests for linking pages together (issue #185):
   - taxonomy terms on the gallery cards and the specimen detail page link to
     that taxon's node in the Taxonomy Browser
-  - the specimen detail page offers a "Classify with AI" link, but only for
+  - the specimen detail page offers a "Generate AI recommendation" link, but only for
     specimens that have not been identified yet
   - the specimen detail page's toolbar links staff to the Annotation Tool,
     focused on that image
@@ -79,19 +79,19 @@ class DetailClassifyLinkTests(PageBehaviourCase):
         image = make_image(image_file=SimpleUploadedFile("specimen.jpg", b"fake image bytes"))
         beetle = make_beetle(image=image)
         html = self.detail_html(beetle)
-        self.assertIn("Classify with AI", html)
+        self.assertIn("Generate AI recommendation", html)
         self.assertIn(f'{reverse("tool_classify")}?image_url=', html)
 
     def test_identified_specimen_has_no_classify_link(self):
         taxon = make_taxon("T-PLA", scientific_name="Platypus cylindrus")
         image = make_image(image_file=SimpleUploadedFile("specimen.jpg", b"fake image bytes"))
         beetle = make_beetle(image=image, taxon=taxon)
-        self.assertNotIn("Classify with AI", self.detail_html(beetle))
+        self.assertNotIn("Generate AI recommendation", self.detail_html(beetle))
 
     def test_specimen_with_no_image_file_has_no_classify_link(self):
         # make_image() defaults to no actual image_file, matching "No image found." on the page.
         beetle = make_beetle(image=make_image())
-        self.assertNotIn("Classify with AI", self.detail_html(beetle))
+        self.assertNotIn("Generate AI recommendation", self.detail_html(beetle))
 
     @expectedFailure
     def test_specimen_with_no_image_at_all_does_not_crash_the_page(self):
@@ -103,7 +103,7 @@ class DetailClassifyLinkTests(PageBehaviourCase):
         "add specimen" control. Remove @expectedFailure when that's guarded."""
         from beetlesgallery.beetles_app.models import Beetles
         beetle = Beetles.objects.create()  # no image_asset at all
-        self.assertNotIn("Classify with AI", self.detail_html(beetle))
+        self.assertNotIn("Generate AI recommendation", self.detail_html(beetle))
 
 
 class DetailAnnotateLinkTests(PageBehaviourCase):

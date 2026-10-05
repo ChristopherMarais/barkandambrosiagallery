@@ -8,6 +8,8 @@ works on the server.** Contributors never need server access: merged work is vis
 1. The owner merges pull requests into `main`. Each merge updates staging, not production.
 2. When staging looks right, the owner **publishes a GitHub release** (for example `v2.2.0`). That starts the
    *Deploy App* workflow (`.github/workflows/deploy.yml`). It can also be started by hand from *Actions*.
+   First it deploys the AI classifier to Modal, but only if its code (`beetlesgallery/tools/`) changed since the
+   previous release; then the website. If the AI deploy fails, the website is not deployed.
 3. The workflow connects over SSH to `/opt/barkandambrosiagallery` and does these steps in order:
    1. It pulls `main` and builds new images. The live site keeps running on the old version meanwhile.
    2. It checks settings and the database connection in a throw-away container (`check --deploy`,

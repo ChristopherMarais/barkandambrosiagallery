@@ -4,7 +4,7 @@
   <span class="text-xs text-gray-500 tabular-nums">{{ page.start_index|digit_groups }}&ndash;{{ page.end_index|digit_groups }} of {{ page.paginator.count|digit_groups }}</span>
   <span class="flex items-center gap-1">
     {% if page.has_previous %}<a href="{% page_url param page.previous_page_number anchor %}" class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">&larr; Previous</a>{% endif %}
-    <span class="px-2 text-xs text-gray-500 tabular-nums">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    <span class="px-2 text-xs text-gray-500 tabular-nums">Page {{ page.number|digit_groups_text }} of {{ page.paginator.num_pages|digit_groups_text }}</span>
     {% if page.has_next %}<a href="{% page_url param page.next_page_number anchor %}" class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">Next &rarr;</a>{% endif %}
   </span>
 </nav>

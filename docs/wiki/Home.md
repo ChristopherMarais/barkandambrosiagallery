@@ -2,7 +2,7 @@
 
 [barkandambrosiagallery.org](https://barkandambrosiagallery.org) is a web platform for storing, browsing,
 annotating and identifying images of bark and ambrosia beetles. It also has a pathogen-interactions database and the
-Beetle ID Game. It is a Django site with Postgres, Redis and Celery, run with Docker Compose.
+game, Ambrosia Archive. It is a Django site with Postgres, Redis and Celery, run with Docker Compose.
 
 ## Pages
 

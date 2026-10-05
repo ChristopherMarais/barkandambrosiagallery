@@ -61,41 +61,11 @@
   </script>
 
   <script>
-    (function () {
-      // Configuration
-      const DIRECT_HOST = "direct.barkandambrosiagallery.org";
-      const MAIN_HOST = "barkandambrosiagallery.org";
-
-      // If the user is currently on the 'direct' (insecure) server...
-      if (window.location.hostname === DIRECT_HOST) {
-
-        const path = window.location.pathname;
-
-        // Define which pages are ALLOWED to stay on the direct server.
-        // We allow Uploads, Updates, and Account/Admin pages (to prevent login loops).
-        const allowedPaths = [
-          "/upload",
-          "/updates",
-          "/accounts",
-          "/my-uploads",
-          "/admin"
-        ];
-
-        let isAllowed = false;
-        for (let p of allowedPaths) {
-          if (path.startsWith(p)) {
-            isAllowed = true;
-            break;
-          }
-        }
-
-        // If the user is viewing image_browser, Gallery, or My Files on the direct server...
-        if (!isAllowed) {
-          // ...force them back to the secure main domain.
-          window.location.href = "https://" + MAIN_HOST + path;
-        }
-      }
-    })();
+    // Big uploads now go through Cloudflare in pieces, so the old direct. address is no longer used:
+    // anyone who still opens it is sent to the same page on the main site.
+    if (window.location.hostname === "direct.barkandambrosiagallery.org") {
+      window.location.replace("https://barkandambrosiagallery.org" + window.location.pathname + window.location.search);
+    }
   </script>
 
   <style>
@@ -290,8 +260,11 @@
 
             <a href="{% url 'game_home' %}"
               class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'game_home' or request.resolver_match.url_name == 'game_play' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
-              <i class="fi fi-rr-gamepad text-xl text-gray-700 w-8 text-center"></i>
-              <span class="font-medium text-gray-700 ml-1">{{ game_name }}</span>
+              {% if game_player %}<span class="w-8 flex justify-center">{% include "beetles/includes/game_level_badge.html" with level=game_player.level name=game_player.name %}</span>{% else %}<i class="fi fi-rr-gamepad text-xl text-gray-700 w-8 text-center"></i>{% endif %}
+              <span class="ml-1 min-w-0 leading-tight">
+                <span class="block font-medium text-gray-700">{{ game_name }}</span>
+                {% if game_player %}<span class="block text-xs text-gray-500" data-testid="sidebar-player">{{ game_player.name }} &middot; {{ game_player.score|digit_groups }} pts</span>{% endif %}
+              </span>
               <span class="ml-auto text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">Beta</span>
             </a>
 
@@ -317,13 +290,6 @@
             </a>
 
             <div class="h-px bg-gray-300 my-1 mx-2"></div>
-            {% if game_player %}
-            <a href="{% url 'game_home' %}" data-testid="sidebar-player"
-              class="flex items-center gap-3 w-full min-h-[3.5rem] rounded-lg px-5 hover:bg-gray-200 transition-all whitespace-nowrap">
-              <span class="w-8 flex justify-center">{% include "beetles/includes/game_level_badge.html" with level=game_player.level name=game_player.name %}</span>
-              <span class="min-w-0 leading-tight"><span class="block font-semibold text-gray-800 truncate">{{ user.username }}</span><span class="block text-xs text-gray-500">{{ game_player.name }} &middot; {{ game_player.score|digit_groups }} pts</span></span>
-            </a>
-            {% endif %}
 
             <form action="{% url 'logout' %}" method="post" class="w-full"
               onsubmit="return confirm('Are you sure you want to log out?');">
@@ -400,11 +366,12 @@
             </span>
           </a>
 
-          <a href="{% url 'game_home' %}"
+          <a href="{% url 'game_home' %}"{% if game_player %} title="{{ game_name }}: {{ user.username }}, level {{ game_player.level }} ({{ game_player.name }}), {{ game_player.score|digit_groups_text }} pts"{% endif %}
             class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'game_home' or request.resolver_match.url_name == 'game_play' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
-            <i class="fi fi-rr-gamepad text-xl text-gray-700 w-8 text-center"></i>
-            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
-              {{ game_name }} <span class="ml-0.5 text-[9px] uppercase font-semibold px-1 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">Beta</span>
+            {% if game_player %}<span class="sidebar-icon w-8 shrink-0 flex justify-center">{% include "beetles/includes/game_level_badge.html" with level=game_player.level name=game_player.name %}</span>{% else %}<i class="fi fi-rr-gamepad text-xl text-gray-700 w-8 text-center"></i>{% endif %}
+            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 min-w-0 leading-tight">
+              <span class="block font-medium text-gray-700">{{ game_name }}</span>
+              {% if game_player %}<span class="block truncate max-w-[10.5rem] text-xs text-gray-500" data-testid="sidebar-player">{{ game_player.name }} &middot; {{ game_player.score|digit_groups_text }} pts</span>{% endif %}
             </span>
           </a>
 
@@ -436,15 +403,6 @@
           </a>
 
           <div class="h-px bg-gray-300 my-2 mx-2"></div>
-          {% if game_player %}
-          <a href="{% url 'game_home' %}" data-testid="sidebar-player" title="{{ user.username }}: level {{ game_player.level }}, {{ game_player.score|digit_groups_text }} pts"
-            class="flex items-center w-full min-h-[3.5rem] rounded-lg px-5 hover:bg-gray-200 transition-all group overflow-hidden whitespace-nowrap">
-            <span class="sidebar-icon w-8 shrink-0 flex justify-center">{% include "beetles/includes/game_level_badge.html" with level=game_player.level name=game_player.name %}</span>
-            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 min-w-0 leading-tight">
-              <span class="block font-semibold text-gray-800 truncate">{{ user.username }}</span><span class="block text-xs text-gray-500">{{ game_player.name }} &middot; {{ game_player.score|digit_groups }} pts</span>
-            </span>
-          </a>
-          {% endif %}
 
           <form action="{% url 'logout' %}" method="post" class="w-full"
             onsubmit="return confirm('Are you sure you want to log out?');">

@@ -44,9 +44,16 @@
   </div>
   {% endif %}
 
-  {% if request.user.is_superuser %}
-  <p class="mb-10 -mt-6 text-sm"><a href="{% url 'site_notice' %}" class="underline text-gray-700 hover:text-black" data-testid="site-notice-link">Site notice</a>
-    <span class="text-gray-500">: a one-line message at the top of every page, e.g. during a stress test.</span></p>
+  {% if areas.site_notice %}
+  <div class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm">
+    <h2 class="text-2xl font-bold mb-2 text-gray-800">Site Notice</h2>
+    <p class="text-sm text-gray-600 mb-4 max-w-2xl">A one-line message at the top of every page, e.g. during a stress test or a backup.</p>
+    <a href="{% url 'site_notice' %}" data-testid="site-notice-link"
+      class="inline-flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+      <i class="fi fi-rr-megaphone"></i>
+      <span>Edit Site Notice</span>
+    </a>
+  </div>
   {% endif %}
 
   {# --- SECTION 3: USER LIST (Superusers Only) --- #}
@@ -78,7 +85,9 @@
               <td class="px-4 py-3 font-medium text-gray-800">
                  {# Username code #}
                  <div class="flex flex-col">
-                    <span class="text-base">{{ u.username }}</span>
+                    <button type="button" data-testid="edit-user-name" title="Edit this account"
+                      onclick="this.closest('tr').querySelector('[data-edit-user]').click()"
+                      class="text-base text-left underline decoration-gray-300 underline-offset-2 hover:decoration-gray-700">{{ u.username }}</button>
                     {% if u.email %}
                       <span class="text-xs text-gray-400 font-normal">{{ u.email }}</span>
                     {% endif %}
@@ -94,7 +103,7 @@
                     {% else %}
                       <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">Standard</span>
                     {% endif %}
-                    {% if u.granted_areas and not u.is_staff %}<span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800" title="{{ u.granted_areas }}">+ extra access</span>{% endif %}
+                    {% if u.granted_areas and not u.is_superuser %}<span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800" title="{{ u.granted_areas }}">+ extra access</span>{% endif %}
                   </div>
               </td>
               <td class="px-4 py-3 text-gray-600 whitespace-nowrap">{{ u.date_joined|date:"M d, Y" }}</td>
@@ -112,7 +121,7 @@
               {# Actions Cell #}
               <td class="px-4 py-3 text-right">
                 {% if request.user.is_superuser %}
-                <button type="button" 
+                <button type="button" data-edit-user
                    onclick="openEditUserModal(
                      '{{ u.id }}', 
                      '{{ u.username|escapejs }}', 
@@ -282,22 +291,29 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Role</label>
                     <select name="role" id="edit-role" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500 sm:text-sm border p-2 bg-white">
-                        <option value="standard">Standard User</option>
-                        <option value="staff">Staff (Admin Access)</option>
-                        <option value="superuser">Superuser (Full Control)</option>
+                        <option value="standard">Standard</option>
+                        <option value="staff">Staff</option>
+                        <option value="superuser">Superuser (everything)</option>
                     </select>
+                    <p class="text-xs text-gray-500 mt-1" data-testid="role-help">Standard and Staff can only do what is ticked below.
+                      Choosing Staff ticks the curator set and also opens the Django admin. Superusers can do everything.</p>
                 </div>
 
                 {# Extra areas (superusers only) #}
                 {% if request.user.is_superuser %}
                 <div class="border rounded-md p-3 bg-gray-50">
-                    <span class="text-sm font-medium text-gray-900">Extra access</span>
-                    <p class="text-xs text-gray-500 mb-2">On top of the role. Staff and superusers already have all of these.</p>
-                    {% for key, label, description in area_choices %}
-                    <label class="flex items-start gap-2 py-1 text-sm text-gray-700">
-                        <input type="checkbox" name="areas" value="{{ key }}" class="mt-0.5 h-4 w-4 rounded border-gray-300">
-                        <span><span class="font-medium">{{ label }}</span><span class="block text-xs text-gray-500">{{ description }}</span></span>
-                    </label>
+                    <span class="text-sm font-medium text-gray-900">Permissions</span>
+                    <p class="text-xs text-gray-500 mb-2">Grouped by page. Superusers have all of them.</p>
+                    {% for group in permission_pages %}
+                    <fieldset class="mb-2" data-testid="permission-page">
+                      <legend class="text-xs font-bold uppercase text-gray-500 mt-1">{{ group.page }}</legend>
+                      {% for area in group.areas %}
+                      <label class="flex items-start gap-2 py-1 text-sm text-gray-700">
+                          <input type="checkbox" name="areas" value="{{ area.key }}" class="mt-0.5 h-4 w-4 rounded border-gray-300">
+                          <span><span class="font-medium">{{ area.label }}</span><span class="block text-xs text-gray-500">{{ area.description }}</span></span>
+                      </label>
+                      {% endfor %}
+                    </fieldset>
                     {% endfor %}
                 </div>
                 {% endif %}
@@ -360,6 +376,13 @@
       // 3. Show Modal
       openModal('modal-edit-user');
   }
+
+  // Staff is a preset: choosing it ticks the curator permissions (they can still be changed one by one).
+  const CURATOR_AREAS = {{ curator_areas|safe }};
+  document.getElementById('edit-role')?.addEventListener('change', (e) => {
+      if (e.target.value !== 'staff') return;
+      document.querySelectorAll('input[name=areas]').forEach(box => { if (CURATOR_AREAS.includes(box.value)) box.checked = true; });
+  });
 
   // --- 2. DOM Ready Logic ---
   document.addEventListener('DOMContentLoaded', function() {

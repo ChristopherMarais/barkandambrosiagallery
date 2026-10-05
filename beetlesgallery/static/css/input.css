@@ -33,9 +33,28 @@
     }
 }
 
-/* The site's house style. Mostly white and grey: colour is only for meaning (green = done or right,
-   red = a problem or a danger, amber = waiting or needs attention). */
+/* Ticked boxes, radio buttons and sliders are dark grey everywhere, never the browser's blue. */
+@layer base {
+    input[type="checkbox"], input[type="radio"], input[type="range"] {
+        accent-color: theme("colors.gray.600");
+    }
+}
+
+/* The site's house style (keep to it on every page; CLAUDE.md points here):
+   - Mostly white and grey. Colour is only for meaning: green = done or correct, red = a problem or a danger,
+     amber = waiting or needs attention, and the game's rarity colours for levels, challenge and accuracy.
+   - Each page has at most one main button (Search, Classify image, Play ...): .btn-main, a mid-grey button
+     with dark bold text, never black. Other actions use .btn-primary or .btn-secondary.
+   - Ticked boxes and radio buttons are dark grey (see above).
+   - Numbers of four digits or more are grouped in threes (12 345): the |digit_groups filter in templates,
+     digitGroups() / digitGroupsText() in scripts (static/js/digit_groups.js).
+   - Text for players and visitors is short and plain. */
 @layer components {
+    /* The one main action of a page. Size it per page with utilities (e.g. "btn-main w-full text-2xl py-6"). */
+    .btn-main {
+        @apply inline-flex items-center justify-center gap-3 rounded-xl bg-gray-300 border border-gray-400 px-8 py-3 text-lg font-bold tracking-wide text-gray-900 shadow-sm transition hover:bg-gray-400 hover:text-black active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-gray-300 disabled:opacity-60 disabled:cursor-not-allowed;
+    }
+
     .page-title {
         @apply text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight;
         margin: 0 0 1rem;
@@ -81,3 +100,19 @@
   background-size: 1rem;
   text-overflow: ellipsis;
 }
+
+/* Rarity colours (as the levels and badges: grey, green, blue, purple, orange, gold) for a 0-1 value such as accuracy
+   or challenge; game_rewards.rarity_tier picks the tier. Text: .rarity-<tier>, bars: .rarity-fill-<tier>. Outside the
+   layers so they are kept although templates build the class names. */
+.rarity-common { color: theme("colors.gray.600"); }
+.rarity-uncommon { color: theme("colors.green.600"); }
+.rarity-rare { color: theme("colors.blue.600"); }
+.rarity-epic { color: theme("colors.purple.600"); }
+.rarity-legendary { color: theme("colors.orange.600"); }
+.rarity-mythic { color: theme("colors.yellow.600"); }
+.rarity-fill-common { background-color: theme("colors.gray.500"); }
+.rarity-fill-uncommon { background-color: theme("colors.green.500"); }
+.rarity-fill-rare { background-color: theme("colors.blue.500"); }
+.rarity-fill-epic { background-color: theme("colors.purple.500"); }
+.rarity-fill-legendary { background-color: theme("colors.orange.500"); }
+.rarity-fill-mythic { background-color: theme("colors.yellow.500"); }

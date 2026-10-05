@@ -13,12 +13,13 @@
 
   const STEPS = [
     { el: "photos", text: "This is the beetle. Tap it to see the whole photo." },
-    { el: "light-btn", text: "Photo too dark? Light makes it brighter or sharper." },
+    { el: "light-btn", text: "Photo too dark? Lighting makes it brighter or sharper." },
     { el: "ranks", text: "Name it as far as you're sure: subfamily, tribe, genus, species. Stop where you're unsure." },
     { el: "ladder", text: "Are A and B related? Pick the lowest line you're sure of." },
     { el: "rank-lock", text: "Start with the big groups. Tribe, genus and species open one by one after a few beetles." },
     { el: "find-btn-genus", text: "Long list? Tap the magnifier, or just start typing, to search it." },
-    { el: "skip", text: () => (mode() === "pair" ? "Not sure? Tap Not sure. It costs very little." : "Not sure? Skip it. It costs very little.") },
+    { el: "skip", text: "Not sure? Skip it. It costs very little." },
+    { el: "back", text: "Back shows your last beetle and what you answered." },
     { el: "submit", text: "Next saves your answer and brings the next beetle. Naming a beetle earns the most points, but a sure tribe beats a wrong genus." },
     { el: "chip", text: "Beetles today against your daily goal. The flame is your streak: days in a row you reached the goal." },
     { el: "level-chip", text: "Your level and points. New levels unlock more of the game." },
@@ -54,8 +55,8 @@
     bubble.style.top = Math.min(top, innerHeight - h - 12) + "px";
     $("tour-next").focus({ preventScroll: true });
   }
-  function openTour() {
-    steps = STEPS.filter((s) => visible($(s.el)));
+  function openTour(custom) {
+    steps = (custom || STEPS).filter((s) => visible($(s.el)));
     if (!steps.length) return;
     at = 0;
     tour.classList.remove("hidden");
@@ -118,5 +119,16 @@
       else if (tour.dataset.reportTip === "1" && tipCount() < 3) openTip();
     }, 350);
   });
-  window.gameTour = { open: openTour };
+  // A feature that just unlocked (a new level): point it out once, on this device. [{key, el, text}]
+  function unlocked(list) {
+    const fresh = list.filter((s) => {
+      try {
+        if (localStorage.getItem("game-unlock-tip-" + s.key)) return false;
+        localStorage.setItem("game-unlock-tip-" + s.key, "1");
+      } catch (e) { /* private window: show it anyway */ }
+      return true;
+    });
+    if (fresh.length) setTimeout(() => openTour(fresh), 600);   // after the level-up toast and confetti
+  }
+  window.gameTour = { open: () => openTour(), unlocked };
 })();

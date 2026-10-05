@@ -1,12 +1,12 @@
 """
-A site-wide notice a superuser can switch on and off, e.g. "We're stress-testing the site" during a load test or a
+A site-wide notice a superuser (or someone granted "Site notice") can switch on and off, e.g. "We're stress-testing the site" during a load test or a
 club session (issue #383). Read through the cache, so it costs nothing per page while the site is busy.
 """
 from django.core.cache import cache
 from django.shortcuts import redirect, render
 
 from .models import SiteNotice
-from .views import superuser_required
+from .areas import NOTICE, area_required
 
 CACHE_KEY = "site_notice:v1"
 CACHE_SECONDS = 60
@@ -31,7 +31,7 @@ def context(request):
         return {"site_notice": ""}
 
 
-@superuser_required
+@area_required(NOTICE)
 def edit(request):
     notice, _ = SiteNotice.objects.get_or_create(pk=1, defaults={"text": DEFAULT_TEXT})
     if request.method == "POST":

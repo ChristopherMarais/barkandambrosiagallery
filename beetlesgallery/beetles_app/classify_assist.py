@@ -1,5 +1,5 @@
 """
-"Classify with AI" on the annotation page: ask the classifier for boxes and species, and add them as new ROIs.
+"Generate AI recommendation" on the annotation page: ask the classifier for boxes and species, and add them as new ROIs.
 
 The new ROIs are never validated: a person does that. A box that overlaps an existing ROI of the image is skipped,
 so running it twice, or on an image that already has boxes, adds only what is new. Each proposed species is also

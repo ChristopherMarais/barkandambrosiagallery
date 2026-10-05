@@ -8,6 +8,13 @@ cd "$(dirname "$0")/.."
 grep -qx 'STAGING=1' .env.staging 2>/dev/null || { echo "No .env.staging with STAGING=1 here: stopping"; exit 1; }
 STAGING="docker compose -f docker-compose.staging.yml -p barkandambrosia-staging"
 
+# Staging calls its own AI service (Modal app ibbi-api-staging), never the live one (older setups lacked this line)
+STAGING_AI="https://christophermarais--ibbi-api-staging-fastapi-app.modal.run/analyze"
+if ! grep -q '^MODAL_API_URL=.*ibbi-api-staging' .env.staging; then
+  sed -i '/^MODAL_API_URL=/d' .env.staging
+  echo "MODAL_API_URL=$STAGING_AI" >> .env.staging
+fi
+
 echo "APP_VERSION=staging-$(git rev-parse --short HEAD)" > .env.version
 $STAGING build web worker
 $STAGING up -d --wait db redis

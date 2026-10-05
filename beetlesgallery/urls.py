@@ -8,8 +8,11 @@ from django.http import Http404
 from django.views.static import serve
 
 from beetlesgallery.beetles_app import views as beetles_views
+from beetlesgallery.beetles_app import chunked_upload
 from beetlesgallery.beetles_app import game_views
 from beetlesgallery.beetles_app import site_notice
+from beetlesgallery.beetles_app import bulk_validate
+from beetlesgallery.beetles_app import roi_reports
 from beetlesgallery.beetles_app import interaction_views
 from beetlesgallery.beetles_app import interaction_proposals_views
 from beetlesgallery.beetles_app import interaction_upload_views
@@ -60,12 +63,14 @@ urlpatterns = [
     path('interactions/export.csv', interaction_upload_views.interactions_export, name='interactions_export'),
 
     path('beetles/<uuid:beetle_id>/', beetles_views.beetle_detail, name='beetle_detail'),
+    path('beetles/<uuid:beetle_id>/report/', roi_reports.report_roi, name='report_roi'),
     path('beetles/<uuid:beetle_id>/toggle-validation/', beetles_views.toggle_beetle_validation, name='toggle_beetle_validation'),
     path('images/<uuid:image_id>/toggle-validation/', beetles_views.toggle_image_validation, name='toggle_image_validation'),
     path("beetles/add_specimen/<uuid:image_id>/", beetles_views.create_specimen_for_image, name="create_specimen_for_image"),
 
     # --- Tools ---
     path('upload/', beetles_views.upload_file, name='upload'),
+    path('upload/chunk/', chunked_upload.upload_chunk, name='upload_chunk'),
     path("my-uploads/", beetles_views.data_management, name="data_management"),
     path("events/", beetles_views.stream_updates, name="stream_updates"),
     path("downloads/start/", beetles_views.start_batch_download, name="start_batch_download"),
@@ -77,6 +82,8 @@ urlpatterns = [
     path('tools/classify/', beetles_views.tool_classify, name='tool_classify'),
     path('tools/annotate/', beetles_views.tool_annotate, name='tool_annotate'),
     path('tools/predictions/', beetles_views.upload_predictions, name='upload_predictions'),
+    path('tools/predictions/<uuid:job_id>/', beetles_views.upload_predictions_status, name='upload_predictions_status'),
+    path('tools/bulk-validate/', bulk_validate.bulk_validate, name='bulk_validate'),
     path('tools/access-requests/', access_views.access_requests, name='access_requests'),
     path('tools/site-notice/', site_notice.edit, name='site_notice'),
 

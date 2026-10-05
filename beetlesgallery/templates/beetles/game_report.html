@@ -24,13 +24,13 @@
     </div>
     <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">
       <div class="text-xs uppercase tracking-wider text-gray-500 font-semibold">Accuracy</div>
-      <div class="mt-1 text-2xl font-semibold text-gray-900 tabular-nums">
+      <div class="mt-1 text-2xl font-semibold tabular-nums rarity-{{ report.summary.accuracy|rarity }}" data-testid="report-accuracy">
         {% if report.summary.accuracy is not None %}{% widthratio report.summary.accuracy 1 100 %}%{% else %}<span class="text-gray-400">&ndash;</span>{% endif %}
       </div>
     </div>
     <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">
       <div class="text-xs uppercase tracking-wider text-gray-500 font-semibold">Sessions</div>
-      <div class="mt-1 text-2xl font-semibold text-gray-900 tabular-nums">{{ report.rounds }}</div>
+      <div class="mt-1 text-2xl font-semibold text-gray-900 tabular-nums">{{ report.rounds|digit_groups }}</div>
     </div>
     <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">
       <div class="text-xs uppercase tracking-wider text-gray-500 font-semibold">Expert areas</div>
@@ -42,10 +42,10 @@
   <div class="mb-8">
     <div class="flex items-baseline justify-between mb-1">
       <h2 class="text-lg font-semibold text-gray-900">Challenge level</h2>
-      <span class="text-sm text-gray-500 tabular-nums">{% widthratio report.challenge 1 100 %} / 100</span>
+      <span class="text-sm font-semibold tabular-nums rarity-{{ report.challenge|rarity }}">{% widthratio report.challenge 1 100 %} / 100</span>
     </div>
     <div class="h-2 bg-gray-100 rounded-full overflow-hidden" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{% widthratio report.challenge 1 100 %}" aria-label="Challenge level">
-      <div class="h-full bg-gray-600 rounded-full" style="width: {% widthratio report.challenge 1 100 %}%"></div>
+      <div class="h-full rounded-full rarity-fill-{{ report.challenge|rarity }}" data-testid="challenge-bar" style="width: {% widthratio report.challenge 1 100 %}%"></div>
     </div>
     <p class="mt-2 text-xs text-gray-500">Images get harder as you play and as your accuracy grows.</p>
   </div>
@@ -55,7 +55,7 @@
     <h2 class="text-lg font-semibold text-gray-900 mb-1">Expertise</h2>
     <p class="text-xs text-gray-500 mb-3">
       You become an expert in a taxon once you have named {{ report.per_species }} validated images of every species in it
-      (all of them, for a species with fewer) and got at least {% widthratio report.min_accuracy 1 100 %}% right.
+      (all of them, for a species with fewer) and got at least {% widthratio report.min_accuracy 1 100 %}% correct.
       A genus with two species needs far fewer answers than one with forty. Experts' labels are flagged to our curators as trusted.
     </p>
 
@@ -83,7 +83,7 @@
       <li>
         <div class="flex items-baseline justify-between text-sm">
           <span class="text-gray-900 truncate">{{ s.rank|capfirst }} ID{% if s.branch %} in <span class="{% if s.rank == 'species' %}italic{% endif %}">{{ s.branch }}</span>{% endif %}</span>
-          <span class="text-xs text-gray-500 tabular-nums ml-2 shrink-0">{{ s.species_done|digit_groups }}/{{ s.species_total|digit_groups }} species · {% widthratio s.accuracy 1 100 %}% right</span>
+          <span class="text-xs text-gray-500 tabular-nums ml-2 shrink-0">{{ s.species_done|digit_groups }}/{{ s.species_total|digit_groups }} species · {% widthratio s.accuracy 1 100 %}% correct</span>
         </div>
         <div class="mt-1 h-1.5 bg-gray-100 rounded-full overflow-hidden" title="{{ s.covered|digit_groups_text }} of the {{ s.required|digit_groups_text }} answers needed, {{ s.correct|digit_groups_text }} of {{ s.judged|digit_groups_text }} correct">
           <div class="h-full bg-gray-600 rounded-full" style="width: {% widthratio s.progress 1 100 %}%"></div>

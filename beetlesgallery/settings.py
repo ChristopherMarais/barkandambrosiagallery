@@ -218,7 +218,7 @@ EMAIL_BACKEND = os.environ.get(
 )
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "noreply@barkandambrosiagallery.org")
 
-# The AI classifier service (used by the classifier page and "Classify with AI" on the annotation page)
+# The AI classifier service (used by the classifier page and "Generate AI recommendation" on the annotation page)
 MODAL_API_URL = os.environ.get("MODAL_API_URL", "https://christophermarais--ibbi-api-fastapi-app.modal.run/analyze")
 
 # Beetle ID game (beetles_app/game.py)
@@ -226,7 +226,7 @@ GAME_ROUND_SIZE = 10                  # items per round
 # Re-score other players on the Celery worker when someone finishes playing (on in production)
 GAME_RECOMPUTE_IN_BACKGROUND = os.environ.get("GAME_RECOMPUTE_IN_BACKGROUND", "0" if DEBUG else "1") == "1"
 # what the game is called on the site (one place to rename it)
-GAME_DISPLAY_NAME = "Beetle ID Game"
+GAME_DISPLAY_NAME = "Ambrosia Archive"
 # where players report bugs and suggest ideas for the game
 GAME_DISCUSSIONS_URL = "https://github.com/ChristopherMarais/barkandambrosiagallery/discussions/categories/beetle-id-game"
 GAME_CALIBRATION_CHECKS = 20          # scored answers before a player counts as calibrated
@@ -266,6 +266,8 @@ MAX_UPLOAD_TOTAL_BYTES = 2 * 1024 * 1024 * 1024  # CSV + ZIP together; keep in s
 DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 FILE_UPLOAD_TEMP_DIR = MEDIA_ROOT / "tmp_uploads"
+# Big files are uploaded in pieces of this size (beetles_app/chunked_upload.py): Cloudflare refuses requests over 100 MB
+UPLOAD_CHUNK_BYTES = int(os.environ.get("UPLOAD_CHUNK_BYTES", 50 * 1024 * 1024))
 # How long files that are no longer needed stay on disk (beetles_app/storage_cleanup.py, run nightly)
 DOWNLOAD_RETENTION_DAYS = 14   # a finished download can be fetched for this long, then it is rebuilt on request
 UPLOAD_ZIP_KEEP_DAYS = 7       # an imported upload's ZIP, once every image in it is in the gallery
@@ -291,7 +293,7 @@ CELERY_RESULT_BACKEND = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
-# Heavy jobs (CSV uploads and updates, building downloads) go to their own queue, which production runs one at a
+# Heavy jobs (CSV uploads and updates, model predictions, building downloads) go to their own queue, which production runs one at a
 # time at low CPU priority (the worker-heavy service), so they never hold up the game's quick background work
 # (issue #383). A worker started without -Q only takes the default queue: in development run it with -Q celery,heavy.
 CELERY_TASK_DEFAULT_QUEUE = "celery"
@@ -300,6 +302,7 @@ CELERY_TASK_ROUTES = {
     "beetlesgallery.beetles_app.tasks.process_upload_task": {"queue": HEAVY_QUEUE},
     "beetlesgallery.beetles_app.tasks.process_update_task": {"queue": HEAVY_QUEUE},
     "beetlesgallery.beetles_app.tasks.build_downloads_task": {"queue": HEAVY_QUEUE},
+    "beetlesgallery.beetles_app.tasks.import_predictions_task": {"queue": HEAVY_QUEUE},
 }
 
 # --- Cache Configuration ---

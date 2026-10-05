@@ -127,7 +127,7 @@
                 <select onchange="goToPage(this.value)" class="page-select rounded border border-text/20 bg-background py-1.5 px-2 text-sm focus:ring-gray-400 cursor-pointer">
                   {{ page_options_html }}
                 </select>
-                <span>of {{ paginator.num_pages }}</span>
+                <span>of {{ paginator.num_pages|digit_groups_text }}</span>
               </div>
 
               {% if page_obj.has_next %}
@@ -455,7 +455,7 @@
                 <select onchange="goToPage(this.value)" class="page-select rounded border border-text/20 bg-background py-1.5 px-2 text-sm focus:ring-gray-400 cursor-pointer">
                   {{ page_options_html }}
                 </select>
-                <span>of {{ paginator.num_pages }}</span>
+                <span>of {{ paginator.num_pages|digit_groups_text }}</span>
               </div>
 
               {% if page_obj.has_next %}
