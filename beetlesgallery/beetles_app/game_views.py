@@ -73,9 +73,11 @@ def game_home(request):
     game_discoveries.find([request.user.id])
     checked, checked_new, checked_change = game_checked.pop_unseen(request.user)
     # this week's top players; at the start of a quiet week, all time instead
-    board, board_period = game_board.board(limit=5), "week"
+    board, board_period = game_board.board(limit=5, viewer_id=request.user.id), "week"
     if not board:
-        board, board_period = game_board.board(period="all", limit=5), "all"
+        board, board_period = game_board.board(period="all", limit=5, viewer_id=request.user.id), "all"
+    from .models import GamePreference
+    hide_boards = GamePreference.objects.filter(player=request.user, hide_boards=True).exists()   # #394
     rewards = game_rewards.progress(request.user)
     return render(request, "beetles/game_home.html", {
         "checked": checked, "checked_new": checked_new, "checked_change": checked_change,
@@ -83,7 +85,7 @@ def game_home(request):
         "discoveries": game_discoveries.pop_unseen(request.user),
         "score": game_scoring.score_for(request.user),
         "rewards": rewards,
-        "board": board, "board_period": board_period,
+        "board": board, "board_period": board_period, "hide_boards": hide_boards,
         "standing": game_board.accuracy_standing(request.user),
         "goal_floor": game_rewards.daily_goal(),
         "games": game_board.mode_stats([request.user.id])[request.user.id],
@@ -199,15 +201,18 @@ def game_leaderboard(request):
     last_week = game_board.weekly_wins()[:1]
     names = dict(get_user_model().objects.filter(id__in=[p for w in last_week for p, _ in w["places"]])
                  .values_list("id", "username"))
+    hidden = game_board.hidden_names() - {request.user.id}   # #394
     q = (request.GET.get("q") or "").strip()[:50]
     branch_rank = request.GET.get("rank") if request.GET.get("rank") in game_board.BRANCH_SKILL else ""
     branch_value = (request.GET.get("branch") or "").strip()[:100]
     return render(request, "beetles/game_leaderboard.html", {
-        "rows": game_board.board(sort=sort, period=period, q=q, limit=100),
-        "branch_rows": game_board.branch_board(branch_rank, branch_value) if branch_rank and branch_value else None,
+        "rows": game_board.board(sort=sort, period=period, q=q, limit=100, viewer_id=request.user.id),
+        "branch_rows": (game_board.branch_board(branch_rank, branch_value, viewer_id=request.user.id)
+                        if branch_rank and branch_value else None),
         "sort": sort, "period": period, "q": q, "sorts": game_board.SORTS, "periods": game_board.PERIODS,
         "resets_at": game_board.period_end(period),
-        "last_week": [{"position": i, "player_id": p, "username": names.get(p, ""), "points": round(pts)}
+        "last_week": [{"position": i, "player_id": p, "points": round(pts), "anonymous": p in hidden,
+                       "username": game_board.ANONYMOUS if p in hidden else names.get(p, "")}
                       for i, (p, pts) in enumerate(last_week[0]["places"], start=1)] if last_week else [],
         "branch_rank": branch_rank, "branch_value": branch_value,
     })
@@ -219,6 +224,7 @@ def game_profile(request, user_id):
     player = get_object_or_404(get_user_model(), id=user_id)
     return render(request, "beetles/game_profile.html", {
         "player": player, "is_self": player == request.user, "p": game_board.profile(player),
+        "name": game_board.shown_name(player, request.user.id),
     })
 
 
@@ -230,6 +236,11 @@ def game_unlocks(request):
     info = game_levels.for_player(request.user)
     pref, _ = GamePreference.objects.get_or_create(player=request.user)
     error = ""
+    if request.method == "POST" and request.POST.get("boards"):   # #394: the leaderboard settings
+        pref.hide_name = request.POST.get("hide_name") == "on"
+        pref.hide_boards = request.POST.get("hide_boards") == "on"
+        pref.save(update_fields=["hide_name", "hide_boards", "updated_at"])
+        return redirect(reverse("game_unlocks") + "#boards")
     if request.method == "POST":
         rank = request.POST.get("focus_rank", "")
         value = (request.POST.get("focus_value") or "").strip()[:100]
@@ -267,6 +278,7 @@ def game_expertise(request, user_id=None):
     player = request.user if user_id is None else get_object_or_404(get_user_model(), id=user_id)
     return render(request, "beetles/game_expertise.html", {
         "player": player, "is_self": player == request.user, "tree": game_trust.expertise_tree(player),
+        "name": game_board.shown_name(player, request.user.id),
         "info": game_levels.for_player(player),
     })
 

@@ -4,7 +4,7 @@
 {% block content %}
 <div class="max-w-3xl mx-auto">
   <a href="{% url 'game_home' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; {{ game_name }}</a>
-  <h1 class="page-title"><span class="inline-flex items-center gap-2">{% include "beetles/includes/game_level_badge.html" with level=p.level.level name=p.level.name %}{{ player.username }}{% if p.discoveries %}<i class="fi fi-rr-sparkles text-amber-600 text-xl" title="New species finder"></i>{% endif %}</span>{% if is_self %} <span class="text-base font-normal text-gray-400">(you)</span>{% endif %}</h1>
+  <h1 class="page-title"><span class="inline-flex items-center gap-2">{% include "beetles/includes/game_level_badge.html" with level=p.level.level name=p.level.name %}{{ name }}{% if p.discoveries %}<i class="fi fi-rr-sparkles text-amber-600 text-xl" title="New species finder"></i>{% endif %}</span>{% if is_self %} <span class="text-base font-normal text-gray-400">(you)</span>{% endif %}</h1>
 
   <div class="grid grid-cols-3 gap-3 mb-6">
     <div class="p-4 bg-gray-50 border border-gray-100 rounded-2xl">
