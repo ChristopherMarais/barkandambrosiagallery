@@ -12,6 +12,7 @@ from beetlesgallery.beetles_app import chunked_upload
 from beetlesgallery.beetles_app import game_views
 from beetlesgallery.beetles_app import site_notice
 from beetlesgallery.beetles_app import bulk_validate
+from beetlesgallery.beetles_app import roi_reports
 from beetlesgallery.beetles_app import interaction_views
 from beetlesgallery.beetles_app import interaction_proposals_views
 from beetlesgallery.beetles_app import interaction_upload_views
@@ -62,6 +63,7 @@ urlpatterns = [
     path('interactions/export.csv', interaction_upload_views.interactions_export, name='interactions_export'),
 
     path('beetles/<uuid:beetle_id>/', beetles_views.beetle_detail, name='beetle_detail'),
+    path('beetles/<uuid:beetle_id>/report/', roi_reports.report_roi, name='report_roi'),
     path('beetles/<uuid:beetle_id>/toggle-validation/', beetles_views.toggle_beetle_validation, name='toggle_beetle_validation'),
     path('images/<uuid:image_id>/toggle-validation/', beetles_views.toggle_image_validation, name='toggle_image_validation'),
     path("beetles/add_specimen/<uuid:image_id>/", beetles_views.create_specimen_for_image, name="create_specimen_for_image"),
