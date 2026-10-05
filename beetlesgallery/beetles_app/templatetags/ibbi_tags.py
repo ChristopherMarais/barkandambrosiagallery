@@ -1,4 +1,4 @@
-"""{% ibbi_model_options %}: the <option>s of the AI model pickers (the classifier page, Generate AI recommendation)."""
+"""{% ibbi_model_options %}: the <option>s of the AI model pickers (the AI page, Generate AI recommendation)."""
 from django import template
 from django.utils.html import format_html, format_html_join
 
@@ -9,8 +9,16 @@ register = template.Library()
 
 @register.simple_tag
 def ibbi_model_options():
+    """Each model by its name; the default comes first, selected and marked as recommended."""
     return format_html_join(
         "", '<option value="{}"{}>{}</option>',
-        ((key, format_html(" selected") if key == ibbi_models.DEFAULT else "", spec["label"])
+        ((key, format_html(" selected") if key == ibbi_models.DEFAULT else "",
+          f"{spec['label']} (recommended)" if key == ibbi_models.DEFAULT else spec["label"])
          for key, spec in ibbi_models.MODELS.items()),
     )
+
+
+@register.simple_tag
+def ibbi_recommended_name():
+    """The recommended model's name, e.g. "DINOv3"."""
+    return ibbi_models.MODELS[ibbi_models.DEFAULT]["label"]

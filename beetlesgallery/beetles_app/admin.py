@@ -408,6 +408,7 @@ class ImageAssetAdmin(admin.ModelAdmin):
         'thumb_height',
         'is_validated',
         'last_updated_by',
+        'added_by',
         'created_at',
         'updated_at',
         'is_deleted',

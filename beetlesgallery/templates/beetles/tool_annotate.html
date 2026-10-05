@@ -1184,7 +1184,12 @@ async function classifyCurrentImage() {
     if (!res.ok) throw new Error(data.error || 'The AI recommendation failed.');
     const img = state.images.find(i => i.image_asset_id === state.selectedImageId) || { image_asset_id: state.selectedImageId };
     await selectImage(img);
-    show(`${data.added} ROI${data.added === 1 ? '' : 's'} added (not validated)` + (data.already_boxed ? `, ${data.already_boxed} overlapped an existing ROI` : '') + '.');
+    // e.g. "2 ROIs added, 1 existing ROI got an AI suggestion (nothing validated)."
+    const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+    const parts = [`${plural(data.added, 'ROI')} added`];
+    if (data.attached) parts.push(`${plural(data.attached, 'existing ROI')} got an AI suggestion`);
+    if (data.already_boxed) parts.push(`${data.already_boxed} already there`);
+    show(`${parts.join(', ')} (nothing validated).`);
   } catch (e) {
     show(e.message);
   } finally {

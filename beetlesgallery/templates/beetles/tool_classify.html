@@ -6,7 +6,7 @@
 
 <section class="relative z-0">
     <div class="pt-8"> 
-        <h1 class="page-title">Intelligent Bark Beetle Identifier (IBBI)</h1>
+        <h1 class="page-title">IBBI-AI: Intelligent Bark Beetle Identifier</h1>
     </div>
 </section>
 
@@ -14,19 +14,7 @@
     
     <div class="pb-6 flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div class="max-w-3xl mx-auto text-center">
-            <div class="mt-2 text-md text-gray-600 space-y-2">
-                <p>
-                    These models come from <a href="{{ ibbi_docs_url }}" target="_blank" rel="noopener" class="text-gray-600 hover:text-gray-800 underline">IBBI</a>, our open-source package for detecting and identifying bark and ambrosia beetles
-                    (<a href="https://joss.theoj.org/papers/10.21105/joss.08796" target="_blank" rel="noopener" class="text-gray-600 hover:text-gray-800 underline">paper</a>,
-                    <a href="https://github.com/ChristopherMarais/IBBI" target="_blank" rel="noopener" class="text-gray-600 hover:text-gray-800 underline">code</a>).
-                    The IBBI documentation lists what each model can name and how accurate it is.
-                </p>
-                <p>
-                    Treat the answer as a screening tool and have important identifications checked by a taxonomist. Images you submit that contain a bark or ambrosia beetle are added to the gallery as unvalidated images, with the proposed names, for experts to check.
-                </p>
-            </div>
-            
-            <div class="mt-3">
+            <div class="mt-3" data-testid="server-info">
                 <p class="text-gray-700 bg-gray-100 inline-block px-2 py-1 rounded border border-gray-300 text-sm">
                     <i class="fi fi-rr-info text-base align-middle mr-1"></i>
                     <strong>Server Info:</strong> The analysis server sleeps when idle. The first image may take a moment to wake it up; subsequent uploads will process much faster.
@@ -43,7 +31,7 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-24 lg:pb-0">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         <div class="lg:col-span-3 space-y-6">
             <form id="classifyForm" class="space-y-5 bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
@@ -51,9 +39,8 @@
                 
                 <div>
                     <label for="modelSelect" class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Model</label>
-                    <p class="text-[10px] text-gray-500 mb-2 leading-tight">
-                        <strong>Species classifier:</strong> finds each beetle, then names it rank by rank and says when it is not sure.
-                        <strong>Species detector:</strong> finds and names a beetle in one step.
+                    <p class="text-[10px] text-gray-500 mb-2 leading-tight" data-testid="model-help">
+                        All models find and name beetles; {% ibbi_recommended_name %} is recommended.
                         <a href="{{ ibbi_docs_url }}" target="_blank" rel="noopener" class="underline hover:text-gray-800" data-testid="ibbi-link">How well each model does</a>
                     </p>
                     <div class="relative">
@@ -71,7 +58,7 @@
                         <label for="confRange" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Confidence</label>
                         <span id="confValue" class="text-xs font-mono text-gray-600 bg-gray-50 px-1.5 py-0.5 rounded">25%</span>
                     </div>
-                    <input type="range" id="confRange" name="box_threshold" min="0.01" max="0.99" step="0.01" value="0.25" 
+                    <input type="range" id="confRange" name="box_threshold" min="0.05" max="0.99" step="0.01" value="0.25" 
                         class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-500 hover:accent-gray-700">
                 </div>
 
@@ -97,7 +84,7 @@
             {% if examples %}
             <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                 <div class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Try an example</div>
-                <p class="text-[11px] text-gray-500 mb-2">Loads a photo so you can test the classifier. Examples are never added to the gallery.</p>
+                <p class="text-[11px] text-gray-500 mb-2">Loads a photo so you can try IBBI-AI. Examples are never added to the gallery.</p>
                 <div class="grid grid-cols-2 gap-2">
                     {% for ex in examples %}
                     <button type="button" class="example-btn group text-left rounded-lg border border-gray-200 overflow-hidden hover:border-gray-500 transition"
@@ -166,6 +153,9 @@
                     <span id="chartLabel" class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded">Select a detection</span>
                 </div>
                 
+                {# What happened to the photo (the "saved" answer), one line #}
+                <p id="savedNote" class="hidden mb-4 text-xs text-gray-600" role="status" data-testid="saved-note"></p>
+
                 <div id="ranksPanel" class="hidden mb-4 divide-y divide-gray-100 text-sm" data-testid="ranks-panel"></div>
 
                 <div class="relative w-full" id="chartWrapper" style="height: 400px;">
@@ -177,14 +167,28 @@
 
         </div>
     </div>
+
+    {# About IBBI-AI, under the tool; on phones the space below keeps it clear of the floating Classify button #}
+    <section class="max-w-3xl mx-auto mt-12 pb-24 lg:pb-0 text-center text-md text-gray-600 space-y-2" data-testid="ibbi-about">
+        <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wide">About IBBI-AI</h2>
+        <p>
+            IBBI-AI is our Intelligent Bark Beetle Identifier. Its models come from <a href="{{ ibbi_docs_url }}" target="_blank" rel="noopener" class="text-gray-600 hover:text-gray-800 underline">IBBI</a>, our open-source package for detecting and identifying bark and ambrosia beetles
+            (<a href="https://joss.theoj.org/papers/10.21105/joss.08796" target="_blank" rel="noopener" class="text-gray-600 hover:text-gray-800 underline">paper</a>,
+            <a href="https://github.com/ChristopherMarais/IBBI" target="_blank" rel="noopener" class="text-gray-600 hover:text-gray-800 underline">code</a>).
+            The IBBI documentation lists what each model can name and how accurate it is.
+        </p>
+        <p>
+            Treat the answer as a screening tool and have important identifications checked by a taxonomist. Images you submit that contain a bark or ambrosia beetle are added to the gallery as unvalidated images, with the proposed names, for experts to check.
+        </p>
+    </section>
 </div>
 
 <div id="termsModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60" role="dialog" aria-modal="true" aria-labelledby="termsTitle">
   <div class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
-    <h2 id="termsTitle" class="text-lg font-semibold text-gray-900 mb-3">Before you use the classifier</h2>
+    <h2 id="termsTitle" class="text-lg font-semibold text-gray-900 mb-3">Before you use IBBI-AI</h2>
     <div class="space-y-3 text-sm text-gray-700">
-      <p>The classifier is a screening tool and its answers can be wrong.</p>
-      <p><strong>What we keep.</strong> If the classifier finds a bark or ambrosia beetle in an image you submit, we add that image to the Bark &amp; Ambrosia Beetle Gallery as an <em>unvalidated</em> image, with the proposed labels, so experts can check it. We remove GPS location data from the copy we keep. We do not keep images where no beetle is found, and we do not keep an image we already have.</p>
+      <p>IBBI-AI is a screening tool and its answers can be wrong.</p>
+      <p><strong>What we keep.</strong> If IBBI-AI finds a bark or ambrosia beetle in an image you submit, we add that image to the Bark &amp; Ambrosia Beetle Gallery as an <em>unvalidated</em> image, with the proposed labels, so experts can check it. We remove GPS location data from the copy we keep. We do not keep images where no beetle is found, and we do not keep an image we already have.</p>
       <p><strong>Your choice.</strong> Tick &ldquo;Don't keep my image&rdquo; on the page at any time and we will not keep what you submit. You can change your mind for each image. Only submit images you have the right to share, and no images of people.</p>
       <p class="text-xs text-gray-500">Kept images may be shown in the gallery and used for research on bark and ambrosia beetles. To have one removed, contact the gallery team.</p>
     </div>
@@ -198,6 +202,7 @@
   </div>
 </div>
 
+{% if gallery_photo %}{{ gallery_photo|json_script:"gallery-photo" }}{% endif %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     // --- Elements ---
@@ -227,7 +232,8 @@ document.addEventListener('DOMContentLoaded', () => {
         captureBtn: document.getElementById('captureBtn'),
         cancelCameraBtn: document.getElementById('cancelCameraBtn'),
         clearBtn: document.getElementById('clearBtn'),
-        chartWrapper: document.getElementById('chartWrapper')
+        chartWrapper: document.getElementById('chartWrapper'),
+        savedNote: document.getElementById('savedNote')
     };
 
     // --- State ---
@@ -238,6 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedIndex: -1,
         chart: null,
         currentFile: null, // Tracks the actual file object to upload
+        assetId: null, // A gallery photo: the server classifies its own copy (no upload)
         cameraStreamObj: null
     };
 
@@ -534,6 +541,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleFile(file, options) {
         state.currentFile = file;
         state.isExample = !!(options && options.example);
+        state.assetId = (options && options.asset) || null;
         
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -566,21 +574,22 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsDataURL(file);
     }
 
-    // --- Preload an image from another page (e.g. the specimen detail page) ---
-    // Only pages for specimens that have not been identified yet link here, so this
-    // never re-runs the (GPU-backed) classifier on an image that's already ID'd.
-    (function preloadFromQueryString() {
-        const sourceUrl = new URLSearchParams(window.location.search).get('image_url');
-        if (!sourceUrl) return;
+    // --- A gallery photo, from its specimen page (?asset=<image id>) ---
+    // Only pages for specimens that have not been identified yet link here. The preview is the photo as the gallery
+    // shows it; IBBI-AI runs on the copy stored on the server, and its names are kept on that photo's records.
+    (function preloadGalleryPhoto() {
+        const el = document.getElementById('gallery-photo');
+        if (!el) return;
+        const photo = JSON.parse(el.textContent);
 
-        fetch(sourceUrl)
+        fetch(photo.url)
             .then(res => {
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 return res.blob();
             })
             .then(blob => {
-                const filename = sourceUrl.split('/').pop().split('?')[0] || 'specimen.jpg';
-                handleFile(new File([blob], filename, { type: blob.type || 'image/jpeg' }));
+                const filename = photo.url.split('/').pop().split('?')[0] || 'specimen.jpg';
+                handleFile(new File([blob], filename, { type: blob.type || 'image/jpeg' }), { asset: photo.id });
             })
             .catch(err => console.error('Could not preload image for classification:', err));
     })();
@@ -675,6 +684,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ui.clearBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         state.currentFile = null;
+        state.assetId = null;
         state.detections = [];
         ui.fileInput.value = ''; 
         
@@ -689,6 +699,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Submission ---
     
+    // One line on what happened to the photo (the answer's "saved"); nothing when it was not kept for another reason
+    function showSaved(data) {
+        const n = data.attached || 0;
+        const text = {
+            saved: 'Your photo was added to the gallery, unchecked.',
+            already_on_platform: 'This photo is already in the gallery.',
+            opted_out: state.isExample ? '' : 'Your photo was not kept, as you asked.',
+            attached: n === 1 ? 'Saved as the AI suggestion for this specimen.' : `Saved as the AI suggestion for ${n} specimens.`,
+            nothing_new: 'Nothing new to save for this photo.'
+        }[data.saved] || '';
+        ui.savedNote.textContent = text;
+        ui.savedNote.classList.toggle('hidden', !text);
+    }
+
     function setLoading(isLoading, statusText="") {
         if (isLoading) {
             ui.loadingContainer.classList.remove('hidden');
@@ -723,9 +747,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Construct FormData manually to include the correct file (drag/cam/input)
         const formData = new FormData(ui.form);
-        formData.set('image', state.currentFile);
-        // Examples are never kept, and neither is an image the person asked us not to keep.
-        if (state.isExample || document.getElementById('dontKeep').checked) formData.set('keep_image', '0');
+        if (state.assetId) {
+            // A gallery photo: the server classifies its own copy, so nothing is uploaded
+            formData.delete('image');
+            formData.set('asset', state.assetId);
+        } else {
+            formData.set('image', state.currentFile);
+            // Examples are never kept, and neither is an image the person asked us not to keep.
+            if (state.isExample || document.getElementById('dontKeep').checked) formData.set('keep_image', '0');
+        }
         
         setLoading(true, "Processing image...");
         const pIntv = animateProgress();
@@ -770,6 +800,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     alert("No beetles detected above the confidence threshold.");
                 }
+                showSaved(data);
 
                 draw();
                 setLoading(false);

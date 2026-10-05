@@ -74,7 +74,8 @@ class ClassifyTests(ClassifyCase):
         existing.save()
         other = {**DETECTION, "box": [600, 100, 800, 300]}
         response, _ = self.classify([DETECTION, other])
-        self.assertEqual(response.json(), {"added": 1, "already_boxed": 1, "model": "ibbi-test"})
+        # the overlapping box adds no ROI; the existing ROI keeps its name and gets the AI's as a suggestion (#503)
+        self.assertEqual(response.json(), {"added": 1, "attached": 1, "already_boxed": 0, "model": "ibbi-test"})
         self.assertEqual(Beetles.objects.filter(image_asset=self.asset).count(), 2)
         existing.refresh_from_db()
         self.assertEqual((existing.depicts_valid_name_id, existing.bbox_is_validated), ("1733", True))
