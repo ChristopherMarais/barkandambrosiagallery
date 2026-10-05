@@ -535,6 +535,21 @@ if (!CAN_EDIT_RECORDS) {
     document.querySelectorAll("#form-image-details input, #form-image-details select, #form-image-details textarea").forEach((el) => { el.disabled = true; });
   });
 }
+// Validating and AI recommendations are separate permissions: without them the buttons are hidden (the API refuses too).
+const CAN_VALIDATE = {{ can_validate|yesno:"true,false" }};
+const CAN_AI_RECOMMEND = {{ can_ai_recommend|yesno:"true,false" }};
+document.addEventListener("DOMContentLoaded", () => {
+  const hide = [];
+  if (!CAN_VALIDATE) hide.push("#validate-all-btn", "#unvalidate-image-btn", "[id^='btn-val-roi-']");
+  if (!CAN_AI_RECOMMEND) hide.push(".ai-recommend-block");
+  const aiBlock = document.getElementById("classify-btn")?.closest(".mb-4");
+  if (aiBlock) aiBlock.classList.add("ai-recommend-block");
+  if (hide.length) {
+    const style = document.createElement("style");
+    style.textContent = hide.join(", ") + " { display: none !important; }";
+    document.head.appendChild(style);
+  }
+});
 let searchDebounceTimer = null;
 
 // ---------------------------------------------------------

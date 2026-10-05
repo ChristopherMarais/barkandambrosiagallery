@@ -5,7 +5,10 @@ access request).
 * Basic (every account, approved automatically once the email is confirmed): the image browser (without specimen
   pages), the taxonomy browser, the interactions page, the AI classifier and the Beetle ID game.
 * Each area below is granted on its own (AreaGrant), to anyone, staff or not, so two curators can have different
-  access. Superusers have everything.
+  access. Superusers have everything. "Staff" is only a preset that ticks the usual curator areas (and lets someone
+  into Django's own admin pages).
+* Validation is separate from editing: VALIDATE for one record at a time, BULK_VALIDATE for many at once. New
+  uploads always arrive unvalidated.
 
 Accounts that existed before this split keep what they had: members got "details" and "download", curators every
 area except the species tables (migration 0037).
@@ -16,22 +19,44 @@ from django.contrib.auth.views import redirect_to_login
 from django.shortcuts import render
 
 DETAILS, DOWNLOAD = "details", "download"
-ANNOTATE, BOXES, UPLOAD, INTERACTIONS, SPECIES = "annotate", "boxes", "upload", "interactions", "species_tables"
-AREAS = [
-    (DETAILS, "Specimen pages", "Open each specimen's page with all its details."),
-    (DOWNLOAD, "Downloads", "Download images and their metadata in batches."),
-    (BOXES, "Edit bounding boxes", "Draw and adjust boxes on the annotation page (not names or other details)."),
-    (ANNOTATE, "Edit names and records", "Change species labels and image and ROI details, and validate records "
-                                         "(includes editing boxes)."),
-    (UPLOAD, "Upload and update images", "Upload new images and metadata, and update existing records from a CSV."),
-    (INTERACTIONS, "Ecological interactions", "Review proposed interactions, and upload or update interactions."),
-    (SPECIES, "Species tables", "Upload and download the ground-truth valid species and described names tables "
-                                "(Data Management)."),
+BOXES, ANNOTATE, VALIDATE, AI_RECOMMEND = "boxes", "annotate", "validate", "ai_recommend"
+UPLOAD, UPDATE, BULK_VALIDATE, PREDICTIONS, SPECIES = "upload", "update", "bulk_validate", "predictions", "species_tables"
+INTERACTIONS, NOTICE = "interactions", "site_notice"
+
+# What can be granted, grouped by the page it is used on: (page, [(key, label, description), ...])
+PAGES = [
+    ("Image browser", [
+        (DETAILS, "Specimen pages", "Open each specimen's page with all its details."),
+        (DOWNLOAD, "Downloads", "Download images and their metadata in batches."),
+    ]),
+    ("Image annotation", [
+        (BOXES, "Edit bounding boxes", "Draw, move and remove boxes (not names or other details)."),
+        (ANNOTATE, "Edit names and records", "Change species names and image and ROI details (includes editing boxes)."),
+        (VALIDATE, "Validate", "Mark images and ROIs as validated, or take that back, one at a time."),
+        (AI_RECOMMEND, "AI recommendations", "Generate AI recommendations: boxes and suggested names."),
+    ]),
+    ("Data management", [
+        (UPLOAD, "Upload new images", "Upload new images with their details (CSV and ZIP). They arrive unvalidated."),
+        (UPDATE, "Update metadata", "Change existing records from a CSV (not their validation)."),
+        (BULK_VALIDATE, "Bulk validate", "Validate many records at once, from an update CSV or the validation list."),
+        (PREDICTIONS, "Model predictions", "Upload AI model predictions for many images."),
+        (SPECIES, "Species tables", "Upload and download the accepted species and the synonyms and old names."),
+    ]),
+    ("Interactions", [
+        (INTERACTIONS, "Ecological interactions", "Review proposed interactions, and upload or update interactions."),
+    ]),
+    ("Site", [
+        (NOTICE, "Site notice", "Switch the notice at the top of every page on and off."),
+    ]),
 ]
+AREAS = [area for _, items in PAGES for area in items]
 KEYS = [key for key, _, _ in AREAS]
 LABELS = {key: label for key, label, _ in AREAS}
-# what a curator ("staff") account had before areas were granted one by one
-CURATOR_AREAS = [DETAILS, DOWNLOAD, BOXES, ANNOTATE, UPLOAD, INTERACTIONS]
+# Areas that come with another one: editing names and records includes boxes; bulk validation includes validating one at a time
+INCLUDED = {BOXES: {ANNOTATE}, VALIDATE: {BULK_VALIDATE}}
+# The "Staff" preset on the account page (what a curator usually needs); every box can still be changed one by one.
+# Before areas were granted one by one, a curator ("staff") had these.
+CURATOR_AREAS = [DETAILS, DOWNLOAD, BOXES, ANNOTATE, VALIDATE, AI_RECOMMEND, UPLOAD, UPDATE, INTERACTIONS]
 MEMBER_AREAS = [DETAILS, DOWNLOAD]
 
 
@@ -47,14 +72,14 @@ def granted_areas(user):
 
 
 def has_area(user, area):
-    """Superusers have every area; anyone else (staff included) has the areas granted to them. Editing names and
-    records includes editing boxes."""
+    """Superusers have every area; anyone else (staff included) has the areas granted to them, plus the ones those
+    include (INCLUDED)."""
     if not (getattr(user, "is_authenticated", False) and user.is_active):
         return False
     if user.is_superuser:
         return True
     granted = granted_areas(user)
-    return area in granted or (area == BOXES and ANNOTATE in granted)
+    return area in granted or bool(INCLUDED.get(area, set()) & granted)
 
 
 def area_required(area):
@@ -78,3 +103,10 @@ def areas_for_templates(request):
     """{'areas': {'annotate': bool, ...}} for templates, e.g. {% if areas.annotate %}."""
     user = getattr(request, "user", None)
     return {"areas": {key: has_area(user, key) for key in KEYS}}
+
+
+def page_groups(granted=()):
+    """For forms: [{"page": ..., "areas": [{"key", "label", "description", "checked"}]}] in PAGES order."""
+    granted = set(granted)
+    return [{"page": page, "areas": [{"key": k, "label": label, "description": d, "checked": k in granted}
+                                     for k, label, d in items]} for page, items in PAGES]

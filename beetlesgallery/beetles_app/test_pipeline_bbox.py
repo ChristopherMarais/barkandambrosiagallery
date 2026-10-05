@@ -14,7 +14,7 @@ from django.core.management import call_command
 from django.urls import reverse
 
 from beetlesgallery.beetles_app.bbox_rules import parse_box
-from beetlesgallery.beetles_app.models import Beetles, ImageAsset, UpdateBatch
+from beetlesgallery.beetles_app.models import AreaGrant, Beetles, ImageAsset, UpdateBatch
 from beetlesgallery.beetles_app.test_pipeline_update import download_row, fresh, to_csv
 from beetlesgallery.beetles_app.test_pipeline_upload import UploadPipelineCase, image_bytes
 from beetlesgallery.beetles_app.testing import PageBehaviourCase, make_beetle, make_image, make_taxon
@@ -54,6 +54,7 @@ class ParseBoxTests(PageBehaviourCase):
 
 class UpdateBoxTests(PageBehaviourCase):
     def make_batch(self, content):
+        AreaGrant.objects.get_or_create(user=self.staff, area="bulk_validate")   # these rows may change validation
         batch = UpdateBatch.objects.create(
             uploaded_by=self.staff, original_filename="updates.csv", status=UpdateBatch.Status.STAGING
         )
@@ -222,15 +223,15 @@ class UploadBoxTests(UploadPipelineCase):
         self.assertIsNotNone(beetle.bbox_created_at)
         self.assertFalse(beetle.bbox_is_validated)
 
-    def test_a_validated_box_records_the_validator(self):
+    def test_a_box_marked_validated_still_arrives_unvalidated(self):
         batch = self.upload({
             "full_path_at_import": "a.jpg", "bbox_x": 0.1, "bbox_y": 0.2, "bbox_width": 0.3,
             "bbox_height": 0.4, "bbox_is_validated": "yes",
         })
         self.assertEqual(batch.status, "imported", batch.error_message)
         beetle = Beetles.objects.get()
-        self.assertTrue(beetle.bbox_is_validated)
-        self.assertEqual(beetle.bbox_validated_by, self.staff)
+        self.assertFalse(beetle.bbox_is_validated)
+        self.assertIsNone(beetle.bbox_validated_by)
 
     def test_a_row_without_a_box_still_imports(self):
         batch = self.upload({"full_path_at_import": "a.jpg"})

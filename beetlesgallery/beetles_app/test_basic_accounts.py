@@ -83,6 +83,6 @@ class ExistingAccountsKeepTheirAccessTests(PageTestCase):
         migration.grant(apps, None)   # running it again adds nothing twice
         have = lambda u: sorted(AreaGrant.objects.filter(user=u).values_list("area", flat=True))   # noqa: E731
         self.assertEqual(have(member), sorted(areas.MEMBER_AREAS))
-        self.assertEqual(have(curator), sorted(areas.CURATOR_AREAS))
+        self.assertEqual(have(curator), sorted(migration.CURATOR_AREAS))
         self.assertNotIn(areas.SPECIES, have(curator))
         self.assertEqual((have(waiting), have(boss)), ([], []))
