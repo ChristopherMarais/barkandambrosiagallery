@@ -8,6 +8,7 @@ from django.core.paginator import Paginator
 from django.db.models import Count, Exists, OuterRef, Prefetch, Q
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from .areas import BULK_VALIDATE, area_required
 from .models import Beetles, ImageAsset
@@ -43,7 +44,14 @@ def bulk_validate(request):
             messages.success(request, f"Validated {done} image{'s' if done != 1 else ''} and their boxed ROIs.")
         else:
             messages.info(request, "Nothing was selected, so nothing was validated.")
-        return redirect(request.POST.get("next") or reverse("bulk_validate"))
+        next_url = request.POST.get("next") or ""
+        if url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+        return redirect(reverse("bulk_validate"))
 
     q = (request.GET.get("q") or "").strip()[:100]
     source = request.GET.get("source") or ""
