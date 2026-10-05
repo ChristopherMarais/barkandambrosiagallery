@@ -63,21 +63,34 @@ class BuildTests(SelectCase):
                 photos = game.Beetles.objects.filter(id__in=item["tiles"]).values_list("image_asset_id", flat=True)
                 self.assertEqual(len(set(photos)), 9)
 
-    def test_unchecked_beetles_the_classifier_puts_in_the_group_are_mixed_in(self):
+    def test_every_grid_has_a_sure_and_an_unsure_ai_beetle_besides_validated_ones(self):
         self.level(200, 0.4)
         # only Xyleborus affinis has three validated beetles, so it is always the group; two each of the others to fill
         for roi in self.rois["affinis"][3:] + self.rois["ferrugineus"][2:] + self.rois["cylindrus"][2:] + self.rois["crassiusculus"][2:]:
             roi.delete()
-        guess = self.roi(self.t_affinis, validated=False)
-        ModelPrediction.objects.create(roi=guess, valid_species_id=self.t_affinis.valid_species_id, taxon=self.t_affinis,
-                                       confidence=0.8, model_name="m", model_version="1")
+        guesses = {}
+        for conf in (0.95, 0.8, 0.3):   # sure, in between, unsure
+            guesses[conf] = self.roi(self.t_affinis, validated=False)
+            ModelPrediction.objects.create(roi=guesses[conf], valid_species_id=self.t_affinis.valid_species_id,
+                                           taxon=self.t_affinis, confidence=conf, model_name="m", model_version="1")
         with mock.patch.object(game, "_relation_order", return_value=["species"]):
             for _ in range(30):   # an anchor of another species can't make a grid; keep going until one does
                 items = game.build_select_items(self.user, 1)
                 if items:
                     break
+        tiles = items[0]["tiles"]
         self.assertEqual(items[0]["group"]["species"], "Xyleborus affinis")
-        self.assertIn(str(guess.id), items[0]["tiles"])
+        self.assertIn(str(guesses[0.95].id), tiles)
+        self.assertIn(str(guesses[0.3].id), tiles)
+        self.assertGreaterEqual(game.Beetles.objects.filter(id__in=tiles, bbox_is_validated=True).count(), 6)
+
+    def test_without_an_unsure_ai_beetle_there_is_no_grid(self):
+        self.level(200, 0.4)
+        sure = self.roi(self.t_affinis, validated=False)
+        ModelPrediction.objects.create(roi=sure, valid_species_id=self.t_affinis.valid_species_id, taxon=self.t_affinis,
+                                       confidence=0.95, model_name="m", model_version="1")
+        with mock.patch.object(game, "_relation_order", return_value=["species"]):
+            self.assertEqual(game.build_select_items(self.user, 1), [])
 
 
 @override_settings(GAME_POINTS_PARTICIPATION=0.0)

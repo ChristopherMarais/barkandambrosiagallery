@@ -725,7 +725,7 @@ def select_open_count(level, members):
     return max(0, min(wanted, SELECT_TILES - 2 * members))
 
 
-def _select_item(n_open_at, target, deepest, check_pool, open_pool, avoid):
+def _select_item(n_open_at, target, deepest, check_pool, open_pool, avoid, required=False):
     """One Select all item, or None when no part of the tree has enough beetles for it."""
     for rank in _relation_order(target, {r: d for r, d in ODD_RANK_DIFFICULTY.items()
                                          if RANKS.index(r) <= RANKS.index(deepest)}):
@@ -737,16 +737,18 @@ def _select_item(n_open_at, target, deepest, check_pool, open_pool, avoid):
                 continue
             same = rank_q(rank, group[rank])
             photos = {anchor.image_asset_id}
-            # 3 or 4 validated members (a third to under half of the grid), so tapping everything never pays
+            # 3 or 4 validated members (a third to under half of the grid), so tapping everything never pays; 3 when
+            # the grid must also hold a sure and an unsure AI beetle (two more), so non-members still outnumber members
             members = [anchor.id] + _distinct_photos(
                 _sample(check_pool.filter(same).exclude(id__in=avoid).exclude(id=anchor.id), 9, target, allow_seen=True),
-                photos, random.choice((2, 3)))
+                photos, 2 if required else random.choice((2, 3)))
             if len(members) < 3:
                 continue
-            n_open = n_open_at(len(members))
-            opens = _distinct_photos(
-                _sample(open_pool.filter(_predicted(rank, group[rank], 0.6, 1.01)).exclude(id__in=avoid).distinct(),
-                        n_open * 2, target, allow_seen=False), photos, n_open) if n_open else []
+            n_open = max(2, n_open_at(len(members))) if required else n_open_at(len(members))
+            # AI beetles: at least one the classifier is sure is in the group and one it is unsure about (ai_bands)
+            opens = _ai_beetles(open_pool, rank, group[rank], n_open, target, avoid, photos, required) if n_open else []
+            if opens is None:
+                continue
             # the rest: validated beetles of other groups at this rank; near relatives (the same parent) on harder rounds
             need = SELECT_TILES - len(members) - len(opens)
             others = check_pool.filter(_named_at(rank)).exclude(same).exclude(id__in=avoid)
@@ -769,8 +771,8 @@ def build_select_items(player, size, fresh_only=False):
     """
     Select all: nine beetles and a group to find ("Tap every Platypodinae"). The rank follows the player's open ranks
     and difficulty, like Odd One Out; three or four of the nine are validated members, the rest validated beetles of
-    other groups (near relatives on harder rounds), plus one to three beetles nobody has validated that a classifier
-    puts in the group. Taps on those are recorded, never scored. Beetles whose answer the player has been shown are
+    other groups (near relatives on harder rounds), plus beetles nobody has validated that a classifier puts in the
+    group: at least one it is sure about and one it is unsure about (ai_bands), up to three as players rise. Taps on those are recorded, never scored. Beetles whose answer the player has been shown are
     never used again for them (revealed_ids).
     """
     from .game_levels import for_player, rank_unlock
@@ -781,12 +783,13 @@ def build_select_items(player, size, fresh_only=False):
     check_pool, open_pool = pools(player)
     target = target_difficulty(player)
     avoid = set(revealed_ids(player))
+    required = ai_required()
     items = []
     for _ in range(size * 2):
         if len(items) >= size:
             break
         item = _select_item(lambda members: select_open_count(info["level"], members), target, deepest,
-                            check_pool, open_pool, avoid)
+                            check_pool, open_pool, avoid, required)
         if item is None:
             break
         avoid.update(uuid.UUID(t) for t in item["tiles"])
