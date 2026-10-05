@@ -216,13 +216,13 @@
                 <label for="game-filter" class="block text-xs font-bold text-gray-500 uppercase">Game label proposals</label>
                 <select id="game-filter" class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs focus:ring-1 focus:ring-gray-500 outline-none">
                   <option value="">All images</option>
-                  <option value="any">With game proposals waiting</option>
-                  <option value="expert">Expert-backed proposals only</option>
+                  <option value="any">Proposals waiting</option>
+                  <option value="expert">Expert-backed proposals</option>
                   <option value="reported">Reported by players</option>
-                  <option value="disputed">Validated labels players dispute</option>
-                  <option value="applied">Labels applied from the game</option>
+                  <option value="disputed">Disputed validated labels</option>
+                  <option value="applied">Applied from the game</option>
                 </select>
-                <p class="text-[10px] text-gray-400">Proposals a curator already accepted or dismissed drop out until new answers arrive.</p>
+                <p class="text-[10px] text-gray-400">Accepted or rejected proposals come back when new answers arrive; disputed labels come from the automatic label check.</p>
               </div>
               {% if filter_groups %}
                 <button type="button" onclick="closeAndApplyFilters()" class="w-full mb-2 bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 rounded-lg transition-colors text-sm shadow-sm flex items-center justify-center gap-2">
@@ -1463,12 +1463,16 @@ function gameTipsHtml(b) {
 }
 
 // What classifier models said about this ROI: each rank with the model's confidence, and whether the
-// current label agrees (green tick) or not (amber). A suggestion only; it never sets the label.
+// current label agrees (green tick) or not (amber). It sets the label only when a curator uses it: "Use <species>"
+// for a model's top species, when that is in the species list and isn't the label already (once per species).
 function aiSuggestionHtml(b) {
   const list = (state.aiSuggestions || {})[b.id];
   if (!list || !list.length) return '';
   const pct = c => `${Math.round(c * 100)}%`;
-  const blocks = list.map(s => {
+  const idx = state.bboxes.indexOf(b);
+  const current = String(b.depicts_valid_name_id || '');
+  const offered = new Set();
+  const blocks = list.map((s, n) => {
     const rows = s.levels.map(l => `
       <tr data-rank="${l.rank}">
         <td class="py-0.5 pr-2 text-gray-500 capitalize" style="width:4.75rem">${l.rank}</td>
@@ -1484,14 +1488,45 @@ function aiSuggestionHtml(b) {
       </tr>`).join('');
     const runners = s.runners_up && s.runners_up.length
       ? `<div class="text-[10px] text-gray-500 mt-1">Also possible: ${s.runners_up.map(r => `<i>${escHtml(r.value)}</i> ${pct(r.confidence)}`).join(', ')}</div>` : '';
+    const top = s.top_species;
+    let use = '';
+    if (CAN_EDIT_RECORDS && top && String(top.valid_species_id) !== current && !offered.has(top.valid_species_id)) {
+      offered.add(top.valid_species_id);
+      use = `<button type="button" id="btn-ai-accept-${idx}-${n}" onclick="acceptAiSuggestion(${idx}, ${n})" ${state.isLockedByOther ? 'disabled' : ''}
+          class="btn-main mt-2 px-3 py-1.5 text-xs gap-1.5 rounded-lg" title="Accept the IBBI-AI suggestion: it becomes your Expert ID (not validated)" data-testid="accept-ai-suggestion">
+          <i class="fi fi-rr-check"></i> Use <i>${escHtml(top.name)}</i> (${pct(top.confidence)})</button>`;
+    }
     return `<table class="w-full text-xs">${rows}</table>${runners}
-      <div class="text-[10px] text-gray-400 mt-1 break-all">${escHtml(s.model_name)}${s.model_version ? ' · ' + escHtml(s.model_version) : ''}</div>`;
+      <div class="text-[10px] text-gray-400 mt-1 break-all">${escHtml(s.model_name)}${s.model_version ? ' · ' + escHtml(s.model_version) : ''}</div>${use}`;
   }).join('<hr class="my-2 border-gray-200">');
   return `
     <div class="rounded-lg border border-gray-200 bg-white p-3" data-testid="ai-suggestion">
       <div class="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-2"><i class="fi fi-rr-microchip-ai"></i> AI suggestion</div>
       ${blocks}
     </div>`;
+}
+
+// "Use <species>" under the AI suggestion: the ROI takes that model's top species as the curator's Expert ID.
+async function acceptAiSuggestion(idx, n) {
+  if (state.isLockedByOther) return;
+  const b = state.bboxes[idx];
+  const top = (((state.aiSuggestions || {})[b.id] || [])[n] || {}).top_species;
+  if (!top) return;
+  if (!confirm(`Set this ROI's species to ${top.name}, the IBBI-AI suggestion?` + (b.bbox_is_validated ? '' : ' (It stays unvalidated until you validate it.)'))) return;
+  try {
+    const res = await fetch(`/api/v1/beetles/${b.id}/accept-ai-suggestion/`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+      body: JSON.stringify({ valid_species_id: top.valid_species_id })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || data.detail || 'Could not use the AI suggestion.');
+    state.bboxes[idx] = data;   // the ROI as saved
+    await loadGameProposals(state.selectedImageId);   // the ticks and buttons follow the new label
+    renderRoiAccordions();
+    drawCanvas();
+  } catch (e) {
+    alert(e.message);
+  }
 }
 
 // A label the game wrote into the database (#427): who or what applied it, and a way to take it back.
@@ -1550,14 +1585,14 @@ function gameProposalHtml(b, i) {
   let reviewed = '';
   if (p.review) {
     const newer = p.answers > p.review.answers ? ` · ${p.answers - p.review.answers} new answer(s) since` : '';
-    reviewed = `<div class="text-[10px] text-gray-500 mt-2">${p.review.decision === 'accepted' ? 'Accepted' : 'Dismissed'} by ${escHtml(p.review.reviewed_by)}${newer}</div>`;
+    reviewed = `<div class="text-[10px] text-gray-500 mt-2">${p.review.decision === 'accepted' ? 'Accepted' : 'Rejected'} by ${escHtml(p.review.reviewed_by)}${newer}</div>`;
   }
   const locked = state.isLockedByOther ? 'disabled' : '';
   const current = String(b.depicts_valid_name_id || '');
   const canAccept = p.taxon && String(p.taxon.valid_species_id) !== current;
   const acceptBtn = canAccept
     ? `<button type="button" id="btn-game-accept-${i}" onclick="reviewGameProposal(${i}, 'accept')" ${locked}
-         class="px-3 py-1.5 text-xs font-semibold text-white bg-gray-800 rounded hover:bg-gray-900 disabled:opacity-50">
+         class="btn-main px-3 py-1.5 text-xs gap-1.5 rounded-lg">
          <i class="fi fi-rr-check"></i> Use ${escHtml(p.taxon.scientific_name)}</button>`
     : (p.taxon ? `<span class="text-[10px] text-gray-500">Matches the current label.</span>` : `<span class="text-[10px] text-gray-500">No species-level proposal yet.</span>`);
 
@@ -1573,8 +1608,9 @@ function gameProposalHtml(b, i) {
       <div class="flex items-center gap-2 mt-3">
         ${acceptBtn}
         ${p.review && p.review.decision === 'dismissed' && p.answers === p.review.answers ? '' :
-          `<button type="button" onclick="reviewGameProposal(${i}, 'dismiss')" ${locked}
-             class="px-3 py-1.5 text-xs text-gray-600 border border-gray-300 rounded bg-white hover:bg-gray-100 disabled:opacity-50">Dismiss</button>`}
+          `<button type="button" id="btn-game-reject-${i}" onclick="reviewGameProposal(${i}, 'dismiss')" ${locked}
+             title="Hide until new answers arrive; the game won't apply this label on its own."
+             class="btn-secondary px-3 py-1.5 text-xs rounded-lg disabled:opacity-50">Reject</button>`}
       </div>
     </div>`;
 }
