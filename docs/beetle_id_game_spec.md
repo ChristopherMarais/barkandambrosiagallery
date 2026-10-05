@@ -54,7 +54,13 @@ Status: built on branch `claude/funny-tesla-pi0iki` (PR #255). Classifier integr
 - After answering, the odd one is outlined and named at the round's rank (it is always validated, so this is the truth); the odd one is then never scored for that player again.
 - Unlocks at level 2; Identification moves to level 4. Players who had Identification keep it (`GamePreference.kept_perks`).
 
-### 4.4 Every mode
+### 4.4 Select all (select, #370)
+- Shows nine ROI crops (3×3) and a group: "Tap every Platypodinae". The rank follows the player's open ranks and difficulty, as in Odd One Out.
+- Three or four of the nine are validated members; the rest are validated beetles of other groups (near relatives on harder rounds), never fewer than the members, so tapping everything always loses. One to three more are unvalidated ROIs a classifier puts in the group (confidence ≥ 0.6), more as players rise: taps on those are recorded (`picks`) and never scored. No two crops come from one image.
+- **Scoring** (`game_scoring.select_truth`): each validated member tapped earns a share of `GAME_POINTS_SELECT_WEIGHT` (2) × the Family Ties points for the grid's rank, so a perfect grid earns about twice a Similarity answer; each validated non-member tapped costs `GAME_POINTS_SELECT_WRONG` (1.5) shares; a member left out costs nothing. Skip earns `GAME_POINTS_ODD_SKIP`. `correct_<rank>` records whether the grid was perfect; Select all stays out of the reliability rating until #381 says how a grid's many judgements count.
+- After answering: green for members tapped, red for wrong taps, a dashed line round members left out.
+
+### 4.5 Every mode
 - Every item has a **Skip** button.
 - There's no feedback during a round: nothing says right or wrong, and the score doesn't change. (Odd One Out is the exception: it shows the odd one after each answer, see 4.3.)
 - The browser receives only an image URL and a box, never the ROI ID, its label, or whether the item is scored.

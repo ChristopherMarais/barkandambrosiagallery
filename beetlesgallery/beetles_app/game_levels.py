@@ -9,7 +9,7 @@ levels are kept only while the answers stay good.
     level  name                         points  reliability  unlocks
     1      Egg                               0       -       Similarity
     2      Larva                            50       -       Odd One Out, and choosing your game
-    3      Pupa                            150      35%      focus on one subfamily; more photos of each beetle
+    3      Pupa                            150      35%      Select all; focus on one subfamily; more photos of each beetle
     4      Teneral                     400      50%      the identification game; focus on one tribe; lighting
     5      Tunnel master                   800      60%      focus on one genus
     6      Gallery engineer               1500      70%      your labels go to curators as suggestions
@@ -30,12 +30,14 @@ from .game import game_setting
 PROPOSALS = "proposals"
 CHOOSE_GAME = "choose_game"
 ODD_ONE_OUT = "odd_one_out"
+SELECT_ALL = "select_all"
 IDENTIFY = "identification"
 SPECIMEN_PHOTOS = "specimen_photos"
 LIGHT = "light"
 PERKS = {
     ODD_ONE_OUT: ("Odd One Out", "A new game: tap the beetle that doesn't belong with the rest."),
     CHOOSE_GAME: ("Choose your game", "Play one game, or a mix of every game you have."),
+    SELECT_ALL: ("Select all", "A new game: tap every beetle of one group in a grid of nine."),
     IDENTIFY: ("Identification game", "Name beetles: subfamily, tribe, genus and species."),
     "focus_subfamily": ("Focus on a subfamily", "Choose one subfamily and the game shows you only its beetles."),
     "focus_tribe": ("Focus on a tribe", "Narrow your focus to a single tribe."),
@@ -53,11 +55,11 @@ PERKS = {
 }
 
 # (points, reliability, name, perks). The games open one by one, easiest first: Similarity from the start, then Odd One
-# Out, then Identification (#369). Players who had Identification before it moved up keep it (kept_perks).
+# Out, Select all and Identification (#369, #370). Players who had Identification before it moved up keep it (kept_perks).
 LEVELS = [
     (0, 0.0, "Egg", []),
     (50, 0.0, "Larva", [ODD_ONE_OUT, CHOOSE_GAME]),
-    (150, 0.35, "Pupa", ["focus_subfamily", SPECIMEN_PHOTOS]),
+    (150, 0.35, "Pupa", [SELECT_ALL, "focus_subfamily", SPECIMEN_PHOTOS]),
     (400, 0.5, "Teneral", [IDENTIFY, "focus_tribe", LIGHT]),
     # After the teneral adult, a bark beetle's life: it bores in, carves its galleries, farms its fungus, guards its
     # brood and founds a colony. (Not "Taxonomist": that word is kept for real taxonomists' identifications.)
@@ -109,9 +111,9 @@ def pair_share(level):
 
 
 # The games, in the order they open, and the unlock each needs (Similarity needs none)
-GAMES = ("pair", "odd", "classify")
-GAME_PERK = {"odd": ODD_ONE_OUT, "classify": IDENTIFY}
-GAME_NAMES = {"pair": "Similarity", "odd": "Odd One Out", "classify": "Identification"}
+GAMES = ("pair", "odd", "select", "classify")
+GAME_PERK = {"odd": ODD_ONE_OUT, "select": SELECT_ALL, "classify": IDENTIFY}
+GAME_NAMES = {"pair": "Similarity", "odd": "Odd One Out", "select": "Select all", "classify": "Identification"}
 
 
 def games(perks):
@@ -127,10 +129,12 @@ def game_level(game):
 def game_shares(level, available):
     """
     {game: share of the mixed feed} over the ``available`` games. Similarity and Identification split as pair_share
-    says (beginners mostly Similarity, experts mostly Identification); Odd One Out weighs GAME_ODD_SHARE beside them.
+    says (beginners mostly Similarity, experts mostly Identification); Odd One Out and Select all weigh GAME_ODD_SHARE
+    and GAME_SELECT_SHARE beside them.
     """
     pair = pair_share(level)
-    weights = {"pair": pair, "odd": game_setting("GAME_ODD_SHARE", 0.3), "classify": 1 - pair}
+    weights = {"pair": pair, "odd": game_setting("GAME_ODD_SHARE", 0.3), "select": game_setting("GAME_SELECT_SHARE", 0.25),
+               "classify": 1 - pair}
     weights = {g: w for g, w in weights.items() if g in available}
     total = sum(weights.values())
     if total <= 0:   # e.g. Similarity alone, with its share set to nothing: it still plays

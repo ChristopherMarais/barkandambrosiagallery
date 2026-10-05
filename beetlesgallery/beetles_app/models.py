@@ -1309,6 +1309,7 @@ class GameRound(models.Model):
         CLASSIFY = "classify", "Classify"
         PAIR = "pair", "Compare pairs"
         ODD = "odd", "Odd One Out"
+        SELECT = "select", "Select all"
         MIXED = "mixed", "Mixed"   # one feed of several games; each item carries its own mode
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -1339,6 +1340,9 @@ class GameAnswer(models.Model):
     Odd One Out: ``tiles`` are the regions shown, ``roi`` the one the player picked (the odd one itself when they
     skipped) and ``roi_b`` the odd one the round was built around; the pick says "``roi`` is not in ``grid_group`` at
     ``grid_rank``". ``is_check`` is set when the picked region is validated, and only ``correct_<grid_rank>`` is judged.
+    Select all: ``tiles`` are the regions shown, ``picks`` the places of those the player tapped as ``grid_group`` at
+    ``grid_rank``, and ``roi`` one validated member of the group; ``correct_<grid_rank>`` says whether the grid was
+    perfect (every validated member tapped, nothing else), the taps themselves are scored in game_scoring.
 
     ``correct_<rank>`` is only filled for check items: True/False when that rank was
     judged, None when it was not answered or has no reference value.
@@ -1372,7 +1376,8 @@ class GameAnswer(models.Model):
     genus = models.CharField(max_length=100, blank=True)
     species = models.CharField(max_length=100, blank=True)
     pair_answer = models.CharField(max_length=10, choices=PairAnswer.choices, blank=True)
-    tiles = models.JSONField(default=list, blank=True, help_text="Grid games (Odd One Out): the regions shown, in order.")
+    tiles = models.JSONField(default=list, blank=True, help_text="Grid games (Odd One Out, Select all): the regions shown, in order.")
+    picks = models.JSONField(default=list, blank=True, help_text="Select all: the places in tiles the player tapped.")
     grid_rank = models.CharField(max_length=10, blank=True, help_text="Grid games: the rank of the group (in Odd One Out, where one region differs).")
     grid_group = models.JSONField(
         default=dict, blank=True,
@@ -1485,6 +1490,7 @@ class GamePreference(models.Model):
         CLASSIFY = "classify", "Name That Beetle"
         PAIR = "pair", "Family Ties"
         ODD = "odd", "Odd One Out"
+        SELECT = "select", "Select all"
 
     class FocusRank(models.TextChoices):
         NONE = "", "Everything"

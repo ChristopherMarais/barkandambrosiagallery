@@ -133,7 +133,21 @@
   .odd-name { position: absolute; left: 50%; top: 0.375rem; transform: translateX(-50%); z-index: 3; max-width: calc(100% - 0.75rem); padding: 0.125rem 0.55rem;
               border-radius: 0.5rem; background: rgba(255,255,255,.95); border: 1px solid #d1d5db; font-size: 0.75rem; font-weight: 600; color: #111827;
               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
-  #odd.hidden { display: none; }
+  #odd.hidden, #select.hidden { display: none; }
+  /* Select all: nine beetles, three across; a tap toggles one. After Next: green for a member you tapped, red for one
+     you shouldn't have, a dashed green line round a member you left out. */
+  #game[data-mode="select"] #photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: 0.375rem; }
+  #game[data-mode="select"] #photos .cell { height: 100%; outline: 3px solid transparent; outline-offset: -3px; }
+  #game[data-mode="select"] #photos .cell.tapped { outline-color: #374151; }
+  #game[data-mode="select"] #photos .cell.sel-right { outline-color: #16a34a; }
+  #game[data-mode="select"] #photos .cell.sel-wrong { outline-color: #dc2626; }
+  #game[data-mode="select"] #photos .cell.sel-missed { outline: 3px dashed #16a34a; }
+  #game[data-mode="select"] #photos .cell.key-cursor, #game[data-mode="odd"] #photos .cell.key-cursor { box-shadow: inset 0 0 0 2px #9ca3af; }
+  .tap-mark { position: absolute; left: 0.375rem; top: 0.375rem; z-index: 3; display: none; align-items: center; justify-content: center;
+              width: 1.5rem; height: 1.5rem; border-radius: 9999px; background: #374151; color: #fff; font-size: 0.75rem; pointer-events: none; }
+  .cell.tapped .tap-mark { display: inline-flex; }
+  #game[data-mode="select"] .report-chip span { display: none; }   /* nine photos: the flag alone */
+  #game[data-mode="select"] .report-chip { padding: 0 0.5rem; }
   /* while the answer shows, only the names: the photo buttons step aside so nothing covers them */
   #photos.revealing .report-chip, #photos.revealing .zoom-chip { visibility: hidden; }
   /* The rank row the arrow keys (or WASD) are on */
@@ -249,12 +263,13 @@
   {% if mode == 'mixed' %}
   <!-- Your unlocks, right where you play: which game, and a focus. Locked ones say the level that opens them. -->
   <div id="toolbar" class="hidden items-center gap-2 px-2 py-1.5 border-b border-gray-200 bg-white">
-    <div class="flex flex-1 min-w-0 p-0.5 bg-gray-100 rounded-lg text-xs font-semibold" role="radiogroup" aria-label="Which game">
-      {# Short names on a phone, so all four fit #}
+    <div class="flex flex-1 min-w-0 p-0.5 bg-gray-100 rounded-lg text-[11px] sm:text-xs font-semibold" role="radiogroup" aria-label="Which game">
+      {# Short names on a phone, so all five fit #}
       <button type="button" data-play="both" data-short="Mix" data-long="Mix" class="play-opt flex-1 h-8 rounded-md">Mix</button>
-      <button type="button" data-play="pair" data-short="Similarity" data-long="Similarity" class="play-opt flex-1 h-8 rounded-md">Similarity</button>
+      <button type="button" data-play="pair" data-short="Similar" data-long="Similarity" class="play-opt flex-1 h-8 rounded-md">Similarity</button>
       <button type="button" data-play="odd" data-short="Odd one" data-long="Odd One Out" class="play-opt flex-1 h-8 rounded-md">Odd One Out</button>
-      <button type="button" data-play="classify" data-short="Identify" data-long="Identification" class="play-opt flex-1 h-8 rounded-md">Identification</button>
+      <button type="button" data-play="select" data-short="Select" data-long="Select all" class="play-opt flex-1 h-8 rounded-md">Select all</button>
+      <button type="button" data-play="classify" data-short="ID" data-long="Identification" class="play-opt flex-1 h-8 rounded-md">Identification</button>
     </div>
     <button type="button" id="focus-btn" class="inline-flex items-center gap-1 h-9 px-3 max-w-[45%] rounded-lg border border-gray-300 text-xs font-semibold text-gray-700">
       <i class="fi fi-rr-bullseye" id="focus-icon"></i><span id="focus-label" class="truncate">Focus</span>
@@ -311,6 +326,10 @@
       <div id="odd" class="hidden text-center" data-testid="odd-panel">
         <p id="odd-prompt" class="text-base font-semibold text-gray-900"></p>
         <p id="odd-result" class="text-sm text-gray-700 min-h-[1.25rem]" role="status" aria-live="polite"></p>
+      </div>
+      <div id="select" class="hidden text-center" data-testid="select-panel">
+        <p id="select-prompt" class="text-base font-semibold text-gray-900"></p>
+        <p id="select-result" class="text-sm text-gray-700 min-h-[1.25rem]" role="status" aria-live="polite"></p>
       </div>
       <p id="rank-lock" class="rank-lock hidden" data-testid="rank-lock"><i class="fi fi-rr-lock"></i><span id="rank-lock-text"></span></p>
 
@@ -444,7 +463,7 @@
   const root = document.getElementById("game");
   const PAGE_MODE = root.dataset.mode;          // "mixed" (both games in one feed) or one game
   let MODE = PAGE_MODE === "mixed" ? "classify" : PAGE_MODE;   // the game of the beetle on screen
-  const GAME_NAMES = { classify: "Name That Beetle", pair: "Similarity", odd: "Odd One Out" };
+  const GAME_NAMES = { classify: "Name That Beetle", pair: "Similarity", odd: "Odd One Out", select: "Select all" };
   // badge accents, the same as on the profile (includes/game_badge.html)
   // badge colours by rarity, the same as the levels and the profile (includes/game_badge.html)
   const TIER_INK = { common: "text-gray-600", uncommon: "text-green-600", rare: "text-blue-600", epic: "text-purple-600",
@@ -527,7 +546,8 @@
 
   // Zoom into a crop: double-tap or double-click toggles 2.5x at that spot, the wheel and a pinch zoom smoothly,
   // and a zoomed crop can be dragged around. A single tap (not zoomed) still opens the whole photo; with
-  // ``immediate`` (picking a beetle in Odd One Out) it acts at once instead of waiting to see if a second tap follows.
+  // ``immediate`` (picking beetles in Odd One Out and Select all) every tap acts at once, and a quick second tap is
+  // another tap, not a zoom (pinch and the wheel still zoom).
   function makeZoomable(frame, canvas, onTap, immediate) {
     let z = 1, tx = 0, ty = 0, lastTap = 0, tapTimer = null, drag = null, pinch = null;
     const pointers = new Map();
@@ -577,7 +597,7 @@
       e.preventDefault();
       if (drag && drag.moved) return;
       const now = Date.now();
-      if (now - lastTap < 300) {
+      if (!immediate && now - lastTap < 300) {
         clearTimeout(tapTimer);
         lastTap = 0;
         const [cx, cy] = local(e);
@@ -811,6 +831,7 @@
     $("ranks").classList.toggle("hidden", mode !== "classify");
     $("ladder").classList.toggle("hidden", mode !== "pair");
     $("odd").classList.toggle("hidden", mode !== "odd");
+    $("select").classList.toggle("hidden", mode !== "select");
     $("skip-text").textContent = "Skip";
     $("game-title").textContent = GAME_NAMES[mode];
     $("open-help").classList.toggle("hidden", mode !== "pair");
@@ -828,6 +849,7 @@
       const tips = [];
       if (!prefs.light && p.light) tips.push({ key: "light", el: "light-btn", text: "New: Lighting. Make a dark or flat photo brighter or sharper. Key: E (or L)." });
       if (!opened(prefs, "odd") && opened(p, "odd")) tips.push({ key: "game-odd", el: "toolbar", text: "New game: Odd One Out. All but one beetle share a name; tap the one that doesn't." });
+      if (!opened(prefs, "select") && opened(p, "select")) tips.push({ key: "game-select", el: "toolbar", text: "New game: Select all. Tap every beetle of the group named below the photos." });
       if (!opened(prefs, "classify") && opened(p, "classify")) tips.push({ key: "game-classify", el: "toolbar", text: "New game: Identification. Name the beetle, rank by rank, as far as you're sure." });
       if (!prefs.choose_game && p.choose_game) tips.push({ key: "choose-game", el: "toolbar", text: "New: pick one game here, or play a mix of them all." });
       if (!anyFocus(prefs) && anyFocus(p)) tips.push({ key: "focus", el: "focus-btn", text: "New: Focus. Play only beetles from one group you want to learn." });
@@ -992,9 +1014,15 @@
         tag.textContent = i === 0 ? "A" : "B";
         cell.appendChild(tag);
       }
-      if (MODE === "odd") {
-        // a tap picks it; the whole photo opens from its own small button (or the Q key)
-        makeZoomable(frame, canvas, () => pickTile(i), true);
+      if (MODE === "odd" || MODE === "select") {
+        // a tap picks it (Select all: toggles it); the whole photo opens from its own small button (or the Q key)
+        makeZoomable(frame, canvas, () => (MODE === "odd" ? pickTile(i) : toggleTile(i)), true);
+        if (MODE === "select") {
+          const mark = document.createElement("span");
+          mark.className = "tap-mark";
+          mark.innerHTML = '<i class="fi fi-rr-check"></i>';
+          cell.appendChild(mark);
+        }
         const zoom = document.createElement("button");
         zoom.type = "button";
         zoom.className = "zoom-chip";
@@ -1059,6 +1087,11 @@
     if (MODE === "odd") {
       $("odd-prompt").textContent = (item.images.length - 1) + " share a " + item.rank + ". Which one doesn't?";
     }
+    if (MODE === "select") {
+      const name = document.createElement(item.rank === "genus" || item.rank === "species" ? "em" : "span");
+      name.textContent = item.target;
+      $("select-prompt").replaceChildren("Tap every ", name);
+    }
 
     resetAnswer();
     resetLight();
@@ -1069,6 +1102,10 @@
       // the first time: how to play it (once on this device)
       setTimeout(() => window.gameTour.unlocked([{ key: "odd-intro", el: "photos", text:
         "Odd One Out: all but one of these share a " + item.rank + ". Tap the one that doesn't, then Next. Not sure? Skip earns a little, a wrong pick costs." }]), 400);
+    }
+    if (MODE === "select" && window.gameTour && window.gameTour.unlocked) {
+      setTimeout(() => window.gameTour.unlocked([{ key: "select-intro", el: "photos", text:
+        "Select all: tap every beetle of the group named below, then Next. Leave out any you're unsure of: a wrong tap costs, a missed one doesn't." }]), 400);
     }
     shownAt = Date.now();
     readyAt = performance.now() + MASH_GUARD_MS;
@@ -1098,7 +1135,7 @@
       showCommunity(data.community);
       rememberPrevious(answeredItem, extra, data.community, data.reveal);
       bumpCombo(!extra.skipped && extra.pair_answer !== "unsure");
-      if (data.reveal) await revealOdd(data.reveal, extra);
+      if (data.reveal) await (answeredItem.mode === "select" ? revealSelect(data.reveal) : revealOdd(data.reveal, extra));
       if (data.done) {
         $("review-link").href = data.review_url;
         $("sum-round").textContent = answered;
@@ -1147,12 +1184,29 @@
     await pause(reduceMotion ? 900 : extra.pick === r.odd ? 1100 : 2000);
   }
 
+  // ---------- Select all: after answering, which were members ----------
+  const SELECT_CLASS = { right: "sel-right", wrong: "sel-wrong", missed: "sel-missed" };
+  function selectLine(r) {
+    if (!r.members) return [];
+    return ["Found " + r.right + " of " + r.members + (r.wrong ? " · " + r.wrong + " wrong" : "")];
+  }
+  async function revealSelect(r) {
+    $("photos").classList.add("revealing");
+    $("photos").querySelectorAll(".cell").forEach((cell, i) => {
+      const cls = SELECT_CLASS[r.tiles[i]];
+      if (cls) { cell.classList.remove("tapped"); cell.classList.add(cls); }
+    });
+    $("select-result").replaceChildren(...selectLine(r));
+    await pause(reduceMotion ? 1200 : 2200);   // nine photos: a little longer to look
+  }
+
   // ---------- Back: your last beetle and what you said ----------
   let previous = null;
   function describeAnswer(extra) {
     if (extra.reported) return "Reported";
     if (extra.skipped || extra.pair_answer === "unsure") return "Skipped";
     if (extra.pick !== undefined) return "The one with the dark ring";
+    if (extra.picks) return extra.picks.length + " tapped";
     if (extra.pair_answer) {
       const rung = rungs.find((r) => r.dataset.choice === extra.pair_answer);
       return rung ? rung.firstChild.textContent.trim() : extra.pair_answer;
@@ -1161,14 +1215,14 @@
     return names.length ? names.join(" › ") : "Skipped";
   }
   function rememberPrevious(it, extra, community, reveal) {
-    previous = { item: it, answer: describeAnswer(extra), community, reveal, pick: extra.pick };
-    if (reveal && extra.pick === reveal.odd) previous.answer = "The odd one";
+    previous = { item: it, answer: describeAnswer(extra), community, reveal, pick: extra.pick, picks: extra.picks || [] };
+    if (reveal && extra.pick !== undefined && extra.pick === reveal.odd) previous.answer = "The odd one";
     $("back").disabled = false;
   }
   async function showPrevious() {
     if (!previous) return false;
     const box = $("previous-photos");
-    const odd = previous.item.mode === "odd";
+    const odd = previous.item.mode === "odd" || previous.item.mode === "select";
     box.innerHTML = "";
     // Odd One Out: the same grid, your pick ringed dark and the odd one green
     box.className = odd ? "flex-1 min-h-0 grid gap-2 p-2 bg-gray-100 auto-rows-fr " + (previous.item.images.length > 4 ? "grid-cols-3" : "grid-cols-2")
@@ -1177,7 +1231,12 @@
       const canvas = document.createElement("canvas");
       canvas.className = "max-h-full max-w-full rounded-2xl";
       if (odd) {
-        const ring = previous.reveal && i === previous.reveal.odd ? " ring-4 ring-green-600" : previous.pick === i ? " ring-4 ring-gray-700" : "";
+        let ring = previous.reveal && i === previous.reveal.odd ? " ring-4 ring-green-600" : previous.pick === i ? " ring-4 ring-gray-700" : "";
+        if (previous.item.mode === "select" && previous.reveal) {   // the same colours as after answering
+          const state = previous.reveal.tiles[i];
+          ring = { right: " ring-4 ring-green-600", wrong: " ring-4 ring-red-600", missed: " outline-dashed outline-4 outline-green-600 -outline-offset-4",
+                   vote: " ring-4 ring-gray-700" }[state] || "";
+        }
         canvas.className = "w-full h-full min-h-0 object-contain rounded-2xl" + ring;
       }
       box.appendChild(canvas);
@@ -1186,7 +1245,10 @@
     });
     $("previous-answer").textContent = previous.answer;
     $("previous-community").textContent = previous.community ? previous.community.text || "" : "";
-    if (odd && previous.reveal) $("previous-community").replaceChildren(...oddLine(previous.reveal));
+    if (odd && previous.reveal) {
+      $("previous-community").replaceChildren(...(previous.item.mode === "select"
+        ? ["Tap every " + previous.reveal.target + ". ", ...selectLine(previous.reveal)] : oddLine(previous.reveal)));
+    }
     $("previous").classList.remove("hidden");
     return true;
   }
@@ -1511,21 +1573,40 @@
     updateSubmit();
   }
 
+  // ---------- Select all: tapping beetles ----------
+  const tapped = new Set();
+  function toggleTile(i) {
+    if (MODE !== "select" || busy) return;
+    if (tapped.has(i)) tapped.delete(i); else tapped.add(i);
+    $("photos").querySelectorAll(".cell").forEach((c, j) => c.classList.toggle("tapped", tapped.has(j)));
+    updateSubmit();
+  }
+  let keyCursor = null;   // the beetle the arrow keys are on (Odd One Out picks it; Select all just points at it)
+  function moveCursor(i) {
+    keyCursor = i;
+    $("photos").querySelectorAll(".cell").forEach((c, j) => c.classList.toggle("key-cursor", j === i && MODE === "select"));
+  }
+
   // ---------- shared ----------
   function currentAnswer() {
     if (MODE === "odd") return { pick: oddPick };
+    if (MODE === "select") return { picks: Array.from(tapped).sort((a, b) => a - b) };
     return MODE === "classify" ? Object.assign({}, pick) : { pair_answer: pairChoice };
   }
 
   function updateSubmit() {
-    const ready = MODE === "classify" ? RANKS.some((r) => pick[r]) : MODE === "odd" ? oddPick !== null : !!pairChoice;
+    const ready = MODE === "classify" ? RANKS.some((r) => pick[r]) : MODE === "odd" ? oddPick !== null
+      : MODE === "select" ? tapped.size > 0 : !!pairChoice;
     $("submit").disabled = busy || !ready;
   }
 
   function resetAnswer() {
     pairChoice = null;
     oddPick = null;
+    tapped.clear();
+    keyCursor = null;
     $("odd-result").replaceChildren();
+    $("select-result").replaceChildren();
     rungs.forEach((r) => { r.classList.remove("selected", "filled"); r.setAttribute("aria-checked", "false"); });
     pick = { subfamily: "", tribe: "", genus: "", species: "" };
     if (MODE === "classify") renderPickers();
@@ -1625,12 +1706,14 @@
     if (!pressed) return;
     e.preventDefault();   // also keeps a focused list from opening, and Space from scrolling
     if ((pressed === "next" || pressed === "skip") && e.repeat) return;   // a held key is not a burst of answers
+    // Select all: Space taps the beetle the arrows are on (Enter is Next)
+    if (MODE === "select" && key === " ") { if (keyCursor !== null) toggleTile(keyCursor); return; }
     if (pressed === "next") { if (!$("submit").disabled) $("submit").click(); }
     else if (pressed === "skip") { if (!$("skip").disabled) $("skip").click(); }
     else if (pressed === "back") { if (!$("back").disabled) showPrevious(); }
     else if (pressed === "photo" || pressed === "report") {
       // the photo on screen; in Odd One Out the one you picked (or the first)
-      const at = MODE === "odd" && oddPick !== null ? oddPick : 0;
+      const at = MODE === "odd" && oddPick !== null ? oddPick : MODE === "select" && keyCursor !== null ? keyCursor : 0;
       if (item && item.images[at]) {
         openLightbox(item.images[at].url, item.images[at].box, at);
         if (pressed === "report") $("report-menu").classList.remove("hidden");
@@ -1643,6 +1726,11 @@
       const cols = getComputedStyle($("photos")).gridTemplateColumns.split(" ").length || 2;
       const step = { left: -1, right: 1, up: -cols, down: cols }[pressed];
       if (count && step !== undefined) pickTile(oddPick === null ? 0 : Math.max(0, Math.min(count - 1, oddPick + step)));
+    } else if (MODE === "select") {
+      // move around the grid, three across
+      const count = item ? item.images.length : 0;
+      const step = { left: -1, right: 1, up: -3, down: 3 }[pressed];
+      if (count && step !== undefined) moveCursor(keyCursor === null ? 0 : Math.max(0, Math.min(count - 1, keyCursor + step)));
     } else if (MODE === "pair" && (pressed === "up" || pressed === "down")) {
       const now = rungs.findIndex((r) => r.classList.contains("selected"));
       const open = rungs.filter((r) => !r.classList.contains("locked")).length;

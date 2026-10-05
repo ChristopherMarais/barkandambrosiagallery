@@ -371,7 +371,7 @@ def player_report(player):
     from . import game
 
     reliability = game.player_reliability([player.id]).get(player.id) or {
-        m: game.default_weight() for m in ("classify", "pair", "odd", "all")
+        m: game.default_weight() for m in ("classify", "pair", "odd", "select", "all")
     }
     skills = skills_for(player)
     proven = [s for s in skills if s.proven]
