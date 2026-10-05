@@ -32,12 +32,13 @@ from .predictions import suggestions_for
 
 MODES = {m.value: m.label for m in GameRound.Mode}
 # What players see. (The model keeps its own plain labels; changing those would need a migration.)
-GAME_NAMES = {"classify": "Name That Beetle", "pair": "Similarity", "odd": "Odd One Out",
+GAME_NAMES = {"classify": "Name That Beetle", "pair": "Similarity", "odd": "Odd One Out", "select": "Select all",
               "mixed": settings.GAME_DISPLAY_NAME}
 GAME_TAGLINES = {
     "classify": "One beetle, four guesses: subfamily, tribe, genus, species. Go as deep as you dare.",
     "pair": "Two beetles. How close is the family? From total strangers to the very same species.",
     "odd": "Four beetles, one doesn't belong. Spot it.",
+    "select": "Nine beetles. Tap every one of a group.",
     "mixed": "Name beetles and spot family ties.",
 }
 PAIR_CHOICES = [(c.value, c.label) for c in GameAnswer.PairAnswer]
@@ -165,6 +166,7 @@ def game_history(request):
                   identified=Count("answers", filter=Q(answers__skipped=False, answers__mode="classify"), distinct=True),
                   compared=Count("answers", filter=Q(answers__skipped=False, answers__mode="pair"), distinct=True),
                   spotted=Count("answers", filter=Q(answers__skipped=False, answers__mode="odd"), distinct=True),
+                  selected=Count("answers", filter=Q(answers__skipped=False, answers__mode="select"), distinct=True),
                   points=Sum("answers__points__points"))
         .filter(labelled__gt=0).order_by("-finished_at")
     )
@@ -176,7 +178,7 @@ def game_history(request):
     sessions = Paginator(rounds, HISTORY_PER_PAGE).get_page(request.GET.get("page") if tab == "sessions" else 1)
     for r in sessions:   # which games a session was: one by name, or how many
         played = [name for name, n in (("Identification", r.identified), ("Similarity", r.compared),
-                                       ("Odd One Out", r.spotted)) if n]
+                                       ("Odd One Out", r.spotted), ("Select all", r.selected)) if n]
         r.games_label = played[0] if len(played) == 1 else f"{len(played)} games"
     checked_page = Paginator(checked, HISTORY_PER_PAGE).get_page(request.GET.get("page") if tab == "checked" else 1)
     return render(request, "beetles/game_history.html", {
@@ -301,6 +303,8 @@ def game_how(request):
         "retry_days": game.game_setting("GAME_RETRY_AFTER_DAYS", 2),
         "rank_steps": game_levels.rank_steps(), "ranks_all_level": game_levels.RANKS_ALL_FROM_LEVEL,
         "odd_level": game_levels.game_level("odd"), "identify_level": game_levels.game_level("classify"),
+        "select_level": game_levels.game_level("select"),
+        "select_wrong": game.game_setting("GAME_POINTS_SELECT_WRONG", 1.5),
         "odd_weight": _weight_label(game.game_setting("GAME_POINTS_ODD_WEIGHT", 1.5)),
         "odd_skip": game.game_setting("GAME_POINTS_ODD_SKIP", 0.25),
     })
@@ -541,6 +545,9 @@ def _item_payload(rnd, index):
         payload["again"] = True   # a beetle they got wrong before, shown again so they can learn it
     if payload["mode"] == GameRound.Mode.ODD:
         payload["rank"] = rnd.items[index]["rank"]   # all but one share a name at this rank
+    if payload["mode"] == GameRound.Mode.SELECT:   # "Tap every <target>"
+        payload["rank"] = rnd.items[index]["rank"]
+        payload["target"] = rnd.items[index]["group"][rnd.items[index]["rank"]]
     if payload["mode"] == GameRound.Mode.CLASSIFY:
         others = (GameAnswer.objects.filter(roi_id=rnd.items[index]["a"], skipped=False)
                   .exclude(player=rnd.player).values("player").distinct().count())
@@ -720,11 +727,13 @@ def game_answer(request, round_id):
         # moving on from a beetle they just reported: no points either way
         score_hold=bool(body.get("reported")),
     )
-    tiles = None
-    if record.mode == GameRound.Mode.ODD:
-        # roi_b: the odd one the round was built around. Only a pick on a validated beetle is scored straight away.
+    tiles = grid = None
+    if record.mode in (GameRound.Mode.ODD, GameRound.Mode.SELECT):
         tiles = _item_tiles(item)
         record.tiles, record.grid_rank, record.grid_group = item["tiles"], item["rank"], item["group"]
+        record._grid_tiles = tiles
+    if record.mode == GameRound.Mode.ODD:
+        # roi_b: the odd one the round was built around. Only a pick on a validated beetle is scored straight away.
         record.roi_b, record.is_check = roi_a, False
     if record.is_check and roi_a.taxon:
         record.ref_subfamily = roi_a.taxon.subfamily or ""
@@ -757,6 +766,15 @@ def game_answer(request, round_id):
                 record.ref_subfamily, record.ref_tribe = t.subfamily or "", t.tribe or ""
                 record.ref_genus, record.ref_species = t.genus or "", t.species or ""
                 scores = game.score_odd(t, record.grid_rank, record.grid_group)
+        elif record.mode == GameRound.Mode.SELECT:
+            picks = body.get("picks")
+            if (not isinstance(picks, list) or not picks or len(set(map(str, picks))) != len(picks)
+                    or any(not isinstance(i, int) or isinstance(i, bool) or not 0 <= i < len(tiles) for i in picks)):
+                return JsonResponse({"error": "Tap the beetles first."}, status=400)
+            record.picks = sorted(picks)
+            grid = game.score_select(tiles, record.picks, record.grid_rank, record.grid_group)
+            if grid["members"]:
+                scores = {record.grid_rank: grid["perfect"]}   # the rank's "correct": a perfect grid
         else:
             choice = body.get("pair_answer")
             if choice not in dict(PAIR_CHOICES):
@@ -783,8 +801,13 @@ def game_answer(request, round_id):
         "events": game_rewards.play_events(request.user, before),
         "chip": _chip(request.user),
     }
-    if tiles is not None:
+    if record.mode == GameRound.Mode.ODD:
         extra["reveal"] = _odd_reveal(item, tiles)
+    elif record.mode == GameRound.Mode.SELECT:
+        # which were members: tapped right, tapped wrong, left out (votes on unchecked beetles stay as they were)
+        grid = grid or game.score_select(tiles, [], record.grid_rank, record.grid_group)
+        extra["reveal"] = {"rank": item["rank"], "target": item["group"][item["rank"]], "tiles": grid["tiles"],
+                           "right": grid["right"], "members": grid["members"], "wrong": grid["wrong"]}
     if any(e["kind"] == "level" for e in extra["events"]):
         # A new level's unlocks apply at once: the toolbar learns about them, and when the level opens a new game
         # the rest of this batch (picked under the old rules) is set aside for a fresh one.
@@ -910,6 +933,11 @@ def _worth_celebrating(record, scores):
     """
     if record.skipped:
         return False
+    if record.mode == GameRound.Mode.SELECT:   # a perfect grid; some found and nothing wrong: a few grey beetles
+        grid = game.score_select(record._grid_tiles, record.picks, record.grid_rank, record.grid_group)
+        if grid["perfect"]:
+            return "validated"
+        return "partial" if grid["right"] and not grid["wrong"] else False
     if record.is_check:
         if record.mode == GameRound.Mode.CLASSIFY:
             if scores.get("species") is True:
@@ -922,7 +950,13 @@ def _worth_celebrating(record, scores):
 
 
 def _celebration_size(record, scores):
-    """How big the celebration is, 0.25 to 1: the share of the ranks the player got correct (all of them: 1)."""
+    """
+    How big the celebration is, 0.25 to 1: the share of the ranks the player got correct (all of them: 1); in Select
+    all, the share of the group found.
+    """
+    if record.mode == GameRound.Mode.SELECT and not record.skipped:
+        grid = game.score_select(record._grid_tiles, record.picks, record.grid_rank, record.grid_group)
+        return round(max(0.25, grid["right"] / grid["members"]), 2) if grid["members"] else 1.0
     judged = [ok for ok in scores.values() if ok is not None]
     if record.skipped or not judged:
         return 1.0
@@ -1142,7 +1176,7 @@ def _player_rows():
     users = get_user_model().objects.in_bulk(ids)
     rows = []
     for pid in ids:
-        rel = reliability.get(pid) or {m: game.default_weight() for m in ("classify", "pair", "odd", "all")}
+        rel = reliability.get(pid) or {m: game.default_weight() for m in ("classify", "pair", "odd", "select", "all")}
         rows.append({
             "id": pid,
             "username": users[pid].username if pid in users else "?",

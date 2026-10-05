@@ -28,6 +28,12 @@ Beetles we know the answer to (validated) are scored against the truth. These ea
                      of the rest costs GAME_POINTS_ODD_WRONG_FACTOR (1.25) times that, so guessing loses on average,
                      and Skip earns a little instead of costing (GAME_POINTS_ODD_SKIP, 0.25). A pick on a beetle nobody
                      has validated yet is scored like a name on it: by agreement that it doesn't belong.
+  Select all         every validated member tapped earns a share of GAME_POINTS_SELECT_WEIGHT (2) times the Family
+                     Ties points for the grid's rank (another subfamily 1 ... another species of one genus 5), so a
+                     perfect grid earns about twice a Similarity answer; every validated non-member tapped costs
+                     GAME_POINTS_SELECT_WRONG (1.5) shares, and a member left out costs nothing. Taps on beetles nobody
+                     has validated are recorded, never scored. Skip earns GAME_POINTS_ODD_SKIP, as in Odd One Out.
+                     Select all is left out of the reliability rating for now: a grid is many judgements at once (#381).
   Seen again         a beetle shown again so you can learn it (a retry) earns half.
 
 Beetles nobody has validated yet are scored by agreement, never more than GAME_POINTS_CONSENSUS_CAP (60%)
@@ -47,6 +53,7 @@ When a beetle is validated later, or its label is corrected, every answer on it 
 up or down (recompute, run for a player when they leave the game and for everyone every night).
 """
 import math
+import uuid
 from collections import defaultdict
 
 from django.contrib.auth import get_user_model
@@ -196,6 +203,27 @@ def odd_truth(answer):
     return -base * setting("GAME_POINTS_ODD_WRONG_FACTOR", 1.25), detail
 
 
+def grid_tiles(answer):
+    """The Beetles of a grid answer in the order shown (None where one is gone); recompute loads them for all at once."""
+    cached = getattr(answer, "_grid_tiles", None)
+    if cached is None:
+        found = Beetles.objects.select_related("taxon").in_bulk([uuid.UUID(str(t)) for t in answer.tiles or []])
+        cached = answer._grid_tiles = [found.get(uuid.UUID(str(t))) for t in answer.tiles or []]
+    return cached
+
+
+def select_truth(answer):
+    """(points, detail) for a Select all grid, or None if it holds no validated member to score against."""
+    result = game.score_select(grid_tiles(answer), answer.picks, answer.grid_rank, answer.grid_group)
+    if not result["members"]:
+        return None
+    depth = game.RANKS.index(answer.grid_rank) - 1 if answer.grid_rank in game.RANKS else -1
+    share = setting("GAME_POINTS_SELECT_WEIGHT", 2.0) * PAIR_POINTS[depth] / result["members"]
+    points = share * (result["right"] - setting("GAME_POINTS_SELECT_WRONG", 1.5) * result["wrong"])
+    detail = {k: result[k] for k in ("right", "wrong", "missed", "members", "perfect", "tiles")}
+    return points, dict(detail, rank=answer.grid_rank, worth=round(share * result["members"], 2))
+
+
 def odd_consensus(answer, votes, judges, model_refs):
     """
     (points, detail) for an Odd One Out pick on a beetle not validated yet: like a name on it, scored by how far the
@@ -263,6 +291,7 @@ def ratings():
     rows = (
         GameAnswer.objects.filter(Q(is_check=True) | Q(validated_later=True), is_retry=False, skipped=False,
                                   score_hold=False)
+        .exclude(mode="select")   # a grid is many judgements at once: not counted until #381 says how
         .order_by("answered_at")
         .values_list("player_id", "mode", "roi_id", "roi_b_id", *[f"correct_{r}" for r in RANKS])
     )
@@ -367,11 +396,16 @@ def score(answer, votes_for, judges, model_refs=None):
 def _score(answer, votes_for, judges, model_refs):
     if answer.score_hold:
         return 0.0, AnswerPoints.Basis.NONE, {"held": True}
-    if answer.skipped and answer.mode == "odd":
-        # Odd One Out rewards saying you're not sure over guessing (#369)
+    if answer.skipped and answer.mode in ("odd", "select"):
+        # the grid games reward saying you're not sure over guessing (#369, #370)
         return setting("GAME_POINTS_ODD_SKIP", 0.25), AnswerPoints.Basis.UNSURE, {}
     if answer.skipped or (answer.mode == "pair" and answer.pair_answer == "unsure"):
         return -setting("GAME_POINTS_UNSURE", 0.25), AnswerPoints.Basis.UNSURE, {}
+    if answer.mode == "select":
+        scored = select_truth(answer)
+        if scored:
+            return scored[0], AnswerPoints.Basis.TRUTH, scored[1]
+        return 0.0, AnswerPoints.Basis.NONE, {}
     if answer.mode == "odd":
         if is_truth(answer.roi):
             scored = odd_truth(answer)
@@ -530,6 +564,11 @@ def recompute(player_ids=None):
     if player_ids is not None:
         answers = answers.filter(player_id__in=list(player_ids))
     answers = list(answers)
+    grids = [a for a in answers if a.mode == "select"]
+    if grids:   # every Select all beetle in one query
+        found = Beetles.objects.select_related("taxon").in_bulk({uuid.UUID(str(t)) for a in grids for t in a.tiles or []})
+        for a in grids:
+            a._grid_tiles = [found.get(uuid.UUID(str(t))) for t in a.tiles or []]
     open_rois = {a.roi_id for a in answers if not is_truth(a.roi)}
     votes = votes_on(open_rois)
     model_refs = game_reference.model_references(open_rois)

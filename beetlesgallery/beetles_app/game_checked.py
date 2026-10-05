@@ -12,6 +12,8 @@ from .models import RetroCredit
 def _said(answer):
     if answer.mode == "pair":
         return answer.get_pair_answer_display()
+    if answer.mode == "select":
+        return f"{len(answer.picks or [])} tapped"
     if answer.mode == "odd":   # picked as the odd one out: "not one of the group"
         group = (answer.grid_group or {}).get(answer.grid_rank, "")
         return f"Not {group}" if group else "Odd one out"

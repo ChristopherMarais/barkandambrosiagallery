@@ -104,7 +104,7 @@
       {% for r in report.recent_rounds %}
       <li>
         <a href="{% url 'game_round_review' r.id %}" class="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
-          <span class="text-sm text-gray-900">{% if r.mode == "classify" %}Identification{% elif r.mode == "pair" %}Similarity{% elif r.mode == "odd" %}Odd One Out{% else %}Mixed{% endif %}
+          <span class="text-sm text-gray-900">{% if r.mode == "classify" %}Identification{% elif r.mode == "pair" %}Similarity{% elif r.mode == "odd" %}Odd One Out{% elif r.mode == "select" %}Select all{% else %}Mixed{% endif %}
             <span class="text-gray-400">· {{ r.labelled }} labelled</span></span>
           <span class="text-xs text-gray-500">{{ r.finished_at|date:"M j" }} <i class="fi fi-rr-angle-right ml-1"></i></span>
         </a>
