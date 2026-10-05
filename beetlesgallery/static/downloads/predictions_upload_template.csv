@@ -1,0 +1,1 @@
+record_id,image_id,bbox_x,bbox_y,bbox_width,bbox_height,valid_species_id,confidence,model_name,model_version,top_k,subfamily,subfamily_confidence,tribe,tribe_confidence,genus,genus_confidence

@@ -77,6 +77,7 @@ urlpatterns = [
     path('tools/classify/', beetles_views.tool_classify, name='tool_classify'),
     path('tools/annotate/', beetles_views.tool_annotate, name='tool_annotate'),
     path('tools/predictions/', beetles_views.upload_predictions, name='upload_predictions'),
+    path('tools/predictions/<uuid:job_id>/', beetles_views.upload_predictions_status, name='upload_predictions_status'),
     path('tools/access-requests/', access_views.access_requests, name='access_requests'),
     path('tools/site-notice/', site_notice.edit, name='site_notice'),
 
