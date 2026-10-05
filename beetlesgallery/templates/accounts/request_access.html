@@ -4,7 +4,7 @@
 
 {% block content %}
 <section class="max-w-2xl">
-  <a href="{% url 'login' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Sign in</a>
+  {% if not signed_in %}<a href="{% url 'login' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Sign in</a>{% endif %}
   <h1 class="page-title">Request access</h1>
   <p class="text-gray-600 mb-3">
     {% if signed_in %}Your account already works.{% else %}Choose a username and password and tell us who you are. Confirm your email and your account works straight away.{% endif %}

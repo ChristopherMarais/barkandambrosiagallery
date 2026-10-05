@@ -5,7 +5,7 @@ The account page and the request-access pages (#501).
   icon. Nobody else sees either button. The page has no stray closing tags.
 * The request-access form and the page after sending, signed out and signed in, say what happens: the account works
   once the email is confirmed, and access to some parts of the site is reviewed and given once approved. The AI is
-  called IBBI-AI and the game goes by its name.
+  called IBBI-AI and the game goes by its name. Only people not signed in get the Sign in link at the top of the form.
 """
 from html.parser import HTMLParser
 
@@ -178,6 +178,11 @@ class RequestAccessExplainsTheReviewTests(ReadsPages, PageBehaviourCase):
                 html = " ".join(html.split())
                 for old in ("Until then you cannot sign in", "nothing is approved until", "Beetle ID game", "AI classifier"):
                     self.assertNotIn(old, html)
+
+    def test_only_people_not_signed_in_get_the_sign_in_link(self):
+        self.assertEqual(self.one(self.main("request_access").root, "a", href=reverse("login")).words, "← Sign in")
+        self.client.force_login(self.user)
+        self.assertEqual(self.main("request_access").root.find_all("a", href=reverse("login")), [])
 
     def test_the_form_names_ibbi_ai_and_the_game(self):
         for label, html in self.each_page(["request_access"]):
