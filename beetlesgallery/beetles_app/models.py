@@ -112,6 +112,8 @@ class ImageAsset(models.Model):
             roi_updates["last_updated_by"] = user
             self.last_updated_by = user
         boxed_rois.filter(bbox_is_validated=False).update(**roi_updates)
+        from beetlesgallery.beetles_app import identification
+        identification.vouch(list(boxed_rois), user)   # validated names are Expert IDs at least
         self.is_validated = boxed_rois.exists()
         self.save(update_fields=['is_validated', 'last_updated_by', 'updated_at'])
         return self.is_validated
@@ -176,16 +178,23 @@ class Beetles(models.Model):
     depicts_described_name_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     depicts_name_verbatim = models.CharField(max_length=255, null=True, blank=True)
 
-    # --- Where the name came from (#390): how far a verified label can be trusted ---
+    # --- How reliable the name is (#390): an identification tier, most reliable first ---
+    #   Taxonomist ID  a taxonomist examined it, or the vial / specimen label says so
+    #   Expert ID      a curator or proven expert named or validated it (game consensus a curator accepted, too)
+    #   Community ID   players' answers, not yet checked
+    #   External ID    an external database or website
+    #   (blank)        No ID: not recorded
+    # Only Taxonomist ID and Expert ID names can be validated. Every name an ROI was given is kept (RoiName); the
+    # ROI shows the most reliable one (identification.py).
     class LabelSource(models.TextChoices):
-        VIAL_LABEL = "vial_label", "Vial / specimen label"
-        TAXONOMIST = "taxonomist", "Taxonomist examined it"
-        EXTERNAL = "external", "External database or website"
-        GAME_CONSENSUS = "game_consensus", "Game consensus accepted by a curator"
+        TAXONOMIST = "taxonomist", "Taxonomist ID"
+        EXPERT = "expert", "Expert ID"
+        COMMUNITY = "community", "Community ID"
+        EXTERNAL = "external", "External ID"
 
     label_source = models.CharField(
         max_length=20, choices=LabelSource.choices, blank=True, default="",
-        help_text="Where the name came from. Blank: not recorded (names given before this was kept).",
+        help_text="How reliable the name is (identification tier). Blank: No ID (not recorded).",
     )
     label_source_detail = models.CharField(
         max_length=255, blank=True, default="",
@@ -317,7 +326,15 @@ class Beetles(models.Model):
                 if update_fields is not None and 'taxon' not in update_fields:
                     kwargs['update_fields'] = list(update_fields) + ['taxon']
 
+        # Identification tiers: keep the most reliable name, validated names are Expert IDs at least, and every
+        # name given is recorded (identification.py)
+        from beetlesgallery.beetles_app import identification
+        before = kwargs.get('update_fields')
+        fields = identification.before_save(self, before)
+        if before is not None:
+            kwargs['update_fields'] = fields
         super().save(*args, **kwargs)
+        identification.after_save(self)
 
     class Meta:
         db_table = "beetles"
@@ -1860,3 +1877,27 @@ class PredictionUpload(models.Model):
 
     def __str__(self):
         return f"{self.original_filename} ({self.status})"
+
+
+class RoiName(models.Model):
+    """
+    Every name an ROI has been given, with its identification tier (Beetles.LabelSource) and where it came from.
+    The ROI itself shows the most reliable one (identification.py); the others stay here for the record.
+    """
+
+    id = models.BigAutoField(primary_key=True)
+    roi = models.ForeignKey(Beetles, on_delete=models.CASCADE, related_name="names")
+    valid_species_id = models.CharField(max_length=255)
+    taxon = models.ForeignKey("Taxon", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    tier = models.CharField(max_length=20, choices=Beetles.LabelSource.choices, blank=True, default="")
+    detail = models.CharField(max_length=255, blank=True, default="", help_text="Who, or which database / website.")
+    added_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "roi_name"
+        ordering = ["roi", "-created_at", "-id"]   # -id: names saved in the same instant still list newest first
+        indexes = [models.Index(fields=["roi", "-created_at"], name="roi_name_roi_recent")]
+
+    def __str__(self):
+        return f"{self.valid_species_id} ({self.get_tier_display() or 'No ID'})"

@@ -4,7 +4,7 @@ from django.utils import timezone
 from .models import (
     UploadBatch, UpdateBatch, Beetles, ImageAsset, DownloadJob, ImageLock,
     Taxon, Synonym, CategoryMapping, GameRound, GameAnswer,
-    PlayerSkill, SpeciesDiscovery, RetroCredit, AnswerPoints, PlayerScore, GamePreference, LabelReview, RoiDifficulty, GameReport, ModelPrediction, PathogenInteraction, AccessRequest, InteractionProposal, AreaGrant, SiteNotice, PredictionUpload,
+    PlayerSkill, SpeciesDiscovery, RetroCredit, AnswerPoints, PlayerScore, GamePreference, LabelReview, RoiDifficulty, GameReport, ModelPrediction, PathogenInteraction, AccessRequest, InteractionProposal, AreaGrant, SiteNotice, PredictionUpload, RoiName,
 )
 from simple_history.admin import SimpleHistoryAdmin
 
@@ -947,3 +947,12 @@ class PredictionUploadAdmin(admin.ModelAdmin):
     list_filter = ("status", "dry_run")
     raw_id_fields = ("uploaded_by",)
     readonly_fields = ("result", "created_at", "finished_at")
+
+
+@admin.register(RoiName)
+class RoiNameAdmin(admin.ModelAdmin):
+    """Every name an ROI was given, with its identification tier (the ROI shows the most reliable)."""
+    list_display = ("roi", "valid_species_id", "tier", "detail", "added_by", "created_at")
+    list_filter = ("tier",)
+    search_fields = ("valid_species_id", "detail")
+    raw_id_fields = ("roi", "taxon", "added_by")

@@ -355,6 +355,7 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         require_box_fields_only(self.request, serializer.initial_data)
         if validation_change(serializer.initial_data, serializer.instance, "bbox_is_validated"):
             require_validate(self.request)
+        serializer.instance._name_by_hand = True   # a curator's name always shows (identification.py)
         # 3. If frontend sends a PATCH setting bbox to null (Last ROI Deletion)
         if 'bbox_x' in serializer.validated_data and serializer.validated_data.get('bbox_x') is None:
             # We DO NOT delete the record. We keep the Ghost ROI alive.

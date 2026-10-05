@@ -282,8 +282,11 @@
                 <dt class="col-span-1 text-text/60">Subspecies</dt>
                 <dd class="col-span-2 text-text/80 italic">{% if beetle.depicts_valid_name_id and ref_species.subspecies %}<a href="{% url 'taxonomy_browser' %}?species={{ beetle.depicts_valid_name_id|urlencode }}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.subspecies }}</a>{% else %}{{ ref_species.subspecies|default:"—" }}{% endif %}</dd>
 
-                <dt class="col-span-1 text-text/60">Name source</dt>
-                <dd class="col-span-2 text-text/80" data-testid="label-source">{% if beetle.label_source %}{{ beetle.get_label_source_display }}{% if beetle.label_source_detail %} &middot; {% if beetle.label_source_detail|slice:":4" == "http" %}<a href="{{ beetle.label_source_detail }}" class="underline" rel="noopener" target="_blank">{{ beetle.label_source_detail }}</a>{% else %}{{ beetle.label_source_detail }}{% endif %}{% endif %}{% else %}Not recorded{% endif %}</dd>
+                <dt class="col-span-1 text-text/60">Identification</dt>
+                <dd class="col-span-2 text-text/80" data-testid="label-source">{% if beetle.label_source %}{{ beetle.get_label_source_display }}{% if beetle.bbox_is_validated %} &middot; validated{% endif %}{% if beetle.label_source_detail %} &middot; {% if beetle.label_source_detail|slice:":4" == "http" %}<a href="{{ beetle.label_source_detail }}" class="underline" rel="noopener" target="_blank">{{ beetle.label_source_detail }}</a>{% else %}{{ beetle.label_source_detail }}{% endif %}{% endif %}{% else %}No ID{% endif %}
+                  {% if other_names %}<details class="mt-1 text-xs text-text/60" data-testid="other-names"><summary class="cursor-pointer">Other names given ({{ other_names|length }})</summary>
+                    <ul class="mt-1 space-y-0.5">{% for n in other_names %}<li><i>{{ n.taxon.scientific_name|default:n.valid_species_id }}</i> &middot; {{ n.get_tier_display|default:"No ID" }}{% if n.detail %} &middot; {{ n.detail }}{% endif %} &middot; {{ n.created_at|date:"M j, Y" }}</li>{% endfor %}</ul>
+                  </details>{% endif %}</dd>
 
                 <dt class="col-span-1 text-text/60">Authority Year</dt>
                 <dd class="col-span-2 text-text/80">{{ ref_species.authorityYear|default:"—" }}</dd>

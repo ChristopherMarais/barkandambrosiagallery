@@ -27,14 +27,14 @@ class LabelSourceTests(TrustCase):
         batch.refresh_from_db()
         return batch
 
-    def test_accepting_a_game_proposal_records_game_consensus(self):
+    def test_accepting_a_game_proposal_makes_it_an_expert_id(self):
         self.prove(self.user, self.t_affinis)
         target = self.roi(validated=False)
         self.label(self.user, target, self.t_ferr)
         self.client.force_login(self.staff)
         self.post("game_proposal_review", {"decision": "accept"}, target.id)
         target.refresh_from_db()
-        self.assertEqual(target.label_source, Beetles.LabelSource.GAME_CONSENSUS)
+        self.assertEqual(target.label_source, Beetles.LabelSource.EXPERT)
         self.assertIn(f"accepted by {self.staff.username}", target.label_source_detail)
 
     def test_an_update_file_can_set_it_by_key_or_label(self):
@@ -44,7 +44,7 @@ class LabelSourceTests(TrustCase):
             dict(download_row(b), label_source="Taxonomist examined it", label_source_detail="A. Cognato"),
         )
         self.assertEqual(batch.status, UpdateBatch.Status.APPLIED, batch.error_message)
-        self.assertEqual((fresh(a).label_source, fresh(a).label_source_detail), ("vial_label", "Lab vial 2019-044"))
+        self.assertEqual((fresh(a).label_source, fresh(a).label_source_detail), ("taxonomist", "Lab vial 2019-044"))   # a vial label is a Taxonomist ID
         self.assertEqual(fresh(b).label_source, "taxonomist")
 
     def test_an_unknown_source_is_refused(self):
@@ -57,11 +57,11 @@ class LabelSourceTests(TrustCase):
         self.client.force_login(self.user)
         page = self.client.get(reverse("beetle_detail", args=[roi.id])).content.decode()
         block = page[page.index('data-testid="label-source"'):][:400]
-        self.assertIn("External database or website", block)
+        self.assertIn("External ID", block)
         self.assertIn('href="https://www.gbif.org/occurrence/1"', block)
         plain = make_beetle()
         page = self.client.get(reverse("beetle_detail", args=[plain.id])).content.decode()
-        self.assertIn("Not recorded", page[page.index('data-testid="label-source"'):][:200])
+        self.assertIn("No ID", page[page.index('data-testid="label-source"'):][:200])
 
     def test_the_annotation_api_saves_it(self):
         roi = make_beetle()
