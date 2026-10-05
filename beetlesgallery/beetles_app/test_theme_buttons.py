@@ -80,7 +80,10 @@ class ThemeButtonTests(SimpleTestCase):
         for name, marker in (("beetles/image_browser.html", ">Search</button>"),
                              ("beetles/tool_classify.html", 'data-testid="classify-button"'),
                              ("beetles/game_home.html", 'data-testid="play"'),
-                             ("beetles/bulk_validate.html", 'data-testid="validate-selected"')):
+                             ("beetles/bulk_validate.html", 'data-testid="validate-selected"'),
+                             # "Keep playing" looks the same after a session and after a round's review
+                             ("beetles/game_play.html", 'id="recap-more"'),
+                             ("beetles/game_round_review.html", ">Keep playing</a>")):
             with self.subTest(name=name, marker=marker):
                 self.assertIn("btn-main", opening_tag(template(name), marker))
 
@@ -89,7 +92,6 @@ class ThemeButtonTests(SimpleTestCase):
                              ("beetles/tool_annotate.html", 'id="btn-save-roi-'),
                              ("beetles/game_play.html", 'id="previous-done"'),   # Current beetle
                              ("beetles/game_play.html", 'id="focus-save"'),
-                             ("beetles/game_play.html", 'id="recap-more"'),
                              ("beetles/includes/game_tour.html", 'id="tour-next"'),
                              ("beetles/game_staff_unlocks.html", ">Save</button>"),
                              ("beetles/interaction_review.html", 'value="accept"')):
