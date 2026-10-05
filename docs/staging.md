@@ -15,7 +15,7 @@ be tried there before a release. Production keeps deploying only when you publis
 | AI classifier (Modal) | app `ibbi-api` | its own app, `ibbi-api-staging` |
 | Who can sign in | everyone with an account | only the shared account **stagedtesting** / **gallerystaging** |
 
-Every staging page has a black **STAGING** bar, asks search engines not to index it, and sends visitors who are not
+Every staging page has a red **STAGING** bar, asks search engines not to index it, and sends visitors who are not
 signed in to the sign-in page. Its sign-in cookie has a different name from production's, so the two never mix.
 
 ## Data
