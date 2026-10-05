@@ -20,7 +20,7 @@ from .models import AnswerPoints, GameAnswer, PlayerScore, PlayerSkill, SpeciesD
 SORTS = {"score": "Score", "identification": "Identification accuracy", "similarity": "Similarity accuracy",
          "viewed": "Beetles seen"}
 PERIODS = {"week": "This week", "month": "This month", "year": "This year", "all": "All time"}
-GAMES = ("classify", "pair")   # Identification (Name That Beetle) and Similarity (Family Ties)
+GAMES = ("classify", "pair", "odd", "select")   # Identification, Similarity, Odd One Out, Select all
 # a branch of the tree -> the skill that measures it (see game_trust.BRANCH_OF)
 BRANCH_SKILL = {"subfamily": "tribe", "tribe": "genus", "genus": "species"}
 
@@ -120,14 +120,43 @@ def weekly_wins(player_id=None, top=3, now=None):
     return out
 
 
-def board(sort="score", period="week", q="", limit=50):
+ANONYMOUS = "A player"
+
+
+def hidden_names():
+    """The players who chose not to show their name on boards (#394)."""
+    from .models import GamePreference
+
+    return set(GamePreference.objects.filter(hide_name=True).values_list("player_id", flat=True))
+
+
+def shown_name(player, viewer_id=None):
+    """A player's name as others see it in the game: "A player" if they hid it (#394), except to themselves."""
+    if player.id != viewer_id and player.id in hidden_names():
+        return ANONYMOUS
+    return player.username
+
+
+def _anonymise(rows, viewer_id):
+    """Board rows of players who hid their name show "A player" (and no profile link), except their own row."""
+    hidden = hidden_names() - {viewer_id}
+    for row in rows:
+        row["anonymous"] = row["player_id"] in hidden
+        if row["anonymous"]:
+            row["username"] = ANONYMOUS
+    return rows
+
+
+def board(sort="score", period="week", q="", limit=50, viewer_id=None):
     """
-    Rows: position, player_id, username, level, level_name, score, accuracy, id_accuracy, sim_accuracy, viewed,
-    is_expert, discoveries. Sort by score, identification or similarity accuracy, or beetles seen.
+    Rows: position, player_id, username, anonymous, level, level_name, score, accuracy, id_accuracy, sim_accuracy,
+    viewed, is_expert, discoveries. Sort by score, identification or similarity accuracy, or beetles seen.
     Everything but the level and the expert mark follows the period: points, beetles seen, accuracy and finds.
+    Players who hid their name show as "A player" to everyone but themselves, and a name search doesn't find them.
     """
     scores = {s.player_id: s for s in PlayerScore.objects.all()}
     names = dict(get_user_model().objects.filter(id__in=scores).values_list("id", "username"))
+    unsearchable = hidden_names() - {viewer_id} if q else set()
     experts = set(PlayerSkill.objects.filter(proven=True).values_list("player_id", flat=True))
     since = period_start(period)
     found = SpeciesDiscovery.objects.all() if since is None else SpeciesDiscovery.objects.filter(created_at__gte=since)
@@ -146,7 +175,7 @@ def board(sort="score", period="week", q="", limit=50):
     for pid, s in scores.items():
         if pid not in names or (s.viewed == 0):
             continue
-        if q and q.lower() not in names[pid].lower():
+        if q and (pid in unsearchable or q.lower() not in names[pid].lower()):
             continue
         level = game_levels.describe(s.score, s.rating)
         score, viewed = (max(0.0, week_points.get(pid, 0.0)), week_viewed.get(pid, 0)) if since else (s.score, s.viewed)
@@ -167,10 +196,10 @@ def board(sort="score", period="week", q="", limit=50):
         rows.sort(key=lambda r: (-r["score"], r["username"]))
     for i, row in enumerate(rows, start=1):
         row["position"] = i
-    return rows[:limit] if limit else rows
+    return _anonymise(rows[:limit] if limit else rows, viewer_id)
 
 
-def branch_board(rank, value, limit=50):
+def branch_board(rank, value, limit=50, viewer_id=None):
     """
     Players ranked inside one part of the tree: for a genus, how well they name its species; for a tribe, its
     genera; for a subfamily, its tribes. Proven experts first, then by the cautious estimate of their accuracy.
@@ -187,7 +216,7 @@ def branch_board(rank, value, limit=50):
     rows.sort(key=lambda r: (not r["is_expert"], -r["lower_bound"], -r["judged"]))
     for i, row in enumerate(rows, start=1):
         row["position"] = i
-    return rows[:limit]
+    return _anonymise(rows[:limit], viewer_id)
 
 
 def profile(player):

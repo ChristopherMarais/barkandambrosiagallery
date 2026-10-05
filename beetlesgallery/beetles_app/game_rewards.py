@@ -148,7 +148,7 @@ BADGES = OrderedDict([
     ("streak7", ("Week warrior", "Reach your daily goal 7 days in a row", "fi-rr-calendar-check", True)),
     ("streak30", ("Habitat regular", "Reach your daily goal 30 days in a row", "fi-rr-trophy", True)),
     ("goal", ("Goal getter", "Reach the daily goal", "fi-rr-bullseye-arrow", True)),
-    ("both", ("All-rounder", "Play both games", "fi-rr-apps", True)),
+    ("both", ("All-rounder", "Play more than one game", "fi-rr-apps", True)),
     ("species1", ("Species spotter", "Name a species we know the answer to", "fi-rr-search", False)),
     ("species25", ("Sharp eyes", "Name 25 species we know the answer to", "fi-rr-star", False)),
     ("expert", ("Trusted expert", "Prove yourself on a taxon", "fi-rr-shield-check", False)),

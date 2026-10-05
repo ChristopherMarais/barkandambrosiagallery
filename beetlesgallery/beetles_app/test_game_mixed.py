@@ -36,7 +36,7 @@ class MixTests(MixedFeedCase):
             self.assertEqual(bool(it.get("b")), it["mode"] == "pair")
 
     def test_beginners_get_mostly_family_ties_and_experts_mostly_naming(self):
-        GamePreference.objects.create(player=self.user, granted_perks=["choose_game"])   # plays both
+        GamePreference.objects.create(player=self.user, granted_perks=["choose_game", "identification"])   # plays both
         asked = {}
 
         def fake(mode):
@@ -89,7 +89,7 @@ class ChooseGameTests(MixedFeedCase):
         self.assertEqual(game.play_mode(self.user), "pair")
         self.assertEqual(set(self.modes(game.start_round(self.user, "mixed", size=6))), {"pair"})
 
-    def test_reaching_level_two_mid_game_brings_identification_in_at_once(self):
+    def test_reaching_level_two_mid_game_brings_odd_one_out_in_at_once(self):
         from beetlesgallery.beetles_app import game_scoring
         self.level(49)
         data = self.post("game_start", {"mode": "mixed"}).json()
@@ -103,9 +103,9 @@ class ChooseGameTests(MixedFeedCase):
         self.assertIn("level", [e["kind"] for e in res["events"]])
         self.assertTrue(res["prefs"]["choose_game"])                 # the toolbar unlocks straight away
         self.assertNotEqual(res["round"], data["round"])              # and a fresh batch, picked under the new rules
-        self.assertIn("classify", self.modes(GameRound.objects.get(pk=res["round"])))
+        self.assertIn("odd", self.modes(GameRound.objects.get(pk=res["round"])))
 
-    def test_level_two_unlocks_identification_and_defaults_to_both(self):
+    def test_level_two_unlocks_odd_one_out_and_defaults_to_both(self):
         self.level(60)
         self.assertEqual(game.play_mode(self.user), "both")
 
@@ -113,8 +113,10 @@ class ChooseGameTests(MixedFeedCase):
         self.level(60)
         self.assertEqual(self.post("game_prefs", {"play_mode": "pair"}).status_code, 200)
         self.assertEqual(set(self.modes(game.start_round(self.user, "mixed", size=6))), {"pair"})
-        self.post("game_prefs", {"play_mode": "classify"})
-        self.assertEqual(set(self.modes(game.start_round(self.user, "mixed", size=6))), {"classify"})
+        self.post("game_prefs", {"play_mode": "odd"})
+        self.assertEqual(set(self.modes(game.start_round(self.user, "mixed", size=3))), {"odd"})
+        res = self.post("game_prefs", {"play_mode": "classify"})   # Identification is level 4 now
+        self.assertEqual((res.status_code, res.json()["error"]), (403, "Identification unlocks at level 4."))
 
     def test_a_chosen_game_is_never_topped_up_with_the_other(self):
         self.level(60)

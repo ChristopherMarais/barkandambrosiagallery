@@ -7,6 +7,7 @@ from django.contrib.postgres.indexes import GinIndex
 import uuid
 import json, os
 from simple_history.models import HistoricalRecords
+from .schema import LEGACY_MANIFEST_NAME, archive_name, manifest_name
 from treebeard.mp_tree import MP_Node
 
 # -----------------------------
@@ -596,8 +597,8 @@ class UploadBatch(models.Model):
 
     def mark_imported_and_archive(self) -> None:
         """
-        Move CSV/ZIP and known sidecars (manifest.json, archive.json) from validated->archived,
-        then mark the batch as IMPORTED.
+        Move CSV/ZIP and the batch's sidecars (its manifest and archive record, see schema.py) from
+        validated->archived, then mark the batch as IMPORTED.
         """
         with transaction.atomic():
             # capture source & destination dirs so we can move sidecars too
@@ -621,8 +622,11 @@ class UploadBatch(models.Model):
                         # ignore; sidecar isn't critical for marking imported
                         pass
 
-            _move_sidecar("manifest.json")
-            _move_sidecar("archive.json")
+            manifest = manifest_name(self.id)
+            if not os.path.exists(os.path.join(src_dir_abs, manifest)):
+                manifest = LEGACY_MANIFEST_NAME   # validated before manifests were kept per batch (#350)
+            _move_sidecar(manifest)
+            _move_sidecar(archive_name(self.id))
 
             self.status = self.Status.IMPORTED
             self.imported_at = timezone.now()
@@ -645,7 +649,7 @@ class UploadBatch(models.Model):
 
     def write_archive_json(self, *, imported_count: int, records_summary: list[dict] | None = None, notes: str = "") -> str:
         """
-        Create/overwrite archive.json next to the CSV that’s currently on disk.
+        Create/overwrite this batch's archive record (archive_<id>.json) next to the CSV that’s currently on disk.
         Call this AFTER a successful import, BEFORE archiving.
         Returns the absolute path written.
         """
@@ -664,7 +668,7 @@ class UploadBatch(models.Model):
         }
 
         dir_abs = self._current_dir_abs()
-        path_abs = os.path.join(dir_abs, "archive.json")
+        path_abs = os.path.join(dir_abs, archive_name(self.id))
         with open(path_abs, "w", encoding="utf-8") as fh:
             json.dump(payload, fh, ensure_ascii=False, indent=2)
         return path_abs
@@ -1301,12 +1305,16 @@ class GameRound(models.Model):
     client never picks what it is shown. Each item is a dict:
     {"a": <Beetles id>, "b": <Beetles id or None>, "check": bool, "flip": bool}.
     "check" items have a validated answer and are scored; the client is never told which.
+    Odd One Out items also carry "tiles" (the Beetles ids shown, in order), "rank" (where the odd one differs) and
+    "group" (the others' names down to that rank); their "a" is the odd one.
     """
 
     class Mode(models.TextChoices):
         CLASSIFY = "classify", "Classify"
         PAIR = "pair", "Compare pairs"
-        MIXED = "mixed", "Mixed"   # one feed of both games; each item carries its own mode
+        ODD = "odd", "Odd One Out"
+        SELECT = "select", "Select all"
+        MIXED = "mixed", "Mixed"   # one feed of several games; each item carries its own mode
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     player = models.ForeignKey(
@@ -1333,6 +1341,12 @@ class GameAnswer(models.Model):
     (blank = the player stopped before that rank).
     Pair: ``roi`` and ``roi_b`` are the two regions and ``pair_answer`` is the deepest
     rank the player says they share. On unvalidated pairs ``roi`` is the unvalidated one.
+    Odd One Out: ``tiles`` are the regions shown, ``roi`` the one the player picked (the odd one itself when they
+    skipped) and ``roi_b`` the odd one the round was built around; the pick says "``roi`` is not in ``grid_group`` at
+    ``grid_rank``". ``is_check`` is set when the picked region is validated, and only ``correct_<grid_rank>`` is judged.
+    Select all: ``tiles`` are the regions shown, ``picks`` the places of those the player tapped as ``grid_group`` at
+    ``grid_rank``, and ``roi`` one validated member of the group; ``correct_<grid_rank>`` says whether the grid was
+    perfect (every validated member tapped, nothing else), the taps themselves are scored in game_scoring.
 
     ``correct_<rank>`` is only filled for check items: True/False when that rank was
     judged, None when it was not answered or has no reference value.
@@ -1366,6 +1380,13 @@ class GameAnswer(models.Model):
     genus = models.CharField(max_length=100, blank=True)
     species = models.CharField(max_length=100, blank=True)
     pair_answer = models.CharField(max_length=10, choices=PairAnswer.choices, blank=True)
+    tiles = models.JSONField(default=list, blank=True, help_text="Grid games (Odd One Out, Select all): the regions shown, in order.")
+    picks = models.JSONField(default=list, blank=True, help_text="Select all: the places in tiles the player tapped.")
+    grid_rank = models.CharField(max_length=10, blank=True, help_text="Grid games: the rank of the group (in Odd One Out, where one region differs).")
+    grid_group = models.JSONField(
+        default=dict, blank=True,
+        help_text='Grid games: the names of the group, down to grid_rank, e.g. {"subfamily": "Scolytinae", "tribe": "Xyleborini"}.',
+    )
 
     correct_subfamily = models.BooleanField(null=True, blank=True)
     correct_tribe = models.BooleanField(null=True, blank=True)
@@ -1469,9 +1490,11 @@ class GamePreference(models.Model):
     """
 
     class PlayMode(models.TextChoices):
-        BOTH = "both", "Both"
+        BOTH = "both", "Both"   # every game the player has unlocked, mixed
         CLASSIFY = "classify", "Name That Beetle"
         PAIR = "pair", "Family Ties"
+        ODD = "odd", "Odd One Out"
+        SELECT = "select", "Select all"
 
     class FocusRank(models.TextChoices):
         NONE = "", "Everything"
@@ -1488,6 +1511,14 @@ class GamePreference(models.Model):
         help_text="Unlocks a superuser granted whatever the player's level (game_levels.PERKS keys, or \"all\"). "
                   "For people who need the features, and for testing.",
     )
+    kept_perks = models.JSONField(
+        default=list, blank=True,
+        help_text="Unlocks the player keeps from before the levels changed (game_levels.PERKS keys), e.g. "
+                  "Identification for players who had it when it moved from level 2 to level 4.",
+    )
+    # Leaderboards (#394): appear as "A player" to others; or don't see the boards at all (personal progress only)
+    hide_name = models.BooleanField(default=False)
+    hide_boards = models.BooleanField(default=False)
     proposals_notice_seen_at = models.DateTimeField(
         null=True, blank=True, help_text="When the player saw 'Your labels now go to the curators' (shown once)."
     )
@@ -1559,9 +1590,10 @@ class PlayerSkill(models.Model):
       rank=subfamily, branch=""           subfamily ID overall
 
     ``proven`` means the player has covered the taxon and is accurate enough (see game_trust.is_proven):
-    enough answers on every species in it that has validated images, at least GAME_TRUST_MIN_ACCURACY right.
+    enough answers on most of its children with validated images, at least GAME_TRUST_MIN_ACCURACY right.
     ``required`` and ``covered`` are the answers that coverage needs and how many of them the player has;
-    ``species_total`` and ``species_done`` count the species in the taxon and those fully covered.
+    ``children_total`` counts the taxon's children with validated images (its species, genera or tribes),
+    ``children_needed`` how many of them proof needs, and ``children_done`` those fully covered (#381).
     ``proven_at`` is when it last became proven.
     """
 
@@ -1575,8 +1607,9 @@ class PlayerSkill(models.Model):
     lower_bound = models.FloatField(default=0.0)
     required = models.PositiveIntegerField(default=0)
     covered = models.PositiveIntegerField(default=0)
-    species_total = models.PositiveIntegerField(default=0)
-    species_done = models.PositiveIntegerField(default=0)
+    children_total = models.PositiveIntegerField(default=0)
+    children_needed = models.PositiveIntegerField(default=0)
+    children_done = models.PositiveIntegerField(default=0)
     proven = models.BooleanField(default=False, db_index=True)
     proven_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -1901,3 +1934,33 @@ class RoiName(models.Model):
 
     def __str__(self):
         return f"{self.valid_species_id} ({self.get_tier_display() or 'No ID'})"
+
+
+class GameTuning(models.Model):
+    """
+    A superuser's override of one scoring setting (game_tuning.TUNABLES), from the Scoring page. It wins over
+    settings.py; deleting it puts the default back. The game picks a change up within half a minute.
+    """
+
+    key = models.CharField(max_length=64, unique=True)
+    value = models.JSONField()
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    updated_at = models.DateTimeField(auto_now=True)
+    history = HistoricalRecords()
+
+    class Meta:
+        db_table = "game_tuning"
+        ordering = ["key"]
+
+    def __str__(self):
+        return f"{self.key} = {self.value}"
+
+
+
+def _forget_tuning(**kwargs):
+    from beetlesgallery.beetles_app.game_tuning import forget
+    forget()
+
+
+models.signals.post_save.connect(_forget_tuning, sender=GameTuning, dispatch_uid="game_tuning_saved")
+models.signals.post_delete.connect(_forget_tuning, sender=GameTuning, dispatch_uid="game_tuning_deleted")

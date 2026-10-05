@@ -7,10 +7,10 @@ player has played and how far their answers can be trusted. Reliability can go d
 levels are kept only while the answers stay good.
 
     level  name                         points  reliability  unlocks
-    1      Egg                               0       -
-    2      Larva                            50       -       the identification game, and choosing your game
-    3      Pupa                            150      35%      focus on one subfamily; more photos of each beetle
-    4      Teneral                     400      50%      focus on one tribe
+    1      Egg                               0       -       Similarity
+    2      Larva                            50       -       Odd One Out, and choosing your game
+    3      Pupa                            150      35%      Select all; focus on one subfamily; more photos of each beetle
+    4      Teneral                     400      50%      the identification game; focus on one tribe; lighting
     5      Tunnel master                   800      60%      focus on one genus
     6      Gallery engineer               1500      70%      your labels go to curators as suggestions
     7      Fungus farmer                  3000      75%
@@ -29,10 +29,16 @@ from .game import game_setting
 
 PROPOSALS = "proposals"
 CHOOSE_GAME = "choose_game"
+ODD_ONE_OUT = "odd_one_out"
+SELECT_ALL = "select_all"
+IDENTIFY = "identification"
 SPECIMEN_PHOTOS = "specimen_photos"
 LIGHT = "light"
 PERKS = {
-    CHOOSE_GAME: ("Identification game", "Name beetles too, and choose Identification, Similarity or both."),
+    ODD_ONE_OUT: ("Odd One Out", "A new game: tap the beetle that doesn't belong with the rest."),
+    CHOOSE_GAME: ("Choose your game", "Play one game, or a mix of every game you have."),
+    SELECT_ALL: ("Select all", "A new game: tap every beetle of one group in a grid of nine."),
+    IDENTIFY: ("Identification game", "Name beetles: subfamily, tribe, genus and species."),
     "focus_subfamily": ("Focus on a subfamily", "Choose one subfamily and the game shows you only its beetles."),
     "focus_tribe": ("Focus on a tribe", "Narrow your focus to a single tribe."),
     "focus_genus": ("Focus on a genus", "Narrow your focus to a single genus."),
@@ -48,12 +54,13 @@ PERKS = {
     ),
 }
 
-# (points, reliability, name, perks)
+# (points, reliability, name, perks). The games open one by one, easiest first: Similarity from the start, then Odd One
+# Out, Select all and Identification (#369, #370). Players who had Identification before it moved up keep it (kept_perks).
 LEVELS = [
     (0, 0.0, "Egg", []),
-    (50, 0.0, "Larva", [CHOOSE_GAME]),
-    (150, 0.35, "Pupa", ["focus_subfamily", SPECIMEN_PHOTOS]),
-    (400, 0.5, "Teneral", ["focus_tribe", LIGHT]),
+    (50, 0.0, "Larva", [ODD_ONE_OUT, CHOOSE_GAME]),
+    (150, 0.35, "Pupa", [SELECT_ALL, "focus_subfamily", SPECIMEN_PHOTOS]),
+    (400, 0.5, "Teneral", [IDENTIFY, "focus_tribe", LIGHT]),
     # After the teneral adult, a bark beetle's life: it bores in, carves its galleries, farms its fungus, guards its
     # brood and founds a colony. (Not "Taxonomist": that word is kept for real taxonomists' identifications.)
     (800, 0.6, "Tunnel master", ["focus_genus"]),
@@ -103,6 +110,38 @@ def pair_share(level):
     return start + (end - start) * (level - 1) / (len(LEVELS) - 1)
 
 
+# The games, in the order they open, and the unlock each needs (Similarity needs none)
+GAMES = ("pair", "odd", "select", "classify")
+GAME_PERK = {"odd": ODD_ONE_OUT, "select": SELECT_ALL, "classify": IDENTIFY}
+GAME_NAMES = {"pair": "Similarity", "odd": "Odd One Out", "select": "Select all", "classify": "Identification"}
+
+
+def games(perks):
+    """The games these unlocks open, easiest first."""
+    return [g for g in GAMES if g not in GAME_PERK or GAME_PERK[g] in perks]
+
+
+def game_level(game):
+    """1-based level that opens ``game``."""
+    return perk_level(GAME_PERK[game]) if game in GAME_PERK else 1
+
+
+def game_shares(level, available):
+    """
+    {game: share of the mixed feed} over the ``available`` games. Similarity and Identification split as pair_share
+    says (beginners mostly Similarity, experts mostly Identification); Odd One Out and Select all weigh GAME_ODD_SHARE
+    and GAME_SELECT_SHARE beside them.
+    """
+    pair = pair_share(level)
+    weights = {"pair": pair, "odd": game_setting("GAME_ODD_SHARE", 0.3), "select": game_setting("GAME_SELECT_SHARE", 0.25),
+               "classify": 1 - pair}
+    weights = {g: w for g, w in weights.items() if g in available}
+    total = sum(weights.values())
+    if total <= 0:   # e.g. Similarity alone, with its share set to nothing: it still plays
+        return {g: 1 / len(weights) for g in weights}
+    return {g: w / total for g, w in weights.items()}
+
+
 def unlocked_perks(index):
     return {perk for _, _, _, perks in LEVELS[: index + 1] for perk in perks}
 
@@ -135,24 +174,39 @@ def describe(score, rating):
     return info
 
 
-def granted(player_or_id):
-    """Unlocks a superuser granted this player, whatever their level (GamePreference.granted_perks)."""
+def _preference_perks(player_or_id):
+    """(granted_perks, kept_perks) from the player's GamePreference, both lists."""
     from .models import GamePreference
 
     pid = getattr(player_or_id, "pk", player_or_id)
-    perks = GamePreference.objects.filter(player_id=pid).values_list("granted_perks", flat=True).first() or []
+    row = GamePreference.objects.filter(player_id=pid).values_list("granted_perks", "kept_perks").first()
+    return (row[0] or [], row[1] or []) if row else ([], [])
+
+
+def _granted_from(perks):
     return set(PERKS) if "all" in perks else {p for p in perks if p in PERKS}
 
 
+def granted(player_or_id):
+    """Unlocks a superuser granted this player, whatever their level (GamePreference.granted_perks)."""
+    return _granted_from(_preference_perks(player_or_id)[0])
+
+
 def for_player(player):
-    """describe() for this player, plus any unlocks a superuser granted them."""
+    """
+    describe() for this player, plus any unlocks a superuser granted them, and any they kept from before the levels
+    changed (those count as unlocks, but unlike a grant they don't open every rank).
+    """
     from .game_scoring import score_for
     s = score_for(player)
     info = describe(s.score, s.rating)
-    extra = granted(player)
-    if extra:
-        info["perks"] = info["perks"] | extra
+    granted_perks, kept_perks = _preference_perks(player)
+    extra = _granted_from(granted_perks)
+    kept = {p for p in kept_perks if p in PERKS}
+    if extra or kept:
+        info["perks"] = info["perks"] | extra | kept
         info["proposals"] = PROPOSALS in info["perks"]
+    if extra:
         info["granted"] = sorted(extra)
     return info
 

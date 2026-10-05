@@ -27,8 +27,11 @@ class LevelTests(ScoringCase):
 
     def test_perks_build_up(self):
         self.assertEqual(levels.describe(0, 0)["perks"], set())
-        self.assertEqual(levels.describe(60, 0)["perks"], {"choose_game"})   # level 2: choose your game
-        self.assertEqual(levels.describe(200, 0.4)["perks"], {"choose_game", "focus_subfamily", "specimen_photos"})
+        # level 2: Odd One Out, and choosing your game
+        self.assertEqual(levels.describe(60, 0)["perks"], {"odd_one_out", "choose_game"})
+        self.assertEqual(levels.describe(200, 0.4)["perks"],   # level 3: Select all
+                         {"odd_one_out", "choose_game", "select_all", "focus_subfamily", "specimen_photos"})
+        self.assertIn("identification", levels.describe(450, 0.55)["perks"])   # level 4
         self.assertTrue(levels.describe(1600, 0.75)["proposals"])
         self.assertFalse(levels.describe(1600, 0.65)["proposals"])   # reliability matters for it
         self.assertEqual(levels.proposal_level(), 6)
@@ -113,7 +116,7 @@ class ExpertLabelTests(ScoringCase):
         self.client.force_login(self.user)
         page = self.client.get("/game/unlocks/").content.decode()
         self.assertIn("at least 90% correct", page)
-        self.assertIn("every species in it", page)
+        self.assertIn("75% of its species, genera or tribes", page)
         self.assertIn("neighbouring taxa is not enough", page)
 
     def test_experts_proven_only_in_neighbouring_genera_do_not_write_labels(self):

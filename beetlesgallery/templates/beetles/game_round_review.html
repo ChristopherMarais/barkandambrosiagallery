@@ -16,7 +16,7 @@
     </a>
     <div class="flex-1">
       <h1 class="page-title">Your answers</h1>
-      <p class="text-sm text-gray-500">{% if round.mode == 'classify' %}Identification{% elif round.mode == 'pair' %}Similarity{% else %}{{ game_name }}{% endif %} · {{ round.finished_at|date:"M j, Y H:i" }}</p>
+      <p class="text-sm text-gray-500">{% if round.mode == 'classify' %}Identification{% elif round.mode == 'pair' %}Similarity{% elif round.mode == 'odd' %}Odd One Out{% elif round.mode == 'select' %}Select all{% else %}{{ game_name }}{% endif %} · {{ round.finished_at|date:"M j, Y H:i" }}</p>
     </div>
   </div>
 
@@ -88,6 +88,8 @@
   const csrf = document.querySelector('meta[name="csrf-token"]').content;
   const RANKS = ["subfamily", "tribe", "genus", "species"];
   const IS_SELF = {{ is_self|yesno:"true,false" }};
+  const CAN_REVOKE = {{ can_revoke|yesno:"true,false" }};   // curators who may validate (#380)
+  const ANNOTATE_URL = "{% url 'tool_annotate' %}";
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const safeImageUrl = (raw) => {
@@ -155,7 +157,22 @@
     return v;
   }
 
+  // Curators: a verified name that looks wrong can be un-validated or corrected on the annotation page
+  function curatorLink(side) {
+    if (!CAN_REVOKE || !side.verified || !side.image_id) return "";
+    return ` <a href="${ANNOTATE_URL}?image=${encodeURIComponent(side.image_id)}&roi=${encodeURIComponent(side.roi_id)}" target="_blank" rel="noopener"
+              class="text-xs text-gray-500 underline underline-offset-2 hover:text-gray-900" data-testid="open-in-annotator"
+              title="Un-validate or correct it on the annotation page">Open in annotator</a>`;
+  }
+
   function reportControl(item, side) {
+    const link = curatorLink(side);
+    if (!link) return reportOnly(item, side);
+    // two controls: stacked on a phone, side by side on a wider screen
+    return `<span class="flex flex-col items-end gap-0.5 whitespace-nowrap sm:flex-row sm:items-center sm:gap-3">${reportOnly(item, side)}${link}</span>`;
+  }
+
+  function reportOnly(item, side) {
     if (!IS_SELF) return side.report ? `<span class="text-xs text-gray-500">Reported</span>` : "";
     if (side.report) {
       const label = side.report.status === "open" ? "Reported · being checked" : side.report.status === "corrected" ? "Reported · corrected, thanks!" : "Reported · name confirmed";
@@ -213,6 +230,47 @@
       <div class="mt-3 space-y-2">${names}</div>`;
   }
 
+  // Odd One Out: what you picked, which one was odd and the names at the round's rank, and each beetle's name
+  function oddBody(item) {
+    const t = item.truth_odd || {};
+    const em = (v) => (t.rank === "genus" || t.rank === "species" ? `<em>${esc(v)}</em>` : esc(v));
+    const line = t.odd_name && t.group
+      ? `<p class="text-sm">Odd one (green): <span class="font-semibold">${em(t.odd_name)}</span> · the rest: <span class="font-semibold">${em(t.group)}</span></p>` : "";
+    const note = item.losses && item.losses.kind === "odd" && item.losses.state === "wrong"
+      ? `<p class="text-xs text-red-700">That one shares the ${esc(t.rank)} with the rest. ${fmt(-item.losses.lost)} pts missed.</p>` : "";
+    const names = item.sides.map((side, i) => `
+      <div class="flex items-center justify-between gap-2 text-sm">
+        <span><span class="font-semibold">${i + 1}:</span> ${dbName(side)} ${sideStatus(side)}</span>
+        ${reportControl(item, side)}
+      </div>`).join("");
+    return `
+      <div class="mt-3 space-y-1">
+        <p class="text-sm">You picked: <span class="font-semibold">${item.skipped ? "Skipped" : esc(item.answer)}</span>${item.skipped ? "" : " (dark ring)"}</p>
+        ${line}
+        ${note}
+      </div>
+      <div class="mt-3 space-y-2">${names}</div>`;
+  }
+
+  // Select all: the group, how many found, and each beetle's name as far as the round went
+  function selectBody(item) {
+    const t = item.truth_select || {};
+    const em = (v) => (t.rank === "genus" || t.rank === "species" ? `<em>${esc(v)}</em>` : esc(v));
+    const found = t.members ? `Found ${t.right} of ${t.members}${t.wrong ? ` · ${t.wrong} wrong` : ""}` : "";
+    const names = item.sides.map((side, i) => `
+      <div class="flex items-center justify-between gap-2 text-sm">
+        <span><span class="font-semibold">${i + 1}:</span> ${dbName(side)} ${sideStatus(side)}</span>
+        ${reportControl(item, side)}
+      </div>`).join("");
+    return `
+      <div class="mt-3 space-y-1">
+        <p class="text-sm">Tap every <span class="font-semibold">${em(t.target || "")}</span>${item.skipped ? ": skipped" : ""}</p>
+        ${found ? `<p class="text-sm">${found}</p>` : ""}
+        <p class="text-xs text-gray-500">Green: tapped and in it. Red: tapped, not in it. Dashed: in it, left out.</p>
+      </div>
+      <div class="mt-3 space-y-2">${names}</div>`;
+  }
+
   function drawCrop(canvas, img, box) {
     const W = img.naturalWidth, H = img.naturalHeight;
     const [bx, by, bw, bh] = box;
@@ -237,13 +295,16 @@
           <span class="text-xs font-semibold text-gray-400">#${n + 1}</span>
           <span class="flex items-center gap-2">${pointsChip(item)}${chip(item)}</span>
         </div>
-        <div class="${item.sides.length > 1 ? "grid grid-cols-2 gap-2 items-center" : ""}" data-images></div>
-        ${item.mode === "classify" ? classifyBody(item) : pairBody(item)}`;
+        <div class="${item.mode === "select" ? "grid grid-cols-3 gap-2 items-center" : item.mode === "odd" ? "grid grid-cols-2 sm:grid-cols-3 gap-2 items-center" : item.sides.length > 1 ? "grid grid-cols-2 gap-2 items-center" : ""}" data-images></div>
+        ${item.mode === "classify" ? classifyBody(item) : item.mode === "odd" ? oddBody(item) : item.mode === "select" ? selectBody(item) : pairBody(item)}`;
       const holder = li.querySelector("[data-images]");
       item.sides.forEach((side, i) => {
         const btn = document.createElement("button");
         btn.type = "button";
-        btn.className = "relative block mx-auto";
+        btn.className = "relative block mx-auto rounded-lg" + (item.mode === "select"
+          ? ({ right: " ring-4 ring-green-600", wrong: " ring-4 ring-red-600", missed: " outline-dashed outline-4 outline-green-600 -outline-offset-4",
+               vote: " ring-4 ring-gray-700" }[side.state] || "")
+          : side.odd ? " ring-4 ring-green-600" : side.picked ? " ring-4 ring-gray-700" : "");
         btn.setAttribute("aria-label", "See the whole image");
         const canvas = document.createElement("canvas");
         canvas.className = "game-crop";
@@ -251,7 +312,7 @@
         if (item.sides.length > 1) {
           const tag = document.createElement("span");
           tag.className = "absolute top-1.5 left-1.5 px-1.5 py-0.5 text-xs font-bold bg-white/90 rounded";
-          tag.textContent = i === 0 ? "A" : "B";
+          tag.textContent = item.mode === "odd" || item.mode === "select" ? String(i + 1) : i === 0 ? "A" : "B";
           btn.appendChild(tag);
         }
         btn.addEventListener("click", () => openLightbox(side.url, side.box));
@@ -308,7 +369,9 @@
       if (!res.ok) throw new Error(data.error || "Could not send the report.");
       const item = items.find((it) => it.index === reporting.index);
       item.sides.forEach((s) => { if (s.roi_id === reporting.roi) s.report = { status: data.status, reason: data.reason }; });
-      if (item.scored && item.sides.some((s) => s.verified && s.roi_id === reporting.roi)) item.held = true;
+      // held while checked: in Odd One Out only when it is the beetle picked or the odd one
+      const holds = (s) => s.verified && s.roi_id === reporting.roi && item.mode !== "select" && (item.mode !== "odd" || s.picked || s.odd);
+      if (item.scored && item.sides.some(holds)) item.held = true;
       closeSheet();
       render();
     } catch (err) {

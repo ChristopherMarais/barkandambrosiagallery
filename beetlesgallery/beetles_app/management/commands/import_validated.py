@@ -5,7 +5,7 @@ from django.core.files.base import ContentFile
 from django.utils import timezone
 
 from beetlesgallery.beetles_app.models import Beetles, UploadBatch, ImageAsset, Taxon
-from beetlesgallery.beetles_app.schema import REQUIRED_COLS
+from beetlesgallery.beetles_app.schema import LEGACY_MANIFEST_NAME, REQUIRED_COLS, manifest_name
 from beetlesgallery.beetles_app.utils import get_system_user
 
 import os
@@ -241,22 +241,31 @@ class Command(BaseCommand):
     def _import_one_batch(self, batch: UploadBatch, dry_run: bool) -> int:
         """
         For a single VALIDATED batch:
-          - read manifest.json (row -> sha256, zip member, filename),
+          - read its manifest (row -> sha256, zip member, filename),
           - read the CSV,
           - create Beetles rows (create-only) and set image_sha256,
           - mark batch imported (unless dry-run).
         """
         base_dir = os.path.dirname(batch.file.path)
-        manifest_path = os.path.join(base_dir, "manifest.json")
+        manifest_path = os.path.join(base_dir, manifest_name(batch.id))
         if not os.path.exists(manifest_path):
-            raise CommandError(f"{batch.id}: manifest.json not found next to CSV ({manifest_path}).")
+            # validated before manifests were kept per batch (#350): the folder's shared one, checked below
+            manifest_path = os.path.join(base_dir, LEGACY_MANIFEST_NAME)
+        if not os.path.exists(manifest_path):
+            raise CommandError(f"{batch.id}: manifest not found next to CSV ({manifest_name(batch.id)}).")
 
         # Read manifest
         try:
             with open(manifest_path, "r", encoding="utf-8") as fh:
                 manifest = json.load(fh)
         except Exception as e:
-            raise CommandError(f"{batch.id}: cannot read manifest.json: {e}")
+            raise CommandError(f"{batch.id}: cannot read {os.path.basename(manifest_path)}: {e}")
+        # Never import one batch's rows against another batch's images
+        if str(manifest.get("batch_id")) != str(batch.id):
+            raise CommandError(
+                f"{batch.id}: the manifest next to the CSV belongs to batch {manifest.get('batch_id')}. "
+                "Re-run validation for this batch."
+            )
 
         # Locate the paired ZIP (same dir as XLSX but filename recorded during validation)
         zip_name = manifest.get("zip")
@@ -494,11 +503,13 @@ class Command(BaseCommand):
                             }
 
                             # 2. Get or Create ImageAsset
-                            # We use full_path_at_import as the unique key. 
-                            # If it exists, we link to it (and do NOT overwrite metadata).
+                            # The photo itself (its sha256) is the key: rows listing the same photo share one
+                            # ImageAsset (one per photo, a Beetles row per specimen on it). A new photo whose path
+                            # was used before gets its own (#350). Validation already refuses photos that are in
+                            # the database, so this only finds one created earlier in the same batch.
                             image_asset, created = ImageAsset.objects.get_or_create(
-                                full_path_at_import=full_path_at_import,
-                                defaults=image_defaults
+                                image_sha256=image_sha256,
+                                defaults={**image_defaults, "full_path_at_import": full_path_at_import},
                             )
 
                             # 3. Create Beetle Record
@@ -583,13 +594,13 @@ class Command(BaseCommand):
 
                 # End-of-import actions (only when not a dry run)
                 if not dry_run:
-                    # 1) Write archive.json next to the CSV in validated/
+                    # 1) Write the batch's archive record next to the CSV in validated/
                     batch.write_archive_json(
                         imported_count=created_beetles,
                         records_summary=[], 
                         notes="initial import"
                     )
-                    # 2) Now move CSV/ZIP + sidecars (manifest.json, archive.json) to archived/
+                    # 2) Now move CSV/ZIP + sidecars (its manifest and archive record) to archived/
                     batch.mark_imported_and_archive()
 
 

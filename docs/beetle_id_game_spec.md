@@ -46,9 +46,23 @@ Status: built on branch `claude/funny-tesla-pi0iki` (PR #255). Classifier integr
 - The partner is picked at a random relationship (same species, genus, tribe, subfamily, or different), so answers are spread across ranks.
 - The two ROIs always come from different images, and their left/right order is random.
 
-### 4.3 Both modes
+### 4.3 Odd One Out (odd, #369)
+- Shows four ROI crops in a 2×2 grid, or six from level `GAME_ODD_SIX_FROM_LEVEL` (5). All but one share a name at one rank; the player taps the one that doesn't, then Next.
+- The rank follows the player's open ranks (subfamily first, then tribe, genus, species) and their target difficulty. On harder rounds the odd one is a near relative (same parent, e.g. another genus of the same tribe).
+- The odd one and at least one of the rest are always validated. A few of the rest are unvalidated ROIs a classifier puts in the group (confidence ≥ 0.9 on easy rounds, 0.6–0.9 on harder ones), more as the player levels up (`GAME_ODD_OPEN_SHARE_*`). No two crops come from one image.
+- **Scoring** (`game_scoring.odd_truth`, `odd_consensus`): a pick on a validated ROI is judged at once, right when it isn't in the group. A right pick earns `GAME_POINTS_ODD_WEIGHT` (1.5) × the Family Ties points for how related the odd one is to the rest; a wrong pick costs `GAME_POINTS_ODD_WRONG_FACTOR` (1.25) × that; **Skip earns** `GAME_POINTS_ODD_SKIP` (0.25). A pick on an unvalidated ROI is scored later by agreement that it isn't in the group (judges' names, experts, a trusted model), like a name on it.
+- After answering, the odd one is outlined and named at the round's rank (it is always validated, so this is the truth); the odd one is then never scored for that player again.
+- Unlocks at level 2; Identification moves to level 4. Players who had Identification keep it (`GamePreference.kept_perks`).
+
+### 4.4 Select all (select, #370)
+- Shows nine ROI crops (3×3) and a group: "Tap every Platypodinae". The rank follows the player's open ranks and difficulty, as in Odd One Out.
+- Three or four of the nine are validated members; the rest are validated beetles of other groups (near relatives on harder rounds), never fewer than the members, so tapping everything always loses. One to three more are unvalidated ROIs a classifier puts in the group (confidence ≥ 0.6), more as players rise: taps on those are recorded (`picks`) and never scored. No two crops come from one image.
+- **Scoring** (`game_scoring.select_truth`): each validated member tapped earns a share of `GAME_POINTS_SELECT_WEIGHT` (2) × the Family Ties points for the grid's rank, so a perfect grid earns about twice a Similarity answer; each validated non-member tapped costs `GAME_POINTS_SELECT_WRONG` (1.5) shares; a member left out costs nothing. Skip earns `GAME_POINTS_ODD_SKIP`. `correct_<rank>` records whether the grid was perfect; Select all stays out of the reliability rating until #381 says how a grid's many judgements count.
+- After answering: green for members tapped, red for wrong taps, a dashed line round members left out.
+
+### 4.5 Every mode
 - Every item has a **Skip** button.
-- There's no feedback during a round: nothing says right or wrong, and the score doesn't change.
+- There's no feedback during a round: nothing says right or wrong, and the score doesn't change. (Odd One Out is the exception: it shows the odd one after each answer, see 4.3.)
 - The browser receives only an image URL and a box, never the ROI ID, its label, or whether the item is scored.
 
 ## 5. Rounds

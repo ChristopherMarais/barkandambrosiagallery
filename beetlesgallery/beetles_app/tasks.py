@@ -24,3 +24,8 @@ def import_predictions_task(job_id):
     """Check and save a model predictions CSV uploaded on Data Management (predictions.run_upload)."""
     from beetlesgallery.beetles_app.predictions import run_upload
     run_upload(job_id)
+
+@shared_task
+def recompute_all_scores_task():
+    """Everyone's scores with the current scoring settings (the Scoring page's "Re-score everyone")."""
+    call_command("recompute_game_scores")
