@@ -125,21 +125,35 @@ class BuildTests(OddCase):
             ranks = {it["rank"] for _ in range(3) for it in game.build_odd_items(self.user, 3)}
         self.assertEqual(ranks, {"subfamily"})
 
-    def test_beetles_the_classifier_is_sure_of_join_the_rest(self):
+    def predict(self, roi, conf, taxon=None):
+        taxon = taxon or self.t_affinis
+        ModelPrediction.objects.create(roi=roi, valid_species_id=taxon.valid_species_id, taxon=taxon,
+                                       confidence=conf, model_name="m", model_version="1")
+
+    def test_every_grid_has_a_sure_and_an_unsure_ai_beetle(self):
         self.level(60)
         # only Xyleborus affinis has enough beetles to be the group; one other species each can be the odd one
         for roi in self.rois["ferrugineus"][1:] + self.rois["cylindrus"][1:]:
             roi.delete()
-        sure = self.roi(self.t_affinis, validated=False)
-        unsure = self.roi(self.t_affinis, validated=False)
-        for roi, conf in ((sure, 0.95), (unsure, 0.7)):
-            ModelPrediction.objects.create(roi=roi, valid_species_id=self.t_affinis.valid_species_id, taxon=self.t_affinis,
-                                           confidence=conf, model_name="m", model_version="1")
-        with mock.patch.object(game, "_relation_order", return_value=["species"]), \
-                mock.patch.object(game, "target_difficulty", return_value=0.2):   # an easy round: very sure only
-            seen = {t for _ in range(6) for it in game.build_odd_items(self.user, 1) for t in it["tiles"]}
-        self.assertIn(str(sure.id), seen)
-        self.assertNotIn(str(unsure.id), seen)
+        sure, unsure = self.roi(self.t_affinis, validated=False), self.roi(self.t_affinis, validated=False)
+        self.predict(sure, 0.95)
+        self.predict(unsure, 0.3)
+        for target in (0.2, 0.8):   # easy and hard rounds alike
+            with self.subTest(target=target), mock.patch.object(game, "_relation_order", return_value=["species"]), \
+                    mock.patch.object(game, "target_difficulty", return_value=target):
+                item = game.build_odd_items(self.user, 1)[0]
+                self.assertIn(str(sure.id), item["tiles"])
+                self.assertIn(str(unsure.id), item["tiles"])
+                validated = game.Beetles.objects.filter(id__in=item["tiles"], bbox_is_validated=True)
+                self.assertEqual(validated.count(), 2)   # the odd one and one of the rest
+
+    def test_without_both_kinds_of_ai_beetle_there_is_no_grid(self):
+        self.level(60)
+        self.predict(self.roi(self.t_affinis, validated=False), 0.95)   # sure ones only, nothing unsure
+        with mock.patch.object(game, "_relation_order", return_value=["species"]):
+            self.assertEqual(game.build_odd_items(self.user, 1), [])
+        with override_settings(GAME_GRID_REQUIRE_AI=False), mock.patch.object(game, "_relation_order", return_value=["species"]):
+            self.assertTrue(game.build_odd_items(self.user, 1))
 
     def test_an_odd_one_the_player_has_been_shown_is_never_used_again(self):
         rnd, item = self.odd_round()
