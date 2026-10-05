@@ -22,6 +22,7 @@ migrate = "python manage.py migrate"
 # Adds the published interactions dataset (v1.0) to the database if it is missing; never changes a row that is there
 game-scores = "python manage.py recompute_game_scores"
 remind-access = "python manage.py remind_access_requests"
+backup-notice = "python manage.py backup_notice"
 # Deletes expired downloads, temp leftovers and upload ZIPs whose images are already in the gallery (nightly)
 cleanup-storage = "python manage.py cleanup_storage"
 import-interactions = "python manage.py import_pathogen_interactions"
