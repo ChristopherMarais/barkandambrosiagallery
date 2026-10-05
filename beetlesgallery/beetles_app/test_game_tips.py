@@ -80,5 +80,5 @@ class HelpAndFeedbackTests(ScoringCase):
         from django.urls import reverse
         self.client.force_login(self.user)
         page = self.client.get(reverse("game_how")).content.decode()
-        for text in ("In 30 seconds", "King of Bark and Ambrosia", "without review", "at least 90% right", "one taxon at a time", "specialists"):
+        for text in ("In 30 seconds", "King of Bark and Ambrosia", "without review", "at least 90% correct", "one taxon at a time", "specialists"):
             self.assertIn(text, page)

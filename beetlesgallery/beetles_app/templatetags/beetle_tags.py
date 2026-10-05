@@ -143,3 +143,13 @@ def percent(value):
         return "%.3f" % (float(value) * 100)
     except (TypeError, ValueError):
         return "0"
+
+
+@register.filter
+def rarity(value):
+    """A 0-1 value's rarity tier ("common" ... "mythic"), for the .rarity-<tier> / .rarity-fill-<tier> classes."""
+    from beetlesgallery.beetles_app.game_rewards import rarity_tier
+    try:
+        return rarity_tier(None if value is None else float(value))
+    except (TypeError, ValueError):
+        return "common"

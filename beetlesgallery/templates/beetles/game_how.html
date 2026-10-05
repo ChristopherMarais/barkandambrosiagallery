@@ -14,7 +14,7 @@
     <h2 class="text-lg font-semibold text-gray-900 mb-3">In 30 seconds</h2>
     <ol class="text-sm text-gray-700 list-decimal pl-5 space-y-1.5">
       <li>Tap <strong>Play</strong>. Each beetle is either <strong>Identification</strong> (name it) or <strong>Similarity</strong> (how related are two beetles?).</li>
-      <li><strong>Stop at the rank you're sure of.</strong> A right tribe scores more than the same tribe with a guessed, wrong genus. Skipping costs almost nothing.</li>
+      <li><strong>Stop at the rank you're sure of.</strong> A correct tribe scores more than the same tribe with a guessed, wrong genus. Skipping costs almost nothing.</li>
       <li><strong>Take your time.</strong> There is no timer: look things up in keys, papers or a reference collection, and pause whenever you like.</li>
       <li>Photo shows no useful characters (an underside, a leg)? Still answer as far as you can: even just the subfamily helps. Report only a photo that is broken: wrong name, a box that misses the beetle, blurry, not a beetle.</li>
       <li>Tap <strong>Exit</strong> when you're done.</li>
@@ -30,13 +30,13 @@
       <h2 class="text-lg font-semibold text-gray-900 mb-2">1. Beetles we already know</h2>
       <p class="text-sm text-gray-600 mb-3">Some beetles in the feed have an expert-checked name. You never know which ones, so treat every beetle as if it counts.</p>
       <h3 class="text-sm font-semibold text-gray-900 mb-1">Identification (Name That Beetle)</h3>
-      <p class="text-sm text-gray-600 mb-2">Naming a beetle is the harder game, so it is worth {{ classify_weight }}&times; the points. You get partial credit: each rank you get right earns its points.</p>
+      <p class="text-sm text-gray-600 mb-2">Naming a beetle is the harder game, so it is worth {{ classify_weight }}&times; the points. You get partial credit: each rank you get correct earns its points.</p>
       <table class="text-sm mb-3"><tbody>
         {% for rank, pts in rank_points.items %}<tr><td class="pr-6 py-0.5 capitalize text-gray-700">{{ rank }}</td><td class="font-semibold text-gray-900 tabular-nums">{{ pts|digit_groups }}</td></tr>{% endfor %}
       </tbody></table>
-      <p class="text-sm text-gray-600 mb-4">Going one rank too far costs a little ({% widthratio overreach 1 100 %}% of that rank): right genus but wrong species earns {{ classify_examples.overreach }}, stopping at the genus {{ classify_examples.genus }}, the exact species {{ classify_examples.species }}. A wrong subfamily costs {% widthratio wrong 1 100 %}% of everything you claimed.</p>
+      <p class="text-sm text-gray-600 mb-4">Going one rank too far costs a little ({% widthratio overreach 1 100 %}% of that rank): correct genus but wrong species earns {{ classify_examples.overreach }}, stopping at the genus {{ classify_examples.genus }}, the exact species {{ classify_examples.species }}. A wrong subfamily costs {% widthratio wrong 1 100 %}% of everything you claimed.</p>
       <h3 class="text-sm font-semibold text-gray-900 mb-1">Similarity</h3>
-      <p class="text-sm text-gray-600 mb-2">The right answer earns more the finer the difference you had to spot:</p>
+      <p class="text-sm text-gray-600 mb-2">The correct answer earns more the finer the difference you had to spot:</p>
       <table class="text-sm mb-3"><tbody>
         {% for name, pts in pair_points %}<tr><td class="pr-6 py-0.5 text-gray-700">{{ name|capfirst }}</td><td class="font-semibold text-gray-900 tabular-nums">{{ pts|digit_groups }}</td></tr>{% endfor %}
       </tbody></table>
@@ -45,7 +45,7 @@
 
     <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl">
       <h2 class="text-lg font-semibold text-gray-900 mb-2">2. Beetles nobody has checked yet</h2>
-      <p class="text-sm text-gray-600 mb-2">Here there is no right answer to compare with yet, so you earn points by <strong>agreeing with strong players</strong>:</p>
+      <p class="text-sm text-gray-600 mb-2">Here there is no correct answer to compare with yet, so you earn points by <strong>agreeing with strong players</strong>:</p>
       <ul class="text-sm text-gray-600 list-disc pl-5 space-y-1">
         <li>Only players in the better half on known beetles count as judges, and proven experts for that part of the tree count the most.</li>
         <li>Agreeing with players stronger than you earns nearly full credit; agreeing with weaker players earns very little.</li>
@@ -57,12 +57,12 @@
 
     <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl">
       <h2 class="text-lg font-semibold text-gray-900 mb-2">3. Scores keep up with the truth</h2>
-      <p class="text-sm text-gray-600">When a curator later checks a beetle you answered, your answer is scored again against the real name, up or down, and it counts towards your accuracy and expertise. You'll see it on the game home under <strong>Checked since you played</strong>, with the photo and the real name. Points from agreement move as more people answer, whenever anyone finishes playing and every night.</p>
+      <p class="text-sm text-gray-600">When a curator later checks a beetle you answered, your answer is scored again against the real name, up or down, and it counts towards your accuracy and expertise. You'll see it on the game home under <strong>Reviewed by curators</strong>, with the photo and the real name. Points from agreement move as more people answer, whenever anyone finishes playing and every night.</p>
     </section>
 
     <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl">
       <h2 class="text-lg font-semibold text-gray-900 mb-2">4. Learning from mistakes</h2>
-      <p class="text-sm text-gray-600">A known beetle you got wrong comes back after {{ retry_days }} days or more, marked &ldquo;Seen before&rdquo;. Getting it right then earns half points. Second tries help your score but not your accuracy, which only counts the first time you see a beetle.</p>
+      <p class="text-sm text-gray-600">A known beetle you got wrong comes back after {{ retry_days }} days or more, marked &ldquo;Seen before&rdquo;. Getting it correct then earns half points. Second tries help your score but not your accuracy, which only counts the first time you see a beetle.</p>
     </section>
 
     <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl">
@@ -86,11 +86,11 @@
       <h2 class="text-lg font-semibold text-gray-900 mb-2">Where your labels go</h2>
       <ul class="text-sm text-gray-600 list-disc pl-5 space-y-1">
         <li>From level {{ proposal_level }}, your names for beetles nobody has checked yet go to the curators as <strong>suggestions</strong>. Curators decide.</li>
-        <li>Only real <strong>experts</strong> have their labels written to the database without review. You become one by proving yourself on <strong>beetles experts have already checked</strong>, in that exact taxon: {{ per_species }} images of every species in it (all of them, for a species with fewer), with at least {% widthratio trust_accuracy 1 100 %}% right. Small taxa need few answers, large ones many. You must also be among the most reliable players overall.</li>
+        <li>Only real <strong>experts</strong> have their labels written to the database without review. You become one by proving yourself on <strong>beetles experts have already checked</strong>, in that exact taxon: {{ per_species }} images of every species in it (all of them, for a species with fewer), with at least {% widthratio trust_accuracy 1 100 %}% correct. Small taxa need few answers, large ones many. You must also be among the most reliable players overall.</li>
         <li>Then, when {{ min_experts }} or more such experts give the same species for a beetle with no name yet, and no proven player disagrees, it is written to the database. It stays marked unvalidated until a curator checks it.</li>
         <li>Expertise is earned one taxon at a time (a subfamily, a tribe, a genus). You can be an expert on one genus and not on another, so some of your labels may skip review and others not. Being good in neighbouring taxa only makes your labels suggestions. Your <a href="{% url 'game_expertise' %}" class="underline">expertise tree</a> shows where you stand.</li>
         <li>Expertise is checked again all the time, so it can be lost as well as earned.</li>
-        <li><strong>Found a new species?</strong> If you name a species the gallery has no validated images of yet, and a curator later confirms you were right, you get a pop-up and a <em>New species finder</em> badge on your profile.</li>
+        <li><strong>Found a new species?</strong> If you name a species the gallery has no validated images of yet, and a curator later confirms you were correct, you get a pop-up and a <em>New species finder</em> badge on your profile.</li>
       </ul>
     </section>
 

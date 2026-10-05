@@ -975,6 +975,10 @@ video {
   margin-left: -0.5rem;
 }
 
+.-mt-6 {
+  margin-top: -1.5rem;
+}
+
 .mb-0\.5 {
   margin-bottom: 0.125rem;
 }
@@ -3272,6 +3276,58 @@ video {
   background-position: right 0.75rem center;
   background-size: 1rem;
   text-overflow: ellipsis;
+}
+
+/* Rarity colours (as the levels and badges: grey, green, blue, purple, orange, gold) for a 0-1 value such as accuracy
+   or challenge; game_rewards.rarity_tier picks the tier. Text: .rarity-<tier>, bars: .rarity-fill-<tier>. Outside the
+   layers so they are kept although templates build the class names. */
+
+.rarity-common {
+  color: #4b5563;
+}
+
+.rarity-uncommon {
+  color: #16a34a;
+}
+
+.rarity-rare {
+  color: #2563eb;
+}
+
+.rarity-epic {
+  color: #9333ea;
+}
+
+.rarity-legendary {
+  color: #ea580c;
+}
+
+.rarity-mythic {
+  color: #ca8a04;
+}
+
+.rarity-fill-common {
+  background-color: #6b7280;
+}
+
+.rarity-fill-uncommon {
+  background-color: #22c55e;
+}
+
+.rarity-fill-rare {
+  background-color: #3b82f6;
+}
+
+.rarity-fill-epic {
+  background-color: #a855f7;
+}
+
+.rarity-fill-legendary {
+  background-color: #f97316;
+}
+
+.rarity-fill-mythic {
+  background-color: #eab308;
 }
 
 .file\:mr-4::file-selector-button {

@@ -721,6 +721,7 @@ def game_answer(request, round_id):
     extra = {
         "community": None if record.skipped else _community(record),
         "celebrate": _worth_celebrating(record, scores),
+        "celebrate_size": _celebration_size(record, scores),
         "events": game_rewards.play_events(request.user, before),
         "chip": _chip(request.user),
     }
@@ -829,7 +830,8 @@ def _leading(items, ok):
 def _worth_celebrating(record, scores):
     """
     What to celebrate after an answer (#425): "validated" (beetle confetti) for a checked beetle the player got right,
-    the species or a pair with every judged claim right; "strong" (ordinary confetti) for an Identification answer
+    the species or a pair with every judged claim right; "partial" (a few grey beetles) for a checked beetle named
+    correctly to some rank but not the species; "strong" (ordinary confetti) for an Identification answer
     on an unchecked beetle that proven experts or a trusted model back to genus or species, or that most reliable
     players agree with at species; otherwise False. Validated and strong look different, but neither shows on a
     wrong or weak answer, so it hints at little.
@@ -838,10 +840,20 @@ def _worth_celebrating(record, scores):
         return False
     if record.is_check:
         if record.mode == GameRound.Mode.CLASSIFY:
-            return "validated" if scores.get("species") is True else False
+            if scores.get("species") is True:
+                return "validated"
+            return "partial" if any(ok is True for ok in scores.values()) else False
         judged = [ok for ok in scores.values() if ok is not None]
         return "validated" if judged and all(judged) else False
     return "strong" if record.mode == GameRound.Mode.CLASSIFY and _strong_unvalidated(record) else False
+
+
+def _celebration_size(record, scores):
+    """How big the celebration is, 0.25 to 1: the share of the ranks the player got correct (all of them: 1)."""
+    judged = [ok for ok in scores.values() if ok is not None]
+    if record.skipped or not judged:
+        return 1.0
+    return round(max(0.25, sum(1 for ok in judged if ok) / len(judged)), 2)
 
 
 def _strong_unvalidated(record):

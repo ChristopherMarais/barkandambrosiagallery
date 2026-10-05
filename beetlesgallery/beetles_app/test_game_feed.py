@@ -63,11 +63,11 @@ class ConfettiTests(GameCase):
     def test_a_right_species_on_a_scored_beetle_gets_confetti(self):
         self.assertTrue(self.answer(self.t_affinis, AFFINIS)["celebrate"])
 
-    def test_a_wrong_species_or_a_genus_only_answer_does_not(self):
-        self.assertFalse(self.answer(self.t_affinis, FERR)["celebrate"])
+    def test_a_wrong_species_with_the_right_genus_gets_the_small_partial_kind(self):
+        self.assertEqual(self.answer(self.t_affinis, FERR)["celebrate"], "partial")
 
-    def test_a_genus_only_answer_does_not(self):
-        self.assertFalse(self.answer(self.t_affinis, {"subfamily": "Scolytinae", "genus": "Xyleborus"})["celebrate"])
+    def test_a_genus_only_answer_gets_the_partial_kind(self):
+        self.assertEqual(self.answer(self.t_affinis, {"subfamily": "Scolytinae", "genus": "Xyleborus"})["celebrate"], "partial")
 
     def test_no_confetti_on_a_beetle_we_do_not_know_the_answer_to(self):
         self.assertFalse(self.answer(self.t_affinis, AFFINIS, validated=False)["celebrate"])
