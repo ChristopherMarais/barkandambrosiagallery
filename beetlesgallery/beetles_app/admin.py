@@ -4,7 +4,7 @@ from django.utils import timezone
 from .models import (
     UploadBatch, UpdateBatch, Beetles, ImageAsset, DownloadJob, ImageLock,
     Taxon, Synonym, CategoryMapping, GameRound, GameAnswer,
-    PlayerSkill, SpeciesDiscovery, RetroCredit, AnswerPoints, PlayerScore, GamePreference, LabelReview, RoiDifficulty, GameReport, ModelPrediction, PathogenInteraction, AccessRequest, InteractionProposal, AreaGrant, SiteNotice, PredictionUpload, RoiName,
+    PlayerSkill, SpeciesDiscovery, RetroCredit, AnswerPoints, PlayerScore, GamePreference, LabelReview, RoiDifficulty, GameReport, ModelPrediction, PathogenInteraction, AccessRequest, InteractionProposal, AreaGrant, SiteNotice, GameTuning, PredictionUpload, RoiName,
 )
 from simple_history.admin import SimpleHistoryAdmin
 
@@ -956,3 +956,10 @@ class RoiNameAdmin(admin.ModelAdmin):
     list_filter = ("tier",)
     search_fields = ("valid_species_id", "detail")
     raw_id_fields = ("roi", "taxon", "added_by")
+
+
+@admin.register(GameTuning)
+class GameTuningAdmin(admin.ModelAdmin):
+    """Scoring overrides; usually changed on the game's Scoring page, which explains each one and checks its limits."""
+    list_display = ("key", "value", "updated_by", "updated_at")
+    raw_id_fields = ("updated_by",)
