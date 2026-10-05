@@ -1284,7 +1284,7 @@ def admin_valid_species(request):
             # Synchronously trigger the ETL pipeline
             try:
                 call_command('migrate_taxonomy_to_db')
-                messages.success(request, "Valid Species uploaded. Postgres database successfully rebuilt and beetles re-linked.")
+                messages.success(request, "Accepted species uploaded: the taxonomy was successfully rebuilt and every beetle re-linked.")
             except Exception as e:
                 messages.error(request, f"File saved, but database rebuild failed: {str(e)}")
 
@@ -1317,7 +1317,7 @@ def admin_described_names(request):
 
             try:
                 call_command('migrate_taxonomy_to_db')
-                messages.success(request, "Described Names uploaded. Postgres database successfully rebuilt and beetles re-linked.")
+                messages.success(request, "Synonyms and old names uploaded: the taxonomy was successfully rebuilt and every beetle re-linked.")
             except Exception as e:
                 messages.error(request, f"File saved, but database rebuild failed: {str(e)}")
 
