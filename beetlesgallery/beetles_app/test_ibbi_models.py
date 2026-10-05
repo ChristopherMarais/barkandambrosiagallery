@@ -96,12 +96,12 @@ class ClassifyWithThePipelineTests(ClassifyCase):
 class PagesListTheModelsTests(ClassifyCase):
     def test_both_pickers_offer_the_new_models_with_the_recommended_one_first(self):
         page = self.client.get("/tools/classify/").content.decode()
-        self.assertIn('<option value="ibbi_dinov3" selected>Detector + DINOv3 classifier (recommended)</option>', page)
-        self.assertIn('<option value="yolov8x">YOLOv8 species detector</option>', page)
+        self.assertIn('<option value="ibbi_dinov3" selected>Species classifier: DINOv3</option>', page)
+        self.assertIn('<option value="yolov8x">Species detector: YOLOv8</option>', page)
         self.assertNotIn('value="rtdetr"', page)
         self.assertIn('data-testid="ranks-panel"', page)
         annotate = self.client.get(reverse("tool_annotate")).content.decode()
-        self.assertIn('<option value="ibbi_bioclip2">Detector + BioCLIP 2 classifier</option>', annotate)
+        self.assertIn('<option value="ibbi_bioclip2">Species classifier: BioCLIP 2</option>', annotate)
 
     def test_the_classifier_page_sends_the_chosen_model_or_the_default(self):
         from django.core.files.uploadedfile import SimpleUploadedFile

@@ -91,7 +91,7 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='classify')
     def classify(self, request, pk=None):
         """
-        "Classify with AI": add the classifier's boxes and species to this image as new, unvalidated ROIs.
+        "Generate AI recommendation": add the classifier's boxes and species to this image as new, unvalidated ROIs.
         POST /api/v1/image-assets/{uuid}/classify/  {"architecture": "ibbi_dinov3", "box_threshold": 0.25}
         (the model keys are in beetlesgallery/tools/ibbi_models.py; the names from before ibbi 0.3 still work)
         """

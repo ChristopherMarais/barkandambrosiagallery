@@ -16,10 +16,13 @@
         <div class="max-w-3xl mx-auto text-center">
             <div class="mt-2 text-md text-gray-600 space-y-2">
                 <p>
-                    This tool uses deep learning models trained on approximately 35,000 images to detect <a href="https://github.com/ChristopherMarais/IBBI/blob/main/src/ibbi/data/ibbi_species_table.csv" target="_blank" class="text-gray-600 hover:text-gray-800 underline">63 distinct species</a> of bark and ambrosia beetles. For further details on how these models were all trained, see our <a href="https://joss.theoj.org/papers/10.21105/joss.08796" target="_blank" class="text-gray-600 hover:text-gray-800 underline">Journal of Open Source Software publication</a> on the IBBI Python package. These baseline models demonstrate common industry capabilities.
+                    These models come from <a href="{{ ibbi_docs_url }}" target="_blank" rel="noopener" class="text-gray-600 hover:text-gray-800 underline">IBBI</a>, our open-source package for detecting and identifying bark and ambrosia beetles
+                    (<a href="https://joss.theoj.org/papers/10.21105/joss.08796" target="_blank" rel="noopener" class="text-gray-600 hover:text-gray-800 underline">paper</a>,
+                    <a href="https://github.com/ChristopherMarais/IBBI" target="_blank" rel="noopener" class="text-gray-600 hover:text-gray-800 underline">code</a>).
+                    The IBBI documentation lists what each model can name and how accurate it is.
                 </p>
                 <p>
-                    We are actively developing advanced architectures to outperform these benchmarks. The current models should be treated as screening tools. Images you submit that contain a bark or ambrosia beetle are added to the gallery as unvalidated images, with the proposed labels, for experts to check. For critical identification needs, we strongly recommend verification by a taxonomist or contacting our team directly.
+                    Treat the answer as a screening tool and have important identifications checked by a taxonomist. Images you submit that contain a bark or ambrosia beetle are added to the gallery as unvalidated images, with the proposed names, for experts to check.
                 </p>
             </div>
             
@@ -49,7 +52,9 @@
                 <div>
                     <label for="modelSelect" class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Model</label>
                     <p class="text-[10px] text-gray-500 mb-2 leading-tight">
-                        The recommended model finds each beetle, then names it rank by rank and says when it is not sure of the species.
+                        <strong>Species classifier:</strong> finds each beetle, then names it rank by rank and says when it is not sure.
+                        <strong>Species detector:</strong> finds and names a beetle in one step.
+                        <a href="{{ ibbi_docs_url }}" target="_blank" rel="noopener" class="underline hover:text-gray-800" data-testid="ibbi-link">How well each model does</a>
                     </p>
                     <div class="relative">
                         <select name="architecture" id="modelSelect" class="block w-full pl-3 pr-8 py-2.5 text-sm border-gray-300 focus:outline-none focus:ring-gray-500 focus:border-gray-500 rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer appearance-none" data-testid="model-select">
