@@ -652,9 +652,11 @@ def gallery(request):
         beetles_page = paginator.page(paginator.num_pages)
 
     from django.utils.safestring import mark_safe
+
+    from .templatetags.beetle_tags import digit_groups_text
     current_page = beetles_page.number
     page_options_html = mark_safe("".join(
-        f'<option value="{p}"{" selected" if p == current_page else ""}>{p}</option>'
+        f'<option value="{p}"{" selected" if p == current_page else ""}>{digit_groups_text(p)}</option>'
         for p in range(1, paginator.num_pages + 1)
     ))
 

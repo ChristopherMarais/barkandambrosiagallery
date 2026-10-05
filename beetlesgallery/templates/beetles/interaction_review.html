@@ -140,7 +140,7 @@
   {% if page.has_other_pages %}
   <nav class="flex items-center justify-between mt-6 text-sm" aria-label="Pages">
     {% if page.has_previous %}<a class="underline hover:text-black" href="?{{ querystring }}&page={{ page.previous_page_number }}">&larr; Previous</a>{% else %}<span></span>{% endif %}
-    <span class="text-gray-500">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    <span class="text-gray-500">Page {{ page.number|digit_groups_text }} of {{ page.paginator.num_pages|digit_groups_text }}</span>
     {% if page.has_next %}<a class="underline hover:text-black" href="?{{ querystring }}&page={{ page.next_page_number }}">Next &rarr;</a>{% else %}<span></span>{% endif %}
   </nav>
   {% endif %}

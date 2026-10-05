@@ -33,12 +33,12 @@
     {% if result.ok %}
       <h2 class="text-lg font-semibold text-green-900 mb-1">{% if result.dry_run %}{{ filename }} is valid{% else %}Saved {{ filename }}{% endif %}</h2>
       <p class="text-sm text-green-900">
-        {{ result.rows }} row{{ result.rows|pluralize }}: {{ result.created }} added, {{ result.updated }} updated, {{ result.unchanged }} unchanged.
+        {{ result.rows|digit_groups_text }} row{{ result.rows|pluralize }}: {{ result.created|digit_groups_text }} added, {{ result.updated|digit_groups_text }} updated, {{ result.unchanged }} unchanged.
         {% if result.dry_run %}This was a check only, so nothing was saved.{% endif %}
       </p>
     {% else %}
       <h2 class="text-lg font-semibold text-red-900 mb-1">{{ filename }} was not saved</h2>
-      <p class="text-sm text-red-900 mb-3">{{ result.error_count }} problem{{ result.error_count|pluralize }} found, so nothing was saved. Fix them and upload the file again.</p>
+      <p class="text-sm text-red-900 mb-3">{{ result.error_count|digit_groups_text }} problem{{ result.error_count|pluralize }} found, so nothing was saved. Fix them and upload the file again.</p>
       <ul class="text-sm text-red-900 list-disc pl-5 space-y-1">{% for message in result.errors %}<li>{{ message }}</li>{% endfor %}</ul>
       {% if result.hidden_errors %}<p class="text-sm text-red-900 mt-2">&hellip;and {{ result.hidden_errors }} more.</p>{% endif %}
     {% endif %}
