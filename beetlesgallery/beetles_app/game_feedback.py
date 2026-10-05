@@ -75,6 +75,7 @@ def _side(roi, player_reports, others):
     report = player_reports.get(roi.id)
     return {
         "roi_id": str(roi.id),
+        "image_id": str(roi.image_asset_id) if roi.image_asset_id else "",
         "url": roi.display_url,
         "box": [roi.bbox_x, roi.bbox_y, roi.bbox_width, roi.bbox_height],
         "verified": verified,
