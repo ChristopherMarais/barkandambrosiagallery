@@ -61,7 +61,7 @@
     <details class="mt-2 text-sm text-gray-700" data-testid="expert-rule">
       <summary class="cursor-pointer text-gray-500 underline">How experts are proven</summary>
       <ul class="mt-2 list-disc pl-5 space-y-1">
-        <li>Expertise is per taxon: answer {{ per_species }} checked images of every species in it, and get at least {% widthratio trust_accuracy 1 100 %}% correct.</li>
+        <li>Expertise is per taxon: answer {{ per_species }} checked images each of at least {% widthratio children_share 1 100 %}% of its species, genera or tribes, and get at least {% widthratio trust_accuracy 1 100 %}% correct.</li>
         <li>Be among the most reliable players overall.</li>
         <li>Being good in neighbouring taxa is not enough to skip review.</li>
         <li>{{ min_experts }} experts must agree, and no proven player disagree.</li>

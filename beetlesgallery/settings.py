@@ -248,11 +248,12 @@ GAME_DIFFICULTY_MAX = 0.9
 GAME_CANDIDATE_OVERSAMPLE = 6         # candidates drawn per slot before matching difficulty
 
 # Trusted labels (beetles_app/game_trust.py).
-# Expertise in a taxon scales with its size: so many validated images of every species in it that has any
-# (all of them for a species with fewer), at least GAME_TRUST_MIN_JUDGED in total, and at least
-# GAME_TRUST_MIN_ACCURACY of the answers right. Taxa with fewer than GAME_TRUST_MIN_JUDGED validated images
-# can't be proven directly.
-GAME_TRUST_IMAGES_PER_SPECIES = 5
+# Expertise in a taxon scales with its size: so many validated images (all of them for one with fewer) of at least
+# GAME_TRUST_CHILDREN_SHARE of its children with validated images (a genus's species, a tribe's genera, ...; rounded
+# up), at least GAME_TRUST_MIN_JUDGED in total, and at least GAME_TRUST_MIN_ACCURACY of the answers right. Taxa with
+# fewer than GAME_TRUST_MIN_JUDGED validated images can't be proven directly.
+GAME_TRUST_IMAGES_PER_SPECIES = 5     # per child covered (the name predates #381)
+GAME_TRUST_CHILDREN_SHARE = 0.75
 GAME_TRUST_MIN_JUDGED = 10
 GAME_TRUST_MIN_ACCURACY = 0.9
 GAME_TRUST_Z = 1.96                   # only for ranking players (Wilson lower bound), not for proof
