@@ -71,14 +71,14 @@ def discussions_url():
 def game_home(request):
     game.close_idle_rounds(request.user)   # anything they left open counts now
     game_discoveries.find([request.user.id])
-    checked, checked_new = game_checked.pop_unseen(request.user)
+    checked, checked_new, checked_change = game_checked.pop_unseen(request.user)
     # this week's top players; at the start of a quiet week, all time instead
     board, board_period = game_board.board(limit=5), "week"
     if not board:
         board, board_period = game_board.board(period="all", limit=5), "all"
     rewards = game_rewards.progress(request.user)
     return render(request, "beetles/game_home.html", {
-        "checked": checked, "checked_new": checked_new,
+        "checked": checked, "checked_new": checked_new, "checked_change": checked_change,
         "proposals_notice": rewards["proposals"] and _first_sight_of_proposals(request.user),
         "discoveries": game_discoveries.pop_unseen(request.user),
         "score": game_scoring.score_for(request.user),
@@ -884,10 +884,10 @@ def _ahead_of(player):
 
 def _community(record):
     """
-    What players ranked above this one said about the beetle just answered (Name That Beetle), rank by rank, and
-    how far they agree with this player: "Players ahead of you agree with you to tribe; on genus, 3 of 4 said
-    Xylosandrus." Only players ahead count, so newcomers learn from better players, not from each other. Their
-    latest answer each, never the truth.
+    The "Last beetle" bar after a Name That Beetle answer: how far players ranked above this one agree
+    (_players_ahead), and what proven experts said (_experts_said) and the species classifier leans to (_model_leans).
+    The same for every beetle, validated or not, so it never shows which ones are (#382); and it is agreement, never
+    "correct".
     """
     if record.mode != GameRound.Mode.CLASSIFY:
         return None
@@ -895,6 +895,81 @@ def _community(record):
     for ans in (GameAnswer.objects.filter(roi=record.roi, skipped=False).exclude(player=record.player)
                 .order_by("answered_at")):
         latest[ans.player_id] = ans
+    out = _players_ahead(record, latest)
+    for key, line in (("experts", _experts_said(record, latest)), ("model", _model_leans(record))):
+        if line:
+            out[key] = line
+    return out
+
+
+def _experts_said(record, latest):
+    """
+    What proven experts (game_trust) said about this beetle, as agreement: "A proven expert agrees with you to genus",
+    "2 proven experts agree with you to tribe; on genus they said Xylosandrus". A rank counts only where every expert
+    who named it agrees, as for reference points (game_reference). ``latest``: each other player's latest answer.
+    None when no proven expert has named it.
+    """
+    votes = [(pid, game.implied_labels(ans)) for pid, ans in latest.items()]
+    trust = game_trust.TrustContext({pid for pid, labels in votes if labels})
+    said, experts = {}, set()
+    for pid, labels in votes:
+        for rank, value in labels.items():
+            if trust.trusted_through(pid, rank, labels):
+                said.setdefault(rank, {}).setdefault(game._norm(value), value.strip())
+                experts.add(pid)
+    if not said:
+        return None
+    one = len(experts) == 1
+    who, agree = ("A proven expert", "agrees") if one else (f"{len(experts)} proven experts", "agree")
+    mine = game.answer_values({r: getattr(record, r) for r in game.RANKS})
+    agreed = ""
+    for rank in game.RANKS:
+        if rank not in said:
+            continue
+        if len(said[rank]) > 1:
+            return (f"{who} {agree} with you to {agreed}; they're split on {rank}." if agreed
+                    else f"Proven experts are split on {rank}.")
+        value, name = next(iter(said[rank].items()))
+        if mine[rank] == value:
+            agreed = rank
+        elif not mine[rank]:
+            return (f"{who} {agree} with you to {agreed} and went on to {rank} {name}." if agreed
+                    else f"{who} went on to {rank} {name}.")
+        else:
+            return (f"{who} {agree} with you to {agreed}; on {rank} they said {name}." if agreed
+                    else f"On {rank}, {who[0].lower() + who[1:]} said {name}.")
+    return f"{who} {agree} with you to {agreed}."
+
+
+def _model_leans(record):
+    """
+    What the species classifier leans to for this beetle, after the answer: its deepest rank with at least
+    GAME_FEEDBACK_AI_MIN (50%) confidence, e.g. "The species classifier leans genus Xyleborus (71%)". None without a
+    prediction or below that everywhere.
+    """
+    from .models import ModelPrediction
+    from .predictions import rank_tips
+
+    prediction = ModelPrediction.objects.filter(roi=record.roi).order_by("-created_at").first()
+    if prediction is None:
+        return None
+    tips = rank_tips(prediction)
+    least = game.game_setting("GAME_FEEDBACK_AI_MIN", 0.5)
+    for rank in reversed(game.RANKS):
+        tip = tips.get(rank)
+        if tip and tip["confidence"] >= least:
+            name = tip["value"] if rank == "species" else f"{rank} {tip['value']}"
+            return f"The species classifier leans {name} ({round(tip['confidence'] * 100)}%)."
+    return None
+
+
+def _players_ahead(record, latest):
+    """
+    What players ranked above this one said about the beetle just answered (Name That Beetle), rank by rank, and
+    how far they agree with this player: "Players ahead of you agree with you to tribe; on genus, 3 of 4 said
+    Xylosandrus." Only players ahead count, so newcomers learn from better players, not from each other. Their
+    latest answer each, never the truth.
+    """
     if not latest:
         return {"players": 0}
     ahead = _ahead_of(record.player)

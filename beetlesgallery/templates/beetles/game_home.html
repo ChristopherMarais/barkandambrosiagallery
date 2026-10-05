@@ -52,6 +52,7 @@
       <h2 class="text-lg font-semibold text-gray-900">Reviewed by curators{% if checked_new > checked|length %} <span class="text-sm font-normal text-gray-400">({{ checked_new }})</span>{% endif %}</h2>
       <a href="{% url 'game_history' %}?tab=checked" class="text-sm underline text-gray-600 hover:text-gray-900">All</a>
     </div>
+    <p class="mb-2 text-sm text-gray-600" data-testid="checked-since">Since your last visit: {{ checked_new|digit_groups }} answer{{ checked_new|pluralize }} checked, {% if checked_change > 0 %}+{% endif %}{{ checked_change|floatformat:"-1" }} point{{ checked_change|pluralize }}.</p>
     {% include "beetles/includes/game_checked_list.html" %}
   </section>
   {% endif %}

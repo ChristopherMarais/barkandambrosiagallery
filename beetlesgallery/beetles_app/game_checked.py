@@ -57,10 +57,13 @@ def items(player, unseen_only=False, limit=None):
 
 
 def pop_unseen(player, limit=3):
-    """The newest checked beetles the player hasn't been shown, then all unseen ones marked as seen."""
+    """
+    The newest checked beetles the player hasn't been shown, how many there are and the points they moved in all
+    (#382: "Since your last visit: 5 answers checked, +34 points"), then all unseen ones marked as seen.
+    """
     shown = items(player, unseen_only=True, limit=limit)
     unseen = RetroCredit.objects.filter(player=player, seen_at__isnull=True)
-    count = unseen.count()
-    if count:
+    moved = list(unseen.values_list("points_before", "points_after"))
+    if moved:
         unseen.update(seen_at=timezone.now())
-    return shown, count
+    return shown, len(moved), round(sum(after - before for before, after in moved), 1)
