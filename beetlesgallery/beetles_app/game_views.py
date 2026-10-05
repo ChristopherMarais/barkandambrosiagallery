@@ -250,7 +250,7 @@ def game_unlocks(request):
         "focus_ranks": [(r, label, game_levels.FOCUS_PERK[r] in info["perks"]) for r, label in
                         (("subfamily", "Subfamily"), ("tribe", "Tribe"), ("genus", "Genus"))],
         "proposal_level": game_levels.proposal_level(),
-        "per_species": game_trust.per_species(),
+        "per_species": game_trust.per_species(), "children_share": game_trust.children_share(),
         "trust_accuracy": game_trust.min_accuracy(),
         "min_experts": game.game_setting("GAME_AUTO_APPLY_MIN_EXPERTS", 2),
         "ranks": game_levels.rank_for(request.user),
@@ -290,7 +290,7 @@ def game_how(request):
         "discussions": discussions_url(), "levels": game_levels.table(), "goal_floor": game_rewards.daily_goal(),
         "proposal_level": game_levels.proposal_level(),
         "min_experts": game.game_setting("GAME_AUTO_APPLY_MIN_EXPERTS", 2),
-        "per_species": game_trust.per_species(),
+        "per_species": game_trust.per_species(), "children_share": game_trust.children_share(),
         "trust_accuracy": game_trust.min_accuracy(),
         "classify_weight": _weight_label(game_scoring.classify_weight()),
         "rank_points": {r: p * game_scoring.classify_weight() for r, p in game_scoring.RANK_POINTS.items()},
@@ -1258,7 +1258,7 @@ def game_review(request):
         "only_trusted": only_trusted,
         "rounds": GameRound.objects.count(),
         "answers": GameAnswer.objects.count(),
-        "per_species": game_trust.per_species(),
+        "per_species": game_trust.per_species(), "children_share": game_trust.children_share(),
     })
 
 

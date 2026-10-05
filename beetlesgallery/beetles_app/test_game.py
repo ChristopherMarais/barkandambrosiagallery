@@ -337,19 +337,19 @@ SMALL_TRUST = dict(GAME_TRUST_MIN_JUDGED=3, GAME_TRUST_IMAGES_PER_SPECIES=3)
 
 
 class CoverageTests(SimpleTestCase):
-    """Proof scales with the taxon: so many images of every species with validated images, 90% right."""
+    """Proof scales with the taxon: so many images of 75% of its children (all of them up to three), 90% right."""
 
     def test_a_small_genus_needs_few_answers_and_a_big_one_many(self):
         small = {"a x": 20, "a y": 20}
         big = {f"b {i}": 20 for i in range(40)}
         self.assertEqual(game_trust.coverage(small, {})["required"], 10)
-        self.assertEqual(game_trust.coverage(big, {})["required"], 200)
+        self.assertEqual(game_trust.coverage(big, {})["required"], 150)   # 30 of the 40 species (#381)
 
-    def test_every_species_must_be_covered(self):
+    def test_a_taxon_with_three_children_needs_all_of_them(self):
         available = {"a x": 20, "a y": 20, "a z": 2}
         lopsided = game_trust.coverage(available, {"a x": 30})
         self.assertFalse(lopsided["complete"])
-        self.assertEqual((lopsided["species_done"], lopsided["species_total"]), (1, 3))
+        self.assertEqual((lopsided["children_done"], lopsided["children_needed"], lopsided["children_total"]), (1, 3, 3))
         full = game_trust.coverage(available, {"a x": 5, "a y": 5, "a z": 2})   # a z only has 2 images
         self.assertTrue(full["complete"])
         self.assertEqual(full["required"], 12)

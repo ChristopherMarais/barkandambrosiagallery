@@ -106,8 +106,12 @@ GROUPS = [
     ("Experts (whose answers become trusted labels)", [
         _t("GAME_TRUST_MIN_ACCURACY", "Accuracy an expert needs", 0.9,
            "In a taxon, a player must be correct at least this often on validated beetles.", 0.5, 1, 0.01),
-        _t("GAME_TRUST_IMAGES_PER_SPECIES", "Images per species an expert must have answered", 5,
-           "Every species in the taxon (all images for a species with fewer).", 1, 100, 1),
+        _t("GAME_TRUST_IMAGES_PER_SPECIES", "Images that cover a species, genus or tribe", 5,
+           "An expert must have answered this many validated images of each child they cover (all of them for one "
+           "with fewer): the species of a genus, the genera of a tribe, the tribes of a subfamily.", 1, 100, 1),
+        _t("GAME_TRUST_CHILDREN_SHARE", "Share of a taxon's children an expert must cover", 0.75,
+           "Rounded up, so a taxon with three or fewer children (at 75%) needs all of them. A rare genus no "
+           "longer stops anyone becoming a tribe expert.", 0.1, 1, 0.05),
         _t("GAME_TRUST_MIN_JUDGED", "Fewest answers in a taxon for an expert", 10,
            "Also the fewest validated images a taxon needs before anyone can be proven in it.", 1, 500, 1),
         _t("GAME_EXPERT_PERCENTILE", "Experts come from the top share of players", 0.25,

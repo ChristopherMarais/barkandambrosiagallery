@@ -1583,9 +1583,10 @@ class PlayerSkill(models.Model):
       rank=subfamily, branch=""           subfamily ID overall
 
     ``proven`` means the player has covered the taxon and is accurate enough (see game_trust.is_proven):
-    enough answers on every species in it that has validated images, at least GAME_TRUST_MIN_ACCURACY right.
+    enough answers on most of its children with validated images, at least GAME_TRUST_MIN_ACCURACY right.
     ``required`` and ``covered`` are the answers that coverage needs and how many of them the player has;
-    ``species_total`` and ``species_done`` count the species in the taxon and those fully covered.
+    ``children_total`` counts the taxon's children with validated images (its species, genera or tribes),
+    ``children_needed`` how many of them proof needs, and ``children_done`` those fully covered (#381).
     ``proven_at`` is when it last became proven.
     """
 
@@ -1599,8 +1600,9 @@ class PlayerSkill(models.Model):
     lower_bound = models.FloatField(default=0.0)
     required = models.PositiveIntegerField(default=0)
     covered = models.PositiveIntegerField(default=0)
-    species_total = models.PositiveIntegerField(default=0)
-    species_done = models.PositiveIntegerField(default=0)
+    children_total = models.PositiveIntegerField(default=0)
+    children_needed = models.PositiveIntegerField(default=0)
+    children_done = models.PositiveIntegerField(default=0)
     proven = models.BooleanField(default=False, db_index=True)
     proven_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
