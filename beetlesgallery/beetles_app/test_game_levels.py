@@ -15,8 +15,8 @@ class LevelTests(ScoringCase):
         self.assertEqual(levels.describe(60, 0)["level"], 2)
         self.assertEqual(levels.describe(200, 0.2)["level"], 2)     # enough points for 3, not reliable enough
         self.assertEqual(levels.describe(200, 0.4)["level"], 3)
-        self.assertEqual(levels.describe(20000, 0.99)["name"], "Coleopterist")
-        self.assertEqual(levels.describe(30000, 0.9)["name"], "Coleopterist")   # the top needs 92% reliability
+        self.assertEqual(levels.describe(20000, 0.99)["name"], "Colony founder")
+        self.assertEqual(levels.describe(30000, 0.9)["name"], "Colony founder")   # the top needs 92% reliability
         self.assertEqual(levels.describe(30000, 0.95)["name"], "King of Bark and Ambrosia")
         self.assertEqual(levels.describe(30000, 0.95)["level"], 10)
 
@@ -236,7 +236,7 @@ class PageTests(ScoringCase):
     def test_the_unlocks_page(self):
         self.client.force_login(self.user)
         page = self.client.get("/game/unlocks/").content.decode()
-        for text in ("Levels and unlocks", "Coleopterist", "Focus on a genus", "Your labels go to curators", "proven experts", "expertise tree"):
+        for text in ("Levels and unlocks", "Colony founder", "Focus on a genus", "Your labels go to curators", "proven experts", "expertise tree"):
             self.assertIn(text, page)
 
     def test_it_says_when_your_labels_go_to_curators(self):

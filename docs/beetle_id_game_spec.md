@@ -1,4 +1,4 @@
-# Beetle ID Game: Specification
+# Ambrosia Archive (the Beetle ID game): Specification
 
 Status: built on branch `claude/funny-tesla-pi0iki` (PR #255). Classifier integration is out of scope (see section 12).
 
@@ -13,7 +13,7 @@ Status: built on branch `claude/funny-tesla-pi0iki` (PR #255). Classifier integr
 
 | Requirement | Detail |
 |---|---|
-| Entry point | "Beetle ID Game" card on the home page, plus an entry in the mobile and desktop sidebars |
+| Entry point | the game's card on the home page, plus one entry in the mobile and desktop sidebars (with the player's level and points) |
 | Players | Logged-in users only. Accounts are created by staff |
 | Staff | Review page, player reports, proposals and report handling on the annotation page |
 | Devices | Mobile-first: native pickers, large tap targets, action bar within thumb reach, tap a photo to see the whole image |
