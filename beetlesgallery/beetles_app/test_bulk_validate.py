@@ -44,8 +44,8 @@ class BulkValidateTests(PageBehaviourCase):
     def test_filters(self):
         self.assertEqual(self.listed(named="1"), {str(self.open_image.pk)})
         self.assertEqual(self.listed(q="affinis"), {str(self.open_image.pk)})
-        Beetles.objects.filter(pk=self.roi.pk).update(label_source="vial_label")
-        self.assertEqual(self.listed(source="vial_label"), {str(self.open_image.pk)})
+        Beetles.objects.filter(pk=self.roi.pk).update(label_source="external")   # a source both before and after #464
+        self.assertEqual(self.listed(source="external"), {str(self.open_image.pk)})
 
     def test_validating_the_ticked_images(self):
         response = self.client.post(reverse("bulk_validate"), {"image": [self.open_image.pk, self.done.pk, self.boxless.pk]})
