@@ -62,10 +62,10 @@ class PeriodTests(ScoringCase):
         profile = self.client.get(reverse("game_profile", args=[self.bob.id])).content.decode()
         self.assertIn('data-testid="weekly-wins"', profile)
 
-    def test_the_home_board_falls_back_to_all_time_in_a_quiet_week(self):
+    def test_the_home_board_stays_on_this_week_in_a_quiet_week(self):
         self.client.force_login(self.ann)
         ctx = self.client.get(reverse("game_home")).context
-        self.assertEqual(ctx["board_period"], "all")
+        self.assertEqual((ctx["board"], ctx["last_week"]), ([], []))   # never all time instead (#497)
         self.points(self.cy, 5, self.this_week + timedelta(hours=1))
         ctx = self.client.get(reverse("game_home")).context
-        self.assertEqual((ctx["board_period"], [r["username"] for r in ctx["board"]]), ("week", ["cy"]))
+        self.assertEqual([r["username"] for r in ctx["board"]], ["cy"])

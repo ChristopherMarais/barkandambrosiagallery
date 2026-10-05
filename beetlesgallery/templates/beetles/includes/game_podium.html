@@ -9,7 +9,7 @@
         {% for row in p.top %}
         <li class="podium-place podium-{{ row.place }}" style="order:{% if row.place == 1 %}2{% elif row.place == 2 %}1{% else %}3{% endif %}">
           <span class="podium-medal">{{ row.place }}</span>
-          {% if row.anonymous %}<span class="block mt-1 text-sm font-semibold text-gray-500 truncate">{{ row.username }}</span>{% else %}<a href="{% url 'game_profile' row.player_id %}" class="block mt-1 text-sm font-semibold text-gray-900 truncate hover:underline">{{ row.username }}</a>{% endif %}
+          <a href="{% url 'game_profile' row.player_id %}" class="block mt-1 text-sm font-semibold text-gray-900 truncate hover:underline">{{ row.username }}</a>
           <div class="podium-step">
             <div class="text-base font-bold tabular-nums">{{ row.points|digit_groups }} pts</div>
             <div class="text-[11px] text-gray-600 tabular-nums">{{ row.beetles|digit_groups }} beetles</div>

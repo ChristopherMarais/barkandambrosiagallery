@@ -69,18 +69,6 @@
       </ul>
     </details>
   </div>
-
-  <!-- Leaderboards (#394): not everyone wants to compete -->
-  <div id="boards" class="p-4 border border-gray-200 bg-white rounded-2xl mb-8" data-testid="board-settings">
-    <h2 class="text-base font-semibold text-gray-900 mb-2">Leaderboards</h2>
-    <form method="post" class="space-y-2 text-sm text-gray-700">
-      {% csrf_token %}
-      <input type="hidden" name="boards" value="1">
-      <label class="flex items-center gap-2"><input type="checkbox" name="hide_name" {% if pref.hide_name %}checked{% endif %}> Show me as &ldquo;A player&rdquo; to others</label>
-      <label class="flex items-center gap-2"><input type="checkbox" name="hide_boards" {% if pref.hide_boards %}checked{% endif %}> Hide the leaderboard from my game home</label>
-      <button type="submit" class="btn-primary h-10">Save</button>
-    </form>
-  </div>
 </div>
 {% endblock %}
 
