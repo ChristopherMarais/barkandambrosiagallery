@@ -543,7 +543,7 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         # Only known sorts are accepted (the value used to go straight into order_by). Empty values go last.
         from django.db.models import F
         sorts = {
-            'newest': (F('created_at').desc(nulls_last=True),),
+            'newest': (F('created_at').desc(nulls_last=True), F('id').desc()),   # so 'oldest' is it turned round
             'oldest': (F('created_at').asc(nulls_last=True),),
             'date_taken': (F('image_date_taken').desc(nulls_last=True),),
             'largest': (F('image_size_bytes').desc(nulls_last=True),),
