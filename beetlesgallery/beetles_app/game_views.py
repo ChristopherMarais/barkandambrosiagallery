@@ -805,6 +805,7 @@ def game_answer(request, round_id):
         "events": game_rewards.play_events(request.user, before),
         "chip": _chip(request.user),
     }
+    extra["verified"] = _verified_names(record, item)   # for Back (#424)
     if record.mode == GameRound.Mode.ODD:
         extra["reveal"] = _odd_reveal(item, tiles)
     elif record.mode == GameRound.Mode.SELECT:
@@ -833,6 +834,30 @@ def game_answer(request, round_id):
             return JsonResponse(dict(extra, round=str(fresh.id), item=_item_payload(fresh, first)))
         return JsonResponse(dict(_finish(rnd), **extra))
     return JsonResponse(dict(extra, item=_item_payload(rnd, nxt)))
+
+
+def _verified_names(record, item):
+    """
+    For Back (#424): each validated beetle just answered in Identification or Similarity, in the order shown, with its
+    true name and how reliable that name is, e.g. [{"name": "Xyleborus affinis", "rank": "species", "tier": "Taxonomist
+    ID"}] (None for a beetle not validated). Empty when none is validated (Back then shows what other players said) and
+    in the grid games, whose answer already names them.
+    """
+    if record.mode == GameRound.Mode.CLASSIFY:
+        rois = [record.roi]
+    elif record.mode == GameRound.Mode.PAIR:
+        rois = [record.roi_b, record.roi] if item.get("flip") else [record.roi, record.roi_b]
+    else:
+        return []
+    out = []
+    for roi in rois:
+        if roi is None or not game_scoring.is_truth(roi):
+            out.append(None)
+            continue
+        t = roi.taxon
+        name, rank = (f"{t.genus} {t.species}", "species") if t.genus and t.species else (t.genus, "genus")
+        out.append({"name": name, "rank": rank, "tier": roi.get_label_source_display() or "Verified"})
+    return out if any(out) else []
 
 
 def _odd_reveal(item, tiles):

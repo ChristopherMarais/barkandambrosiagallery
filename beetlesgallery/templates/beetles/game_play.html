@@ -384,14 +384,15 @@
   <!-- Back: your last beetle and what you answered (it is saved; this is to look, not to change it) -->
   <div id="previous" class="hidden absolute inset-0 z-10 bg-white flex flex-col" data-testid="previous">
     <div class="flex items-center gap-2 px-2 h-14 border-b border-gray-200">
-      <button type="button" id="close-previous" class="icon-btn" aria-label="Back to the current beetle"><i class="fi fi-rr-cross text-lg"></i></button>
+      <button type="button" id="close-previous" class="icon-btn" aria-label="Current beetle"><i class="fi fi-rr-cross text-lg"></i></button>
       <h2 class="font-semibold text-gray-900">Your last beetle</h2>
     </div>
     <div id="previous-photos" class="flex-1 min-h-0 flex items-center justify-center gap-2 p-2 bg-gray-100"></div>
     <div class="p-4 space-y-2">
       <p class="text-gray-900"><span class="text-gray-500">You said:</span> <strong id="previous-answer"></strong></p>
+      <p id="previous-truth" class="text-sm text-gray-900" data-testid="previous-truth"></p>
       <p id="previous-community" class="text-sm text-gray-600"></p>
-      <button type="button" id="previous-done" class="w-full h-12 rounded-xl font-semibold text-white bg-gray-600">Back to the current beetle</button>
+      <button type="button" id="previous-done" class="w-full h-12 rounded-xl font-semibold text-white bg-gray-600">Current beetle</button>
     </div>
   </div>
 
@@ -1144,7 +1145,7 @@
       if (data.prefs) renderPrefs(data.prefs);   // a new level: its unlocks show (and work) straight away
       (data.events || []).forEach(toast);
       showCommunity(data.community);
-      rememberPrevious(answeredItem, extra, data.community, data.reveal);
+      rememberPrevious(answeredItem, extra, data.community, data.reveal, data.verified);
       bumpCombo(!extra.skipped && extra.pair_answer !== "unsure");
       if (data.reveal) await (answeredItem.mode === "select" ? revealSelect(data.reveal) : revealOdd(data.reveal, extra));
       if (data.done) {
@@ -1225,8 +1226,8 @@
     const names = RANKS.map((r) => extra[r]).filter(Boolean);
     return names.length ? names.join(" › ") : "Skipped";
   }
-  function rememberPrevious(it, extra, community, reveal) {
-    previous = { item: it, answer: describeAnswer(extra), community, reveal, pick: extra.pick, picks: extra.picks || [] };
+  function rememberPrevious(it, extra, community, reveal, verified) {
+    previous = { item: it, answer: describeAnswer(extra), community, reveal, verified: verified || [], pick: extra.pick, picks: extra.picks || [] };
     if (reveal && extra.pick !== undefined && extra.pick === reveal.odd) previous.answer = "The odd one";
     $("back").disabled = false;
   }
@@ -1255,6 +1256,17 @@
       if (previous.item.images.length === 2) canvas.title = i === 0 ? "A" : "B";
     });
     $("previous-answer").textContent = previous.answer;
+    // A validated beetle: its true name and how reliable it is (#424), "A: ... · B: ..." for the two of Similarity
+    const truth = [];
+    previous.verified.forEach((v, i) => {
+      if (truth.length) truth.push(document.createElement("br"));
+      const label = previous.verified.length > 1 ? (i === 0 ? "A: " : "B: ") : "Verified: ";
+      if (!v) { truth.push(label + "not verified yet"); return; }
+      const name = document.createElement(v.rank === "species" || v.rank === "genus" ? "em" : "span");
+      name.textContent = v.name;
+      truth.push(label, name, " · " + v.tier);
+    });
+    $("previous-truth").replaceChildren(...truth);
     $("previous-community").textContent = previous.community ? previous.community.text || "" : "";
     if (odd && previous.reveal) {
       $("previous-community").replaceChildren(...(previous.item.mode === "select"
