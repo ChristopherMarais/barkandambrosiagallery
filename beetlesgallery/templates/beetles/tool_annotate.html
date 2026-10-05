@@ -941,11 +941,11 @@ async function loadAnnotatedImages(append = false) {
     const newImages = data.results || [];
 
     if (data.stats && !append) {
-        document.getElementById('stat-img-val').textContent = data.stats.images_validated;
-        document.getElementById('stat-img-unval').textContent = data.stats.images_unvalidated;
-        document.getElementById('stat-img-empty').textContent = data.stats.images_no_bbox;
-        document.getElementById('stat-roi-val').textContent = data.stats.rois_validated;
-        document.getElementById('stat-roi-unval').textContent = data.stats.rois_unvalidated;
+        document.getElementById('stat-img-val').textContent = digitGroupsText(data.stats.images_validated);
+        document.getElementById('stat-img-unval').textContent = digitGroupsText(data.stats.images_unvalidated);
+        document.getElementById('stat-img-empty').textContent = digitGroupsText(data.stats.images_no_bbox);
+        document.getElementById('stat-roi-val').textContent = digitGroupsText(data.stats.rois_validated);
+        document.getElementById('stat-roi-unval').textContent = digitGroupsText(data.stats.rois_unvalidated);
         document.getElementById('filter-stats').classList.remove('hidden');
     }
     
@@ -1012,7 +1012,7 @@ function renderImageList(imagesToRender, append = false) {
       </div>
       <div class="flex-shrink-0">
         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${img.annotation_count === 0 ? 'bg-gray-100 text-gray-600 border border-gray-200' : (img.has_unvalidated_boxes ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-green-100 text-green-800 border border-green-200')} shadow-sm" title="ROIs">
-          ${img.annotation_count}
+          ${digitGroupsText(img.annotation_count)}
         </span>
       </div>
     `;
@@ -1123,7 +1123,7 @@ async function selectImage(img) {
     state.bboxes = data.results || data;
     await loadGameProposals(img.image_asset_id);
     
-    document.getElementById('tab-bbox-count').textContent = state.bboxes.length;
+    document.getElementById('tab-bbox-count').textContent = digitGroupsText(state.bboxes.length);
     
     // Completely re-render the ROI Accordion list for the new image
     renderRoiAccordions();
@@ -1425,9 +1425,9 @@ function gameTipText(t) {
   const name = t.rank === 'species' || t.rank === 'genus' ? `<i>${escHtml(t.value)}</i>` : escHtml(t.value);
   if (t.kind === 'not') {
     const who = t.experts ? 'Experts and players are' : 'Players are';
-    return `${who} confident it is <b>not</b> in ${t.rank} ${name} <span class="text-gray-400">(${t.count} said so${t.against ? `, ${t.against} disagreed` : ''})</span>`;
+    return `${who} confident it is <b>not</b> in ${t.rank} ${name} <span class="text-gray-400">(${digitGroupsText(t.count)} said so${t.against ? `, ${digitGroupsText(t.against)} disagreed` : ''})</span>`;
   }
-  const who = t.kind === 'expert' ? `Expert${t.count > 1 ? 's' : ''} say` : `${t.count} reliable players say`;
+  const who = t.kind === 'expert' ? `Expert${t.count > 1 ? 's' : ''} say` : `${digitGroupsText(t.count)} reliable players say`;
   const clash = t.conflicts ? ` <span class="text-amber-800">· the current label says ${escHtml(t.current)}</span>` : '';
   return `${who} ${t.rank} <b>${name}</b> <span class="text-gray-400">(${Math.round(t.support * 100)}%)</span>${clash}`;
 }
@@ -1948,7 +1948,7 @@ async function deleteBoxUi(idx) {
     }
     
     state.bboxes.splice(idx, 1);
-    document.getElementById('tab-bbox-count').textContent = state.bboxes.length;
+    document.getElementById('tab-bbox-count').textContent = digitGroupsText(state.bboxes.length);
     
     const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
     if(currentIndex > -1) {
@@ -2359,7 +2359,7 @@ async function onMouseUp(e) {
       .then(async (newBox) => {
         // 4. Once the server responds, seamlessly swap the temp box with the real database box
         state.bboxes[tempIndex] = newBox;
-        document.getElementById('tab-bbox-count').textContent = state.bboxes.length;
+        document.getElementById('tab-bbox-count').textContent = digitGroupsText(state.bboxes.length);
         
         const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
         if (currentIndex > -1) {
