@@ -165,7 +165,7 @@ if proven experts (or a trusted model) name that rank and you match them:
   <section id="rating" class="mb-10 space-y-3 text-gray-700">
     <h2 class="text-xl font-semibold text-gray-900">Reliability, levels and experts</h2>
     <ul class="list-disc pl-5 text-sm space-y-1">
-      <li><b>Reliability (rating)</b> is the lower end of a Wilson interval on how often the player is correct, rank by rank, the first time they see each validated beetle. A few lucky answers don't make anyone an authority: the rating rises only with many correct answers. Select all is left out of it for now.</li>
+      <li><b>Reliability (rating)</b> is the lower end of a Wilson interval on how often the player is correct, rank by rank, the first time they see each validated beetle. A few lucky answers don't make anyone an authority: the rating rises only with many correct answers. A Select all grid counts once, as correct only when perfect.</li>
       <li><b>Levels</b> need points <em>and</em> a rating (none at levels 1–2, 35% at 3, rising to 92% at the top), so the top levels are kept only while answers stay good.</li>
       <li><b>Experts</b> in a taxon have answered {{ v.GAME_TRUST_IMAGES_PER_SPECIES }} validated images of every species in it (at least {{ v.GAME_TRUST_MIN_JUDGED }} in all) and been correct at least {{ v.GAME_TRUST_MIN_ACCURACY|floatformat:"-2" }} of the time, and are among the top {{ v.GAME_EXPERT_PERCENTILE|floatformat:"-2" }} of players by rating. Their agreeing labels go to curators as trusted suggestions; when two such experts agree on a beetle with no name, it is written in as an Expert ID, still unvalidated for a curator to confirm.</li>
     </ul>

@@ -1190,7 +1190,7 @@ def player_reliability(player_ids=None):
     accuracy as they answer more checks.
     """
     out = defaultdict(dict)
-    qs = GameAnswer.objects.filter(is_check=True, is_retry=False).exclude(mode="select")   # see game_scoring.ratings
+    qs = GameAnswer.objects.filter(is_check=True, is_retry=False)   # a Select all grid counts once (game_scoring.ratings)
     if player_ids is not None:
         qs = qs.filter(player_id__in=list(player_ids))
     for row in qs.values("player", "mode").annotate(**_rank_counts()):
