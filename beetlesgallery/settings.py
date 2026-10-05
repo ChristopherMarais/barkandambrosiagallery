@@ -236,6 +236,10 @@ GAME_MIN_JUDGED_FOR_ACCURACY = 10     # judged ranks needed before an accuracy i
 GAME_REPORT_MIN_JUDGED = 5            # scored answers before a group shows on a player's report
 GAME_RESUME_HOURS = 12                # an unfinished round is picked up again within this time
 
+# Focus: an unvalidated beetle counts as in the focus taxon when the species classifier gives it at least this much
+# confidence at the focus rank (#375). The player is never told why a beetle was chosen.
+GAME_FOCUS_AI_MIN = {"subfamily": 0.6, "tribe": 0.6, "genus": 0.5}
+
 # Item difficulty (0 easy .. 1 hard): the target starts low and rises with every round
 GAME_DIFFICULTY_START = 0.15
 GAME_DIFFICULTY_PER_ROUND = 0.005

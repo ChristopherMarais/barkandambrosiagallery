@@ -323,14 +323,37 @@ def _focused(qs, focus):
     return qs.filter(**{f"taxon__{focus[0]}__iexact": focus[1]}) if focus else qs
 
 
+def _focused_open(qs, focus):
+    """
+    Unvalidated beetles in the focus (#375, #340): named in it, or placed in it by the species classifier, whose
+    prediction for the focus rank is the focus taxon with at least GAME_FOCUS_AI_MIN confidence at that rank. Where
+    an upload gave no confidence for that rank, the top species' own confidence counts: a lower bound for its genus,
+    tribe and subfamily. Players are never told why a beetle was chosen, so the model's guess doesn't anchor them.
+    """
+    from .models import ModelPrediction
+
+    if not focus:
+        return qs
+    rank, value = focus
+    least = game_setting("GAME_FOCUS_AI_MIN", {"subfamily": 0.6, "tribe": 0.6, "genus": 0.5}).get(rank, 0.6)
+    said = Q(**{f"rank_confidence__{rank}__value__iexact": value, f"rank_confidence__{rank}__confidence__gte": least})
+    top_species = Q(**{f"taxon__{rank}__iexact": value, "confidence__gte": least})
+    predicted = ModelPrediction.objects.filter(said | top_species).values("roi_id")
+    return qs.filter(Q(**{f"taxon__{rank}__iexact": value}) | Q(id__in=predicted))
+
+
 def pools(player):
     """
-    The beetles to choose from: (validated, not validated). With a focus, only that part of the tree, as long as it
-    has beetles left in both pools; otherwise everything, so the feed never runs dry because of a focus.
+    The beetles to choose from: (validated, not validated). With a focus, only that part of the tree: validated
+    beetles by their name, unvalidated ones by their name or the classifier's (_focused_open). A round tops up from
+    the other pool when one runs short (_fill); only when both are empty does it fall back to everything, so the
+    feed never runs dry because of a focus.
     """
     focus = player_focus(player)
-    checks, opens = _focused(check_rois(), focus), _focused(open_rois(), focus)
-    if focus and not (checks.exists() and opens.exists()):
+    if not focus:
+        return check_rois(), open_rois()
+    checks, opens = _focused(check_rois(), focus), _focused_open(open_rois(), focus)
+    if not (checks.exists() or opens.exists()):
         return check_rois(), open_rois()
     return checks, opens
 
