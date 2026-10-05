@@ -62,21 +62,23 @@
   {% endif %}
 
   <!-- Everything else, one tap away -->
-  <nav class="grid gap-2 mb-6 text-center text-xs font-medium text-gray-700" style="grid-template-columns: repeat(5, minmax(0, 1fr))" aria-label="More">
-    <a href="{% url 'game_leaderboard' %}" class="py-3 rounded-2xl border border-gray-200 hover:bg-gray-50"><i class="fi fi-rr-trophy block text-xl text-gray-600"></i>Leader&shy;board</a>
+  <nav class="grid gap-2 mb-6 text-center text-xs font-medium text-gray-700" style="grid-template-columns: repeat({% if hide_boards %}4{% else %}5{% endif %}, minmax(0, 1fr))" aria-label="More">
+    {% if not hide_boards %}<a href="{% url 'game_leaderboard' %}" class="py-3 rounded-2xl border border-gray-200 hover:bg-gray-50"><i class="fi fi-rr-trophy block text-xl text-gray-600"></i>Leader&shy;board</a>{% endif %}
     <a href="{% url 'game_unlocks' %}" class="py-3 rounded-2xl border border-gray-200 hover:bg-gray-50"><i class="fi fi-rr-unlock block text-xl text-gray-600"></i>Unlocks</a>
     <a href="{% url 'game_expertise' %}" class="py-3 rounded-2xl border border-gray-200 hover:bg-gray-50"><i class="fi fi-rr-sitemap block text-xl text-gray-600"></i>Expertise</a>
     <a href="{% url 'game_profile' user.id %}" class="py-3 rounded-2xl border border-gray-200 hover:bg-gray-50"><i class="fi fi-rr-medal block text-xl text-gray-600"></i>Badges</a>
     <a href="{% url 'game_history' %}" class="py-3 rounded-2xl border border-gray-200 hover:bg-gray-50" data-testid="history-link"><i class="fi fi-rr-time-past block text-xl text-gray-600"></i>History</a>
   </nav>
 
-  <div class="mb-6">
+  {% if not hide_boards %}
+  <div class="mb-6" data-testid="home-board">
     <div class="flex items-baseline justify-between mb-2">
       <h2 class="text-lg font-semibold text-gray-900">Top players {% if board_period == 'week' %}this week{% else %}of all time{% endif %}</h2>
       <a href="{% url 'game_leaderboard' %}" class="text-sm underline text-gray-600 hover:text-gray-900">All</a>
     </div>
     {% include "beetles/includes/game_board_table.html" with rows=board %}
   </div>
+  {% endif %}
 
   <!-- Share: anyone can scan this off your screen to join (they sign up or sign in, then land here) -->
   <section class="mb-6 p-5 bg-white border border-gray-200 rounded-2xl text-center" data-testid="share-qr">
