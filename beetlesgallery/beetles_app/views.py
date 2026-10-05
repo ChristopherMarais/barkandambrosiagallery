@@ -33,6 +33,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.files.storage import default_storage
 from django.core.management import call_command
 
+from . import chunked_upload
 from .areas import ANNOTATE, BOXES, DETAILS, DOWNLOAD, SPECIES, UPLOAD, INTERACTIONS, AREAS, area_required, has_area
 from .csv_columns import modern_columns
 from .models import Beetles, UploadBatch, DownloadJob, UpdateBatch, ImageAsset
@@ -325,6 +326,14 @@ def upload_file(request):
     # --- require both files present ---
     csv_file = request.FILES.get("csv_file") or request.FILES.get("csv")
     zipf = request.FILES.get("zip")
+    # A big ZIP arrives in pieces first (chunked_upload.py) and the form names it by its upload id
+    chunked_id = request.POST.get("zip_upload_id")
+    if not zipf and chunked_id:
+        zipf = chunked_upload.take(request.user, chunked_id, request.POST.get("zip_total"),
+                                   name=os.path.basename(request.POST.get("zip_name") or "images.zip"))
+        if zipf is None:
+            messages.error(request, "The images ZIP did not arrive completely. Please upload it again.")
+            return redirect("data_management")
 
     print(f"DEBUG: Resolved csv_file: {csv_file}, zipf: {zipf}", flush=True)
 
@@ -385,6 +394,9 @@ def upload_file(request):
     # Saving will use your upload_to=staging_upload_path_csv/zip and name them <batch-id>.(csv|zip)
     batch.file.save(csv_file.name, csv_file, save=False)
     batch.zip_file.save(zipf.name, zipf, save=False)
+    if chunked_id and not request.FILES.get("zip"):
+        zipf.close()
+        chunked_upload.discard(request.user, chunked_id)   # it now lives with the batch
     batch.size_bytes = csv_file.size or 0
     # Compute checksum of the CSV (used by your existing admin display)
     try:
@@ -1081,6 +1093,7 @@ def data_management(request):
             "described_names_ref_status": described_names_ref_status,
             "initial_archives": initial_archives,
             "initial_current": initial_current,
+            "chunk_bytes": chunked_upload.CHUNK_BYTES,
         }
     )
 

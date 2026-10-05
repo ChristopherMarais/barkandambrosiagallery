@@ -8,6 +8,7 @@ from django.http import Http404
 from django.views.static import serve
 
 from beetlesgallery.beetles_app import views as beetles_views
+from beetlesgallery.beetles_app import chunked_upload
 from beetlesgallery.beetles_app import game_views
 from beetlesgallery.beetles_app import site_notice
 from beetlesgallery.beetles_app import interaction_views
@@ -66,6 +67,7 @@ urlpatterns = [
 
     # --- Tools ---
     path('upload/', beetles_views.upload_file, name='upload'),
+    path('upload/chunk/', chunked_upload.upload_chunk, name='upload_chunk'),
     path("my-uploads/", beetles_views.data_management, name="data_management"),
     path("events/", beetles_views.stream_updates, name="stream_updates"),
     path("downloads/start/", beetles_views.start_batch_download, name="start_batch_download"),

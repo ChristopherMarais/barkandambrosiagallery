@@ -61,41 +61,11 @@
   </script>
 
   <script>
-    (function () {
-      // Configuration
-      const DIRECT_HOST = "direct.barkandambrosiagallery.org";
-      const MAIN_HOST = "barkandambrosiagallery.org";
-
-      // If the user is currently on the 'direct' (insecure) server...
-      if (window.location.hostname === DIRECT_HOST) {
-
-        const path = window.location.pathname;
-
-        // Define which pages are ALLOWED to stay on the direct server.
-        // We allow Uploads, Updates, and Account/Admin pages (to prevent login loops).
-        const allowedPaths = [
-          "/upload",
-          "/updates",
-          "/accounts",
-          "/my-uploads",
-          "/admin"
-        ];
-
-        let isAllowed = false;
-        for (let p of allowedPaths) {
-          if (path.startsWith(p)) {
-            isAllowed = true;
-            break;
-          }
-        }
-
-        // If the user is viewing image_browser, Gallery, or My Files on the direct server...
-        if (!isAllowed) {
-          // ...force them back to the secure main domain.
-          window.location.href = "https://" + MAIN_HOST + path;
-        }
-      }
-    })();
+    // Big uploads now go through Cloudflare in pieces, so the old direct. address is no longer used:
+    // anyone who still opens it is sent to the same page on the main site.
+    if (window.location.hostname === "direct.barkandambrosiagallery.org") {
+      window.location.replace("https://barkandambrosiagallery.org" + window.location.pathname + window.location.search);
+    }
   </script>
 
   <style>

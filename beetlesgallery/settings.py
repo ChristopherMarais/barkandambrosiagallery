@@ -266,6 +266,8 @@ MAX_UPLOAD_TOTAL_BYTES = 2 * 1024 * 1024 * 1024  # CSV + ZIP together; keep in s
 DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 FILE_UPLOAD_TEMP_DIR = MEDIA_ROOT / "tmp_uploads"
+# Big files are uploaded in pieces of this size (beetles_app/chunked_upload.py): Cloudflare refuses requests over 100 MB
+UPLOAD_CHUNK_BYTES = int(os.environ.get("UPLOAD_CHUNK_BYTES", 50 * 1024 * 1024))
 # How long files that are no longer needed stay on disk (beetles_app/storage_cleanup.py, run nightly)
 DOWNLOAD_RETENTION_DAYS = 14   # a finished download can be fetched for this long, then it is rebuilt on request
 UPLOAD_ZIP_KEEP_DAYS = 7       # an imported upload's ZIP, once every image in it is in the gallery

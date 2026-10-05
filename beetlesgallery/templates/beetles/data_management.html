@@ -14,19 +14,6 @@
 {% endblock %}
 
 {% block content %}
-<script>
-  // Configuration: The direct subdomain that bypasses Cloudflare
-  const DIRECT_HOST = "direct.barkandambrosiagallery.org";
-  const CURRENT_HOST = window.location.hostname;
-
-  // If we are not on localhost and not already on the direct subdomain...
-  if (CURRENT_HOST !== 'localhost' && CURRENT_HOST !== '127.0.0.1' && CURRENT_HOST !== DIRECT_HOST) {
-    // Redirect to the direct subdomain.
-    // NOTE: Using http because 'direct' bypasses Cloudflare's SSL. 
-    // If you haven't installed Certbot/Let's Encrypt on the server, https will fail.
-    window.location.href = "http://" + DIRECT_HOST + window.location.pathname;
-  }
-</script>
 
 <section class="relative z-0">
 
@@ -542,7 +529,7 @@
     <div
       class="relative w-full max-w-md transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all">
       {# Added ID to form for JS targeting #}
-      <form id="form-upload-new" data-max-bytes="2147483648" action="{% url 'upload' %}" method="post" enctype="multipart/form-data">
+      <form id="form-upload-new" data-max-bytes="2147483648" data-chunk-input="zip" action="{% url 'upload' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
           <div class="block">
@@ -1066,6 +1053,17 @@
     return Math.max(1, Math.round(bytes / 1024)) + ' KB';
   }
 
+  // Big files are sent in pieces (beetles_app/chunked_upload.py)
+  const CHUNK_URL = "{% url 'upload_chunk' %}";
+  const CHUNK_BYTES = {{ chunk_bytes }};
+  function newUploadId() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    const b = crypto.getRandomValues(new Uint8Array(16));
+    b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
+    const h = Array.from(b, function (x) { return x.toString(16).padStart(2, '0'); }).join('');
+    return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
+  }
+
   function attachUploadHandler(formId, progressContainerId, progressBarId, progressTextId, submitBtnId) {
     const form = document.getElementById(formId);
     if (!form) return;
@@ -1143,76 +1141,129 @@
       submitBtn.disabled = true;
       startDots('Uploading');
 
-      // AJAX Request
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', form.action, true);
-      xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+      // The form itself (and, for a big file, its upload id instead of the file)
+      function sendForm() {
+        // AJAX Request
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', form.action, true);
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
 
-      // Progress Event
-      xhr.upload.onprogress = function (e) {
-        if (!e.lengthComputable) return;
-        const percent = Math.round((e.loaded / e.total) * 100);
-        progressBar.style.width = percent + '%';
+        // Progress Event
+        xhr.upload.onprogress = function (e) {
+          if (!e.lengthComputable) return;
+          const percent = Math.round((e.loaded / e.total) * 100);
+          progressBar.style.width = percent + '%';
 
-        if (e.loaded < e.total) {
-          progressBar.classList.remove('upload-working');
-          progressText.innerText =
-            'Uploading: ' + percent + '% (' + formatBytes(e.loaded) + ' of ' + formatBytes(e.total) + ')';
-        } else {
-          // Everything has been sent; the server is now saving and checking the files.
-          progressBar.classList.add('upload-working');
-          progressText.innerText = 'Upload complete. Processing on the server, this can take a few minutes...';
-          startDots('Processing');
-        }
-      };
+          if (e.loaded < e.total) {
+            progressBar.classList.remove('upload-working');
+            progressText.innerText =
+              'Uploading: ' + percent + '% (' + formatBytes(e.loaded) + ' of ' + formatBytes(e.total) + ')';
+          } else {
+            // Everything has been sent; the server is now saving and checking the files.
+            progressBar.classList.add('upload-working');
+            progressText.innerText = 'Upload complete. Processing on the server, this can take a few minutes...';
+            startDots('Processing');
+          }
+        };
 
-      // Completion Handler
-      xhr.onload = function () {
-        if (xhr.status === 413) {
-          showError('The server rejected the upload because it is too large.' + (maxBytes ? ' Uploads here must be under ' + formatBytes(maxBytes) + '.' : ''));
-          return;
-        }
-        if (xhr.status === 200) {
-          try {
-            // Try to parse JSON response
-            const response = JSON.parse(xhr.responseText);
-            if (response.success) {
-              // Success: Reload page to show new data
+        // Completion Handler
+        xhr.onload = function () {
+          if (xhr.status === 413) {
+            showError('The server rejected the upload because it is too large.' + (maxBytes ? ' Uploads here must be under ' + formatBytes(maxBytes) + '.' : ''));
+            return;
+          }
+          if (xhr.status === 200) {
+            try {
+              // Try to parse JSON response
+              const response = JSON.parse(xhr.responseText);
+              if (response.success) {
+                // Success: Reload page to show new data
+                window.location.reload();
+              } else {
+                // Server returned success status but indicated failure
+                showError('Error: ' + (response.error || 'Unknown error'));
+              }
+            } catch (err) {
+              // Not JSON: the view redirected back here with a message; reload to show it
               window.location.reload();
-            } else {
-              // Server returned success status but indicated failure
-              showError('Error: ' + (response.error || 'Unknown error'));
             }
-          } catch (err) {
-            // Not JSON: the view redirected back here with a message; reload to show it
-            window.location.reload();
-          }
-        } else {
-          // Error status code
-          let errorMsg = 'Server Error: ' + xhr.status;
-          try {
-            const response = JSON.parse(xhr.responseText);
-            if (response.error) {
-              errorMsg = response.error;
+          } else {
+            // Error status code
+            let errorMsg = 'Server Error: ' + xhr.status;
+            try {
+              const response = JSON.parse(xhr.responseText);
+              if (response.error) {
+                errorMsg = response.error;
+              }
+            } catch (err) {
+              // Couldn't parse error response
             }
-          } catch (err) {
-            // Couldn't parse error response
+            showError(errorMsg);
           }
-          showError(errorMsg);
+        };
+
+        xhr.onerror = function () {
+          showError('Network error. The upload did not finish.' + (maxBytes ? ' If the file is large, check it is under ' + formatBytes(maxBytes) + '.' : ''));
+        };
+        xhr.ontimeout = function () {
+          showError('The upload timed out. Please try again.');
+        };
+        xhr.onabort = function () {
+          showError('The upload was cancelled.');
+        };
+
+        xhr.send(formData);
+      }
+
+      // A file named in data-chunk-input goes up first in pieces of CHUNK_BYTES: Cloudflare refuses any single
+      // request over 100 MB, and pieces also survive a dropped connection (each is retried).
+      const chunkName = form.dataset.chunkInput;
+      const chunkInput = chunkName ? form.querySelector('input[name="' + chunkName + '"]') : null;
+      if (chunkInput && chunkInput.files.length) {
+        const file = chunkInput.files[0];
+        sendInPieces(file).then(function (uploadId) {
+          formData.delete(chunkName);
+          formData.append(chunkName + '_upload_id', uploadId);
+          formData.append(chunkName + '_total', file.size);
+          formData.append(chunkName + '_name', file.name);
+          sendForm();
+        }).catch(function (err) {
+          showError((err && err.message) || 'The upload did not finish. Please try again.', idleLabel);
+        });
+      } else {
+        sendForm();
+      }
+
+      async function sendInPieces(file) {
+        const uploadId = newUploadId();
+        const csrf = form.querySelector('input[name="csrfmiddlewaretoken"]').value;
+        for (let offset = 0; offset < file.size; offset += CHUNK_BYTES) {
+          const body = new FormData();
+          body.append('upload_id', uploadId);
+          body.append('offset', offset);
+          body.append('total', file.size);
+          body.append('chunk', file.slice(offset, offset + CHUNK_BYTES), 'chunk');
+          for (let attempt = 1; ; attempt++) {
+            try {
+              const res = await fetch(CHUNK_URL, { method: 'POST', body: body,
+                headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest' } });
+              const data = await res.json().catch(function () { return {}; });
+              if (!res.ok) throw new Error(data.error || ('Server error ' + res.status));
+              break;
+            } catch (err) {
+              if (attempt >= 3) throw err;
+              progressText.innerText = 'Connection hiccup, trying that piece again...';
+              await new Promise(function (r) { setTimeout(r, 2000 * attempt); });
+            }
+          }
+          const sent = Math.min(file.size, offset + CHUNK_BYTES);
+          const percent = Math.round((sent / file.size) * 100);
+          progressBar.classList.remove('upload-working');
+          progressBar.style.width = percent + '%';
+          progressText.innerText = 'Uploading images: ' + percent + '% (' + formatBytes(sent) + ' of ' + formatBytes(file.size) + ')';
         }
-      };
-
-      xhr.onerror = function () {
-        showError('Network error. The upload did not finish.' + (maxBytes ? ' If the file is large, check it is under ' + formatBytes(maxBytes) + '.' : ''));
-      };
-      xhr.ontimeout = function () {
-        showError('The upload timed out. Please try again.');
-      };
-      xhr.onabort = function () {
-        showError('The upload was cancelled.');
-      };
-
-      xhr.send(formData);
+        return uploadId;
+      }
     });
   }
 
