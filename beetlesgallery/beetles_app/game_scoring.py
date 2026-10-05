@@ -55,6 +55,7 @@ up or down (recompute, run for a player when they leave the game and for everyon
 import math
 import uuid
 from collections import defaultdict
+from collections.abc import Mapping
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, connection, transaction
@@ -66,9 +67,29 @@ from . import game, game_reference
 from .game import PAIR_DEPTH, RANKS, game_setting
 from .models import AnswerPoints, Beetles, GameAnswer, PlayerScore, RetroCredit
 
-RANK_POINTS = {"subfamily": 1.0, "tribe": 2.0, "genus": 4.0, "species": 8.0}
+class _Points(Mapping):
+    """A points table read from its game setting each time (a superuser can tune it on the Scoring page)."""
+
+    def __init__(self, name, default, convert=lambda k: k):
+        self.name, self.default, self.convert = name, default, convert
+
+    def _table(self):
+        stored = game_setting(self.name, None) or {}
+        return {k: float(stored.get(str(k), v)) for k, v in self.default.items()}
+
+    def __getitem__(self, key):
+        return self._table()[key]
+
+    def __iter__(self):
+        return iter(self.default)
+
+    def __len__(self):
+        return len(self.default)
+
+
+RANK_POINTS = _Points("GAME_POINTS_RANK", {"subfamily": 1.0, "tribe": 2.0, "genus": 4.0, "species": 8.0})
 # Family Ties: points for the right answer, by how related the two beetles really are (-1 = different subfamilies)
-PAIR_POINTS = {-1: 1.0, 0: 2.0, 1: 3.0, 2: 5.0, 3: 5.0}
+PAIR_POINTS = _Points("GAME_PAIR_POINTS", {-1: 1.0, 0: 2.0, 1: 3.0, 2: 5.0, 3: 5.0})
 DEPTH_NAME = {-1: "different subfamilies", 0: "same subfamily", 1: "same tribe", 2: "same genus", 3: "same species"}
 
 
@@ -343,7 +364,7 @@ def agreement(player_id, claims, votes, judges):
         for judge_id, labels in votes:
             if rank not in labels:
                 continue
-            w = judges.weight(judge_id, player_id, rank, labels)
+            w = judges.weight(judge_id, player_id, rank, labels) * getattr(labels, "weight", 1.0)
             if not w:
                 continue
             if labels[rank].strip().lower() == value.strip().lower():
@@ -466,6 +487,9 @@ def votes_on(roi_ids):
         labels = game.implied_labels(ans)
         if labels:
             latest[(ans.roi_id, ans.player_id)] = labels
+    # Select all taps count too, a little less than a name (game.tap_votes), unless the player also named it
+    for roi_id, pid, vote in game.tap_votes(roi_ids):
+        latest.setdefault((roi_id, pid), vote)
     out = defaultdict(list)
     for (roi_id, pid), labels in latest.items():
         out[roi_id].append((pid, labels))

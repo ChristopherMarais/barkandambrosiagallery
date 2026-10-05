@@ -40,6 +40,11 @@ PAIR_DEPTH = {"different": -1, "subfamily": 0, "tribe": 1, "genus": 2, "species"
 
 
 def game_setting(name, default):
+    """A game setting: a superuser's override from the Scoring page (game_tuning), else settings.py, else ``default``."""
+    from .game_tuning import overrides
+    found = overrides()
+    if name in found:
+        return found[name]
     return getattr(settings, name, default)
 
 
@@ -1210,14 +1215,83 @@ def default_weight():
 # ---------------------------------------------------------------------------
 # Consensus on unvalidated ROIs
 # ---------------------------------------------------------------------------
+class Vote(dict):
+    """A player's {rank: value} for one beetle, with how much it counts: 1 for a name, less for a Select all tap."""
+
+    def __init__(self, labels, weight=1.0):
+        super().__init__(labels)
+        self.weight = weight
+
+
+def tap_weight():
+    """How much a Select all tap counts towards a beetle's name, against a direct identification (GAME_SELECT_TAP_WEIGHT)."""
+    return float(game_setting("GAME_SELECT_TAP_WEIGHT", 0.8))
+
+
+def showing(roi_ids):
+    """Q for grid answers whose grid showed any of these beetles."""
+    q = Q(pk__in=[])
+    for rid in {str(r) for r in roi_ids}:
+        q |= Q(tiles__contains=[rid])
+    return q
+
+
+def tap_votes(roi_ids=None, voters=None):
+    """
+    [(roi_id, player_id, Vote)] from Select all grids: tapping a beetle nobody has validated says it is in the grid's
+    group, down to the grid's rank (e.g. tribe Xyleborini and genus Xyleborus). Each counts tap_weight() of a name.
+    """
+    answers = GameAnswer.objects.filter(mode="select", skipped=False).exclude(picks=[])
+    if roi_ids is not None:
+        answers = answers.filter(showing(roi_ids))
+    if voters is not None:
+        answers = answers.filter(player_id__in=list(voters))
+    rows, wanted = [], {str(r) for r in roi_ids} if roi_ids is not None else None
+    for ans in answers.only("player_id", "tiles", "picks", "grid_rank", "grid_group"):
+        if ans.grid_rank not in RANKS or not ans.grid_group:
+            continue
+        labels = {r: ans.grid_group[r] for r in RANKS[: RANKS.index(ans.grid_rank) + 1] if ans.grid_group.get(r)}
+        for i in ans.picks or []:
+            if isinstance(i, int) and 0 <= i < len(ans.tiles or []) and (wanted is None or ans.tiles[i] in wanted):
+                rows.append((ans.tiles[i], ans.player_id, labels))
+    if not rows:
+        return []
+    open_ids = {str(i) for i in Beetles.objects.filter(id__in={r for r, _, _ in rows}, bbox_is_validated=False)
+                .values_list("id", flat=True)}
+    weight = tap_weight()
+    return [(uuid.UUID(r), pid, Vote(labels, weight)) for r, pid, labels in rows if r in open_ids]
+
+
+def grid_exclusions(answer):
+    """
+    [(roi_id, rank, value)] a grid answer says beetles nobody has validated are *not* in: in Odd One Out the picked
+    beetle is not of the rest's group; in Select all the beetles left untapped are not of the grid's group.
+    """
+    if answer.skipped or answer.mode not in ("odd", "select") or answer.grid_rank not in RANKS or not answer.grid_group:
+        return []
+    value = answer.grid_group.get(answer.grid_rank)
+    if not value:
+        return []
+    if answer.mode == "odd":
+        roi = answer.roi
+        return [(roi.id, answer.grid_rank, value)] if roi is not None and not roi.bbox_is_validated else []
+    picked = set(answer.picks or [])
+    if not picked:   # tapped nothing: says too little about each beetle
+        return []
+    untapped = [t for i, t in enumerate(answer.tiles or []) if i not in picked]
+    open_ids = Beetles.objects.filter(id__in=untapped, bbox_is_validated=False, is_deleted=False).values_list("id", flat=True)
+    return [(rid, answer.grid_rank, value) for rid in open_ids]
+
+
 def implied_labels(answer):
     """
     The rank values an answer on an unvalidated item says the ROI has.
 
     Classify: what the player picked. Pair: the ranks the player says the unvalidated
     ROI shares with its validated partner, taken from the partner's taxon. "Different
-    subfamily" and "not sure" say nothing positive, so they imply nothing, and nor do the grid games (an Odd One Out
-    pick says what a beetle is not; Select all records its taps on unchecked beetles but doesn't use them as names yet).
+    subfamily" and "not sure" say nothing positive, so they imply nothing, and nor does a grid answer here: it is about
+    other beetles than its own ``roi`` (Select all taps count through tap_votes, what a grid says a beetle is not
+    through grid_exclusions).
     Species values are "Genus species".
     """
     if answer.skipped or answer.mode in ("odd", "select"):
@@ -1276,6 +1350,18 @@ def consensus(limit=None, roi_ids=None, voters=None):
         labels = implied_labels(ans)
         if labels:
             entry["votes"].append((ans.player_id, labels))
+    # Select all taps: a little lighter than a name (tap_weight), and never enough for an expert's verdict
+    taps = tap_votes(roi_ids, voters)
+    if taps:
+        tapped = Beetles.objects.select_related("taxon").in_bulk({r for r, _, _ in taps})
+        reliability.update(player_reliability({p for _, p, _ in taps} - set(reliability)))
+        for roi_id, pid, vote in taps:
+            if roi_id not in tapped:
+                continue
+            entry = per_roi.setdefault(roi_id, {"roi": tapped[roi_id], "answers": 0, "players": set(), "votes": []})
+            entry["answers"] += 1
+            entry["players"].add(pid)
+            entry["votes"].append((pid, vote))
 
     results = []
     for entry in per_roi.values():
@@ -1289,7 +1375,7 @@ def consensus(limit=None, roi_ids=None, voters=None):
                 key = labels[r].lower()
                 display.setdefault(key, labels[r])
                 weights = reliability.get(pid, {}).get("all") or default_weight()
-                tally[key] += weights[r]["weight"]
+                tally[key] += weights[r]["weight"] * getattr(labels, "weight", 1.0)
                 count[key] += 1
             if not tally:
                 ranks[r] = None
@@ -1300,7 +1386,7 @@ def consensus(limit=None, roi_ids=None, voters=None):
                 "support": tally[key] / sum(tally.values()),
                 "votes": count[key],
             }
-        verdict = trust.verdict(entry["votes"], ranks)
+        verdict = trust.verdict([(p, l) for p, l in entry["votes"] if getattr(l, "weight", 1.0) == 1.0], ranks)
         for r in RANKS:
             if ranks[r]:
                 ranks[r].update(verdict["ranks"][r])

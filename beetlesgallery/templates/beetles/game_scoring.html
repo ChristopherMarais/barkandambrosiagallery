@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% load beetle_tags %}
+
+{% block title %}Scoring | {{ game_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+  <a href="{% url 'game_review' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Game review</a>
+  <h1 class="page-title">How scoring works</h1>
+  <p class="text-gray-600 mb-6 max-w-3xl">
+    Superusers only. Everything a player gains or loses, why, and the numbers in use right now. The aim: the most
+    points go to answers that are <strong>correct</strong> and <strong>as precise as the player is sure of</strong>,
+    so the game's labels can be trusted. Tune the numbers at the bottom; the checks tell you if a change would start
+    rewarding guessing.
+  </p>
+
+  <nav class="flex flex-wrap gap-2 mb-8 text-sm" aria-label="On this page">
+    <a href="#principles" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Principles</a>
+    <a href="#known" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Validated beetles</a>
+    <a href="#unknown" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Unvalidated beetles</a>
+    <a href="#naming" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Naming confidence</a>
+    <a href="#rating" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Reliability and experts</a>
+    <a href="#examples" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Examples</a>
+    <a href="#checks" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Balance checks</a>
+    <a href="#tune" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Tune</a>
+  </nav>
+
+  <section id="principles" class="mb-10 space-y-3 text-gray-700">
+    <h2 class="text-xl font-semibold text-gray-900">Principles</h2>
+    <ol class="list-decimal pl-5 space-y-2">
+      <li><strong>Correct beats confident.</strong> Each rank named correctly earns points; a wrong rank costs. Going one rank further than you know earns <em>less</em> than stopping, so players stop where they are sure.</li>
+      <li><strong>Precise beats vague,</strong> when correct: species is worth the most, then genus, tribe, subfamily.</li>
+      <li><strong>Not knowing is cheap.</strong> A skip costs less than the smallest mistake (and earns a little in the grid games), so guessing never pays.</li>
+      <li><strong>The truth decides where we have it.</strong> On validated beetles answers are scored against the real name. Players are never told which beetles those are, so they have to try their best on every one.</li>
+      <li><strong>Elsewhere, agreement with strong players.</strong> On unvalidated beetles an answer earns points only when players with a better record (or proven experts, or a model proven in that group) agree. It never costs points there, and it earns less than on validated beetles.</li>
+      <li><strong>Scores follow the truth over time.</strong> When a beetle is validated or its name corrected, every answer on it is re-scored, up or down: when the player leaves the game, every night, or with "Re-score everyone" below.</li>
+      <li><strong>Levels need reliability as well as points,</strong> so playing a lot is not enough to reach the top; being correct is.</li>
+    </ol>
+  </section>
+
+  <section id="known" class="mb-10 space-y-4 text-gray-700">
+    <h2 class="text-xl font-semibold text-gray-900">Validated beetles: scored against the truth</h2>
+
+    <div class="p-4 rounded-xl border border-gray-200">
+      <h3 class="font-semibold text-gray-900 mb-1">Identification (name the beetle)</h3>
+      <p class="text-sm mb-2">Points per rank named correctly: subfamily <b>{{ v.GAME_POINTS_RANK.subfamily|floatformat:"-2" }}</b>, tribe <b>{{ v.GAME_POINTS_RANK.tribe|floatformat:"-2" }}</b>, genus <b>{{ v.GAME_POINTS_RANK.genus|floatformat:"-2" }}</b>, species <b>{{ v.GAME_POINTS_RANK.species|floatformat:"-2" }}</b>, all times the Identification weight <b>×{{ v.GAME_POINTS_CLASSIFY_WEIGHT|floatformat:"-2" }}</b>.</p>
+      <pre class="text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">points = weight × ( Σ points of each correct rank
+                  − overreach × points of the first wrong rank        if a rank above it was correct
+                  − wrong_factor × Σ points of every rank claimed      if even the subfamily is wrong )
+weight = {{ v.GAME_POINTS_CLASSIFY_WEIGHT|floatformat:"-2" }}   overreach = {{ v.GAME_POINTS_OVERREACH|floatformat:"-2" }}   wrong_factor = {{ v.GAME_POINTS_WRONG_FACTOR|floatformat:"-2" }}</pre>
+      <p class="text-sm mt-2">Ranks below the first wrong one cost nothing more: they were wrong because of it. Leaving a rank blank costs nothing.</p>
+    </div>
+
+    <div class="p-4 rounded-xl border border-gray-200">
+      <h3 class="font-semibold text-gray-900 mb-1">Similarity (how related are A and B?)</h3>
+      <pre class="text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">correct rung:          P[true] × (1 + bonus × photo_likeness)
+cautious, true rung:   P[given] × (1 + bonus × photo_likeness)              e.g. "same tribe" for two of one genus
+too close a tie:       P[true] × (…) − overreach × P[true + 1] × rungs_too_far
+related ↔ unrelated:   − step × rungs_off
+P = {{ pair_text }}
+bonus = {{ v.GAME_POINTS_SIMILARITY_BONUS|floatformat:"-2" }}   step = {{ v.GAME_POINTS_PAIR_STEP|floatformat:"-2" }}</pre>
+      <p class="text-sm mt-2">Photo likeness (0 to 1) counts what two photos share: photographer, institution, magnification, country, view. Alike photos are harder to tell apart, so they pay a little more.</p>
+    </div>
+
+    <div class="p-4 rounded-xl border border-gray-200">
+      <h3 class="font-semibold text-gray-900 mb-1">Odd One Out</h3>
+      <pre class="text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">worth   = odd_weight × P[how related the odd one is to the rest]      odd_weight = {{ v.GAME_POINTS_ODD_WEIGHT|floatformat:"-2" }}
+correct = + worth
+wrong   = − odd_wrong × worth                                           odd_wrong = {{ v.GAME_POINTS_ODD_WRONG_FACTOR|floatformat:"-2" }}
+skip    = + {{ v.GAME_POINTS_ODD_SKIP|floatformat:"-2" }}</pre>
+      <p class="text-sm mt-2">With four beetles a blind guess is correct one time in four, so a wrong pick costing more than a third of a correct one makes guessing lose on average. A pick on an unvalidated beetle is scored like a name on it (below): by agreement that it doesn't belong, never negative.</p>
+    </div>
+
+    <div class="p-4 rounded-xl border border-gray-200">
+      <h3 class="font-semibold text-gray-900 mb-1">Select all</h3>
+      <pre class="text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">share  = select_weight × P[the grid's rank] ÷ validated members        select_weight = {{ v.GAME_POINTS_SELECT_WEIGHT|floatformat:"-2" }}
+points = share × ( members tapped − select_wrong × non-members tapped )   select_wrong = {{ v.GAME_POINTS_SELECT_WRONG|floatformat:"-2" }}
+members left out cost nothing; taps on unvalidated beetles are recorded, not scored; skip = + {{ v.GAME_POINTS_ODD_SKIP|floatformat:"-2" }}</pre>
+      <p class="text-sm mt-2">Grids always hold more non-members than members, so tapping everything loses while wrong taps cost more than a member earns.</p>
+    </div>
+
+    <div class="p-4 rounded-xl border border-gray-200 text-sm">
+      <h3 class="font-semibold text-gray-900 mb-1">In every game</h3>
+      <ul class="list-disc pl-5 space-y-1">
+        <li><b>Taking part:</b> every real answer earns +{{ v.GAME_POINTS_PARTICIPATION|floatformat:"-2" }} on top, so the score grows with play.</li>
+        <li><b>Skip</b> in Identification and Similarity costs {{ v.GAME_POINTS_UNSURE|floatformat:"-2" }}; in Odd One Out and Select all it earns {{ v.GAME_POINTS_ODD_SKIP|floatformat:"-2" }}.</li>
+        <li><b>Seen again:</b> a beetle the player got wrong comes back to be learned and earns ×{{ v.GAME_POINTS_RETRY_FACTOR|floatformat:"-2" }}. Only the first time counts towards accuracy.</li>
+        <li><b>Reported:</b> while a player's report on a beetle is open, their answers on it are held (no points either way).</li>
+        <li><b>Score</b> is the running total, never below zero.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="unknown" class="mb-10 space-y-3 text-gray-700">
+    <h2 class="text-xl font-semibold text-gray-900">Unvalidated beetles: scored by agreement</h2>
+    <p class="text-sm">Here nobody knows the answer yet, so a player earns points when stronger players agree with them. It is never negative, so honest answers on hard beetles are never punished.</p>
+    <pre class="text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">for each rank the player named:
+  judge weight  = 1                                        a proven expert for that part of the tree
+                = 1 / (1 + e^−(judge rating − your rating) / spread)   otherwise (spread = {{ v.GAME_RATER_SPREAD|floatformat:"-2" }})
+  c             = (Σ weight agreeing − Σ weight disagreeing) / (Σ all weights + 1)      from −1 to +1
+  points        = cap × P[rank] × max(0, c)                                         cap = {{ v.GAME_POINTS_CONSENSUS_CAP|floatformat:"-2" }}
+if proven experts (or a trusted model) name that rank and you match them:
+  points        = max(points, reference_cap × P[rank])                              reference_cap = {{ v.GAME_POINTS_REFERENCE_CAP|floatformat:"-2" }}
+(Identification answers then × weight {{ v.GAME_POINTS_CLASSIFY_WEIGHT|floatformat:"-2" }})</pre>
+    <ul class="list-disc pl-5 text-sm space-y-1">
+      <li><b>Judges</b> are players with at least {{ v.GAME_RATER_MIN_JUDGED }} answers on validated beetles and a rating at or above the median. Weaker players never move anyone's points.</li>
+      <li>Agreeing with stronger players earns almost full credit; with weaker ones, very little. A stronger player who disagrees cancels out agreement from weaker ones, so a crowd of weak players can't outvote one strong one.</li>
+      <li>The "+1" in c means one judge alone never gives full credit: the more strong players agree, the closer to the cap.</li>
+      <li><b>A trusted model</b> counts only when it is at least {{ v.GAME_REF_MODEL_MIN_CONFIDENCE|floatformat:"-2" }} sure of this beetle <em>and</em> has been correct {{ v.GAME_REF_MODEL_MIN_PRECISION|floatformat:"-2" }} of the time on at least {{ v.GAME_REF_MODEL_MIN_CHECKED }} of its sure calls in that same group.</li>
+      <li>These points move as more people answer, and are replaced by the real score once the beetle is validated. They never count towards accuracy or expertise.</li>
+    </ul>
+  </section>
+
+  <section id="naming" class="mb-10 space-y-4 text-gray-700" data-testid="naming-confidence">
+    <h2 class="text-xl font-semibold text-gray-900">Naming confidence: what a beetle is, and what it is not</h2>
+    <p class="text-sm">Points are for players; this is about the beetles. Every answer on an unvalidated beetle is also evidence about its name, rank by rank. Evidence comes in two kinds.</p>
+
+    <div class="p-4 rounded-xl border border-gray-200 text-sm">
+      <h3 class="font-semibold text-gray-900 mb-2">What it is</h3>
+      <div class="overflow-x-auto"><table class="w-full">
+        <thead class="text-xs uppercase text-gray-500"><tr><th class="text-left pr-3 pb-1">Answer</th><th class="text-left pr-3 pb-1">Says the beetle is</th><th class="text-right pb-1">Counts</th></tr></thead>
+        <tbody class="divide-y divide-gray-100">
+          <tr><td class="pr-3 py-1.5">Identification</td><td class="pr-3">each rank the player named</td><td class="text-right">1 vote</td></tr>
+          <tr><td class="pr-3 py-1.5">Similarity, with a validated partner</td><td class="pr-3">the partner's name down to the rung chosen ("same genus" → its subfamily, tribe and genus)</td><td class="text-right">1 vote</td></tr>
+          <tr><td class="pr-3 py-1.5">Select all, a tap</td><td class="pr-3">the grid's group, down to the grid's rank</td><td class="text-right">{{ v.GAME_SELECT_TAP_WEIGHT|floatformat:"-2" }} of a vote</td></tr>
+        </tbody>
+      </table></div>
+      <pre class="mt-3 text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">at each rank, for each name given:
+  weight(player, rank) = (correct + 1) / (judged + 2)      on validated beetles at that rank: a newcomer counts as a coin flip
+  tally[name]          = Σ weight × vote                    (vote = 1, or {{ v.GAME_SELECT_TAP_WEIGHT|floatformat:"-2" }} for a tap)
+  support              = tally[leading name] / Σ tally       0 to 1</pre>
+      <ul class="list-disc pl-5 mt-2 space-y-1">
+        <li><b>Trusted</b> at a rank: a proven expert for that part of the tree supports the name and no trusted player disagrees. Taps alone never make a name trusted.</li>
+        <li><b>Curator tip</b> on the Image Annotation page: the deepest rank that is trusted, or has at least {{ v.GAME_TIP_MIN_VOTES }} players and {{ v.GAME_TIP_MIN_SUPPORT|floatformat:"-2" }} support ("3 reliable players say genus <i>Xyleborus</i>"), flagged when it disagrees with the current label.</li>
+        <li><b>Written in:</b> when {{ v.GAME_AUTO_APPLY_MIN_EXPERTS }} proven experts give the same species for a beetle with no species name, it is written in as an <b>Expert ID</b>, still unvalidated for a curator to confirm. Otherwise names only reach a beetle through a curator.</li>
+        <li><b>The AI</b> adds its own suggestion (shown separately); it becomes a reference for scoring only when proven in that group (see above).</li>
+      </ul>
+    </div>
+
+    <div class="p-4 rounded-xl border border-gray-200 text-sm">
+      <h3 class="font-semibold text-gray-900 mb-2">What it is not</h3>
+      <div class="overflow-x-auto"><table class="w-full">
+        <thead class="text-xs uppercase text-gray-500"><tr><th class="text-left pr-3 pb-1">Answer</th><th class="text-left pr-3 pb-1">Says the beetle is not</th></tr></thead>
+        <tbody class="divide-y divide-gray-100">
+          <tr><td class="pr-3 py-1.5">Similarity, a rung short of a validated partner</td><td>in the partner's next rank ("same tribe" with a <i>Xyleborus</i> → not genus <i>Xyleborus</i>)</td></tr>
+          <tr><td class="pr-3 py-1.5">Odd One Out, picked as the odd one</td><td>in the group of the rest, at the round's rank</td></tr>
+          <tr><td class="pr-3 py-1.5">Select all, left untapped (when the player tapped something)</td><td>in the grid's group</td></tr>
+        </tbody>
+      </table></div>
+      <p class="mt-2">A <b>"not in" tip</b> ("Players are confident it is not in genus <i>Xyleborus</i>", or "Experts and players…") appears once at least {{ v.GAME_TIP_MIN_NOT_VOTES }} players say so and they are at least {{ v.GAME_TIP_MIN_SUPPORT|floatformat:"-2" }} of everyone who spoke to that group either way. It helps a curator rule names out, and flags a current label that players reject.</p>
+    </div>
+
+    <div class="p-4 rounded-xl border border-gray-200 text-sm">
+      <h3 class="font-semibold text-gray-900 mb-2">What players see</h3>
+      <ul class="list-disc pl-5 space-y-1">
+        <li><b>After each answer:</b> what players ranked above them said about that beetle, or that they are the first to name it. Only stronger players count, so newcomers learn from better players, not from each other.</li>
+        <li><b>Grid games:</b> on validated beetles, the answer straight away: the odd one ringed with its name against the rest's ("Odd one: <i>Xylosandrus</i> · the rest: <i>Xyleborus</i>"); in Select all, members found, wrong taps and members missed. This shows what each beetle is and what it is not.</li>
+        <li><b>Round review and "Where I lost points":</b> the real name of each validated beetle and, rank by rank, where an answer went wrong.</li>
+        <li><b>Reviewed by curators:</b> when a beetle they answered is validated later, its real name and how their points moved.</li>
+        <li>Players are never told which beetles are validated before they answer, and never see the votes of players below them.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="rating" class="mb-10 space-y-3 text-gray-700">
+    <h2 class="text-xl font-semibold text-gray-900">Reliability, levels and experts</h2>
+    <ul class="list-disc pl-5 text-sm space-y-1">
+      <li><b>Reliability (rating)</b> is the lower end of a Wilson interval on how often the player is correct, rank by rank, the first time they see each validated beetle. A few lucky answers don't make anyone an authority: the rating rises only with many correct answers. Select all is left out of it for now.</li>
+      <li><b>Levels</b> need points <em>and</em> a rating (none at levels 1–2, 35% at 3, rising to 92% at the top), so the top levels are kept only while answers stay good.</li>
+      <li><b>Experts</b> in a taxon have answered {{ v.GAME_TRUST_IMAGES_PER_SPECIES }} validated images of every species in it (at least {{ v.GAME_TRUST_MIN_JUDGED }} in all) and been correct at least {{ v.GAME_TRUST_MIN_ACCURACY|floatformat:"-2" }} of the time, and are among the top {{ v.GAME_EXPERT_PERCENTILE|floatformat:"-2" }} of players by rating. Their agreeing labels go to curators as trusted suggestions; when two such experts agree on a beetle with no name, it is written in as an Expert ID, still unvalidated for a curator to confirm.</li>
+    </ul>
+  </section>
+
+  <section id="examples" class="mb-10">
+    <h2 class="text-xl font-semibold text-gray-900 mb-2">Examples with the current numbers</h2>
+    <p class="text-sm text-gray-500 mb-3">Before the +{{ v.GAME_POINTS_PARTICIPATION|floatformat:"-2" }} for taking part, on validated beetles unless said otherwise.</p>
+    <div class="overflow-x-auto rounded-xl border border-gray-200">
+      <table class="w-full text-sm" data-testid="scoring-examples">
+        <thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr><th class="text-left px-3 py-2">Game</th><th class="text-left px-3 py-2">Answer</th><th class="text-right px-3 py-2">Points</th></tr></thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for game, what, points in examples %}
+          <tr><td class="px-3 py-2 text-gray-500 whitespace-nowrap">{{ game }}</td><td class="px-3 py-2">{{ what }}</td>
+            <td class="px-3 py-2 text-right tabular-nums font-semibold {% if points < 0 %}text-red-700{% elif points > 0 %}text-green-700{% endif %}">{% if points > 0 %}+{% endif %}{{ points|floatformat:"-2" }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="checks" class="mb-10">
+    <h2 class="text-xl font-semibold text-gray-900 mb-2">Balance checks</h2>
+    <p class="text-sm text-gray-500 mb-3">What keeps the scores pointing at accurate labels. A red check means the current numbers reward guessing or volume somewhere.</p>
+    <ul class="space-y-2" data-testid="scoring-checks">
+      {% for rule, ok, why in checks %}
+      <li class="flex items-start gap-3 p-3 rounded-xl border {% if ok %}border-gray-200{% else %}border-red-300 bg-red-50{% endif %}">
+        <i class="fi {% if ok %}fi-rr-check text-green-700{% else %}fi-rr-cross text-red-700{% endif %} mt-0.5"></i>
+        <div><div class="text-sm font-semibold text-gray-900">{{ rule }}</div><div class="text-xs text-gray-600">{{ why }}</div></div>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section id="tune" class="mb-10">
+    <h2 class="text-xl font-semibold text-gray-900 mb-2">Tune</h2>
+    <p class="text-sm text-gray-500 mb-4">New answers use a change within half a minute. Answers already given follow at the next re-score: when each player next leaves the game, every night, or now with the button below. Changed values are marked; "Default" puts one back.</p>
+    <form method="post" data-testid="scoring-form">
+      {% csrf_token %}
+      {% for title, rows in groups %}
+      <fieldset class="mb-6">
+        <legend class="text-sm font-bold uppercase tracking-wide text-gray-500 mb-2">{{ title }}</legend>
+        <div class="divide-y divide-gray-100 rounded-xl border border-gray-200">
+          {% for t in rows %}
+          <div class="p-3 grid gap-2 md:grid-cols-[1fr_auto] md:items-center" data-testid="tunable-{{ t.key }}">
+            <div>
+              <div class="text-sm font-semibold text-gray-900">{{ t.label }}{% if t.changed %} <span class="ml-1 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-800">changed</span>{% endif %}</div>
+              <div class="text-xs text-gray-500">{{ t.help }} <span class="font-mono text-gray-400">{{ t.key }}</span></div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              {% if t.parts %}
+                {% for k, label, value, default in t.parts %}
+                <label class="text-[11px] text-gray-500 text-center">{{ label }}
+                  <input type="number" name="{{ t.key }}.{{ k }}" value="{{ value }}" min="{{ t.min }}" max="{{ t.max }}" step="{{ t.step }}" class="block w-20 rounded border border-gray-300 px-2 py-1 text-sm text-gray-900" title="Default {{ default }}"></label>
+                {% endfor %}
+              {% else %}
+                <input type="number" name="{{ t.key }}" value="{{ t.value }}" min="{{ t.min }}" max="{{ t.max }}" step="{{ t.step }}" class="w-24 rounded border border-gray-300 px-2 py-1 text-sm text-gray-900" title="Default {{ t.default }}">
+                <span class="text-xs text-gray-400">default {{ t.default }}</span>
+              {% endif %}
+              {% if t.changed %}<label class="flex items-center gap-1 text-xs text-gray-600"><input type="checkbox" name="reset-{{ t.key }}" value="1" class="h-4 w-4 rounded border-gray-300"> Default</label>{% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </fieldset>
+      {% endfor %}
+      <button type="submit" class="btn-main px-6 py-3">Save changes</button>
+    </form>
+
+    <form method="post" action="{% url 'game_scoring_rescore' %}" class="mt-4" onsubmit="return confirm('Re-score every answer of every player with the current numbers? It runs in the background.');">
+      {% csrf_token %}
+      <button type="submit" class="px-4 py-2 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50" data-testid="rescore">Re-score everyone now</button>
+    </form>
+  </section>
+
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold text-gray-900 mb-2">Changes</h2>
+    {% if log %}
+    <ul class="text-sm divide-y divide-gray-100 rounded-xl border border-gray-200" data-testid="scoring-log">
+      {% for h in log %}
+      <li class="px-3 py-2 flex flex-wrap gap-x-3"><span class="text-gray-500 tabular-nums">{{ h.history_date|date:"M j, Y H:i" }}</span>
+        <span class="font-mono">{{ h.key }}</span>
+        <span>{% if h.history_type == "-" %}back to default{% else %}= {{ h.value }}{% endif %}</span>
+        <span class="text-gray-500">{{ h.history_user.username|default:"" }}</span></li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-gray-500">No changes yet: every number is the default.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

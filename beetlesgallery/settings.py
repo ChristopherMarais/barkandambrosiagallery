@@ -302,6 +302,7 @@ CELERY_TASK_ROUTES = {
     "beetlesgallery.beetles_app.tasks.process_upload_task": {"queue": HEAVY_QUEUE},
     "beetlesgallery.beetles_app.tasks.process_update_task": {"queue": HEAVY_QUEUE},
     "beetlesgallery.beetles_app.tasks.build_downloads_task": {"queue": HEAVY_QUEUE},
+    "beetlesgallery.beetles_app.tasks.recompute_all_scores_task": {"queue": HEAVY_QUEUE},
     "beetlesgallery.beetles_app.tasks.import_predictions_task": {"queue": HEAVY_QUEUE},
 }
 

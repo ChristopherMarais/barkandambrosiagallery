@@ -10,6 +10,7 @@ from django.views.static import serve
 from beetlesgallery.beetles_app import views as beetles_views
 from beetlesgallery.beetles_app import chunked_upload
 from beetlesgallery.beetles_app import game_views
+from beetlesgallery.beetles_app import game_tuning_views
 from beetlesgallery.beetles_app import site_notice
 from beetlesgallery.beetles_app import bulk_validate
 from beetlesgallery.beetles_app import roi_reports
@@ -114,6 +115,8 @@ urlpatterns = [
     path('game/api/round/<uuid:round_id>/answer/', game_views.game_answer, name='game_answer'),
     path('game/api/taxa/', game_views.game_taxa, name='game_taxa'),
     path('game/review/', game_views.game_review, name='game_review'),
+    path('game/scoring/', game_tuning_views.scoring, name='game_scoring'),
+    path('game/scoring/rescore/', game_tuning_views.rescore, name='game_scoring_rescore'),
     path('game/review/<str:kind>.csv', game_views.game_export, name='game_export'),
 
     # --- API ---
