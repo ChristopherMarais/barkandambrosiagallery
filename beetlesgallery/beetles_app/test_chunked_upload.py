@@ -56,6 +56,12 @@ class ChunkedUploadTests(PageBehaviourCase):
             self.assertEqual(self.piece(0, 5).status_code, 400)
         self.assertEqual(self.piece(0, 40, upload_id="../../etc/passwd").status_code, 400)
 
+    def test_only_a_uuid_gets_a_file_and_one_uuid_gets_one_file(self):
+        for bad in ("../../etc/passwd", "../" * 12, "x" * 36, "", None):
+            self.assertIsNone(chunked_upload.part_path(self.staff, bad))
+        loose = self.id.replace("-", "") + "----"                           # the same UUID, hyphens moved
+        self.assertEqual(chunked_upload.part_path(self.staff, loose), chunked_upload.part_path(self.staff, self.id))
+
     def test_the_upload_takes_the_joined_zip_and_tidies_up(self):
         self.send_all()
         res = self.client.post(reverse("upload"), {"csv_file": SimpleUploadedFile("metadata.csv", GOOD_CSV),

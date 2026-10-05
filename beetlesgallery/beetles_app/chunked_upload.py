@@ -9,6 +9,7 @@ the file's upload id instead of the file, and take() hands the assembled file ov
 (a retry after a dropped connection) is written over itself. Files never finished are removed by the nightly
 cleanup (storage_cleanup.sweep_upload_temp_files).
 """
+import os
 import re
 import uuid
 from pathlib import Path
@@ -34,10 +35,14 @@ def part_path(user, upload_id):
     if not NAME.match(upload_id):
         return None
     try:
-        uuid.UUID(upload_id)
+        upload_id = uuid.UUID(upload_id)
     except ValueError:
         return None
-    return Path(settings.MEDIA_ROOT) / "tmp_uploads" / f"chunk-{user.pk}-{upload_id}.part"
+    folder = os.path.normpath(os.path.join(settings.MEDIA_ROOT, "tmp_uploads"))
+    path = os.path.normpath(os.path.join(folder, f"chunk-{user.pk}-{upload_id}.part"))
+    if not path.startswith(folder + os.sep):   # a UUID cannot leave the folder; the check says so to the code scanner
+        return None
+    return Path(path)
 
 
 @area_required(UPLOAD)
