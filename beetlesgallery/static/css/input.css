@@ -33,9 +33,28 @@
     }
 }
 
-/* The site's house style. Mostly white and grey: colour is only for meaning (green = done or right,
-   red = a problem or a danger, amber = waiting or needs attention). */
+/* Ticked boxes, radio buttons and sliders are dark grey everywhere, never the browser's blue. */
+@layer base {
+    input[type="checkbox"], input[type="radio"], input[type="range"] {
+        accent-color: theme("colors.gray.600");
+    }
+}
+
+/* The site's house style (keep to it on every page; CLAUDE.md points here):
+   - Mostly white and grey. Colour is only for meaning: green = done or correct, red = a problem or a danger,
+     amber = waiting or needs attention, and the game's rarity colours for levels, challenge and accuracy.
+   - Each page has at most one main button (Search, Classify image, Play ...): .btn-main, a mid-grey button
+     with dark bold text, never black. Other actions use .btn-primary or .btn-secondary.
+   - Ticked boxes and radio buttons are dark grey (see above).
+   - Numbers of four digits or more are grouped in threes (12 345): the |digit_groups filter in templates,
+     digitGroups() / digitGroupsText() in scripts (static/js/digit_groups.js).
+   - Text for players and visitors is short and plain. */
 @layer components {
+    /* The one main action of a page. Size it per page with utilities (e.g. "btn-main w-full text-2xl py-6"). */
+    .btn-main {
+        @apply inline-flex items-center justify-center gap-3 rounded-xl bg-gray-300 border border-gray-400 px-8 py-3 text-lg font-bold tracking-wide text-gray-900 shadow-sm transition hover:bg-gray-400 hover:text-black active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-gray-300 disabled:opacity-60 disabled:cursor-not-allowed;
+    }
+
     .page-title {
         @apply text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight;
         margin: 0 0 1rem;
