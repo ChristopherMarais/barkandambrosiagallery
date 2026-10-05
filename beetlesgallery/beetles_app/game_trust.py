@@ -541,17 +541,56 @@ def expertise_bands():
     return [(tier, round(EXPERTISE_FLOOR + i * step, 4)) for i, tier in reversed(list(enumerate(EXPERTISE_TIERS)))]
 
 
+def accuracy_status(ok, n, min_shown):
+    """unknown (fewer than ``min_shown`` judged), or common .. legendary by accuracy."""
+    if n < min_shown:
+        return "unknown"
+    for tier, lowest in expertise_bands():
+        if ok / n >= lowest:
+            return tier
+    return "common"
+
+
 def node_status(skill, min_shown):
     """How a branch is shown: unknown (too few answers yet), common .. legendary by accuracy, or expert."""
     if skill is None or skill.judged < min_shown:
         return "unknown"
     if skill.proven:
         return "expert"
-    accuracy = skill.correct / skill.judged
-    for tier, lowest in expertise_bands():
-        if accuracy >= lowest:
-            return tier
-    return "common"
+    return accuracy_status(skill.correct, skill.judged, min_shown)
+
+
+def apart_counts(player):
+    """
+    {(rank, branch_lower): [correct, judged]}: how well the player tells a taxon's children apart, from Similarity,
+    Odd One Out and Select all answers judged against validated beetles (#381). Keyed like the naming skills, so
+    ("genus", "xyleborini") is telling Xyleborini's genera apart. A Similarity answer judges each rank whose parent
+    the two beetles share (both in Xyleborini: did they say rightly whether the genus is the same?). A grid judges its
+    own rank within its group's parent: Odd One Out a pick outside the group, Select all a perfect grid. Shown only:
+    naming alone makes an expert.
+    """
+    out = defaultdict(lambda: [0, 0])
+    answers = GameAnswer.objects.filter(player=player, is_retry=False, skipped=False, score_hold=False)
+    correct = [f"correct_{r}" for r in RANKS]
+    sides = [f"{side}__taxon__{r}" for side in ("roi", "roi_b") for r in RANKS]
+    for a in answers.filter(mode="pair").values(*sides, *correct):
+        for r in RANKS:
+            parent = BRANCH_OF[r]
+            branch = (a[f"roi__taxon__{parent}"] or "").lower() if parent else ""
+            if parent and (not branch or branch != (a[f"roi_b__taxon__{parent}"] or "").lower()):
+                break   # different above this rank: nothing inside one taxon to tell apart
+            if a[f"correct_{r}"] is not None:
+                out[(r, branch)][0] += int(a[f"correct_{r}"])
+                out[(r, branch)][1] += 1
+    for a in answers.filter(mode__in=["odd", "select"], grid_rank__in=RANKS).values("grid_rank", "grid_group", *correct):
+        r, ok = a["grid_rank"], a[f"correct_{a['grid_rank']}"]
+        parent = BRANCH_OF[r]
+        branch = ((a["grid_group"] or {}).get(parent) or "").lower() if parent else ""
+        if ok is None or (parent and not branch):
+            continue
+        out[(r, branch)][0] += int(ok)
+        out[(r, branch)][1] += 1
+    return out
 
 
 def expertise_legend():
@@ -568,15 +607,19 @@ def expertise_legend():
 def expertise_tree(player):
     """
     The taxonomy as subfamily > tribe > genus, each branch with how well the player identifies what is inside it:
-    a subfamily shows their tribe calls within it, a tribe their genus calls, a genus their species calls.
-    Branches they have not played are counted but not listed one by one.
+    a subfamily shows their tribe calls within it, a tribe their genus calls, a genus their species calls; and how
+    well they tell those apart in Similarity, Odd One Out and Select all (apart_counts). Branches they have not
+    played are counted but not listed one by one.
     """
     min_shown = game_setting("GAME_REPORT_MIN_JUDGED", 5)
     skills = {(s.rank, s.branch.lower()): s for s in skills_for(player)}
+    apart = apart_counts(player)
 
     def node(rank, name):
         skill = skills.get((rank, name.lower()))
+        apart_ok, apart_n = apart.get((rank, name.lower()), (0, 0))
         return {
+            "apart_correct": apart_ok, "apart_judged": apart_n, "apart_status": accuracy_status(apart_ok, apart_n, min_shown),
             "name": name, "status": node_status(skill, min_shown),
             "judged": skill.judged if skill else 0, "correct": skill.correct if skill else 0,
             "accuracy": (skill.correct / skill.judged) if skill and skill.judged else None,
@@ -596,9 +639,9 @@ def expertise_tree(player):
         for tribe in sorted(layout[subfamily]):
             t = node("genus", tribe)
             genera = [node("species", g) for g in sorted(layout[subfamily][tribe])]
-            t["genera"] = [g for g in genera if g["status"] != "unknown"]
+            t["genera"] = [g for g in genera if g["status"] != "unknown" or g["apart_status"] != "unknown"]
             t["hidden"] = len(genera) - len(t["genera"])
-            if t["status"] != "unknown" or t["genera"]:
+            if t["status"] != "unknown" or t["apart_status"] != "unknown" or t["genera"]:
                 sub["tribes"].append(t)
             else:
                 sub["hidden"] += 1
