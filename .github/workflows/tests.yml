@@ -64,6 +64,12 @@ jobs:
       - name: Install environment
         run: pixi install --frozen
 
+      # A model change without its migration would reach production with a
+      # schema that doesn't match the code (a deploy only runs migrate).
+      # --check fails when a migration is missing; --dry-run writes nothing.
+      - name: Check for missing migrations
+        run: pixi run python manage.py makemigrations --check --dry-run
+
       # The test runner builds its own empty database by running every
       # migration, so this also catches migrations that fail on a fresh DB.
       - name: Run tests
