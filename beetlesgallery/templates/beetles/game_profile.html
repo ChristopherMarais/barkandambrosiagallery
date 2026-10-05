@@ -22,7 +22,7 @@
   </div>
 
   <div class="mb-6 text-sm text-gray-600">
-    {{ p.streak|digit_groups }} day streak &middot; {{ p.modes.classify|default:0|digit_groups }} identified &middot; {{ p.modes.pair|default:0|digit_groups }} compared for similarity
+    {{ p.streak|digit_groups }} day streak &middot; {{ p.modes.classify|default:0|digit_groups }} identified &middot; {{ p.modes.pair|default:0|digit_groups }} compared for similarity &middot; {{ p.modes.odd|default:0|digit_groups }} odd ones out
   </div>
   <div class="mb-6">{% include "beetles/includes/game_split.html" with games=p.games %}</div>
 

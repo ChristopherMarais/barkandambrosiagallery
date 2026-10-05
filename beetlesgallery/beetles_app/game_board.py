@@ -20,7 +20,7 @@ from .models import AnswerPoints, GameAnswer, PlayerScore, PlayerSkill, SpeciesD
 SORTS = {"score": "Score", "identification": "Identification accuracy", "similarity": "Similarity accuracy",
          "viewed": "Beetles seen"}
 PERIODS = {"week": "This week", "month": "This month", "year": "This year", "all": "All time"}
-GAMES = ("classify", "pair")   # Identification (Name That Beetle) and Similarity (Family Ties)
+GAMES = ("classify", "pair", "odd")   # Identification (Name That Beetle), Similarity (Family Ties), Odd One Out
 # a branch of the tree -> the skill that measures it (see game_trust.BRANCH_OF)
 BRANCH_SKILL = {"subfamily": "tribe", "tribe": "genus", "genus": "species"}
 

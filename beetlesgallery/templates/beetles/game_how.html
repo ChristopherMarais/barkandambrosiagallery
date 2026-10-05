@@ -13,15 +13,15 @@
   <section class="mt-4 mb-8 p-5 bg-white border border-gray-200 rounded-2xl" data-testid="quick-start">
     <h2 class="text-lg font-semibold text-gray-900 mb-3">In 30 seconds</h2>
     <ol class="text-sm text-gray-700 list-decimal pl-5 space-y-1.5">
-      <li>Tap <strong>Play</strong>. Each beetle is either <strong>Identification</strong> (name it) or <strong>Similarity</strong> (how related are two beetles?).</li>
+      <li>Tap <strong>Play</strong>. Each beetle is one of three games: <strong>Similarity</strong> (how related are two beetles?), <strong>Odd One Out</strong> (which beetle doesn't belong?) or <strong>Identification</strong> (name it).</li>
       <li><strong>Stop at the rank you're sure of.</strong> A correct tribe scores more than the same tribe with a guessed, wrong genus. Skipping costs almost nothing.</li>
       <li><strong>Take your time.</strong> There is no timer: look things up in keys, papers or a reference collection, and pause whenever you like.</li>
       <li>Photo shows no useful characters (an underside, a leg)? Still answer as far as you can: even just the subfamily helps. Report only a photo that is broken: wrong name, a box that misses the beetle, blurry, not a beetle.</li>
       <li>Tap <strong>Exit</strong> when you're done.</li>
     </ol>
     <p class="mt-3 text-sm text-gray-600">Your <strong>daily goal</strong> adapts to how much you play, like a step goal on a fitness watch: beat it and tomorrow's goal goes up a little, fall short or take a day off and it eases down. It never drops below {{ goal_floor }} beetles.</p>
-    <p class="mt-3 text-sm text-gray-600">You start with Similarity. Identification, and choosing between the two, unlock at level 2; new players get more Similarity, experts more Identification.</p>
-    <p class="mt-3 text-sm text-gray-600" data-testid="rank-steps">New players start with the big groups: only the subfamily at first. The tribe opens after {{ rank_steps.tribe }} beetles, the genus after {{ rank_steps.genus }} and the species after {{ rank_steps.species }}, in both games. From level {{ ranks_all_level }} every rank is open.</p>
+    <p class="mt-3 text-sm text-gray-600">You start with Similarity. Odd One Out, and choosing your game, unlock at level {{ odd_level }}, and Identification at level {{ identify_level }}. New players get more Similarity, experts more Identification.</p>
+    <p class="mt-3 text-sm text-gray-600" data-testid="rank-steps">New players start with the big groups: only the subfamily at first. The tribe opens after {{ rank_steps.tribe }} beetles, the genus after {{ rank_steps.genus }} and the species after {{ rank_steps.species }}, in every game. From level {{ ranks_all_level }} every rank is open.</p>
   </section>
 
   <h2 class="text-xl font-semibold text-gray-900 mb-3">Scoring</h2>
@@ -40,7 +40,9 @@
       <table class="text-sm mb-3"><tbody>
         {% for name, pts in pair_points %}<tr><td class="pr-6 py-0.5 text-gray-700">{{ name|capfirst }}</td><td class="font-semibold text-gray-900 tabular-nums">{{ pts|digit_groups }}</td></tr>{% endfor %}
       </tbody></table>
-      <p class="text-sm text-gray-600">Two photos that look alike (same photographer, place or magnification) earn up to a quarter more. Partial credit here too: &ldquo;same tribe&rdquo; for two beetles of one genus is true, so it earns the tribe&rsquo;s points; &ldquo;same species&rdquo; earns the genus&rsquo;s points minus a little. Calling relatives strangers (or strangers relatives) loses 1 point per step.</p>
+      <p class="text-sm text-gray-600 mb-4">Two photos that look alike (same photographer, place or magnification) earn up to a quarter more. Partial credit here too: &ldquo;same tribe&rdquo; for two beetles of one genus is true, so it earns the tribe&rsquo;s points; &ldquo;same species&rdquo; earns the genus&rsquo;s points minus a little. Calling relatives strangers (or strangers relatives) loses 1 point per step.</p>
+      <h3 class="text-sm font-semibold text-gray-900 mb-1" data-testid="how-odd">Odd One Out</h3>
+      <p class="text-sm text-gray-600">All but one beetle share a name at one rank. Picking the odd one earns {{ odd_weight }}&times; what Similarity pays for telling those two apart. Picking one of the rest costs a little more than a correct pick earns, so pick only when you&rsquo;re fairly sure: <strong>Skip</strong> here earns {{ odd_skip }}.</p>
     </section>
 
     <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl">
