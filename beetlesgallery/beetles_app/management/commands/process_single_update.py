@@ -144,6 +144,7 @@ class Command(BaseCommand):
         
         row_count = len(df)
         batch.rows_total = row_count
+        batch.save(update_fields=["rows_total"])   # the later saves name only their own fields (#350)
         # Validating or un-validating through a spreadsheet is bulk validation: its own permission. Batches with
         # no uploader were made by the owner on the server.
         may_validate = batch.uploaded_by is None or has_area(batch.uploaded_by, BULK_VALIDATE)
@@ -365,7 +366,6 @@ class Command(BaseCommand):
 
                     if plan["is_new"]:
                         obj.save() # Insert
-                        changed_count += 1
                         # History attribution
                         h = obj.history.first()
                         if h:
@@ -374,7 +374,6 @@ class Command(BaseCommand):
                             h.save()
                     elif has_b_change:
                         obj.save()
-                        changed_count += 1
                         # History attribution
                         h = obj.history.first()
                         if h:
@@ -384,9 +383,9 @@ class Command(BaseCommand):
 
                     # 2. Update ImageAsset
                     # We update image fields if provided. Note: this affects ALL specimens linked to this image.
+                    has_i_change = False
                     if i_data and obj.image_asset:
                         img = obj.image_asset
-                        has_i_change = False
                         for k, v in i_data.items():
                             if k == "image_has_multiple_individuals": val = _to_bool(v)
                             elif k == "is_validated":
@@ -410,11 +409,15 @@ class Command(BaseCommand):
                         if has_i_change:
                             img.save()
 
+                    if plan["is_new"] or has_b_change or has_i_change:
+                        changed_count += 1
+
                 # Run after all ROI saves so stale in-memory ROIs can't re-validate the image
                 for img in images_to_unvalidate.values():
                     img.unvalidate(user=batch.uploaded_by)
 
             batch.rows_changed = changed_count
+            batch.save(update_fields=["rows_matched", "rows_changed"])
             batch.mark_applied_and_archive()
             self.stdout.write(self.style.SUCCESS(f"Batch {batch.id} applied successfully."))
 

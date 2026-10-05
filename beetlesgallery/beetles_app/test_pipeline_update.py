@@ -277,8 +277,6 @@ class ProcessSingleUpdateTests(PageBehaviourCase):
         self.assertFailed(batch, "Row 2: bbox_x '0,3' is not a number")
         self.assertEqual(fresh(beetle).bbox_x, 0.1)
 
-    # KNOWN BUG: the counts are set only in memory (process_single_update.py:125,191,270); every later save passes update_fields without them (models.py:689-713), so they stay 0.
-    @expectedFailure
     def test_row_counts_are_saved_on_the_batch(self):
         changed, unchanged = make_beetle(collection_country="USA"), make_beetle()
 
