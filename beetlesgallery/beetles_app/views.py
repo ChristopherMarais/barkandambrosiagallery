@@ -448,7 +448,8 @@ def upload_file(request):
     process_upload_task.delay(batch.id)
     print(f"Queued process_single_upload for batch {batch.id}", flush=True)
 
-    messages.success(request, "Files received. Track the upload status below in the Activity Logs.")
+    messages.success(request, "Files received. You can close this page: the server checks and imports them. "
+                              "Track the upload status below in the Activity Logs.")
     return redirect("data_management")
 
 

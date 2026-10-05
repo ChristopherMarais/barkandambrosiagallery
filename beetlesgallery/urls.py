@@ -72,6 +72,7 @@ urlpatterns = [
     # --- Tools ---
     path('upload/', beetles_views.upload_file, name='upload'),
     path('upload/chunk/', chunked_upload.upload_chunk, name='upload_chunk'),
+    path('upload/chunk/status/', chunked_upload.upload_chunk_status, name='upload_chunk_status'),
     path("my-uploads/", beetles_views.data_management, name="data_management"),
     path("events/", beetles_views.stream_updates, name="stream_updates"),
     path("downloads/start/", beetles_views.start_batch_download, name="start_batch_download"),
