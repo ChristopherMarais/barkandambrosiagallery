@@ -17,6 +17,7 @@ from io import BytesIO
 from django.db.models import Q, Count, F
 from django.utils import timezone
 from django.urls import reverse
+from django.db import transaction
 from django.conf import settings
 from django.contrib import messages
 from django.utils.http import http_date, url_has_allowed_host_and_scheme
@@ -1099,6 +1100,8 @@ def data_management(request):
             "initial_archives": initial_archives,
             "initial_current": initial_current,
             "chunk_bytes": chunked_upload.CHUNK_BYTES,
+            "predictions_max_bytes": getattr(settings, "MAX_UPLOAD_SIZE_PREDICTIONS", 50 * 1024 * 1024),
+            "predictions_max_mb": getattr(settings, "MAX_UPLOAD_SIZE_PREDICTIONS", 50 * 1024 * 1024) // (1024 * 1024),
         }
     )
 
@@ -2118,7 +2121,7 @@ def interactions_preview(request):
 @area_required(PREDICTIONS)
 def upload_predictions(request):
     """
-    Superuser page to upload classifier predictions (species suggestions for ROIs) from a CSV.
+    Upload classifier predictions (species suggestions for ROIs) from a CSV (the "Model predictions" permission).
     Everything is checked first; if any row is wrong nothing is saved and each problem is listed.
     """
     context = {"max_mb": getattr(settings, "MAX_UPLOAD_SIZE_PREDICTIONS", 50 * 1024 * 1024) // (1024 * 1024)}
@@ -2132,6 +2135,8 @@ def upload_predictions(request):
         elif csv_file.size and csv_file.size > limit:
             context["error"] = f"The file is too large ({_format_size(csv_file.size)}); the limit is {_format_size(limit)}."
         else:
+            if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                return _start_prediction_upload(request, csv_file)
             context["result"] = import_predictions(
                 csv_file, user=request.user,
                 default_model=request.POST.get("model_name", "").strip(),
@@ -2139,4 +2144,34 @@ def upload_predictions(request):
                 dry_run=bool(request.POST.get("dry_run")),
             )
             context["filename"] = csv_file.name
+        if context.get("error") and request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": False, "error": context["error"]}, status=400)
     return render(request, "beetles/upload_predictions.html", context)
+
+
+def _start_prediction_upload(request, csv_file):
+    """The Data Management dialog: save the file, check and save it in the background, and say where to follow it."""
+    from .models import PredictionUpload
+    from .tasks import import_predictions_task
+    job = PredictionUpload(
+        original_filename=csv_file.name[:255], uploaded_by=request.user,
+        model_name=request.POST.get("model_name", "").strip()[:100],
+        model_version=request.POST.get("model_version", "").strip()[:50],
+        dry_run=bool(request.POST.get("dry_run")),
+    )
+    job.file.save(csv_file.name, csv_file, save=False)
+    job.save()
+    transaction.on_commit(lambda: import_predictions_task.delay(str(job.id)))
+    return JsonResponse({"success": True, "status_url": reverse("upload_predictions_status", args=[job.id])})
+
+
+@area_required(PREDICTIONS)
+def upload_predictions_status(request, job_id):
+    """How far a predictions upload is, and its result when done (the uploader's own, or any for a superuser)."""
+    from .models import PredictionUpload
+    jobs = PredictionUpload.objects.all() if request.user.is_superuser else PredictionUpload.objects.filter(uploaded_by=request.user)
+    job = get_object_or_404(jobs, pk=job_id)
+    return JsonResponse({
+        "status": job.status, "phase": job.phase, "percent": job.percent, "filename": job.original_filename,
+        "dry_run": job.dry_run, "done": job.status in ("done", "failed"), "result": job.result,
+    })

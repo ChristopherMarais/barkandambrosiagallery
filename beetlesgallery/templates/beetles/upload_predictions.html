@@ -8,6 +8,7 @@
   <a href="{% url 'data_management' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Data Management</a>
   <h1 class="page-title">Model predictions</h1>
   <p class="text-gray-600 mb-8">
+    The usual way is the Upload Model Predictions button on Data Management, which shows its progress.
     Upload a classifier's species guesses for ROIs. They appear as an unverified suggestion on ROIs that
     have no species label yet, and they set how hard the game treats each image.
     A prediction never changes an ROI's label.
@@ -73,7 +74,7 @@
     </button>
   </form>
 
-  <h2 class="text-xl font-semibold text-gray-900 mb-3">Columns</h2>
+  <h2 id="columns" class="text-xl font-semibold text-gray-900 mb-3">Columns</h2>
   <div class="rounded-xl border border-gray-200 bg-white overflow-x-auto">
     <table class="w-full text-sm">
       <tbody class="divide-y divide-gray-100">

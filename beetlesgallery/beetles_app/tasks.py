@@ -18,3 +18,9 @@ def recompute_game_players_task(player_ids):
     """Re-score these players in the background (see game.finish_round)."""
     from beetlesgallery.beetles_app.game_scoring import recompute
     recompute(player_ids)
+
+@shared_task
+def import_predictions_task(job_id):
+    """Check and save a model predictions CSV uploaded on Data Management (predictions.run_upload)."""
+    from beetlesgallery.beetles_app.predictions import run_upload
+    run_upload(job_id)
