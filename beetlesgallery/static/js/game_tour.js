@@ -23,8 +23,9 @@
     { el: "submit", text: "Next saves your answer and brings the next beetle. Naming a beetle earns the most points, but a sure tribe beats a wrong genus." },
     { el: "chip", text: "Beetles today against your daily goal. The flame is your streak: days in a row you reached the goal." },
     { el: "level-chip", text: "Your level and points. New levels unlock more of the game." },
+    { el: "open-help", text: "How to play: the rules in short, any time." },
     { el: "toolbar", text: "Pick the game and a focus here once you've unlocked them." },
-    { el: "report-chip-0", text: "Photo looks wrong (wrong name, bad box, blurry)? Tap Report here, at the top right of the photo, and pick what's wrong. You lose no points." },
+    { el: "report-chip-0", text: "Bad photo (blurry, not a beetle, a box that misses it)? Tap Report here, at the top right of the photo. You lose no points. A clear photo that just shows too little isn't bad: name it as far as you can." },
     { el: "exit", text: "No timer: take your time, use keys or references, and leave any time. You'll see how the session went." },
   ];
 

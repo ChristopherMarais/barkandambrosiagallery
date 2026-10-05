@@ -55,6 +55,8 @@ DISCUSSIONS_URL = "https://github.com/ChristopherMarais/barkandambrosiagallery/d
 
 # Reporting a photo from the feed, before answering (a wrong name is reported from the round review instead)
 FEED_REPORT_REASONS = [("bad_box", "Box doesn't fit"), ("bad_image", "Bad photo"), ("other", "Something else")]
+# A short line under a reason in that menu, so a clear photo that just shows little isn't reported as bad (#360)
+FEED_REPORT_HINTS = {"bad_box": "Misses the beetle or frames the label", "bad_image": "Blurry, dark, or not a beetle"}
 
 
 def discussions_url():
@@ -318,7 +320,7 @@ def game_play(request, mode):
         "discussions": discussions_url(),
         # short, one line each, for the little report menu in the full-image view. No "Wrong name" here: that is
         # for after answering (the round review), so the menu never hints at the answer.
-        "report_reasons": FEED_REPORT_REASONS,
+        "report_reasons": [(value, label, FEED_REPORT_HINTS.get(value, "")) for value, label in FEED_REPORT_REASONS],
         "mode": mode,
         "mode_label": GAME_NAMES[mode],
         "break_minutes": game.game_setting("GAME_BREAK_NUDGE_MINUTES", 60),   # 0 turns the break nudge off
