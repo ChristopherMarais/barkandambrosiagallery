@@ -367,14 +367,14 @@
         </div>
 
         <div class="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
-          <div class="text-xs font-bold text-gray-500 uppercase mb-2">Classify with AI</div>
-          <p class="text-[11px] text-gray-500 mb-2">Adds boxes and a proposed species for beetles the classifier finds. They are added to the existing ROIs, never validated, and boxes that overlap an existing ROI are skipped.</p>
-          <div class="flex gap-2">
-            <select id="classify-model" class="flex-1 rounded border border-gray-300 bg-white px-2 py-1.5 text-xs">
+          <div class="text-xs font-bold text-gray-500 uppercase mb-1">Generate AI recommendation</div>
+          <p class="text-[11px] text-gray-500 mb-2">Finds the beetles in this image, adds a box for each new one and suggests its name. Nothing is validated; boxes over an existing ROI are skipped.</p>
+          <div class="space-y-2" data-testid="ai-recommendation">
+            <select id="classify-model" aria-label="AI model" class="block w-full min-w-0 rounded border border-gray-300 bg-white px-2 py-1.5 text-xs">
               {% ibbi_model_options %}
             </select>
             <button type="button" id="classify-btn" onclick="classifyCurrentImage()"
-              class="px-3 py-1.5 text-xs font-semibold text-white bg-gray-800 rounded hover:bg-gray-900 disabled:opacity-50">Classify</button>
+              class="btn-primary w-full py-1.5 text-xs"><i class="fi fi-rr-sparkles"></i><span>Generate</span></button>
           </div>
           <div id="classify-status" class="text-[11px] text-gray-600 mt-2 hidden"></div>
         </div>
@@ -528,7 +528,7 @@ const CAN_EDIT_RECORDS = {{ can_edit_records|yesno:"true,false" }};
 if (!CAN_EDIT_RECORDS) {
   document.addEventListener("DOMContentLoaded", () => {
     const style = document.createElement("style");
-    // no saving names or details, validating, deleting images or classifying (boxes can still be drawn, moved and removed)
+    // no saving names or details, validating, deleting images or AI recommendations (boxes can still be drawn, moved and removed)
     style.textContent = "body.boxes-only #image-form-actions, body.boxes-only #classify-btn { display: none !important; }";
     document.head.appendChild(style);
     document.body.classList.add("boxes-only");
@@ -1159,14 +1159,14 @@ async function classifyCurrentImage() {
   const status = document.getElementById('classify-status');
   const show = (text) => { status.textContent = text; status.classList.remove('hidden'); };
   btn.disabled = true;
-  show('Classifying... the first request can take a minute while the model wakes up.');
+  show('Generating... the first request can take a minute while the AI wakes up.');
   try {
     const res = await fetch(`/api/v1/image-assets/${state.selectedImageId}/classify/`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
       body: JSON.stringify({ architecture: document.getElementById('classify-model').value })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Classification failed.');
+    if (!res.ok) throw new Error(data.error || 'The AI recommendation failed.');
     const img = state.images.find(i => i.image_asset_id === state.selectedImageId) || { image_asset_id: state.selectedImageId };
     await selectImage(img);
     show(`${data.added} ROI${data.added === 1 ? '' : 's'} added (not validated)` + (data.already_boxed ? `, ${data.already_boxed} overlapped an existing ROI` : '') + '.');

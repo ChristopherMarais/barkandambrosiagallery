@@ -94,8 +94,8 @@
             {% if not beetle.depicts_valid_name_id %}
             <a href="{% url 'tool_classify' %}?image_url={{ beetle.display_url|urlencode }}"
                class="flex-1 block text-center rounded-lg bg-gray-200 border border-gray-300 py-3 text-sm font-bold text-gray-800 hover:bg-gray-300 hover:text-black transition shadow-sm tracking-wide"
-               title="Run this image through the AI species classifier">
-              <i class="fi fi-rr-sparkles"></i> Classify with AI
+               title="Ask the AI which species this is">
+              <i class="fi fi-rr-sparkles"></i> Generate AI recommendation
             </a>
             {% endif %}
             <a href="{{ beetle.image_asset.image_file.url }}" download class="flex-1 block text-center rounded-lg bg-gray-200 border border-gray-300 py-3 text-sm font-bold text-gray-800 hover:bg-gray-300 hover:text-black transition shadow-sm tracking-wide">

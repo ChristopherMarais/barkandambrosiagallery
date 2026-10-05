@@ -2,7 +2,7 @@
 The IBBI models the site offers, and how their output becomes the classifier service's answer.
 
 Shared by the Modal service (modal_ibbi_api.py, which ships this file with it) and the site (the classifier page,
-"Classify with AI" on the annotation page), so the model list lives in one place. Plain Python, no dependencies.
+"Generate AI recommendation" on the annotation page), so the model list lives in one place. Plain Python, no dependencies.
 
 Two kinds of model (ibbi 0.3.2; on a GPU it decodes, crops and classifies on the GPU by itself):
 
@@ -26,22 +26,25 @@ and per detection:
 IBBI_VERSION = "0.3.2"
 LEVELS = ("subfamily", "tribe", "genus", "species")
 
-# key -> what the site shows and which ibbi models it runs. Order = the order of the options.
+# key -> what the site shows and which ibbi models it runs. Order = the order of the options; the first is the default.
+# "Species classifier": the detector finds each beetle, then the species classifier names it rank by rank.
+# "Species detector": finds and names the 65 trained species in one step.
+IBBI_DOCS_URL = "https://gcmarais.com/IBBI/"   # model descriptions and benchmark scores
 MODELS = {
     "ibbi_dinov3": {
-        "label": "Detector + DINOv3 classifier (recommended)", "kind": "pipeline",
+        "label": "Species classifier: DINOv3", "kind": "pipeline",
         "detector": "yolo11x_arthropod_detector", "classifier": "dinov3_hierarchical_classifier",
     },
     "ibbi_bioclip2": {
-        "label": "Detector + BioCLIP 2 classifier", "kind": "pipeline",
+        "label": "Species classifier: BioCLIP 2", "kind": "pipeline",
         "detector": "yolo11x_arthropod_detector", "classifier": "bioclip2_hierarchical_classifier",
     },
-    "rtdetrx": {"label": "RT-DETR species detector", "kind": "detector", "detector": "rtdetrx_species_detector"},
-    "yolo12x": {"label": "YOLO12 species detector", "kind": "detector", "detector": "yolo12x_species_detector"},
-    "yolo11x": {"label": "YOLO11 species detector", "kind": "detector", "detector": "yolo11x_species_detector"},
-    "yolov10x": {"label": "YOLOv10 species detector", "kind": "detector", "detector": "yolov10x_species_detector"},
-    "yolov9e": {"label": "YOLOv9 species detector", "kind": "detector", "detector": "yolov9e_species_detector"},
-    "yolov8x": {"label": "YOLOv8 species detector", "kind": "detector", "detector": "yolov8x_species_detector"},
+    "rtdetrx": {"label": "Species detector: RT-DETR", "kind": "detector", "detector": "rtdetrx_species_detector"},
+    "yolo12x": {"label": "Species detector: YOLO12", "kind": "detector", "detector": "yolo12x_species_detector"},
+    "yolo11x": {"label": "Species detector: YOLO11", "kind": "detector", "detector": "yolo11x_species_detector"},
+    "yolov10x": {"label": "Species detector: YOLOv10", "kind": "detector", "detector": "yolov10x_species_detector"},
+    "yolov9e": {"label": "Species detector: YOLOv9", "kind": "detector", "detector": "yolov9e_species_detector"},
+    "yolov8x": {"label": "Species detector: YOLOv8", "kind": "detector", "detector": "yolov8x_species_detector"},
 }
 DEFAULT = "ibbi_dinov3"
 # The names used before ibbi 0.3, still accepted (saved links, API clients)

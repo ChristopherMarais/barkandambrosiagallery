@@ -1,4 +1,4 @@
-"""{% ibbi_model_options %}: the <option>s of the AI model pickers (the classifier page, Classify with AI)."""
+"""{% ibbi_model_options %}: the <option>s of the AI model pickers (the classifier page, Generate AI recommendation)."""
 from django import template
 from django.utils.html import format_html, format_html_join
 

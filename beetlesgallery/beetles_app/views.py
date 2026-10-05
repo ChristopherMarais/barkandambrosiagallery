@@ -1702,7 +1702,7 @@ def tool_classify(request):
             }, status=500)
 
     # GET request: Render the page
-    return render(request, 'beetles/tool_classify.html', {'examples': CLASSIFIER_EXAMPLES})
+    return render(request, 'beetles/tool_classify.html', {'examples': CLASSIFIER_EXAMPLES, 'ibbi_docs_url': ibbi_models.IBBI_DOCS_URL})
 
 @login_required
 def stream_updates(request):
