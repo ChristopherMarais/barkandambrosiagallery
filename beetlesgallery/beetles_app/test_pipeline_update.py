@@ -5,7 +5,7 @@ import os
 import uuid
 from datetime import date
 from decimal import Decimal
-from unittest import expectedFailure, mock
+from unittest import mock
 
 from django.core.files.base import ContentFile
 from django.core.management import call_command
@@ -284,8 +284,6 @@ class ProcessSingleUpdateTests(PageBehaviourCase):
 
         self.assertEqual((batch.rows_total, batch.rows_matched, batch.rows_changed), (2, 2, 1))
 
-    # KNOWN BUG: the apply loop (process_single_update.py:204-248) never sets last_updated_by, and update_notes is skipped as an ignored column (lines 43, 166), so the bulk-update attribution fields (models.py:159-167) stay empty.
-    @expectedFailure
     def test_changed_record_records_who_updated_it_and_why(self):
         beetle = make_beetle(collection_country="USA")
 

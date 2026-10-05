@@ -45,8 +45,8 @@ BEETLE_FIELDS = {
 from beetlesgallery.beetles_app.identification import parse_tier
 UPDATE_IGNORED_COLS = {
     "image_id", "taxonomy_scientific_name", "taxonomy_subfamily", 
-    "taxonomy_tribe", "taxonomy_genus", "taxonomy_species", "update_notes"
-}
+    "taxonomy_tribe", "taxonomy_genus", "taxonomy_species",
+}   # update_notes is read on its own: why the record changed
 
 # -----------------------
 # Helpers
@@ -259,7 +259,9 @@ class Command(BaseCommand):
                                   "Validate on the annotation page, or leave the cell as downloaded.")
                     continue
 
+            notes = _none(row.get("update_notes"))
             updates_plan.append({
+                "notes": None if is_blank(notes) else str(notes).strip(),   # why (optional column)
                 "beetle": beetle_obj,
                 "b_data": b_updates,
                 "i_data": i_updates,
@@ -352,6 +354,13 @@ class Command(BaseCommand):
                             if k == "depicts_valid_name_id":
                                 obj.taxon = taxon_map.get(val) if val else None
                     
+                    # Who changed the record and why (#350); a blank update_notes leaves the old note
+                    if plan["notes"] is not None and plan["notes"] != (obj.update_notes or ""):
+                        obj.update_notes = plan["notes"]
+                        has_b_change = True
+                    if plan["is_new"] or has_b_change:
+                        obj.last_updated_by = batch.uploaded_by
+
                     # Audit trail for boxes, as the annotator API keeps it.
                     now = timezone.now()
                     has_box = obj.bbox_x is not None
@@ -407,6 +416,7 @@ class Command(BaseCommand):
                                 has_i_change = True
                         
                         if has_i_change:
+                            img.last_updated_by = batch.uploaded_by
                             img.save()
 
                     if plan["is_new"] or has_b_change or has_i_change:
