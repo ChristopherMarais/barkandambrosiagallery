@@ -112,7 +112,7 @@ class ExpertLabelTests(ScoringCase):
     def test_the_unlocks_page_states_the_bar(self):
         self.client.force_login(self.user)
         page = self.client.get("/game/unlocks/").content.decode()
-        self.assertIn("at least 90% right", page)
+        self.assertIn("at least 90% correct", page)
         self.assertIn("every species in it", page)
         self.assertIn("neighbouring taxa is not enough", page)
 

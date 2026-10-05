@@ -48,7 +48,7 @@
   <!-- Beetles checked by a curator since last time: what you said, what it is -->
   <section class="mb-5" data-testid="checked-recap">
     <div class="flex items-baseline justify-between mb-2">
-      <h2 class="text-lg font-semibold text-gray-900">Checked since you played{% if checked_new > checked|length %} <span class="text-sm font-normal text-gray-400">({{ checked_new }})</span>{% endif %}</h2>
+      <h2 class="text-lg font-semibold text-gray-900">Reviewed by curators{% if checked_new > checked|length %} <span class="text-sm font-normal text-gray-400">({{ checked_new }})</span>{% endif %}</h2>
       <a href="{% url 'game_history' %}?tab=checked" class="text-sm underline text-gray-600 hover:text-gray-900">All</a>
     </div>
     {% include "beetles/includes/game_checked_list.html" %}

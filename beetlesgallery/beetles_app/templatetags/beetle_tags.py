@@ -134,3 +134,13 @@ def taxon_url(subfamily="", tribe="", genus=""):
 
     params = [(k, (v or "").strip()) for k, v in (("subfamily", subfamily), ("tribe", tribe), ("genus", genus))]
     return reverse("taxonomy_browser") + "?" + urlencode([(k, v) for k, v in params if v])
+
+
+@register.filter
+def rarity(value):
+    """A 0-1 value's rarity tier ("common" ... "mythic"), for the .rarity-<tier> / .rarity-fill-<tier> classes."""
+    from beetlesgallery.beetles_app.game_rewards import rarity_tier
+    try:
+        return rarity_tier(None if value is None else float(value))
+    except (TypeError, ValueError):
+        return "common"

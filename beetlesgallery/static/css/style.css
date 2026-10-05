@@ -881,6 +881,10 @@ video {
   z-index: 100;
 }
 
+.z-\[110\] {
+  z-index: 110;
+}
+
 .z-\[96\] {
   z-index: 96;
 }
@@ -960,6 +964,10 @@ video {
 
 .-ml-2 {
   margin-left: -0.5rem;
+}
+
+.-mt-6 {
+  margin-top: -1.5rem;
 }
 
 .mb-0\.5 {
@@ -2021,11 +2029,6 @@ video {
   border-color: rgb(134 239 172 / var(--tw-border-opacity, 1));
 }
 
-.border-lime-300 {
-  --tw-border-opacity: 1;
-  border-color: rgb(190 242 100 / var(--tw-border-opacity, 1));
-}
-
 .border-orange-300 {
   --tw-border-opacity: 1;
   border-color: rgb(253 186 116 / var(--tw-border-opacity, 1));
@@ -2056,16 +2059,6 @@ video {
   border-color: rgb(186 230 253 / var(--tw-border-opacity, 1));
 }
 
-.border-sky-300 {
-  --tw-border-opacity: 1;
-  border-color: rgb(125 211 252 / var(--tw-border-opacity, 1));
-}
-
-.border-teal-300 {
-  --tw-border-opacity: 1;
-  border-color: rgb(94 234 212 / var(--tw-border-opacity, 1));
-}
-
 .border-text\/10 {
   border-color: rgb(17 24 39 / 0.1);
 }
@@ -2084,11 +2077,6 @@ video {
 
 .border-transparent {
   border-color: transparent;
-}
-
-.border-violet-300 {
-  --tw-border-opacity: 1;
-  border-color: rgb(196 181 253 / var(--tw-border-opacity, 1));
 }
 
 .border-white {
@@ -2247,11 +2235,6 @@ video {
   background-color: rgb(22 163 74 / var(--tw-bg-opacity, 1));
 }
 
-.bg-lime-50 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(247 254 231 / var(--tw-bg-opacity, 1));
-}
-
 .bg-orange-50 {
   --tw-bg-opacity: 1;
   background-color: rgb(255 247 237 / var(--tw-bg-opacity, 1));
@@ -2305,22 +2288,12 @@ video {
   background-color: rgb(240 249 255 / var(--tw-bg-opacity, 1));
 }
 
-.bg-teal-50 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(240 253 250 / var(--tw-bg-opacity, 1));
-}
-
 .bg-text\/20 {
   background-color: rgb(17 24 39 / 0.2);
 }
 
 .bg-transparent {
   background-color: transparent;
-}
-
-.bg-violet-50 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(245 243 255 / var(--tw-bg-opacity, 1));
 }
 
 .bg-white {
@@ -2911,11 +2884,6 @@ video {
   color: rgb(20 83 45 / var(--tw-text-opacity, 1));
 }
 
-.text-lime-600 {
-  --tw-text-opacity: 1;
-  color: rgb(101 163 13 / var(--tw-text-opacity, 1));
-}
-
 .text-orange-600 {
   --tw-text-opacity: 1;
   color: rgb(234 88 12 / var(--tw-text-opacity, 1));
@@ -2956,19 +2924,9 @@ video {
   color: rgb(127 29 29 / var(--tw-text-opacity, 1));
 }
 
-.text-sky-600 {
-  --tw-text-opacity: 1;
-  color: rgb(2 132 199 / var(--tw-text-opacity, 1));
-}
-
 .text-sky-700 {
   --tw-text-opacity: 1;
   color: rgb(3 105 161 / var(--tw-text-opacity, 1));
-}
-
-.text-teal-600 {
-  --tw-text-opacity: 1;
-  color: rgb(13 148 136 / var(--tw-text-opacity, 1));
 }
 
 .text-text {
@@ -3004,18 +2962,9 @@ video {
   color: rgb(17 24 39 / 0.8);
 }
 
-.text-violet-600 {
-  --tw-text-opacity: 1;
-  color: rgb(124 58 237 / var(--tw-text-opacity, 1));
-}
-
 .text-white {
   --tw-text-opacity: 1;
   color: rgb(255 255 255 / var(--tw-text-opacity, 1));
-}
-
-.text-white\/30 {
-  color: rgb(255 255 255 / 0.3);
 }
 
 .text-yellow-600 {
@@ -3199,6 +3148,11 @@ video {
   filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
 }
 
+.drop-shadow {
+  --tw-drop-shadow: drop-shadow(0 1px 2px rgb(0 0 0 / 0.1)) drop-shadow(0 1px 1px rgb(0 0 0 / 0.06));
+  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
+}
+
 .drop-shadow-xl {
   --tw-drop-shadow: drop-shadow(0 20px 13px rgb(0 0 0 / 0.03)) drop-shadow(0 8px 5px rgb(0 0 0 / 0.08));
   filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
@@ -3297,6 +3251,58 @@ video {
   background-position: right 0.75rem center;
   background-size: 1rem;
   text-overflow: ellipsis;
+}
+
+/* Rarity colours (as the levels and badges: grey, green, blue, purple, orange, gold) for a 0-1 value such as accuracy
+   or challenge; game_rewards.rarity_tier picks the tier. Text: .rarity-<tier>, bars: .rarity-fill-<tier>. Outside the
+   layers so they are kept although templates build the class names. */
+
+.rarity-common {
+  color: #4b5563;
+}
+
+.rarity-uncommon {
+  color: #16a34a;
+}
+
+.rarity-rare {
+  color: #2563eb;
+}
+
+.rarity-epic {
+  color: #9333ea;
+}
+
+.rarity-legendary {
+  color: #ea580c;
+}
+
+.rarity-mythic {
+  color: #ca8a04;
+}
+
+.rarity-fill-common {
+  background-color: #6b7280;
+}
+
+.rarity-fill-uncommon {
+  background-color: #22c55e;
+}
+
+.rarity-fill-rare {
+  background-color: #3b82f6;
+}
+
+.rarity-fill-epic {
+  background-color: #a855f7;
+}
+
+.rarity-fill-legendary {
+  background-color: #f97316;
+}
+
+.rarity-fill-mythic {
+  background-color: #eab308;
 }
 
 .file\:mr-4::file-selector-button {
@@ -3483,6 +3489,11 @@ video {
   background-color: rgb(243 244 246 / 0.3);
 }
 
+.hover\:bg-white:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
+}
+
 .hover\:text-amber-900:hover {
   --tw-text-opacity: 1;
   color: rgb(120 53 15 / var(--tw-text-opacity, 1));
@@ -3556,10 +3567,6 @@ video {
 .hover\:text-text:hover {
   --tw-text-opacity: 1;
   color: rgb(17 24 39 / var(--tw-text-opacity, 1));
-}
-
-.hover\:text-white\/70:hover {
-  color: rgb(255 255 255 / 0.7);
 }
 
 .hover\:underline:hover {
@@ -3672,11 +3679,6 @@ video {
   --tw-ring-color: rgb(107 114 128 / var(--tw-ring-opacity, 1));
 }
 
-.focus\:ring-gray-600:focus {
-  --tw-ring-opacity: 1;
-  --tw-ring-color: rgb(75 85 99 / var(--tw-ring-opacity, 1));
-}
-
 .focus\:ring-offset-0:focus {
   --tw-ring-offset-width: 0px;
 }
@@ -3708,11 +3710,6 @@ video {
   --tw-scale-x: 0.99;
   --tw-scale-y: 0.99;
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
-}
-
-.active\:bg-gray-100:active {
-  --tw-bg-opacity: 1;
-  background-color: rgb(243 244 246 / var(--tw-bg-opacity, 1));
 }
 
 .disabled\:cursor-not-allowed:disabled {

@@ -323,9 +323,10 @@
     <div class="inline-flex p-4 bg-gray-100 rounded-full mb-4"><i class="fi fi-rr-trophy text-3xl text-gray-700"></i></div>
     <h2 class="text-2xl font-bold text-gray-900">Nice session!</h2>
     <p class="mt-1 text-gray-500" id="recap-line"></p>
-    <div class="grid grid-cols-3 gap-2 my-6">
+    <div class="grid grid-cols-2 gap-2 my-6">
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="recap-points">0</div><div class="text-xs text-gray-500">points</div></div>
-      <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="recap-right">&ndash;</div><div class="text-xs text-gray-500">known beetles right</div></div>
+      <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="recap-right">&ndash;</div><div class="text-xs text-gray-500">known beetles correct</div></div>
+      <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="recap-challenge">&ndash;</div><div class="text-xs text-gray-500">challenge</div></div>
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="recap-streak">0</div><div class="text-xs text-gray-500">day streak</div></div>
     </div>
     <div id="recap-badges" class="mb-6 space-y-2"></div>
@@ -365,6 +366,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>window.BEETLE_LOGO_URL = "{% static 'img/IMG_5557.PNG' %}";</script>
 <script src="{% static 'js/beetle_confetti.js' %}"></script>
 <script>
 (function () {
@@ -604,13 +606,14 @@
     (urls || []).forEach((url) => { const img = new Image(); img.src = url; prefetched.push(img); });
   }
 
-  // ---------- confetti (only ever for a right answer on a beetle we know) ----------
+  // ---------- confetti (only ever for a correct answer, or a level) ----------
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  // "validated": little bark beetles for a validated beetle named right; "strong": ordinary confetti for a
-  // strong answer on a beetle nobody has checked yet (#425). See static/js/beetle_confetti.js.
-  function confetti(kind) {
+  // Logo beetles: "validated" (brown) for a checked beetle named correctly, "partial" (a few grey) for one named
+  // correctly to some rank, both scaled by the share of ranks correct; "strong": paper confetti for a strong answer
+  // on a beetle nobody has checked yet; "level": the gold level-up burst. See static/js/beetle_confetti.js.
+  function confetti(kind, size) {
     if (reduceMotion || !window.beetleConfetti) return;
-    window.beetleConfetti($("confetti"), kind === "strong" ? "plain" : "beetles");
+    window.beetleConfetti($("confetti"), kind === "strong" ? "plain" : (kind || "validated"), size);
   }
 
   // ---------- the chip and the toasts: counts and celebrations, never the score ----------
@@ -660,7 +663,8 @@
     $("toasts").appendChild(box);
     requestAnimationFrame(() => { box.style.opacity = "1"; box.style.transform = "none"; });
     setTimeout(() => { box.style.opacity = "0"; setTimeout(() => box.remove(), 450); }, 3200);
-    if (event.kind === "level" || event.kind === "goal") confetti();
+    if (event.kind === "level") confetti("level");
+    else if (event.kind === "goal") confetti("validated");
   }
 
   // ---------- after a long session: suggest a break (never blocks, never nags twice in an hour) ----------
@@ -939,7 +943,7 @@
       answered += 1;
       if (data.chip) goalMet = !!data.chip.goal_met;
       noteAnswerForBreak();
-      if (data.celebrate) confetti(data.celebrate);
+      if (data.celebrate) confetti(data.celebrate, data.celebrate_size);
       updateChip(data.chip);
       if (data.prefs) renderPrefs(data.prefs);   // a new level: its unlocks show (and work) straight away
       (data.events || []).forEach(toast);
@@ -992,6 +996,10 @@
     $("recap-points").textContent = (r.points > 0 ? "+" : "") + digitGroupsText(r.points);
     $("recap-right").textContent = r.scored ? digitGroupsText(r.right) + "/" + digitGroupsText(r.scored) : "–";
     $("recap-streak").textContent = r.streak;
+    // accuracy and challenge in rarity colours (grey, green, blue, purple, orange, gold), as levels and badges
+    $("recap-right").className = "text-2xl font-bold rarity-" + r.accuracy_tier;
+    $("recap-challenge").textContent = r.challenge + "/100";
+    $("recap-challenge").className = "text-2xl font-bold rarity-" + r.challenge_tier;
     $("recap-line").textContent = digitGroupsText(r.labelled) + " beetles labelled. Level " + r.level + ", " + r.level_name + ". " + r.today + " of " + r.goal + " beetles today.";
     const holder = $("recap-badges");
     holder.innerHTML = "";

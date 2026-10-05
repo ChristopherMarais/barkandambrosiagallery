@@ -22,7 +22,7 @@
 
   <div class="p-4 mb-4 bg-gray-50 border border-gray-200 rounded-lg">
     {% if feedback.scored %}
-    <p class="text-gray-900"><span class="text-2xl font-semibold tabular-nums">{{ feedback.right|digit_groups }}</span> of {{ feedback.scored|digit_groups }} verified beetles fully right.</p>
+    <p class="text-gray-900"><span class="text-2xl font-semibold tabular-nums">{{ feedback.right|digit_groups }}</span> of {{ feedback.scored|digit_groups }} verified beetles fully correct.</p>
     {% else %}
     <p class="text-gray-900">None of these beetles has a verified name yet, so there's nothing to score.</p>
     {% endif %}
@@ -99,8 +99,8 @@
   };
 
   const VERDICT = {
-    right: ['<i class="fi fi-rr-check"></i> Right', "bg-green-100 text-green-800 border-green-200"],
-    partly: ['<i class="fi fi-rr-minus"></i> Partly right', "bg-amber-100 text-amber-800 border-amber-200"],
+    right: ['<i class="fi fi-rr-check"></i> Correct', "bg-green-100 text-green-800 border-green-200"],
+    partly: ['<i class="fi fi-rr-minus"></i> Partly correct', "bg-amber-100 text-amber-800 border-amber-200"],
     wrong: ['<i class="fi fi-rr-cross-small"></i> Not quite', "bg-red-100 text-red-800 border-red-200"],
   };
 
@@ -137,7 +137,7 @@
   }
 
   function mark(ok) {
-    if (ok === true) return '<i class="fi fi-rr-check text-green-700" aria-label="right"></i>';
+    if (ok === true) return '<i class="fi fi-rr-check text-green-700" aria-label="correct"></i>';
     if (ok === false) return '<i class="fi fi-rr-cross-small text-red-700" aria-label="wrong"></i>';
     return "";
   }

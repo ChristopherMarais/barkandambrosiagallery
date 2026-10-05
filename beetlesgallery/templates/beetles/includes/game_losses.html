@@ -6,12 +6,12 @@
     <span class="text-xs text-gray-500">{{ losses.answers|digit_groups }} checked beetle{{ losses.answers|pluralize }}{% if period %} &middot; {{ period }}{% endif %}</span>
   </div>
   {% if not losses.lost %}
-  <p class="text-sm text-green-700"><i class="fi fi-rr-check"></i> Nothing lost: every checked beetle was fully right.</p>
+  <p class="text-sm text-green-700"><i class="fi fi-rr-check"></i> Nothing lost: every checked beetle was fully correct.</p>
   {% else %}
   {% if losses.ranks %}
   <table class="w-full text-sm">
     <thead class="text-[11px] uppercase tracking-wider text-gray-400">
-      <tr><th class="text-left font-semibold pb-1">Identification</th><th class="text-right font-semibold pb-1 px-2">Right</th><th class="text-right font-semibold pb-1 px-2">Wrong</th><th class="text-right font-semibold pb-1 px-2" title="Left blank though the beetle has one">Stopped</th><th class="text-right font-semibold pb-1">Lost</th></tr>
+      <tr><th class="text-left font-semibold pb-1">Identification</th><th class="text-right font-semibold pb-1 px-2">Correct</th><th class="text-right font-semibold pb-1 px-2">Wrong</th><th class="text-right font-semibold pb-1 px-2" title="Left blank though the beetle has one">Stopped</th><th class="text-right font-semibold pb-1">Lost</th></tr>
     </thead>
     <tbody>
       {% for row in losses.ranks %}

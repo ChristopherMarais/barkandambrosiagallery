@@ -81,3 +81,19 @@
   background-size: 1rem;
   text-overflow: ellipsis;
 }
+
+/* Rarity colours (as the levels and badges: grey, green, blue, purple, orange, gold) for a 0-1 value such as accuracy
+   or challenge; game_rewards.rarity_tier picks the tier. Text: .rarity-<tier>, bars: .rarity-fill-<tier>. Outside the
+   layers so they are kept although templates build the class names. */
+.rarity-common { color: theme("colors.gray.600"); }
+.rarity-uncommon { color: theme("colors.green.600"); }
+.rarity-rare { color: theme("colors.blue.600"); }
+.rarity-epic { color: theme("colors.purple.600"); }
+.rarity-legendary { color: theme("colors.orange.600"); }
+.rarity-mythic { color: theme("colors.yellow.600"); }
+.rarity-fill-common { background-color: theme("colors.gray.500"); }
+.rarity-fill-uncommon { background-color: theme("colors.green.500"); }
+.rarity-fill-rare { background-color: theme("colors.blue.500"); }
+.rarity-fill-epic { background-color: theme("colors.purple.500"); }
+.rarity-fill-legendary { background-color: theme("colors.orange.500"); }
+.rarity-fill-mythic { background-color: theme("colors.yellow.500"); }
