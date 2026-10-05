@@ -78,7 +78,7 @@ jobs:
         if: steps.changes.outputs.deploy == 'true'
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.39.0
+          pixi-version: v0.81.0
           cache: true
           environments: default
       - name: Deploy staging's API endpoint
