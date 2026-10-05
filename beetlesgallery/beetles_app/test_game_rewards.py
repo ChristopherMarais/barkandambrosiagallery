@@ -152,7 +152,7 @@ class PlayEventsTests(RewardsCase):
         kinds = [e["kind"] for e in events]
         self.assertIn("level", kinds)
         self.assertIn("milestone", kinds)
-        self.assertIn("identification game", next(e for e in events if e["kind"] == "level")["text"])
+        self.assertIn("odd one out", next(e for e in events if e["kind"] == "level")["text"])   # level 2's new game
 
     def test_reaching_the_suggestions_level_says_so(self):
         self.set_score(1490, 0.75)

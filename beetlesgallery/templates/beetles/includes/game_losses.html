@@ -26,6 +26,23 @@
     </tbody>
   </table>
   {% endif %}
+  {% if losses.odd %}
+  <table class="w-full text-sm{% if losses.ranks %} mt-3{% endif %}" data-testid="losses-odd">
+    <thead class="text-[11px] uppercase tracking-wider text-gray-400">
+      <tr><th class="text-left font-semibold pb-1">Odd One Out</th><th class="text-right font-semibold pb-1 px-2">Correct</th><th class="text-right font-semibold pb-1 px-2">Wrong</th><th class="text-right font-semibold pb-1">Lost</th></tr>
+    </thead>
+    <tbody>
+      {% for row in losses.odd %}
+      <tr class="border-t border-gray-100">
+        <td class="py-1.5 text-gray-900">{{ row.label }}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums text-gray-700">{{ row.right|digit_groups }}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums {% if row.wrong %}text-red-700{% else %}text-gray-300{% endif %}">{{ row.wrong|digit_groups }}</td>
+        <td class="py-1.5 text-right tabular-nums font-semibold {% if row.lost %}text-red-700{% else %}text-gray-300{% endif %}">{% if row.lost %}&minus;{{ row.lost|floatformat:1 }}{% else %}0{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
   {% if losses.pair %}
   <ul class="mt-3 space-y-1 text-sm">
     {% for row in losses.pair %}
