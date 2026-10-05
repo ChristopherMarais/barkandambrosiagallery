@@ -33,7 +33,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.files.storage import default_storage
 from django.core.management import call_command
 
-from .areas import ANNOTATE, BOXES, DETAILS, DOWNLOAD, SPECIES, UPLOAD, INTERACTIONS, AREAS, area_required, has_area
+from .areas import CURATOR_AREAS, page_groups, AI_RECOMMEND, ANNOTATE, BOXES, BULK_VALIDATE, NOTICE, PREDICTIONS, UPDATE, VALIDATE, DETAILS, DOWNLOAD, SPECIES, UPLOAD, INTERACTIONS, AREAS, area_required, has_area
 from .csv_columns import modern_columns
 from .models import Beetles, UploadBatch, DownloadJob, UpdateBatch, ImageAsset
 from .schema import REQUIRED_COLS, MAX_ROWS
@@ -166,6 +166,8 @@ def my_account(request):
         "accounts/my_account.html",
         {
             "area_choices": AREAS,
+            "permission_pages": page_groups(),
+            "curator_areas": json.dumps(CURATOR_AREAS),
             "password_form": password_form,
             "create_user_form": create_user_form,
             "active_modal": active_modal,
@@ -1195,6 +1197,8 @@ def tool_annotate(request):
     return render(request, 'beetles/tool_annotate.html', {
         # someone who may only edit boxes sees names and details read-only (the API refuses changes to them)
         'can_edit_records': has_area(request.user, ANNOTATE),
+        'can_validate': has_area(request.user, VALIDATE),
+        'can_ai_recommend': has_area(request.user, AI_RECOMMEND),
         'filter_groups': filter_context,
         'taxonomy_tree_json': json.dumps(tree_dict_clean, cls=DjangoJSONEncoder, ensure_ascii=False),
         'species_map_json': json.dumps(species_map, cls=DjangoJSONEncoder, ensure_ascii=False),
@@ -1344,7 +1348,7 @@ UPDATE_IGNORED_COLS = {
     "taxonomy_tribe", "taxonomy_genus", "taxonomy_species"
 }
 
-@area_required(UPLOAD)
+@area_required(UPDATE)
 def update_upload(request):
     """
     Staff-only portal to submit a CSV of metadata updates by Record ID (UUID).
@@ -2066,6 +2070,8 @@ def tool_annotate(request):
     return render(request, 'beetles/tool_annotate.html', {
         # someone who may only edit boxes sees names and details read-only (the API refuses changes to them)
         'can_edit_records': has_area(request.user, ANNOTATE),
+        'can_validate': has_area(request.user, VALIDATE),
+        'can_ai_recommend': has_area(request.user, AI_RECOMMEND),
         'filter_groups': filter_context
     })
 
@@ -2093,7 +2099,7 @@ def interactions_preview(request):
 
 
 
-@superuser_required
+@area_required(PREDICTIONS)
 def upload_predictions(request):
     """
     Superuser page to upload classifier predictions (species suggestions for ROIs) from a CSV.

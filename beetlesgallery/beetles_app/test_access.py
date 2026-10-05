@@ -281,7 +281,7 @@ class ApprovalTests(AccessCase):
         self.assertEqual((user.is_active, user.is_staff, user.is_superuser), (True, False, False))
         message = mail.outbox[-1]
         self.assertEqual(message.to, ["ada@example.org"])
-        for text in ("Specimen pages, Upload and update images", "Welcome aboard", reverse("password_reset")):
+        for text in ("Specimen pages, Upload new images", "Welcome aboard", reverse("password_reset")):
             self.assertIn(text, message.body)
         self.assertNotIn(STRONG, message.body)
         self.client.logout()

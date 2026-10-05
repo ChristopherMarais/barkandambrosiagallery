@@ -11,7 +11,7 @@ from django.core.files.base import ContentFile
 from django.core.management import call_command
 from django.urls import reverse
 
-from beetlesgallery.beetles_app.models import Beetles, UpdateBatch
+from beetlesgallery.beetles_app.models import AreaGrant, Beetles, UpdateBatch
 from beetlesgallery.beetles_app.testing import PageBehaviourCase, make_beetle, make_image, make_taxon
 from beetlesgallery.beetles_app.views import UPDATE_ALLOWED_FIELDS
 
@@ -46,6 +46,7 @@ def to_csv(rows):
 class ProcessSingleUpdateTests(PageBehaviourCase):
 
     def make_batch(self, content, filename="updates.csv"):
+        AreaGrant.objects.get_or_create(user=self.staff, area="bulk_validate")   # these rows may change validation
         batch = UpdateBatch.objects.create(
             uploaded_by=self.staff,
             original_filename=filename,

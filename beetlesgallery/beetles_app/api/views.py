@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from ..areas import ANNOTATE, BOXES, has_area
+from ..areas import AI_RECOMMEND, ANNOTATE, BOXES, VALIDATE, has_area
 from django.http import FileResponse
 from django.db import transaction
 from django.utils import timezone
@@ -47,6 +47,25 @@ def require_records(request):
         raise PermissionDenied("Your account can edit boxes only.")
 
 
+def require_validate(request):
+    """Marking records validated (or taking it back) needs areas.VALIDATE, whatever else the account may edit."""
+    if not has_area(request.user, VALIDATE):
+        raise PermissionDenied("Your account cannot validate records.")
+
+
+def validation_change(data, instance, field):
+    """True when ``data`` would change ``instance.field`` (validated or not). Clearing the last box also clears its
+    validation: that is part of removing a box, not a validation change."""
+    if field not in (data or {}):
+        return False
+    if field == "bbox_is_validated" and "bbox_x" in data and data.get("bbox_x") is None:
+        return False
+    wanted = data.get(field)
+    if isinstance(wanted, str):
+        wanted = wanted.strip().lower() in ("1", "true", "yes", "t")
+    return bool(wanted) != bool(getattr(instance, field, False))
+
+
 def require_box_fields_only(request, data):
     """Someone who may only edit boxes can change nothing but the box (and say which image a new box is on)."""
     if has_area(request.user, ANNOTATE):
@@ -74,6 +93,8 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         require_records(self.request)
+        if validation_change(serializer.initial_data, serializer.instance, "is_validated"):
+            require_validate(self.request)
         # Automatically track who updated/validated the image
         serializer.save(last_updated_by=self.request.user)
 
@@ -98,7 +119,8 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
         from beetlesgallery.tools import ibbi_models
 
         from ..classify_assist import ClassifyError, add_rois, call_classifier
-        require_records(request)   # it adds species names too
+        if not has_area(request.user, AI_RECOMMEND):
+            raise PermissionDenied("Your account cannot generate AI recommendations.")
         asset = self.get_object()
         if not asset.image_file:
             return Response({'error': 'This image has no file.'}, status=400)
@@ -232,7 +254,7 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
         Staff endpoint to unvalidate an image and all its ROIs.
         POST /api/v1/image-assets/{uuid}/unvalidate/
         """
-        require_records(request)
+        require_validate(request)
         asset = self.get_object()
         asset.unvalidate(user=request.user)
         return Response({
@@ -247,7 +269,7 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
         Staff endpoint to validate an image and all its ROIs.
         POST /api/v1/image-assets/{uuid}/validate/
         """
-        require_records(request)
+        require_validate(request)
         asset = self.get_object()
         is_validated = asset.validate(user=request.user)
         return Response({
@@ -298,6 +320,8 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         Delegates all database writes strictly to serializer.save().
         """
         require_box_fields_only(self.request, serializer.initial_data)
+        if serializer.validated_data.get("bbox_is_validated") is True:
+            require_validate(self.request)
         # Base audit fields for any creation or update
         save_kwargs = {
             'last_updated_by': self.request.user
@@ -329,6 +353,8 @@ class BeetlesViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         require_box_fields_only(self.request, serializer.initial_data)
+        if validation_change(serializer.initial_data, serializer.instance, "bbox_is_validated"):
+            require_validate(self.request)
         # 3. If frontend sends a PATCH setting bbox to null (Last ROI Deletion)
         if 'bbox_x' in serializer.validated_data and serializer.validated_data.get('bbox_x') is None:
             # We DO NOT delete the record. We keep the Ghost ROI alive.
@@ -364,7 +390,7 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         Staff endpoint to unvalidate a specific ROI.
         POST /api/v1/beetles/{uuid}/unvalidate/
         """
-        require_records(request)
+        require_validate(request)
         beetle = self.get_object()
         beetle.unvalidate(user=request.user)
         return Response({
@@ -380,7 +406,7 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         Staff endpoint to validate a specific ROI.
         POST /api/v1/beetles/{uuid}/validate/
         """
-        require_records(request)
+        require_validate(request)
         beetle = self.get_object()
         beetle.validate(user=request.user)
         return Response({

@@ -519,13 +519,12 @@ class Command(BaseCommand):
                                 bbox_y=bbox_y,
                                 bbox_width=bbox_width,
                                 bbox_height=bbox_height,
-                                bbox_is_validated=_to_bool(row.get('bbox_is_validated')) or False,
+                                # New data always arrives unvalidated: a curator reviews it on the annotation page.
+                                bbox_is_validated=False,
                                 taxon=taxon_map.get(depicts_valid_name_id),
                                 # Who drew the box and who validated it, as the annotator records them.
                                 bbox_created_by=history_user if bbox_x is not None else None,
                                 bbox_created_at=timezone.now() if bbox_x is not None else None,
-                                bbox_validated_by=history_user if (bbox_x is not None and _to_bool(row.get('bbox_is_validated'))) else None,
-                                bbox_validated_at=timezone.now() if (bbox_x is not None and _to_bool(row.get('bbox_is_validated'))) else None,
                             )
                             
                             created_beetles += 1
