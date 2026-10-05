@@ -149,7 +149,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "db_table": "roi_name",
-                "ordering": ["roi", "-created_at"],
+                "ordering": ["roi", "-created_at", "-id"],
                 "indexes": [
                     models.Index(
                         fields=["roi", "-created_at"], name="roi_name_roi_recent"

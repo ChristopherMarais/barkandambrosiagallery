@@ -1863,7 +1863,7 @@ class RoiName(models.Model):
 
     class Meta:
         db_table = "roi_name"
-        ordering = ["roi", "-created_at"]
+        ordering = ["roi", "-created_at", "-id"]   # -id: names saved in the same instant still list newest first
         indexes = [models.Index(fields=["roi", "-created_at"], name="roi_name_roi_recent")]
 
     def __str__(self):
