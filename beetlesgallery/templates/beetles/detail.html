@@ -197,12 +197,14 @@
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                       </button>
 
-                      {# ADD BUTTON (Plus Icon) #}
+                      {# ADD BUTTON (Plus Icon): another specimen on the same image, so only when there is one #}
+                      {% if beetle.image_asset %}
                       <button type="button" id="add-btn" onclick="toggleAddMode()" 
                               class="text-gray-500 hover:text-gray-600 transition p-1 rounded hover:bg-gray-50" 
                               title="Add Another Specimen to Image">
                           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16M4 12h16"></path></svg>
                       </button>
+                      {% endif %}
 
                       {# CONTROLS (Hidden by default) #}
                       <div id="edit-controls" class="hidden flex gap-2">
@@ -501,7 +503,7 @@
       editControls.classList.remove('hidden');
       editActions.forEach(a => a.classList.remove('hidden'));
       editBtn.classList.add('hidden');
-      addBtn.classList.add('hidden');
+      if (addBtn) addBtn.classList.add('hidden');
       addNotice.classList.add('hidden');
       editNotice.classList.remove('hidden');
       
@@ -523,13 +525,13 @@
       // 3. Show Controls
       editControls.classList.remove('hidden');
       editBtn.classList.add('hidden');
-      addBtn.classList.add('hidden');
+      if (addBtn) addBtn.classList.add('hidden');
       addNotice.classList.remove('hidden');
       editNotice.classList.add('hidden');
       
       title.innerText = "Add Details";
       // Set action to CREATE
-      form.action = "{% url 'create_specimen_for_image' beetle.image_asset.id %}";
+      form.action = "{% if beetle.image_asset %}{% url 'create_specimen_for_image' beetle.image_asset.id %}{% endif %}";
   }
 
   function cancelMode() {
@@ -545,7 +547,7 @@
       editControls.classList.add('hidden');
       editActions.forEach(a => a.classList.add('hidden'));
       editBtn.classList.remove('hidden');
-      addBtn.classList.remove('hidden');
+      if (addBtn) addBtn.classList.remove('hidden');
       addNotice.classList.add('hidden');
       editNotice.classList.add('hidden');
       title.innerText = "Image Details";

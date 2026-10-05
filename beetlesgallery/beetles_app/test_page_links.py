@@ -7,7 +7,6 @@ Behaviour tests for linking pages together (issue #185):
   - the specimen detail page's toolbar links staff to the Annotation Tool,
     focused on that image
 """
-from unittest import expectedFailure
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
@@ -93,14 +92,9 @@ class DetailClassifyLinkTests(PageBehaviourCase):
         beetle = make_beetle(image=make_image())
         self.assertNotIn("Generate AI recommendation", self.detail_html(beetle))
 
-    @expectedFailure
     def test_specimen_with_no_image_at_all_does_not_crash_the_page(self):
-        """KNOWN BUG, pre-existing and unrelated to #185: detail.html has
-        {% url 'create_specimen_for_image' beetle.image_asset.id %} inside a <script>
-        block with no guard. For a beetle with image_asset=None this is a Django
-        template tag evaluated at render time (not just JS), so it raises
-        NoReverseMatch and the whole page 500s instead of just hiding the
-        "add specimen" control. Remove @expectedFailure when that's guarded."""
+        """detail.html built the "add specimen" URL from beetle.image_asset.id with no guard, so a beetle without
+        an image made the page 500 (NoReverseMatch). The control is now left out instead (#350)."""
         from beetlesgallery.beetles_app.models import Beetles
         beetle = Beetles.objects.create()  # no image_asset at all
         self.assertNotIn("Generate AI recommendation", self.detail_html(beetle))
