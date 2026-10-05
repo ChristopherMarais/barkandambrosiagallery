@@ -17,6 +17,11 @@ on:
         required: false
         default: false
         type: boolean
+      deploy_modal:
+        description: "Also deploy staging's own AI service (Modal), even if its code did not change"
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: staging
@@ -45,3 +50,41 @@ jobs:
             if [ "${{ inputs.refresh_data }}" = "true" ]; then
               bash scripts/staging_refresh.sh
             fi
+
+  # Staging's own copy of the AI service (Modal app "ibbi-api-staging"), so staging never calls the live service
+  # with code it does not know yet. Deployed when a push to main changes beetlesgallery/tools/, or by hand.
+  deploy-staging-modal:
+    name: Deploy Staging's AI Service (Modal)
+    runs-on: ubuntu-latest
+    if: vars.STAGING_ENABLED == 'true'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Did the AI service change?
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" != "push" ]; then
+            echo "deploy=${{ inputs.deploy_modal }}" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          BEFORE="${{ github.event.before }}"
+          if ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null || ! git diff --quiet "$BEFORE" "$GITHUB_SHA" -- beetlesgallery/tools/; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Setup Pixi
+        if: steps.changes.outputs.deploy == 'true'
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.81.0
+          cache: true
+          environments: default
+      - name: Deploy staging's API endpoint
+        if: steps.changes.outputs.deploy == 'true'
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+          IBBI_MODAL_APP: ibbi-api-staging
+        run: pixi run modal deploy beetlesgallery/tools/modal_ibbi_api.py

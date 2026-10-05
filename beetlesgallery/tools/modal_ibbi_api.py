@@ -2,9 +2,14 @@
 The AI classifier service on Modal (GPU). The site posts an image and a model key; the answer is described in
 ibbi_models.py, which also lists the models (ibbi 0.3.2).
 
-    Deploy:        pixi run modal deploy beetlesgallery/tools/modal_ibbi_api.py   (the "Deploy App" workflow, target modal)
+    Deploy:        pixi run modal deploy beetlesgallery/tools/modal_ibbi_api.py
+                   (automatic: "Deploy App" on a release when this code changed, or by hand with target modal)
     Pre-download:  pixi run modal run beetlesgallery/tools/modal_ibbi_api.py::download_all_models
+
+The staging site has its own copy, deployed by "Deploy Staging" with IBBI_MODAL_APP=ibbi-api-staging, so trying a
+change on staging never touches the live service (its address: ...--ibbi-api-staging-fastapi-app.modal.run).
 """
+import os
 import sys
 from pathlib import Path
 
@@ -17,6 +22,7 @@ import ibbi_models  # noqa: E402
 
 # --- Configuration ---
 CACHE_DIR = "/model_cache"
+APP_NAME = os.environ.get("IBBI_MODAL_APP") or "ibbi-api"   # "ibbi-api-staging" for the staging site
 
 # 1. The container: ibbi brings torch, ultralytics, transformers and timm with it
 image = (
@@ -30,11 +36,12 @@ image = (
         "TORCH_HOME": f"{CACHE_DIR}/torch",
         "YOLO_CONFIG_DIR": f"{CACHE_DIR}/ultralytics",
         "MPLCONFIGDIR": f"{CACHE_DIR}/matplotlib",
+        "IBBI_MODAL_APP": APP_NAME,   # the container names its app the same way
     })
     .add_local_file(HERE / "ibbi_models.py", "/root/ibbi_models.py")
 )
 
-app = modal.App("ibbi-api")
+app = modal.App(APP_NAME)
 
 # --- A volume that keeps the model weights between containers ---
 cache_volume = modal.Volume.from_name("ibbi-cache", create_if_missing=True)
