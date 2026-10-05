@@ -224,7 +224,7 @@ class PlayPageTests(GameCase):
         order = [page.index(f'data-choice="{c}"') for c in ("different", "subfamily", "tribe", "genus", "species")]
         self.assertEqual(order, sorted(order))
         self.assertNotIn('data-choice="unsure"', page)        # "Not sure" is the fixed button next to Next
-        self.assertIn('mode === "pair" ? "Not sure" : "Skip"', page)   # the fixed button reads "Not sure" in Family Ties
+        self.assertIn('$("skip-text").textContent = "Skip";', page)   # "Skip" in every game now (it still sends "unsure" here)
 
     def test_the_game_keeps_its_colours_to_a_small_palette(self):
         # The game may be more colourful than the rest of the site, but from one palette: RPG rarity colours
@@ -281,7 +281,7 @@ class OnboardingTests(GameCase):
     def test_box_shows_on_any_photo_and_the_crop_shows_where_it_sits(self):
         self.client.force_login(self.user)
         page = self.client.get(reverse("game_play", args=["classify"])).content.decode()
-        self.assertIn("#lightbox-box { border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.7)", page)   # white with a dark edge
+        self.assertIn("#lightbox-box { border-radius: 0.5rem; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.7)", page)   # white with a dark edge
         self.assertIn("const CROP_PAD = 0.25;", page)        # some of the photo around the beetle (#421)
         self.assertNotIn("photo-edge", page)                 # past the photo's edge is plain grey: no label needed
 
