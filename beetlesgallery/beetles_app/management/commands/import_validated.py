@@ -503,11 +503,13 @@ class Command(BaseCommand):
                             }
 
                             # 2. Get or Create ImageAsset
-                            # We use full_path_at_import as the unique key. 
-                            # If it exists, we link to it (and do NOT overwrite metadata).
+                            # The photo itself (its sha256) is the key: rows listing the same photo share one
+                            # ImageAsset (one per photo, a Beetles row per specimen on it). A new photo whose path
+                            # was used before gets its own (#350). Validation already refuses photos that are in
+                            # the database, so this only finds one created earlier in the same batch.
                             image_asset, created = ImageAsset.objects.get_or_create(
-                                full_path_at_import=full_path_at_import,
-                                defaults=image_defaults
+                                image_sha256=image_sha256,
+                                defaults={**image_defaults, "full_path_at_import": full_path_at_import},
                             )
 
                             # 3. Create Beetle Record
