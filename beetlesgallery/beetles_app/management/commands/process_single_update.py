@@ -164,14 +164,15 @@ class Command(BaseCommand):
             # 1. Resolve Target
             if raw_id and raw_id != "new":
                 try:
-                    beetle_obj = Beetles.objects.get(pk=raw_id)
+                    # uuid.UUID: an id that isn't a UUID at all is "not found" too, not a crash (#350)
+                    beetle_obj = Beetles.objects.get(pk=uuid.UUID(raw_id))
                 except (Beetles.DoesNotExist, ValueError):
                     errors.append(f"Row {row_num}: Record ID '{raw_id}' not found.")
                     continue
             elif target_image_id:
                 # CREATION MODE
                 try:
-                    image_asset = ImageAsset.objects.get(pk=target_image_id)
+                    image_asset = ImageAsset.objects.get(pk=uuid.UUID(target_image_id))
                     beetle_obj = Beetles(image_asset=image_asset)
                     is_new = True
                 except (ImageAsset.DoesNotExist, ValueError):

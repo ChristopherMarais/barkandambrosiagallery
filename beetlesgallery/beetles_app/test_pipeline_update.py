@@ -260,8 +260,6 @@ class ProcessSingleUpdateTests(PageBehaviourCase):
         self.assertEqual(fresh(first).collection_country, "USA")
         self.assertEqual(first.history.count(), 1)
 
-    # KNOWN BUG: Beetles.objects.get(pk="not-a-uuid") raises ValidationError, but the except at process_single_update.py:144 catches only DoesNotExist/ValueError; the command crashes and the batch stays "validating". update_upload checks only the first 20 IDs (views.py:1337).
-    @expectedFailure
     def test_non_uuid_record_id_fails_the_batch_with_a_reason(self):
         batch = self.run_rows({"record_id": "not-a-uuid", "collection_country": "Peru"})
 
