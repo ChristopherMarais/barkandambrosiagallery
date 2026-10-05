@@ -50,6 +50,9 @@ RUNGS = [
 MAX_RESPONSE_MS = 60 * 60 * 1000
 DISCUSSIONS_URL = "https://github.com/ChristopherMarais/barkandambrosiagallery/discussions/categories/beetle-id-game"
 
+# Reporting a photo from the feed, before answering (a wrong name is reported from the round review instead)
+FEED_REPORT_REASONS = [("bad_box", "Box doesn't fit"), ("bad_image", "Bad photo"), ("other", "Something else")]
+
 
 def discussions_url():
     """Where players report bugs and suggest ideas (GitHub Discussions)."""
@@ -299,9 +302,9 @@ def game_play(request, mode):
         raise Http404("Unknown game mode")
     return render(request, "beetles/game_play.html", {
         "discussions": discussions_url(),
-        # short, one line each, for the little report menu in the full-image view
-        "report_reasons": [("wrong_label", "Wrong name"), ("bad_box", "Box doesn't fit"),
-                           ("bad_image", "Bad photo"), ("other", "Something else")],
+        # short, one line each, for the little report menu in the full-image view. No "Wrong name" here: that is
+        # for after answering (the round review), so the menu never hints at the answer.
+        "report_reasons": FEED_REPORT_REASONS,
         "mode": mode,
         "mode_label": GAME_NAMES[mode],
         "break_minutes": game.game_setting("GAME_BREAK_NUDGE_MINUTES", 60),   # 0 turns the break nudge off
@@ -408,7 +411,7 @@ def game_report_item(request):
     if not isinstance(which, int) or not 0 <= which < len(shown):
         return JsonResponse({"error": "Unknown image."}, status=400)
     reason = body.get("reason")
-    if reason not in GameReport.Reason.values:
+    if reason not in dict(FEED_REPORT_REASONS):
         return JsonResponse({"error": "Please choose a reason."}, status=400)
     roi = shown[which]
     photo = body.get("photo") or 0

@@ -39,6 +39,7 @@ from .models import Beetles, UploadBatch, DownloadJob, UpdateBatch, ImageAsset
 from .schema import REQUIRED_COLS, MAX_ROWS
 from .forms import TailwindUserCreationForm, ProfileForm, PasswordChangeFormStyled, ValidSpeciesUploadForm, DescribedNamesUploadForm, UpdateBatchUploadForm
 from .predictions import import_predictions, suggestions_for
+from .roi_reports import REASONS as REPORT_REASONS
 from .tasks import process_upload_task, process_update_task, build_downloads_task
 
 import pandas as pd
@@ -814,6 +815,7 @@ def beetle_detail(request, beetle_id):
         request,
         "beetles/detail.html",
         {
+            "report_reasons": REPORT_REASONS,
             "beetle": beetle, 
             "ref_species": ref_species, 
             "ref_version": ref_version,
