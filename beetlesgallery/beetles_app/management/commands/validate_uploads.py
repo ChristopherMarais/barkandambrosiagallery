@@ -16,7 +16,7 @@ try:
 except ImportError:
     pd = None
 
-from beetlesgallery.beetles_app.schema import REQUIRED_COLS, MAX_ROWS, IMAGE_EXTENSIONS, MANIFEST_NAME, MANIFEST_VERSION
+from beetlesgallery.beetles_app.schema import REQUIRED_COLS, MAX_ROWS, IMAGE_EXTENSIONS, MANIFEST_VERSION, manifest_name
 from beetlesgallery.beetles_app.bbox_rules import BOX_COLUMNS, is_blank, parse_box
 from beetlesgallery.beetles_app.csv_columns import modern_columns
 
@@ -384,7 +384,7 @@ class Command(BaseCommand):
                 batch.mark_validated_and_move()
                 try:
                     base_dir = os.path.dirname(batch.file.path)
-                    manifest_path = os.path.join(base_dir, MANIFEST_NAME)
+                    manifest_path = os.path.join(base_dir, manifest_name(batch.id))   # one per batch (#350)
                     if manifest is not None:
                         with open(manifest_path, "w", encoding="utf-8") as fh:
                             json.dump({

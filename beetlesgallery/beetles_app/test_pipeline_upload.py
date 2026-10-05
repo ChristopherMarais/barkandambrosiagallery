@@ -201,9 +201,9 @@ class ValidBatchImportTests(UploadPipelineCase):
             self.assertTrue(field.name.startswith("uploads/archived/"), field.name)
             self.assertTrue(os.path.exists(field.path))
         archive_dir = os.path.dirname(batch.file.path)
-        with open(os.path.join(archive_dir, "manifest.json")) as fh:
+        with open(os.path.join(archive_dir, f"manifest_{batch.id}.json")) as fh:
             self.assertEqual([row["sha256"] for row in json.load(fh)["rows"]], [sha])
-        with open(os.path.join(archive_dir, "archive.json")) as fh:
+        with open(os.path.join(archive_dir, f"archive_{batch.id}.json")) as fh:
             archive = json.load(fh)
         self.assertEqual((archive["batch_id"], archive["imported_count"]), (str(batch.id), 1))
 
@@ -399,8 +399,6 @@ class PipelineOrderTests(UploadPipelineCase):
                 self.assertEqual(batch.status, status)
         self.assertTrue(os.path.exists(os.path.join(self.media_root, "upload_pipeline.lock")))
 
-    # KNOWN BUG: validate_uploads.py:361-362 writes every batch's manifest to the shared uploads/validated/YYYY/MM/manifest.json, so the second batch validated overwrites the first and import_validated.py:243 reads the wrong manifest.
-    @expectedFailure
     def test_two_batches_validated_together_each_import_their_own_images(self):
         first, second = image_bytes(), image_bytes()
         batch_a = self.stage_batch([{"full_path_at_import": "a.jpg"}], {"a.jpg": first})
