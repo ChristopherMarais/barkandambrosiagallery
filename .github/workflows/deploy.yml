@@ -19,14 +19,54 @@ on:
           - all
 
 jobs:
-  # JOB 1: Deploy Django Web App (Contabo)
+  # JOB 1: Deploy the AI service (Modal). On a release it runs first, and only deploys when the service's code
+  # (beetlesgallery/tools/) changed since the previous release; by hand ("modal" or "all") it always deploys.
+  deploy-modal:
+    name: Deploy AI Service (Modal)
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'release' ||
+      (github.event_name == 'workflow_dispatch' && (inputs.deploy_target == 'modal' || inputs.deploy_target == 'all'))
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Did the AI service change?
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" != "release" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          PREV=$(git describe --tags --abbrev=0 "${GITHUB_SHA}^" 2>/dev/null || true)
+          if [ -z "$PREV" ] || ! git diff --quiet "$PREV" "$GITHUB_SHA" -- beetlesgallery/tools/; then
+            echo "The AI service changed since ${PREV:-the first commit}: deploying it."
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "The AI service is unchanged since $PREV: nothing to deploy."
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Setup Pixi
+        if: steps.changes.outputs.deploy == 'true'
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.39.0
+          cache: true
+          environments: default
+      - name: Deploy API Endpoint
+        if: steps.changes.outputs.deploy == 'true'
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: pixi run modal deploy beetlesgallery/tools/modal_ibbi_api.py
+
+  # JOB 2: Deploy Django Web App (Contabo), after the AI service it may rely on (or when that had nothing to do)
   deploy-web:
     name: Deploy Web App (Contabo)
     runs-on: ubuntu-latest
-    # Run on Release OR Manual (web/all)
-    if: |
-      github.event_name == 'release' || 
-      (github.event_name == 'workflow_dispatch' && (inputs.deploy_target == 'web' || inputs.deploy_target == 'all'))
+    needs: deploy-modal
+    # Run on Release OR Manual (web/all); never after a failed AI service deploy
+    if: ${{ !failure() && !cancelled() && (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && (inputs.deploy_target == 'web' || inputs.deploy_target == 'all'))) }}
     steps:
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -104,24 +144,3 @@ jobs:
 
             # 7. Cleanup
             docker image prune -f
-
-  # JOB 2: Deploy AI Service (Modal)
-  deploy-modal:
-    name: Deploy AI Service (Modal)
-    runs-on: ubuntu-latest
-    # Run ONLY on Manual (modal/all)
-    if: github.event_name == 'workflow_dispatch' && (inputs.deploy_target == 'modal' || inputs.deploy_target == 'all')
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-      - name: Setup Pixi
-        uses: prefix-dev/setup-pixi@v0.8.1
-        with:
-          pixi-version: v0.39.0
-          cache: true
-          environments: default 
-      - name: Deploy API Endpoint
-        env:
-          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
-          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
-        run: pixi run modal deploy beetlesgallery/tools/modal_ibbi_api.py
