@@ -88,6 +88,8 @@
   const csrf = document.querySelector('meta[name="csrf-token"]').content;
   const RANKS = ["subfamily", "tribe", "genus", "species"];
   const IS_SELF = {{ is_self|yesno:"true,false" }};
+  const CAN_REVOKE = {{ can_revoke|yesno:"true,false" }};   // curators who may validate (#380)
+  const ANNOTATE_URL = "{% url 'tool_annotate' %}";
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const safeImageUrl = (raw) => {
@@ -155,7 +157,22 @@
     return v;
   }
 
+  // Curators: a verified name that looks wrong can be un-validated or corrected on the annotation page
+  function curatorLink(side) {
+    if (!CAN_REVOKE || !side.verified || !side.image_id) return "";
+    return ` <a href="${ANNOTATE_URL}?image=${encodeURIComponent(side.image_id)}&roi=${encodeURIComponent(side.roi_id)}" target="_blank" rel="noopener"
+              class="text-xs text-gray-500 underline underline-offset-2 hover:text-gray-900" data-testid="open-in-annotator"
+              title="Un-validate or correct it on the annotation page">Open in annotator</a>`;
+  }
+
   function reportControl(item, side) {
+    const link = curatorLink(side);
+    if (!link) return reportOnly(item, side);
+    // two controls: stacked on a phone, side by side on a wider screen
+    return `<span class="flex flex-col items-end gap-0.5 whitespace-nowrap sm:flex-row sm:items-center sm:gap-3">${reportOnly(item, side)}${link}</span>`;
+  }
+
+  function reportOnly(item, side) {
     if (!IS_SELF) return side.report ? `<span class="text-xs text-gray-500">Reported</span>` : "";
     if (side.report) {
       const label = side.report.status === "open" ? "Reported · being checked" : side.report.status === "corrected" ? "Reported · corrected, thanks!" : "Reported · name confirmed";

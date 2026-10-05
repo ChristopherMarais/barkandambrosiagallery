@@ -26,7 +26,7 @@ from django.views.decorators.http import require_GET, require_POST
 from . import game, game_board, game_checked, game_discoveries, game_feedback, game_queue, game_levels, game_rewards, game_scoring, game_tips, game_trust
 from . import game_applied
 from . import game_taxa as taxa_tree
-from .areas import ANNOTATE, area_required
+from .areas import ANNOTATE, BOXES, VALIDATE, area_required, has_area
 from .models import Beetles, GameAnswer, GameReport, GameRound, ImageLock, LabelReview, PlayerScore, RetroCredit, Taxon
 from .predictions import suggestions_for
 
@@ -377,6 +377,8 @@ def game_round_review(request, round_id):
         "feedback_json": feedback["items"],
         "is_self": rnd.player == request.user,
         "reasons": GameReport.Reason.choices,
+        # curators who may validate can open a verified beetle in the annotator, to un-validate or correct it (#380)
+        "can_revoke": has_area(request.user, BOXES) and has_area(request.user, VALIDATE),
     })
 
 
