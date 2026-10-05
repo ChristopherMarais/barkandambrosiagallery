@@ -122,9 +122,10 @@ class ScoringTests(SelectCase):
         self.assertEqual((result["tiles"][0], result["members"], result["right"]), ("vote", 2, 2))
         self.assertEqual(ans.picks, [0, 1, 2])
 
-    def test_grids_stay_out_of_the_reliability_rating(self):
-        self.grid_answer([0, 1, 2])
-        self.assertNotIn(self.user.id, game_scoring.ratings())
+    def test_a_grid_counts_once_in_the_reliability_rating(self):   # #381: once per grid, not per tile
+        ans = self.grid_answer([0, 1, 2])
+        GameAnswer.objects.filter(pk=ans.pk).update(correct_species=True)   # a perfect grid, as the game stores it
+        self.assertEqual(game_scoring.ratings()[self.user.id][2], 1)
 
     def test_skip_earns_a_little_like_odd_one_out(self):
         rnd, item = self.grid()

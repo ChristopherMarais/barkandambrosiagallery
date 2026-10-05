@@ -45,8 +45,8 @@ BEETLE_FIELDS = {
 from beetlesgallery.beetles_app.identification import parse_tier
 UPDATE_IGNORED_COLS = {
     "image_id", "taxonomy_scientific_name", "taxonomy_subfamily", 
-    "taxonomy_tribe", "taxonomy_genus", "taxonomy_species", "update_notes"
-}
+    "taxonomy_tribe", "taxonomy_genus", "taxonomy_species",
+}   # update_notes is read on its own: why the record changed
 
 # -----------------------
 # Helpers
@@ -144,6 +144,7 @@ class Command(BaseCommand):
         
         row_count = len(df)
         batch.rows_total = row_count
+        batch.save(update_fields=["rows_total"])   # the later saves name only their own fields (#350)
         # Validating or un-validating through a spreadsheet is bulk validation: its own permission. Batches with
         # no uploader were made by the owner on the server.
         may_validate = batch.uploaded_by is None or has_area(batch.uploaded_by, BULK_VALIDATE)
@@ -164,14 +165,15 @@ class Command(BaseCommand):
             # 1. Resolve Target
             if raw_id and raw_id != "new":
                 try:
-                    beetle_obj = Beetles.objects.get(pk=raw_id)
+                    # uuid.UUID: an id that isn't a UUID at all is "not found" too, not a crash (#350)
+                    beetle_obj = Beetles.objects.get(pk=uuid.UUID(raw_id))
                 except (Beetles.DoesNotExist, ValueError):
                     errors.append(f"Row {row_num}: Record ID '{raw_id}' not found.")
                     continue
             elif target_image_id:
                 # CREATION MODE
                 try:
-                    image_asset = ImageAsset.objects.get(pk=target_image_id)
+                    image_asset = ImageAsset.objects.get(pk=uuid.UUID(target_image_id))
                     beetle_obj = Beetles(image_asset=image_asset)
                     is_new = True
                 except (ImageAsset.DoesNotExist, ValueError):
@@ -257,7 +259,9 @@ class Command(BaseCommand):
                                   "Validate on the annotation page, or leave the cell as downloaded.")
                     continue
 
+            notes = _none(row.get("update_notes"))
             updates_plan.append({
+                "notes": None if is_blank(notes) else str(notes).strip(),   # why (optional column)
                 "beetle": beetle_obj,
                 "b_data": b_updates,
                 "i_data": i_updates,
@@ -350,6 +354,13 @@ class Command(BaseCommand):
                             if k == "depicts_valid_name_id":
                                 obj.taxon = taxon_map.get(val) if val else None
                     
+                    # Who changed the record and why (#350); a blank update_notes leaves the old note
+                    if plan["notes"] is not None and plan["notes"] != (obj.update_notes or ""):
+                        obj.update_notes = plan["notes"]
+                        has_b_change = True
+                    if plan["is_new"] or has_b_change:
+                        obj.last_updated_by = batch.uploaded_by
+
                     # Audit trail for boxes, as the annotator API keeps it.
                     now = timezone.now()
                     has_box = obj.bbox_x is not None
@@ -364,7 +375,6 @@ class Command(BaseCommand):
 
                     if plan["is_new"]:
                         obj.save() # Insert
-                        changed_count += 1
                         # History attribution
                         h = obj.history.first()
                         if h:
@@ -373,7 +383,6 @@ class Command(BaseCommand):
                             h.save()
                     elif has_b_change:
                         obj.save()
-                        changed_count += 1
                         # History attribution
                         h = obj.history.first()
                         if h:
@@ -383,9 +392,9 @@ class Command(BaseCommand):
 
                     # 2. Update ImageAsset
                     # We update image fields if provided. Note: this affects ALL specimens linked to this image.
+                    has_i_change = False
                     if i_data and obj.image_asset:
                         img = obj.image_asset
-                        has_i_change = False
                         for k, v in i_data.items():
                             if k == "image_has_multiple_individuals": val = _to_bool(v)
                             elif k == "is_validated":
@@ -407,13 +416,18 @@ class Command(BaseCommand):
                                 has_i_change = True
                         
                         if has_i_change:
+                            img.last_updated_by = batch.uploaded_by
                             img.save()
+
+                    if plan["is_new"] or has_b_change or has_i_change:
+                        changed_count += 1
 
                 # Run after all ROI saves so stale in-memory ROIs can't re-validate the image
                 for img in images_to_unvalidate.values():
                     img.unvalidate(user=batch.uploaded_by)
 
             batch.rows_changed = changed_count
+            batch.save(update_fields=["rows_matched", "rows_changed"])
             batch.mark_applied_and_archive()
             self.stdout.write(self.style.SUCCESS(f"Batch {batch.id} applied successfully."))
 

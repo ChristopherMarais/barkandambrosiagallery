@@ -25,8 +25,8 @@
     <p class="font-semibold text-gray-800 mb-1">How labels become expert-backed</p>
     <p>
       A player is an expert at a rank within a taxon (species within a genus, genus within a tribe, tribe within a subfamily,
-      or subfamily overall) once they have answered {{ per_species }} validated images of every species in it that has any
-      (all of them for a species with fewer, at least 10 in total) and got at least 90% correct. Larger taxa need more answers.
+      or subfamily overall) once they have answered {{ per_species }} validated images each of at least {% widthratio children_share 1 100 %}% of its members
+      with validated images (its species, genera or tribes; all images of one with fewer; at least 10 answers in total) and got at least 90% correct. Larger taxa need more answers.
       A proposal is expert-backed at a rank when an expert for that exact branch agrees and no expert disagrees, and every rank above it is
       expert-backed too. Branches with too few validated ROIs to ever test instead accept players proven in two or more related branches
       (e.g. other genera of the same tribe). Accept or dismiss proposals on the <a class="underline" href="{% url 'tool_annotate' %}">annotation page</a>.

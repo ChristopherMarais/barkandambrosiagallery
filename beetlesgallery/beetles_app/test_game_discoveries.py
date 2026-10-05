@@ -78,4 +78,6 @@ class ScalingExpertiseTests(ScoringCase):
             self.answer(p, self.roi(self.t_affinis), AFFINIS)    # only one of the four species
         recompute_skills(p)
         skill = PlayerSkill.objects.get(player=p, rank="species", branch="Xyleborus")
-        self.assertEqual((skill.required, skill.species_total, skill.species_done, skill.proven), (20, 4, 1, False))
+        # 3 of the 4 species are needed (75%, #381)
+        self.assertEqual((skill.required, skill.children_total, skill.children_needed, skill.children_done, skill.proven),
+                         (15, 4, 3, 1, False))

@@ -10,10 +10,12 @@ Expertise is measured per rank *within a branch* of the taxonomy, from a player'
     subfamily overall
 
 A player is *proven* (an expert) at a rank in a taxon once they have covered it: answered at least
-GAME_TRUST_IMAGES_PER_SPECIES validated images of every species in it that has validated images (all of them for
-a species with fewer), at least GAME_TRUST_MIN_JUDGED answers in total, and at least GAME_TRUST_MIN_ACCURACY of
-those answers are right. So a genus with two species needs far
-fewer answers than one with forty, and nobody is an expert on a taxon whose species they have never seen.
+GAME_TRUST_IMAGES_PER_SPECIES validated images (all of them for one with fewer) of at least GAME_TRUST_CHILDREN_SHARE
+of its children with validated images (the species of a genus, the genera of a tribe, the tribes of a subfamily),
+rounded up so a taxon with three or fewer needs all of them; at least GAME_TRUST_MIN_JUDGED answers in total; and at
+least GAME_TRUST_MIN_ACCURACY of those answers are right. So a genus with two species needs far fewer answers than
+one with forty, a rare genus doesn't stop anyone becoming a tribe expert (#381), and nobody is an expert on a taxon
+most of whose members they have never seen.
 
 A player is *reliable* in a taxon with at least GAME_TRUST_MIN_JUDGED answers there and the same accuracy, without
 the full coverage. A game label on an unvalidated ROI is *trusted* at a rank when a player proven for the label's
@@ -38,6 +40,8 @@ from .models import GameAnswer, PlayerSkill, Taxon
 
 # The rank whose value names the branch a skill is measured in.
 BRANCH_OF = {"subfamily": None, "tribe": "subfamily", "genus": "tribe", "species": "genus"}
+# What a skill's children are called: genus calls within a tribe cover its genera (#381)
+CHILDREN_UNIT = {"subfamily": "subfamilies", "tribe": "tribes", "genus": "genera", "species": "species"}
 
 INDEX_CACHE_KEY = "game:trust_index:v1"
 INDEX_CACHE_SECONDS = 600
@@ -56,7 +60,18 @@ def wilson_lower_bound(ok, n, z=None):
 
 
 def per_species():
+    """Validated images of a child (a species, genus or tribe) that cover it; the setting kept its old name."""
     return game_setting("GAME_TRUST_IMAGES_PER_SPECIES", 5)
+
+
+def children_share():
+    """The share of a taxon's children an expert must have covered (#381)."""
+    return game_setting("GAME_TRUST_CHILDREN_SHARE", 0.75)
+
+
+def children_needed(total):
+    """How many of ``total`` children proof needs: the share, rounded up (so all of them up to three, at 75%)."""
+    return min(total, math.ceil(round(children_share() * total, 6))) if total else 0
 
 
 def min_accuracy():
@@ -67,22 +82,26 @@ def coverage(available, answered):
     """
     What proof of a taxon needs, and how far a player is.
 
-    ``available``: {species: validated images in the taxon}. ``answered``: {species: the player's first answers
-    on those images}. Returns {"required", "covered", "species_total", "species_done", "complete"}, where each
-    species needs min(GAME_TRUST_IMAGES_PER_SPECIES, its validated images), and the total needs at least
-    GAME_TRUST_MIN_JUDGED. A taxon with fewer validated images than that can't be proven directly at all.
+    ``available``: {child: validated images in the taxon} for its children (the species of a genus, the genera of
+    a tribe, ...). ``answered``: {child: the player's first answers on those images}. A child is covered with
+    min(GAME_TRUST_IMAGES_PER_SPECIES, its validated images) answers; proof needs children_needed() of them covered
+    and at least GAME_TRUST_MIN_JUDGED answers in all. A taxon with fewer validated images than that can't be
+    proven directly at all. Returns {"required", "covered", "children_total", "children_needed", "children_done",
+    "complete"}; ``required`` and ``covered`` count answers, for progress: those the cheapest children to cover
+    need, and the player's best progress on as many children.
     """
     k = per_species()
-    need = {sp: min(k, n) for sp, n in available.items() if n > 0}
+    need = {child: min(k, n) for child, n in available.items() if n > 0}
+    needed = children_needed(len(need))
     floor = game_setting("GAME_TRUST_MIN_JUDGED", 10)
-    required = max(sum(need.values()), floor)
-    covered_per = {sp: min(answered.get(sp, 0), n) for sp, n in need.items()}
-    done = sum(1 for sp, n in need.items() if covered_per[sp] >= n)
+    required = max(sum(sorted(need.values())[:needed]), floor)
+    progress = sorted((min(answered.get(child, 0), n) for child, n in need.items()), reverse=True)
+    done = sum(1 for child, n in need.items() if answered.get(child, 0) >= n)
     total_answers = sum(answered.values())
-    covered = min(required, max(sum(covered_per.values()), min(total_answers, floor)))
+    covered = min(required, max(sum(progress[:needed]), min(total_answers, floor)))
     return {
-        "required": required, "covered": covered, "species_total": len(need), "species_done": done,
-        "complete": bool(need) and done == len(need) and total_answers >= floor,
+        "required": required, "covered": covered, "children_total": len(need), "children_needed": needed,
+        "children_done": done, "complete": bool(need) and done >= needed and total_answers >= floor,
     }
 
 
@@ -108,11 +127,16 @@ def branch_for(rank, labels):
 # ---------------------------------------------------------------------------
 # Skills
 # ---------------------------------------------------------------------------
+def child_at(rank, genus, species, value):
+    """The child a skill at ``rank`` is about: the species ("genus species") or the genus, tribe or subfamily."""
+    return species_key(genus, species) if rank == "species" else (value or "").lower()
+
+
 def skill_counts(player):
     """
-    {(rank, branch_lower): [correct, judged, branch_display, {species: answers}]} from scored classify answers.
-    Each validated ROI counts once per rank (the first answer), so replayed items can't
-    pad a record.
+    {(rank, branch_lower): [correct, judged, branch_display, {child: answers}]} from scored classify answers, where
+    a child is the beetle's taxon at that rank (its genus, for genus calls within a tribe). Each validated ROI
+    counts once per rank (the first answer), so replayed items can't pad a record.
     """
     stats = {}
     seen = set()
@@ -124,7 +148,8 @@ def skill_counts(player):
                 *[f"correct_{r}" for r in RANKS])
     )
     for a in answers:
-        labels = {"subfamily": a["ref_subfamily"], "tribe": a["ref_tribe"], "genus": a["ref_genus"]}
+        labels = {"subfamily": a["ref_subfamily"], "tribe": a["ref_tribe"], "genus": a["ref_genus"],
+                  "species": a["ref_species"]}
         for r in RANKS:
             ok = a[f"correct_{r}"]
             if ok is None or (r, a["roi_id"]) in seen:
@@ -136,21 +161,20 @@ def skill_counts(player):
             row = stats.setdefault((r, branch.lower()), [0, 0, branch, defaultdict(int)])
             row[0] += int(ok)
             row[1] += 1
-            row[3][species_key(a["ref_genus"], a["ref_species"])] += 1
+            row[3][child_at(r, a["ref_genus"], a["ref_species"], labels[r])] += 1
     return stats
 
 
-def species_available():
-    """{(rank, branch_lower): {species: validated images}}: what proving each skill has to cover."""
+def children_available():
+    """{(rank, branch_lower): {child: validated images}}: what proving each skill has to cover."""
     out = defaultdict(lambda: defaultdict(int))
     rows = check_rois().values("taxon__subfamily", "taxon__tribe", "taxon__genus", "taxon__species").annotate(n=Count("id"))
     for row in rows:
-        sp = species_key(row["taxon__genus"], row["taxon__species"])
         for rank, field in BRANCH_OF.items():
             branch = (row[f"taxon__{field}"] or "").lower() if field else ""
             if field and not branch:
                 continue
-            out[(rank, branch)][sp] += row["n"]
+            out[(rank, branch)][child_at(rank, row["taxon__genus"], row["taxon__species"], row[f"taxon__{rank}"])] += row["n"]
     return out
 
 
@@ -158,7 +182,7 @@ def recompute_skills(player):
     """Refresh the player's PlayerSkill rows from their answers."""
     now = timezone.now()
     existing = {(s.rank, s.branch.lower()): s for s in PlayerSkill.objects.filter(player=player)}
-    available = species_available()
+    available = children_available()
     create, update = [], []
     for key, (ok, n, display, answered) in skill_counts(player).items():
         skill = existing.get(key)
@@ -173,13 +197,14 @@ def recompute_skills(player):
             skill.proven_at = now
         skill.correct, skill.judged, skill.proven = ok, n, proven
         skill.required, skill.covered = cover["required"], cover["covered"]
-        skill.species_total, skill.species_done = cover["species_total"], cover["species_done"]
+        skill.children_total, skill.children_needed = cover["children_total"], cover["children_needed"]
+        skill.children_done = cover["children_done"]
         skill.lower_bound = round(wilson_lower_bound(ok, n), 4)
         skill.updated_at = now
     PlayerSkill.objects.bulk_create(create)
     PlayerSkill.objects.bulk_update(update, [
-        "correct", "judged", "proven", "proven_at", "lower_bound", "required", "covered", "species_total",
-        "species_done", "updated_at",
+        "correct", "judged", "proven", "proven_at", "lower_bound", "required", "covered", "children_total",
+        "children_needed", "children_done", "updated_at",
     ])
 
 
@@ -395,6 +420,7 @@ def player_report(player):
     for s in skills:
         s.progress = min(1.0, s.covered / s.required) if s.required else 0.0
         s.accuracy = s.correct / s.judged if s.judged else None
+        s.children_unit = CHILDREN_UNIT[s.rank]
 
     since = timezone.now() - timedelta(days=183)
     monthly = []
@@ -429,6 +455,7 @@ def player_report(player):
             .order_by("-finished_at")[:10]
         ),
         "per_species": per_species(),
+        "children_share": children_share(),
         "min_accuracy": min_accuracy(),
         "siblings": game_setting("GAME_TRUST_SIBLINGS", 2),
     }
@@ -441,7 +468,7 @@ def auto_apply_expert_labels(roi_ids=None):
     """
     Write the species that proven experts agree on onto beetles that have no name yet, without waiting for a
     curator. This is the strictest rule in the game. Each expert counted must be *proven directly* on the species
-    of the label's genus (enough validated images of every species in it, see coverage, and at least
+    of the label's genus (enough validated images of most of its species, see coverage, and at least
     GAME_TRUST_MIN_ACCURACY right), be proven or reliable in its tribe, subfamily and overall, and be among the most
     reliable players overall (elite_players). Proof in neighbouring genera, which is enough for a suggestion to
     curators, is not enough here. GAME_AUTO_APPLY_MIN_EXPERTS (2) such experts must give the same species, no
@@ -555,7 +582,8 @@ def expertise_tree(player):
             "accuracy": (skill.correct / skill.judged) if skill and skill.judged else None,
             "proven": bool(skill and skill.proven),
             "required": skill.required if skill else 0, "covered": skill.covered if skill else 0,
-            "species_total": skill.species_total if skill else 0, "species_done": skill.species_done if skill else 0,
+            "children_total": skill.children_total if skill else 0, "children_done": skill.children_done if skill else 0,
+            "children_needed": skill.children_needed if skill else 0, "unit": CHILDREN_UNIT[rank],
         }
 
     layout = defaultdict(lambda: defaultdict(set))
@@ -577,5 +605,5 @@ def expertise_tree(player):
         tree.append(sub)
     root = node("subfamily", "")
     return {"root": root, "subfamilies": tree, "min_shown": min_shown, "per_species": per_species(),
-            "min_accuracy": min_accuracy(), "legend": expertise_legend(),
+            "children_share": children_share(), "min_accuracy": min_accuracy(), "legend": expertise_legend(),
             "experts": sum(1 for s in skills.values() if s.proven)}

@@ -7,6 +7,7 @@ from django.contrib.postgres.indexes import GinIndex
 import uuid
 import json, os
 from simple_history.models import HistoricalRecords
+from .schema import LEGACY_MANIFEST_NAME, archive_name, manifest_name
 from treebeard.mp_tree import MP_Node
 
 # -----------------------------
@@ -596,8 +597,8 @@ class UploadBatch(models.Model):
 
     def mark_imported_and_archive(self) -> None:
         """
-        Move CSV/ZIP and known sidecars (manifest.json, archive.json) from validated->archived,
-        then mark the batch as IMPORTED.
+        Move CSV/ZIP and the batch's sidecars (its manifest and archive record, see schema.py) from
+        validated->archived, then mark the batch as IMPORTED.
         """
         with transaction.atomic():
             # capture source & destination dirs so we can move sidecars too
@@ -621,8 +622,11 @@ class UploadBatch(models.Model):
                         # ignore; sidecar isn't critical for marking imported
                         pass
 
-            _move_sidecar("manifest.json")
-            _move_sidecar("archive.json")
+            manifest = manifest_name(self.id)
+            if not os.path.exists(os.path.join(src_dir_abs, manifest)):
+                manifest = LEGACY_MANIFEST_NAME   # validated before manifests were kept per batch (#350)
+            _move_sidecar(manifest)
+            _move_sidecar(archive_name(self.id))
 
             self.status = self.Status.IMPORTED
             self.imported_at = timezone.now()
@@ -645,7 +649,7 @@ class UploadBatch(models.Model):
 
     def write_archive_json(self, *, imported_count: int, records_summary: list[dict] | None = None, notes: str = "") -> str:
         """
-        Create/overwrite archive.json next to the CSV that’s currently on disk.
+        Create/overwrite this batch's archive record (archive_<id>.json) next to the CSV that’s currently on disk.
         Call this AFTER a successful import, BEFORE archiving.
         Returns the absolute path written.
         """
@@ -664,7 +668,7 @@ class UploadBatch(models.Model):
         }
 
         dir_abs = self._current_dir_abs()
-        path_abs = os.path.join(dir_abs, "archive.json")
+        path_abs = os.path.join(dir_abs, archive_name(self.id))
         with open(path_abs, "w", encoding="utf-8") as fh:
             json.dump(payload, fh, ensure_ascii=False, indent=2)
         return path_abs
@@ -1583,9 +1587,10 @@ class PlayerSkill(models.Model):
       rank=subfamily, branch=""           subfamily ID overall
 
     ``proven`` means the player has covered the taxon and is accurate enough (see game_trust.is_proven):
-    enough answers on every species in it that has validated images, at least GAME_TRUST_MIN_ACCURACY right.
+    enough answers on most of its children with validated images, at least GAME_TRUST_MIN_ACCURACY right.
     ``required`` and ``covered`` are the answers that coverage needs and how many of them the player has;
-    ``species_total`` and ``species_done`` count the species in the taxon and those fully covered.
+    ``children_total`` counts the taxon's children with validated images (its species, genera or tribes),
+    ``children_needed`` how many of them proof needs, and ``children_done`` those fully covered (#381).
     ``proven_at`` is when it last became proven.
     """
 
@@ -1599,8 +1604,9 @@ class PlayerSkill(models.Model):
     lower_bound = models.FloatField(default=0.0)
     required = models.PositiveIntegerField(default=0)
     covered = models.PositiveIntegerField(default=0)
-    species_total = models.PositiveIntegerField(default=0)
-    species_done = models.PositiveIntegerField(default=0)
+    children_total = models.PositiveIntegerField(default=0)
+    children_needed = models.PositiveIntegerField(default=0)
+    children_done = models.PositiveIntegerField(default=0)
     proven = models.BooleanField(default=False, db_index=True)
     proven_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)

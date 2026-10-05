@@ -255,7 +255,7 @@
       <i class="fi fi-rr-flame" id="chip-flame"></i><span id="chip-text"></span>
     </span>
     <span id="level-chip" class="hidden items-center gap-1 px-2 h-8 rounded-full bg-gray-100 text-xs font-semibold text-gray-700 tabular-nums" title="Points to the next level" data-testid="level-chip"></span>
-    <button type="button" id="open-help" class="icon-btn hidden" aria-label="How it works"><i class="fi fi-rr-interrogation text-lg"></i></button>
+    <button type="button" id="open-help" class="icon-btn" aria-label="How to play" title="How to play" data-testid="open-help"><i class="fi fi-rr-interrogation text-lg"></i></button>
   </header>
   <!-- progress to the next level, right under the top bar -->
   <div class="h-1 bg-gray-100"><div id="level-bar" class="h-full bg-green-600 transition-all duration-500" style="width:0%"></div></div>
@@ -358,29 +358,41 @@
     </div>
   </div>
 
-  <!-- How it works (Family Ties) -->
-  <div id="help-sheet" class="hidden absolute inset-0 z-10 bg-white flex-col">
+  <!-- How to play (the ? at the top, in every game): the game on screen in one line, then the rules in short (#361).
+       data-help-mode: shown only in those games (setMode). -->
+  <div id="help-sheet" class="hidden absolute inset-0 z-10 bg-white flex-col" data-testid="help-sheet">
     <div class="flex items-center gap-2 px-2 h-14 border-b border-gray-200">
       <button type="button" id="close-help" class="icon-btn" aria-label="Close"><i class="fi fi-rr-cross text-lg"></i></button>
-      <h2 class="font-semibold text-gray-900">How it works</h2>
+      <h2 class="font-semibold text-gray-900">How to play</h2>
     </div>
-    <div class="p-5 text-gray-700 space-y-3 overflow-y-auto">
-      <p>How related are <strong>A</strong> and <strong>B</strong>? Pick the lowest line you're sure of.</p>
-      <p>Unsure? Tap <strong>Skip</strong>.</p>
+    <div class="p-5 text-gray-700 space-y-4 overflow-y-auto">
+      <p class="hidden" data-help-mode="classify">Name it as far as you're sure: subfamily, tribe, genus, species.</p>
+      <p class="hidden" data-help-mode="pair">How related are <strong>A</strong> and <strong>B</strong>? Pick the lowest line you're sure of.</p>
+      <p class="hidden" data-help-mode="odd">All but one share a name. Tap the one that doesn't, then <strong>Next</strong>.</p>
+      <p class="hidden" data-help-mode="select">Tap every beetle of the group named below the photos, then <strong>Next</strong>. A wrong tap costs, a missed one doesn't.</p>
+      <ul class="list-disc pl-5 space-y-2 text-sm" data-testid="help-rules">
+        <li>Answer only as far as you're sure: a wrong guess costs more than stopping early.</li>
+        <li>Unsure? <strong>Skip</strong> <span data-help-mode="classify pair">costs very little</span><span class="hidden" data-help-mode="odd select">earns a little</span>. Reporting a bad photo costs nothing.</li>
+        <li>A clear photo that shows too little (an underside, a leg) isn't bad: name it as far as you can.</li>
+        <li>No timer: keys and references are welcome.</li>
+        <li>On beetles nobody has checked yet, you earn points when strong players agree with you. Once a curator checks one, it is scored again.</li>
+      </ul>
+      <a href="{% url 'game_how' %}" target="_blank" rel="noopener" class="inline-block text-sm text-gray-600 underline hover:text-gray-900" data-testid="help-how">All the rules and scoring</a>
     </div>
   </div>
 
   <!-- Back: your last beetle and what you answered (it is saved; this is to look, not to change it) -->
   <div id="previous" class="hidden absolute inset-0 z-10 bg-white flex flex-col" data-testid="previous">
     <div class="flex items-center gap-2 px-2 h-14 border-b border-gray-200">
-      <button type="button" id="close-previous" class="icon-btn" aria-label="Back to the current beetle"><i class="fi fi-rr-cross text-lg"></i></button>
+      <button type="button" id="close-previous" class="icon-btn" aria-label="Current beetle"><i class="fi fi-rr-cross text-lg"></i></button>
       <h2 class="font-semibold text-gray-900">Your last beetle</h2>
     </div>
     <div id="previous-photos" class="flex-1 min-h-0 flex items-center justify-center gap-2 p-2 bg-gray-100"></div>
     <div class="p-4 space-y-2">
       <p class="text-gray-900"><span class="text-gray-500">You said:</span> <strong id="previous-answer"></strong></p>
+      <p id="previous-truth" class="text-sm text-gray-900" data-testid="previous-truth"></p>
       <p id="previous-community" class="text-sm text-gray-600"></p>
-      <button type="button" id="previous-done" class="w-full h-12 rounded-xl font-semibold text-white bg-gray-600">Back to the current beetle</button>
+      <button type="button" id="previous-done" class="w-full h-12 rounded-xl font-semibold text-white bg-gray-600">Current beetle</button>
     </div>
   </div>
 
@@ -411,7 +423,7 @@
     <h2 class="text-2xl font-bold text-gray-900">Nice session!</h2>
     <p class="mt-1 text-gray-500" id="recap-line"></p>
     <div class="grid grid-cols-2 gap-2 my-6">
-      <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="recap-points">0</div><div class="text-xs text-gray-500">points</div></div>
+      <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="recap-points">0</div><div class="text-xs text-gray-500">points &middot; <a href="{% url 'game_how' %}#scoring" class="underline hover:text-gray-800" data-testid="recap-why">why?</a></div></div>
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="recap-right">&ndash;</div><div class="text-xs text-gray-500">known beetles correct</div></div>
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="recap-challenge">&ndash;</div><div class="text-xs text-gray-500">challenge</div></div>
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="recap-streak">0</div><div class="text-xs text-gray-500">day streak</div></div>
@@ -446,8 +458,8 @@
   <button type="button" id="report-cog" class="absolute bottom-3 left-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white text-gray-900 text-sm font-semibold shadow-lg" aria-label="Report this image"><i class="fi fi-rr-flag"></i><span>Report</span></button>
   <div id="report-menu" class="hidden absolute bottom-12 left-3 p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Report this image">
     <div class="px-2 py-1 text-xs font-semibold text-gray-500">Report this image</div>
-    {% for value, label in report_reasons %}
-    <button type="button" class="report-reason block w-full text-left px-2 py-2 rounded-lg hover:bg-gray-100" data-reason="{{ value }}" role="menuitem">{{ label }}</button>
+    {% for value, label, hint in report_reasons %}
+    <button type="button" class="report-reason block w-full text-left px-2 py-2 rounded-lg hover:bg-gray-100" data-reason="{{ value }}" role="menuitem">{{ label }}{% if hint %}<span class="block text-xs text-gray-500">{{ hint }}</span>{% endif %}</button>
     {% endfor %}
   </div>
 </div>
@@ -834,7 +846,7 @@
     $("select").classList.toggle("hidden", mode !== "select");
     $("skip-text").textContent = "Skip";
     $("game-title").textContent = GAME_NAMES[mode];
-    $("open-help").classList.toggle("hidden", mode !== "pair");
+    document.querySelectorAll("#help-sheet [data-help-mode]").forEach((el) => el.classList.toggle("hidden", !el.dataset.helpMode.split(" ").includes(mode)));
   }
 
   // ---------- unlocks in the feed: which game, and focus ----------
@@ -1133,7 +1145,7 @@
       if (data.prefs) renderPrefs(data.prefs);   // a new level: its unlocks show (and work) straight away
       (data.events || []).forEach(toast);
       showCommunity(data.community);
-      rememberPrevious(answeredItem, extra, data.community, data.reveal);
+      rememberPrevious(answeredItem, extra, data.community, data.reveal, data.verified);
       bumpCombo(!extra.skipped && extra.pair_answer !== "unsure");
       if (data.reveal) await (answeredItem.mode === "select" ? revealSelect(data.reveal) : revealOdd(data.reveal, extra));
       if (data.done) {
@@ -1214,8 +1226,8 @@
     const names = RANKS.map((r) => extra[r]).filter(Boolean);
     return names.length ? names.join(" › ") : "Skipped";
   }
-  function rememberPrevious(it, extra, community, reveal) {
-    previous = { item: it, answer: describeAnswer(extra), community, reveal, pick: extra.pick, picks: extra.picks || [] };
+  function rememberPrevious(it, extra, community, reveal, verified) {
+    previous = { item: it, answer: describeAnswer(extra), community, reveal, verified: verified || [], pick: extra.pick, picks: extra.picks || [] };
     if (reveal && extra.pick !== undefined && extra.pick === reveal.odd) previous.answer = "The odd one";
     $("back").disabled = false;
   }
@@ -1244,6 +1256,17 @@
       if (previous.item.images.length === 2) canvas.title = i === 0 ? "A" : "B";
     });
     $("previous-answer").textContent = previous.answer;
+    // A validated beetle: its true name and how reliable it is (#424), "A: ... · B: ..." for the two of Similarity
+    const truth = [];
+    previous.verified.forEach((v, i) => {
+      if (truth.length) truth.push(document.createElement("br"));
+      const label = previous.verified.length > 1 ? (i === 0 ? "A: " : "B: ") : "Verified: ";
+      if (!v) { truth.push(label + "not verified yet"); return; }
+      const name = document.createElement(v.rank === "species" || v.rank === "genus" ? "em" : "span");
+      name.textContent = v.name;
+      truth.push(label, name, " · " + v.tier);
+    });
+    $("previous-truth").replaceChildren(...truth);
     $("previous-community").textContent = previous.community ? previous.community.text || "" : "";
     if (odd && previous.reveal) {
       $("previous-community").replaceChildren(...(previous.item.mode === "select"

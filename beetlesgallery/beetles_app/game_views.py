@@ -26,7 +26,7 @@ from django.views.decorators.http import require_GET, require_POST
 from . import game, game_board, game_checked, game_discoveries, game_feedback, game_queue, game_levels, game_rewards, game_scoring, game_tips, game_trust
 from . import game_applied
 from . import game_taxa as taxa_tree
-from .areas import ANNOTATE, area_required
+from .areas import ANNOTATE, BOXES, VALIDATE, area_required, has_area
 from .models import Beetles, GameAnswer, GameReport, GameRound, ImageLock, LabelReview, PlayerScore, RetroCredit, Taxon
 from .predictions import suggestions_for
 
@@ -55,6 +55,8 @@ DISCUSSIONS_URL = "https://github.com/ChristopherMarais/barkandambrosiagallery/d
 
 # Reporting a photo from the feed, before answering (a wrong name is reported from the round review instead)
 FEED_REPORT_REASONS = [("bad_box", "Box doesn't fit"), ("bad_image", "Bad photo"), ("other", "Something else")]
+# A short line under a reason in that menu, so a clear photo that just shows little isn't reported as bad (#360)
+FEED_REPORT_HINTS = {"bad_box": "Misses the beetle or frames the label", "bad_image": "Blurry, dark, or not a beetle"}
 
 
 def discussions_url():
@@ -250,7 +252,7 @@ def game_unlocks(request):
         "focus_ranks": [(r, label, game_levels.FOCUS_PERK[r] in info["perks"]) for r, label in
                         (("subfamily", "Subfamily"), ("tribe", "Tribe"), ("genus", "Genus"))],
         "proposal_level": game_levels.proposal_level(),
-        "per_species": game_trust.per_species(),
+        "per_species": game_trust.per_species(), "children_share": game_trust.children_share(),
         "trust_accuracy": game_trust.min_accuracy(),
         "min_experts": game.game_setting("GAME_AUTO_APPLY_MIN_EXPERTS", 2),
         "ranks": game_levels.rank_for(request.user),
@@ -290,7 +292,7 @@ def game_how(request):
         "discussions": discussions_url(), "levels": game_levels.table(), "goal_floor": game_rewards.daily_goal(),
         "proposal_level": game_levels.proposal_level(),
         "min_experts": game.game_setting("GAME_AUTO_APPLY_MIN_EXPERTS", 2),
-        "per_species": game_trust.per_species(),
+        "per_species": game_trust.per_species(), "children_share": game_trust.children_share(),
         "trust_accuracy": game_trust.min_accuracy(),
         "classify_weight": _weight_label(game_scoring.classify_weight()),
         "rank_points": {r: p * game_scoring.classify_weight() for r, p in game_scoring.RANK_POINTS.items()},
@@ -318,7 +320,7 @@ def game_play(request, mode):
         "discussions": discussions_url(),
         # short, one line each, for the little report menu in the full-image view. No "Wrong name" here: that is
         # for after answering (the round review), so the menu never hints at the answer.
-        "report_reasons": FEED_REPORT_REASONS,
+        "report_reasons": [(value, label, FEED_REPORT_HINTS.get(value, "")) for value, label in FEED_REPORT_REASONS],
         "mode": mode,
         "mode_label": GAME_NAMES[mode],
         "break_minutes": game.game_setting("GAME_BREAK_NUDGE_MINUTES", 60),   # 0 turns the break nudge off
@@ -377,6 +379,8 @@ def game_round_review(request, round_id):
         "feedback_json": feedback["items"],
         "is_self": rnd.player == request.user,
         "reasons": GameReport.Reason.choices,
+        # curators who may validate can open a verified beetle in the annotator, to un-validate or correct it (#380)
+        "can_revoke": has_area(request.user, BOXES) and has_area(request.user, VALIDATE),
     })
 
 
@@ -801,6 +805,7 @@ def game_answer(request, round_id):
         "events": game_rewards.play_events(request.user, before),
         "chip": _chip(request.user),
     }
+    extra["verified"] = _verified_names(record, item)   # for Back (#424)
     if record.mode == GameRound.Mode.ODD:
         extra["reveal"] = _odd_reveal(item, tiles)
     elif record.mode == GameRound.Mode.SELECT:
@@ -829,6 +834,30 @@ def game_answer(request, round_id):
             return JsonResponse(dict(extra, round=str(fresh.id), item=_item_payload(fresh, first)))
         return JsonResponse(dict(_finish(rnd), **extra))
     return JsonResponse(dict(extra, item=_item_payload(rnd, nxt)))
+
+
+def _verified_names(record, item):
+    """
+    For Back (#424): each validated beetle just answered in Identification or Similarity, in the order shown, with its
+    true name and how reliable that name is, e.g. [{"name": "Xyleborus affinis", "rank": "species", "tier": "Taxonomist
+    ID"}] (None for a beetle not validated). Empty when none is validated (Back then shows what other players said) and
+    in the grid games, whose answer already names them.
+    """
+    if record.mode == GameRound.Mode.CLASSIFY:
+        rois = [record.roi]
+    elif record.mode == GameRound.Mode.PAIR:
+        rois = [record.roi_b, record.roi] if item.get("flip") else [record.roi, record.roi_b]
+    else:
+        return []
+    out = []
+    for roi in rois:
+        if roi is None or not game_scoring.is_truth(roi):
+            out.append(None)
+            continue
+        t = roi.taxon
+        name, rank = (f"{t.genus} {t.species}", "species") if t.genus and t.species else (t.genus, "genus")
+        out.append({"name": name, "rank": rank, "tier": roi.get_label_source_display() or "Verified"})
+    return out if any(out) else []
 
 
 def _odd_reveal(item, tiles):
@@ -1258,7 +1287,7 @@ def game_review(request):
         "only_trusted": only_trusted,
         "rounds": GameRound.objects.count(),
         "answers": GameAnswer.objects.count(),
-        "per_species": game_trust.per_species(),
+        "per_species": game_trust.per_species(), "children_share": game_trust.children_share(),
     })
 
 

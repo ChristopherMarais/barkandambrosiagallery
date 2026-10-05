@@ -26,7 +26,7 @@
 <div class="max-w-3xl mx-auto">
   <a href="{% if is_self %}{% url 'game_home' %}{% else %}{% url 'game_home' %}{% endif %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; {{ game_name }}</a>
   <h1 class="page-title">{% if is_self %}Your expertise{% else %}{{ player.username }}&rsquo;s expertise{% endif %}</h1>
-  <p class="text-gray-600 mb-4">Expertise is earned taxon by taxon, from images whose names curators have validated. A subfamily shows how well {% if is_self %}you tell{% else %}they tell{% endif %} its tribes apart, a tribe its genera, a genus its species. To become <strong>expert</strong> in a taxon, name {{ tree.per_species }} validated images of every species in it (all of them, for a species with fewer) and get at least {% widthratio tree.min_accuracy 1 100 %}% correct, so small taxa need few answers and large ones many. Play beetles from a taxon to light it up{% if is_self %}; a <a href="{% url 'game_unlocks' %}" class="underline hover:text-gray-900">focus</a> helps{% endif %}.</p>
+  <p class="text-gray-600 mb-4">Expertise is earned taxon by taxon, from images whose names curators have validated. A subfamily shows how well {% if is_self %}you tell{% else %}they tell{% endif %} its tribes apart, a tribe its genera, a genus its species. To become <strong>expert</strong> in a taxon, name {{ tree.per_species }} validated images each of at least {% widthratio tree.children_share 1 100 %}% of its members (a genus's species, a tribe's genera, a subfamily's tribes) and get at least {% widthratio tree.min_accuracy 1 100 %}% correct, so small taxa need few answers and large ones many. Play beetles from a taxon to light it up{% if is_self %}; a <a href="{% url 'game_unlocks' %}" class="underline hover:text-gray-900">focus</a> helps{% endif %}.</p>
 
   <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600 mb-6" aria-label="Legend">
     <span class="st-unknown flex items-center gap-1.5"><span class="tree-dot"></span>fewer than {{ tree.min_shown }} answers</span>
@@ -44,7 +44,7 @@
       <summary class="flex items-center gap-2 p-3">
         <span class="tree-dot"></span><span class="tree-name text-gray-900">{{ sub.name }}</span>
         <span class="text-xs text-gray-400">subfamily</span>
-        <span class="ml-auto text-xs text-gray-500 tabular-nums" title="{{ sub.species_done|digit_groups_text }} of {{ sub.species_total|digit_groups_text }} species covered">{% if sub.judged %}{{ sub.correct|digit_groups }}/{{ sub.judged|digit_groups }}{% if sub.species_total %} · {{ sub.species_done|digit_groups }}/{{ sub.species_total|digit_groups }} sp.{% endif %}{% else %}&ndash;{% endif %}</span>
+        <span class="ml-auto text-xs text-gray-500 tabular-nums" title="{{ sub.children_done|digit_groups_text }} of the {{ sub.children_needed|digit_groups_text }} {{ sub.unit }} needed covered ({{ sub.children_total|digit_groups_text }} in all)">{% if sub.judged %}{{ sub.correct|digit_groups }}/{{ sub.judged|digit_groups }}{% if sub.children_total %} · {{ sub.children_done|digit_groups }}/{{ sub.children_needed|digit_groups }} {{ sub.unit }}{% endif %}{% else %}&ndash;{% endif %}</span>
       </summary>
       <div class="pl-6 pr-3 pb-3 space-y-1">
         {% for t in sub.tribes %}
@@ -52,14 +52,14 @@
           <summary class="flex items-center gap-2 py-1.5">
             <span class="tree-dot"></span><span class="tree-name text-gray-800">{{ t.name }}</span>
             <span class="text-xs text-gray-400">tribe</span>
-            <span class="ml-auto text-xs text-gray-500 tabular-nums" title="{{ t.species_done|digit_groups_text }} of {{ t.species_total|digit_groups_text }} species covered">{% if t.judged %}{{ t.correct|digit_groups }}/{{ t.judged|digit_groups }}{% if t.species_total %} · {{ t.species_done|digit_groups }}/{{ t.species_total|digit_groups }} sp.{% endif %}{% else %}&ndash;{% endif %}</span>
+            <span class="ml-auto text-xs text-gray-500 tabular-nums" title="{{ t.children_done|digit_groups_text }} of the {{ t.children_needed|digit_groups_text }} {{ t.unit }} needed covered ({{ t.children_total|digit_groups_text }} in all)">{% if t.judged %}{{ t.correct|digit_groups }}/{{ t.judged|digit_groups }}{% if t.children_total %} · {{ t.children_done|digit_groups }}/{{ t.children_needed|digit_groups }} {{ t.unit }}{% endif %}{% else %}&ndash;{% endif %}</span>
           </summary>
           <div class="pl-6 space-y-0.5">
             {% for g in t.genera %}
             <div class="st-{{ g.status }}"><div class="row flex items-center gap-2 py-1">
               <span class="tree-dot"></span><span class="tree-name italic text-gray-800">{{ g.name }}</span>
               <span class="text-xs text-gray-400">genus</span>
-              <span class="ml-auto text-xs text-gray-500 tabular-nums" title="{{ g.species_done|digit_groups_text }} of {{ g.species_total|digit_groups_text }} species covered">{{ g.correct|digit_groups }}/{{ g.judged|digit_groups }}{% if g.species_total %} · {{ g.species_done|digit_groups }}/{{ g.species_total|digit_groups }} sp.{% endif %}</span>
+              <span class="ml-auto text-xs text-gray-500 tabular-nums" title="{{ g.children_done|digit_groups_text }} of the {{ g.children_needed|digit_groups_text }} {{ g.unit }} needed covered ({{ g.children_total|digit_groups_text }} in all)">{{ g.correct|digit_groups }}/{{ g.judged|digit_groups }}{% if g.children_total %} · {{ g.children_done|digit_groups }}/{{ g.children_needed|digit_groups }} {{ g.unit }}{% endif %}</span>
             </div></div>
             {% endfor %}
             {% if t.hidden %}<div class="text-xs text-gray-400 py-1">{{ t.hidden }} more genera not played yet</div>{% endif %}
@@ -73,5 +73,6 @@
     <p class="text-sm text-gray-500 p-4 bg-gray-50 rounded-2xl">The species list has not been loaded yet.</p>
     {% endfor %}
   </div>
+  <p class="mt-6 text-sm text-gray-600"><a href="{% url 'game_how' %}#labels" class="underline hover:text-gray-900" data-testid="expertise-why">What being an expert means</a></p>
 </div>
 {% endblock %}

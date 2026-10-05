@@ -24,7 +24,7 @@
     <p class="mt-3 text-sm text-gray-600" data-testid="rank-steps">New players start with the big groups: only the subfamily at first. The tribe opens after {{ rank_steps.tribe }} beetles, the genus after {{ rank_steps.genus }} and the species after {{ rank_steps.species }}, in every game. From level {{ ranks_all_level }} every rank is open.</p>
   </section>
 
-  <h2 class="text-xl font-semibold text-gray-900 mb-3">Scoring</h2>
+  <h2 class="text-xl font-semibold text-gray-900 mb-3" id="scoring">Scoring</h2>
   <div class="space-y-6">
     <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl">
       <h2 class="text-lg font-semibold text-gray-900 mb-2">1. Beetles we already know</h2>
@@ -47,7 +47,7 @@
       <p class="text-sm text-gray-600">Tap every beetle of the group named under the photos. A perfect grid earns about twice a Similarity answer. Every wrong tap costs {{ select_wrong }} times a correct one, and a member you leave out costs nothing, so leave out any you&rsquo;re unsure of. Some beetles in the grid haven&rsquo;t been checked yet: your taps on those help name them and are never held against you.</p>
     </section>
 
-    <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl">
+    <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl" id="unchecked">
       <h2 class="text-lg font-semibold text-gray-900 mb-2">2. Beetles nobody has checked yet</h2>
       <p class="text-sm text-gray-600 mb-2">Here there is no correct answer to compare with yet, so you earn points by <strong>agreeing with strong players</strong>:</p>
       <ul class="text-sm text-gray-600 list-disc pl-5 space-y-1">
@@ -83,14 +83,14 @@
       <div class="overflow-x-auto"><table class="text-sm w-full"><thead class="text-xs uppercase tracking-wider text-gray-500"><tr><th class="text-left py-1 pr-3">Level</th><th class="text-right py-1 pr-3">Points</th><th class="text-right py-1 pr-3">Reliability</th></tr></thead><tbody>
         {% for l in levels %}<tr class="border-t border-gray-200"><td class="py-1.5 pr-3 text-gray-900"><span class="inline-flex items-center gap-2">{% include "beetles/includes/game_level_badge.html" with level=l.level name=l.name %}{{ l.name }}</span>{% if l.perks %}<div class="text-xs text-gray-500">Unlocks: {% for p in l.perks %}{{ p.title|lower }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>{% endif %}</td><td class="py-1 pr-3 text-right tabular-nums">{{ l.points|digit_groups }}</td><td class="py-1 pr-3 text-right tabular-nums">{% if l.rating %}{% widthratio l.rating 1 100 %}%{% else %}&ndash;{% endif %}</td></tr>{% endfor %}
       </tbody></table></div>
-      <p class="mt-3 text-sm text-gray-600"><strong>Focus</strong> lets you play only one subfamily, tribe or genus. Change it any time on the <a href="{% url 'game_unlocks' %}" class="underline">unlocks page</a>.</p>
+      <p class="mt-3 text-sm text-gray-600"><strong>Focus</strong> lets you play only one subfamily, tribe or genus: beetles named in it, and beetles nobody has named yet that the species classifier places there. Change it any time on the <a href="{% url 'game_unlocks' %}" class="underline">unlocks page</a>.</p>
     </section>
 
     <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl" id="labels">
       <h2 class="text-lg font-semibold text-gray-900 mb-2">Where your labels go</h2>
       <ul class="text-sm text-gray-600 list-disc pl-5 space-y-1">
         <li>From level {{ proposal_level }}, your names for beetles nobody has checked yet go to the curators as <strong>suggestions</strong>. Curators decide.</li>
-        <li>Only real <strong>experts</strong> have their labels written to the database without review. You become one by proving yourself on <strong>beetles experts have already checked</strong>, in that exact taxon: {{ per_species }} images of every species in it (all of them, for a species with fewer), with at least {% widthratio trust_accuracy 1 100 %}% correct. Small taxa need few answers, large ones many. You must also be among the most reliable players overall.</li>
+        <li>Only real <strong>experts</strong> have their labels written to the database without review. You become one by proving yourself on <strong>beetles experts have already checked</strong>, in that exact taxon: {{ per_species }} images each of at least {% widthratio children_share 1 100 %}% of its members (a genus&rsquo;s species, a tribe&rsquo;s genera, a subfamily&rsquo;s tribes), with at least {% widthratio trust_accuracy 1 100 %}% correct. Small taxa need few answers, large ones many. You must also be among the most reliable players overall.</li>
         <li>Then, when {{ min_experts }} or more such experts give the same species for a beetle with no name yet, and no proven player disagrees, it is written to the database. It stays marked unvalidated until a curator checks it.</li>
         <li>Expertise is earned one taxon at a time (a subfamily, a tribe, a genus). You can be an expert on one genus and not on another, so some of your labels may skip review and others not. Being good in neighbouring taxa only makes your labels suggestions. Your <a href="{% url 'game_expertise' %}" class="underline">expertise tree</a> shows where you stand.</li>
         <li>Expertise is checked again all the time, so it can be lost as well as earned.</li>
@@ -103,6 +103,24 @@
       <p class="text-sm text-gray-600">The <a href="{% url 'game_leaderboard' %}" class="underline">leaderboard</a> ranks players by score, accuracy or beetles seen: this week (it starts again every Monday), this month, or all time. Only the board's points start again; your level, expertise and badges never reset, and each week's top three are kept on their profiles. Tap a name to see that player. The specialists board ranks players inside one subfamily, tribe or genus.</p>
     </section>
   </div>
+
+  <h2 class="text-xl font-semibold text-gray-900 mt-10 mb-3" id="faq">Quick answers</h2>
+  <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl" data-testid="how-faq">
+    <dl class="text-sm text-gray-600 space-y-3">
+      <div><dt class="font-semibold text-gray-900">Do I lose points if I report a photo?</dt>
+        <dd>No. It goes to the curators and you get the next beetle.</dd></div>
+      <div><dt class="font-semibold text-gray-900">What does skipping cost?</dt>
+        <dd>A tiny {{ unsure }} points in Similarity and Identification, much less than a wrong guess. In Odd One Out and Select all, skipping earns {{ odd_skip }}.</dd></div>
+      <div><dt class="font-semibold text-gray-900">Is there a time limit?</dt>
+        <dd>No. Take your time, use keys, papers or a reference collection, and stop whenever you like.</dd></div>
+      <div><dt class="font-semibold text-gray-900">The photo is clear but shows too little to name it (an underside, a leg).</dt>
+        <dd>Don&rsquo;t report it: name it as far as you can, even just the subfamily. Those answers show which views allow a name at which rank. Report only a photo that is broken: blurry or dark, not a beetle, or a box that misses the beetle or frames the label. A name that looks wrong is reported after you play, from the round&rsquo;s answers in <a href="{% url 'game_history' %}" class="underline">History</a>.</dd></div>
+      <div><dt class="font-semibold text-gray-900">Do other players affect my score?</dt>
+        <dd>Only on beetles nobody has checked yet: there you earn points when strong players agree with you, and you never lose any (<a href="#unchecked" class="underline">more</a>). On checked beetles only the real name counts.</dd></div>
+      <div><dt class="font-semibold text-gray-900">What is an expert?</dt>
+        <dd>A player proven on checked beetles of one taxon. Their names for unchecked beetles in that taxon can go into the database without review (<a href="#labels" class="underline">more</a>).</dd></div>
+    </dl>
+  </section>
 
   {% include "beetles/includes/game_discussions.html" %}
 </div>

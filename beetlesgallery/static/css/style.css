@@ -3981,6 +3981,10 @@ input[type="checkbox"], input[type="radio"], input[type="range"] {
     justify-content: space-between;
   }
 
+  .sm\:gap-3 {
+    gap: 0.75rem;
+  }
+
   .sm\:gap-4 {
     gap: 1rem;
   }

@@ -810,12 +810,12 @@ class GameAnswerAdmin(admin.ModelAdmin):
 
 @admin.register(PlayerSkill)
 class PlayerSkillAdmin(admin.ModelAdmin):
-    list_display = ("player", "rank", "branch", "correct", "judged", "covered", "required", "species_done",
-                    "species_total", "proven", "proven_at")
+    list_display = ("player", "rank", "branch", "correct", "judged", "covered", "required", "children_done",
+                    "children_needed", "children_total", "proven", "proven_at")
     list_filter = ("rank", "proven")
     search_fields = ("player__username", "branch")
     readonly_fields = ("player", "rank", "branch", "correct", "judged", "lower_bound", "required", "covered",
-                       "species_total", "species_done", "proven", "proven_at", "updated_at")
+                       "children_total", "children_needed", "children_done", "proven", "proven_at", "updated_at")
 
 
 @admin.register(RetroCredit)

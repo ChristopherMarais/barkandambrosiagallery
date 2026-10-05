@@ -5,7 +5,7 @@ import os
 import uuid
 from datetime import date
 from decimal import Decimal
-from unittest import expectedFailure, mock
+from unittest import mock
 
 from django.core.files.base import ContentFile
 from django.core.management import call_command
@@ -260,8 +260,6 @@ class ProcessSingleUpdateTests(PageBehaviourCase):
         self.assertEqual(fresh(first).collection_country, "USA")
         self.assertEqual(first.history.count(), 1)
 
-    # KNOWN BUG: Beetles.objects.get(pk="not-a-uuid") raises ValidationError, but the except at process_single_update.py:144 catches only DoesNotExist/ValueError; the command crashes and the batch stays "validating". update_upload checks only the first 20 IDs (views.py:1337).
-    @expectedFailure
     def test_non_uuid_record_id_fails_the_batch_with_a_reason(self):
         batch = self.run_rows({"record_id": "not-a-uuid", "collection_country": "Peru"})
 
@@ -279,8 +277,6 @@ class ProcessSingleUpdateTests(PageBehaviourCase):
         self.assertFailed(batch, "Row 2: bbox_x '0,3' is not a number")
         self.assertEqual(fresh(beetle).bbox_x, 0.1)
 
-    # KNOWN BUG: the counts are set only in memory (process_single_update.py:125,191,270); every later save passes update_fields without them (models.py:689-713), so they stay 0.
-    @expectedFailure
     def test_row_counts_are_saved_on_the_batch(self):
         changed, unchanged = make_beetle(collection_country="USA"), make_beetle()
 
@@ -288,8 +284,6 @@ class ProcessSingleUpdateTests(PageBehaviourCase):
 
         self.assertEqual((batch.rows_total, batch.rows_matched, batch.rows_changed), (2, 2, 1))
 
-    # KNOWN BUG: the apply loop (process_single_update.py:204-248) never sets last_updated_by, and update_notes is skipped as an ignored column (lines 43, 166), so the bulk-update attribution fields (models.py:159-167) stay empty.
-    @expectedFailure
     def test_changed_record_records_who_updated_it_and_why(self):
         beetle = make_beetle(collection_country="USA")
 
