@@ -592,7 +592,49 @@ def _distinct_photos(ids, taken, limit):
     return out
 
 
-def _odd_item(tiles, n_open, target, deepest, check_pool, open_pool, avoid):
+# The AI beetles in a grid (Odd One Out, Select all): unvalidated beetles a classifier puts in the group. Every grid
+# has at least one it is sure about (a sure call makes a hard, informative round) and one it is unsure about (could be
+# anything: hard or very easy), as well as validated ones; more fill out bigger grids. Below GAME_AI_UNSURE_BELOW is
+# "unsure", from GAME_AI_SURE_FROM up "sure", and the band between them fills the rest.
+def ai_bands():
+    sure = game_setting("GAME_AI_SURE_FROM", 0.9)
+    unsure = game_setting("GAME_AI_UNSURE_BELOW", 0.6)
+    return (sure, 1.01), (0.0, unsure), (unsure, sure)
+
+
+def ai_required():
+    """The sure + unsure minimum applies once predictions exist (before any upload a grid is validated beetles only)."""
+    from .models import ModelPrediction
+    return game_setting("GAME_GRID_REQUIRE_AI", True) and ModelPrediction.objects.exists()
+
+
+def _ai_beetles(open_pool, rank, value, n_open, target, avoid, photos, required):
+    """
+    ``n_open`` (at least 2 when required) unvalidated beetles the classifier puts at ``value``: one sure, one unsure,
+    then the rest from all bands. None when a required sure or unsure one cannot be found.
+    """
+    sure_band, unsure_band, middle_band = ai_bands()
+
+    def pick(band, n):
+        if n <= 0:
+            return []
+        q = open_pool.filter(_predicted(rank, value, *band)).exclude(id__in=avoid).distinct()
+        return _distinct_photos(_sample(q, n * 2, target, allow_seen=False), photos, n)
+
+    sure, unsure = pick(sure_band, 1), pick(unsure_band, 1)
+    if required and not (sure and unsure):
+        return None
+    chosen = sure + unsure
+    for band in (sure_band, unsure_band, middle_band):   # fill out bigger grids, any confidence
+        if len(chosen) >= n_open:
+            break
+        more = pick(band, n_open - len(chosen))
+        chosen += more
+        avoid = set(avoid) | set(more)
+    return chosen[:max(n_open, 2 if required else 0)]
+
+
+def _odd_item(tiles, n_open, target, deepest, check_pool, open_pool, avoid, required=False):
     """One Odd One Out item, or None when no part of the tree has enough beetles for it."""
     for rank in _relation_order(target, {r: d for r, d in ODD_RANK_DIFFICULTY.items()
                                          if RANKS.index(r) <= RANKS.index(deepest)}):
@@ -612,11 +654,11 @@ def _odd_item(tiles, n_open, target, deepest, check_pool, open_pool, avoid):
             odd = odd or _distinct_photos(_sample(odd_pool, 3, target, allow_seen=False), photos, 1)
             if not odd:
                 continue
-            # The rest: beetles the classifier is sure share the name (very sure on easy rounds), then validated ones
-            low, high = (0.9, 1.01) if target < game_setting("GAME_ODD_HARD_FROM", 0.5) else (0.6, 0.9)
-            opens = _distinct_photos(
-                _sample(open_pool.filter(_predicted(rank, group[rank], low, high)).exclude(id__in=avoid).distinct(),
-                        n_open * 2, target, allow_seen=False), photos, n_open)
+            # The rest: AI beetles (at least one sure and one unsure, ai_bands), then validated ones
+            opens = _ai_beetles(open_pool, rank, group[rank], max(n_open, 2) if required else n_open, target, avoid,
+                                photos, required)
+            if opens is None:
+                continue
             need = tiles - 2 - len(opens)
             rest = _distinct_photos(
                 _sample(check_pool.filter(same).exclude(id__in=avoid).exclude(id=anchor.id), need * 3, target,
@@ -637,8 +679,9 @@ def build_odd_items(player, size, fresh_only=False):
     and their target difficulty: subfamily first, then tribe, genus and species, and on harder rounds the odd one is a
     near relative (the same tribe, say, but another genus).
 
-    The odd one and at least one of the rest are always validated, so every item has a known answer. A few of the
-    rest are not validated yet but a classifier is sure about them (GAME_ODD_OPEN_SHARE_*), more as the player rises:
+    The odd one and at least one of the rest are always validated, so every item has a known answer. Of the rest, at
+    least one is a beetle the classifier is sure belongs and one it is unsure about (ai_bands), more as the player
+    rises (GAME_ODD_OPEN_SHARE_*):
     a player who picks one of those says it does not belong, which is scored later by agreement, like a name.
     Beetles whose answer the player has been shown are never used again for them (revealed_ids).
     """
@@ -652,11 +695,12 @@ def build_odd_items(player, size, fresh_only=False):
     check_pool, open_pool = pools(player)
     target = target_difficulty(player)
     avoid = set(revealed_ids(player))
+    required = ai_required()
     items = []
     for _ in range(size * 2):
         if len(items) >= size:
             break
-        item = _odd_item(tiles, n_open, target, deepest, check_pool, open_pool, avoid)
+        item = _odd_item(tiles, n_open, target, deepest, check_pool, open_pool, avoid, required)
         if item is None:
             break
         avoid.update(uuid.UUID(t) for t in item["tiles"])
