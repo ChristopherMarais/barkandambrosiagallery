@@ -1337,8 +1337,8 @@ class GameAnswer(models.Model):
     Pair: ``roi`` and ``roi_b`` are the two regions and ``pair_answer`` is the deepest
     rank the player says they share. On unvalidated pairs ``roi`` is the unvalidated one.
     Odd One Out: ``tiles`` are the regions shown, ``roi`` the one the player picked (the odd one itself when they
-    skipped) and ``roi_b`` the odd one the round was built around; the pick says "``roi`` is not in ``odd_group`` at
-    ``odd_rank``". ``is_check`` is set when the picked region is validated, and only ``correct_<odd_rank>`` is judged.
+    skipped) and ``roi_b`` the odd one the round was built around; the pick says "``roi`` is not in ``grid_group`` at
+    ``grid_rank``". ``is_check`` is set when the picked region is validated, and only ``correct_<grid_rank>`` is judged.
 
     ``correct_<rank>`` is only filled for check items: True/False when that rank was
     judged, None when it was not answered or has no reference value.
@@ -1372,11 +1372,11 @@ class GameAnswer(models.Model):
     genus = models.CharField(max_length=100, blank=True)
     species = models.CharField(max_length=100, blank=True)
     pair_answer = models.CharField(max_length=10, choices=PairAnswer.choices, blank=True)
-    tiles = models.JSONField(default=list, blank=True, help_text="Odd One Out: the regions shown, in order.")
-    odd_rank = models.CharField(max_length=10, blank=True, help_text="Odd One Out: the rank at which one region differs.")
-    odd_group = models.JSONField(
+    tiles = models.JSONField(default=list, blank=True, help_text="Grid games (Odd One Out): the regions shown, in order.")
+    grid_rank = models.CharField(max_length=10, blank=True, help_text="Grid games: the rank of the group (in Odd One Out, where one region differs).")
+    grid_group = models.JSONField(
         default=dict, blank=True,
-        help_text='Odd One Out: the names the others share, down to odd_rank, e.g. {"subfamily": "Scolytinae", "tribe": "Xyleborini"}.',
+        help_text='Grid games: the names of the group, down to grid_rank, e.g. {"subfamily": "Scolytinae", "tribe": "Xyleborini"}.',
     )
 
     correct_subfamily = models.BooleanField(null=True, blank=True)

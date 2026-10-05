@@ -162,7 +162,7 @@ class AnswerTests(OddCase):
         self.assertEqual(res.status_code, 200, res.content)
         data = res.json()
         ans = GameAnswer.objects.get()
-        self.assertEqual((ans.mode, ans.odd_rank, ans.is_check, ans.roi_id, ans.correct_species),
+        self.assertEqual((ans.mode, ans.grid_rank, ans.is_check, ans.roi_id, ans.correct_species),
                          ("odd", "species", True, ans.roi_b_id, True))
         self.assertEqual(len(ans.tiles), 4)
         self.assertEqual(data["celebrate"], "validated")
@@ -233,7 +233,7 @@ class UnvalidatedPickTests(OddCase):
         odd = self.roi(odd_taxon)
         return GameAnswer.objects.create(
             round=rnd, player=self.user, mode="odd", index=0, roi=picked, roi_b=odd, is_check=False,
-            tiles=[str(picked.id), str(odd.id)], odd_rank=rank, odd_group=game.lineage(group_taxon, rank))
+            tiles=[str(picked.id), str(odd.id)], grid_rank=rank, grid_group=game.lineage(group_taxon, rank))
 
     def test_agreement_that_it_does_not_belong_earns_and_disagreement_never_costs(self):
         picked = self.roi(self.t_ferr, validated=False)

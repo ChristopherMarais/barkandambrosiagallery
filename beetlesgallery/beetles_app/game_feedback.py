@@ -118,11 +118,11 @@ def round_feedback(rnd):
                     side["picked"] = not a.skipped and str(tile_id) == str(a.roi_id)
                     side["odd"] = str(tile_id) == str(a.roi_b_id)
                     if not (side["picked"] or side["odd"]):
-                        side["label"] = _rank_label(tiles[str(tile_id)].taxon, a.odd_rank)
+                        side["label"] = _rank_label(tiles[str(tile_id)].taxon, a.grid_rank)
                     sides.append(side)
-            odd_names = game.lineage(a.roi_b.taxon, a.odd_rank) if a.roi_b and a.roi_b.taxon and a.odd_rank else None
-            truth_odd = {"rank": a.odd_rank, "group": (a.odd_group or {}).get(a.odd_rank, ""),
-                         "odd_name": (odd_names or {}).get(a.odd_rank, "")}
+            odd_names = game.lineage(a.roi_b.taxon, a.grid_rank) if a.roi_b and a.roi_b.taxon and a.grid_rank else None
+            truth_odd = {"rank": a.grid_rank, "group": (a.grid_group or {}).get(a.grid_rank, ""),
+                         "odd_name": (odd_names or {}).get(a.grid_rank, "")}
         else:
             sides = [_side(a.roi, player_reports, others)]
         if a.mode != "odd" and a.roi_b_id:
@@ -215,7 +215,7 @@ def answer_losses(answer, points=None):
         return {"kind": "classify", "ranks": ranks, "earned": earned, "lost": round(lost, 1)}
     if answer.mode == "odd":
         worth = float(detail.get("worth", 0.0))
-        return {"kind": "odd", "state": "right" if detail.get("right") else "wrong", "rank": answer.odd_rank,
+        return {"kind": "odd", "state": "right" if detail.get("right") else "wrong", "rank": answer.grid_rank,
                 "earned": earned, "lost": round(max(0.0, worth - earned), 1)}
     truth = detail.get("truth")
     depth = {v: k for k, v in {-1: "different subfamilies", 0: "same subfamily", 1: "same tribe", 2: "same genus",
@@ -341,7 +341,7 @@ def rescore_roi(roi):
                 ans.score_hold = True
                 ans.save(update_fields=["score_hold"])
                 continue
-            scores = game.score_odd(picked, ans.odd_rank, ans.odd_group) if not ans.skipped else {
+            scores = game.score_odd(picked, ans.grid_rank, ans.grid_group) if not ans.skipped else {
                 r: None for r in game.RANKS
             }
         else:

@@ -180,17 +180,17 @@ def odd_base(answer):
     round's odd one (``roi_b``) is to the rest. The closer they are, the harder it was to tell.
     """
     odd = answer.roi_b.taxon if answer.roi_b_id and answer.roi_b else None
-    depth = true_depth(odd, game.group_taxon(answer.odd_group)) if odd is not None and answer.odd_group else None
+    depth = true_depth(odd, game.group_taxon(answer.grid_group)) if odd is not None and answer.grid_group else None
     return PAIR_POINTS[depth if depth is not None and depth < 3 else -1] * setting("GAME_POINTS_ODD_WEIGHT", 1.5)
 
 
 def odd_truth(answer):
     """(points, detail) for an Odd One Out pick on a validated beetle, or None if it can't be told."""
-    ok = game.score_odd(answer.roi.taxon, answer.odd_rank, answer.odd_group).get(answer.odd_rank)
+    ok = game.score_odd(answer.roi.taxon, answer.grid_rank, answer.grid_group).get(answer.grid_rank)
     if ok is None:
         return None
     base = odd_base(answer)
-    detail = {"right": ok, "rank": answer.odd_rank, "worth": round(base, 2)}
+    detail = {"right": ok, "rank": answer.grid_rank, "worth": round(base, 2)}
     if ok:
         return base, detail
     return -base * setting("GAME_POINTS_ODD_WRONG_FACTOR", 1.25), detail
@@ -202,7 +202,7 @@ def odd_consensus(answer, votes, judges, model_refs):
     judges' names for it, and what proven experts or a trusted model say, agree that it is not one of the group at
     the round's rank. Never negative.
     """
-    rank, group = answer.odd_rank, (answer.odd_group or {}).get(answer.odd_rank, "")
+    rank, group = answer.grid_rank, (answer.grid_group or {}).get(answer.grid_rank, "")
     if not rank or not group:
         return 0.0, {"agreement": {}}
     agree = disagree = 0.0
@@ -469,7 +469,7 @@ def sync_late_truth(player_ids=None):
             if ans.mode == "classify":
                 results = game.score_classification({r: getattr(ans, r) for r in RANKS}, ans.roi.taxon)
             elif ans.mode == "odd":
-                results = game.score_odd(ans.roi.taxon, ans.odd_rank, ans.odd_group) if ans.odd_rank else None
+                results = game.score_odd(ans.roi.taxon, ans.grid_rank, ans.grid_group) if ans.grid_rank else None
             elif ans.roi_b is not None and is_truth(ans.roi_b) and ans.pair_answer in PAIR_DEPTH:
                 results = game.score_pair(ans.pair_answer, ans.roi.taxon, ans.roi_b.taxon)
         if results is not None:

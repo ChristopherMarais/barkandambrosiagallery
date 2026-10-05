@@ -724,7 +724,7 @@ def game_answer(request, round_id):
     if record.mode == GameRound.Mode.ODD:
         # roi_b: the odd one the round was built around. Only a pick on a validated beetle is scored straight away.
         tiles = _item_tiles(item)
-        record.tiles, record.odd_rank, record.odd_group = item["tiles"], item["rank"], item["group"]
+        record.tiles, record.grid_rank, record.grid_group = item["tiles"], item["rank"], item["group"]
         record.roi_b, record.is_check = roi_a, False
     if record.is_check and roi_a.taxon:
         record.ref_subfamily = roi_a.taxon.subfamily or ""
@@ -756,7 +756,7 @@ def game_answer(request, round_id):
                 t = record.roi.taxon
                 record.ref_subfamily, record.ref_tribe = t.subfamily or "", t.tribe or ""
                 record.ref_genus, record.ref_species = t.genus or "", t.species or ""
-                scores = game.score_odd(t, record.odd_rank, record.odd_group)
+                scores = game.score_odd(t, record.grid_rank, record.grid_group)
         else:
             choice = body.get("pair_answer")
             if choice not in dict(PAIR_CHOICES):
@@ -936,7 +936,7 @@ def _strong_unvalidated(record):
     row = AnswerPoints.objects.filter(answer=record).values_list("detail", flat=True).first() or {}
     reference = row.get("reference") or {}
     if record.mode == GameRound.Mode.ODD:   # experts, a trusted model or most strong players agree it doesn't belong
-        rank = record.odd_rank
+        rank = record.grid_rank
         return bool(reference.get(rank, {}).get("match")) or \
             (row.get("agreement") or {}).get(rank, 0) >= game.game_setting("GAME_CELEBRATE_AGREEMENT", 0.75)
     if any(reference.get(r, {}).get("match") for r in ("genus", "species")):

@@ -133,7 +133,7 @@ def revealed_ids(player):
         .values_list("roi_b_id", flat=True)
     )
     # an Odd One Out round at species names the rest's species too ("the rest: Xyleborus affinis")
-    for tiles in GameAnswer.objects.filter(player=player, mode="odd", odd_rank="species").values_list("tiles", flat=True):
+    for tiles in GameAnswer.objects.filter(player=player, mode="odd", grid_rank="species").values_list("tiles", flat=True):
         ids |= {uuid.UUID(str(t)) for t in tiles or []}
     return ids
 

@@ -13,7 +13,7 @@ def _said(answer):
     if answer.mode == "pair":
         return answer.get_pair_answer_display()
     if answer.mode == "odd":   # picked as the odd one out: "not one of the group"
-        group = (answer.odd_group or {}).get(answer.odd_rank, "")
+        group = (answer.grid_group or {}).get(answer.grid_rank, "")
         return f"Not {group}" if group else "Odd one out"
     given = [getattr(answer, r) for r in RANKS[:3] if getattr(answer, r)]
     if answer.genus and answer.species:

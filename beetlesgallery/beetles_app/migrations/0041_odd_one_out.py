@@ -1,6 +1,6 @@
 """
 Odd One Out (#369): a third game, between Similarity and Identification. Its answers keep the regions shown
-(``tiles``), the rank at which one differs (``odd_rank``) and the names the others share (``odd_group``).
+(``tiles``), the rank at which one differs (``grid_rank``) and the names the others share (``grid_group``).
 
 Identification moves from level 2 to level 4. Nobody loses it: every player who could play it before (level 2, that
 is 50 points, or anyone who has played it) keeps it (GamePreference.kept_perks), and a superuser's earlier grant of
@@ -56,15 +56,15 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name="gameanswer", name="tiles",
-            field=models.JSONField(blank=True, default=list, help_text="Odd One Out: the regions shown, in order."),
+            field=models.JSONField(blank=True, default=list, help_text="Grid games (Odd One Out): the regions shown, in order."),
         ),
         migrations.AddField(
-            model_name="gameanswer", name="odd_rank",
-            field=models.CharField(blank=True, help_text="Odd One Out: the rank at which one region differs.", max_length=10),
+            model_name="gameanswer", name="grid_rank",
+            field=models.CharField(blank=True, help_text="Grid games: the rank of the group (in Odd One Out, where one region differs).", max_length=10),
         ),
         migrations.AddField(
-            model_name="gameanswer", name="odd_group",
-            field=models.JSONField(blank=True, default=dict, help_text='Odd One Out: the names the others share, down to odd_rank, e.g. {"subfamily": "Scolytinae", "tribe": "Xyleborini"}.'),
+            model_name="gameanswer", name="grid_group",
+            field=models.JSONField(blank=True, default=dict, help_text='Grid games: the names of the group, down to grid_rank, e.g. {"subfamily": "Scolytinae", "tribe": "Xyleborini"}.'),
         ),
         migrations.AddField(
             model_name="gamepreference", name="kept_perks",
