@@ -1925,3 +1925,33 @@ class RoiName(models.Model):
 
     def __str__(self):
         return f"{self.valid_species_id} ({self.get_tier_display() or 'No ID'})"
+
+
+class GameTuning(models.Model):
+    """
+    A superuser's override of one scoring setting (game_tuning.TUNABLES), from the Scoring page. It wins over
+    settings.py; deleting it puts the default back. The game picks a change up within half a minute.
+    """
+
+    key = models.CharField(max_length=64, unique=True)
+    value = models.JSONField()
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    updated_at = models.DateTimeField(auto_now=True)
+    history = HistoricalRecords()
+
+    class Meta:
+        db_table = "game_tuning"
+        ordering = ["key"]
+
+    def __str__(self):
+        return f"{self.key} = {self.value}"
+
+
+
+def _forget_tuning(**kwargs):
+    from beetlesgallery.beetles_app.game_tuning import forget
+    forget()
+
+
+models.signals.post_save.connect(_forget_tuning, sender=GameTuning, dispatch_uid="game_tuning_saved")
+models.signals.post_delete.connect(_forget_tuning, sender=GameTuning, dispatch_uid="game_tuning_deleted")

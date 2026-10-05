@@ -40,6 +40,11 @@ PAIR_DEPTH = {"different": -1, "subfamily": 0, "tribe": 1, "genus": 2, "species"
 
 
 def game_setting(name, default):
+    """A game setting: a superuser's override from the Scoring page (game_tuning), else settings.py, else ``default``."""
+    from .game_tuning import overrides
+    found = overrides()
+    if name in found:
+        return found[name]
     return getattr(settings, name, default)
 
 

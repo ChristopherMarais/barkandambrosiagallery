@@ -55,6 +55,7 @@ up or down (recompute, run for a player when they leave the game and for everyon
 import math
 import uuid
 from collections import defaultdict
+from collections.abc import Mapping
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, connection, transaction
@@ -66,9 +67,29 @@ from . import game, game_reference
 from .game import PAIR_DEPTH, RANKS, game_setting
 from .models import AnswerPoints, Beetles, GameAnswer, PlayerScore, RetroCredit
 
-RANK_POINTS = {"subfamily": 1.0, "tribe": 2.0, "genus": 4.0, "species": 8.0}
+class _Points(Mapping):
+    """A points table read from its game setting each time (a superuser can tune it on the Scoring page)."""
+
+    def __init__(self, name, default, convert=lambda k: k):
+        self.name, self.default, self.convert = name, default, convert
+
+    def _table(self):
+        stored = game_setting(self.name, None) or {}
+        return {k: float(stored.get(str(k), v)) for k, v in self.default.items()}
+
+    def __getitem__(self, key):
+        return self._table()[key]
+
+    def __iter__(self):
+        return iter(self.default)
+
+    def __len__(self):
+        return len(self.default)
+
+
+RANK_POINTS = _Points("GAME_POINTS_RANK", {"subfamily": 1.0, "tribe": 2.0, "genus": 4.0, "species": 8.0})
 # Family Ties: points for the right answer, by how related the two beetles really are (-1 = different subfamilies)
-PAIR_POINTS = {-1: 1.0, 0: 2.0, 1: 3.0, 2: 5.0, 3: 5.0}
+PAIR_POINTS = _Points("GAME_PAIR_POINTS", {-1: 1.0, 0: 2.0, 1: 3.0, 2: 5.0, 3: 5.0})
 DEPTH_NAME = {-1: "different subfamilies", 0: "same subfamily", 1: "same tribe", 2: "same genus", 3: "same species"}
 
 
