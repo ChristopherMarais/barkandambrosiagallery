@@ -3171,12 +3171,28 @@ input[type="checkbox"], input[type="radio"], input[type="range"] {
   outline-style: solid;
 }
 
+.outline-dashed {
+  outline-style: dashed;
+}
+
 .outline-1 {
   outline-width: 1px;
 }
 
+.outline-4 {
+  outline-width: 4px;
+}
+
+.-outline-offset-4 {
+  outline-offset: -4px;
+}
+
 .outline-gray-900 {
   outline-color: #111827;
+}
+
+.outline-green-600 {
+  outline-color: #16a34a;
 }
 
 .ring {
@@ -3224,6 +3240,11 @@ input[type="checkbox"], input[type="radio"], input[type="range"] {
 .ring-green-600 {
   --tw-ring-opacity: 1;
   --tw-ring-color: rgb(22 163 74 / var(--tw-ring-opacity, 1));
+}
+
+.ring-red-600 {
+  --tw-ring-opacity: 1;
+  --tw-ring-color: rgb(220 38 38 / var(--tw-ring-opacity, 1));
 }
 
 .ring-text\/10 {
@@ -4001,6 +4022,11 @@ input[type="checkbox"], input[type="radio"], input[type="range"] {
   .sm\:text-sm {
     font-size: 0.875rem;
     line-height: 1.25rem;
+  }
+
+  .sm\:text-xs {
+    font-size: 0.75rem;
+    line-height: 1rem;
   }
 }
 

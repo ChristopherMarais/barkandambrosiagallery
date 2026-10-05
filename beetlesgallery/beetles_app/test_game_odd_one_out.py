@@ -47,7 +47,7 @@ class LadderTests(OddCase):
     def test_similarity_first_then_odd_one_out_then_identification(self):
         self.assertEqual(game_levels.games(game_levels.describe(0, 0)["perks"]), ["pair"])
         self.assertEqual(game_levels.games(game_levels.describe(60, 0)["perks"]), ["pair", "odd"])
-        self.assertEqual(game_levels.games(game_levels.describe(450, 0.55)["perks"]), ["pair", "odd", "classify"])
+        self.assertEqual(game_levels.games(game_levels.describe(450, 0.55)["perks"]), ["pair", "odd", "select", "classify"])
         self.assertEqual((game_levels.game_level("odd"), game_levels.game_level("classify")), (2, 4))
 
     def test_players_who_had_identification_keep_it_without_every_rank_opening(self):
@@ -75,7 +75,7 @@ class LadderTests(OddCase):
     def test_the_toolbar_learns_which_games_are_open(self):
         prefs = self.post("game_start", {"mode": "mixed"}).json()["prefs"]
         self.assertEqual([(g["key"], g["unlocked"], g["level"]) for g in prefs["games"]],
-                         [("pair", True, 1), ("odd", False, 2), ("classify", False, 4)])
+                         [("pair", True, 1), ("odd", False, 2), ("select", False, 3), ("classify", False, 4)])
         res = self.post("game_prefs", {"play_mode": "odd"})
         self.assertEqual((res.status_code, res.json()["error"]), (403, "Odd One Out unlocks at level 2."))
 

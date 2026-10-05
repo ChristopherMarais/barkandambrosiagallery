@@ -1,12 +1,13 @@
 """
 Beetle ID game: picking items, scoring answers, player statistics and label consensus.
 
-Three modes:
+Four modes:
   classify  one region of interest (ROI) is shown; the player names its subfamily,
             tribe, genus and species, stopping at any rank.
   pair      two ROIs are shown; the player says the deepest rank they share.
   odd       four or six ROIs are shown; all but one share a name at some rank, and the
             player picks the one that doesn't belong (Odd One Out).
+  select    nine ROIs are shown; the player taps every one of a named group (Select all).
 
 Some items in every round are "checks": items with a validated answer
 (``Beetles.bbox_is_validated``). Only checks are scored, and the player is never told
@@ -132,8 +133,9 @@ def revealed_ids(player):
         GameAnswer.objects.filter(player=player, mode__in=["pair", "odd"], roi_b__isnull=False)
         .values_list("roi_b_id", flat=True)
     )
-    # an Odd One Out round at species names the rest's species too ("the rest: Xyleborus affinis")
-    for tiles in GameAnswer.objects.filter(player=player, mode="odd", grid_rank="species").values_list("tiles", flat=True):
+    # a grid at species names the rest's species too ("the rest: Xyleborus affinis", "tap every Xyleborus affinis")
+    for tiles in (GameAnswer.objects.filter(player=player, mode__in=["odd", "select"], grid_rank="species")
+                  .values_list("tiles", flat=True)):
         ids |= {uuid.UUID(str(t)) for t in tiles or []}
     return ids
 
@@ -327,7 +329,7 @@ def peer_rois(player, pool):
     player has not: showing them to more people is how a name gets agreed on.
     """
     counts = (
-        GameAnswer.objects.filter(skipped=False, roi__in=pool).exclude(player=player).exclude(mode="odd")
+        GameAnswer.objects.filter(skipped=False, roi__in=pool).exclude(player=player).exclude(mode__in=["odd", "select"])
         .values("roi_id").annotate(n=Count("player", distinct=True))
         .filter(n__lte=game_setting("GAME_PEER_MAX_OTHERS", 4)).values("roi_id")
     )
@@ -662,6 +664,92 @@ def build_odd_items(player, size, fresh_only=False):
     return items
 
 
+# ---------------------------------------------------------------------------
+# Select all (#370)
+# ---------------------------------------------------------------------------
+SELECT_TILES = 9
+
+
+def select_open_count(level, members):
+    """
+    How many beetles in a Select all grid are not validated: one at level 1, up to three at the top, never so many
+    that the grid holds fewer validated non-members than validated members (so tapping everything always loses).
+    """
+    from .game_levels import LEVELS
+
+    wanted = 1 + round(2 * (level - 1) / (len(LEVELS) - 1))
+    return max(0, min(wanted, SELECT_TILES - 2 * members))
+
+
+def _select_item(n_open_at, target, deepest, check_pool, open_pool, avoid):
+    """One Select all item, or None when no part of the tree has enough beetles for it."""
+    for rank in _relation_order(target, {r: d for r, d in ODD_RANK_DIFFICULTY.items()
+                                         if RANKS.index(r) <= RANKS.index(deepest)}):
+        # a few more anchors than Odd One Out tries: a grid needs three members of one group
+        anchors = _sample(check_pool.filter(_named_at(rank)).exclude(id__in=avoid), 5, target, allow_seen=False)
+        for anchor in Beetles.objects.select_related("taxon").filter(id__in=anchors):
+            group = lineage(anchor.taxon, rank) if anchor.taxon else None
+            if group is None:
+                continue
+            same = rank_q(rank, group[rank])
+            photos = {anchor.image_asset_id}
+            # 3 or 4 validated members (a third to under half of the grid), so tapping everything never pays
+            members = [anchor.id] + _distinct_photos(
+                _sample(check_pool.filter(same).exclude(id__in=avoid).exclude(id=anchor.id), 9, target, allow_seen=True),
+                photos, random.choice((2, 3)))
+            if len(members) < 3:
+                continue
+            n_open = n_open_at(len(members))
+            opens = _distinct_photos(
+                _sample(open_pool.filter(_predicted(rank, group[rank], 0.6, 1.01)).exclude(id__in=avoid).distinct(),
+                        n_open * 2, target, allow_seen=False), photos, n_open) if n_open else []
+            # the rest: validated beetles of other groups at this rank; near relatives (the same parent) on harder rounds
+            need = SELECT_TILES - len(members) - len(opens)
+            others = check_pool.filter(_named_at(rank)).exclude(same).exclude(id__in=avoid)
+            parent = RANKS[RANKS.index(rank) - 1] if rank != "subfamily" else None
+            near = parent and random.random() < min(0.9, game_setting("GAME_ODD_NEAR_FLOOR", 0.3) + target)
+            rest = _distinct_photos(_sample(others.filter(rank_q(parent, group[parent])), need * 2, target, allow_seen=True),
+                                    photos, need) if near else []
+            rest += _distinct_photos(_sample(others.exclude(id__in=rest), need * 3, target, allow_seen=True),
+                                     photos, need - len(rest))
+            shown = [*members, *opens, *rest]
+            if len(rest) < len(members) or len(shown) < SELECT_TILES:
+                continue
+            random.shuffle(shown)
+            return {"a": str(anchor.id), "b": None, "check": True, "mode": "select",
+                    "tiles": [str(i) for i in shown], "rank": rank, "group": group}
+    return None
+
+
+def build_select_items(player, size, fresh_only=False):
+    """
+    Select all: nine beetles and a group to find ("Tap every Platypodinae"). The rank follows the player's open ranks
+    and difficulty, like Odd One Out; three or four of the nine are validated members, the rest validated beetles of
+    other groups (near relatives on harder rounds), plus one to three beetles nobody has validated that a classifier
+    puts in the group. Taps on those are recorded, never scored. Beetles whose answer the player has been shown are
+    never used again for them (revealed_ids).
+    """
+    from .game_levels import for_player, rank_unlock
+
+    info = for_player(player)
+    answered = GameAnswer.objects.filter(player=player, skipped=False).count()
+    deepest = rank_unlock(info["level"], answered, bool(info.get("granted")))["rank"]
+    check_pool, open_pool = pools(player)
+    target = target_difficulty(player)
+    avoid = set(revealed_ids(player))
+    items = []
+    for _ in range(size * 2):
+        if len(items) >= size:
+            break
+        item = _select_item(lambda members: select_open_count(info["level"], members), target, deepest,
+                            check_pool, open_pool, avoid)
+        if item is None:
+            break
+        avoid.update(uuid.UUID(t) for t in item["tiles"])
+        items.append(item)
+    return items
+
+
 def resumable_round(player, mode):
     """The player's latest unfinished round in this mode, if recent enough to pick up again."""
     since = timezone.now() - timedelta(hours=game_setting("GAME_RESUME_HOURS", 12))
@@ -717,7 +805,8 @@ def start_round(player, mode, size=None, fresh_only=False):
     return GameRound.objects.create(player=player, mode=mode, items=spread(items))
 
 
-BUILDERS = {"pair": "build_pair_items", "odd": "build_odd_items", "classify": "build_classify_items"}
+BUILDERS = {"pair": "build_pair_items", "odd": "build_odd_items", "select": "build_select_items",
+            "classify": "build_classify_items"}
 
 
 def build(game_key, player, size, fresh_only=False):
@@ -939,6 +1028,28 @@ def score_odd(picked_taxon, rank, group):
     return out
 
 
+def score_select(tiles, picks, rank, group):
+    """
+    How a Select all grid went. ``tiles`` are the Beetles shown (None for one that is gone), ``picks`` the places
+    tapped. Each validated beetle is "right" (a member, tapped), "wrong" (not one, tapped), "missed" (a member left
+    out) or "clear" (not one, left out); one nobody has validated is "vote" when tapped and "" otherwise.
+    Returns {"tiles": [state, ...], "right", "wrong", "missed", "members", "perfect"}.
+    """
+    theirs, picked = _norm((group or {}).get(rank)), set(picks or [])
+    states, count = [], {"right": 0, "wrong": 0, "missed": 0, "clear": 0, "members": 0}
+    for i, roi in enumerate(tiles):
+        mine = rank_values(roi.taxon).get(rank, "") if roi is not None and roi.taxon else ""
+        if roi is None or not roi.bbox_is_validated or roi.is_deleted or not mine or not theirs:
+            states.append("vote" if i in picked else "")
+            continue
+        member = mine == theirs
+        count["members"] += member
+        state = ("right" if member else "wrong") if i in picked else ("missed" if member else "clear")
+        count[state] += 1
+        states.append(state)
+    return dict(count, tiles=states, perfect=count["wrong"] == 0 and count["missed"] == 0 and count["members"] > 0)
+
+
 # ---------------------------------------------------------------------------
 # Player statistics
 # ---------------------------------------------------------------------------
@@ -1020,7 +1131,7 @@ def player_reliability(player_ids=None):
     accuracy as they answer more checks.
     """
     out = defaultdict(dict)
-    qs = GameAnswer.objects.filter(is_check=True, is_retry=False)
+    qs = GameAnswer.objects.filter(is_check=True, is_retry=False).exclude(mode="select")   # see game_scoring.ratings
     if player_ids is not None:
         qs = qs.filter(player_id__in=list(player_ids))
     for row in qs.values("player", "mode").annotate(**_rank_counts()):
@@ -1028,7 +1139,7 @@ def player_reliability(player_ids=None):
     result = {}
     for pid, modes in out.items():
         result[pid] = {}
-        for mode in ("classify", "pair", "odd", "all"):
+        for mode in ("classify", "pair", "odd", "select", "all"):
             result[pid][mode] = {}
             for r in RANKS:
                 if mode == "all":
@@ -1058,11 +1169,11 @@ def implied_labels(answer):
 
     Classify: what the player picked. Pair: the ranks the player says the unvalidated
     ROI shares with its validated partner, taken from the partner's taxon. "Different
-    subfamily" and "not sure" say nothing positive, so they imply nothing, and nor does an Odd One Out pick (it
-    says what a beetle is not).
+    subfamily" and "not sure" say nothing positive, so they imply nothing, and nor do the grid games (an Odd One Out
+    pick says what a beetle is not; Select all records its taps on unchecked beetles but doesn't use them as names yet).
     Species values are "Genus species".
     """
-    if answer.skipped or answer.mode == "odd":
+    if answer.skipped or answer.mode in ("odd", "select"):
         return {}
     if answer.mode == "classify":
         values = {
@@ -1095,7 +1206,7 @@ def consensus(limit=None, roi_ids=None, voters=None):
     from .game_trust import TrustContext
 
     answers = (
-        GameAnswer.objects.filter(is_check=False, skipped=False).exclude(mode="odd")   # a pick is not a name
+        GameAnswer.objects.filter(is_check=False, skipped=False).exclude(mode__in=["odd", "select"])   # not names
         .select_related("roi", "roi__taxon", "roi_b__taxon")
         .order_by("roi_id", "answered_at")
     )

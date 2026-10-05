@@ -67,6 +67,8 @@ class Player(HttpUser):
             body["pair_answer"] = random.choice(["different", "subfamily"])
         elif self.item.get("mode") == "odd":
             body["pick"] = random.randrange(len(self.item.get("images") or [None]))
+        elif self.item.get("mode") == "select":
+            body["picks"] = sorted(random.sample(range(len(self.item.get("images") or [])), 3))
         else:
             if not self.subfamilies:
                 res = self.client.get("/game/api/taxa/?rank=subfamily", name="game: name lists")
