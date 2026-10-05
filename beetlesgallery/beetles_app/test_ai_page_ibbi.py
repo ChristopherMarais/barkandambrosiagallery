@@ -2,6 +2,7 @@
 The AI page as IBBI-AI (#502): the picker shows just the model names with the recommended one first, the IBBI text
 sits under the tool with the server note on top, the page says what happened to the photo, and photos it keeps say
 "AI page" for their institution and who added them (when signed in). Older AI-page photos get the same (migration).
+IBBI-AI's suggestions read as "IBBI-AI · DINOv3" wherever people see them.
 """
 import importlib
 import io
@@ -18,9 +19,11 @@ from django.urls import reverse
 from PIL import Image
 
 from beetlesgallery.beetles_app import game_tuning
+from beetlesgallery.beetles_app.classify_assist import readable_model_name
 from beetlesgallery.beetles_app.models import ImageAsset, ModelPrediction
+from beetlesgallery.beetles_app.predictions import suggestions_for
 from beetlesgallery.beetles_app.test_classify_assist import DETECTION, ClassifyCase, fake_response
-from beetlesgallery.beetles_app.testing import PageBehaviourCase
+from beetlesgallery.beetles_app.testing import PageBehaviourCase, make_beetle, make_taxon
 from beetlesgallery.tools import ibbi_models
 
 TEMPLATES = Path(settings.BASE_DIR) / "beetlesgallery" / "templates" / "beetles"
@@ -117,7 +120,8 @@ class SavedPhotoTests(ClassifyCase):
                          ("AI page", None, None, False))
         self.assertIn("IBBI-AI", photo.image_notes)
         prediction = ModelPrediction.objects.get(roi__image_asset=photo)
-        self.assertEqual((prediction.model_name, prediction.uploaded_by), ("ai-page:ibbi-test", None))
+        # the same name as the annotation page's runs, so the game counts one track record per model
+        self.assertEqual((prediction.model_name, prediction.uploaded_by), ("annotator:ibbi-test", None))
 
     def test_a_signed_in_visitor_is_recorded_as_who_added_it(self):
         self.client.force_login(self.user)
@@ -156,6 +160,35 @@ class SavedPhotoTests(ClassifyCase):
         self.assertEqual(response.status_code, 502)
         self.assertIn("waking up", response.json()["message"])
         self.assertFalse(ImageAsset.objects.filter(full_path_at_import__startswith="classifier/").exists())
+
+
+class ReadableModelNameTests(PageBehaviourCase):
+    """People read "IBBI-AI · DINOv3", not "annotator:ibbi_dinov3"; other models' names are shown as they came."""
+
+    def test_ibbi_ai_runs_read_as_ibbi_ai_and_the_model(self):
+        for stored, shown in (
+            ("annotator:ibbi_dinov3", "IBBI-AI · DINOv3"), ("annotator:ibbi_bioclip2", "IBBI-AI · BioCLIP 2"),
+            ("annotator:yolo12x", "IBBI-AI · YOLO12"),
+            ("annotator:rtdetr", "IBBI-AI · RT-DETR"), ("annotator:yolov8", "IBBI-AI · YOLOv8"),   # names from before ibbi 0.3
+            ("annotator:ibbi-test", "IBBI-AI · ibbi-test"),                                        # a key the site no longer lists
+            ("M2e20__dinov3L336", "M2e20__dinov3L336"), ("ibbi-rtdetr", "ibbi-rtdetr"),            # uploaded predictions
+        ):
+            self.assertEqual(readable_model_name(stored), shown, stored)
+
+    def test_the_specimen_and_annotation_pages_show_the_readable_name(self):
+        taxon = make_taxon(valid_species_id="2210", genus="Xyleborus", species="affinis", scientific_name="Xyleborus affinis")
+        roi = make_beetle(bbox="unvalidated")
+        ModelPrediction.objects.create(roi=roi, valid_species_id="2210", taxon=taxon, confidence=0.9,
+                                       model_name="annotator:ibbi_dinov3")
+        [s] = suggestions_for([roi])[roi.id]
+        self.assertEqual((s["model_name"], s["model_key"]), ("IBBI-AI · DINOv3", "annotator:ibbi_dinov3"))
+        self.client.force_login(self.staff)
+        detail = self.client.get(reverse("beetle_detail", args=[roi.id])).content.decode()
+        block = detail[detail.index('data-testid="ai-suggestion"'):]
+        self.assertIn("IBBI-AI · DINOv3", block)
+        self.assertNotIn("annotator:", detail)
+        ai = self.client.get(reverse("game_proposals"), {"image_asset": str(roi.image_asset_id)}).json()["ai"]
+        self.assertEqual(ai[str(roi.id)][0]["model_name"], "IBBI-AI · DINOv3")   # what aiSuggestionHtml shows
 
 
 class OldAiPagePhotosTests(PageBehaviourCase):

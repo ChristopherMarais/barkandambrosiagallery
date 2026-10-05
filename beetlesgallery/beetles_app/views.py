@@ -7,7 +7,6 @@ import subprocess
 import sys
 import os
 import math
-import requests
 import time
 import logging
 from beetlesgallery.tools import ibbi_models
@@ -47,8 +46,6 @@ from .tasks import process_upload_task, process_update_task, build_downloads_tas
 
 import pandas as pd
 from io import BytesIO, StringIO
-
-MODAL_API_URL = settings.MODAL_API_URL
 
 logger = logging.getLogger(__name__)
 

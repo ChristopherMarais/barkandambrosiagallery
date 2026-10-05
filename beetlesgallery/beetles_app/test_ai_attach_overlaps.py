@@ -50,12 +50,13 @@ class OverlappingBoxTests(ClassifyCase):
         self.assertEqual((new.depicts_valid_name_id, new.bbox_is_validated), ("2210", False))
         self.assertEqual(ModelPrediction.objects.filter(roi__image_asset=self.asset).count(), 2)
 
-    def test_a_suggestion_from_the_same_model_on_the_ai_page_counts(self):
-        roi = self.existing_roi()
-        ModelPrediction.objects.create(roi=roi, valid_species_id="2210", confidence=0.9, model_name="ai-page:ibbi-test")
+    def test_a_suggestion_the_model_gave_before_is_kept_as_it_was(self):
+        roi = self.existing_roi()   # e.g. from a run on the AI page, which saves under the same model name
+        ModelPrediction.objects.create(roi=roi, valid_species_id="1733", confidence=0.4, model_name="annotator:ibbi-test")
         response, _ = self.classify()
         self.assertEqual((response.json()["attached"], response.json()["already_boxed"]), (0, 1))
-        self.assertEqual(ModelPrediction.objects.filter(roi=roi).count(), 1)
+        self.assertEqual(list(ModelPrediction.objects.filter(roi=roi).values_list("valid_species_id", "confidence")),
+                         [("1733", 0.4)])
 
     def test_another_models_suggestion_does_not_stop_this_one(self):
         roi = self.existing_roi()
@@ -91,13 +92,15 @@ class OverlappingBoxTests(ClassifyCase):
         self.classify()
         data = self.client.get(reverse("game_proposals"), {"image_asset": str(self.asset.id)}).json()
         [suggestion] = data["ai"][str(roi.id)]
-        self.assertEqual(suggestion["model_name"], "annotator:ibbi-test")
+        self.assertEqual((suggestion["model_name"], suggestion["model_key"]), ("IBBI-AI · ibbi-test", "annotator:ibbi-test"))
         self.assertEqual(suggestion["levels"][-1]["value"], "Xyleborus affinis")
         self.assertFalse(suggestion["levels"][-1]["agrees"])   # the label (Ips typographus) stays and differs
 
     def test_the_annotation_page_says_what_was_added_and_what_got_a_suggestion(self):
         self.client.force_login(self.staff)
         page = self.client.get(reverse("tool_annotate")).content.decode()
+        self.assertIn("Nothing is validated; an existing ROI keeps its box and gets the AI's suggestion.", page)
+        self.assertNotIn("boxes over an existing ROI are skipped", page)
         script = page[page.index("async function classifyCurrentImage()"):]
         script = script[:script.index("async function acquireLock")]
         self.assertIn("data.attached", script)

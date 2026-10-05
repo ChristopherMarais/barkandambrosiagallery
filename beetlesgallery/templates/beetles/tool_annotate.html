@@ -368,7 +368,7 @@
 
         <div class="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
           <div class="text-xs font-bold text-gray-500 uppercase mb-1">Generate AI recommendation</div>
-          <p class="text-[11px] text-gray-500 mb-2">Finds the beetles in this image, adds a box for each new one and suggests its name. Nothing is validated; boxes over an existing ROI are skipped.</p>
+          <p class="text-[11px] text-gray-500 mb-2">Finds the beetles in this image, adds a box for each new one and suggests its name. Nothing is validated; an existing ROI keeps its box and gets the AI's suggestion.</p>
           <div class="space-y-2" data-testid="ai-recommendation">
             <select id="classify-model" aria-label="AI model" class="block w-full min-w-0 rounded border border-gray-300 bg-white px-2 py-1.5 text-xs">
               {% ibbi_model_options %}

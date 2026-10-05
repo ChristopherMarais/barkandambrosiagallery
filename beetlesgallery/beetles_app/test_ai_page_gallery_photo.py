@@ -57,7 +57,7 @@ class GalleryPhotoTests(ClassifyCase):
         self.assertEqual((response.json()["saved"], response.json()["attached"]), ("attached", 1))
         prediction = ModelPrediction.objects.get(roi=bare)
         self.assertEqual((prediction.valid_species_id, prediction.model_name, prediction.uploaded_by),
-                         ("2210", "ai-page:ibbi-test", None))
+                         ("2210", "annotator:ibbi-test", None))   # one name per model, whichever page ran it
         self.assertEqual(list(ModelPrediction.objects.filter(roi=named).values_list("model_name", flat=True)),
                          ["M2e20__dinov3L336"])
         self.assertEqual(Beetles.objects.filter(image_asset=self.asset).count(), 2)   # no new ROI
