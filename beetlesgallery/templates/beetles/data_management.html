@@ -69,6 +69,14 @@
       </button>
       {% endif %}
 
+      {% if areas.bulk_validate %}
+      <a href="{% url 'bulk_validate' %}" data-testid="open-bulk-validate"
+        class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+        <i class="fi fi-rr-list-check"></i>
+        <span>Bulk Validation</span>
+      </a>
+      {% endif %}
+
       {# All Users: Download Link #}
       <a href="{% url 'beetles_image_browser' %}"
         class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">

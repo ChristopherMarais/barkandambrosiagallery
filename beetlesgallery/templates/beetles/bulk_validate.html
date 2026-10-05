@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load beetle_tags %}
+
+{% block title %}Bulk validation | Bark & Ambrosia Beetle Gallery{% endblock %}
+
+{% block content %}
+<section>
+  <a href="{% url 'data_management' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Data Management</a>
+  <h1 class="page-title">Bulk validation</h1>
+  <p class="text-gray-600 mb-6 max-w-3xl">
+    Unvalidated images that have boxes. Check the boxes and names, tick the images that are right and validate them
+    together. Validating an image validates every boxed ROI on it. Open an image to fix it first.
+  </p>
+
+  <form method="get" class="flex flex-wrap items-end gap-3 mb-6" data-testid="bulk-filters">
+    <label class="block"><span class="block text-xs font-semibold text-gray-600 mb-1">Search</span>
+      <input type="search" name="q" value="{{ q }}" placeholder="Species, institution or file" class="w-64 max-w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"></label>
+    <label class="block"><span class="block text-xs font-semibold text-gray-600 mb-1">Name source</span>
+      <select name="source" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+        <option value="">Any</option>
+        {% for key, label in sources %}<option value="{{ key }}" {% if key == source %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select></label>
+    <label class="flex items-center gap-2 py-2 text-sm text-gray-700"><input type="checkbox" name="named" value="1" class="h-4 w-4 rounded border-gray-300" {% if named_only %}checked{% endif %}> Every ROI has a name</label>
+    <button type="submit" class="rounded-xl border border-gray-400 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-400 disabled:opacity-50">Filter</button>
+  </form>
+
+  <form method="post" id="bulk-form" data-testid="bulk-form">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <div class="sticky top-0 z-10 -mx-4 mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white/95 px-4 py-3">
+      <span class="text-sm text-gray-600"><span data-testid="bulk-total">{{ total|digit_groups }}</span> unvalidated image{{ total|pluralize }} with boxes</span>
+      <span class="flex items-center gap-3">
+        <label class="flex items-center gap-2 whitespace-nowrap text-sm text-gray-700"><input type="checkbox" id="select-page" class="h-4 w-4 rounded border-gray-300"> Select this page</label>
+        <button type="submit" id="validate-selected" class="rounded-xl border border-gray-400 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-400 disabled:opacity-50" disabled data-testid="validate-selected">Validate selected (<span id="selected-count">0</span>)</button>
+      </span>
+    </div>
+
+    {% if page.object_list %}
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {% for image in page.object_list %}
+      <label class="block cursor-pointer rounded-xl border border-gray-200 bg-white p-2 shadow-sm has-[:checked]:border-gray-700 has-[:checked]:ring-2 has-[:checked]:ring-gray-400" data-testid="bulk-image">
+        <div class="relative overflow-hidden rounded-lg bg-gray-100">
+          {% if image.thumb_small %}<img src="{{ image.thumb_small.url }}" alt="" class="block w-full" loading="lazy">{% else %}<div class="aspect-[4/3]"></div>{% endif %}
+          {% for roi in image.active_rois %}{% if roi.bbox_x is not None %}
+          <span class="absolute border-2 border-white outline outline-1 outline-gray-900" title="{{ roi.taxon.scientific_name|default:'No name' }}"
+            style="left: {{ roi.bbox_x|percent }}%; top: {{ roi.bbox_y|percent }}%; width: {{ roi.bbox_width|percent }}%; height: {{ roi.bbox_height|percent }}%;"></span>
+          {% endif %}{% endfor %}
+          <input type="checkbox" name="image" value="{{ image.pk }}" class="bulk-pick absolute left-2 top-2 h-5 w-5 rounded border-gray-300">
+        </div>
+        <ul class="mt-2 space-y-0.5 text-xs text-gray-700">
+          {% for roi in image.active_rois %}
+          <li class="truncate">{% if roi.taxon %}<i>{{ roi.taxon.scientific_name }}</i>{% else %}<span class="text-gray-400">No name</span>{% endif %}{% if roi.bbox_x is None %} <span class="text-gray-400">(no box)</span>{% endif %}{% if roi.label_source %} <span class="text-gray-400">· {{ roi.get_label_source_display }}</span>{% endif %}</li>
+          {% endfor %}
+        </ul>
+        <div class="mt-1 flex items-center justify-between gap-2 text-xs text-gray-500">
+          <span class="truncate">{{ image.image_institution|default:"" }}</span>
+          <a href="{% url 'tool_annotate' %}?image={{ image.pk }}" target="_blank" rel="noopener" class="shrink-0 underline hover:text-gray-900">Open</a>
+        </div>
+      </label>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="rounded-xl border border-gray-200 bg-gray-50 p-6 text-gray-600" data-testid="bulk-empty">Nothing to validate here.</p>
+    {% endif %}
+  </form>
+
+  {% include "beetles/includes/pager.html" with page=page param="page" anchor="bulk" %}
+</section>
+
+<script>
+  (function () {
+    const form = document.getElementById('bulk-form');
+    const picks = () => Array.from(form.querySelectorAll('.bulk-pick'));
+    const button = document.getElementById('validate-selected');
+    const all = document.getElementById('select-page');
+    function update() {
+      const n = picks().filter((p) => p.checked).length;
+      document.getElementById('selected-count').textContent = n;
+      button.disabled = n === 0;
+      all.checked = n > 0 && n === picks().length;
+    }
+    form.addEventListener('change', (e) => { if (e.target !== all) update(); });
+    all.addEventListener('change', () => { picks().forEach((p) => { p.checked = all.checked; }); update(); });
+    form.addEventListener('submit', (e) => {
+      const n = picks().filter((p) => p.checked).length;
+      if (!confirm('Validate ' + n + ' image' + (n === 1 ? '' : 's') + ' and every boxed ROI on them?')) e.preventDefault();
+    });
+    update();
+  })();
+</script>
+{% endblock %}
