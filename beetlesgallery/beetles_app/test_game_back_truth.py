@@ -36,6 +36,9 @@ class BackTruthTests(GameCase):
         self.assertEqual([v["name"] if v else None for v in verified].count(None), 1)   # the unvalidated one
         self.assertIn("Xyleborus ferrugineus", [v["name"] for v in verified if v])
 
-    def test_the_back_sheet_has_room_for_it(self):
+    def test_the_back_sheet_has_room_for_it_and_its_button_just_says_current_beetle(self):
         self.client.force_login(self.user)
-        self.assertIn('id="previous-truth"', self.client.get(reverse("game_play", args=["mixed"])).content.decode())
+        page = self.client.get(reverse("game_play", args=["mixed"])).content.decode()
+        self.assertIn('id="previous-truth"', page)
+        self.assertIn(">Current beetle</button>", page)
+        self.assertNotIn("Back to the current beetle", page)
