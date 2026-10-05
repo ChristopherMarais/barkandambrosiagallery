@@ -5,7 +5,8 @@ Two kinds:
 
 * **Agreement**: proven experts, or many reliable players, agree on a name at some rank. The deepest such rank
   is the tip ("Experts say genus Xyleborus"). If it disagrees with the beetle's current label, the tip says so.
-* **Not in**: Family Ties answers also say what a beetle is *not*. A player who says an unnamed beetle and a
+* **Not in**: answers also say what a beetle is *not*. In Odd One Out the picked beetle is not of the rest's group;
+  in Select all the beetles left untapped are not of the grid's group (game.grid_exclusions). And Family Ties answers: A player who says an unnamed beetle and a
   validated *Xyleborus affinis* are only "same tribe" says the beetle is not a *Xyleborus*. When enough reliable
   players say so, and few or none say the opposite, it becomes a tip ("Players are confident it is not in genus
   Xyleborus").
@@ -78,6 +79,20 @@ def _not_tips(roi_ids, voters):
             display.setdefault(key, hit[1])
         for rank, value in game.implied_labels(ans).items():
             inside[(ans.roi_id, rank, value.lower())].add(ans.player_id)
+    # the grid games: a beetle picked as the odd one, or left untapped, is not of that group
+    wanted = {str(r) for r in roi_ids}
+    grids = GameAnswer.objects.filter(game.showing(roi_ids), mode__in=["odd", "select"], skipped=False).select_related("roi")
+    if voters is not None:
+        grids = grids.filter(player_id__in=list(voters))
+    for ans in grids:
+        for roi_id, rank, value in game.grid_exclusions(ans):
+            if str(roi_id) in wanted:
+                key = (roi_id, rank, value.lower())
+                against[key].add(ans.player_id)
+                display.setdefault(key, value)
+    for roi_id, pid, vote in game.tap_votes(roi_ids, voters):
+        for rank, value in vote.items():
+            inside[(roi_id, rank, value.lower())].add(pid)
     if not against:
         return {}
     experts = set(PlayerSkill.objects.filter(proven=True, player_id__in={p for s in against.values() for p in s})
@@ -85,6 +100,7 @@ def _not_tips(roi_ids, voters):
     min_votes = game_setting("GAME_TIP_MIN_NOT_VOTES", 2)
     min_support = game_setting("GAME_TIP_MIN_SUPPORT", 0.75)
     rois = {a.roi_id: a.roi for a in answers}
+    rois.update(game.Beetles.objects.in_bulk({k[0] for k in against} - set(rois)))
     tips = defaultdict(list)
     for key, players in against.items():
         roi_id, rank, _ = key

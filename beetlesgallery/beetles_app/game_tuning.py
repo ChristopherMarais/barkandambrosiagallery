@@ -88,6 +88,21 @@ GROUPS = [
         _t("GAME_REF_MODEL_MIN_CHECKED", "Model: sure calls checked in that taxon", 20,
            "...over at least this many of its sure calls there.", 1, 1000, 1),
     ]),
+    ("Naming confidence: what a beetle is, and is not", [
+        _t("GAME_SELECT_TAP_WEIGHT", "A Select all tap, against a name", 0.8,
+           "Tapping an unvalidated beetle in Select all counts as this share of a direct identification towards its "
+           "name (down to the grid's rank). Taps never make an expert's verdict on their own.", 0, 1, 0.05),
+        _t("GAME_TIP_MIN_VOTES", "Players needed for a name tip", 3,
+           "Curators see 'N reliable players say genus X' once at least this many players agree...", 1, 50, 1),
+        _t("GAME_TIP_MIN_SUPPORT", "Share of the weighted vote for a tip", 0.75,
+           "...and their name has at least this share of the reliability-weighted vote at that rank. The same share "
+           "applies to 'not in' tips.", 0.5, 1, 0.05),
+        _t("GAME_TIP_MIN_NOT_VOTES", "Players needed for a 'not in' tip", 2,
+           "Curators see 'Players are confident it is not in genus X' once at least this many say so.", 1, 50, 1),
+        _t("GAME_AUTO_APPLY_MIN_EXPERTS", "Experts who must agree to write a name in", 2,
+           "Proven experts who must give the same species before it is written onto an unnamed beetle as an "
+           "Expert ID (still unvalidated, for a curator to confirm).", 1, 10, 1),
+    ]),
     ("Experts (whose answers become trusted labels)", [
         _t("GAME_TRUST_MIN_ACCURACY", "Accuracy an expert needs", 0.9,
            "In a taxon, a player must be correct at least this often on validated beetles.", 0.5, 1, 0.01),
@@ -240,6 +255,8 @@ def checks():
          "Points on validated beetles are the real test of accuracy; agreement is capped below them."),
         ("Taking part earns less than a correct subfamily", v["GAME_POINTS_PARTICIPATION"] < rank["subfamily"] * w,
          "So the score follows accuracy, not just the number of answers."),
+        ("A tap counts less than a name", v["GAME_SELECT_TAP_WEIGHT"] < 1,
+         "Tapping a beetle among nine is a quicker, weaker judgement than naming it."),
         ("Experts must be very accurate", v["GAME_TRUST_MIN_ACCURACY"] >= 0.85,
          "Expert labels reach curators as trusted: below 85% that trust is not earned."),
     ]

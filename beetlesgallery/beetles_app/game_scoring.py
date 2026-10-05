@@ -364,7 +364,7 @@ def agreement(player_id, claims, votes, judges):
         for judge_id, labels in votes:
             if rank not in labels:
                 continue
-            w = judges.weight(judge_id, player_id, rank, labels)
+            w = judges.weight(judge_id, player_id, rank, labels) * getattr(labels, "weight", 1.0)
             if not w:
                 continue
             if labels[rank].strip().lower() == value.strip().lower():
@@ -487,6 +487,9 @@ def votes_on(roi_ids):
         labels = game.implied_labels(ans)
         if labels:
             latest[(ans.roi_id, ans.player_id)] = labels
+    # Select all taps count too, a little less than a name (game.tap_votes), unless the player also named it
+    for roi_id, pid, vote in game.tap_votes(roi_ids):
+        latest.setdefault((roi_id, pid), vote)
     out = defaultdict(list)
     for (roi_id, pid), labels in latest.items():
         out[roi_id].append((pid, labels))
