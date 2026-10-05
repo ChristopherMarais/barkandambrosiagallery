@@ -12,9 +12,10 @@
 
   <!-- One button: the feed mixes both games -->
   <a href="{% url 'game_play' 'mixed' %}" data-testid="play"
-    class="btn-main flex w-full py-6 mb-5 text-2xl rounded-2xl">
+    class="btn-main flex w-full py-6 mb-2 text-2xl rounded-2xl">
     <i class="fi fi-rr-play"></i> Play
   </a>
+  <p class="mb-5 text-center text-sm"><a href="{% url 'game_play' 'mixed' %}?tour=1" class="text-gray-500 underline hover:text-gray-900" data-testid="home-tour">Show me around the game</a></p>
 
   <!-- Level, points, streak, today -->
   <a href="{% url 'game_unlocks' %}" class="block p-4 mb-3 bg-gray-50 border border-gray-100 rounded-2xl hover:border-gray-300">
