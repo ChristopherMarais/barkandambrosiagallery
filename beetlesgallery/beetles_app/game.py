@@ -129,8 +129,8 @@ def _seen(player, mode, is_check):
 def revealed_ids(player):
     """
     Validated ROIs whose answer this player has been shown in round feedback: every
-    scored item, and every validated partner in a pair. They are never scored for this
-    player again, so feedback can't be memorised into a better score.
+    scored item, and every validated partner in a pair, with every other photo of the same specimen. They are never
+    scored for this player again, so feedback can't be memorised into a better score.
     """
     ids = set(GameAnswer.objects.filter(player=player, is_check=True).values_list("roi_id", flat=True))
     # the validated partner of a pair, and the odd one an Odd One Out round was built around
@@ -142,6 +142,13 @@ def revealed_ids(player):
     for tiles in (GameAnswer.objects.filter(player=player, mode__in=["odd", "select"], grid_rank="species")
                   .values_list("tiles", flat=True)):
         ids |= {uuid.UUID(str(t)) for t in tiles or []}
+    # every other photo of the same specimen (#386): once its name was shown, any photo of it tests memory, not skill
+    from django.db.models.functions import Lower, Trim
+
+    by_specimen = Beetles.objects.annotate(specimen=Lower(Trim("depicts_specimen")))
+    specimens = set(by_specimen.filter(id__in=ids).exclude(specimen="").values_list("specimen", flat=True)) - {None}
+    if specimens:
+        ids |= set(by_specimen.filter(specimen__in=specimens).values_list("id", flat=True))
     return ids
 
 
