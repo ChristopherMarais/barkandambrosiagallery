@@ -1403,7 +1403,7 @@ def _keep_classifier_image(request, image_file, data):
     try:
         if request.POST.get("keep_image") == "0":
             return classify_assist.OPTED_OUT   # the person asked us not to keep it (or it is a built-in example)
-        if data.get("status") != "success" or not data.get("detections"):
+        if data.get("status") != "success" or not classify_assist.keepable(data):
             return classify_assist.NOT_SAVED
         key, count = _hourly_saves(request)
         if count >= classify_assist.SUBMISSIONS_PER_HOUR:
@@ -1428,7 +1428,7 @@ def _keep_ai_suggestions(request, asset, data):
     from . import classify_assist
 
     try:
-        if not data.get("detections"):
+        if not classify_assist.keepable(data):
             return classify_assist.NOT_SAVED, 0
         limited = not has_area(request.user, AI_RECOMMEND)
         key, count = _hourly_saves(request)
@@ -1500,10 +1500,8 @@ def tool_classify(request):
     asset = _gallery_photo(request.POST.get("asset") if request.method == "POST" else request.GET.get("asset"))
     if request.method == 'POST' and (asset is not None or request.FILES.get('image')):
         architecture = ibbi_models.resolve(request.POST.get('architecture')) or ibbi_models.DEFAULT
-        try:
-            threshold = min(1.0, max(0.05, float(request.POST.get('box_threshold', 0.25))))
-        except (TypeError, ValueError):
-            threshold = 0.25
+        # Every box down to the lowest threshold: the page's slider filters them without asking again
+        threshold = classify_assist.LOWEST_THRESHOLD
         try:
             if asset is not None:
                 with asset.image_file.open('rb') as fh:
@@ -1535,6 +1533,7 @@ def tool_classify(request):
                 "status": "error", 
                 "message": "Processing failed. Please try again later."
             }, status=500)
+        data["keep_threshold"] = classify_assist.KEEP_THRESHOLD   # what was kept, whatever the slider says
         return JsonResponse(data)
     if request.method == 'POST' and request.POST.get("asset"):
         return JsonResponse({"status": "error", "message": "That photo is not in the gallery."}, status=404)
@@ -1543,6 +1542,7 @@ def tool_classify(request):
     gallery_photo = {"id": str(asset.id), "url": asset.display_url} if asset is not None else None
     return render(request, 'beetles/tool_classify.html', {
         'examples': _classifier_examples(), 'ibbi_docs_url': ibbi_models.IBBI_DOCS_URL, 'gallery_photo': gallery_photo,
+        'keep_threshold': classify_assist.KEEP_THRESHOLD, 'lowest_threshold': classify_assist.LOWEST_THRESHOLD,
     })
 
 
