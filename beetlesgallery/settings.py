@@ -49,7 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',
+    'beetlesgallery.apps.GalleryStaticFilesConfig',  # django.contrib.staticfiles, without the Tailwind source
     'django.contrib.humanize',      # Required for template filters
     
     # Third-party libraries
