@@ -65,9 +65,6 @@ urlpatterns = [
 
     path('beetles/<uuid:beetle_id>/', beetles_views.beetle_detail, name='beetle_detail'),
     path('beetles/<uuid:beetle_id>/report/', roi_reports.report_roi, name='report_roi'),
-    path('beetles/<uuid:beetle_id>/toggle-validation/', beetles_views.toggle_beetle_validation, name='toggle_beetle_validation'),
-    path('images/<uuid:image_id>/toggle-validation/', beetles_views.toggle_image_validation, name='toggle_image_validation'),
-    path("beetles/add_specimen/<uuid:image_id>/", beetles_views.create_specimen_for_image, name="create_specimen_for_image"),
 
     # --- Tools ---
     path('upload/', beetles_views.upload_file, name='upload'),
@@ -79,7 +76,6 @@ urlpatterns = [
     path("reference/download/", beetles_views.download_taxonomy_ref, name="download_taxonomy_ref"),
     path("reference/download-described-names/", beetles_views.download_described_names_ref, name="download_described_names_ref"),
     path("reference/archive/<str:ref_type>/<str:filename>/", beetles_views.download_taxonomy_archive, name="download_taxonomy_archive"),
-    path('update_single/<uuid:beetle_id>/', beetles_views.update_single_beetle, name='update_single_beetle'),
     path('tools/classify/', beetles_views.tool_classify, name='tool_classify'),
     path('tools/annotate/', beetles_views.tool_annotate, name='tool_annotate'),
     path('tools/predictions/', beetles_views.upload_predictions, name='upload_predictions'),

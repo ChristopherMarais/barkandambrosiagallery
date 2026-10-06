@@ -1,5 +1,18 @@
 {% extends "base.html" %}
 {% load beetle_tags %}
+
+{% block extra_css %}
+<style>
+  /* The flag on the photo: shown while the pointer is on the photo or the keyboard is in it, always on touch screens
+     (they can't hover), and never while the whole photo shows, since only the beetle in its box is flagged here. */
+  #report-roi-btn { opacity: 0; }
+  #roi-photo:hover #report-roi-btn, #roi-photo:focus-within #report-roi-btn, #report-roi-btn[aria-expanded="true"] { opacity: 1; }
+  @media (hover: none) { #report-roi-btn { opacity: 1; } }
+  #roi-photo[data-box="hidden"] #report-roi-btn { display: none; }
+  #report-roi-btn:disabled { cursor: default; }
+</style>
+{% endblock %}
+
 {% block content %}
 <section class="relative z-0">
   
@@ -41,78 +54,67 @@
       {# MAIN IMAGE #}
       {% if beetle.image_asset and beetle.image_asset.image_file %}
         <figure class="rounded-xl bg-primary2 p-3 ring-1 ring-text/10 flex flex-col items-center">
-          
-          {# IMAGE WRAPPER (Hooks absolute positioning to the actual image bounds) #}
-          <div class="relative inline-block max-h-[70vh] max-w-full overflow-hidden rounded-lg">
-            <img
-              src="{{ beetle.display_url }}"
-              alt="Specimen Image"
-              {% if beetle.image_asset.image_width %}
-                style="aspect-ratio: {{ beetle.image_asset.image_width }}/{{ beetle.image_asset.image_height }};"
+
+          {# THE PHOTO, with the flag in its corner. Not clipped itself, so the flag's menu can reach past the photo. #}
+          <div id="roi-photo" class="relative max-w-full"{% if beetle.bbox_x is not None %} data-box="shown"{% endif %}>
+            {# IMAGE WRAPPER (Hooks absolute positioning to the actual image bounds). With a box, a click, Enter or Space shows the whole photo, then the box again. #}
+            <div id="roi-frame" class="relative block max-h-[70vh] max-w-full overflow-hidden rounded-lg{% if beetle.bbox_x is not None %} cursor-pointer focus:outline-none focus-visible:ring-4 focus-visible:ring-gray-500{% endif %}"
+                 {% if beetle.bbox_x is not None %}role="button" tabindex="0" title="Show the whole photo" aria-label="Show the whole photo"{% endif %}>
+              <img
+                src="{{ beetle.display_url }}"
+                alt="Specimen Image"
+                {% if beetle.image_asset.image_width %}
+                  style="aspect-ratio: {{ beetle.image_asset.image_width }}/{{ beetle.image_asset.image_height }};"
+                {% endif %}
+                class="block max-h-[70vh] w-auto rounded-lg object-contain"
+                decoding="async"
+              />
+
+              {# BOUNDING BOX OVERLAY #}
+              {% if beetle.bbox_x is not None %}
+                <div id="roi-bbox"
+                     class="absolute border-2 border-white/90 transition-opacity duration-200 pointer-events-none rounded-md"
+                     style="
+                       box-shadow:
+                         0 0 0 1px rgba(0, 0, 0, 0.4),
+                         inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+                         0 0 0 9999px rgba(255, 255, 255, 0.25);
+                       left: calc({{ beetle.bbox_x|stringformat:'f' }} * 100%);
+                       top: calc({{ beetle.bbox_y|stringformat:'f' }} * 100%);
+                       width: calc({{ beetle.bbox_width|stringformat:'f' }} * 100%);
+                       height: calc({{ beetle.bbox_height|stringformat:'f' }} * 100%);
+                     ">
+                </div>
               {% endif %}
-              class="block max-h-[70vh] w-auto rounded-lg object-contain"
-              decoding="async"
-            />
-            
-            {# BOUNDING BOX OVERLAY #}
+            </div>
+
             {% if beetle.bbox_x is not None %}
-              <div id="roi-bbox" 
-                   class="absolute border-2 border-white/90 transition-opacity duration-200 pointer-events-none rounded-md"
-                   style="
-                     box-shadow: 
-                       0 0 0 1px rgba(0, 0, 0, 0.4), 
-                       inset 0 0 0 1px rgba(0, 0, 0, 0.4), 
-                       0 0 0 9999px rgba(255, 255, 255, 0.25);
-                     left: calc({{ beetle.bbox_x|stringformat:'f' }} * 100%);
-                     top: calc({{ beetle.bbox_y|stringformat:'f' }} * 100%);
-                     width: calc({{ beetle.bbox_width|stringformat:'f' }} * 100%);
-                     height: calc({{ beetle.bbox_height|stringformat:'f' }} * 100%);
-                   ">
+              {# FLAG: sends this beetle to the curators, as Report does in the game. Shown on hover and focus, always on touch screens, only with the box (see the CSS). #}
+              <button type="button" id="report-roi-btn" class="btn-secondary absolute bottom-2 right-2 h-9 w-9 p-0 rounded-full text-base shadow-md" aria-haspopup="menu" aria-expanded="false" aria-label="Flag this photo" title="Flag this photo" data-testid="report-roi"><i class="fi fi-rr-flag" aria-hidden="true"></i></button>
+              <div id="report-roi-menu" class="hidden absolute bottom-12 right-2 z-20 scroll-mt-24 p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Flag this photo" data-url="{% url 'report_roi' beetle.id %}">
+                <div class="px-2 py-1 text-xs font-semibold text-gray-500">Flag this photo</div>
+                {% for value, label in report_reasons %}
+                <button type="button" class="report-roi-reason block w-full text-left px-2 py-2 rounded-lg hover:bg-gray-100" data-reason="{{ value }}" role="menuitem">{{ label }}</button>
+                {% endfor %}
               </div>
             {% endif %}
           </div>
+          {% if beetle.bbox_x is not None %}
+            <p id="report-roi-status" class="mt-2 empty:mt-0 text-sm text-gray-600" role="status"></p>
+          {% endif %}
 
           <figcaption class="mt-3 w-full flex gap-2">
-            {# TOGGLE BUTTON (Only renders if a box exists) #}
-            {% if beetle.bbox_x is not None %}
-              <button type="button" id="toggle-bbox-btn" class="flex items-center justify-center bg-gray-200 border border-gray-300 rounded-lg px-4 text-gray-700 hover:bg-gray-300 hover:text-black transition shadow-sm" title="Toggle Region of Interest">
-                
-                {# ICON: BOUNDING BOX VISIBLE (ACTIVE) #}
-                <svg id="eye-open" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 4H6a2 2 0 00-2 2v2m16 0V6a2 2 0 00-2-2h-2M4 16v2a2 2 0 002 2h2m12-4v2a2 2 0 01-2 2h-2" />
-                  <rect x="8" y="8" width="8" height="8" stroke-width="1.5" stroke-dasharray="2 2" rx="1" />
-                </svg>
-
-                {# ICON: BOUNDING BOX HIDDEN (INACTIVE) #}
-                <svg id="eye-closed" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 4H6a2 2 0 00-2 2v2m16 0V6a2 2 0 00-2-2h-2M4 16v2a2 2 0 002 2h2m12-4v2a2 2 0 01-2 2h-2M3 3l18 18" />
-                </svg>
-
-              </button>
-            {% endif %}
-            
             {% if not beetle.depicts_valid_name_id %}
             <a href="{% url 'tool_classify' %}?image_url={{ beetle.display_url|urlencode }}"
-               class="flex-1 block text-center rounded-lg bg-gray-200 border border-gray-300 py-3 text-sm font-bold text-gray-800 hover:bg-gray-300 hover:text-black transition shadow-sm tracking-wide"
+               class="btn-main flex-1 px-4 py-3 text-sm"
                title="Ask the AI which species this is">
               <i class="fi fi-rr-sparkles"></i> Generate AI recommendation
             </a>
             {% endif %}
-            <a href="{{ beetle.image_asset.image_file.url }}" download class="flex-1 block text-center rounded-lg bg-gray-200 border border-gray-300 py-3 text-sm font-bold text-gray-800 hover:bg-gray-300 hover:text-black transition shadow-sm tracking-wide">
+            <a href="{{ beetle.image_asset.image_file.url }}" download class="btn-main flex-1 px-4 py-3 text-sm">
               Download Original Image
             </a>
           </figcaption>
-          {# Report this beetle, as in the game: it goes to the curators and leaves the game until they check it #}
-          <div class="relative mt-3 self-start" data-testid="report-roi">
-            <button type="button" id="report-roi-btn" class="inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm hover:bg-gray-50" aria-haspopup="menu" aria-expanded="false"><i class="fi fi-rr-flag"></i><span>Report</span></button>
-            <div id="report-roi-menu" class="hidden absolute bottom-12 left-0 z-20 p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Report this beetle" data-url="{% url 'report_roi' beetle.id %}">
-              <div class="px-2 py-1 text-xs font-semibold text-gray-500">Report this beetle</div>
-              {% for value, label in report_reasons %}
-              <button type="button" class="report-roi-reason block w-full text-left px-2 py-2 rounded-lg hover:bg-gray-100" data-reason="{{ value }}" role="menuitem">{{ label }}</button>
-              {% endfor %}
-            </div>
-            <span id="report-roi-status" class="ml-2 text-sm text-gray-600" role="status"></span>
-          </div>
         </figure>
       {% else %}
         <div class="rounded-xl bg-primary2 p-6 text-text/70 ring-1 ring-text/10">No image found.</div>
@@ -141,7 +143,7 @@
       {% endif %}
     </div>
 
-    {# --- RIGHT COLUMN: METADATA FORM --- #}
+    {# --- RIGHT COLUMN: DETAILS --- #}
     <aside class="lg:col-span-4">
       
       {# PAGINATION HEADER inside card (Redundant but requested context) #}
@@ -170,55 +172,20 @@
       </div>
       {% endif %}
 
-      <form id="metadata-form" method="POST" action="{% url 'update_single_beetle' beetle.id %}">
-        {% csrf_token %}
-        
         <div class="rounded-xl bg-primary2 p-4 ring-1 ring-text/10 sticky top-4">
-          
+
           {# TOOLBAR #}
           <div class="flex items-center justify-between mb-4 h-8 border-b border-text/10 pb-2">
-              <h2 id="form-title" class="text-md font-semibold uppercase tracking-wider text-text/80">Image Details</h2>
-              
-              {% if areas.annotate %}
-                  <div class="flex items-center gap-2">
-                      {# ANNOTATE BUTTON (opens this image in the full Annotation Tool) #}
-                      {% if beetle.image_asset %}
-                      <a href="{% url 'tool_annotate' %}?image={{ beetle.image_asset.id }}"
-                         class="text-gray-500 hover:text-gray-600 transition p-1 rounded hover:bg-gray-50"
-                         title="Open in Annotation Tool">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V6a2 2 0 012-2h2M4 16v2a2 2 0 002 2h2m8-16h2a2 2 0 012 2v2m-4 12h2a2 2 0 002-2v-2"></path><rect x="8" y="8" width="8" height="8" stroke-width="1.5" rx="1"></rect></svg>
-                      </a>
-                      {% endif %}
+              <h2 class="text-md font-semibold uppercase tracking-wider text-text/80">Image Details</h2>
 
-                      {# EDIT BUTTON #}
-                      <button type="button" id="edit-btn" onclick="toggleEditMode()" 
-                              class="text-gray-500 hover:text-gray-600 transition p-1 rounded hover:bg-gray-50" 
-                              title="Edit Current Metadata">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                      </button>
-
-                      {# ADD BUTTON (Plus Icon): another specimen on the same image, so only when there is one #}
-                      {% if beetle.image_asset %}
-                      <button type="button" id="add-btn" onclick="toggleAddMode()" 
-                              class="text-gray-500 hover:text-gray-600 transition p-1 rounded hover:bg-gray-50" 
-                              title="Add Another Specimen to Image">
-                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16M4 12h16"></path></svg>
-                      </button>
-                      {% endif %}
-
-                      {# CONTROLS (Hidden by default) #}
-                      <div id="edit-controls" class="hidden flex gap-2">
-                          <button type="button" onclick="cancelMode()" class="rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold text-red-700 hover:bg-red-100 transition">Cancel</button>
-                          <button type="submit" class="rounded-md border border-green-200 bg-green-50 px-3 py-1 text-xs font-bold text-green-700 hover:bg-green-100 transition">Save</button>
-                      </div>
-                  </div>
+              {# PEN: names, boxes, details and validation are changed on the annotation page, opened at this beetle; only for those who may open it #}
+              {% if areas.boxes and beetle.image_asset %}
+                  <a href="{% url 'tool_annotate' %}?image={{ beetle.image_asset.id }}&roi={{ beetle.id }}"
+                     class="text-gray-500 hover:text-gray-600 transition p-1 rounded hover:bg-gray-50"
+                     title="Open in the annotation page" aria-label="Open in the annotation page" data-testid="open-annotation">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                  </a>
               {% endif %}
-          </div>
-
-          {# NOTIFICATION (Add Mode) #}
-          <div id="add-mode-notice" class="hidden mb-4 p-2 bg-gray-100 border border-gray-200 rounded text-xs text-gray-800">
-              <strong>Adding New Specimen:</strong><br>
-              Technical image cannot be changed here. 'Multiple Individuals' will default to Yes.
           </div>
 
           {# --- IDENTITY --- #}
@@ -226,40 +193,22 @@
               <h3 class="mt-2 mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Identity</h3>
               <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
                 <dt class="col-span-1 text-text/60">Specimen ID</dt>
-                <dd class="col-span-2">
-                    <span class="view-val">{{ beetle.depicts_specimen|default:"—" }}</span>
-                    <input type="text" name="depicts_specimen" value="{{ beetle.depicts_specimen|default:'' }}" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-                </dd>
+                <dd class="col-span-2">{{ beetle.depicts_specimen|default:"—" }}</dd>
                 <dt class="col-span-1 text-text/60">Valid Name ID</dt>
-                <dd class="col-span-2">
-                    <span class="view-val">{{ beetle.depicts_valid_name_id|default:"—" }}</span>
-                    <input type="text" name="depicts_valid_name_id" value="{{ beetle.depicts_valid_name_id|default:'' }}" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-                </dd>
+                <dd class="col-span-2">{{ beetle.depicts_valid_name_id|default:"—" }}</dd>
                 <dt class="col-span-1 text-text/60">Described ID</dt>
-                <dd class="col-span-2">
-                    <span class="view-val">{{ beetle.depicts_described_name_id|default:"—" }}</span>
-                    <input type="text" name="depicts_described_name_id" value="{{ beetle.depicts_described_name_id|default:'' }}" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-                </dd>
+                <dd class="col-span-2">{{ beetle.depicts_described_name_id|default:"—" }}</dd>
                 <dt class="col-span-1 text-text/60" title="Your own ID for this record, e.g. a catalogue number or file name from your database. Optional; we keep it unchanged and include it in every download so you can link our records back to yours.">Alias ID</dt>
-                <dd class="col-span-2">
-                    <span class="view-val">{{ beetle.alias_id|default:"—" }}</span>
-                    <input type="text" name="alias_id" value="{{ beetle.alias_id|default:'' }}" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-                </dd>
+                <dd class="col-span-2">{{ beetle.alias_id|default:"—" }}</dd>
               </dl>
           </div>
 
           {# --- TAXONOMY (Reference Read-Only) --- #}
           <div class="group-section mt-4">
               <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Taxonomy</h3>
-              <div id="edit-mode-notice" class="hidden mb-4 p-2 bg-gray-100 border border-gray-200 rounded text-xs text-gray-800">
-                  Note: To update Scientific Name, Genus, etc., please update the <strong>Valid Name ID</strong> above.
-              </div>
               <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
                 <dt class="col-span-1 text-text/60">Name (verbatim)</dt>
-                <dd class="col-span-2">
-                    <span class="view-val">{{ beetle.depicts_name_verbatim|default:"—" }}</span>
-                    <input type="text" name="depicts_name_verbatim" value="{{ beetle.depicts_name_verbatim|default:'' }}" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-                </dd>
+                <dd class="col-span-2">{{ beetle.depicts_name_verbatim|default:"—" }}</dd>
                 <dt class="col-span-1 text-text/60">Scientific Name</dt>
                 <dd class="col-span-2 text-text/80">{% if beetle.depicts_valid_name_id and ref_species.scientificName %}<a href="{% url 'taxonomy_browser' %}?species={{ beetle.depicts_valid_name_id|urlencode }}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.scientificName }}</a>{% else %}{{ ref_species.scientificName|default:"—" }}{% endif %}</dd>
                 
@@ -305,25 +254,13 @@
               <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Attribution</h3>
               <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
                 <dt class="col-span-1 text-text/60">Institution</dt>
-                <dd class="col-span-2">
-                    <span class="view-val">{{ beetle.image_asset.image_institution|default:"—" }}</span>
-                    <input type="text" name="image_institution" value="{{ beetle.image_asset.image_institution|default:'' }}" class="edit-input image-only hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-                </dd>
+                <dd class="col-span-2">{{ beetle.image_asset.image_institution|default:"—" }}</dd>
                 <dt class="col-span-1 text-text/60">Photographer</dt>
-                <dd class="col-span-2">
-                    <span class="view-val">{{ beetle.image_asset.photographer|default:"—" }}</span>
-                    <input type="text" name="photographer" value="{{ beetle.image_asset.photographer|default:'' }}" class="edit-input image-only hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-                </dd>
+                <dd class="col-span-2">{{ beetle.image_asset.photographer|default:"—" }}</dd>
                 <dt class="col-span-1 text-text/60">Image Email</dt>
-                <dd class="col-span-2">
-                    <span class="view-val">{{ beetle.image_asset.image_email|default:"—" }}</span>
-                    <input type="text" name="image_email" value="{{ beetle.image_asset.image_email|default:'' }}" class="edit-input image-only hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-                </dd>
+                <dd class="col-span-2">{{ beetle.image_asset.image_email|default:"—" }}</dd>
                 <dt class="col-span-1 text-text/60">Usage License</dt>
-                <dd class="col-span-2">
-                    <span class="view-val">{{ beetle.image_asset.photo_usage_statement|default:"—" }}</span>
-                    <input type="text" name="photo_usage_statement" value="{{ beetle.image_asset.photo_usage_statement|default:'' }}" class="edit-input image-only hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-                </dd>
+                <dd class="col-span-2">{{ beetle.image_asset.photo_usage_statement|default:"—" }}</dd>
               </dl>
           </div>
 
@@ -332,29 +269,13 @@
               <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Image Technical</h3>
               <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
                 <dt class="col-span-1 text-text/60">Aspect</dt>
-                <dd class="col-span-2">
-                    <span class="view-val">{{ beetle.aspect|default:"—" }}</span>
-                    <input type="text" name="aspect" value="{{ beetle.aspect|default:'' }}" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-                </dd>
+                <dd class="col-span-2">{{ beetle.aspect|default:"—" }}</dd>
                 <dt class="col-span-1 text-text/60">Resolution (px/mm)</dt>
-                <dd class="col-span-2">
-                    <span class="view-val">{{ beetle.image_asset.resolution_in_ppmm|default:"—" }}</span>
-                    <input type="text" name="resolution_in_ppmm" value="{{ beetle.image_asset.resolution_in_ppmm|default:'' }}" class="edit-input image-only hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-                </dd>
+                <dd class="col-span-2">{{ beetle.image_asset.resolution_in_ppmm|default:"—" }}</dd>
                 <dt class="col-span-1 text-text/60">Image Date</dt>
-                <dd class="col-span-2">
-                    <span class="view-val">{{ beetle.image_asset.image_date_taken|default:"—" }}</span>
-                    <input type="text" name="image_date_taken" value="{{ beetle.image_asset.image_date_taken|default:'' }}" placeholder="YYYY-MM-DD" class="edit-input image-only hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-                </dd>
+                <dd class="col-span-2">{{ beetle.image_asset.image_date_taken|default:"—" }}</dd>
                 <dt class="col-span-1 text-text/60">Multiple Individuals</dt>
-                <dd class="col-span-2">
-                    <span class="view-val">{% if beetle.image_asset.image_has_multiple_individuals %}Yes{% else %}No{% endif %}</span>
-                    <select name="image_has_multiple_individuals" class="edit-input image-only hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-                        <option value="unknown" {% if beetle.image_asset.image_has_multiple_individuals is None %}selected{% endif %}>Unknown</option>
-                        <option value="True" {% if beetle.image_asset.image_has_multiple_individuals is True %}selected{% endif %}>Yes</option>
-                        <option value="False" {% if beetle.image_asset.image_has_multiple_individuals is False %}selected{% endif %}>No</option>
-                    </select>
-                </dd>
+                <dd class="col-span-2">{% if beetle.image_asset.image_has_multiple_individuals %}Yes{% else %}No{% endif %}</dd>
               </dl>
           </div>
 
@@ -363,25 +284,13 @@
               <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Collection / Specimen</h3>
               <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
                 <dt class="col-span-1 text-text/60">Country</dt>
-                <dd class="col-span-2">
-                    <span class="view-val">{{ beetle.collection_country|default:"—" }}</span>
-                    <input type="text" name="collection_country" value="{{ beetle.collection_country|default:'' }}" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-                </dd>
+                <dd class="col-span-2">{{ beetle.collection_country|default:"—" }}</dd>
                 <dt class="col-span-1 text-text/60">State/Province</dt>
-                <dd class="col-span-2">
-                    <span class="view-val">{{ beetle.collection_stateProvince|default:"—" }}</span>
-                    <input type="text" name="collection_stateProvince" value="{{ beetle.collection_stateProvince|default:'' }}" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-                </dd>
+                <dd class="col-span-2">{{ beetle.collection_stateProvince|default:"—" }}</dd>
                 <dt class="col-span-1 text-text/60">Sex</dt>
-                <dd class="col-span-2">
-                    <span class="view-val">{{ beetle.specimen_sex|default:"—" }}</span>
-                    <input type="text" name="specimen_sex" value="{{ beetle.specimen_sex|default:'' }}" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-                </dd>
+                <dd class="col-span-2">{{ beetle.specimen_sex|default:"—" }}</dd>
                 <dt class="col-span-1 text-text/60">Type Status</dt>
-                <dd class="col-span-2">
-                    <span class="view-val">{{ beetle.specimen_type_status|default:"—" }}</span>
-                    <input type="text" name="specimen_type_status" value="{{ beetle.specimen_type_status|default:'' }}" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">
-                </dd>
+                <dd class="col-span-2">{{ beetle.specimen_type_status|default:"—" }}</dd>
               </dl>
           </div>
 
@@ -398,18 +307,6 @@
                         <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>Not validated
                       {% endif %}
                     </span>
-                    {% if areas.annotate and beetle.image_asset %}
-                      {% if beetle.image_asset.is_validated %}
-                        <button type="submit" form="image-validation-form" name="state" value="unvalidate"
-                                onclick="return confirm('Move this image and all of its ROIs back to unvalidated?');"
-                                class="edit-action hidden rounded-md border border-gray-300 bg-white px-3 py-1 text-xs font-bold text-gray-700 hover:bg-gray-100 transition"
-                                title="Unvalidates this image and every ROI on it">Unvalidate</button>
-                      {% else %}
-                        <button type="submit" form="image-validation-form" name="state" value="validate"
-                                class="edit-action hidden rounded-md border border-gray-300 bg-white px-3 py-1 text-xs font-bold text-gray-700 hover:bg-gray-100 transition"
-                                title="Validates every ROI with a bounding box on this image">Validate</button>
-                      {% endif %}
-                    {% endif %}
                 </dd>
                 <dt class="col-span-1 text-text/60">This ROI</dt>
                 <dd class="col-span-2 flex items-center justify-between gap-2">
@@ -422,25 +319,8 @@
                         <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>Not validated
                       {% endif %}
                     </span>
-                    {% if areas.annotate and beetle.bbox_x is not None %}
-                      {% if beetle.bbox_is_validated %}
-                        <button type="submit" form="roi-validation-form" name="state" value="unvalidate"
-                                onclick="return confirm('Move this ROI back to unvalidated? The image will also become unvalidated.');"
-                                class="edit-action hidden rounded-md border border-gray-300 bg-white px-3 py-1 text-xs font-bold text-gray-700 hover:bg-gray-100 transition"
-                                title="Unvalidates this ROI (the image becomes unvalidated too)">Unvalidate</button>
-                      {% else %}
-                        <button type="submit" form="roi-validation-form" name="state" value="validate"
-                                class="edit-action hidden rounded-md border border-gray-300 bg-white px-3 py-1 text-xs font-bold text-gray-700 hover:bg-gray-100 transition"
-                                title="Validates this ROI">Validate</button>
-                      {% endif %}
-                    {% endif %}
                 </dd>
               </dl>
-              {% if areas.annotate %}
-              <p class="edit-action hidden mt-2 text-xs text-text/50">
-                  Validation changes apply immediately. An image is only validated when all of its ROIs are.
-              </p>
-              {% endif %}
           </div>
 
           {# --- NOTES --- #}
@@ -448,111 +328,19 @@
               <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Notes</h3>
               <div class="space-y-2">
                   <div class="text-xs text-text/60">Image Notes</div>
-                  <div class="view-val p-2 bg-black/5 rounded text-sm min-h-[2rem] break-words whitespace-pre-wrap">{{ beetle.image_asset.image_notes|default:"—" }}</div>
-                  <textarea name="image_notes" class="edit-input image-only hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">{{ beetle.image_asset.image_notes|default:'' }}</textarea>
-                  
+                  <div class="p-2 bg-black/5 rounded text-sm min-h-[2rem] break-words whitespace-pre-wrap">{{ beetle.image_asset.image_notes|default:"—" }}</div>
+
                   <div class="text-xs text-text/60 mt-2">Specimen Notes</div>
-                  <div class="view-val p-2 bg-black/5 rounded text-sm min-h-[2rem] break-words whitespace-pre-wrap">{{ beetle.specimen_notes|default:"—" }}</div>
-                  <textarea name="specimen_notes" class="edit-input hidden w-full rounded border border-gray-300 px-2 py-1 text-sm">{{ beetle.specimen_notes|default:'' }}</textarea>
+                  <div class="p-2 bg-black/5 rounded text-sm min-h-[2rem] break-words whitespace-pre-wrap">{{ beetle.specimen_notes|default:"—" }}</div>
               </div>
           </div>
 
         </div>
-      </form>
-
-      {% if areas.annotate %}
-        {% if beetle.image_asset %}
-        <form id="image-validation-form" method="post" action="{% url 'toggle_image_validation' beetle.image_asset.id %}" class="hidden">{% csrf_token %}</form>
-        {% endif %}
-        <form id="roi-validation-form" method="post" action="{% url 'toggle_beetle_validation' beetle.id %}" class="hidden">{% csrf_token %}</form>
-      {% endif %}
     </aside>
   </div>
 </section>
 
 <script>
-  const form = document.getElementById('metadata-form');
-  const viewVals = document.querySelectorAll('.view-val');
-  const editInputs = document.querySelectorAll('.edit-input');
-  const imageOnlyInputs = document.querySelectorAll('.image-only'); 
-  const editActions = document.querySelectorAll('.edit-action');
-  
-  const editControls = document.getElementById('edit-controls');
-  const editBtn = document.getElementById('edit-btn');
-  const editNotice = document.getElementById('edit-mode-notice');
-  const addBtn = document.getElementById('add-btn');
-  const addNotice = document.getElementById('add-mode-notice');
-  const title = document.getElementById('form-title');
-
-  // Store original values
-  let originals = {};
-  editInputs.forEach(el => originals[el.name] = el.value);
-
-  function toggleEditMode() {
-      // 1. Show Inputs
-      viewVals.forEach(v => v.classList.add('hidden'));
-      editInputs.forEach(i => i.classList.remove('hidden'));
-      
-      // 2. Enable All Fields
-      editInputs.forEach(i => {
-          i.disabled = false;
-          i.classList.remove('bg-gray-100', 'text-gray-400');
-      });
-
-      // 3. Show Controls
-      editControls.classList.remove('hidden');
-      editActions.forEach(a => a.classList.remove('hidden'));
-      editBtn.classList.add('hidden');
-      if (addBtn) addBtn.classList.add('hidden');
-      addNotice.classList.add('hidden');
-      editNotice.classList.remove('hidden');
-      
-      title.innerText = "Edit Details";
-      form.action = "{% url 'update_single_beetle' beetle.id %}";
-  }
-
-  function toggleAddMode() {
-      // 1. Show Inputs
-      viewVals.forEach(v => v.classList.add('hidden'));
-      editInputs.forEach(i => i.classList.remove('hidden'));
-
-      // 2. Disable Image Fields (Attribution, Technical)
-      imageOnlyInputs.forEach(i => {
-          i.disabled = true;
-          i.classList.add('bg-gray-100', 'text-gray-400');
-      });
-
-      // 3. Show Controls
-      editControls.classList.remove('hidden');
-      editBtn.classList.add('hidden');
-      if (addBtn) addBtn.classList.add('hidden');
-      addNotice.classList.remove('hidden');
-      editNotice.classList.add('hidden');
-      
-      title.innerText = "Add Details";
-      // Set action to CREATE
-      form.action = "{% if beetle.image_asset %}{% url 'create_specimen_for_image' beetle.image_asset.id %}{% endif %}";
-  }
-
-  function cancelMode() {
-      // Reset visibility
-      viewVals.forEach(v => v.classList.remove('hidden'));
-      editInputs.forEach(i => {
-          i.classList.add('hidden');
-          i.value = originals[i.name]; // Restore
-          i.disabled = false;
-          i.classList.remove('bg-gray-100', 'text-gray-400');
-      });
-
-      editControls.classList.add('hidden');
-      editActions.forEach(a => a.classList.add('hidden'));
-      editBtn.classList.remove('hidden');
-      if (addBtn) addBtn.classList.remove('hidden');
-      addNotice.classList.add('hidden');
-      editNotice.classList.add('hidden');
-      title.innerText = "Image Details";
-  }
-
   // Existing Copy UUID logic
   document.addEventListener('click', async (e) => {
     const btn = e.target.closest('.copy-uuid');
@@ -567,48 +355,66 @@
     } catch (err) { console.error(err); }
   });
 
-// Report this beetle (the menu under the image)
+  // The photo: a click on it (or Enter or Space) shows the whole photo, and the next one this beetle's box again. The
+  // flag in its corner sends the beetle to the curators; it shows only with the box (the CSS reads data-box).
   (function () {
-    const btn = document.getElementById('report-roi-btn');
+    const photo = document.getElementById('roi-photo');
+    const frame = document.getElementById('roi-frame');
+    const box = document.getElementById('roi-bbox');
+    const flag = document.getElementById('report-roi-btn');
     const menu = document.getElementById('report-roi-menu');
     const status = document.getElementById('report-roi-status');
-    if (!btn || !menu) return;
-    const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      menu.classList.toggle('hidden');
-      btn.setAttribute('aria-expanded', String(!menu.classList.contains('hidden')));
+    if (!photo || !box) return;   // no photo, or no box to show or flag
+
+    const menuOpen = () => !menu.classList.contains('hidden');
+    function setMenu(open) {
+      menu.classList.toggle('hidden', !open);
+      flag.setAttribute('aria-expanded', String(open));
+      if (open) menu.scrollIntoView({ block: 'nearest' });   // it opens upwards: a short photo high on a phone's screen
+    }
+
+    function toggleBox() {
+      const show = box.classList.contains('hidden');
+      box.classList.toggle('hidden', !show);
+      photo.dataset.box = show ? 'shown' : 'hidden';
+      const label = show ? 'Show the whole photo' : "Show the beetle's box";
+      frame.title = label;
+      frame.setAttribute('aria-label', label);
+      setMenu(false);
+    }
+    frame.addEventListener('click', () => {
+      if (!menuOpen()) toggleBox();   // while the flag's menu is open, a click on the photo only closes the menu
     });
-    document.addEventListener('click', () => menu.classList.add('hidden'));
+    frame.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();   // Space would scroll the page
+      toggleBox();
+    });
+
+    const csrf = document.querySelector('meta[name="csrf-token"]').content;
+    flag.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setMenu(!menuOpen());
+    });
+    document.addEventListener('click', () => setMenu(false));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && menuOpen()) { setMenu(false); flag.focus(); }
+    });
     menu.querySelectorAll('.report-roi-reason').forEach((choice) => choice.addEventListener('click', async (e) => {
       e.stopPropagation();
-      menu.classList.add('hidden');
+      setMenu(false);
+      flag.focus();
       try {
         const res = await fetch(menu.dataset.url, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf},
                                                    body: JSON.stringify({reason: choice.dataset.reason})});
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Could not send.');
-        status.textContent = data.already ? 'Already reported. Thanks!' : 'Thanks! Sent to the curators to check.';
-        btn.disabled = true;
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.status) throw new Error(data.error || 'Could not send.');
+        status.textContent = data.already ? 'Already flagged. Thanks!' : 'Thanks! Sent to the curators to check.';
+        flag.disabled = true;
       } catch (err) {
         status.textContent = err.message;
       }
     }));
   })();
-
-// Toggle Bounding Box Logic
-  const toggleBboxBtn = document.getElementById('toggle-bbox-btn');
-  const roiBbox = document.getElementById('roi-bbox');
-  const eyeOpen = document.getElementById('eye-open');
-  const eyeClosed = document.getElementById('eye-closed');
-
-  if (toggleBboxBtn && roiBbox) {
-      toggleBboxBtn.addEventListener('click', () => {
-          roiBbox.classList.toggle('hidden');
-          eyeOpen.classList.toggle('hidden');
-          eyeClosed.classList.toggle('hidden');
-      });
-  }
-
 </script>
 {% endblock %}
