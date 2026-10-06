@@ -297,6 +297,8 @@
   .lb-names .src { flex: none; display: inline-flex; align-items: center; color: #d1d5db; font-size: 0.8em; }
   .lb-names .src .fi { font-size: 0.85em; margin-right: 0.125rem; }
   .lb-names .none { color: #9ca3af; font-weight: 400; }
+  :is(.rv-names, .lb-names) .also { margin-left: 0.3em; }
+  .lb-names .who { white-space: pre; }
   #lightbox.with-names #lightbox-img { max-height: calc(85vh - 7rem); }
   /* grids: smaller tiles, smaller text and corners; the text keeps clear of the rounded corners and the marks above */
   #game:is([data-mode="odd"], [data-mode="select"]) #photos .rv-names, #previous-photos:is([data-size="4"], [data-size="9"], [data-size="16"]) .rv-names {
@@ -610,7 +612,7 @@
 <canvas id="confetti" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:95"></canvas>
 
 <!-- Full image viewer -->
-<div id="lightbox" class="hidden fixed inset-0 z-100 bg-black/90 flex items-center justify-center p-3" role="dialog" aria-label="Whole image">
+<div id="lightbox" class="hidden fixed inset-0 z-100 bg-black/90 flex flex-col items-center justify-center p-3" role="dialog" aria-label="Whole image">
   <button type="button" class="absolute top-3 right-3 p-3 text-white text-xl" aria-label="Close"><i class="fi fi-rr-cross"></i></button>
   <div id="lb-photo" class="relative">
     <div id="lb-frame" class="relative block overflow-hidden rounded-lg" title="Scroll, pinch or double-click to zoom">
@@ -628,8 +630,8 @@
       <button type="button" class="report-reason block w-full text-left px-2 py-2 rounded-lg hover:bg-gray-100" data-reason="{{ value }}" role="menuitem">{{ label }}{% if hint %}<span class="block text-xs text-gray-500">{{ hint }}</span>{% endif %}</button>
       {% endfor %}
     </div>
-    <div id="lb-names" class="hidden"></div>
   </div>
+  <div id="lb-names" class="hidden"></div>
   <button type="button" id="lb-light" class="hidden absolute bottom-3 right-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white text-gray-900 text-sm font-semibold shadow-lg" aria-label="Lighting" data-testid="lightbox-lighting"><i class="fi fi-rr-brightness"></i><span>Lighting</span></button>
   <button type="button" id="lb-prev" class="lb-nav hidden" aria-label="Previous photo of this beetle"><i class="fi fi-rr-angle-left"></i></button>
   <button type="button" id="lb-next" class="lb-nav hidden" aria-label="Next photo of this beetle"><i class="fi fi-rr-angle-right"></i></button>
@@ -1861,7 +1863,7 @@
       const lead = node("span", "lead", name && dot ? dot : null);
       if (name) dot = null;   // the one dot, on the first line with a name
       box.append(node("span", "", lead, full ? node("span", "rk", r.rank) : null, nm,
-                      how ? node("span", "src", ...[].concat(how[0]), also ? node("span", "also", " · ", ...also[0]) : null) : null));
+                      how ? node("span", "src", ...[].concat(how[0]), also ? node("span", "also", "· ", ...also[0]) : null) : null));
     });
     return box;
   }

@@ -87,7 +87,7 @@ class PageTests(ReviewCase):
 
     def test_both_confidences_and_the_shared_rank(self):
         page = self.page()
-        self.assertIn('also ? node("span", "also", " · ", ...also[0]) : null', page)
+        self.assertIn('also ? node("span", "also", "· ", ...also[0]) : null', page)
         self.assertIn(":is(.rv-names, .lb-names) .nm.shared { text-decoration: underline;", page)
         self.assertIn("function sharedRank(review)", page)
 
