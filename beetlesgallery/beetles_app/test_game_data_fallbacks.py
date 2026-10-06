@@ -64,6 +64,7 @@ class OnlyUnvalidatedTests(FallbackCase):
         for taxon in (self.t_affinis, self.t_ferr, self.t_plat) * 3:
             self.roi(taxon, validated=False)
 
+    @override_settings(GAME_FIRST_ITEMS=0)   # the whole batch, not just its first beetles (#575)
     def test_identification_plays_them_as_open_beetles(self):
         self.grant("identification", "choose_game", play_mode="classify")
         data = self.started()

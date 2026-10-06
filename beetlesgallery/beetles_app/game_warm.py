@@ -64,6 +64,8 @@ def build(player):
         sig = _signature(info, game.player_focus(player))
         built = []
         for choice in missing(player):
+            if game.play_mode(player) == choice:
+                continue   # they switched to it while this ran: the feed has built its batch already (#575)
             items, notice = game.batch_items(player, MIXED, choice=choice)
             if not items:
                 continue

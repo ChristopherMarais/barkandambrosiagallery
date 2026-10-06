@@ -23,6 +23,11 @@
   #photos .frame.dragging, #lb-frame.dragging { cursor: grabbing; }
   #photos.fade canvas { opacity: 0; }
   #photos canvas { transition: opacity 0.15s ease; }
+  /* Each new beetle fades in quickly, so one beetle gives way to the next instead of jumping (#575) */
+  @media (prefers-reduced-motion: no-preference) {
+    #photos.item-in canvas { animation: item-in 0.14s ease-out; }
+    @keyframes item-in { from { opacity: 0.25; transform: scale(0.985); } }
+  }
   /* Brighter / more contrast for dark photos: one control for every photo on screen, back to normal for the next beetle */
   #photos canvas, #lightbox-img { filter: var(--photo-filter, none); }
   /* bottom right of the photo area, as in the whole-photo view: the bottom left of each photo is its Flag */
@@ -369,6 +374,7 @@
   data-taxa-url="{% url 'game_taxa' %}"
   data-prefs-url="{% url 'game_prefs' %}"
   data-warm-url="{% url 'game_warm' %}"
+  data-upcoming-url="{% url 'game_upcoming' '00000000-0000-0000-0000-000000000000' %}"
   data-report-url="{% url 'game_report_item' %}"
   data-last-review-url="{{ last_review }}">
 
@@ -632,7 +638,9 @@
   const MASH_GUARD_MS = 400;
   let answered = 0;
   let openedAt = Date.now();
-  const prefetched = [];
+  // Crops loaded ahead and decoded, by URL (a URL names one photo and box for good), so Next draws at once (#575)
+  const decoded = new Map();
+  const DECODED_KEEP = 128;   // enough for the biggest grids (25 beetles): three ahead and the one on screen
 
   // ---------- helpers ----------
   async function api(url, body) {
@@ -856,15 +864,24 @@
   $("light-reset").addEventListener("click", resetLight);
   document.addEventListener("game:close-overlays", () => toggleLight(false));   // Esc
 
-  // Load an image and decode it off the main thread (decode()), so drawing it doesn't stall the page
+  // Load an image and decode it off the main thread (decode()), so drawing it doesn't stall the page. A crop is kept
+  // by URL: loaded ahead, it is drawn straight away when its beetle comes; one that failed is tried again next time.
+  // Whole photos (large files, rarely shown twice) are not kept.
   function loadImage(url) {
-    return new Promise((resolve, reject) => {
+    const known = decoded.get(url);
+    if (known) return known;
+    const loading = new Promise((resolve, reject) => {
       const img = new Image();
       img.decoding = "async";
       img.onload = () => (img.decode ? img.decode().catch(() => {}) : Promise.resolve()).then(() => resolve(img));
       img.onerror = () => reject(new Error("An image failed to load."));
       img.src = url;
     });
+    if (!url.includes("/crop/")) return loading;
+    loading.catch(() => decoded.delete(url));
+    decoded.set(url, loading);
+    while (decoded.size > DECODED_KEEP) decoded.delete(decoded.keys().next().value);   // the oldest first
+    return loading;
   }
   // A beetle's crop for the feed: the small one cut on the server (shown at once), or, if that fails, the whole
   // photo to cut here. The large crop is swapped in by showItem when it arrives.
@@ -965,18 +982,30 @@
     }
   }));
 
-  // Warm the browser cache with the coming crops while this beetle is answered: the next beetle's (small ones first),
-  // and the small ones of the beetle after it; on the last beetle of a batch, the next batch's first (#542). Decoded
-  // off the main thread.
+  // Load the coming crops while this beetle is answered: the next beetle's (small ones first), and the small ones of
+  // the beetle after it; on the last beetle of a batch, the next batch's first (#542). Decoded off the main thread.
   function prefetch(urls) {
-    prefetched.length = 0;
-    (urls || []).forEach((url) => {
-      const img = new Image();
-      img.decoding = "async";
-      img.src = url;
-      if (img.decode) img.decode().catch(() => {});
-      prefetched.push(img);
-    });
+    (urls || []).forEach((url) => loadImage(url).catch(() => {}));
+  }
+  // Further ahead (#575): the server's look-ahead lists the crops of the next few beetles, into the next batch, and
+  // meanwhile does any work they still need. Only the next beetle's large crops: the rest get their small ones. On a
+  // phone saving data, or on a slow connection, just the next beetle's small ones. Never waited on; nothing is shown
+  // from it.
+  let lookingAhead = "";
+  function lean() {
+    const c = navigator.connection;
+    return !!c && (!!c.saveData || ["slow-2g", "2g", "3g"].includes(c.effectiveType));
+  }
+  function lookAhead(at) {
+    const url = root.dataset.upcomingUrl.replace("00000000-0000-0000-0000-000000000000", roundId) + "?index=" + at.index;
+    if (lookingAhead === url) return;
+    lookingAhead = url;
+    const saving = lean();
+    api(url).then((data) => {
+      if (item !== at) return;   // moved on meanwhile: the next look-ahead has it
+      (data.items || []).slice(0, saving ? 1 : undefined)
+        .forEach((up, n) => prefetch(up.small.concat(n === 0 && !saving ? up.large : [])));
+    }).catch(() => {});
   }
 
   // ---------- confetti (only ever for a correct answer, or a level) ----------
@@ -1349,7 +1378,9 @@
     setMode(item.mode || PAGE_MODE);   // once the photos are in: the last beetle (and its review) keeps its layout till then
     const holder = $("photos");
     holder.innerHTML = "";
-    holder.classList.remove("revealing");
+    holder.classList.remove("revealing", "item-in");
+    void holder.offsetWidth;   // so the fade-in starts again for this beetle
+    holder.classList.add("item-in");
     // the grid games: 2×2 up to 5×5 by the grid's size, which grows as the player gets better (#489)
     const grid = MODE === "odd" || MODE === "select";
     holder.style.setProperty("--grid-cols", String(Math.ceil(Math.sqrt(item.images.length))));
@@ -1476,6 +1507,7 @@
     shownAt = Date.now();
     readyAt = performance.now() + MASH_GUARD_MS;
     prefetch(item.prefetch);
+    lookAhead(item);
   }
 
   // ---------- answering: Submit locks the answer in, the review shows what it earned, Next brings the next beetle ----------
@@ -1536,6 +1568,7 @@
     const data = upcoming;
     if (!data) return;
     upcoming = null;
+    performance.mark("game:next");   // until the next beetle shows: "game:photo" (present)
     setPhase("next");
     feedNotes(data);   // the next batch had to change game, or the feed ended: say why
     if (data.done) {
@@ -1557,6 +1590,10 @@
     await showItem(next);
     endReview();
     setPhase("answer");
+    if (performance.getEntriesByName("game:next").length) {   // how long Next took to show the beetle (dev tools)
+      performance.measure("game:photo", "game:next");
+      performance.clearMarks("game:next");
+    }
   }
 
   function showReview(review) {
