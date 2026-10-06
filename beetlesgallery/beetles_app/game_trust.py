@@ -155,7 +155,7 @@ def skill_counts(player):
     seen = set()
     answers = (
         GameAnswer.objects.filter(Q(is_check=True) | Q(validated_later=True), player=player, mode="classify",
-                                  is_retry=False, skipped=False, score_hold=False)
+                                  is_retry=False, seen_before=False, skipped=False, score_hold=False)
         .order_by("answered_at")
         .values("roi_id", "ref_subfamily", "ref_tribe", "ref_genus", "ref_species",
                 *[f"correct_{r}" for r in RANKS])
@@ -604,7 +604,8 @@ def apart_counts(player):
     def child(a, side, rank):
         return child_at(rank, a[f"{side}__taxon__genus"], a[f"{side}__taxon__species"], a[f"{side}__taxon__{rank}"])
 
-    answers = GameAnswer.objects.filter(player=player, is_retry=False, skipped=False, score_hold=False)
+    answers = GameAnswer.objects.filter(player=player, is_retry=False, seen_before=False, skipped=False,
+                                        score_hold=False)
     correct = [f"correct_{r}" for r in RANKS]
     sides = [f"{side}__taxon__{r}" for side in ("roi", "roi_b") for r in RANKS]
     for a in answers.filter(mode="pair").values(*sides, *correct):

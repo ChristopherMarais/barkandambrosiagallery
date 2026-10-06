@@ -19,8 +19,11 @@ class GamePageTests(GameCase):
         self.assertIn('#game.answer-locked:not([data-phase="review"]) #photos:not(.revealing)', page)
         self.assertNotIn("#game.answer-locked #photos:not(.revealing)", page)
 
-    def test_imposter_picker_says_one_of_the_rest_not_in_it(self):
-        self.assertIn('(odd ? "says it\'s one of the rest" : "in it")', self.page())
+    def test_the_grid_card_names_the_group_instead_of_vague_phrases(self):
+        page = self.page()   # the lines come from game_answer_review._explain (#541)
+        self.assertIn('node("p", "rv-tile", node("b", "", l.tiles.join(", ") + "."), " ", ...parts(l.parts))', page)
+        for vague in ("one of the rest", '"in it"'):
+            self.assertNotIn(vague, page)
 
     def test_names_in_the_identification_card_are_set_like_names(self):
         page = self.page()

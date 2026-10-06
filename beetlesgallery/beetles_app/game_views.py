@@ -314,6 +314,7 @@ def game_how(request):
         "odd_weight": _weight_label(game.game_setting("GAME_POINTS_ODD_WEIGHT", 1.5)),
         "odd_skip": game.game_setting("GAME_POINTS_ODD_SKIP", 0.25),
         "difficulty_spread": round(game_scoring.difficulty_spread() * 100),
+        "reveal_hours": _weight_label(game.game_setting("GAME_REVEAL_COOLDOWN_HOURS", 2)),
     })
 
 
@@ -992,6 +993,10 @@ def game_answer(request, round_id):
                 scores = game.score_pair(choice, roi_a.taxon, roi_b.taxon)
     for r, ok in scores.items():
         setattr(record, f"correct_{r}", ok)
+    if not (record.skipped or record.is_retry):
+        # a beetle whose names the player has been shown before (#541): full points, but it doesn't show expertise
+        shown = [record.roi, record.roi_b] + (list(tiles) if record.mode == GameRound.Mode.SELECT else [])
+        record.seen_before = game.was_shown(request.user, [b.id for b in shown if b is not None])
     game_scoring.note_difficulty(record)   # how hard the beetle is now: its points follow it (#492)
     try:
         with transaction.atomic():

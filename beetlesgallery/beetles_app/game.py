@@ -128,30 +128,99 @@ def _seen(player, mode, is_check):
     return GameAnswer.objects.filter(player=player, mode=mode, is_check=is_check).values("roi_id")
 
 
-def revealed_ids(player):
+def reveals(player):
     """
-    Validated ROIs whose answer this player has been shown in round feedback: every
-    scored item, and every validated partner in a pair, with every other photo of the same specimen. They are never
-    scored for this player again, so feedback can't be memorised into a better score.
+    {roi_id: {"at", "modes"}}: the ROIs whose names this player has been shown after an answer, when last and in which
+    games: every scored item, every validated partner in a pair, and every beetle of a grid (the review names them all
+    at every rank, #541; a grid at species names them in its prompt too, skipped or not), with every other photo of
+    the same specimen (#386: once its name was shown, any photo of it tests memory first).
     """
-    ids = set(GameAnswer.objects.filter(player=player, is_check=True).values_list("roi_id", flat=True))
+    out = {}
+
+    def shown(roi_id, at, mode):
+        entry = out.setdefault(roi_id, {"at": at, "modes": set()})
+        entry["at"] = max(entry["at"], at)
+        entry["modes"].add(mode)
+
+    answers = GameAnswer.objects.filter(player=player)
+    for roi_id, at, mode in answers.filter(is_check=True).values_list("roi_id", "answered_at", "mode"):
+        shown(roi_id, at, mode)
     # the validated partner of a pair, and the odd one an Odd One Out round was built around
-    ids |= set(
-        GameAnswer.objects.filter(player=player, mode__in=["pair", "odd"], roi_b__isnull=False)
-        .values_list("roi_b_id", flat=True)
-    )
-    # a grid at species names the rest's species too ("the rest: Xyleborus affinis", "tap every Xyleborus affinis")
-    for tiles in (GameAnswer.objects.filter(player=player, mode__in=["odd", "select"], grid_rank="species")
-                  .values_list("tiles", flat=True)):
-        ids |= {uuid.UUID(str(t)) for t in tiles or []}
-    # every other photo of the same specimen (#386): once its name was shown, any photo of it tests memory, not skill
+    for roi_id, at, mode in (answers.filter(mode__in=["pair", "odd"], roi_b__isnull=False)
+                             .values_list("roi_b_id", "answered_at", "mode")):
+        shown(roi_id, at, mode)
+    for tiles, at, mode in (answers.filter(mode__in=["odd", "select"]).filter(Q(skipped=False) | Q(grid_rank="species"))
+                            .values_list("tiles", "answered_at", "mode")):
+        for t in tiles or []:
+            shown(uuid.UUID(str(t)), at, mode)
     from django.db.models.functions import Lower, Trim
 
-    by_specimen = Beetles.objects.annotate(specimen=Lower(Trim("depicts_specimen")))
-    specimens = set(by_specimen.filter(id__in=ids).exclude(specimen="").values_list("specimen", flat=True)) - {None}
+    by_specimen = Beetles.objects.annotate(specimen=Lower(Trim("depicts_specimen"))).exclude(specimen="")
+    specimen_of = dict(by_specimen.filter(id__in=list(out)).values_list("id", "specimen"))
+    if specimen_of:
+        groups = defaultdict(list)
+        siblings = by_specimen.filter(specimen__in=set(specimen_of.values()) - {None})
+        for roi_id, specimen in siblings.values_list("id", "specimen"):
+            groups[specimen].append(roi_id)
+        for roi_id, specimen in specimen_of.items():
+            if specimen is None:
+                continue
+            for sibling in groups[specimen]:
+                for mode in list(out[roi_id]["modes"]):
+                    shown(sibling, out[roi_id]["at"], mode)
+    return out
+
+
+def was_shown(player, roi_ids):
+    """
+    Whether this player has been shown the names of any of these ROIs, or of another photo of the same specimen
+    (reveals, asked about a few beetles: a handful of EXISTS queries instead of all the player's answers).
+    """
+    from django.db.models.functions import Lower, Trim
+
+    ids = {uuid.UUID(str(i)) for i in roi_ids}
+    if not ids:
+        return False
+    by_specimen = Beetles.objects.annotate(specimen=Lower(Trim("depicts_specimen"))).exclude(specimen="")
+    specimens = set(by_specimen.filter(id__in=list(ids)).values_list("specimen", flat=True)) - {None}
     if specimens:
         ids |= set(by_specimen.filter(specimen__in=specimens).values_list("id", flat=True))
-    return ids
+    answers = GameAnswer.objects.filter(player=player)
+    in_grid = Q()
+    for i in ids:
+        in_grid |= Q(tiles__contains=[str(i)])
+    return (answers.filter(is_check=True, roi_id__in=ids).exists()
+            or answers.filter(mode__in=["pair", "odd"], roi_b_id__in=ids).exists()
+            or answers.filter(mode__in=["odd", "select"]).filter(Q(skipped=False) | Q(grid_rank="species"))
+            .filter(in_grid).exists())
+
+
+def revealed_ids(player):
+    """
+    Validated ROIs whose names this player has been shown (reveals). An answer on one of them counts for points but not
+    for accuracy or expertise (GameAnswer.seen_before), and it comes back only after a while (held_back_ids).
+    """
+    return set(reveals(player))
+
+
+def held_back_ids(player, now=None, shown=None):
+    """
+    The revealed ROIs that are not scored for this player yet: shown in the current sitting (game_relearn.sitting_start,
+    GAME_SESSION_GAP_MINUTES), or less than GAME_REVEAL_COOLDOWN_HOURS ago. After that a beetle may come back, so a
+    player learns the beetles by playing, but not straight from the answer they just saw. A beetle they got wrong comes
+    back only as a retry, at the retry's points (game_relearn). ``shown``: reveals(player).
+    """
+    from .game_relearn import open_mistakes, sitting_start
+
+    now = now or timezone.now()
+    shown = reveals(player) if shown is None else shown
+    cutoff = min(sitting_start(player, now), now - timedelta(hours=game_setting("GAME_REVEAL_COOLDOWN_HOURS", 2)))
+    return {roi_id for roi_id, entry in shown.items() if entry["at"] >= cutoff} | set(open_mistakes(player))
+
+
+def shown_in(shown, mode):
+    """The revealed ROIs (from reveals) shown in this game: they come back in another game first, if there are others."""
+    return {roi_id for roi_id, entry in shown.items() if mode in entry["modes"]}
 
 
 # ---------------------------------------------------------------------------
@@ -423,17 +492,19 @@ def build_classify_items(player, size, fresh_only=False):
     n_checks, n_open = _split_round(player, "classify", size)
     check_pool, open_pool = pools(player)
     target = target_difficulty(player, "classify")
-    revealed = list(revealed_ids(player))
+    shown = reveals(player)
+    held, shown_here = list(held_back_ids(player, shown=shown)), list(shown_in(shown, "classify"))
     seen_open = _seen(player, "classify", False)
     focus = focus_filter(player)
 
     def pick_checks(n, exclude=()):
-        exclude = [c["a"] for c in exclude] + revealed
+        # never one whose name was shown a moment ago; one shown in this game only when there are no others
+        exclude = [c["a"] for c in exclude] + held
         ids = []
         n_focus = n // 2 if focus is not None else 0
         if n_focus:
-            ids = _sample(check_pool.filter(focus), n_focus, target, exclude=exclude, allow_seen=False)
-        ids += _sample(check_pool, n - len(ids), target, exclude=exclude + ids, allow_seen=False)
+            ids = _sample(check_pool.filter(focus), n_focus, target, shown_here, exclude=exclude)
+        ids += _sample(check_pool, n - len(ids), target, shown_here, exclude=exclude + ids)
         return [{"a": str(i), "b": None, "check": True} for i in ids]
 
     def pick_open(n):
@@ -523,14 +594,15 @@ def build_pair_items(player, size, fresh_only=False):
     n_checks, n_open = _split_round(player, "pair", size)
     check_pool, open_pool = pools(player)
     target = target_difficulty(player, "pair")
-    revealed = list(revealed_ids(player))
+    shown = reveals(player)
+    held, shown_here = list(held_back_ids(player, shown=shown)), list(shown_in(shown, "pair"))
     seen_open = _seen(player, "pair", False)
 
     def make_pairs(anchor_qs, n, seen, is_check, exclude=()):
         items = []
         exclude = [c["a"] for c in exclude]
-        if is_check:
-            anchor_ids = _sample(anchor_qs, n, target, exclude=exclude + revealed, allow_seen=False)
+        if is_check:   # never one shown a moment ago; one shown in this game only when there are no others
+            anchor_ids = _sample(anchor_qs, n, target, shown_here, exclude=exclude + held)
         else:
             # about half of them hard beetles (nobody could name them, players disagree, IBBI-AI is unsure): Family
             # Ties narrows down what they are before anyone has to name them (game_relearn.hard_rois)
@@ -540,8 +612,8 @@ def build_pair_items(player, size, fresh_only=False):
             anchor_ids += _sample(anchor_qs, n - len(anchor_ids), target, seen, list(exclude) + anchor_ids,
                                   allow_seen=not fresh_only)
         for anchor in Beetles.objects.select_related("taxon").filter(id__in=anchor_ids):
-            # A scored pair must not lean on a partner whose label the player has been shown.
-            partner = _partner_for(anchor, target, revealed if is_check else ())
+            # A scored pair must not lean on a partner whose label the player has just been shown.
+            partner = _partner_for(anchor, target, held if is_check else ())
             if partner is None:
                 continue
             items.append({
@@ -745,8 +817,11 @@ class _Grids:
         self.plan = plan(player, game_key, deepest, player_focus(player))
         self.check_pool, self.open_pool = pools(player)
         self.target = target_difficulty(player)
-        # Beetles whose answer the player has been shown are never used again for them (revealed_ids)
-        self.avoid = set(revealed_ids(player)) | {uuid.UUID(str(i)) for i in avoid}
+        # Beetles whose names the player has just been shown wait a while (held_back_ids); ones shown in this game come
+        # back in another game first, so they are used here only when a grid can't be built without them
+        shown = reveals(player)
+        self.avoid = held_back_ids(player, shown=shown) | {uuid.UUID(str(i)) for i in avoid}
+        self.later = shown_in(shown, game_key) - self.avoid
         self.prefer_ai = ai_preferred()
         self.pairs = {}   # rank: whether IBBI-AI's predictions could give a grid there a sure and an unsure beetle
 
@@ -761,6 +836,18 @@ class _Grids:
         return items
 
     def item(self):
+        """One grid (build), without the beetles shown in this game before if it can be."""
+        if self.later:
+            avoid, self.avoid = self.avoid, self.avoid | self.later
+            try:
+                found = self.build()
+            finally:
+                self.avoid = avoid
+            if found is not None:
+                return found
+        return self.build()
+
+    def build(self):
         """
         One grid at the player's step. When the beetles for it are short, in turn: the same grid without the pair of AI
         beetles, a smaller one at that rank, the nearest other ranks (the shallower first). None when there is nothing.
@@ -898,7 +985,7 @@ def build_odd_items(player, size, fresh_only=False, avoid=()):
     The odd one and at least one of the rest are always validated, so every item has a known answer. Of the rest, when
     IBBI-AI's predictions allow, one is a beetle it is sure belongs and one it is unsure about (ai_bands), more as the
     player rises (GAME_ODD_OPEN_SHARE_*): a player who picks one of those says it does not belong, which is scored later
-    by agreement, like a name. Beetles whose answer the player has been shown are never used again for them.
+    by agreement, like a name. Beetles whose names the player has just been shown wait a while (held_back_ids).
     """
     return build_grid_items("odd", player, size, avoid)
 
@@ -909,8 +996,8 @@ def build_select_items(player, size, fresh_only=False, avoid=()):
     player's step on the grid ladder like Odd One Out. About a quarter to under half are validated members
     (SELECT_MEMBERS), validated beetles of other groups at least as many (near relatives on harder rounds), plus beetles
     nobody has validated that IBBI-AI puts in the group (SELECT_AI): a sure and an unsure one when its predictions
-    allow. Taps on those are recorded, never scored. Beetles whose answer the player has been shown are never used
-    again for them (revealed_ids).
+    allow. Taps on those are recorded, never scored. Beetles whose names the player has just been shown wait a while
+    (held_back_ids).
     """
     return build_grid_items("select", player, size, avoid)
 
@@ -1105,10 +1192,10 @@ def nothing_to_play(player, mode=GameRound.Mode.MIXED):
     if not (checks.exists() or opens.exists()):
         return {"text": "No beetles are ready for the game yet. Please check back soon.", "clear_focus": False}
     answered = GameAnswer.objects.filter(player=player).values("roi_id")
-    revealed = list(revealed_ids(player))
+    held = list(held_back_ids(player))
 
-    def new(check_pool, open_pool):   # never answered, or validated and its answer not shown to them yet
-        return open_pool.exclude(id__in=answered).exists() or check_pool.exclude(id__in=revealed).exists()
+    def new(check_pool, open_pool):   # never answered, or validated and its names not shown to them a moment ago
+        return open_pool.exclude(id__in=answered).exists() or check_pool.exclude(id__in=held).exists()
 
     if not new(checks, opens):
         return {"text": "You've seen every beetle we have. New photos are added regularly.", "clear_focus": False}
@@ -1358,7 +1445,8 @@ def _accuracy(row):
 def player_summary(player):
     """Items labelled and overall accuracy (share of judged ranks correct on checks)."""
     labelled = GameAnswer.objects.filter(player=player, skipped=False).count()
-    row = GameAnswer.objects.filter(player=player, is_check=True, is_retry=False).aggregate(**_rank_counts())
+    row = GameAnswer.objects.filter(player=player, is_check=True, is_retry=False, seen_before=False).aggregate(
+        **_rank_counts())
     accuracy, judged = _accuracy(row)
     min_judged = game_setting("GAME_MIN_JUDGED_FOR_ACCURACY", 10)
     return {
@@ -1388,7 +1476,7 @@ def leaderboard(limit=50, sort="labelled", since=None):
     min_judged = game_setting("GAME_MIN_JUDGED_FOR_ACCURACY", 10)
     accuracy = {}
     for row in (
-        in_period.filter(is_check=True, is_retry=False)
+        in_period.filter(is_check=True, is_retry=False, seen_before=False)
         .values("player").annotate(**_rank_counts())
     ):
         acc, judged = _accuracy(row)
@@ -1418,7 +1506,8 @@ def player_reliability(player_ids=None):
     accuracy as they answer more checks.
     """
     out = defaultdict(dict)
-    qs = GameAnswer.objects.filter(is_check=True, is_retry=False)   # a Select all grid counts once (game_scoring.ratings)
+    # a Select all grid counts once (game_scoring.ratings); a beetle seen before (#541) shows memory, not skill
+    qs = GameAnswer.objects.filter(is_check=True, is_retry=False, seen_before=False)
     if player_ids is not None:
         qs = qs.filter(player_id__in=list(player_ids))
     for row in qs.values("player", "mode").annotate(**_rank_counts()):

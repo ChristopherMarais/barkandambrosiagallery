@@ -127,24 +127,22 @@
   #game[data-mode="odd"] #photos, #game[data-mode="select"] #photos { display: grid; grid-template-columns: repeat(var(--grid-cols, 2), minmax(0, 1fr));
       grid-auto-rows: minmax(0, 1fr); gap: 0.375rem; }
   #photos[data-size="16"] { gap: 0.25rem; padding: 0.25rem; }
-  #game[data-mode="odd"] #photos .cell { height: 100%; outline: 3px solid transparent; outline-offset: -3px; }
-  #game[data-mode="odd"] #photos .cell.picked { outline-color: #374151; }
-  #game[data-mode="odd"] #photos .cell.odd-one { outline-color: #16a34a; }
+  #game[data-mode="odd"] #photos .cell, #game[data-mode="select"] #photos .cell { height: 100%; }
+  /* The rings round the grid photos are drawn on top of the photo, so they show on a grid of 16 too (#541):
+     dark for your pick or tap; after answering green (correct), red (not correct), dashed green (missed), grey (yours,
+     not checked yet) */
+  #photos .cell::after, #previous-photos .cell::after { content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none;
+      border-radius: inherit; border: 3px solid var(--ring, transparent); box-shadow: var(--cursor, none); }
+  #photos .cell.picked, #photos .cell.tapped { --ring: #374151; }
+  .cell.odd-one, .cell.sel-right, .cell.sel-missed { --ring: #16a34a; }
+  :is(#photos, #previous-photos) .cell.sel-missed::after { border-style: dashed; }
+  .cell.odd-wrong, .cell.sel-wrong { --ring: #dc2626; }
+  .cell.odd-pick, .cell.sel-vote { --ring: #9ca3af; }
+  #photos .cell.key-cursor { --cursor: inset 0 0 0 2px #9ca3af; }
   /* top right: the Flag has the bottom left of each photo, Lighting the bottom right of the photo area */
   .zoom-chip { position: absolute; right: 0.375rem; top: 0.375rem; z-index: 3; display: inline-flex; align-items: center; justify-content: center;
                width: 1.875rem; height: 1.875rem; border-radius: 9999px; background: #fff; border: 1px solid #d1d5db; box-shadow: 0 1px 3px rgba(0,0,0,.15); color: #374151; font-size: 0.75rem; }
-  .odd-name { position: absolute; left: 50%; top: 0.375rem; transform: translateX(-50%); z-index: 3; max-width: calc(100% - 0.75rem); padding: 0.125rem 0.55rem;
-              border-radius: 0.5rem; background: rgba(255,255,255,.95); border: 1px solid #d1d5db; font-size: 0.75rem; font-weight: 600; color: #111827;
-              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
   #odd.hidden, #select.hidden { display: none; }
-  /* Select all: a tap toggles one. After Next: green for a member you tapped, red for one you shouldn't have, a dashed
-     green line round a member you left out. */
-  #game[data-mode="select"] #photos .cell { height: 100%; outline: 3px solid transparent; outline-offset: -3px; }
-  #game[data-mode="select"] #photos .cell.tapped { outline-color: #374151; }
-  #game[data-mode="select"] #photos .cell.sel-right { outline-color: #16a34a; }
-  #game[data-mode="select"] #photos .cell.sel-wrong { outline-color: #dc2626; }
-  #game[data-mode="select"] #photos .cell.sel-missed { outline: 3px dashed #16a34a; }
-  #game[data-mode="select"] #photos .cell.key-cursor, #game[data-mode="odd"] #photos .cell.key-cursor { box-shadow: inset 0 0 0 2px #9ca3af; }
   .tap-mark { position: absolute; left: 0.375rem; top: 0.375rem; z-index: 3; display: none; align-items: center; justify-content: center;
               width: 1.5rem; height: 1.5rem; border-radius: 9999px; background: #374151; color: #fff; font-size: 0.75rem; pointer-events: none; }
   .cell.tapped .tap-mark { display: inline-flex; }
@@ -225,17 +223,33 @@
   .rv-table small, .rv-note { display: block; font-size: 0.6875rem; color: #6b7280; }
   .rv-lines { margin-top: 0.375rem; font-size: 0.8125rem; color: #374151; }
   .rv-lines > * + * { margin-top: 0.25rem; }
-  /* the marks on the grid tiles: points, a number to find each one in the card, a name to the grid's rank */
-  #game[data-mode="select"] #photos .cell.sel-vote, #game[data-mode="odd"] #photos .cell.odd-pick { outline-color: #9ca3af; }
-  #game[data-mode="odd"] #photos .cell.odd-wrong { outline-color: #dc2626; }
-  #previous-photos .cell.sel-right, #previous-photos .cell.odd-one { outline: 3px solid #16a34a; outline-offset: -3px; }
-  #previous-photos .cell.sel-wrong, #previous-photos .cell.odd-wrong { outline: 3px solid #dc2626; outline-offset: -3px; }
-  #previous-photos .cell.sel-missed { outline: 3px dashed #16a34a; outline-offset: -3px; }
-  #previous-photos .cell.sel-vote, #previous-photos .cell.odd-pick { outline: 3px solid #9ca3af; outline-offset: -3px; }
+  .rv-tile { margin-top: 0.25rem; }
+  .rv-tile b { display: inline-block; min-width: 1.25rem; color: #374151; }
+  /* the marks on the grid tiles: a number to find each one in the card at the top left, the points at the top right */
   .rv-num, .rv-badge { position: absolute; z-index: 3; display: inline-flex; align-items: center; justify-content: center; pointer-events: none; font-weight: 700; white-space: nowrap; }
   .rv-num { left: 0.375rem; top: 0.375rem; min-width: 1.375rem; height: 1.375rem; padding: 0 0.3rem; border-radius: 9999px; background: rgba(255,255,255,.92); border: 1px solid #d1d5db; color: #374151; font-size: 0.6875rem; }
-  .rv-badge { left: 50%; bottom: 0.375rem; transform: translateX(-50%); padding: 0.0625rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; }
-  #photos[data-size="16"] :is(.rv-num, .rv-badge) { font-size: 0.625rem; }
+  .rv-badge { right: 0.375rem; top: 0.375rem; padding: 0.0625rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; }
+  :is(#photos, #previous-photos)[data-size="16"] :is(.rv-num, .rv-badge) { font-size: 0.625rem; top: 0.25rem; }
+  :is(#photos, #previous-photos)[data-size="16"] .rv-num { left: 0.25rem; min-width: 1.125rem; height: 1.125rem; }
+  :is(#photos, #previous-photos)[data-size="16"] .rv-badge { right: 0.25rem; padding: 0 0.3rem; }
+  /* Every beetle's names after an answer (#541), subfamily to species, on its photo: true names, or the likeliest with
+     who says so. Out of the way while the pointer is on the photo, or after a tap (tap again to bring them back). */
+  .rv-names { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; padding: 0.25rem 0.5rem 0.3rem; pointer-events: none;
+              background: rgba(17,24,39,.8); color: #fff; font-size: 0.75rem; line-height: 1.25; transition: opacity .15s; }
+  .rv-names > span { display: flex; gap: 0.375rem; min-width: 0; }
+  .rv-names .nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rv-names .src { flex: none; color: #d1d5db; font-size: 0.85em; }
+  .rv-names .src .fi { font-size: 0.85em; margin-right: 0.125rem; }
+  .rv-names .none { color: #9ca3af; }
+  .rv-names .tier { color: #d1d5db; font-size: 0.85em; }
+  :is(#photos, #previous-photos)[data-size="9"] .rv-names { font-size: 0.6875rem; padding: 0.1875rem 0.375rem; }
+  :is(#photos, #previous-photos)[data-size="16"] .rv-names { font-size: 0.5625rem; line-height: 1.15; padding: 0.125rem 0.25rem; }
+  :is(#photos, #previous-photos)[data-size="16"] .rv-names > span { gap: 0.2rem; }
+  /* one or two big photos: a box at the bottom middle, clear of the Flag and the Lighting buttons */
+  #game:not([data-mode="odd"]):not([data-mode="select"]) #photos .rv-names { left: 50%; right: auto; bottom: 0.375rem; transform: translateX(-50%);
+      width: max-content; min-width: 9rem; max-width: calc(100% - 6rem); border-radius: 0.5rem; padding: 0.375rem 0.625rem; font-size: 0.8125rem; }
+  .cell.names-off .rv-names { opacity: 0; }
+  @media (hover: hover) { .cell:hover .rv-names { opacity: 0; } }
   .rv-badge.up { background: #16a34a; color: #fff; }
   .rv-badge.down { background: #dc2626; color: #fff; }
   .rv-badge.flat { background: rgba(255,255,255,.95); border: 1px solid #d1d5db; color: #374151; }
@@ -1385,6 +1399,7 @@
       $("photos").classList.add("revealing");
       markTiles($("photos").querySelectorAll(".cell"), review);
     }
+    nameTiles($("photos").querySelectorAll(".cell"), review);
     if (review.celebrate) confetti(review.celebrate.kind, review.celebrate.size);
     // the next photos start loading now (usually they are in already; at the end of a batch they are not)
     if (upcoming && upcoming.item) {   // the crops the next beetle shows: small ones first (#494)
@@ -1456,8 +1471,10 @@
   // Similarity: your rung, and the true one with both names, or what players and IBBI-AI make of the open one
   const PAIR_NOTE = { cautious: "True, but they are closer relatives than that.", too_close: "They are not that closely related.",
                       wrong: "Related beetles called strangers, or the other way round." };
+  const PAIR_SAY = { right: { say: "correct", tone: "good" }, cautious: { say: "partly correct", tone: "flat" },
+                     too_close: { say: "not correct", tone: "bad" }, wrong: { say: "not correct", tone: "bad" } };
   function pairCard(p) {
-    const lines = [node("p", "", "You said: ", node("strong", "", p.said))];
+    const lines = [node("p", "", "You said: ", node("strong", "", p.said), ...(PAIR_SAY[p.state] ? [" — ", ...parts([PAIR_SAY[p.state]])] : []))];
     if (p.truth) lines.push(node("p", "", "Answer: ", node("strong", "", p.truth)), p.state !== "right" && PAIR_NOTE[p.state] ? node("p", "rv-note", PAIR_NOTE[p.state]) : null);
     p.sides.forEach((s) => {
       if (s.validated) { lines.push(node("p", "", node("strong", "", s.letter + ": "), taxonName(s.name, s.rank), " · " + s.tier)); return; }
@@ -1472,28 +1489,30 @@
     return [node("div", "rv-lines", ...lines.filter(Boolean))];
   }
 
-  // Odd One Out and Select all: the marks are on the photos; the card says what they mean, and what players and
-  // IBBI-AI say about the beetles nobody has checked yet (numbered as on the photos)
+  // Odd One Out and Find Them All: a line for every beetle, numbered as on the photos (game_answer_review._explain):
+  // its name next to the grid's group, what you did with it, and whether that was correct, or agrees with IBBI-AI and
+  // the players while nobody knows yet. A line is text, names ({name, rank}) and verdicts ({say, tone}).
+  const TONE = { good: "rv-yes", bad: "rv-no", flat: "rv-flat" };
+  function parts(list) {
+    return list.map((p) => typeof p === "string" ? p : p.say ? node("strong", TONE[p.tone] || "", p.say) : taxonName(p.name, p.rank));
+  }
   function gridCard(r) {
-    const g = r.grid, odd = r.mode === "odd";
-    const lines = [];
-    if (odd && g.odd_name) lines.push(node("p", "", "The odd one: ", taxonName(g.odd_name, g.rank), " · the rest: ", taxonName(g.target, g.rank)));
-    if (!odd) lines.push(node("p", "", "Tap every ", taxonName(g.target, g.rank)));
-    lines.push(node("p", "rv-note", odd ? "Green: the odd one. Red: your pick, one of the rest. Grey: your pick, not checked yet."
-                                        : "Green: in it, tapped. Red: tapped, not in it. Dashed: in it, left out. Grey: your tap on one not checked yet."));
-    g.tiles.forEach((t, i) => {
-      if (!t || t.validated || !(t.ai || t.players)) return;
-      const chosen = odd ? i === g.pick : t.state === "vote";
-      const views = [["IBBI-AI", t.ai], ["players", t.players]].filter(([, v]) => v)
-        .map(([who, v]) => who + " " + (v.in ? (odd ? "says it's one of the rest" : "in it") : "says " + v.name) + " (" + v.sure + "%" + (v.votes ? ", " + v.votes + (v.votes === 1 ? " vote" : " votes") : "") + ")");
-      const outlook = t.pays === true ? (chosen ? "earns points once confirmed" : odd ? "picking it would earn points once confirmed" : "a tap would earn points once confirmed")
-                    : t.pays === false && chosen ? "may cost points once confirmed" : "";
-      lines.push(node("p", "rv-note", node("strong", "", (i + 1) + (chosen ? " (yours)" : "") + ": "), views.join(" · ") + (outlook ? ". " + outlook[0].toUpperCase() + outlook.slice(1) + "." : "")));
+    const g = r.grid;
+    const lines = [node("p", "", ...parts(g.lead || []))];
+    // beetles that read the same share one line ("1, 3, 4. Scolytinae. Not picked — correct"), so 16 stay short
+    const same = new Map();
+    (g.lines || []).forEach((l) => {
+      const key = JSON.stringify(l.parts);
+      if (!same.has(key)) same.set(key, { tiles: [], parts: l.parts });
+      same.get(key).tiles.push(l.tile);
     });
+    same.forEach((l) => lines.push(node("p", "rv-tile", node("b", "", l.tiles.join(", ") + "."), " ", ...parts(l.parts))));
+    lines.push(node("p", "rv-note", r.mode === "odd" ? "Rings: green, the correct pick; red, your pick, not correct; grey, your pick, not checked yet."
+                                                     : "Rings: green, correct; red, not correct; dashed, missed; grey, your choice, not checked yet."));
     return [node("div", "rv-lines", ...lines)];
   }
 
-  // The marks on the grid tiles (live, or under Back): the colours, each tile's number and points, names to the grid's rank
+  // The marks on the grid tiles (live, or under Back): the colours, each tile's number and points
   const MARK = { select: { right: "sel-right", wrong: "sel-wrong", missed: "sel-missed", vote: "sel-vote" },
                  odd: { right: "odd-one", odd: "odd-one", wrong: "odd-wrong", pick: "odd-pick" } };
   function markTiles(cells, review) {
@@ -1514,10 +1533,58 @@
       const badge = t.points ? [pts(t.points), t.points > 0 ? "up" : "down"] : t.state === "missed" ? ["missed", "flat"]
                   : t.state === "vote" || t.state === "pick" ? ["vote", "flat"] : null;
       if (badge) cellEl.appendChild(node("span", "rv-badge " + badge[1], badge[0]));
-      if (t.name && (t.state === "odd" || t.state === "right" && review.mode === "odd" || t.state === "wrong"))
-        cellEl.appendChild(node("span", "odd-name", t.name));
     });
   }
+
+  // Every beetle's names on its photo, in every game (#541): four short lines, subfamily to species (the genus cut to
+  // its letter in the species), true names with how reliable they are, or the likeliest with who says so and how sure
+  const NAME_SOURCE = { ai: (r) => ["AI " + r.sure + "%", "IBBI-AI: " + r.sure + "%"],
+                        players: (r) => [[node("i", "fi fi-rr-users"), r.votes + " · " + r.sure + "%"],
+                                         r.votes + (r.votes === 1 ? " player: " : " players: ") + r.sure + "%"] };
+  function namesLabel(b) {
+    const box = node("div", "rv-names");
+    box.dataset.testid = "beetle-names";
+    if (!b.validated && b.ranks.every((r) => !r.name)) {
+      box.append(node("span", "", node("span", "nm none", "Not named yet")));
+      return box;
+    }
+    let genus = "", said = "";
+    b.ranks.forEach((r, i) => {
+      let name = r.name;
+      if (r.rank === "genus") genus = name;
+      if (r.rank === "species" && genus && name.startsWith(genus + " ")) name = genus[0] + ". " + name.slice(genus.length + 1);
+      const nm = name ? node("span", "nm", taxonName(name, r.rank)) : node("span", "nm none", "—");
+      nm.title = r.rank + ": " + (r.name || "not known");
+      // who says so, once for the lines in a row with the same source and confidence
+      const how = NAME_SOURCE[r.source] && NAME_SOURCE[r.source](r);
+      const repeat = how && how[1] === said;
+      said = how ? how[1] : "";
+      const src = how && !repeat ? node("span", "src", ...[].concat(how[0]))
+                : b.validated && i === 0 ? node("span", "tier", b.tier) : null;
+      nm.title += how ? " (" + how[1] + ")" : "";
+      box.append(node("span", "", nm, src));
+    });
+    return box;
+  }
+  function nameTiles(cells, review) {
+    (review.beetles || []).forEach((b, i) => {
+      const c = cells[i];
+      if (b && c && !c.classList.contains("flagged")) c.appendChild(namesLabel(b));
+    });
+  }
+  // A tap on a photo with its names hides them, so the beetle can be seen; another brings them back. Caught on the
+  // way down, so on the review it never picks, taps or opens the photo.
+  function tapForNames(box) {
+    box.addEventListener("click", (e) => {
+      const c = e.target.closest(".cell");
+      if (!c || !c.querySelector(".rv-names") || e.target.closest("button:not(.frame)")) return;
+      e.stopPropagation();
+      e.preventDefault();
+      c.classList.toggle("names-off");
+    }, true);
+  }
+  tapForNames($("photos"));
+  tapForNames($("previous-photos"));
 
   // ---------- Back: your last beetle's review ----------
   let previous = null;                                  // the last answer's review, from memory...
@@ -1539,6 +1606,7 @@
     if (!previous) return false;
     const box = $("previous-photos"), n = previous.images.length;
     box.style.setProperty("--cols", n > 2 ? Math.ceil(Math.sqrt(n)) : n);
+    box.dataset.size = String(n);
     const cells = previous.images.map((im, i) => {
       const c = node("div", "cell");
       const canvas = document.createElement("canvas");
@@ -1549,6 +1617,7 @@
     });
     box.replaceChildren(...cells);
     markTiles(cells, previous);
+    nameTiles(cells, previous);
     renderReview(previous, $("previous-review"));
     $("previous").classList.remove("hidden");
     return true;

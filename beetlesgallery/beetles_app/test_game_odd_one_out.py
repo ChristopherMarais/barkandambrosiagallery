@@ -215,11 +215,12 @@ class AnswerTests(OddCase):
         tiles = set(rnd.items[item["index"]]["tiles"])
         self.assertTrue(tiles <= {str(i) for i in game.revealed_ids(self.user)})
 
-    def test_other_ranks_keep_the_rest_scorable_and_the_review_names_them_only_that_far(self):
+    def test_other_ranks_give_the_rest_away_after_the_answer_and_the_round_review_names_them_only_that_far(self):
         rnd, item = self.odd_round("genus")
         self.answer(rnd, item, pick=self.pick(rnd, item, odd=False))
         tiles = set(rnd.items[item["index"]]["tiles"])
-        self.assertEqual(len(tiles & {str(i) for i in game.revealed_ids(self.user)}), 2)   # the pick and the odd one
+        # the review after the answer names every beetle at every rank (#541)
+        self.assertTrue(tiles <= {str(i) for i in game.revealed_ids(self.user)})
         game.finish_round(rnd)
         rest = [s for s in game_feedback.round_feedback(rnd)["items"][0]["sides"] if not (s["picked"] or s["odd"])]
         self.assertEqual(len(rest), 2)

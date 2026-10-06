@@ -35,8 +35,8 @@ def _label(taxon):
 
 def _rank_label(taxon, rank):
     """
-    _label() down to ``rank`` only: what an Odd One Out round already said about one of the rest. Their deeper
-    names stay hidden, so they can still be scored for this player later (game.revealed_ids).
+    _label() down to ``rank`` only: what an Odd One Out round itself was about. (The review after each answer names
+    every grid beetle at every rank since #541, and game.reveals counts them all as shown.)
     """
     full = _label(taxon)
     if full is None:

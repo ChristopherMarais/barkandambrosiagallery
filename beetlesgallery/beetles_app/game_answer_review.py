@@ -7,8 +7,14 @@ the grid games; a beetle nobody has validated yet shows what the other players a
 they are. Everything comes from the saved answer and its points (AnswerPoints), through the round review's helpers
 (game_feedback), so the card always matches the score.
 
-What it never shows: a name past the grid's rank in the grid games (game.revealed_ids keeps the deeper names scorable),
-and any truth for a skipped answer.
+Every beetle on screen also gets its names at all four ranks (#541), shown on its photo: the true names of a validated
+beetle, or, for one nobody has validated, the most likely name at each rank from the other players or IBBI-AI with how
+sure they are. That gives every grid beetle away, so each one waits a while before it is scored for this player again
+(game.held_back_ids), and then it no longer counts towards their accuracy or expertise (GameAnswer.seen_before).
+A grid's card says, beetle by beetle, what it is next to the grid's group, what the player did with it, and whether
+that was correct, or, while nobody knows yet, whether it agrees with IBBI-AI and the players.
+
+What it never shows: any name for a skipped answer, or for one held while its name is checked.
 """
 import math
 import uuid
@@ -49,8 +55,11 @@ def review(answer, item):
     }
     facts = {}
     if not (skipped or held):
-        body, facts = BODIES[answer.mode](answer, item, basis, row, losses)
+        shown = _shown(answer, item)
+        opinions = Opinions(answer.player_id, [r.id for r in shown if r is not None and not game_scoring.is_truth(r)])
+        body, facts = BODIES[answer.mode](answer, item, basis, row, losses, opinions)
         out.update(body)
+        out["beetles"] = _beetles(answer, shown, opinions)
     out["headline"] = _headline(out)
     out["celebrate"] = _celebrate(out, facts)
     return out
@@ -84,7 +93,7 @@ def confetti_size(points):
 # ---------------------------------------------------------------------------
 # Each game
 # ---------------------------------------------------------------------------
-def _classify(answer, item, basis, row, losses):
+def _classify(answer, item, basis, row, losses, opinions):
     """Rank by rank: the player's names next to the true name and what each rank earned, or next to what the other
     players (and how many proven experts among them) and IBBI-AI say."""
     yours = game_feedback._answer_label(answer)
@@ -95,16 +104,16 @@ def _classify(answer, item, basis, row, losses):
         complete = verdict == "right" and all(c["state"] != "stopped" for c in ranks)
         return {"verdict": verdict, "classify": {"ranks": ranks, "truth": _truth(answer.roi)}}, {"complete": complete}
     mine = game.answer_values({r: getattr(answer, r) for r in RANKS})
-    said = _said([answer.roi_id], answer.player_id).get(answer.roi_id)
+    said = opinions.said(answer.roi_id)
     votes = said["ranks"] if said else {}
-    tips = _ai([answer.roi_id]).get(answer.roi_id, {})
+    tips = opinions.tips(answer.roi_id)
     ranks = [{"rank": r, "yours": yours[r], "players": _players(votes.get(r), mine[r]), "ai": _bot(tips.get(r), mine[r])}
              for r in RANKS]
     return ({"classify": {"ranks": ranks, "truth": None, "players": said["players"] if said else 0}},
             {"ai_agrees": _agrees_with_ai(mine, tips)})
 
 
-def _pair(answer, item, basis, row, losses):
+def _pair(answer, item, basis, row, losses, opinions):
     """
     The rung the player chose, and either the true relation with both names, or the validated partner's name and
     what the other players and IBBI-AI say the other beetle is, with the rung that puts them on.
@@ -119,9 +128,9 @@ def _pair(answer, item, basis, row, losses):
         return {"verdict": verdict, "pair": data}, {"complete": verdict == "right"}
     # On a pair nobody has fully validated, ``roi`` is the open one and ``roi_b`` its validated partner
     partner = answer.roi_b if game_scoring.is_truth(answer.roi_b) else None
-    said = _said([answer.roi_id], answer.player_id).get(answer.roi_id)
+    said = opinions.said(answer.roi_id)
     votes = {r: v for r, v in (said["ranks"] if said else {}).items() if v}
-    tips = _ai([answer.roi_id]).get(answer.roi_id, {})
+    tips = opinions.tips(answer.roi_id)
     least = game_setting("GAME_FEEDBACK_AI_MIN", 0.5)
     sure = {r: t for r, t in tips.items() if t["confidence"] >= least}   # only where IBBI-AI is sure sets its rung
     ai_relation = _relation({r: t["value"] for r, t in sure.items()}, partner)
@@ -139,17 +148,17 @@ def _pair(answer, item, basis, row, losses):
     return {"pair": data}, {"ai_agrees": ai_relation is not None and ai_relation == (mine, True)}
 
 
-def _odd(answer, item, basis, row, losses):
+def _odd(answer, item, basis, row, losses, opinions):
     """
-    Odd One Out: every beetle in the order shown, which one was odd, the pick and what it earned; names only to the
-    grid's rank, and for the beetles nobody has validated what the other players and IBBI-AI say about them.
+    Odd One Out: every beetle in the order shown, which one was odd, the pick and what it earned, its name at the grid's
+    rank, and for the beetles nobody has validated what the other players and IBBI-AI say about them; a line for each.
     """
     tiles = game_scoring.grid_tiles(answer)
     rank, target = answer.grid_rank, (answer.grid_group or {}).get(answer.grid_rank, "")
     pick, odd = _place(tiles, answer.roi_id), _place(tiles, answer.roi_b_id)
     right = (row.detail or {}).get("right") if basis == "truth" else None
     flagged = set(answer.flagged or [])
-    views = _grid_views(tiles, answer.player_id, rank, target)
+    views = _grid_views(tiles, opinions, rank, target)
     cells = []
     for i, tile in enumerate(tiles):
         if tile is None:   # gone since
@@ -168,18 +177,19 @@ def _odd(answer, item, basis, row, losses):
             cell.update(views[i], pays=None if views[i]["in"] is None else not views[i]["in"])
         cells.append(cell)
     data = {"rank": rank, "target": target, "odd": odd, "pick": pick, "tiles": cells,
-            "odd_name": _name_at(tiles[odd], rank) if odd is not None else ""}
+            "odd_name": _name_at(tiles[odd], rank) if odd is not None else "",
+            **_explain("odd", tiles, cells, set() if pick is None else {pick}, rank, target)}
     least = game_setting("GAME_FEEDBACK_AI_MIN", 0.5)
     ai = (views.get(pick) or {}).get("ai")
     return ({"verdict": None if right is None else "right" if right else "wrong", "grid": data},
             {"complete": bool(right), "ai_agrees": bool(ai and ai["in"] is False and ai["sure"] >= least * 100)})
 
 
-def _select(answer, item, basis, row, losses):
+def _select(answer, item, basis, row, losses, opinions):
     """
     Select all: every beetle in the order shown with its state (right, wrong, missed, clear, or a vote on one nobody
-    has validated) and what it earned, names only to the grid's rank, and what the other players and IBBI-AI say about
-    the unvalidated ones. The tiles add up to the grid's points (game_scoring.select_tile_points).
+    has validated) and what it earned, its name at the grid's rank, and what the other players and IBBI-AI say about
+    the unvalidated ones; a line for each. The tiles add up to the grid's points (game_scoring.select_tile_points).
     """
     tiles = game_scoring.grid_tiles(answer)
     rank, target = answer.grid_rank, (answer.grid_group or {}).get(answer.grid_rank, "")
@@ -190,7 +200,7 @@ def _select(answer, item, basis, row, losses):
     states = detail["tiles"] if scored else ["flagged" if i in flagged else "vote" if i in picked else ""
                                              for i in range(len(tiles))]
     gain, cost = game_scoring.select_tile_points(detail) if scored else (0.0, 0.0)
-    views = _grid_views(tiles, answer.player_id, rank, target)
+    views = _grid_views(tiles, opinions, rank, target)
     cells = []
     for i, tile in enumerate(tiles):
         if tile is None:
@@ -208,7 +218,8 @@ def _select(answer, item, basis, row, losses):
             cell.update(views[i], pays=views[i]["in"])
         cells.append(cell)
     data = {"rank": rank, "target": target, "tiles": cells,
-            **{k: detail.get(k, 0) if scored else 0 for k in ("right", "wrong", "missed", "members")}}
+            **{k: detail.get(k, 0) if scored else 0 for k in ("right", "wrong", "missed", "members")},
+            **_explain("select", tiles, cells, picked - flagged, rank, target)}
     least = game_setting("GAME_FEEDBACK_AI_MIN", 0.5)
     taps = [views[i].get("ai") for i in picked if i in views]
     return ({"verdict": game_feedback.grid_verdict(detail) if scored else None, "grid": data},
@@ -220,8 +231,187 @@ BODIES = {"classify": _classify, "pair": _pair, "odd": _odd, "select": _select}
 
 
 # ---------------------------------------------------------------------------
+# A grid, beetle by beetle (#541)
+# ---------------------------------------------------------------------------
+# What choosing a beetle says about it: an Odd One Out pick says it is not of the group, a Find Them All tap that it is.
+# Leaving a beetle out says the opposite. Only the beetles the player chose are scored, but the review judges them all.
+CLAIM = {"odd": False, "select": True}
+CHOSE = {"odd": "Your pick: not ", "select": "You selected it"}
+LEFT = {"odd": "Not picked", "select": "Not selected"}
+
+
+def _explain(mode, tiles, cells, chosen, rank, target):
+    """
+    Adds "belongs" (to the grid's group: True or False on a validated beetle, None while nobody knows) and "chosen" to
+    each tile, and returns {"lead", "lines"}: a line for the grid, and one for every beetle in the order shown, so none
+    goes unexplained. A line is a list of parts: text, {"name", "rank"} for a name, {"say", "tone"} for a verdict
+    ("good", "bad" or "flat"). Generic per beetle: a grid with several odd ones reads the same.
+    """
+    group, claim = game._norm(target), CLAIM[mode]
+    lines, odd_ones = [], []
+    for i, (tile, cell) in enumerate(zip(tiles, cells)):
+        if tile is None:
+            lines.append({"tile": i + 1, "parts": ["This photo has been removed since."]})
+            continue
+        if cell["state"] == "flagged":
+            lines.append({"tile": i + 1, "parts": ["You flagged it: out of this grid."]})
+            continue
+        chose = i in chosen
+        belongs = (game._norm(_name_at(tile, rank)) == group) if game_scoring.is_truth(tile) and group else None
+        cell.update(belongs=belongs, chosen=chose)
+        if belongs is None:
+            parts = _open_line(mode, cell, chose, rank, target)
+        else:
+            parts = _known_line(mode, tile, cell, chose, belongs, claim, rank, target)
+            if not belongs:
+                odd_ones.append(i)
+        lines.append({"tile": i + 1, "parts": parts})
+    name = _part(target, rank)
+    if mode == "select":
+        lead = ["Find every ", name, "."]
+    else:
+        lead = ["Group: ", name, "."]
+        for n, i in enumerate(odd_ones):
+            lead += [" The odd one: " if n == 0 else ", ", f"{i + 1} (", _part(_name_at(tiles[i], rank), rank), ")"]
+        lead += ["." if odd_ones else ""]
+    return {"lead": lead, "lines": lines}
+
+
+def _known_line(mode, tile, cell, chose, belongs, claim, rank, target):
+    """A validated beetle: its name, whether it belongs to the group, what the player did with it, and the verdict."""
+    name, group = _name_at(tile, rank), _part(target, rank)
+    if mode == "select":
+        parts = [_part(name, rank), ": belongs to " if belongs else ": doesn't belong to ", group, ". "]
+    else:
+        parts = [_part(name, rank)] + ([". "] if belongs else [": not ", group, ", the odd one. "])
+    if chose:
+        parts += [CHOSE[mode]] + ([group] if mode == "odd" else []) + [" — "]
+        parts.append(_say("correct", "good") if belongs == claim else _say("not correct", "bad"))
+    elif belongs == claim:   # left out, but it was one to choose
+        parts += ["You left it out — " if mode == "select" else "Not picked — ", _say("missed", "bad")]
+    else:
+        parts += [LEFT[mode] + " — ", _say("correct", "good")]
+    if cell.get("points"):
+        parts.append(f" · {_signed(cell['points'])} points")
+    return parts
+
+
+def _open_line(mode, cell, chose, rank, target):
+    """
+    A beetle nobody has validated: what IBBI-AI and the other players call it at the grid's rank and how sure, what the
+    player did with it, and whether that agrees with them; a choice is scored once the beetle is checked.
+    """
+    said = []
+    if cell.get("ai"):
+        said.append(["IBBI-AI says ", _part(cell["ai"]["name"], rank), f" ({cell['ai']['sure']}%)"])
+    if cell.get("players"):
+        votes = cell["players"]["votes"]
+        said.append([f"{votes} {'player says' if votes == 1 else 'players say'} ", _part(cell["players"]["name"], rank),
+                     f" ({cell['players']['sure']}%)"])
+    parts = ["Not checked yet: "]
+    for n, bit in enumerate(said):
+        parts += ([", " if n else ""] + bit)
+    parts += [". " if said else "nobody has named it yet. "]
+    if not chose:
+        return parts + [LEFT[mode] + "."]
+    parts += [CHOSE[mode]] + ([_part(target, rank)] if mode == "odd" else []) + [" — "]
+    claim = CLAIM[mode]
+    agree = [who for who, key in (("IBBI-AI", "ai"), ("the players", "players"))
+             if cell.get(key) and cell[key]["in"] is claim]
+    differ = [who for who, key in (("IBBI-AI", "ai"), ("the players", "players"))
+              if cell.get(key) and cell[key]["in"] is (not claim)]
+    if agree and differ:
+        parts.append(_say(f"agrees with {agree[0]}, not with {differ[0]}", "flat"))
+    elif agree:
+        parts.append(_say("agrees with " + " and ".join(agree), "good"))
+    elif differ:
+        parts.append(_say("doesn't agree with " + " or ".join(differ), "bad"))
+    else:
+        parts.append(_say("not known yet", "flat"))
+    if cell.get("points"):
+        parts.append(f" · {_signed(cell['points'])} points so far")
+    elif cell.get("pays") is True:
+        parts.append(" · points once it is checked")
+    elif cell.get("pays") is False:
+        parts.append(" · may cost points once it is checked")
+    return parts
+
+
+def _part(name, rank):
+    return {"name": name, "rank": rank}
+
+
+def _say(text, tone):
+    return {"say": text, "tone": tone}
+
+
+# ---------------------------------------------------------------------------
+# Every beetle's names on its photo (#541)
+# ---------------------------------------------------------------------------
+def _beetles(answer, shown, opinions):
+    """
+    For each photo in the order shown (None for one gone since or flagged): {"validated", "tier", "ranks"}, ranks
+    being [{"rank", "name", "source", "sure", "votes"}] for all four ranks. A validated beetle gives its true names
+    (source "truth"); one nobody has validated the most likely name at each rank, from the other players ("players",
+    with how many named it) or IBBI-AI ("ai"), whichever is surer (the players on a tie); "" where nobody says.
+    """
+    flagged = set(answer.flagged or []) if answer.mode in ("odd", "select") else set()
+    out = []
+    for i, roi in enumerate(shown):
+        if roi is None or i in flagged:
+            out.append(None)
+        elif game_scoring.is_truth(roi):
+            label = game_feedback._label(roi.taxon)
+            out.append({"validated": True, "tier": roi.get_label_source_display() or "Verified",
+                        "ranks": [{"rank": r, "name": label[r], "source": "truth"} for r in RANKS]})
+        else:
+            said = (opinions.said(roi.id) or {}).get("ranks") or {}
+            tips = opinions.tips(roi.id)
+            out.append({"validated": False, "tier": None,
+                        "ranks": [_likeliest(r, said.get(r), tips.get(r)) for r in RANKS]})
+    return out
+
+
+def _likeliest(rank, vote, tip):
+    """The surer of the other players' name (a consensus rank) and IBBI-AI's best guess at one rank."""
+    players = ((vote["support"], 1, {"name": vote["value"], "source": "players", "votes": vote["votes"]})
+               if vote else None)
+    ai = (tip["confidence"], 0, {"name": tip["value"], "source": "ai"}) if tip else None
+    best = max((c for c in (players, ai) if c), key=lambda c: c[:2], default=None)
+    if best is None:
+        return {"rank": rank, "name": "", "source": "", "sure": None}
+    return dict(best[2], rank=rank, sure=round(best[0] * 100))
+
+
+# ---------------------------------------------------------------------------
 # What others say about a beetle nobody has validated
 # ---------------------------------------------------------------------------
+class Opinions:
+    """
+    What the other players (_said) and IBBI-AI (_ai) say about the beetles on screen nobody has validated, loaded for
+    them all at once; a beetle asked about later is loaded then.
+    """
+
+    def __init__(self, player_id, roi_ids):
+        self.player_id, self._said, self._tips, self._loaded = player_id, {}, {}, set()
+        self.load(roi_ids)
+
+    def load(self, roi_ids):
+        ids = [i for i in dict.fromkeys(roi_ids) if i not in self._loaded]
+        if ids:
+            self._said.update(_said(ids, self.player_id))
+            self._tips.update(_ai(ids))
+            self._loaded.update(ids)
+
+    def said(self, roi_id):
+        self.load([roi_id])
+        return self._said.get(roi_id)
+
+    def tips(self, roi_id):
+        self.load([roi_id])
+        return self._tips.get(roi_id, {})
+
+
 def _said(roi_ids, player_id):
     """
     {roi_id: consensus entry}: what the other players say these beetles are (game.consensus: names, Similarity answers
@@ -272,7 +462,7 @@ def _agrees_with_ai(mine, tips):
     return bool(sure) and all(game._norm(tips[r]["value"]) == mine[r] for r in sure)
 
 
-def _grid_views(tiles, player_id, rank, target):
+def _grid_views(tiles, opinions, rank, target):
     """
     {place: {"players", "ai", "in"}} for a grid's beetles nobody has validated: what the other players and IBBI-AI
     call each at the grid's rank, and whether that puts it in the group ("in" True or False; None when nobody sure
@@ -281,13 +471,12 @@ def _grid_views(tiles, player_id, rank, target):
     open_tiles = {i: t for i, t in enumerate(tiles) if t is not None and not game_scoring.is_truth(t)}
     if not open_tiles:
         return {}
-    ids = [t.id for t in open_tiles.values()]
-    said, tips = _said(ids, player_id), _ai(ids)
+    opinions.load([t.id for t in open_tiles.values()])
     group, least = game._norm(target), game_setting("GAME_FEEDBACK_AI_MIN", 0.5)
     out = {}
     for i, tile in open_tiles.items():
-        vote = ((said.get(tile.id) or {}).get("ranks") or {}).get(rank)
-        tip = tips.get(tile.id, {}).get(rank)
+        vote = ((opinions.said(tile.id) or {}).get("ranks") or {}).get(rank)
+        tip = opinions.tips(tile.id).get(rank)
         players, ai = _players(vote, group, key="in"), _bot(tip, group, key="in")
         calls = {view["in"] for view, sure in ((players, vote and vote["support"] >= 0.5),
                                                (ai, tip and tip["confidence"] >= least)) if view and sure}
@@ -360,16 +549,19 @@ def _points(row, basis, losses):
             "participation": _dp((row.detail or {}).get("participation", 0.0)) if row else 0.0}
 
 
-def _images(answer, item):
-    """The photos as they were shown (a pair's A and B, a grid in order; None for one gone since), for Back."""
+def _shown(answer, item):
+    """The beetles in the order shown: a pair's A and B, a grid in order (None for one gone since)."""
     if answer.mode in ("odd", "select"):
-        rois = game_scoring.grid_tiles(answer)
-    elif answer.roi_b_id:
-        rois = [answer.roi_b, answer.roi] if item.get("flip") else [answer.roi, answer.roi_b]
-    else:
-        rois = [answer.roi]
+        return game_scoring.grid_tiles(answer)
+    if answer.roi_b_id:
+        return [answer.roi_b, answer.roi] if item.get("flip") else [answer.roi, answer.roi_b]
+    return [answer.roi]
+
+
+def _images(answer, item):
+    """The photos as they were shown, for Back."""
     return [None if r is None else {"url": r.display_url, "box": [r.bbox_x, r.bbox_y, r.bbox_width, r.bbox_height]}
-            for r in rois]
+            for r in _shown(answer, item)]
 
 
 def _truth(roi):
