@@ -3,6 +3,8 @@ Where the staging-feedback batch's PRs meet (the train): the review card (#488) 
 flagged photos (#489), mistakes coming back (#490) in those grids, a batch built ahead (#494) that keeps the notice of a
 fallback mix (#493), and what a retry's ranks were worth following the tuning.
 """
+from unittest import mock
+
 from django.core.cache import cache
 from django.test import override_settings
 
@@ -105,6 +107,23 @@ class AheadNoticeTests(FallbackCase):
                                            confidence=0.75, model_name="m", model_version="1")
         self.no_grids()
         self.grant("odd_one_out", "select_all", "choose_game", play_mode="odd")
+        self.enterContext(mock.patch.object(game, "start_round", self.start_round_apart))
+
+    real_start_round = staticmethod(game.start_round)
+
+    def start_round_apart(self, player, mode, size=None, fresh_only=False):
+        """
+        The batch built ahead is drawn at random and may share a beetle with the one on screen, and then nothing is
+        built ahead (_build_ahead leaves out beetles still to come). Drawn again until it shares none, so these tests
+        always have a batch ahead.
+        """
+        on_screen = set().union(*(game._item_ids(item) for r in GameRound.objects.all() for item in r.items))
+        for _ in range(50):
+            rnd = self.real_start_round(player, mode, size, fresh_only)
+            if rnd is None or not on_screen or on_screen.isdisjoint(set().union(*map(game._item_ids, rnd.items))):
+                return rnd
+            rnd.delete()
+        self.fail("no batch apart from the one on screen")
 
     def test_a_batch_built_ahead_keeps_its_notice_until_the_feed_reaches_it(self):
         data = self.started()
