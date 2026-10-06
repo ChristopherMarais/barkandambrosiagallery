@@ -102,17 +102,17 @@ class SiteTests(ScoringCase):
         self.assertIn(self.user.username, page)
         self.assertIn("420 pts", page)
         self.assertNotIn('data-testid="game-invite"', page)    # no coloured pop-up on the home page
-        self.assertIn('data-testid="beta"', page)              # the game's panel carries the beta pill
+        self.assertNotIn('data-testid="beta"', page)           # out of beta (#538): no pill
 
     def test_signed_out_visitors_are_invited_to_sign_in_and_play(self):
         page = self.client.get("/").content.decode()
         self.assertNotIn('data-testid="sidebar-player"', page)
         self.assertIn("/game/", page)
 
-    def test_the_game_says_it_is_in_beta(self):
+    def test_the_game_is_out_of_beta(self):
         self.client.force_login(self.user)
         for url in (reverse("game_home"), reverse("game_how"), reverse("game_play", args=["mixed"])):
-            self.assertIn('data-testid="beta"', self.client.get(url).content.decode(), url)
+            self.assertNotIn('data-testid="beta"', self.client.get(url).content.decode(), url)
 
 
 class HistoryTests(ScoringCase):

@@ -137,7 +137,7 @@ class SingleSpeciesTests(FallbackCase):
         self.grant("odd_one_out", "choose_game", play_mode="odd")
         data = self.started()
         if data["item"]["mode"] != "odd":
-            self.assertEqual(data["notice"], "Not enough beetles for Imposter Picker right now: here's Similarity instead.")
+            self.assertEqual(data["notice"], "Not enough beetles for Odd One Out right now: here's Similarity instead.")
 
 
 class PredictionsButNoGridTests(FallbackCase):
@@ -156,7 +156,7 @@ class PredictionsButNoGridTests(FallbackCase):
     def test_the_chosen_grid_game_falls_back_to_a_mix_with_a_notice(self):
         data = self.started()
         self.assertEqual(data["item"]["mode"], "pair")
-        self.assertEqual(data["notice"], "Not enough beetles for Imposter Picker right now: here's a mix of your other games.")
+        self.assertEqual(data["notice"], "Not enough beetles for Odd One Out right now: here's a mix of your other games.")
         self.assertEqual(data["prefs"]["play_mode"], "odd")   # the choice is kept: the next batch tries it again
         self.assertEqual(GamePreference.objects.get(player=self.user).play_mode, "odd")
 
@@ -172,7 +172,7 @@ class PredictionsButNoGridTests(FallbackCase):
         self.assertNotIn("done", res)
         self.assertNotEqual(res["round"], data["round"])
         self.assertEqual(res["item"]["mode"], "pair")
-        self.assertIn("Imposter Picker", res["notice"])
+        self.assertIn("Odd One Out", res["notice"])
 
     def test_a_player_back_on_the_mix_needs_no_notice(self):
         GamePreference.objects.filter(player=self.user).update(play_mode="both")

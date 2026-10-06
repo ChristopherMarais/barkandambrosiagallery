@@ -22,7 +22,7 @@ class GuidanceTests(ScoringCase):
         for mode in ("classify", "pair", "odd", "select"):
             self.assertIn(f'data-help-mode="{mode}"', page)
         for text in ("a wrong guess costs more than stopping early", "Flagging a bad photo costs nothing",
-                     "isn't bad: name it as far as you can", "No timer", "strong players agree with you"):
+                     "A photo must show a good part of the beetle.", "No timer", "strong players agree with you"):
             self.assertIn(text, page)
         self.assertIn(f'href="{reverse("game_how")}"', page)
 
@@ -44,8 +44,8 @@ class GuidanceTests(ScoringCase):
         start = page.index('id="report-tip"')
         tip = page[start:page.index('id="report-tip-show"', start)]
         self.assertNotIn("wrong name", tip.lower())   # not offered before answering (it would hint at the answer)
-        self.assertIn("Too little of the beetle (a leg, a fragment) is a bad photo", tip)   # #498
-        self.assertIn("from an unusual side isn't bad", tip)
+        self.assertIn("A photo must show a good part of the beetle.", tip)   # #498, just that since #538
+        self.assertNotIn("leg", tip)
 
     def test_the_walkthrough_shows_the_rules_button_and_when_to_report(self):
         with open(finders.find("js/game_tour.js"), encoding="utf-8") as f:
@@ -53,7 +53,7 @@ class GuidanceTests(ScoringCase):
         self.assertIn('el: "open-help"', js)
         report_step = next(line for line in js.splitlines() if 'el: "report-chip-0"' in line)
         self.assertNotIn("wrong name", report_step)
-        self.assertIn("isn't bad", report_step)
+        self.assertIn("A photo must show a good part of the beetle.", report_step)
 
     def test_why_links_lead_to_scoring_and_to_what_experts_do(self):
         how = reverse("game_how")
@@ -68,7 +68,7 @@ class GuidanceTests(ScoringCase):
         page = self.page("game_how")
         faq = page[page.index('id="faq"'):]
         for text in ("Do I lose points if I flag a photo?", "Is there a time limit?", "What does skipping cost?",
-                     "shows too little to name it", "Do other players affect my score?", "What is an expert?"):
+                     "doesn&rsquo;t show a good part of the beetle", "Do other players affect my score?", "What is an expert?"):
             self.assertIn(text, faq)
         self.assertIn("A tiny 0.5 points", faq)   # the current settings, not fixed numbers
         self.assertIn("skipping earns 0.3", faq)

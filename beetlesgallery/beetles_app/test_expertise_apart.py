@@ -1,6 +1,6 @@
 """
 The expertise tree shows "tells apart" next to naming (#381): Similarity, Odd One Out and Select all answers on
-validated beetles, counted in the taxon whose children they tell apart. Only naming makes an Identification expert.
+validated beetles, counted in the taxon whose children they tell apart. Only naming makes a Naming expert.
 """
 from django.urls import reverse
 from django.utils.html import strip_tags

@@ -16,7 +16,7 @@
     </a>
     <div class="flex-1">
       <h1 class="page-title">Your answers</h1>
-      <p class="text-sm text-gray-500">{% if round.mode == 'classify' %}Identification{% elif round.mode == 'pair' %}Similarity{% elif round.mode == 'odd' %}Imposter Picker{% elif round.mode == 'select' %}Find Them All{% else %}{{ game_name }}{% endif %} · {{ round.finished_at|date:"M j, Y H:i" }}</p>
+      <p class="text-sm text-gray-500">{% if round.mode == 'classify' %}Naming{% elif round.mode == 'pair' %}Similarity{% elif round.mode == 'odd' %}Odd One Out{% elif round.mode == 'select' %}Find Them All{% else %}{{ game_name }}{% endif %} · {{ round.finished_at|date:"M j, Y H:i" }}</p>
     </div>
   </div>
 
@@ -268,7 +268,7 @@
       </div>`).join("");
     return `
       <div class="mt-3 space-y-1">
-        <p class="text-sm">Tap every <span class="font-semibold">${em(t.target || "")}</span>${item.skipped ? ": skipped" : ""}</p>
+        <p class="text-sm">Select every <span class="font-semibold">${em(t.target || "")}</span>${item.skipped ? ": skipped" : ""}</p>
         ${found ? `<p class="text-sm">${found}</p>` : ""}
         <p class="text-xs text-gray-500">Green: tapped and in it. Red: tapped, not in it. Dashed: in it, left out.</p>
       </div>

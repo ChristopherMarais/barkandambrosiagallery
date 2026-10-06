@@ -38,13 +38,13 @@ logger = logging.getLogger(__name__)
 
 MODES = {m.value: m.label for m in GameRound.Mode}
 # What players see. (The model keeps its own plain labels; changing those would need a migration.)
-GAME_NAMES = {"classify": "Identification", "pair": "Similarity", "odd": "Imposter Picker", "select": "Find Them All",
+GAME_NAMES = {"classify": "Naming", "pair": "Similarity", "odd": "Odd One Out", "select": "Find Them All",
               "mixed": settings.GAME_DISPLAY_NAME}
 GAME_TAGLINES = {
     "classify": "One beetle, four guesses: subfamily, tribe, genus, species. Go as deep as you dare.",
     "pair": "Two beetles. How close is the family? From total strangers to the very same species.",
     "odd": "Four beetles, one doesn't belong. Spot it.",
-    "select": "Nine beetles. Tap every one of a group.",
+    "select": "Nine beetles. Select every one of a group.",
     "mixed": "Name beetles and spot family ties.",
 }
 PAIR_CHOICES = [(c.value, c.label) for c in GameAnswer.PairAnswer]
@@ -184,8 +184,8 @@ def game_history(request):
         RetroCredit.objects.filter(player=request.user, seen_at__isnull=True).update(seen_at=timezone.now())
     sessions = Paginator(rounds, HISTORY_PER_PAGE).get_page(request.GET.get("page") if tab == "sessions" else 1)
     for r in sessions:   # which games a session was: one by name, or how many
-        played = [name for name, n in (("Identification", r.identified), ("Similarity", r.compared),
-                                       ("Imposter Picker", r.spotted), ("Find Them All", r.selected)) if n]
+        played = [name for name, n in (("Naming", r.identified), ("Similarity", r.compared),
+                                       ("Odd One Out", r.spotted), ("Find Them All", r.selected)) if n]
         r.games_label = played[0] if len(played) == 1 else f"{len(played)} games"
     checked_page = Paginator(checked, HISTORY_PER_PAGE).get_page(request.GET.get("page") if tab == "checked" else 1)
     return render(request, "beetles/game_history.html", {
@@ -819,7 +819,7 @@ def _prefs(player):
 @require_POST
 def game_prefs(request):
     """
-    Change the game (All modes / Similarity / Imposter Picker / Find Them All / Identification) or the focus from the feed. Each only if
+    Change the game (All modes / Similarity / Odd One Out / Find Them All / Naming) or the focus from the feed. Each only if
     unlocked. Body: {"play_mode": ...} and/or {"focus_rank": ..., "focus_value": ...} (focus_rank "" clears the focus).
     """
     from .models import GamePreference

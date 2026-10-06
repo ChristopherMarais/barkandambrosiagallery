@@ -272,10 +272,7 @@
               class="flex items-center w-full min-h-[3.5rem] rounded-lg pl-5 pr-2 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'game_home' or request.resolver_match.url_name == 'game_play' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
               <i class="fi fi-rr-gamepad text-xl text-gray-700 w-8 text-center"></i>
               <span class="ml-1 flex-1 min-w-0 leading-tight">
-                <span class="flex items-center gap-2">
-                  <span class="font-medium text-gray-700">{{ game_name }}</span>
-                  <span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">Beta</span>
-                </span>
+                <span class="block font-medium text-gray-700">{{ game_name }}</span>
                 {% if game_player %}<span class="flex items-center gap-1.5 mt-0.5">{% include "beetles/includes/game_level_badge.html" with level=game_player.level name=game_player.name %}<span class="flex min-w-0 text-xs text-gray-500" data-testid="sidebar-player"><span class="truncate">{{ game_player.name }}</span><span class="shrink-0">&nbsp;&middot; {{ game_player.score|digit_groups }} pts</span></span></span>{% endif %}
               </span>
             </a>
