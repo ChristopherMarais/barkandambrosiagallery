@@ -40,8 +40,9 @@ def mode_stats(player_ids=None, since=None):
 
     min_judged = game.game_setting("GAME_MIN_JUDGED_FOR_ACCURACY", 10)
     out = defaultdict(lambda: {m: {"correct": 0, "judged": 0, "points": 0.0, "accuracy": None} for m in GAMES})
-    answers = GameAnswer.objects.filter(Q(is_check=True) | Q(validated_later=True), is_retry=False, skipped=False,
-                                        score_hold=False)
+    # a beetle seen before (#541) earns its points but stays out of accuracy, as in the overall rating
+    answers = GameAnswer.objects.filter(Q(is_check=True) | Q(validated_later=True), is_retry=False, seen_before=False,
+                                        skipped=False, score_hold=False)
     points = AnswerPoints.objects.all()
     if since is not None:
         answers = answers.filter(answered_at__gte=since)
