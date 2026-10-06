@@ -1549,7 +1549,12 @@ def tool_classify(request):
         return JsonResponse({"status": "error", "message": "That photo is not in the gallery."}, status=404)
 
     # GET request: Render the page
-    gallery_photo = {"id": str(asset.id), "url": asset.display_url} if asset is not None else None
+    gallery_photo = None
+    if asset is not None:
+        # its thumbnail and size too, so the page shows the small one at once, at its full size, until the photo is in (#607)
+        gallery_photo = {"id": str(asset.id), "url": asset.display_url,
+                         "thumb": asset.thumb_small.url if asset.thumb_small else "",
+                         "width": asset.image_width, "height": asset.image_height}
     return render(request, 'beetles/tool_classify.html', {
         'examples': _classifier_examples(), 'ibbi_docs_url': ibbi_models.IBBI_DOCS_URL, 'gallery_photo': gallery_photo,
         'keep_threshold': classify_assist.KEEP_THRESHOLD, 'lowest_threshold': classify_assist.LOWEST_THRESHOLD,

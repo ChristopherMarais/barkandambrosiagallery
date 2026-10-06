@@ -121,10 +121,8 @@ class ChooseGameTests(MixedFeedCase):
     def test_a_chosen_game_is_never_topped_up_with_the_other(self):
         self.level(60)
         self.post("game_prefs", {"play_mode": "pair"})
-        with mock.patch.object(game, "build_pair_items", return_value=[]):   # no pairs at all: their other game, and a note
-            rnd = game.start_round(self.user, "mixed", size=6)
-            self.assertEqual(set(self.modes(rnd)), {"odd"})
-            self.assertEqual(rnd.notice, "Not enough beetles for Similarity right now: here's Odd One Out instead.")
+        with mock.patch.object(game, "build_pair_items", return_value=[]):   # no pairs at all: nothing, never Odd One Out (#604)
+            self.assertIsNone(game.start_round(self.user, "mixed", size=6))
         for _ in range(5):
             self.assertEqual(set(self.modes(game.start_round(self.user, "mixed", size=10))), {"pair"})
 

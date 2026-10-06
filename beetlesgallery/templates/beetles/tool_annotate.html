@@ -1150,18 +1150,34 @@ async function selectImage(img) {
     syncMultipleIndividualsCheckbox();
     updateMainStatusIndicator();
 
-    const imageObj = new Image();
-    imageObj.crossOrigin = 'anonymous';
-    imageObj.onload = () => {
-      state.currentImageObj = imageObj;
-      canvas.width = imageObj.width;
-      canvas.height = imageObj.height;
+    // The small thumbnail first, stretched to the photo's full size, then the full photo drawn over it when it has
+    // loaded (#607): with a slow connection the photo sharpens instead of staying blank. The canvas keeps the photo's
+    // size throughout (boxes are fractions of it), so nothing moves when the full one arrives.
+    const wanted = img.image_asset_id;
+    let fitted = false, full = false;
+    const reveal = (source, w, h) => {
+      if (state.selectedImageId !== wanted) return;   // another image was chosen meanwhile
+      const resized = canvas.width !== w || canvas.height !== h;
+      state.currentImageObj = source;
+      if (resized) { canvas.width = w; canvas.height = h; }
       document.getElementById('canvas-loading').classList.add('hidden');
       document.getElementById('canvas-wrapper').classList.remove('hidden');
       document.getElementById('normal-mode-actions').classList.remove('hidden');
-      fitToScreen();
+      if (resized || !fitted) fitToScreen();
+      fitted = true;
       drawCanvas();
     };
+    const imageObj = new Image();
+    imageObj.crossOrigin = 'anonymous';
+    imageObj.onload = () => { full = true; reveal(imageObj, imageObj.width, imageObj.height); };
+    const thumbUrl = img.thumbnail_url || state.currentImageDetails.thumb_small;
+    const fullW = state.currentImageDetails.image_width, fullH = state.currentImageDetails.image_height;
+    if (thumbUrl && fullW && fullH) {
+      const thumb = new Image();
+      thumb.crossOrigin = 'anonymous';
+      thumb.onload = () => { if (!full) reveal(thumb, fullW, fullH); };
+      thumb.src = thumbUrl;
+    }
     // full_image_url comes from the normal image list; when deep-linked straight to an
     // image_asset_id (see the ?image= handling below) we only have that id, so fall back
     // to the file URL the asset endpoint just gave us.

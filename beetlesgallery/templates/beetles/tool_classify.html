@@ -665,6 +665,10 @@ document.addEventListener('DOMContentLoaded', () => {
             showMessage(MESSAGES.unreadable);
         };
         ui.previewImage.src = await readAsUrl(file);
+        if (ui.previewImage.dataset.thumb) {   // the thumbnail shown while it loaded: once the photo is in, it sizes itself
+            delete ui.previewImage.dataset.thumb;
+            ui.previewImage.addEventListener('load', () => { ui.previewImage.style.aspectRatio = ui.previewImage.style.width = ''; }, { once: true });
+        }
 
         // Reset state
         state.detections = [];
@@ -698,6 +702,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const el = document.getElementById('gallery-photo');
         if (!el) return;
         const photo = JSON.parse(el.textContent);
+
+        // The small thumbnail first, at the photo's size, while the full photo loads (#607); handleFile swaps it out
+        if (photo.thumb && photo.width && photo.height) {
+            const img = ui.previewImage;
+            img.style.aspectRatio = photo.width + ' / ' + photo.height;
+            img.style.width = 'min(' + photo.width + 'px, calc(75vh * ' + photo.width + ' / ' + photo.height + '))';
+            img.dataset.thumb = '1';
+            img.src = photo.thumb;
+            ui.placeholder.classList.add('hidden');
+            ui.imageWrapper.classList.remove('hidden');
+            img.classList.remove('opacity-0');
+        }
 
         fetch(photo.url)
             .then(res => {

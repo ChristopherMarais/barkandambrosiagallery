@@ -123,7 +123,7 @@ class GalleryPhotoTests(ClassifyCase):
         page = self.client.get(reverse("tool_classify"), {"asset": str(self.asset.id)}).content.decode()
         start = page.index('<script id="gallery-photo" type="application/json">') + len('<script id="gallery-photo" type="application/json">')
         photo = json.loads(page[start:page.index("</script>", start)])
-        self.assertEqual(photo, {"id": str(self.asset.id), "url": self.asset.display_url})
+        self.assertEqual({k: photo[k] for k in ("id", "url")}, {"id": str(self.asset.id), "url": self.asset.display_url})
         for other in ("not-an-id", str(uuid.uuid4())):
             self.assertNotIn('id="gallery-photo"', self.client.get(reverse("tool_classify"), {"asset": other}).content.decode())
 

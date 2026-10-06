@@ -38,13 +38,11 @@ class ScaleTests(SimpleTestCase):
         steps = [game_scale.value_step(v) for v in (None, 0.0, 0.29, 0.3, 0.5, 0.7, 0.84, 0.85, 1.0)]
         self.assertEqual(steps, ["none", "fair", "fair", "decent", "good", "great", "great", "excellent", "excellent"])
 
-    def test_levels_go_grey_then_two_of_each_colour_then_the_top_glows(self):
-        self.assertEqual([game_scale.level_classes(n) for n in range(1, 11)], [
-            "scale-chip-none", "scale-soft-fair", "scale-chip-fair", "scale-soft-decent", "scale-chip-decent",
-            "scale-soft-good", "scale-chip-good", "scale-soft-great", "scale-chip-great",
-            "scale-chip-excellent scale-glow"])
-        self.assertEqual(game_scale.level_classes(14), "scale-chip-excellent scale-glow")
-        self.assertEqual(game_scale.level_classes(None), "scale-chip-none")
+    def test_levels_each_have_their_own_colour_and_the_top_glows(self):
+        self.assertEqual([game_scale.level_classes(n) for n in range(1, 11)],
+                         [f"level-{n}" for n in range(1, 10)] + ["level-10 scale-glow"])   # #606
+        self.assertEqual(game_scale.level_classes(14), "level-10 scale-glow")
+        self.assertEqual(game_scale.level_classes(None), "level-1")
 
     def test_the_day_streak(self):
         self.assertEqual([game_scale.streak_step(d) for d in (0, 2, 3, 7, 14, 30, 100, 365)],
@@ -88,7 +86,7 @@ class NoRarityLeftTests(SimpleTestCase):
 class RenderedTests(SimpleTestCase):
     def test_level_badges(self):
         html = render_to_string("beetles/includes/game_level_badge.html", {"level": 4, "name": "Teneral"})
-        self.assertIn("scale-soft-decent", html)
+        self.assertIn("level-4", html)
         self.assertEqual(render_to_string("beetles/includes/game_level_badge.html", {"level": 10}).count("scale-glow"), 1)
         locked = render_to_string("beetles/includes/game_level_badge.html", {"level": 10, "locked": True})
         self.assertNotIn("scale-", locked)
@@ -101,7 +99,7 @@ class RenderedTests(SimpleTestCase):
         cards = {tier: render_to_string("beetles/includes/game_badge.html",
                                         {"b": {"key": "k", "name": "x", "how": "", "icon": "fi-rr-crown", "earned": True, "tier": tier}})
                  for tier in game_rewards.BADGE_TIERS}
-        self.assertEqual(list(cards), ["fair", "decent", "good", "great", "excellent"])
+        self.assertEqual(list(cards), ["fair", "decent", "good", "great", "excellent", "blue", "purple"])   # #608
         for tier, html in cards.items():
             self.assertIn(f"scale-card-{tier}", html)
             self.assertIn(f"scale-{tier}", html)
@@ -143,9 +141,9 @@ class LevelPopTests(SimpleTestCase):
         before = {"level": 4, "perks": [], "rank": None, "goal_met": True, "total": 5}
         now = dict(before, level=5, level_name="Tunnel master", streak=1, goal=20)
         with mock.patch.object(game_rewards, "progress", return_value=now):
-            event = game_rewards.play_events(SimpleNamespace(id=1), before)[0]
+            event = game_rewards.play_events(SimpleNamespace(id=1), before, badges=False)[0]
         self.assertEqual((event["kind"], event["level"], event["step"]), ("level", 5, "decent"))
-        self.assertEqual((event["badge"], event["colour"]), ("scale-chip-decent", "#f97316"))
+        self.assertEqual((event["badge"], event["colour"]), ("level-5", "#f59e0b"))   # amber (#606)
         self.assertTrue(event["icon"].startswith("fi-rr-"))
 
     def test_the_pop_up_sits_in_the_middle_and_throws_the_levels_colour(self):

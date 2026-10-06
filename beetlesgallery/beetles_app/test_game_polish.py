@@ -62,9 +62,8 @@ class LevelTests(ScoringCase):
     def test_scale_colours(self):
         from django.template.loader import render_to_string
         colours = {lvl: render_to_string("beetles/includes/game_level_badge.html", {"level": lvl}) for lvl in (1, 3, 5, 7, 9, 10)}
-        for lvl, colour in ((1, "scale-chip-none"), (3, "scale-chip-fair"), (5, "scale-chip-decent"), (7, "scale-chip-good"),
-                            (9, "scale-chip-great"), (10, "scale-chip-excellent")):
-            self.assertIn(colour, colours[lvl])
+        for lvl in (1, 3, 5, 7, 9, 10):   # each level its own colour (#606)
+            self.assertIn(f"level-{lvl}", colours[lvl])
 
 
 class ReviewPageTests(ScoringCase):
