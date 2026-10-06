@@ -21,7 +21,7 @@ class GuidanceTests(ScoringCase):
         self.assertIn('id="open-help" class="icon-btn"', page)   # no longer hidden outside Similarity
         for mode in ("classify", "pair", "odd", "select"):
             self.assertIn(f'data-help-mode="{mode}"', page)
-        for text in ("a wrong guess costs more than stopping early", "Reporting a bad photo costs nothing",
+        for text in ("a wrong guess costs more than stopping early", "Flagging a bad photo costs nothing",
                      "isn't bad: name it as far as you can", "No timer", "strong players agree with you"):
             self.assertIn(text, page)
         self.assertIn(f'href="{reverse("game_how")}"', page)
@@ -67,7 +67,7 @@ class GuidanceTests(ScoringCase):
     def test_how_it_works_answers_the_play_test_questions(self):
         page = self.page("game_how")
         faq = page[page.index('id="faq"'):]
-        for text in ("Do I lose points if I report a photo?", "Is there a time limit?", "What does skipping cost?",
+        for text in ("Do I lose points if I flag a photo?", "Is there a time limit?", "What does skipping cost?",
                      "shows too little to name it", "Do other players affect my score?", "What is an expert?"):
             self.assertIn(text, faq)
         self.assertIn("A tiny 0.5 points", faq)   # the current settings, not fixed numbers

@@ -33,11 +33,12 @@ Beetles we know the answer to (validated) are scored against the truth. These ea
                      perfect grid earns about twice a Similarity answer; every validated non-member tapped costs
                      GAME_POINTS_SELECT_WRONG (1.5) shares, and a member left out costs nothing. Taps on beetles nobody
                      has validated are recorded, never scored. Skip earns GAME_POINTS_ODD_SKIP, as in Odd One Out.
-                     Select all is left out of the reliability rating for now: a grid is many judgements at once (#381).
+                     In the reliability rating a grid counts once, at its rank: correct only when perfect (#381).
   Grid size          both grid games grow from 4 to 9 to 16 beetles as the player gets better (game_grid_ladder), and
                      every point of a grid, gained or lost, is times GAME_GRID_SIZE_FACTOR for its size (1, 1.5, 2).
                      A photo the player flagged as bad before answering counts for nothing (#489).
-  Seen again        a beetle shown again so you can learn it (a retry) earns half.
+  Seen again        a beetle shown again so you can learn it (a retry) earns GAME_POINTS_RETRY_FACTOR (half), in every
+                     game (#490).
 
 Beetles nobody has validated yet are scored by agreement, never more than GAME_POINTS_CONSENSUS_CAP (60%)
 of what the same answer would earn on a validated beetle, and never less than zero:

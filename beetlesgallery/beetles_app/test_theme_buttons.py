@@ -26,10 +26,6 @@ LOOKS = {
 TAG = re.compile(r"""<(?:button|a|input)\b(?:[^>"']|"[^"]*"|'[^']*')*>""")
 CLASS = re.compile(r"""\bclass=(?:"([^"]*)"|'([^']*)')""")
 DARK = re.compile(r"(?<![\w:/-])bg-(?:gray-[4-9]00|black)(?![\w/-])")
-# Restyled by other pull requests of the same batch, so left to them: the pages #500, #501 and #505 rebuild,
-# and the annotation page's game-proposal Accept, which #503 makes light. Once those are in, these can go.
-RESTYLED_ELSEWHERE = {"base.html", "accounts/my_account.html", "beetles/detail.html"}
-RESTYLED_ELSEWHERE_TAG = 'id="btn-game-accept-'
 
 
 def template(name):
@@ -104,13 +100,11 @@ class ThemeButtonTests(SimpleTestCase):
         found = []
         for path in sorted(TEMPLATES.rglob("*.html")):
             name = path.relative_to(TEMPLATES).as_posix()
-            if name in RESTYLED_ELSEWHERE:
-                continue
             for tag in TAG.findall(path.read_text(encoding="utf-8")):
                 match = CLASS.search(tag)
                 classes = (match.group(1) or match.group(2) or "") if match else ""
                 # a selected tab or period switches its classes with {% if %}: a state, not an action
-                if "{%" in classes or RESTYLED_ELSEWHERE_TAG in tag:
+                if "{%" in classes:
                     continue
                 if DARK.search(classes):
                     found.append(f"{name}: {' '.join(tag.split())[:120]}")

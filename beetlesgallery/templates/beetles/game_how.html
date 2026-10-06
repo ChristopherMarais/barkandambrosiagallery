@@ -16,7 +16,7 @@
       <li>Tap <strong>Play</strong>. Each beetle is one of four games: <strong>Similarity</strong> (how related are two beetles?), <strong>Imposter Picker</strong> (which beetle doesn't belong?), <strong>Find Them All</strong> (tap every beetle of one group) or <strong>Identification</strong> (name it).</li>
       <li><strong>Stop at the rank you're sure of.</strong> A correct tribe scores more than the same tribe with a guessed, wrong genus. Skipping costs almost nothing.</li>
       <li><strong>Take your time.</strong> There is no timer: look things up in keys, papers or a reference collection, and pause whenever you like.</li>
-      <li>A photo must show a good part of the beetle. Report one that shows too little of it (a leg, a fragment), is blurry or dark, isn't a beetle, or whose box misses it. A clear photo from an unusual side (from below, say) isn't bad: answer as far as you can, even just the subfamily helps.</li>
+      <li>A photo must show a good part of the beetle. Flag one that shows too little of it (a leg, a fragment), is blurry or dark, isn't a beetle, or whose box misses it. A clear photo from an unusual side (from below, say) isn't bad: answer as far as you can, even just the subfamily helps.</li>
       <li>Tap <strong>Exit</strong> when you're done.</li>
     </ol>
     <p class="mt-3 text-sm text-gray-600">Your <strong>daily goal</strong> adapts to how much you play, like a step goal on a fitness watch: beat it and tomorrow's goal goes up a little, fall short or take a day off and it eases down. It never drops below {{ goal_floor }} beetles.</p>
@@ -110,13 +110,13 @@
   <h2 class="text-xl font-semibold text-gray-900 mt-10 mb-3" id="faq">Quick answers</h2>
   <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl" data-testid="how-faq">
     <dl class="text-sm text-gray-600 space-y-3">
-      <div><dt class="font-semibold text-gray-900">Do I lose points if I report a photo?</dt>
+      <div><dt class="font-semibold text-gray-900">Do I lose points if I flag a photo?</dt>
         <dd>No. It goes to the curators and you get the next beetle.</dd></div>
       <div><dt class="font-semibold text-gray-900">What does skipping cost?</dt>
         <dd>A tiny {{ unsure }} points in Similarity and Identification, much less than a wrong guess. In Imposter Picker and Find Them All, skipping earns {{ odd_skip }}.</dd></div>
       <div><dt class="font-semibold text-gray-900">Is there a time limit?</dt>
         <dd>No. Take your time, use keys, papers or a reference collection, and stop whenever you like.</dd></div>
-      <div><dt class="font-semibold text-gray-900">When should I report a photo?</dt>
+      <div><dt class="font-semibold text-gray-900">When should I flag a photo?</dt>
         <dd>When it shows too little to name it (just a leg or a fragment of the beetle), is blurry or dark, isn&rsquo;t a beetle, or its box misses the beetle or frames the label. A clear photo of a good part of the beetle from an unusual side (from below, say) isn&rsquo;t bad: name it as far as you can, even just the subfamily. Those answers show which views allow a name at which rank. A name that looks wrong is reported after you play, from the round&rsquo;s answers in <a href="{% url 'game_history' %}" class="underline">History</a>.</dd></div>
       <div><dt class="font-semibold text-gray-900">Do other players affect my score?</dt>
         <dd>Only on beetles nobody has checked yet: there you earn points when strong players agree with you, and you never lose any (<a href="#unchecked" class="underline">more</a>). On checked beetles only the real name counts.</dd></div>

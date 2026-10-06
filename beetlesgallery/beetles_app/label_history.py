@@ -5,7 +5,7 @@ Four records already hold it; this module reads them together, newest first:
     RoiName          every name the ROI was given, with its identification tier and who gave it
     Beetles.history  validations and un-validations (django-simple-history; whole-image ones too, see
                      models.record_roi_history), and curators reverting a game label
-    LabelReview      game proposals accepted or dismissed, and labels the game applied by itself
+    LabelReview      game proposals accepted or rejected, and labels the game applied by itself
     GameReport       player reports closed: the label was wrong and fixed, or it is correct
 
 events_for() reads any number of ROIs in a fixed number of queries, so the annotation page can count every ROI on
@@ -75,12 +75,12 @@ def _reviews(roi_ids, out, reverts):
         by = review.reviewed_by.username if review.reviewed_by else ""
         if review.decision == LabelReview.Decision.ACCEPTED:
             kind, what = ("game_accepted", "Game proposal accepted") if by else (
-                "game_applied", "Game label applied automatically (proven experts agreed)")
+                "game_applied", "Game label applied automatically (Identification experts agreed)")
         elif any(review.reviewed_at - _REVERT_WINDOW <= at <= review.reviewed_at and who in ("", None, by)
                  for at, who in reverts.get(review.roi_id, [])):
             kind, what = "game_reverted", "Game label reverted"
         else:
-            kind, what = "game_dismissed", "Game proposal dismissed"
+            kind, what = "game_dismissed", "Game proposal rejected"
         out[review.roi_id].append(_event(kind, review.reviewed_at, what=what, name=_review_name(review), by=by))
 
 

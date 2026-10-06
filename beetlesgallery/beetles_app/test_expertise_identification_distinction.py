@@ -268,10 +268,10 @@ class PhotoGuidanceTests(ExpertCase):
         for text in (how, play, tour):
             self.assertNotIn("an underside, a leg", text)
             self.assertNotIn("just shows too little isn't bad", text)
-        self.assertIn("A photo must show a good part of the beetle. Report one that shows too little of it (a leg, a "
+        self.assertIn("A photo must show a good part of the beetle. Flag one that shows too little of it (a leg, a "
                       "fragment)", how)
         self.assertIn("When it shows too little to name it (just a leg or a fragment of the beetle)", how)
-        self.assertIn("Report a photo that shows too little of the beetle (a leg, a fragment).", play)   # the rules
+        self.assertIn("Flag a photo that shows too little of the beetle (a leg, a fragment).", play)   # the rules
         self.assertIn("Too little of the beetle (a leg, a fragment) is a bad photo too.", play)           # the tip
         self.assertIn("Bad photo (too little of the beetle, blurry", tour)
 

@@ -379,11 +379,9 @@
       </div>
       <div id="odd" class="hidden text-center" data-testid="odd-panel">
         <p id="odd-prompt" class="text-base font-semibold text-gray-900"></p>
-        <p id="odd-result" class="text-sm text-gray-700 min-h-[1.25rem]" role="status" aria-live="polite"></p>
       </div>
       <div id="select" class="hidden text-center" data-testid="select-panel">
         <p id="select-prompt" class="text-base font-semibold text-gray-900"></p>
-        <p id="select-result" class="text-sm text-gray-700 min-h-[1.25rem]" role="status" aria-live="polite"></p>
       </div>
       <p id="rank-lock" class="rank-lock hidden" data-testid="rank-lock"><i class="fi fi-rr-lock"></i><span id="rank-lock-text"></span></p>
 
@@ -428,8 +426,8 @@
       <p class="hidden" data-help-mode="select">Tap every beetle of the group named below the photos, then <strong>Submit</strong>. A wrong tap costs, a missed one doesn't. The grid grows as you get better.</p>
       <ul class="list-disc pl-5 space-y-2 text-sm" data-testid="help-rules">
         <li>Answer only as far as you're sure: a wrong guess costs more than stopping early.</li>
-        <li>Unsure? <strong>Skip</strong> <span data-help-mode="classify pair">costs very little</span><span class="hidden" data-help-mode="odd select">earns a little</span>. Reporting a bad photo costs nothing.</li>
-        <li>Report a photo that shows too little of the beetle (a leg, a fragment). A clear photo of a good part of it from an unusual side (from below, say) isn't bad: name it as far as you can.</li>
+        <li>Unsure? <strong>Skip</strong> <span data-help-mode="classify pair">costs very little</span><span class="hidden" data-help-mode="odd select">earns a little</span>. Flagging a bad photo costs nothing.</li>
+        <li>Flag a photo that shows too little of the beetle (a leg, a fragment). A clear photo of a good part of it from an unusual side (from below, say) isn't bad: name it as far as you can.</li>
         <li>No timer: keys and references are welcome.</li>
         <li>On beetles nobody has checked yet, you earn points when strong players agree with you. Once a curator checks one, it is scored again.</li>
       </ul>
@@ -875,9 +873,10 @@
 
   // ---------- confetti (only ever for a correct answer, or a level) ----------
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  // Logo beetles: "validated" (brown) for a checked beetle named correctly, "partial" (a few grey) for one named
-  // correctly to some rank, both scaled by the share of ranks correct; "strong": paper confetti for a strong answer
-  // on a beetle nobody has checked yet; "level": the gold level-up burst. See static/js/beetle_confetti.js.
+  // Logo beetles: "validated" (brown) for a fully correct answer on a checked beetle, "partial" (grey) for points from
+  // a partly correct one; "strong": paper confetti for points by agreement on a beetle nobody has checked yet;
+  // "level": the gold level-up burst. The size (0.2 to 1) comes from the answer's points (game_answer_review.
+  // confetti_size). See static/js/beetle_confetti.js.
   function confetti(kind, size) {
     if (reduceMotion || !window.beetleConfetti) return;
     window.beetleConfetti($("confetti"), kind === "strong" ? "plain" : (kind || "validated"), size);
@@ -1941,8 +1940,6 @@
     tapped.clear();
     flagged.clear();
     keyCursor = null;
-    $("odd-result").replaceChildren();
-    $("select-result").replaceChildren();
     rungs.forEach((r) => { r.classList.remove("selected", "filled"); r.setAttribute("aria-checked", "false"); });
     pick = { subfamily: "", tribe: "", genus: "", species: "" };
     if (MODE === "classify") renderPickers();
@@ -1981,7 +1978,7 @@
   //   Up/Down: rank or line      W/S: rank or line
   //   Left/Right: change it      A/D: change it
   //   Enter or Space: Submit, then Next (on the review)    Delete or End (or X): Skip    Backspace (or Z): Back, your last beetle
-  //   Home (or Q, V): whole photo    Page Up (or E, L): Lighting    Page Down (or R): Report    Esc: close, or exit
+  //   Home (or Q, V): whole photo    Page Up (or E, L): Lighting    Page Down (or R): Flag    Esc: close, or exit
   // A letter typed on a focused list still searches it (the lists keep their own keys).
   function isTyping(el) { return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable); }
   let cursorRank = 0;
