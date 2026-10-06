@@ -372,6 +372,8 @@ def peer_rois(player, pool):
 
 
 def build_classify_items(player, size, fresh_only=False):
+    from . import game_relearn
+
     n_checks, n_open = _split_round(player, "classify", size)
     check_pool, open_pool = pools(player)
     target = target_difficulty(player)
@@ -392,44 +394,12 @@ def build_classify_items(player, size, fresh_only=False):
         # about half of them beetles others have named, so names get a second and third opinion
         n_peer = round(n * game_setting("GAME_PEER_SHARE", 0.5))
         ids = _sample(peer_rois(player, open_pool), n_peer, target, allow_seen=False) if n_peer else []
-        ids += _sample(open_pool, n - len(ids), target, seen_open, exclude=ids, allow_seen=not fresh_only)
+        # placed beetles first; hard, unplaced ones wait for the easier games (game_relearn, #490)
+        ids += game_relearn.identification_open(open_pool, n - len(ids), target, seen_open, ids, fresh_only)
         return [{"a": str(i), "b": None, "check": False} for i in ids]
 
     checks, opens = _fill(n_checks, n_open, pick_checks, pick_open)
-    # Beetles they got wrong before come back now and then, so they can learn them (see retry_ids)
-    retries = [{"a": str(i), "b": None, "check": True, "retry": True} for i in retry_ids(player, len(checks))]
-    if retries:
-        checks = retries + checks[len(retries):] if len(checks) > len(retries) else retries
-    return checks + opens
-
-
-def retry_ids(player, room):
-    """
-    Validated beetles this player got wrong, ready to be shown again: last seen at least GAME_RETRY_AFTER_DAYS
-    ago, not yet answered right since, and shown again at most GAME_RETRY_MAX times. At most
-    GAME_RETRY_PER_BATCH of them, never more than ``room``.
-    """
-    want = min(game_setting("GAME_RETRY_PER_BATCH", 1), room)
-    if want <= 0:
-        return []
-    cutoff = timezone.now() - timedelta(days=game_setting("GAME_RETRY_AFTER_DAYS", 2))
-    last, retries = {}, defaultdict(int)
-    rows = (
-        GameAnswer.objects.filter(player=player, mode="classify", is_check=True, skipped=False, score_hold=False)
-        .order_by("answered_at").values("roi_id", "answered_at", "is_retry", *[f"correct_{r}" for r in RANKS])
-    )
-    for row in rows:   # the latest answer on each beetle wins
-        last[row["roi_id"]] = (row["answered_at"], any(row[f"correct_{r}"] is False for r in RANKS))
-        retries[row["roi_id"]] += int(row["is_retry"])
-    candidates = [
-        roi_id for roi_id, (when, wrong) in last.items()
-        if wrong and when <= cutoff and retries[roi_id] < game_setting("GAME_RETRY_MAX", 3)
-    ]
-    if not candidates:
-        return []
-    usable = list(check_rois().filter(id__in=candidates).values_list("id", flat=True))
-    random.shuffle(usable)
-    return usable[:want]
+    return checks + opens   # beetles they got wrong come back in every game's batches (game_relearn)
 
 
 # How hard a Family Ties pair is by how closely related the two beetles are: telling apart two species of one genus
@@ -449,11 +419,11 @@ def _relation_order(target, table=RELATION_DIFFICULTY):
     return order
 
 
-def _partner_for(anchor, target, exclude=()):
+def _partner_for(anchor, target, exclude=(), relation=None):
     """
     A validated ROI to pair with ``anchor``, at a relation (same species / genus / tribe / subfamily / different)
     chosen at random but leaning towards the player's difficulty: close relatives for experts, distant ones for
-    novices (RELATION_DIFFICULTY).
+    novices (RELATION_DIFFICULTY). ``relation`` is tried first when given (a retry, game_relearn).
 
     For an unvalidated anchor its current (unchecked) label is only used to aim the
     pairing; the answer is what we record.
@@ -480,7 +450,7 @@ def _partner_for(anchor, target, exclude=()):
                       bool(taxon.subfamily and taxon.tribe)),
         "different": (~Q(taxon__subfamily=taxon.subfamily), bool(taxon.subfamily)),
     }
-    for rel in _relation_order(target):
+    for rel in ([relation] if relation in relations else []) + _relation_order(target):
         condition, usable = relations[rel]
         if usable:
             partner = one(pool.filter(condition))
@@ -502,6 +472,8 @@ def stuck_rois(player, pool):
 
 
 def build_pair_items(player, size, fresh_only=False):
+    from . import game_relearn
+
     n_checks, n_open = _split_round(player, "pair", size)
     check_pool, open_pool = pools(player)
     target = target_difficulty(player)
@@ -514,9 +486,11 @@ def build_pair_items(player, size, fresh_only=False):
         if is_check:
             anchor_ids = _sample(anchor_qs, n, target, exclude=exclude + revealed, allow_seen=False)
         else:
-            # about half of them beetles nobody could name, so Family Ties narrows down what they are not
+            # about half of them hard beetles (nobody could name them, players disagree, IBBI-AI is unsure): Family
+            # Ties narrows down what they are before anyone has to name them (game_relearn.hard_rois)
             n_stuck = round(n * game_setting("GAME_STUCK_SHARE", 0.5))
-            anchor_ids = _sample(stuck_rois(player, anchor_qs), n_stuck, target, allow_seen=False) if n_stuck else []
+            anchor_ids = (_sample(game_relearn.hard_rois(player, anchor_qs), n_stuck, target, allow_seen=False)
+                          if n_stuck else [])
             anchor_ids += _sample(anchor_qs, n - len(anchor_ids), target, seen, list(exclude) + anchor_ids,
                                   allow_seen=not fresh_only)
         for anchor in Beetles.objects.select_related("taxon").filter(id__in=anchor_ids):
@@ -877,6 +851,8 @@ def start_round(player, mode, size=None, fresh_only=False):
     ``fresh_only`` leaves out unscored items the player has already answered: used to carry on from one batch
     into the next, where running out of new beetles should end the feed rather than repeat what they've seen.
     """
+    from . import game_relearn
+
     size = size or game_setting("GAME_ROUND_SIZE", 10)
     if mode == GameRound.Mode.MIXED:
         items = build_mixed_items(player, size, fresh_only=fresh_only)
@@ -884,7 +860,8 @@ def start_round(player, mode, size=None, fresh_only=False):
         items = build(mode, player, size, fresh_only)
     if not items:
         return None
-    return GameRound.objects.create(player=player, mode=mode, items=spread(items))
+    # spread(), with the player's due mistakes in place of some scored items (#490)
+    return GameRound.objects.create(player=player, mode=mode, items=game_relearn.feed_with_retries(player, mode, items))
 
 
 BUILDERS = {"pair": "build_pair_items", "odd": "build_odd_items", "select": "build_select_items",
