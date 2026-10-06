@@ -455,13 +455,33 @@ def species_taxon(species_vote):
 # ---------------------------------------------------------------------------
 # Player report
 # ---------------------------------------------------------------------------
+def accuracy_by_rank(skills, apart):
+    """
+    [{"rank", "naming", "distinction"}] for the report's "Accuracy by rank" (#605), each {"ok", "n", "accuracy"}:
+    the expertise tree's own counts added up over every branch at that rank, so the numbers match the tree. Naming is
+    Naming and Find Them All (the player's skills, skill_counts); Distinction is Similarity and Odd One Out
+    (apart_counts).
+    """
+    totals = {r: {"naming": [0, 0], "distinction": [0, 0]} for r in RANKS}
+    for s in skills:
+        if s.rank in totals:
+            totals[s.rank]["naming"][0] += s.correct
+            totals[s.rank]["naming"][1] += s.judged
+    for (rank, _), (ok, n, *_) in apart.items():
+        if rank in totals:
+            totals[rank]["distinction"][0] += ok
+            totals[rank]["distinction"][1] += n
+
+    def cell(ok, n):
+        return {"ok": ok, "n": n, "accuracy": ok / n if n else None}
+
+    return [{"rank": r, **{k: cell(*v) for k, v in totals[r].items()}} for r in RANKS]
+
+
 def player_report(player):
     """Everything the performance page shows about one player."""
     from . import game
 
-    reliability = game.player_reliability([player.id]).get(player.id) or {
-        m: game.default_weight() for m in ("classify", "pair", "odd", "select", "all")
-    }
     skills = skills_for(player)
     proven = [s for s in skills if s.proven]
 
@@ -510,10 +530,7 @@ def player_report(player):
         "summary": game.player_summary(player),
         "rounds": player.game_rounds.filter(finished_at__isnull=False).count(),
         "challenge": game.target_difficulty(player),
-        "by_rank": [
-            {"rank": r, "classify": reliability["classify"][r], "pair": reliability["pair"][r]}
-            for r in RANKS
-        ],
+        "by_rank": accuracy_by_rank(skills, apart_counts(player)),
         "proven": proven,
         "progressing": progressing[:12],
         "monthly": monthly,

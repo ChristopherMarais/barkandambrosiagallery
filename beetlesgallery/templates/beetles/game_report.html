@@ -126,7 +126,7 @@
           <tr>
             <th class="py-2 pl-4 pr-2 text-left">Rank</th>
             <th class="py-2 px-2 text-right">Naming</th>
-            <th class="py-2 pl-2 pr-4 text-right">Similarity</th>
+            <th class="py-2 pl-2 pr-4 text-right">Distinction</th>
           </tr>
         </thead>
         <tbody>
@@ -134,10 +134,10 @@
           <tr class="border-t border-gray-100">
             <td class="py-2.5 pl-4 pr-2 text-gray-900">{{ row.rank|capfirst }}</td>
             <td class="py-2.5 px-2 text-right tabular-nums">
-              {% if row.classify.n %}{% widthratio row.classify.accuracy 1 100 %}% <span class="text-xs text-gray-400">of {{ row.classify.n }}</span>{% else %}<span class="text-gray-300">&ndash;</span>{% endif %}
+              {% if row.naming.n %}{% widthratio row.naming.accuracy 1 100 %}% <span class="text-xs text-gray-400">of {{ row.naming.n|digit_groups }}</span>{% else %}<span class="text-gray-300">&ndash;</span>{% endif %}
             </td>
             <td class="py-2.5 pl-2 pr-4 text-right tabular-nums">
-              {% if row.pair.n %}{% widthratio row.pair.accuracy 1 100 %}% <span class="text-xs text-gray-400">of {{ row.pair.n }}</span>{% else %}<span class="text-gray-300">&ndash;</span>{% endif %}
+              {% if row.distinction.n %}{% widthratio row.distinction.accuracy 1 100 %}% <span class="text-xs text-gray-400">of {{ row.distinction.n|digit_groups }}</span>{% else %}<span class="text-gray-300">&ndash;</span>{% endif %}
             </td>
           </tr>
           {% endfor %}
