@@ -71,7 +71,7 @@
           </div>
           <div class="text-xs text-gray-500">{{ s.correct|digit_groups }} of {{ s.judged|digit_groups }} correct{% if s.proven_at %} · expert since {{ s.proven_at|date:"M j, Y" }}{% endif %}</div>
         </div>
-        <span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-green-100 text-green-800 border border-green-200">Naming expert</span>
+        <span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-sm bg-green-100 text-green-800 border border-green-200">Naming expert</span>
       </li>
       {% endfor %}
     </ul>

@@ -1,6 +1,186 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind CSS 4. Build: pixi run build-css (watch while editing: pixi run watch-css). The theme lives in this file;
+   there is no tailwind.config.js any more. */
+@import "tailwindcss" source(none);
+
+/* Where class names are read from: the templates and every script (the ones written inside templates too). */
+@source "../../templates";
+@source "../../**/*.js";
+/* Built although no file spells them out: templates put these together from parts. */
+@source inline("max-h-28 max-h-80 bg-gray-300 bg-amber-500 bg-green-500 bg-blue-500");
+/* Tailwind 3 had no such classes, so these did nothing on the pages that name them; keep it that way. */
+@source not inline("scrollbar-thin scrollbar-none");
+
+/* As with Tailwind 3: no dark mode (the site is light only), and hover: works on every device, so a tap on a phone
+   still shows what a mouse would (Tailwind 4 alone would skip hover styles on touch screens). */
+@custom-variant dark (&:not(*));
+@custom-variant hover (&:hover);
+
+@theme {
+    /* Tailwind 3's colours, kept exactly (Tailwind 4's own palette is a little different, in oklch). */
+    --color-slate-50: #f8fafc; --color-slate-100: #f1f5f9; --color-slate-200: #e2e8f0; --color-slate-300: #cbd5e1; --color-slate-400: #94a3b8; --color-slate-500: #64748b; --color-slate-600: #475569; --color-slate-700: #334155; --color-slate-800: #1e293b; --color-slate-900: #0f172a; --color-slate-950: #020617;
+    --color-gray-50: #f9fafb; --color-gray-100: #f3f4f6; --color-gray-200: #e5e7eb; --color-gray-300: #d1d5db; --color-gray-400: #9ca3af; --color-gray-500: #6b7280; --color-gray-600: #4b5563; --color-gray-700: #374151; --color-gray-800: #1f2937; --color-gray-900: #111827; --color-gray-950: #030712;
+    --color-zinc-50: #fafafa; --color-zinc-100: #f4f4f5; --color-zinc-200: #e4e4e7; --color-zinc-300: #d4d4d8; --color-zinc-400: #a1a1aa; --color-zinc-500: #71717a; --color-zinc-600: #52525b; --color-zinc-700: #3f3f46; --color-zinc-800: #27272a; --color-zinc-900: #18181b; --color-zinc-950: #09090b;
+    --color-neutral-50: #fafafa; --color-neutral-100: #f5f5f5; --color-neutral-200: #e5e5e5; --color-neutral-300: #d4d4d4; --color-neutral-400: #a3a3a3; --color-neutral-500: #737373; --color-neutral-600: #525252; --color-neutral-700: #404040; --color-neutral-800: #262626; --color-neutral-900: #171717; --color-neutral-950: #0a0a0a;
+    --color-stone-50: #fafaf9; --color-stone-100: #f5f5f4; --color-stone-200: #e7e5e4; --color-stone-300: #d6d3d1; --color-stone-400: #a8a29e; --color-stone-500: #78716c; --color-stone-600: #57534e; --color-stone-700: #44403c; --color-stone-800: #292524; --color-stone-900: #1c1917; --color-stone-950: #0c0a09;
+    --color-red-50: #fef2f2; --color-red-100: #fee2e2; --color-red-200: #fecaca; --color-red-300: #fca5a5; --color-red-400: #f87171; --color-red-500: #ef4444; --color-red-600: #dc2626; --color-red-700: #b91c1c; --color-red-800: #991b1b; --color-red-900: #7f1d1d; --color-red-950: #450a0a;
+    --color-orange-50: #fff7ed; --color-orange-100: #ffedd5; --color-orange-200: #fed7aa; --color-orange-300: #fdba74; --color-orange-400: #fb923c; --color-orange-500: #f97316; --color-orange-600: #ea580c; --color-orange-700: #c2410c; --color-orange-800: #9a3412; --color-orange-900: #7c2d12; --color-orange-950: #431407;
+    --color-amber-50: #fffbeb; --color-amber-100: #fef3c7; --color-amber-200: #fde68a; --color-amber-300: #fcd34d; --color-amber-400: #fbbf24; --color-amber-500: #f59e0b; --color-amber-600: #d97706; --color-amber-700: #b45309; --color-amber-800: #92400e; --color-amber-900: #78350f; --color-amber-950: #451a03;
+    --color-yellow-50: #fefce8; --color-yellow-100: #fef9c3; --color-yellow-200: #fef08a; --color-yellow-300: #fde047; --color-yellow-400: #facc15; --color-yellow-500: #eab308; --color-yellow-600: #ca8a04; --color-yellow-700: #a16207; --color-yellow-800: #854d0e; --color-yellow-900: #713f12; --color-yellow-950: #422006;
+    --color-lime-50: #f7fee7; --color-lime-100: #ecfccb; --color-lime-200: #d9f99d; --color-lime-300: #bef264; --color-lime-400: #a3e635; --color-lime-500: #84cc16; --color-lime-600: #65a30d; --color-lime-700: #4d7c0f; --color-lime-800: #3f6212; --color-lime-900: #365314; --color-lime-950: #1a2e05;
+    --color-green-50: #f0fdf4; --color-green-100: #dcfce7; --color-green-200: #bbf7d0; --color-green-300: #86efac; --color-green-400: #4ade80; --color-green-500: #22c55e; --color-green-600: #16a34a; --color-green-700: #15803d; --color-green-800: #166534; --color-green-900: #14532d; --color-green-950: #052e16;
+    --color-emerald-50: #ecfdf5; --color-emerald-100: #d1fae5; --color-emerald-200: #a7f3d0; --color-emerald-300: #6ee7b7; --color-emerald-400: #34d399; --color-emerald-500: #10b981; --color-emerald-600: #059669; --color-emerald-700: #047857; --color-emerald-800: #065f46; --color-emerald-900: #064e3b; --color-emerald-950: #022c22;
+    --color-teal-50: #f0fdfa; --color-teal-100: #ccfbf1; --color-teal-200: #99f6e4; --color-teal-300: #5eead4; --color-teal-400: #2dd4bf; --color-teal-500: #14b8a6; --color-teal-600: #0d9488; --color-teal-700: #0f766e; --color-teal-800: #115e59; --color-teal-900: #134e4a; --color-teal-950: #042f2e;
+    --color-cyan-50: #ecfeff; --color-cyan-100: #cffafe; --color-cyan-200: #a5f3fc; --color-cyan-300: #67e8f9; --color-cyan-400: #22d3ee; --color-cyan-500: #06b6d4; --color-cyan-600: #0891b2; --color-cyan-700: #0e7490; --color-cyan-800: #155e75; --color-cyan-900: #164e63; --color-cyan-950: #083344;
+    --color-sky-50: #f0f9ff; --color-sky-100: #e0f2fe; --color-sky-200: #bae6fd; --color-sky-300: #7dd3fc; --color-sky-400: #38bdf8; --color-sky-500: #0ea5e9; --color-sky-600: #0284c7; --color-sky-700: #0369a1; --color-sky-800: #075985; --color-sky-900: #0c4a6e; --color-sky-950: #082f49;
+    --color-blue-50: #eff6ff; --color-blue-100: #dbeafe; --color-blue-200: #bfdbfe; --color-blue-300: #93c5fd; --color-blue-400: #60a5fa; --color-blue-500: #3b82f6; --color-blue-600: #2563eb; --color-blue-700: #1d4ed8; --color-blue-800: #1e40af; --color-blue-900: #1e3a8a; --color-blue-950: #172554;
+    --color-indigo-50: #eef2ff; --color-indigo-100: #e0e7ff; --color-indigo-200: #c7d2fe; --color-indigo-300: #a5b4fc; --color-indigo-400: #818cf8; --color-indigo-500: #6366f1; --color-indigo-600: #4f46e5; --color-indigo-700: #4338ca; --color-indigo-800: #3730a3; --color-indigo-900: #312e81; --color-indigo-950: #1e1b4b;
+    --color-violet-50: #f5f3ff; --color-violet-100: #ede9fe; --color-violet-200: #ddd6fe; --color-violet-300: #c4b5fd; --color-violet-400: #a78bfa; --color-violet-500: #8b5cf6; --color-violet-600: #7c3aed; --color-violet-700: #6d28d9; --color-violet-800: #5b21b6; --color-violet-900: #4c1d95; --color-violet-950: #2e1065;
+    --color-purple-50: #faf5ff; --color-purple-100: #f3e8ff; --color-purple-200: #e9d5ff; --color-purple-300: #d8b4fe; --color-purple-400: #c084fc; --color-purple-500: #a855f7; --color-purple-600: #9333ea; --color-purple-700: #7e22ce; --color-purple-800: #6b21a8; --color-purple-900: #581c87; --color-purple-950: #3b0764;
+    --color-fuchsia-50: #fdf4ff; --color-fuchsia-100: #fae8ff; --color-fuchsia-200: #f5d0fe; --color-fuchsia-300: #f0abfc; --color-fuchsia-400: #e879f9; --color-fuchsia-500: #d946ef; --color-fuchsia-600: #c026d3; --color-fuchsia-700: #a21caf; --color-fuchsia-800: #86198f; --color-fuchsia-900: #701a75; --color-fuchsia-950: #4a044e;
+    --color-pink-50: #fdf2f8; --color-pink-100: #fce7f3; --color-pink-200: #fbcfe8; --color-pink-300: #f9a8d4; --color-pink-400: #f472b6; --color-pink-500: #ec4899; --color-pink-600: #db2777; --color-pink-700: #be185d; --color-pink-800: #9d174d; --color-pink-900: #831843; --color-pink-950: #500724;
+    --color-rose-50: #fff1f2; --color-rose-100: #ffe4e6; --color-rose-200: #fecdd3; --color-rose-300: #fda4af; --color-rose-400: #fb7185; --color-rose-500: #f43f5e; --color-rose-600: #e11d48; --color-rose-700: #be123c; --color-rose-800: #9f1239; --color-rose-900: #881337; --color-rose-950: #4c0519;
+
+    /* The site's own names */
+    --color-background: #ffffff;
+    --color-primary: #ffffff;
+    --color-primary2: #f9fafb;
+    --color-secondary: #f3f4f6;
+    --color-contrast: #111827;
+    --color-accent: #2563eb;
+    --color-text: #111827;
+    --color-name: #111827;
+    --color-spacepurple1: #6b7280;
+    --color-spacepurple2: #4b5563;
+    --color-spacegreen: #6b7280;
+    --color-spaceblue: #6b7280;
+
+    /* Tailwind 3's line heights as lengths: Tailwind 4 gives ratios, which smaller text inside then scales down. */
+    --text-xs--line-height: 1rem;
+    --text-sm--line-height: 1.25rem;
+    --text-base--line-height: 1.5rem;
+    --text-lg--line-height: 1.75rem;
+    --text-xl--line-height: 1.75rem;
+    --text-2xl--line-height: 2rem;
+    --text-3xl--line-height: 2.25rem;
+    --text-4xl--line-height: 2.5rem;
+    --text-5xl--line-height: 1;
+    --text-6xl--line-height: 1;
+    --text-7xl--line-height: 1;
+    --text-8xl--line-height: 1;
+    --text-9xl--line-height: 1;
+
+    /* Tailwind's system font stack */
+    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", sans-serif,
+        "Apple Color Emoji", "Segoe UI Emoji";
+
+    /* Added to Tailwind's own animations (animate-spin for the loading spinners, animate-pulse, -ping, -bounce) */
+    --animate-blob: blob 8s ease-in-out infinite;
+    --animate-tilt: tilt 5s ease-in-out infinite;
+    --animate-linspin: linspin 1568.2353ms linear infinite;
+    --animate-easespin: easespin 5332ms cubic-bezier(0.4, 0, 0.2, 1) infinite both;
+    --animate-left-spin: left-spin 1333ms cubic-bezier(0.4, 0, 0.2, 1) infinite both;
+    --animate-right-spin: right-spin 1333ms cubic-bezier(0.4, 0, 0.2, 1) infinite both;
+    --animate-ping-once: ping 5s cubic-bezier(0, 0, 0.2, 1);
+    --animate-rotating: rotating 30s linear infinite;
+    --animate-topbottom: topbottom 60s infinite alternate linear;
+    --animate-bottomtop: bottomtop 60s infinite alternate linear;
+    --animate-spin-1\.5: spin 1.5s linear infinite;
+    --animate-spin-2: spin 2s linear infinite;
+    --animate-spin-3: spin 3s linear infinite;
+
+    @keyframes blob {
+        0% { transform: translate(0px, 0px) scale(1); }
+        25% { transform: translate(-40px, -10px) scale(1.1); }
+        50% { transform: translate(50px, -40px) scale(1.1); }
+        75% { transform: translate(-20px, 10px) scale(0.9); }
+        100% { transform: translate(0px, 0px) scale(1); }
+    }
+    @keyframes tilt {
+        0%, 50%, 100% { transform: rotate(0deg); }
+        25% { transform: rotate(0.8deg); }
+        75% { transform: rotate(-0.8deg); }
+    }
+    @keyframes linspin {
+        100% { transform: rotate(360deg); }
+    }
+    @keyframes easespin {
+        12.5% { transform: rotate(135deg); }
+        25% { transform: rotate(270deg); }
+        37.5% { transform: rotate(405deg); }
+        50% { transform: rotate(540deg); }
+        62.5% { transform: rotate(675deg); }
+        75% { transform: rotate(810deg); }
+        87.5% { transform: rotate(945deg); }
+        100% { transform: rotate(1080deg); }
+    }
+    @keyframes left-spin {
+        0% { transform: rotate(130deg); }
+        50% { transform: rotate(-5deg); }
+        100% { transform: rotate(130deg); }
+    }
+    @keyframes right-spin {
+        0% { transform: rotate(-130deg); }
+        50% { transform: rotate(5deg); }
+        100% { transform: rotate(-130deg); }
+    }
+    @keyframes rotating {
+        0%, 100% { transform: rotate(360deg); }
+        50% { transform: rotate(0deg); }
+    }
+    @keyframes topbottom {
+        0%, 100% { transform: translate3d(0, -100%, 0); }
+        50% { transform: translate3d(0, 0, 0); }
+    }
+    @keyframes bottomtop {
+        0%, 100% { transform: translate3d(0, 0, 0); }
+        50% { transform: translate3d(0, -100%, 0); }
+    }
+}
+
+/* Tailwind 3's base styles where Tailwind 4 changed them, so the pages look as they did. */
+@layer base {
+    /* Borders without a colour class are light grey (Tailwind 4 would use the text colour). */
+    *, ::after, ::before, ::backdrop, ::file-selector-button {
+        border-color: var(--color-gray-200, currentcolor);
+    }
+    /* Placeholders are mid grey (Tailwind 4: the text colour at half strength). */
+    input::placeholder, textarea::placeholder {
+        color: var(--color-gray-400);
+    }
+    /* Buttons show the hand pointer (Tailwind 4: the arrow), anything switched off the plain arrow. */
+    button:not(:disabled), [role="button"]:not(:disabled) {
+        cursor: pointer;
+    }
+    :disabled {
+        cursor: default;
+    }
+    /* Text fields and lists keep the browser's own background and corners (Tailwind 4 makes them see-through and
+       square), and a switched-off list its faded look (Tailwind 4 sets opacity to 1). */
+    input:where(:not([type="button"], [type="reset"], [type="submit"])), select, textarea {
+        background-color: revert;
+        border-radius: revert;
+    }
+    button, input, select, optgroup, textarea {
+        opacity: revert;
+    }
+    /* Search boxes look like the other text fields. */
+    [type="search"] {
+        appearance: textfield;
+        outline-offset: -2px;
+    }
+    /* A dialog sits in the middle of the screen, as the browser places it (Tailwind 4 sets its margin to 0). */
+    dialog {
+        margin: auto;
+    }
+    /* Table cells keep their 1px padding, and dialogs and list options the browser's own (Tailwind 4 sets every
+       padding to 0). */
+    td, th {
+        padding: 1px;
+    }
+    dialog, option {
+        padding: revert;
+    }
+}
 
 @layer base {
 
@@ -33,10 +213,21 @@
     }
 }
 
-/* Ticked boxes, radio buttons and sliders are dark grey everywhere, never the browser's blue. */
-@layer base {
+/* Ticked boxes, radio buttons and sliders are dark grey everywhere, never the browser's blue. With the utilities, so
+   that it wins over a plain accent-* class next to it, as it did in Tailwind 3 (a hover:accent-* still wins). */
+@layer utilities {
     input[type="checkbox"], input[type="radio"], input[type="range"] {
-        accent-color: theme("colors.gray.600");
+        accent-color: var(--color-gray-600);
+    }
+}
+
+/* hidden wins over the other display classes on the same element, as in Tailwind 3 (Tailwind 4 sorts them by name,
+   so inline-flex, inline-block, table ... would win), so a script can still hide such an element by adding hidden. */
+@layer utilities {
+    .hidden:is(.inline, .inline-block, .inline-flex, .inline-grid, .inline-table, .list-item, .table, .table-caption,
+        .table-cell, .table-column, .table-column-group, .table-footer-group, .table-header-group, .table-row,
+        .table-row-group) {
+        display: none;
     }
 }
 
@@ -56,10 +247,11 @@
    - Ticked boxes and radio buttons are dark grey (see above).
    - Numbers of four digits or more are grouped in threes (12 345): the |digit_groups filter in templates,
      digitGroups() / digitGroupsText() in scripts (static/js/digit_groups.js).
-   - Text for players and visitors is short and plain. */
+   - Text for players and visitors is short and plain.
+   They stay in the components layer, so a utility next to them (w-full, text-2xl, py-6) always wins. */
 @layer components {
     .btn-main {
-        @apply inline-flex items-center justify-center gap-3 rounded-xl bg-gray-200 border border-gray-300 px-8 py-3 text-lg font-bold tracking-wide text-gray-800 shadow-sm transition hover:bg-gray-300 hover:text-black active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-gray-300 disabled:opacity-60 disabled:cursor-not-allowed;
+        @apply inline-flex items-center justify-center gap-3 rounded-xl bg-gray-200 border border-gray-300 px-8 py-3 text-lg font-bold tracking-wide text-gray-800 shadow-xs transition hover:bg-gray-300 hover:text-black active:scale-[0.99] focus:outline-hidden focus-visible:ring-4 focus-visible:ring-gray-300 disabled:opacity-60 disabled:cursor-not-allowed;
     }
 
     .page-title {
@@ -69,25 +261,51 @@
     .page-intro { @apply text-sm sm:text-base text-gray-500; }
 
     .btn-primary {
-        @apply inline-flex items-center justify-center gap-2 rounded-lg bg-gray-500 border border-gray-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-600 hover:border-gray-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-gray-300 disabled:bg-gray-300 disabled:border-gray-300 disabled:cursor-not-allowed;
+        @apply inline-flex items-center justify-center gap-2 rounded-lg bg-gray-500 border border-gray-500 px-4 py-2 text-sm font-semibold text-white shadow-xs transition hover:bg-gray-600 hover:border-gray-600 focus:outline-hidden focus-visible:ring-4 focus-visible:ring-gray-300 disabled:bg-gray-300 disabled:border-gray-300 disabled:cursor-not-allowed;
     }
     .btn-secondary {
-        @apply inline-flex items-center justify-center gap-2 rounded-lg bg-white border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 hover:text-black focus:outline-none focus-visible:ring-4 focus-visible:ring-gray-300 disabled:opacity-60 disabled:cursor-not-allowed;
+        @apply inline-flex items-center justify-center gap-2 rounded-lg bg-white border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 shadow-xs transition hover:bg-gray-50 hover:text-black focus:outline-hidden focus-visible:ring-4 focus-visible:ring-gray-300 disabled:opacity-60 disabled:cursor-not-allowed;
     }
 }
 
-@layer utilities {
-    .animation-delay-2000 {
-        animation-delay: 2s;
+/* space-y-* and divide-y as in Tailwind 3: the space (or line) goes above every child but the first and wins over the
+   child's own top margin. Tailwind 4 puts it below every child but the last instead, which differs when the last
+   children are hidden, in flex columns and next to a child's own margins. Its own rule still matches, so it is switched
+   off: with --tw-space-y-reverse set to a word its margins can't be worked out, and fall back to 0. */
+@utility space-y-* {
+    & > * {
+        --tw-space-y-reverse: off;
     }
+    & > :not([hidden]) ~ :not([hidden]) {
+        margin-top: calc(var(--spacing) * --value(number));
+        margin-bottom: 0;
+    }
+}
+@utility divide-y {
+    & > :not([hidden]) ~ :not([hidden]) {
+        border-top-width: 1px;
+        border-bottom-width: 0;
+    }
+    & > :first-child {
+        border-bottom-width: 0;
+    }
+}
+@utility divide-* {
+    & > :not([hidden]) ~ :not([hidden]) {
+        border-color: --value(--color-*);
+    }
+}
 
-    .animation-delay-4000 {
-        animation-delay: 4s;
-    }
-    
-    .h-40 {
-        height: 2rem;
-    }
+@utility animation-delay-2000 {
+    animation-delay: 2s;
+}
+
+@utility animation-delay-4000 {
+    animation-delay: 4s;
+}
+
+@utility h-40 {
+    height: 2rem;
 }
 
 @font-face {
@@ -114,32 +332,32 @@
    a solid label: .scale-chip-<step>; a light one: .scale-soft-<step>; a badge card: .scale-card-<step>; the top level
    and the hardest badges also glow (.scale-glow). Outside the layers so they are kept although templates and scripts
    build the class names. */
-.scale-none { color: theme("colors.gray.500"); }
-.scale-fair { color: theme("colors.red.600"); }
-.scale-decent { color: theme("colors.orange.700"); }
-.scale-good { color: theme("colors.yellow.700"); }
-.scale-great { color: theme("colors.green.700"); }
-.scale-excellent { color: theme("colors.green.800"); }
-.scale-fill-none { background-color: theme("colors.gray.300"); }
-.scale-fill-fair { background-color: theme("colors.red.500"); }
-.scale-fill-decent { background-color: theme("colors.orange.500"); }
-.scale-fill-good { background-color: theme("colors.yellow.400"); }
-.scale-fill-great { background-color: theme("colors.green.500"); }
-.scale-fill-excellent { background-color: theme("colors.green.700"); }
-.scale-chip-none { background-color: theme("colors.gray.300"); color: theme("colors.gray.800"); }
-.scale-chip-fair { background-color: theme("colors.red.600"); color: #fff; }
-.scale-chip-decent { background-color: theme("colors.orange.400"); color: theme("colors.orange.950"); }
-.scale-chip-good { background-color: theme("colors.yellow.300"); color: theme("colors.yellow.950"); }
-.scale-chip-great { background-color: theme("colors.green.500"); color: theme("colors.green.950"); }
-.scale-chip-excellent { background-color: theme("colors.green.700"); color: #fff; }
-.scale-soft-fair { background-color: theme("colors.red.100"); color: theme("colors.red.800"); box-shadow: inset 0 0 0 1px theme("colors.red.300"); }
-.scale-soft-decent { background-color: theme("colors.orange.100"); color: theme("colors.orange.800"); box-shadow: inset 0 0 0 1px theme("colors.orange.300"); }
-.scale-soft-good { background-color: theme("colors.yellow.100"); color: theme("colors.yellow.800"); box-shadow: inset 0 0 0 1px theme("colors.yellow.400"); }
-.scale-soft-great { background-color: theme("colors.green.100"); color: theme("colors.green.800"); box-shadow: inset 0 0 0 1px theme("colors.green.300"); }
-.scale-card-none { border-color: theme("colors.gray.300"); background-color: #fff; }
-.scale-card-fair { border-color: theme("colors.red.300"); background-color: theme("colors.red.50"); }
-.scale-card-decent { border-color: theme("colors.orange.300"); background-color: theme("colors.orange.50"); }
-.scale-card-good { border-color: theme("colors.yellow.400"); background-color: theme("colors.yellow.50"); }
-.scale-card-great { border-color: theme("colors.green.300"); background-color: theme("colors.green.50"); }
-.scale-card-excellent { border-color: theme("colors.green.600"); background-color: theme("colors.green.50"); }
-.scale-glow { box-shadow: 0 0 0 1px theme("colors.green.800"), 0 0 10px rgba(34, 197, 94, 0.85); }
+.scale-none { color: var(--color-gray-500); }
+.scale-fair { color: var(--color-red-600); }
+.scale-decent { color: var(--color-orange-700); }
+.scale-good { color: var(--color-yellow-700); }
+.scale-great { color: var(--color-green-700); }
+.scale-excellent { color: var(--color-green-800); }
+.scale-fill-none { background-color: var(--color-gray-300); }
+.scale-fill-fair { background-color: var(--color-red-500); }
+.scale-fill-decent { background-color: var(--color-orange-500); }
+.scale-fill-good { background-color: var(--color-yellow-400); }
+.scale-fill-great { background-color: var(--color-green-500); }
+.scale-fill-excellent { background-color: var(--color-green-700); }
+.scale-chip-none { background-color: var(--color-gray-300); color: var(--color-gray-800); }
+.scale-chip-fair { background-color: var(--color-red-600); color: #fff; }
+.scale-chip-decent { background-color: var(--color-orange-400); color: var(--color-orange-950); }
+.scale-chip-good { background-color: var(--color-yellow-300); color: var(--color-yellow-950); }
+.scale-chip-great { background-color: var(--color-green-500); color: var(--color-green-950); }
+.scale-chip-excellent { background-color: var(--color-green-700); color: #fff; }
+.scale-soft-fair { background-color: var(--color-red-100); color: var(--color-red-800); box-shadow: inset 0 0 0 1px var(--color-red-300); }
+.scale-soft-decent { background-color: var(--color-orange-100); color: var(--color-orange-800); box-shadow: inset 0 0 0 1px var(--color-orange-300); }
+.scale-soft-good { background-color: var(--color-yellow-100); color: var(--color-yellow-800); box-shadow: inset 0 0 0 1px var(--color-yellow-400); }
+.scale-soft-great { background-color: var(--color-green-100); color: var(--color-green-800); box-shadow: inset 0 0 0 1px var(--color-green-300); }
+.scale-card-none { border-color: var(--color-gray-300); background-color: #fff; }
+.scale-card-fair { border-color: var(--color-red-300); background-color: var(--color-red-50); }
+.scale-card-decent { border-color: var(--color-orange-300); background-color: var(--color-orange-50); }
+.scale-card-good { border-color: var(--color-yellow-400); background-color: var(--color-yellow-50); }
+.scale-card-great { border-color: var(--color-green-300); background-color: var(--color-green-50); }
+.scale-card-excellent { border-color: var(--color-green-600); background-color: var(--color-green-50); }
+.scale-glow { box-shadow: 0 0 0 1px var(--color-green-800), 0 0 10px rgba(34, 197, 94, 0.85); }

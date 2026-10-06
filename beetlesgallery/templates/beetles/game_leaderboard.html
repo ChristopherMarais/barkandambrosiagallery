@@ -8,7 +8,7 @@
 
   <form method="get" class="flex flex-wrap items-center gap-2 mb-4" role="search">
     <input type="search" name="q" value="{{ q }}" placeholder="Search players&hellip;" aria-label="Search players"
-      class="h-10 px-3 flex-1 min-w-[10rem] border border-gray-300 rounded-lg">
+      class="h-10 px-3 flex-1 min-w-40 border border-gray-300 rounded-lg">
     <select name="sort" class="select-chevron h-10 px-3 border border-gray-300 rounded-lg bg-white" aria-label="Sort by">
       {% for key, label in sorts.items %}<option value="{{ key }}" {% if sort == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
     </select>
@@ -38,7 +38,7 @@
       <option value="tribe" {% if branch_rank == 'tribe' %}selected{% endif %}>Tribe</option>
       <option value="genus" {% if branch_rank == 'genus' %}selected{% endif %}>Genus</option>
     </select>
-    <select name="branch" id="branch-value" class="select-chevron h-10 px-3 flex-1 min-w-[10rem] border border-gray-300 rounded-lg bg-white" data-current="{{ branch_value }}" aria-label="Which one">{% if branch_value %}<option value="{{ branch_value }}" selected>{{ branch_value }}</option>{% endif %}</select>
+    <select name="branch" id="branch-value" class="select-chevron h-10 px-3 flex-1 min-w-40 border border-gray-300 rounded-lg bg-white" data-current="{{ branch_value }}" aria-label="Which one">{% if branch_value %}<option value="{{ branch_value }}" selected>{{ branch_value }}</option>{% endif %}</select>
     <button type="submit" class="btn-primary h-10">Show</button>
   </form>
   {% if branch_rows is not None %}

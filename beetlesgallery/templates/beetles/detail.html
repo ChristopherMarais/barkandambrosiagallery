@@ -173,13 +173,13 @@
       
       {# PAGINATION HEADER inside card (Redundant but requested context) #}
       {% if total_siblings > 1 %}
-      <div class="mb-4 flex items-center justify-between bg-primary2 rounded-xl p-2 border border-text/10 shadow-sm">
+      <div class="mb-4 flex items-center justify-between bg-primary2 rounded-xl p-2 border border-text/10 shadow-xs">
           <div class="text-sm font-bold text-text/50 tracking-wide px-2">
               ROI {{ current_sibling_index|digit_groups }} of {{ total_siblings|digit_groups }}
           </div>
           <div class="flex items-center gap-1">
               {% if prev_sibling %}
-                  <a href="{% url 'beetle_detail' beetle_id=prev_sibling.id %}" class="p-1 rounded hover:bg-black/5 text-text/70 hover:text-black transition" title="Previous Individual">
+                  <a href="{% url 'beetle_detail' beetle_id=prev_sibling.id %}" class="p-1 rounded-sm hover:bg-black/5 text-text/70 hover:text-black transition" title="Previous Individual">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                   </a>
               {% else %}
@@ -187,7 +187,7 @@
               {% endif %}
 
               {% if next_sibling %}
-                  <a href="{% url 'beetle_detail' beetle_id=next_sibling.id %}" class="p-1 rounded hover:bg-black/5 text-text/70 hover:text-black transition" title="Next Individual">
+                  <a href="{% url 'beetle_detail' beetle_id=next_sibling.id %}" class="p-1 rounded-sm hover:bg-black/5 text-text/70 hover:text-black transition" title="Next Individual">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                   </a>
               {% else %}
@@ -206,7 +206,7 @@
               {# PEN: names, boxes, details and validation are changed on the annotation page, opened at this beetle; only for those who may open it #}
               {% if areas.boxes and beetle.image_asset %}
                   <a href="{% url 'tool_annotate' %}?image={{ beetle.image_asset.id }}&roi={{ beetle.id }}"
-                     class="text-gray-500 hover:text-gray-600 transition p-1 rounded hover:bg-gray-50"
+                     class="text-gray-500 hover:text-gray-600 transition p-1 rounded-sm hover:bg-gray-50"
                      title="Open in the annotation page" aria-label="Open in the annotation page" data-testid="open-annotation">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                   </a>
@@ -353,10 +353,10 @@
               <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Notes</h3>
               <div class="space-y-2">
                   <div class="text-xs text-text/60">Image Notes</div>
-                  <div class="p-2 bg-black/5 rounded text-sm min-h-[2rem] break-words whitespace-pre-wrap">{{ beetle.image_asset.image_notes|default:"—" }}</div>
+                  <div class="p-2 bg-black/5 rounded-sm text-sm min-h-8 wrap-break-word whitespace-pre-wrap">{{ beetle.image_asset.image_notes|default:"—" }}</div>
 
                   <div class="text-xs text-text/60 mt-2">Specimen Notes</div>
-                  <div class="p-2 bg-black/5 rounded text-sm min-h-[2rem] break-words whitespace-pre-wrap">{{ beetle.specimen_notes|default:"—" }}</div>
+                  <div class="p-2 bg-black/5 rounded-sm text-sm min-h-8 wrap-break-word whitespace-pre-wrap">{{ beetle.specimen_notes|default:"—" }}</div>
               </div>
           </div>
 

@@ -2,7 +2,6 @@ from __future__ import annotations
 import io
 import logging
 import os
-import imghdr
 import tempfile
 from typing import BinaryIO
 
@@ -112,7 +111,12 @@ def ensure_display_jpeg(beetle) -> str:
         return ""
 
 def _guess_ext_from_path_or_hdr(tmp_path: str) -> str:
-    kind = imghdr.what(tmp_path)
+    # Pillow reads the format from the file's header (imghdr, which did this before, leaves Python in 3.13)
+    try:
+        with Image.open(tmp_path) as probe:
+            kind = (probe.format or "").lower()
+    except Exception:
+        kind = ""
     if kind in {"jpeg", "jpg"}:
         return "jpg"
     if kind in {"png", "bmp", "gif", "tiff", "webp"}:

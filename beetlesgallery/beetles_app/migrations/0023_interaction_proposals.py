@@ -242,7 +242,7 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="interactionproposal",
             constraint=models.CheckConstraint(
-                check=models.Q(
+                condition=models.Q(
                     ("score__isnull", True),
                     models.Q(("score__gte", 0), ("score__lte", 1)),
                     _connector="OR",

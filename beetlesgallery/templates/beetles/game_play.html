@@ -548,7 +548,7 @@
 
 <!-- When you leave: how the sitting went -->
 {# Fits a small phone and scrolls when it can't (many new badges); its own scroll never moves the page under it #}
-<div id="recap" class="hidden fixed inset-0 z-[97] bg-white overflow-y-auto overscroll-contain" role="dialog" aria-modal="true" aria-labelledby="recap-title">
+<div id="recap" class="hidden fixed inset-0 z-97 bg-white overflow-y-auto overscroll-contain" role="dialog" aria-modal="true" aria-labelledby="recap-title">
   <div class="max-w-md mx-auto px-4 sm:px-6 pt-6 sm:pt-10 text-center" style="padding-bottom: max(1.5rem, env(safe-area-inset-bottom))">
     <div class="inline-flex p-3 sm:p-4 bg-gray-100 rounded-full mb-3 sm:mb-4"><i class="fi fi-rr-trophy text-3xl text-gray-700"></i></div>
     <h2 class="text-2xl font-bold text-gray-900" id="recap-title">Nice session!</h2>
@@ -572,7 +572,7 @@
 <canvas id="confetti" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:95"></canvas>
 
 <!-- Full image viewer -->
-<div id="lightbox" class="hidden fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-3" role="dialog" aria-label="Whole image">
+<div id="lightbox" class="hidden fixed inset-0 z-100 bg-black/90 flex items-center justify-center p-3" role="dialog" aria-label="Whole image">
   <button type="button" class="absolute top-3 right-3 p-3 text-white text-xl" aria-label="Close"><i class="fi fi-rr-cross"></i></button>
   <div id="lb-photo" class="relative">
     <div id="lb-frame" class="relative block overflow-hidden rounded-lg" title="Scroll, pinch or double-click to zoom">
@@ -1147,8 +1147,8 @@
       const why = lockReason(p, b.dataset.play);
       const all = b.dataset.play === "both";   // All modes: its own pill, dashed until chosen
       b.className = all
-        ? "play-opt play-all shrink-0 inline-flex items-center gap-1 h-8 px-2 rounded-lg border " + (on ? "border-gray-600 bg-white text-gray-900 shadow-sm" : why ? "border-dashed border-gray-300 text-gray-400" : "border-dashed border-gray-400 text-gray-600")
-        : "play-opt flex-1 min-w-0 h-8 px-1 rounded-md truncate " + (on ? "bg-white text-gray-900 shadow-sm" : why ? "text-gray-400" : "text-gray-600");
+        ? "play-opt play-all shrink-0 inline-flex items-center gap-1 h-8 px-2 rounded-lg border " + (on ? "border-gray-600 bg-white text-gray-900 shadow-xs" : why ? "border-dashed border-gray-300 text-gray-400" : "border-dashed border-gray-400 text-gray-600")
+        : "play-opt flex-1 min-w-0 h-8 px-1 rounded-md truncate " + (on ? "bg-white text-gray-900 shadow-xs" : why ? "text-gray-400" : "text-gray-600");
       const short = document.createElement("span"), long = document.createElement("span");
       short.className = "sm:hidden";
       long.className = "hidden sm:inline";

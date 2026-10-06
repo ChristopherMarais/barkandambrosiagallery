@@ -21,7 +21,7 @@
   <h1 class="page-title">Data Management</h1>
 
   {# --- SECTION 1: DATA ACTIONS --- #}
-  <div class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm">
+  <div class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-xs">
   
     {# Header with "Help" Link #}
     <div class="flex justify-between items-start mb-6">
@@ -47,7 +47,7 @@
       {# Staff Only: Upload & Update Buttons #}
       {% if areas.upload %}
       <button onclick="openModal('modal-upload-new')"
-        class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+        class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
         <i class="fi fi-rr-upload"></i>
         <span>Upload New Data</span>
       </button>
@@ -55,7 +55,7 @@
 
       {% if areas.update %}
       <button onclick="openModal('modal-update-existing')"
-        class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+        class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
         <i class="fi fi-rr-refresh"></i>
         <span>Update Metadata</span>
       </button>
@@ -63,7 +63,7 @@
 
       {% if areas.predictions %}
       <button onclick="openModal('modal-predictions')" data-testid="open-predictions"
-        class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+        class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
         <i class="fi fi-rr-sparkles"></i>
         <span>Upload Model Predictions</span>
       </button>
@@ -71,7 +71,7 @@
 
       {% if areas.bulk_validate %}
       <a href="{% url 'bulk_validate' %}" data-testid="open-bulk-validate"
-        class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+        class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
         <i class="fi fi-rr-list-check"></i>
         <span>Bulk Validation</span>
       </a>
@@ -79,7 +79,7 @@
 
       {# All Users: Download Link #}
       <a href="{% url 'beetles_image_browser' %}"
-        class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+        class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
         <i class="fi fi-rr-search-alt"></i>
         <span>Browse Gallery to Download</span>
       </a>
@@ -89,7 +89,7 @@
   {# --- SECTION: TAXONOMY REFERENCE MANAGEMENT (Admin/Superusers Only) --- #}
   {# The ground-truth species tables: their own permission (areas.SPECIES) #}
   {% if areas.species_tables %}
-  <div class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm">
+  <div class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-xs">
     <h2 class="text-2xl font-bold mb-2 text-gray-800">Species Tables</h2>
     <p class="text-sm text-gray-600 mb-6 max-w-3xl">
       The two tables every name on the site comes from: labels, the game's name lists, uploads and the AI's answers.
@@ -99,7 +99,7 @@
     <div class="mb-4 max-w-xs">
       <label for="taxonomy-selector" class="block text-sm font-semibold text-gray-700 mb-2">Table</label>
       <select id="taxonomy-selector"
-        class="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400">
+        class="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 focus:outline-hidden focus:ring-2 focus:ring-gray-400">
         <option value="valid_species">Accepted species</option>
         <option value="described_names">Synonyms and old names</option>
       </select>
@@ -122,19 +122,19 @@
       </p>
       <p class="text-xs text-gray-500 mt-1">
         File name on download: <code id="filename-preview"
-          class="bg-gray-100 px-2 py-0.5 rounded">valid_species_YYYYMMDD_HHMMSS.csv</code>
+          class="bg-gray-100 px-2 py-0.5 rounded-sm">valid_species_YYYYMMDD_HHMMSS.csv</code>
       </p>
     </div>
 
     <div class="flex flex-wrap gap-4">
       <a id="download-btn" href="{% url 'download_taxonomy_ref' %}"
-        class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+        class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
         <i class="fi fi-rr-download"></i>
         <span>Download Latest Version</span>
       </a>
 
       <button id="upload-taxonomy-btn" onclick="openTaxonomyUploadModal()"
-        class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+        class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
         <i class="fi fi-rr-upload"></i>
         <span>Upload New Reference</span>
       </button>
@@ -148,7 +148,7 @@
         class="rounded-lg border border-gray-200 bg-white wide-table max-h-28 transition-all duration-500 ease-in-out relative">
         <table class="w-full text-sm text-left">
           <thead
-            class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+            class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200 sticky top-0 z-10 shadow-xs">
             <tr>
               <th class="px-4 py-3 bg-gray-100">Archived Date</th>
               <th class="px-4 py-3 bg-gray-100">Filename</th>
@@ -221,7 +221,7 @@
   {% endif %}
 
   {# --- SECTION 2: ACTIVITY LOGS --- #}
-  <div class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm">
+  <div class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-xs">
 
     <div class="mb-8 border-b border-gray-200 pb-4">
       <h2 class="text-2xl font-bold mb-2 text-gray-800">Activity Logs</h2>
@@ -240,7 +240,7 @@
           class="rounded-lg border border-gray-200 bg-white wide-table max-h-80 transition-all duration-500 ease-in-out relative">
           <table class="w-full text-sm text-left">
             <thead
-              class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+              class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200 sticky top-0 z-10 shadow-xs">
               <tr>
                 <th class="px-4 py-3 bg-gray-100">Date/Time</th>
                 <th class="px-4 py-3 bg-gray-100">Request</th>
@@ -385,7 +385,7 @@
           class="rounded-lg border border-gray-200 bg-white wide-table max-h-80 transition-all duration-500 ease-in-out relative">
           <table class="w-full text-sm text-left">
             <thead
-              class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+              class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200 sticky top-0 z-10 shadow-xs">
               <tr>
                 <th class="px-4 py-3 bg-gray-100">Date/Time</th>
                 <th class="px-4 py-3 bg-gray-100">Filename</th>
@@ -465,7 +465,7 @@
           class="rounded-lg border border-gray-200 bg-white wide-table max-h-80 transition-all duration-500 ease-in-out relative">
           <table class="w-full text-sm text-left">
             <thead
-              class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+              class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200 sticky top-0 z-10 shadow-xs">
               <tr>
                 <th class="px-4 py-3 bg-gray-100">Date/Time</th>
                 <th class="px-4 py-3 bg-gray-100">Filename</th>
@@ -545,7 +545,7 @@
 {# --- MODAL 1: UPLOAD NEW DATA --- #}
 <div id="modal-upload-new" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog"
   aria-modal="true">
-  <div class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity"
+  <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-xs transition-opacity"
     onclick="closeModal('modal-upload-new')"></div>
   <div class="flex min-h-screen items-center justify-center p-4 text-center">
     <div
@@ -557,7 +557,7 @@
           <div class="block">
 
             {# --- UPDATED ICON: Centered above text --- #}
-            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gray-600 mb-4">
+            <div class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-600 mb-4">
               <i class="fi fi-rr-upload text-white text-lg"></i>
             </div>
 
@@ -577,7 +577,7 @@
                   </a>
 
                   <button type="button" onclick="openModal('modal-field-definitions')"
-                    class="flex-1 flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-600 transition shadow-sm">
+                    class="flex-1 flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-600 transition shadow-xs">
                     <i class="fi fi-rr-book-alt"></i>
                     <span>Field Definitions</span>
                   </button>
@@ -611,12 +611,12 @@
         </div>
         <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
           <button type="button" onclick="closeModal('modal-upload-new')"
-            class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none sm:text-sm">
+            class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-xs hover:bg-red-50 focus:outline-hidden sm:text-sm">
             Cancel
           </button>
 
           <button type="submit" id="btn-submit-new"
-            class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:text-sm">
+            class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-xs hover:bg-gray-50 focus:outline-hidden sm:text-sm">
             Submit Upload
           </button>
         </div>
@@ -628,7 +628,7 @@
 {# --- MODAL 2: UPDATE METADATA --- #}
 <div id="modal-update-existing" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title-update"
   role="dialog" aria-modal="true">
-  <div class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity"
+  <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-xs transition-opacity"
     onclick="closeModal('modal-update-existing')"></div>
   <div class="flex min-h-screen items-center justify-center p-4 text-center">
     <div
@@ -640,7 +640,7 @@
           <div class="block">
 
             {# --- UPDATED ICON: Centered above text --- #}
-            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gray-600 mb-4">
+            <div class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-600 mb-4">
               <i class="fi fi-rr-refresh text-white text-lg"></i>
             </div>
 
@@ -661,7 +661,7 @@
                   </a>
 
                   <button type="button" onclick="openModal('modal-field-definitions')"
-                    class="flex-1 flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-600 transition shadow-sm">
+                    class="flex-1 flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-600 transition shadow-xs">
                     <i class="fi fi-rr-book-alt"></i>
                     <span>Field Definitions</span>
                   </button>
@@ -689,12 +689,12 @@
         </div>
         <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
           <button type="button" onclick="closeModal('modal-update-existing')"
-            class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none sm:text-sm">
+            class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-xs hover:bg-red-50 focus:outline-hidden sm:text-sm">
             Cancel
           </button>
 
           <button type="submit" id="btn-submit-update"
-            class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:text-sm">
+            class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-xs hover:bg-gray-50 focus:outline-hidden sm:text-sm">
             Submit Update
           </button>
         </div>
@@ -707,14 +707,14 @@
 {% if areas.predictions %}
 <div id="modal-predictions" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title-predictions"
   role="dialog" aria-modal="true">
-  <div class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity"
+  <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-xs transition-opacity"
     onclick="closeModal('modal-predictions')"></div>
   <div class="flex min-h-screen items-center justify-center p-4 text-center">
     <div class="relative w-full max-w-md transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all">
       <form id="form-predictions" data-max-bytes="{{ predictions_max_bytes }}" action="{% url 'upload_predictions' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-          <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gray-600 mb-4">
+          <div class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-600 mb-4">
             <i class="fi fi-rr-sparkles text-white text-lg"></i>
           </div>
           <div class="mt-3 text-center w-full">
@@ -730,7 +730,7 @@
                   <span>Download CSV Template</span>
                 </a>
                 <a href="{% url 'upload_predictions' %}#columns"
-                  class="flex-1 flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 transition shadow-sm text-center">
+                  class="flex-1 flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 transition shadow-xs text-center">
                   <i class="fi fi-rr-book-alt"></i>
                   <span>Field Definitions</span>
                 </a>
@@ -743,12 +743,12 @@
               </div>
               <div class="mb-4 grid grid-cols-2 gap-3 text-left">
                 <label class="block"><span class="block mb-1 font-semibold text-gray-700">Model name</span>
-                  <input type="text" name="model_name" maxlength="100" placeholder="If not in the file" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"></label>
+                  <input type="text" name="model_name" maxlength="100" placeholder="If not in the file" class="w-full rounded-sm border border-gray-300 px-2 py-1.5 text-sm"></label>
                 <label class="block"><span class="block mb-1 font-semibold text-gray-700">Version</span>
-                  <input type="text" name="model_version" maxlength="50" placeholder="Optional" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"></label>
+                  <input type="text" name="model_version" maxlength="50" placeholder="Optional" class="w-full rounded-sm border border-gray-300 px-2 py-1.5 text-sm"></label>
               </div>
               <label class="flex items-center gap-2 text-left text-gray-700">
-                <input type="checkbox" name="dry_run" class="h-4 w-4 rounded border-gray-300"> Check only, don't save
+                <input type="checkbox" name="dry_run" class="h-4 w-4 rounded-sm border-gray-300"> Check only, don't save
               </label>
 
               <div id="progress-container-predictions" class="hidden mt-4">
@@ -763,11 +763,11 @@
         </div>
         <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
           <button type="button" onclick="closeModal('modal-predictions')"
-            class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none sm:text-sm">
+            class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-xs hover:bg-red-50 focus:outline-hidden sm:text-sm">
             Cancel
           </button>
           <button type="submit" id="btn-submit-predictions"
-            class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:text-sm">
+            class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-xs hover:bg-gray-50 focus:outline-hidden sm:text-sm">
             Upload Predictions
           </button>
         </div>
@@ -865,7 +865,7 @@
 {# --- MODAL 3: UPLOAD TAXONOMY REFERENCE --- #}
 <div id="modal-upload-taxonomy" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title-taxonomy"
   role="dialog" aria-modal="true">
-  <div class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity"
+  <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-xs transition-opacity"
     onclick="closeModal('modal-upload-taxonomy')"></div>
   <div class="flex min-h-screen items-center justify-center p-4 text-center">
     <div
@@ -875,7 +875,7 @@
         <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
           <div class="block">
 
-            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gray-600 mb-4">
+            <div class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-600 mb-4">
               <i class="fi fi-rr-upload text-white text-lg"></i>
             </div>
 
@@ -896,7 +896,7 @@
                 <div class="mb-4 text-left">
                   <label class="block mb-1 font-semibold text-gray-700">Version Label (Optional)</label>
                   <input type="text" name="label" placeholder="e.g., 2025-01-27 update"
-                    class="block w-full text-sm px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400" />
+                    class="block w-full text-sm px-4 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-gray-400" />
                   <p class="text-xs text-gray-500 mt-1">Leave blank to use current timestamp</p>
                 </div>
 
@@ -914,12 +914,12 @@
         </div>
         <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
           <button type="button" onclick="closeModal('modal-upload-taxonomy')"
-            class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none sm:text-sm">
+            class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-xs hover:bg-red-50 focus:outline-hidden sm:text-sm">
             Cancel
           </button>
 
           <button type="submit" id="btn-submit-taxonomy"
-            class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:text-sm">
+            class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-xs hover:bg-gray-50 focus:outline-hidden sm:text-sm">
             Upload Reference
           </button>
         </div>
@@ -930,7 +930,7 @@
 
 {# --- MODAL 4: FIELD DEFINITIONS --- #}
 <div id="modal-field-definitions" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title-fields" role="dialog" aria-modal="true">
-  <div class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity" onclick="closeModal('modal-field-definitions')"></div>
+  <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-xs transition-opacity" onclick="closeModal('modal-field-definitions')"></div>
   
   <div class="flex min-h-screen items-center justify-center p-4">
     <div class="relative w-full max-w-4xl transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all flex flex-col max-h-[90vh]">
@@ -949,7 +949,7 @@
       {# Modal Content (Scrollable) #}
       <div class="wide-table wide-table-both p-0">
         <table class="w-full text-sm text-left border-collapse">
-          <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-bold sticky top-0 shadow-sm z-10">
+          <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-bold sticky top-0 shadow-xs z-10">
             <tr>
               <th class="px-6 py-3 border-b border-gray-200 w-1/4">Field ID</th>
               <th class="px-6 py-3 border-b border-gray-200">Description</th>
@@ -1107,7 +1107,7 @@
       {# Modal Footer #}
       <div class="px-6 py-3 border-t border-gray-200 bg-gray-50 flex justify-end shrink-0">
         <button type="button" onclick="closeModal('modal-field-definitions')"
-          class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:text-sm">
+          class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-xs hover:bg-gray-50 focus:outline-hidden sm:text-sm">
           Close
         </button>
       </div>
@@ -1117,7 +1117,7 @@
 
 {# --- Log Modal & Script --- #}
 <div id="log-modal" onclick="if(event.target === this) closeModal('log-modal')"
-  class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+  class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
 
   <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden">
 
@@ -1131,7 +1131,7 @@
 
     <div class="p-6 overflow-y-auto bg-gray-50">
       <pre id="log-modal-text"
-        class="whitespace-pre-wrap break-words text-xs text-gray-700 font-mono bg-white p-4 rounded border border-gray-200 shadow-inner"
+        class="whitespace-pre-wrap wrap-break-word text-xs text-gray-700 font-mono bg-white p-4 rounded-sm border border-gray-200 shadow-inner"
         style="white-space: pre-wrap;">
         Loading...
       </pre>

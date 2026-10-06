@@ -49,7 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',
+    'beetlesgallery.apps.GalleryStaticFilesConfig',  # django.contrib.staticfiles, without the Tailwind source
     'django.contrib.humanize',      # Required for template filters
     
     # Third-party libraries
@@ -354,6 +354,12 @@ if STAGING:
     CSRF_COOKIE_NAME = "staging_csrftoken"
     SESSION_COOKIE_DOMAIN = None
     CSRF_COOKIE_DOMAIN = None
+
+# The live and staging sites are only reached over HTTPS (Cloudflare), so their sign-in and CSRF cookies are never
+# sent over plain HTTP (manage.py check --deploy). Local runs with DEBUG keep plain cookies; SECURE_COOKIES=0/1 overrides.
+SECURE_COOKIES = os.environ.get("SECURE_COOKIES", "1" if IS_PRODUCTION else "0") == "1"
+SESSION_COOKIE_SECURE = SECURE_COOKIES
+CSRF_COOKIE_SECURE = SECURE_COOKIES
 
 # --- Django REST Framework Configuration ---
 REST_FRAMEWORK = {

@@ -5,7 +5,7 @@
 {% block content %}
 <section class="relative z-0">
   {# Loading Overlay #}
-  <div id="page-loading-overlay" class="fixed inset-0 bg-white bg-opacity-90 z-50 flex items-center justify-center">
+  <div id="page-loading-overlay" class="fixed inset-0 bg-white/90 z-50 flex items-center justify-center">
     <div class="flex flex-col items-center gap-4">
       <div class="loading-spinner"></div>
       <p class="text-lg font-medium text-gray-700">Loading image browser...</p>
@@ -20,7 +20,7 @@
       
       {# 1. Search Bar #}
       <div class="relative w-full">
-        <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Search by ROI ID, Image ID (UUID), or Metadata..." class="w-full rounded-lg border border-text/10 bg-background px-6 py-4 text-md text-text shadow-md shadow-black/1 focus:ring-2 focus:ring-gray-400 outline-none transition" />
+        <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Search by ROI ID, Image ID (UUID), or Metadata..." class="w-full rounded-lg border border-text/10 bg-background px-6 py-4 text-md text-text shadow-md focus:ring-2 focus:ring-gray-400 outline-hidden transition" />
       </div>
 
       {# 2. Controls #}
@@ -102,7 +102,7 @@
 
                     {# DROPDOWN TOGGLE BUTTON #}
                     <button type="button" 
-                            class="filter-toggle-btn w-full text-left rounded-lg border bg-background px-3 py-2.5 text-sm flex items-center justify-between transition shadow-sm
+                            class="filter-toggle-btn w-full text-left rounded-lg border bg-background px-3 py-2.5 text-sm flex items-center justify-between transition shadow-xs
                                    {% if f.selected %}border-gray-400 ring-1 ring-gray-200 text-gray-900 font-medium{% else %}border-text/20 text-text hover:border-text/30{% endif %}"
                             onclick="toggleFilterDropdown(this)">
                         <span class="truncate pr-2">
@@ -121,7 +121,7 @@
                         {# Search Input #}
                         <div class="relative">
                             <input type="text" placeholder="Search..." 
-                                   class="w-full rounded-md border border-text/10 bg-secondary/10 px-3 py-1.5 text-sm focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none text-text"
+                                   class="w-full rounded-md border border-text/10 bg-secondary/10 px-3 py-1.5 text-sm focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-hidden text-text"
                                    onkeyup="filterDropdownOptions(this)">
                         </div>
 
@@ -253,7 +253,7 @@
           const isSelected = opt.selected;
 
           const item = document.createElement('div');
-          item.className = 'filter-option cursor-pointer select-none rounded px-2 py-2 text-sm flex items-center justify-between transition-colors ' +
+          item.className = 'filter-option cursor-pointer select-none rounded-sm px-2 py-2 text-sm flex items-center justify-between transition-colors ' +
               (isSelected ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-text/80 hover:bg-secondary/20');
           item.setAttribute('data-value', val);
           item.onclick = function() { toggleDropdownOption(this); };
@@ -264,7 +264,7 @@
           item.appendChild(span);
 
           const checkContainer = document.createElement('div');
-          checkContainer.className = 'w-4 h-4 rounded border flex items-center justify-center ml-2 shrink-0 transition-colors ' +
+          checkContainer.className = 'w-4 h-4 rounded-sm border flex items-center justify-center ml-2 shrink-0 transition-colors ' +
               (isSelected ? 'bg-gray-800 border-gray-800 text-white' : 'border-text/30 bg-white');
           
           const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');

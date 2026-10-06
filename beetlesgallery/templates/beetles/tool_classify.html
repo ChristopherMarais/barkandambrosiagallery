@@ -16,7 +16,7 @@
     <div class="pb-6 flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div class="max-w-3xl mx-auto text-center">
             <div class="mt-3" data-testid="server-info">
-                <p class="text-gray-700 bg-gray-100 inline-block px-2 py-1 rounded border border-gray-300 text-sm">
+                <p class="text-gray-700 bg-gray-100 inline-block px-2 py-1 rounded-sm border border-gray-300 text-sm">
                     <i class="fi fi-rr-info text-base align-middle mr-1"></i>
                     <strong>Server Info:</strong> The analysis server sleeps when idle. The first image may take a moment to wake it up; subsequent uploads will process much faster.
                 </p>
@@ -35,7 +35,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         <div class="lg:col-span-3 space-y-6">
-            <form id="classifyForm" class="space-y-5 bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+            <form id="classifyForm" class="space-y-5 bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
                 {% csrf_token %}
                 
                 <div>
@@ -45,7 +45,7 @@
                         <a href="{{ ibbi_docs_url }}" target="_blank" rel="noopener" class="underline hover:text-gray-800" data-testid="ibbi-link">Find out more about the performance of each model.</a>
                     </p>
                     <div class="relative">
-                        <select name="architecture" id="modelSelect" class="block w-full pl-3 pr-8 py-2.5 text-sm border-gray-300 focus:outline-none focus:ring-gray-500 focus:border-gray-500 rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer appearance-none" data-testid="model-select">
+                        <select name="architecture" id="modelSelect" class="block w-full pl-3 pr-8 py-2.5 text-sm border-gray-300 focus:outline-hidden focus:ring-gray-500 focus:border-gray-500 rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer appearance-none" data-testid="model-select">
                             {% ibbi_model_options %}
                         </select>
                         <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
@@ -56,7 +56,7 @@
 
                 <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
                     <label class="flex items-start gap-2 text-xs text-gray-700 cursor-pointer">
-                        <input type="checkbox" id="dontKeep" class="mt-0.5 h-4 w-4 rounded border-gray-300 accent-gray-600">
+                        <input type="checkbox" id="dontKeep" class="mt-0.5 h-4 w-4 rounded-sm border-gray-300 accent-gray-600">
                         <span><span class="font-semibold">Don't keep my image.</span>
                         Unless you tick this, an image with a bark or ambrosia beetle in it is added to the gallery as an unvalidated image for experts to check (location data removed).
                         <a href="#" id="showTerms" class="underline hover:text-black">Details</a></span>
@@ -68,14 +68,14 @@
                 {# On phones the button floats at the bottom of the screen, since the image is below this form #}
                 <button type="submit" id="submitBtn" disabled data-testid="classify-button"
                     style="bottom: max(1rem, env(safe-area-inset-bottom));"
-                    class="btn-main hidden flex fixed bottom-4 inset-x-4 z-30 lg:static lg:inset-auto lg:z-auto lg:w-full px-6 py-4 lg:py-5 text-base lg:text-lg shadow-lg cursor-pointer">
+                    class="btn-main hidden flex fixed bottom-4 inset-x-4 z-30 lg:static lg:inset-auto lg:z-auto lg:w-full px-6 py-4 lg:py-5 text-base lg:text-lg shadow-lg">
                     <i class="fi fi-rr-sparkles text-xl lg:text-2xl"></i>
                     <span>Classify Image</span>
                 </button>
             </form>
 
             {% if examples %}
-            <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+            <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-xs">
                 <div class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Try an example</div>
                 <p class="text-[11px] text-gray-500 mb-2">Loads a photo so you can try IBBI-AI. Examples are never added to the gallery.</p>
                 <div class="grid grid-cols-2 gap-2">
@@ -107,16 +107,16 @@
             {# What went wrong, or that IBBI-AI is waking up: short and plain, never a raw error #}
             <p id="classifyMessage" class="hidden rounded-lg border px-4 py-3 text-sm" role="alert" data-testid="classify-message"></p>
 
-            <div class="bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 shadow-sm overflow-hidden relative min-h-[280px] lg:min-h-[500px] flex items-center justify-center group hover:border-gray-400 hover:bg-gray-100 transition-all cursor-pointer" id="canvasContainer">
+            <div class="bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 shadow-xs overflow-hidden relative min-h-[280px] lg:min-h-[500px] flex items-center justify-center group hover:border-gray-400 hover:bg-gray-100 transition-all cursor-pointer" id="canvasContainer">
                 
                 <div id="placeholderState" class="text-center p-8 w-full h-full flex flex-col items-center justify-center transition-opacity duration-300">
-                    <div class="bg-white w-24 h-24 rounded-full flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 group-hover:shadow-md transition-all duration-300">
+                    <div class="bg-white w-24 h-24 rounded-full flex items-center justify-center mb-4 shadow-xs group-hover:scale-110 group-hover:shadow-md transition-all duration-300">
                         <i class="fi fi-rr-picture text-4xl text-gray-500"></i>
                     </div>
                     <h3 class="text-xl font-bold text-gray-800 mb-2">Upload Image to Classify</h3>
                     <p class="text-sm text-gray-500 mb-6">Click to browse or drag & drop a file here</p>
                     
-                    <button type="button" id="cameraBtn" class="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-300 rounded-full shadow-sm text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-600 hover:border-gray-300 transition-all z-10">
+                    <button type="button" id="cameraBtn" class="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-300 rounded-full shadow-xs text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-600 hover:border-gray-300 transition-all z-10">
                         <i class="fi fi-rr-camera"></i> Use Camera
                     </button>
                 </div>
@@ -124,7 +124,7 @@
                 <div id="cameraInterface" class="hidden absolute inset-0 bg-black flex flex-col items-center justify-center z-20 cursor-default">
                     <video id="cameraStream" autoplay playsinline class="w-full h-full object-contain"></video>
                     <div class="absolute bottom-8 flex gap-6 z-30">
-                        <button type="button" id="cancelCameraBtn" class="px-6 py-2 bg-gray-800/80 text-white rounded-full text-sm font-medium hover:bg-gray-700 backdrop-blur-sm transition-colors border border-gray-600">
+                        <button type="button" id="cancelCameraBtn" class="px-6 py-2 bg-gray-800/80 text-white rounded-full text-sm font-medium hover:bg-gray-700 backdrop-blur-xs transition-colors border border-gray-600">
                             Cancel
                         </button>
                         <button type="button" id="captureBtn" class="w-16 h-16 bg-white rounded-full border-4 border-gray-300 hover:border-gray-500 flex items-center justify-center shadow-lg transition-colors ring-4 ring-black/20">
@@ -144,23 +144,23 @@
             </div>
 
             {# Right under the photo: shows and hides IBBI-AI's boxes as it moves, without asking IBBI-AI again #}
-            <div id="confidenceBar" class="hidden bg-white px-4 py-3 rounded-xl border border-gray-200 shadow-sm" data-testid="confidence-bar">
+            <div id="confidenceBar" class="hidden bg-white px-4 py-3 rounded-xl border border-gray-200 shadow-xs" data-testid="confidence-bar">
                 {# On phones the slider gets a row of its own, so it is wide enough for a thumb #}
                 <div class="flex flex-wrap sm:flex-nowrap items-center gap-x-3">
                     <label for="confRange" class="shrink-0 text-xs font-bold text-gray-500 uppercase tracking-wide">Confidence</label>
                     <input type="range" id="confRange" min="{{ lowest_threshold|stringformat:'s' }}" max="0.99" step="0.01" value="{{ keep_threshold|stringformat:'s' }}"
                         aria-describedby="confCount" data-testid="confidence-slider"
-                        class="order-last sm:order-none w-full sm:w-auto sm:flex-1 min-w-0 h-8 cursor-pointer accent-gray-600 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2">
+                        class="order-last sm:order-none w-full sm:w-auto sm:flex-1 min-w-0 h-8 cursor-pointer accent-gray-600 rounded-sm focus:outline-hidden focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2">
                     <span id="confValue" class="ml-auto sm:ml-0 w-10 shrink-0 text-right text-sm font-mono tabular-nums text-gray-700" aria-hidden="true">{% widthratio keep_threshold 1 100 %}%</span>
                 </div>
                 <p id="confCount" class="text-xs text-gray-600" role="status" aria-live="polite" data-testid="confidence-count"></p>
                 <p id="keepHint" class="hidden mt-0.5 text-xs text-gray-500" data-testid="keep-hint">Boxes under {% widthratio keep_threshold 1 100 %}% are not kept in the gallery.</p>
             </div>
 
-            <div id="analysisDetails" class="hidden bg-white p-6 rounded-xl border border-gray-200 shadow-sm transition-all">
+            <div id="analysisDetails" class="hidden bg-white p-6 rounded-xl border border-gray-200 shadow-xs transition-all">
                 <div class="flex items-center justify-between mb-4 border-b border-gray-100 pb-2">
                     <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Identification</h3>
-                    <span id="chartLabel" class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded">Select a detection</span>
+                    <span id="chartLabel" class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-sm">Select a detection</span>
                 </div>
                 
                 {# What happened to the photo (the "saved" answer), one line #}
@@ -193,7 +193,7 @@
     </section>
 </div>
 
-<div id="termsModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60" role="dialog" aria-modal="true" aria-labelledby="termsTitle">
+<div id="termsModal" class="hidden fixed inset-0 z-100 flex items-center justify-center p-4 bg-gray-900/60" role="dialog" aria-modal="true" aria-labelledby="termsTitle">
   <div class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
     <h2 id="termsTitle" class="text-lg font-semibold text-gray-900 mb-3">Before you use IBBI-AI</h2>
     <div class="space-y-3 text-sm text-gray-700">
@@ -203,7 +203,7 @@
       <p class="text-xs text-gray-500">Kept images may be shown in the gallery and used for research on bark and ambrosia beetles. To have one removed, contact the gallery team.</p>
     </div>
     <label class="mt-4 flex items-center gap-2 text-sm text-gray-800">
-      <input type="checkbox" id="termsDontKeep" class="h-4 w-4 rounded border-gray-300 accent-gray-600"> Don't keep my images
+      <input type="checkbox" id="termsDontKeep" class="h-4 w-4 rounded-sm border-gray-300 accent-gray-600"> Don't keep my images
     </label>
     <div class="mt-5 flex justify-between gap-3">
       <a href="{% url 'image_browser' %}" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100">No thanks</a>
@@ -322,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Update Chart Label
         ui.chartLabel.innerText = `${det.label} (${Math.round(confidenceOf(det) * 100)}%)`;
-        ui.chartLabel.className = "text-xs font-bold text-white px-2 py-1 rounded shadow-sm transition-colors";
+        ui.chartLabel.className = "text-xs font-bold text-white px-2 py-1 rounded-sm shadow-xs transition-colors";
         ui.chartLabel.style.backgroundColor = getBoxColor(index);
 
         // The most likely species, best first (the newer service sends them as candidates)
@@ -382,7 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (index !== -1) { updateChartData(index); return; }
         ui.ranksPanel.classList.add('hidden');
         ui.chartLabel.textContent = state.detections.length ? 'Move the slider left to see boxes' : 'No beetles found';
-        ui.chartLabel.className = 'text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded';
+        ui.chartLabel.className = 'text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-sm';
         ui.chartLabel.style.backgroundColor = '';
     }
 

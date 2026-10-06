@@ -115,7 +115,7 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
         """
         from beetlesgallery.tools import ibbi_models
 
-        from ..classify_assist import ClassifyError, add_rois, call_classifier
+        from ..classify_assist import ClassifyError, add_rois, call_classifier, user_message
         if not has_area(request.user, AI_RECOMMEND):
             raise PermissionDenied("Your account cannot generate AI recommendations.")
         asset = self.get_object()
@@ -135,7 +135,9 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
                                      request.data.get('architecture') or ibbi_models.DEFAULT, threshold)
             counts = add_rois(asset, result, request.user)
         except ClassifyError as exc:
-            return Response({'error': str(exc)}, status=502)
+            # The details go to the server log; the annotator gets a fixed, plain text for what went wrong.
+            logger.warning("AI recommendation for image %s failed: %s", asset.pk, exc)
+            return Response({'error': user_message(exc)}, status=502)
         return Response({**counts, 'model': result.get('model_used', '')})
 
     @action(detail=True, methods=['post'], url_path='heartbeat')

@@ -49,13 +49,13 @@
 </div>
 
 <!-- Report sheet -->
-<div id="sheet" class="hidden fixed inset-0 z-[100] bg-black/40 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+<div id="sheet" class="hidden fixed inset-0 z-100 bg-black/40 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
   <form id="sheet-form" class="w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl p-5 space-y-3">
     <h2 id="sheet-title" class="text-lg font-semibold text-gray-900">Report this image</h2>
     <p class="text-sm text-gray-500">A curator will take a look. Your answer on it won't count while they check.</p>
     <div class="space-y-2">
       {% for value, label in reasons %}
-      <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl has-[:checked]:border-gray-600">
+      <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl has-checked:border-gray-600">
         <input type="radio" name="reason" value="{{ value }}" class="h-4 w-4" required>
         <span class="text-sm text-gray-800">{{ label }}</span>
       </label>
@@ -74,10 +74,10 @@
 </div>
 
 <!-- Full image viewer -->
-<div id="lightbox" class="hidden fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-3" role="dialog" aria-label="Whole image">
+<div id="lightbox" class="hidden fixed inset-0 z-100 bg-black/90 flex items-center justify-center p-3" role="dialog" aria-label="Whole image">
   <div class="relative inline-block">
     <img id="lightbox-img" alt="Whole image" class="block max-w-[94vw] max-h-[85vh] object-contain">
-    <div id="lightbox-box" class="absolute border-2 border-white rounded-sm pointer-events-none"></div>
+    <div id="lightbox-box" class="absolute border-2 border-white rounded-xs pointer-events-none"></div>
   </div>
 </div>
 
@@ -116,7 +116,7 @@
     else if (item.skipped) [html, cls] = ["Skipped", "bg-gray-100 text-gray-600 border-gray-200"];
     else if (item.verdict) [html, cls] = VERDICT[item.verdict];
     else [html, cls] = ["Not verified yet", "bg-gray-100 text-gray-600 border-gray-200"];
-    return `<span class="text-[11px] font-semibold px-2 py-0.5 rounded border ${cls}">${html}</span>`;
+    return `<span class="text-[11px] font-semibold px-2 py-0.5 rounded-sm border ${cls}">${html}</span>`;
   }
 
   // Points for a checked beetle: what it earned, and where the rest went
@@ -160,8 +160,8 @@
 
   function sideStatus(side) {
     const v = side.verified
-      ? '<span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-green-100 text-green-800 border border-green-200">Verified</span>'
-      : '<span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200">Unverified</span>';
+      ? '<span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-sm bg-green-100 text-green-800 border border-green-200">Verified</span>'
+      : '<span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-sm bg-gray-100 text-gray-600 border border-gray-200">Unverified</span>';
     return v;
   }
 
@@ -319,7 +319,7 @@
         btn.appendChild(canvas);
         if (item.sides.length > 1) {
           const tag = document.createElement("span");
-          tag.className = "absolute top-1.5 left-1.5 px-1.5 py-0.5 text-xs font-bold bg-white/90 rounded";
+          tag.className = "absolute top-1.5 left-1.5 px-1.5 py-0.5 text-xs font-bold bg-white/90 rounded-sm";
           tag.textContent = item.mode === "odd" || item.mode === "select" ? String(i + 1) : i === 0 ? "A" : "B";
           btn.appendChild(tag);
         }

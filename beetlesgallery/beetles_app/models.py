@@ -1292,7 +1292,7 @@ class InteractionProposal(models.Model):
                 name="interaction_proposal_one_per_claim_and_source",
             ),
             models.CheckConstraint(
-                check=models.Q(score__isnull=True) | models.Q(score__gte=0, score__lte=1),
+                condition=models.Q(score__isnull=True) | models.Q(score__gte=0, score__lte=1),
                 name="interaction_proposal_score_0_1",
             ),
         ]
@@ -1834,7 +1834,7 @@ class ModelPrediction(models.Model):
                 fields=["roi", "model_name", "model_version"], name="model_prediction_roi_model_uniq"
             ),
             models.CheckConstraint(
-                check=models.Q(confidence__gte=0, confidence__lte=1), name="model_prediction_confidence_0_1"
+                condition=models.Q(confidence__gte=0, confidence__lte=1), name="model_prediction_confidence_0_1"
             ),
         ]
 

@@ -8,10 +8,10 @@
     
     <div class="flex-1 flex flex-col w-full max-w-7xl mx-auto">
       <header class="text-center py-6 md:py-10 space-y-4 px-4">
-        <h1 class="text-3xl md:text-5xl font-black text-gray-900 tracking-tight leading-tight">
+        <h1 class="text-3xl md:text-5xl md:leading-none font-black text-gray-900 tracking-tight leading-tight">
           Bark & Ambrosia Beetle<br class="hidden md:block" /> Gallery
         </h1>
-        <p class="text-base mt-6 md:text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed text-balance">
+        <p class="text-base mt-6 md:text-lg md:leading-7 text-gray-600 max-w-3xl mx-auto leading-relaxed text-balance">
           Welcome to the Bark & Ambrosia Beetle Gallery. The world's largest collection of bark and ambrosia beetle images and specimen data. 
           
         <span class="block mt-6 text-sm md:text-base font-medium text-gray-400">
@@ -36,13 +36,13 @@
             <div class="absolute inset-0 bg-gray-50 rounded-full blur-3xl opacity-30 animate-pulse"></div>
             <img src="{% static 'img/IMG_5557.PNG' %}" 
                 alt="Beetles DB specimen"
-                class="relative z-10 w-auto h-auto max-h-[400px] lg:max-h-[500px] object-contain drop-shadow-xl hover:scale-105 transition-transform duration-500" />
+                class="relative z-10 w-auto h-auto max-h-[400px] lg:max-h-[500px] object-contain [filter:drop-shadow(0_20px_13px_rgb(0_0_0/0.03))_drop-shadow(0_8px_5px_rgb(0_0_0/0.08))] hover:scale-105 transition-transform duration-500" />
           </div>
         </div>
 
         <div class="lg:col-span-5 flex flex-col gap-4 w-full max-w-md mx-auto order-2 lg:order-2">
 
-          <a href="{% url 'beetles_image_browser' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-gray-100 hover:bg-gray-50/50 transition-all duration-300">
+          <a href="{% url 'beetles_image_browser' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-xs hover:shadow-md hover:border-gray-100 hover:bg-gray-50/50 transition-all duration-300">
             <div class="p-3 bg-gray-100 text-gray-600 rounded-xl group-hover:scale-110 transition-transform">
               <i class="fi fi-rr-bug text-xl"></i>
             </div>
@@ -52,7 +52,7 @@
             </div>
           </a>
 
-          <a href="{% url 'tool_classify' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-gray-100 hover:bg-gray-50/50 transition-all duration-300">
+          <a href="{% url 'tool_classify' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-xs hover:shadow-md hover:border-gray-100 hover:bg-gray-50/50 transition-all duration-300">
             <div class="p-3 bg-gray-100 text-gray-600 rounded-xl group-hover:scale-110 transition-transform">
               <i class="fi fi-rr-sparkles text-xl"></i>
             </div>
@@ -62,7 +62,7 @@
             </div>
           </a>
 
-          <a href="{% url 'game_home' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-gray-100 hover:bg-gray-50/50 transition-all duration-300">
+          <a href="{% url 'game_home' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-xs hover:shadow-md hover:border-gray-100 hover:bg-gray-50/50 transition-all duration-300">
             <div class="p-3 bg-gray-100 text-gray-600 rounded-xl group-hover:scale-110 transition-transform">
               <i class="fi fi-rr-gamepad text-xl"></i>
             </div>
@@ -96,7 +96,7 @@
       </div>
     </div>
       <button onclick="document.getElementById('team-section').scrollIntoView({ behavior: 'smooth' });" 
-            class="w-full pt-6 pb-2 mt-4 justify-center hidden lg:flex items-center opacity-40 hover:opacity-100 transition-opacity duration-300 cursor-pointer outline-none z-10">
+            class="w-full pt-6 pb-2 mt-4 justify-center hidden lg:flex items-center opacity-40 hover:opacity-100 transition-opacity duration-300 cursor-pointer outline-hidden z-10">
         <div class="flex flex-col items-center animate-bounce">
             <span class="text-[16px] text-gray-400 font-bold uppercase tracking-widest mb-1">Team and Sponsors</span>
             <i class="fi fi-rr-angle-double-small-down text-xl text-gray-400 mb-4"></i>
@@ -107,7 +107,7 @@
   <section id="team-section" class="lg:snap-start relative flex flex-col min-h-screen w-full bg-white">
     
     <button onclick="document.getElementById('landing-section').scrollIntoView({ behavior: 'smooth' });" 
-            class="w-full pt-6 pb-2 mt-4 justify-center hidden lg:flex items-center opacity-40 hover:opacity-100 transition-opacity duration-300 cursor-pointer outline-none z-10">
+            class="w-full pt-6 pb-2 mt-4 justify-center hidden lg:flex items-center opacity-40 hover:opacity-100 transition-opacity duration-300 cursor-pointer outline-hidden z-10">
         <div class="flex flex-col items-center animate-bounce">
             <i class="fi fi-rr-angle-double-small-up text-xl text-gray-400"></i>
             <span class="text-[16px] text-gray-400 font-bold uppercase tracking-widest mb-4">Top</span>
@@ -116,7 +116,7 @@
         
     <div class="flex-1 flex flex-col justify-center py-6">
 
-      <h1 class="text-3xl md:text-3xl font-black text-gray-900 mb-6 tracking-tight text-center leading-tight">
+      <h1 class="text-3xl md:text-3xl md:leading-9 font-black text-gray-900 mb-6 tracking-tight text-center leading-tight">
           Created by:
       </h1>
 
@@ -272,7 +272,7 @@
             Contributing Institutions to the Image Database (sorted by volume):
           </h3>
           <br />
-          <p class="text-gray-500 text-sm md:text-base leading-relaxed max-w-5xl mx-auto">
+          <p class="text-gray-500 text-sm md:text-base md:leading-6 leading-relaxed max-w-5xl mx-auto">
             <ul class="list-none p-0 m-0">
               <li>University of Florida Forest Entomology Lab (UFFE) </li>
               <li>Biodiversity Center, University of Texas at Austin </li>
@@ -322,7 +322,7 @@
             <br />
             Connect with our team on GitHub.
         </p>
-        <a href="https://github.com/ChristopherMarais/barkandambrosiagallery/discussions" target="_blank" class="inline-flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 text-gray-600 rounded-full font-medium hover:text-gray-900 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300 shadow-sm hover:shadow-md">
+        <a href="https://github.com/ChristopherMarais/barkandambrosiagallery/discussions" target="_blank" class="inline-flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 text-gray-600 rounded-full font-medium hover:text-gray-900 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300 shadow-xs hover:shadow-md">
             <i class="fi fi-brands-github text-lg mt-2"></i>
             <span>Visit GitHub Discussions</span>
         </a>
