@@ -1,7 +1,7 @@
 """
 The game's wording for the full release (#538): Naming (was Identification) and Odd One Out (was Imposter Picker),
-with Naming experts beside Distinction experts; "Select every X"; Odd One Out asks for the one that doesn't share the
-rank; no "Seen before" tag on the photo; the photo rule in one sentence; the recap leads to the game's home; the
+with Naming experts beside Distinction experts; "Select every X"; Odd One Out asks which one is a different rank
+(#569); no "Seen before" tag on the photo; the photo rule in one sentence; the recap leads to the game's home; the
 loading screen takes turns between short lines; and no Beta pill anywhere.
 """
 import re
@@ -93,8 +93,8 @@ class PromptTests(PlayPageCase):
 
     def test_odd_one_out_asks_for_the_one_that_doesnt_share_the_rank(self):
         page = self.play_page()
-        self.assertIn('"Find the one that doesn\'t share the same " + rank', page)
-        self.assertIn('"Find the " + n + " that don\'t share the same " + rank', page)   # several odd ones
+        self.assertIn('"Which one is a different " + rank + "?"', page)   # shorter since #569
+        self.assertIn('"Which " + n + " are a different " + rank + "?"', page)   # several odd ones
         self.assertIn("oddPrompt(item.rank, oddWant)", page)   # oddWant: item.odds, how many odd ones (#540)
         self.assertNotIn("Which one doesn't?", page)
 
@@ -133,7 +133,7 @@ class RecapTests(PlayPageCase):
     def test_the_recap_leads_to_the_games_home(self):
         page = self.play_page()
         self.assertIn(f'<a href="{reverse("game_home")}" class="px-6 py-3.5 text-base font-medium text-gray-700 border '
-                      f'border-gray-300 rounded-xl" data-testid="recap-home">{settings.GAME_DISPLAY_NAME} home</a>', page)
+                      f'border-gray-300 rounded-xl" data-testid="recap-home">{settings.GAME_DISPLAY_NAME}</a>', page)
         self.assertNotIn("See my stats and the leaderboard", page)
 
 
@@ -147,11 +147,14 @@ class LoadingTests(PlayPageCase):
     def test_the_lines_take_turns_then_say_it_is_slow_and_stop_once_loaded(self):
         page = self.play_page()
         self.assertIn('const LOADING_LINES = ["Finding beetles…", "Building your gallery…"];', page)
-        self.assertIn('const LOADING_SLOW = "This is taking a while: probably making frass…";', page)
-        self.assertIn("const LOADING_LINE_MS = 2500, LOADING_SLOW_MS = 10000;", page)
+        self.assertIn('const LOADING_SLOW = ["This is taking a while: probably making frass…",\n'
+                      '                        "This is taking a while: waiting for the fungus garden to grow…"];',
+                      page.replace("\r\n", "\n"))
+        # each first line three times (about 15 s), then the slow ones in turn (#569)
+        self.assertIn("const LOADING_LINE_MS = 2500, LOADING_TURNS = LOADING_LINES.length * 3;", page)
         lines = page[page.index("function loadingLines()"):page.index("async function startFeed")]
         self.assertIn('window.matchMedia("(prefers-reduced-motion: reduce)").matches', lines)
-        self.assertIn("if (!still) line.textContent", lines)                  # reduced motion: no alternating
+        self.assertIn("if (turn === LOADING_TURNS) line.textContent = LOADING_SLOW[0];", lines)   # reduced motion: one change
         self.assertIn('$("loading").classList.contains("hidden")', lines)    # stops once the beetles are in
         self.assertIn("clearInterval(loadingTimer)", lines)
         feed = page[page.index("async function startFeed"):]

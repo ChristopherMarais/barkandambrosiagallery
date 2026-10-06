@@ -1163,6 +1163,7 @@ def game_past_review(request, round_id, index):
     card = game_answer_review.past(rnd, index) if rnd else None
     if card is None:
         return JsonResponse({"error": "No such answer."}, status=404)
+    card["where"] = {"round": str(rnd.id), "index": index}   # for a Flag from its photos (#569)
     return JsonResponse({"review": card})
 
 

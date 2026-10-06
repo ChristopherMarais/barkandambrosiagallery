@@ -287,11 +287,11 @@ class PageTests(GridCase):
     def test_the_page_picks_up_to_that_many_and_sends_them_all(self):
         html = Path(settings.BASE_DIR, "beetlesgallery", "templates", "beetles", "game_play.html").read_text(encoding="utf-8")
         self.assertIn('oddWant = MODE === "odd" ? item.odds || 1 : 1;', html)
-        self.assertIn('oddPrompt(item.rank, oddWant)', html)   # "Find the 2 that don't share the same ..." (#538)
+        self.assertIn('oddPrompt(item.rank, oddWant)', html)   # "Which 2 are a different genus?" (#569)
         self.assertIn("else if (oddPicks.size < oddWant) oddPicks.add(i);", html)
         self.assertIn('MODE === "odd" ? oddPicks.size === oddWant', html)
         self.assertIn("picks: Array.from(oddPicks).sort((a, b) => a - b)", html)
-        self.assertIn('several ? "the odd ones" : "the odd one"', html)   # the card's lead says "The odd ones" (#541)
+        self.assertIn("parts(r.grid.note || [])", html)   # the card's one line says "Odd ones: 1 · …" (#569)
 
     def test_review_card_keeps_its_shape_for_one_odd_one(self):
         """The card's per-tile fields stay, and the new lists are added (#541 reworks how the names show)."""
