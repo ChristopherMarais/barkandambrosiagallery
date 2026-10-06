@@ -588,8 +588,18 @@
 
   // Draw the beetle with some of the photo around it and its box outlined, so the player sees how the crop sits
   // in the photo. Where the window runs past the photo's edge it is plain grey, which shows the edge without a label.
+  // ``cut``: the server already cut that window (game_crops.py), so the box sits at 1/6..5/6 of it; otherwise ``img``
+  // is the whole photo, cut here.
   const CROP_PAD = 0.25;   // context around the box, as a share of the box on each side
-  function drawCrop(canvas, img, box) {
+  function drawCrop(canvas, img, box, cut) {
+    if (cut) {
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      canvas.getContext("2d").drawImage(img, 0, 0);
+      const at = CROP_PAD / (1 + 2 * CROP_PAD);
+      outlineBox(canvas, [at * canvas.width, at * canvas.height, (1 - 2 * at) * canvas.width, (1 - 2 * at) * canvas.height]);
+      return;
+    }
     const W = img.naturalWidth, H = img.naturalHeight;
     const [bx, by, bw, bh] = box;
     const x0 = bx - bw * CROP_PAD, y0 = by - bh * CROP_PAD;                 // the window, in photo fractions
@@ -603,8 +613,12 @@
     const px = (fx) => (fx - x0) / ww * canvas.width, py = (fy) => (fy - y0) / wh * canvas.height;
     const sx0 = Math.max(0, x0), sy0 = Math.max(0, y0), sx1 = Math.min(1, x0 + ww), sy1 = Math.min(1, y0 + wh);
     ctx.drawImage(img, sx0 * W, sy0 * H, (sx1 - sx0) * W, (sy1 - sy0) * H, px(sx0), py(sy0), px(sx1) - px(sx0), py(sy1) - py(sy0));
+    outlineBox(canvas, [px(bx), py(by), px(bx + bw) - px(bx), py(by + bh) - py(by)]);
+  }
+  // The box's outline: a dark line with a white one inside, at r = [x, y, width, height] in canvas pixels
+  function outlineBox(canvas, r) {
+    const ctx = canvas.getContext("2d");
     const lw = Math.max(2, Math.round(Math.max(canvas.width, canvas.height) * 0.004));
-    const r = [px(bx), py(by), px(bx + bw) - px(bx), py(by + bh) - py(by)];
     // a box with round corners (square where the browser cannot round them)
     const radius = Math.min(lw * 4, Math.abs(r[2]) / 4, Math.abs(r[3]) / 4);
     const outline = () => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(...r, radius); else ctx.rect(...r); ctx.stroke(); };
@@ -765,13 +779,21 @@
   $("light-reset").addEventListener("click", resetLight);
   document.addEventListener("game:close-overlays", () => toggleLight(false));   // Esc
 
+  // Load an image and decode it off the main thread (decode()), so drawing it doesn't stall the page
   function loadImage(url) {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      img.onload = () => resolve(img);
+      img.decoding = "async";
+      img.onload = () => (img.decode ? img.decode().catch(() => {}) : Promise.resolve()).then(() => resolve(img));
       img.onerror = () => reject(new Error("An image failed to load."));
       img.src = url;
     });
+  }
+  // A beetle's crop for the feed: the small one cut on the server (shown at once), or, if that fails, the whole
+  // photo to cut here. The large crop is swapped in by showItem when it arrives.
+  function loadCrop(im) {
+    const whole = () => loadImage(im.url).then((img) => ({ img, cut: false }));
+    return im.small ? loadImage(im.small).then((img) => ({ img, cut: true }), whole) : whole();
   }
 
   let lightboxImage = 0;   // which photo of the item is open (A = 0, B = 1), for reporting it
@@ -838,10 +860,17 @@
     }
   }));
 
-  // Warm the browser cache with the next beetle's photos while this one is answered.
+  // Warm the browser cache with the next beetle's crops while this one is answered (small ones first; on the last
+  // beetle of a batch, the next batch's first), decoded off the main thread.
   function prefetch(urls) {
     prefetched.length = 0;
-    (urls || []).forEach((url) => { const img = new Image(); img.src = url; prefetched.push(img); });
+    (urls || []).forEach((url) => {
+      const img = new Image();
+      img.decoding = "async";
+      img.src = url;
+      if (img.decode) img.decode().catch(() => {});
+      prefetched.push(img);
+    });
   }
 
   // ---------- confetti (only ever for a correct answer, or a level) ----------
@@ -1130,7 +1159,7 @@
     item = next;
     let images;
     try {
-      images = await Promise.all(item.images.map((im) => loadImage(im.url)));
+      images = await Promise.all(item.images.map(loadCrop));   // small crops: the whole photo loads only when opened
     } catch (e) {
       images = null;
     }
@@ -1150,7 +1179,10 @@
       frame.className = "frame";
       frame.setAttribute("aria-label", MODE === "odd" ? "Pick this beetle" : MODE === "select" ? "Tap this beetle" : "See the whole image");
       const canvas = document.createElement("canvas");
-      if (images) drawCrop(canvas, images[i], im.box);
+      if (images) drawCrop(canvas, images[i].img, im.box, images[i].cut);
+      if (images && images[i].cut && im.large) {   // then the sharp one, if this beetle is still on screen
+        loadImage(im.large).then((big) => { if (canvas.isConnected) drawCrop(canvas, big, im.box, true); }).catch(() => {});
+      }
       frame.appendChild(canvas);
       if (MODE === "pair") {
         const tag = document.createElement("span");
@@ -1354,7 +1386,10 @@
     }
     if (review.celebrate) confetti(review.celebrate.kind, review.celebrate.size);
     // the next photos start loading now (usually they are in already; at the end of a batch they are not)
-    if (upcoming && upcoming.item) prefetch(upcoming.item.images.map((im) => im.url));
+    if (upcoming && upcoming.item) {   // the crops the next beetle shows: small ones first (#494)
+      const ims = upcoming.item.images;
+      prefetch(ims.map((im) => im.small || im.url).concat(ims.map((im) => im.large).filter(Boolean)));
+    }
     setPhase("review");
     readyAt = performance.now() + MASH_GUARD_MS;   // Enter pressed three times fast never skips the review
   }

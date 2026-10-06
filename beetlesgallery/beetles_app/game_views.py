@@ -7,7 +7,10 @@ label, or whether the item is a check, so the player cannot tell which answers a
 """
 import csv
 import json
+import logging
+import time
 from datetime import datetime, timedelta, timezone as dt_timezone
+from functools import wraps
 from urllib.parse import urlencode
 
 from django.conf import settings
@@ -16,20 +19,22 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
-from django.db.models import Max
-from django.http import Http404, HttpResponse, JsonResponse
+from django.db.models import Max, Q
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from . import game, game_board, game_checked, game_discoveries, game_feedback, game_queue, game_levels, game_rewards, game_scoring, game_tips, game_trust
-from . import game_answer_review, game_applied
+from . import game_answer_review, game_applied, game_crops
 from . import game_grid_ladder
 from . import game_taxa as taxa_tree
 from .areas import ANNOTATE, BOXES, VALIDATE, area_required, has_area
 from .models import Beetles, GameAnswer, GameReport, GameRound, ImageLock, LabelReview, PlayerScore, RetroCredit, Taxon
 from .predictions import suggestions_for
+
+logger = logging.getLogger(__name__)
 
 MODES = {m.value: m.label for m in GameRound.Mode}
 # What players see. (The model keeps its own plain labels; changing those would need a migration.)
@@ -536,17 +541,35 @@ def _next_index(rnd, start=None):
     return None
 
 
+def _shown_rois(item):
+    """The Beetles rows of an item in the order shown (A then B, or the grid's tiles). None if any is gone."""
+    if item.get("tiles"):
+        return _item_tiles(item)
+    rois = _item_rois(item)
+    if rois is None:
+        return None
+    a, b = rois
+    return [a] if b is None else ([b, a] if item.get("flip") else [a, b])
+
+
+def _crop_url(rnd, index, image, roi, size):
+    """Where the feed gets a beetle's crop (game_crop); ``v`` changes with the box, so the browser may keep it for good."""
+    url = reverse("game_crop", args=[rnd.id, index, image, size])
+    return f"{url}?v={game_crops.crop_key(roi)}"
+
+
 def _item_images(rnd, index, extras=False):
     """
-    The photos of one item. With ``extras``, each also says how many other photos there are of that same beetle
-    ("more"), and lists them ("photos") once the player has unlocked them (game_levels.SPECIMEN_PHOTOS).
-    Odd One Out shows its beetles in a grid, each on its own (no other photos of them).
+    The photos of one item: the whole photo ("url", for the whole-photo view), its box, and the crop the feed shows
+    ("small" at once, "large" swapped in when it arrives; #494). With ``extras``, each also says how many other photos
+    there are of that same beetle ("more"), and lists them ("photos") once the player has unlocked them
+    (game_levels.SPECIMEN_PHOTOS). Odd One Out shows its beetles in a grid, each on its own (no other photos of them).
     """
+    rois = _shown_rois(rnd.items[index])
+    images = [{"url": r.display_url, "box": _box(r), "small": _crop_url(rnd, index, i, r, "small"),
+               "large": _crop_url(rnd, index, i, r, "large")} for i, r in enumerate(rois)]
     if rnd.items[index].get("tiles"):
-        return [{"url": r.display_url, "box": _box(r)} for r in _item_tiles(rnd.items[index])]
-    a, b = _item_rois(rnd.items[index])
-    rois = [a] if b is None else ([b, a] if rnd.items[index].get("flip") else [a, b])
-    images = [{"url": r.display_url, "box": _box(r)} for r in rois]
+        return images
     if extras:
         unlocked = game_levels.SPECIMEN_PHOTOS in game_levels.for_player(rnd.player)["perks"]
         for image, roi in zip(images, rois):
@@ -588,11 +611,141 @@ def _item_payload(rnd, index):
                   .exclude(player=rnd.player).values("player").distinct().count())
         if others:
             payload["others"] = others   # how many other players named it (not what they said, until you answer)
-    # Let the browser start downloading the next photos while this item is answered.
+    # Let the browser start downloading the next crops while this item is answered: small ones first. On the last
+    # item of a batch, those of the next batch, built now so the batch can end without a wait (#494).
     following = _next_index(rnd, index + 1)
+    ahead = None
+    if following is None and rnd.finished_at is None:
+        ahead = _batch_ahead(rnd) or _build_ahead(rnd, index)
+        following = _next_index(ahead, 0) if ahead else None
     if following is not None:
-        payload["prefetch"] = [im["url"] for im in _item_images(rnd, following)]
+        upcoming = _item_images(ahead or rnd, following)
+        payload["prefetch"] = [im["small"] for im in upcoming] + [im["large"] for im in upcoming]
     return payload
+
+
+# ---------------------------------------------------------------------------
+# Speed (#494): the next batch is built while the last item of a batch is on screen, the end of a batch is
+# refreshed on the worker, and each beetle comes as a crop cut on the server.
+# ---------------------------------------------------------------------------
+def _batch_ahead(rnd):
+    """The batch built to follow ``rnd`` (_build_ahead), if there is one: a later unfinished one with no answers."""
+    return (GameRound.objects.filter(player_id=rnd.player_id, mode=rnd.mode, finished_at__isnull=True,
+                                     started_at__gt=rnd.started_at, answers__isnull=True)
+            .exclude(id=rnd.id).order_by("started_at").first())
+
+
+def _build_ahead(rnd, index):
+    """
+    Build the batch that follows ``rnd`` while its last item (``index``) is still being answered, so the feed can
+    prefetch its first beetle and the batch can end without a wait. Beetles still to come in ``rnd`` are left out of
+    it. None when there is nothing new to build.
+    """
+    fresh = game.start_round(rnd.player, rnd.mode, fresh_only=True)
+    if fresh is None:
+        return None
+    coming = set().union(*(game._item_ids(item) for item in rnd.items[index:]))
+    items = [item for item in fresh.items if coming.isdisjoint(game._item_ids(item))]
+    if not items:
+        fresh.delete()
+        return None
+    if len(items) < len(fresh.items):
+        fresh.items = items
+        fresh.save(update_fields=["items"])
+    if fresh.notice:   # not saved with the batch: kept until the feed reaches it (_next_batch)
+        from django.core.cache import cache
+
+        cache.set(AHEAD_NOTICE.format(fresh.id), fresh.notice, 60 * 60 * 24)
+    return fresh
+
+
+def _drop_ahead(rnd):
+    """A batch built ahead under rules that no longer apply (a new level opened a game): it goes, unanswered."""
+    ahead = _batch_ahead(rnd)
+    if ahead is not None:
+        ahead.delete()
+
+
+AHEAD_NOTICE = "game:ahead-notice:{}"
+
+
+def _next_batch(rnd):
+    """
+    The batch that carries the feed on after ``rnd``, and its first item: the one built ahead, or a new one. Either
+    has its ``notice`` (game.start_round): a batch built ahead gets it back from the cache, where _build_ahead left it.
+    """
+    ahead = _batch_ahead(rnd)
+    if ahead is not None:
+        first = _next_index(ahead, 0)
+        if first is not None:
+            from django.core.cache import cache
+
+            ahead.notice = cache.get(AHEAD_NOTICE.format(ahead.id)) or ""
+            return ahead, first
+        ahead.delete()   # its beetles have gone since
+    fresh = game.start_round(rnd.player, rnd.mode, fresh_only=True)
+    return fresh, (_next_index(fresh, 0) if fresh else None)
+
+
+LEVEL_SHOWN = "game:level-shown:{}"
+
+
+def _late_level_events(player, before, events, level):
+    """
+    A level reached through the work done after a batch (on the worker, between two answers) raises no event on its
+    own: play_events compares the moments just before and after one answer. So the feed remembers the last level it
+    showed each player, and announces a higher one on the next answer (toast and gold confetti), once. Without the
+    cache nothing is announced twice: a level it doesn't know of is simply remembered.
+    """
+    from django.core.cache import cache
+
+    key = LEVEL_SHOWN.format(player.pk)
+    shown = cache.get(key)
+    cache.set(key, level, 60 * 60 * 24 * 30)
+    if shown is None or level <= shown or any(e["kind"] == "level" for e in events):
+        return []
+    # what the player had at the level last shown, plus any unlocks granted or kept outside the levels
+    extra = set(before["perks"]) - game_levels.unlocked_perks(before["level"] - 1)
+    then = dict(before, level=shown, perks=sorted(game_levels.unlocked_perks(shown - 1) | extra))
+    return [e for e in game_rewards.play_events(player, then) if e["kind"] in ("level", "proposals")]
+
+
+def _timed(view):
+    """Log how long a feed request took and what it built (one line), so lag shows in the server logs (#494)."""
+    @wraps(view)
+    def timed(request, *args, **kwargs):
+        stats = {"batches": 0, "items": 0, "crops": 0}
+        token = game_crops.built.set(stats)
+        started = time.perf_counter()
+        try:
+            return view(request, *args, **kwargs)
+        finally:
+            game_crops.built.reset(token)
+            logger.info("%s took %d ms: %d new batch(es), %d item(s), %d crop(s) queued", view.__name__,
+                        (time.perf_counter() - started) * 1000, stats["batches"], stats["items"], stats["crops"])
+    return timed
+
+
+@login_required
+@require_GET
+def game_crop(request, round_id, index, image, size):
+    """
+    One beetle of the player's own batch, as the crop the feed shows (game_crops), cut on first request. The URL names
+    the batch, the item and the photo, never the beetle, so it gives away nothing the feed doesn't show.
+    """
+    if size not in game_crops.SIZES:
+        raise Http404("Unknown size.")
+    rnd = get_object_or_404(GameRound, id=round_id, player=request.user)
+    rois = _shown_rois(rnd.items[index]) if index < len(rnd.items) else None
+    if not rois or image >= len(rois) or not game.playable_rois().filter(pk=rois[image].pk).exists():
+        raise Http404("Unknown beetle.")
+    path = game_crops.ensure(rois[image], size)
+    if path is None:
+        raise Http404("No crop.")
+    response = FileResponse(open(path, "rb"), content_type=game_crops.file_format()[2])
+    # the name changes with the box (?v=), so the browser can keep it for good; private, as it needs a login
+    response["Cache-Control"] = "private, max-age=31536000, immutable"
+    return response
 
 
 def _finish(rnd):
@@ -605,6 +758,7 @@ def _finish(rnd):
 
 @login_required
 @require_POST
+@_timed
 def game_start(request):
     body = _json_body(request)
     mode = (body or {}).get("mode")
@@ -739,6 +893,7 @@ def _response_ms(body):
 
 @login_required
 @require_POST
+@_timed
 def game_answer(request, round_id):
     rnd = get_object_or_404(GameRound, id=round_id, player=request.user)
     body = _json_body(request)
@@ -852,24 +1007,26 @@ def game_answer(request, round_id):
         "events": game_rewards.play_events(request.user, before),
         "chip": _chip(request.user),
     }
+    extra["events"] += _late_level_events(request.user, before, extra["events"], extra["chip"]["level"])
     if any(e["kind"] == "level" for e in extra["events"]):
         # A new level's unlocks apply at once: the toolbar learns about them, and when the level opens a new game
         # the rest of this batch (picked under the old rules) is set aside for a fresh one.
         extra["prefs"] = _prefs(request.user)
         opened = {g["key"] for g in extra["prefs"]["games"] if g["unlocked"]}
         if opened - set(game_levels.games(before["perks"])):
-            game.finish_round(rnd)
+            _drop_ahead(rnd)
+            game.finish_round_later(rnd)
             fresh = game.start_round(request.user, rnd.mode, fresh_only=True)
             first = _next_index(fresh, 0) if fresh else None
             if first is not None:
                 return JsonResponse(dict(extra, round=str(fresh.id), item=_item_payload(fresh, first), notice=fresh.notice))
     nxt = _next_index(rnd, index + 1)
     if nxt is None:
-        # The feed carries straight on into a new batch. It only ends when there is nothing new left to show.
-        game.finish_round(rnd)
-        fresh = game.start_round(request.user, rnd.mode, fresh_only=True)
-        first = _next_index(fresh, 0) if fresh else None
+        # The feed carries straight on into a new batch (usually built ahead), and the work of closing this one is
+        # done on the worker. It only ends when there is nothing new left to show.
+        fresh, first = _next_batch(rnd)
         if first is not None:
+            game.finish_round_later(rnd)
             return JsonResponse(dict(extra, round=str(fresh.id), item=_item_payload(fresh, first), notice=fresh.notice))
         return JsonResponse(dict(_finish(rnd), **extra))
     return JsonResponse(dict(extra, item=_item_payload(rnd, nxt)))
@@ -896,7 +1053,7 @@ def game_exit(request):
     body = _json_body(request) or {}
     rnd = GameRound.objects.filter(id=body.get("round"), player=request.user).first() if _is_uuid(body.get("round")) else None
     if rnd is not None and rnd.finished_at is None:
-        game.finish_round(rnd)
+        game.finish_round_later(rnd)
     # How the sitting went. "since" is when the page was opened (milliseconds since 1970); without it, the last hour.
     try:
         since = datetime.fromtimestamp(int(body["since"]) / 1000, tz=dt_timezone.utc)

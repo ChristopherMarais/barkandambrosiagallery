@@ -30,7 +30,7 @@ class FeedTests(GameCase):
         self.assertEqual(len(seen), 1)   # the first batch ended after two answers...
         self.assertNotIn("done", data)   # ...and the second answer already returned the next beetle
         self.assertIsNotNone(GameRound.objects.filter(finished_at__isnull=False).first())
-        self.assertEqual(GameRound.objects.filter(finished_at__isnull=True).count(), 1)
+        self.assertIsNone(GameRound.objects.get(id=data["round"]).finished_at)   # (the one after may be built ahead, #494)
 
     @override_settings(GAME_ROUND_SIZE=2)
     def test_the_feed_ends_only_when_there_is_nothing_new_left(self):

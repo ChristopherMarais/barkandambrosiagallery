@@ -29,3 +29,18 @@ def import_predictions_task(job_id):
 def recompute_all_scores_task():
     """Everyone's scores with the current scoring settings (the Scoring page's "Re-score everyone")."""
     call_command("recompute_game_scores")
+
+@shared_task
+def finish_game_round_task(round_id):
+    """Refresh what derives from a closed batch's answers in the background (see game.finish_round_later)."""
+    from beetlesgallery.beetles_app import game
+    from beetlesgallery.beetles_app.models import GameRound
+    rnd = GameRound.objects.filter(id=round_id).first()
+    if rnd is not None:
+        game.refresh_round(rnd)
+
+@shared_task(ignore_result=True)
+def prepare_game_crops_task(round_id):
+    """Cut a new batch's crops before the feed asks for them (game_crops.prepare)."""
+    from beetlesgallery.beetles_app.game_crops import prepare
+    prepare(round_id)

@@ -942,12 +942,22 @@ def build_select_items(player, size, fresh_only=False, avoid=()):
 
 
 def resumable_round(player, mode):
-    """The player's latest unfinished round in this mode, if recent enough to pick up again."""
+    """
+    The player's latest unfinished round in this mode, if recent enough to pick up again. A batch built ahead of time
+    (game_views: nothing answered in it yet) waits while the batch in play before it still has items to answer.
+    """
+    from django.db.models import Max
+
     since = timezone.now() - timedelta(hours=game_setting("GAME_RESUME_HOURS", 12))
-    return (
+    latest = list(
         GameRound.objects.filter(player=player, mode=mode, finished_at__isnull=True, started_at__gte=since)
-        .order_by("-started_at").first()
+        .order_by("-started_at")[:2]
     )
+    if len(latest) == 2 and not latest[0].answers.exists():
+        last = latest[1].answers.aggregate(m=Max("index"))["m"]
+        if last is not None and last < len(latest[1].items) - 1:
+            return latest[1]
+    return latest[0] if latest else None
 
 
 def spread(items):
@@ -1152,25 +1162,62 @@ def close_idle_rounds(player, idle_minutes=10):
     """
     Finish the player's feed batches that were left open (they closed the tab, or their phone went to sleep),
     so their answers reach their skills and the difficulty of the images without waiting for them to come back.
+    The work is done on the worker (finish_round_later). A batch with nothing answered (one built ahead and never
+    reached) has nothing to count, so it is dropped rather than counted as played.
     """
     cutoff = timezone.now() - timedelta(minutes=idle_minutes)
     for rnd in GameRound.objects.filter(player=player, finished_at__isnull=True, started_at__lt=cutoff):
         last = rnd.answers.order_by("-answered_at").values_list("answered_at", flat=True).first()
-        if last is None or last < cutoff:
-            finish_round(rnd)
+        if last is None:
+            rnd.delete()
+        elif last < cutoff:
+            finish_round_later(rnd)
 
 
 def finish_round(rnd):
     """Close a round and refresh everything derived from its answers."""
+    _close(rnd)
+    refresh_round(rnd)
+
+
+def finish_round_later(rnd):
+    """
+    Close a round now, and refresh everything derived from its answers on the Celery worker (#494), so the player
+    isn't kept waiting at the end of a batch. Done here if the queue can't be reached, and here too where game work
+    isn't sent to the worker (GAME_RECOMPUTE_IN_BACKGROUND off, as when developing).
+    """
+    from django.db import transaction
+
+    from .tasks import finish_game_round_task
+
+    if not game_setting("GAME_RECOMPUTE_IN_BACKGROUND", False):
+        finish_round(rnd)
+        return
+    _close(rnd)
+
+    def queue():
+        try:
+            finish_game_round_task.apply_async(args=[str(rnd.id)], retry=False)
+        except Exception:
+            refresh_round(rnd)
+
+    transaction.on_commit(queue)
+
+
+def _close(rnd):
+    if rnd.finished_at is None:
+        rnd.finished_at = timezone.now()
+        rnd.save(update_fields=["finished_at"])
+
+
+def refresh_round(rnd):
+    """Everything derived from a closed round's answers: skills, image difficulty, scores, applied labels, discoveries."""
     from .game_trust import recompute_skills
 
     from .game_scoring import recompute
 
     from .game_scoring import players_sharing_beetles, sync_late_truth
 
-    if rnd.finished_at is None:
-        rnd.finished_at = timezone.now()
-        rnd.save(update_fields=["finished_at"])
     sync_late_truth([rnd.player_id])
     recompute_skills(rnd.player)
     update_difficulty(rnd.answers.values_list("roi_id", flat=True))
