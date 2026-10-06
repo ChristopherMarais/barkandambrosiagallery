@@ -152,7 +152,7 @@ class GamePageTests(ReviewCase):
 
     def test_names_go_on_every_photo_live_and_under_back(self):
         page = self.page()
-        self.assertIn('nameTiles($("photos").querySelectorAll(".cell"), review);', page)
+        self.assertIn("nameTiles(cells, review);", page)   # a grid tile by tile since #602 (nameTile)
         self.assertIn("nameTiles(cells, previous);", page)
         self.assertIn('box.dataset.testid = "beetle-names";', page)
         self.assertIn('name = genus[0] + ". " + name.slice(genus.length + 1);', page)   # X. affinis

@@ -171,7 +171,7 @@ class LateLevelTests(GameCase):
 class TemplateTests(GameCase):
     def test_small_crops_first_then_the_large_ones(self):
         show = js_function("showItem")
-        self.assertIn("item.images.map(loadCrop)", show)
+        self.assertIn("item.images.map((im) => loadCrop(im)", show)   # each tile its own, as it comes (#602)
         self.assertNotIn("loadImage(im.url)", show)              # the whole photo isn't loaded for the feed
         self.assertIn("loadImage(im.large).then((big) => { if (canvas.isConnected) drawCrop(canvas, big, im.box, true); })", show)
         crop = js_function("loadCrop")
