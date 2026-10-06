@@ -19,6 +19,6 @@ services:
       EMAIL_PORT: ${EMAIL_PORT:-1025}
       EMAIL_USE_TLS: ${EMAIL_USE_TLS:-false}
     depends_on:
-      - db
-      - redis
-      - mailpit
+      # Only adds Mailpit: db and redis (and their wait conditions) come from docker-compose.yml
+      mailpit:
+        condition: service_started
