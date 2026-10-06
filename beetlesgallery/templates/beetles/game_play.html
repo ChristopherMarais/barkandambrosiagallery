@@ -1194,22 +1194,36 @@
     }
   }
 
-  // A new level: a card in the middle of the screen with the level's badge in its colour on the scale
-  // (game_rewards.play_events), over gold and brown beetles with a sprinkle of that colour.
-  function levelPop(event) {
+  // A pop-up in the middle of the screen, over gold and brown beetles with a sprinkle of its colour: a new level, with
+  // the level's badge in its colour on the scale, or a badge just earned (#608). Several wait their turn, one after
+  // another. With reduced motion, the card without the confetti.
+  const POP_MS = 4200;
+  const popQueue = [];
+  let popping = false;
+  function queuePop(show) {
+    popQueue.push(show);
+    if (!popping) nextPop();
+  }
+  function nextPop() {
+    const show = popQueue.shift();
+    popping = !!show;
+    if (show) { show(); setTimeout(nextPop, POP_MS + 450); }
+  }
+  function showPop(event, badgeClass, badgeText, testid, badgeColour) {
     const pop = document.createElement("div");
     pop.className = "level-pop";
     pop.setAttribute("role", "status");
-    pop.dataset.testid = "level-pop";
+    pop.dataset.testid = testid;
     const card = document.createElement("div");
     card.className = "level-pop-card";
     card.style.setProperty("--level-colour", event.colour || "#6b7280");
     const badge = document.createElement("div");
-    badge.className = "level-pop-badge " + (event.badge || "scale-chip-none");
+    badge.className = "level-pop-badge " + badgeClass;
+    if (badgeColour) { badge.style.background = badgeColour; badge.style.color = "#fff"; }
     const icon = document.createElement("i");
     icon.className = "fi " + (event.icon || "fi-rr-egg");
     icon.setAttribute("aria-hidden", "true");
-    badge.append(icon, document.createTextNode(event.level || ""));
+    badge.append(icon, document.createTextNode(badgeText));
     const title = document.createElement("div");
     title.className = "mt-3 text-lg font-bold text-gray-900";
     title.textContent = event.title;
@@ -1220,12 +1234,23 @@
     pop.appendChild(card);
     document.body.appendChild(pop);
     requestAnimationFrame(() => pop.classList.add("shown"));
-    setTimeout(() => { pop.classList.remove("shown"); setTimeout(() => pop.remove(), 400); }, 4200);
+    setTimeout(() => { pop.classList.remove("shown"); setTimeout(() => pop.remove(), 400); }, POP_MS);
     if (!reduceMotion && window.beetleConfetti) window.beetleConfetti($("confetti"), "level", 1, event.colour);
+  }
+  function levelPop(event) {
+    queuePop(() => showPop(event, event.badge || "scale-chip-none", event.level || "", "level-pop"));
+  }
+  // A badge earned with this answer (#608): its icon on its colour, its name and how it was earned. "tier" is a step
+  // of the site's scale (its .scale-chip-* colours) or a colour of its own ("blue", "purple": event.colour)
+  const SCALE_STEPS = ["none", "fair", "decent", "good", "great", "excellent"];
+  function badgePop(event) {
+    const onScale = SCALE_STEPS.includes(event.tier);
+    queuePop(() => showPop(event, onScale ? "scale-chip-" + event.tier : "", "", "badge-pop", onScale ? "" : event.colour || "#6b7280"));
   }
 
   function toast(event) {
     if (event.kind === "level") { levelPop(event); return; }
+    if (event.kind === "badge") { badgePop(event); return; }
     const box = document.createElement("div");
     box.style.cssText = "background:#374151;color:#fff;padding:0.625rem 1rem;border-radius:0.75rem;box-shadow:0 4px 12px rgba(0,0,0,.2);max-width:90vw;text-align:center;transition:opacity .4s,transform .4s;opacity:0;transform:translateY(-8px)";
     const title = document.createElement("div");
