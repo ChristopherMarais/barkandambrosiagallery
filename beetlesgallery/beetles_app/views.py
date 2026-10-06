@@ -448,7 +448,8 @@ def upload_file(request):
     process_upload_task.delay(batch.id)
     print(f"Queued process_single_upload for batch {batch.id}", flush=True)
 
-    messages.success(request, "Files received. Track the upload status below in the Activity Logs.")
+    messages.success(request, "Files received. You can close this page: the server checks and imports them. "
+                              "Track the upload status below in the Activity Logs.")
     return redirect("data_management")
 
 
@@ -1286,7 +1287,30 @@ def download_taxonomy_archive(request, ref_type, filename):
 
     return resp
 
+def keep_messages_for_reload(view):
+    """
+    The uploads page sends these forms in the background (XMLHttpRequest) and then reloads itself. A background
+    request follows the view's redirect, and the page it fetches out of sight would use up the message the view
+    left ("Update file received", "Update rejected: ...") before the reload could show it. So a background send is
+    answered with {"reload": true} instead, and the messages are kept for the reloaded page. A form sent the normal
+    way (no JavaScript, or the admin tools pages) gets the view's own answer.
+    """
+    from functools import wraps
+
+    @wraps(view)
+    def wrapped(request, *args, **kwargs):
+        response = view(request, *args, **kwargs)
+        background = request.method == "POST" and request.headers.get("x-requested-with") == "XMLHttpRequest"
+        page = response.status_code == 200 and response.get("Content-Type", "").startswith("text/html")
+        if background and (response.status_code in (301, 302, 303) or page):
+            messages.get_messages(request).used = False   # a page rendered for it was never seen
+            return JsonResponse({"reload": True})
+        return response
+    return wrapped
+
+
 @area_required(SPECIES)
+@keep_messages_for_reload
 def admin_valid_species(request):
     current_status = {'label': 'Database Managed (v2.0)', 'version': 'v2.0'}
 
@@ -1323,6 +1347,7 @@ def admin_valid_species(request):
 
 
 @area_required(SPECIES)
+@keep_messages_for_reload
 def admin_described_names(request):
     current_status = {'label': 'Database Managed (v2.0)', 'version': 'v2.0'}
 
@@ -1372,6 +1397,7 @@ UPDATE_IGNORED_COLS = {
 }
 
 @area_required(UPDATE)
+@keep_messages_for_reload
 def update_upload(request):
     """
     Staff-only portal to submit a CSV of metadata updates by Record ID (UUID).

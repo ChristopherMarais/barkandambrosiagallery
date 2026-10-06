@@ -6,8 +6,12 @@ visitors over to the live one).
 The browser cuts the file into CHUNK_BYTES pieces and posts them one after the other to upload_chunk(); they are
 written into one file in MEDIA_ROOT/tmp_uploads/. The form that needs the file (the new-data upload) then sends
 the file's upload id instead of the file, and take() hands the assembled file over. A piece that is sent again
-(a retry after a dropped connection) is written over itself. Files never finished are removed by the nightly
-cleanup (storage_cleanup.sweep_upload_temp_files).
+(a retry after a dropped connection) is written over itself.
+
+An upload that stopped part-way carries on: the browser remembers the file's upload id, asks upload_chunk_status()
+how much of it is here and sends only the rest. Files never finished are removed by the nightly cleanup
+(storage_cleanup.sweep_upload_temp_files) once no piece has arrived for TEMP_FILE_KEEP_HOURS, which is how long
+an upload can be carried on.
 """
 import os
 import re
@@ -17,7 +21,8 @@ from pathlib import Path
 from django.conf import settings
 from django.core.files import File
 from django.http import JsonResponse
-from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_GET, require_POST
 
 from .areas import UPLOAD, area_required
 
@@ -45,6 +50,14 @@ def part_path(user, upload_id):
     return Path(path)
 
 
+def _received(path):
+    """Bytes of a file in progress that are here: 0 when there is none (never started, or swept by the cleanup)."""
+    try:
+        return path.stat().st_size
+    except FileNotFoundError:
+        return 0
+
+
 @area_required(UPLOAD)
 @require_POST
 def upload_chunk(request):
@@ -63,15 +76,26 @@ def upload_chunk(request):
         return JsonResponse({"error": "This piece does not fit the file."}, status=400)
 
     path.parent.mkdir(parents=True, exist_ok=True)
-    have = path.stat().st_size if path.exists() else 0
+    have = _received(path)
     if offset > have:
-        return JsonResponse({"error": "A piece is missing; start again.", "received": have}, status=409)
+        return JsonResponse({"error": "A piece is missing; send again from 'received'.", "received": have}, status=409)
     with open(path, "r+b" if path.exists() else "wb") as out:
         out.seek(offset)
         for block in piece.chunks():
             out.write(block)
         out.truncate(offset + piece.size)   # a retried piece replaces what was there
     return JsonResponse({"received": offset + piece.size, "complete": offset + piece.size == total})
+
+
+@area_required(UPLOAD)
+@require_GET
+@never_cache
+def upload_chunk_status(request):
+    """How much of an upload (?upload_id=) is here, so a browser carries on where it stopped: {"received": bytes}."""
+    path = part_path(request.user, request.GET.get("upload_id"))
+    if path is None:
+        return JsonResponse({"error": "Missing or bad upload_id."}, status=400)
+    return JsonResponse({"received": _received(path)})
 
 
 def take(user, upload_id, total, name="images.zip"):

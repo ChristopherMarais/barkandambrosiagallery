@@ -1264,13 +1264,39 @@
 
   // Big files are sent in pieces (beetles_app/chunked_upload.py)
   const CHUNK_URL = "{% url 'upload_chunk' %}";
+  const CHUNK_STATUS_URL = "{% url 'upload_chunk_status' %}";
   const CHUNK_BYTES = {{ chunk_bytes }};
+  const CHUNK_ATTEMPTS = 5;   // tries per request, waiting 3, 6, 12 and then 24 seconds in between
   function newUploadId() {
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
     const b = crypto.getRandomValues(new Uint8Array(16));
     b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
     const h = Array.from(b, function (x) { return x.toString(16).padStart(2, '0'); }).join('');
     return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
+  }
+
+  // This browser remembers the upload id of a file that has not finished (by its name, size and date), so sending
+  // the same file again carries on where the server's copy ends. Without storage every upload starts from the top.
+  const UPLOAD_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  function resumeKey(file) {
+    return 'chunked-upload:' + file.name + ':' + file.size + ':' + file.lastModified;
+  }
+  function rememberedUploadId(file) {
+    let uploadId = null;
+    try { uploadId = localStorage.getItem(resumeKey(file)); } catch (err) { /* storage is off */ }
+    return uploadId && UPLOAD_ID_PATTERN.test(uploadId) ? uploadId : null;
+  }
+  function rememberUploadId(file, uploadId) {
+    try { localStorage.setItem(resumeKey(file), uploadId); } catch (err) { /* storage is off or full */ }
+  }
+  function forgetUploadId(file) {
+    try { localStorage.removeItem(resumeKey(file)); } catch (err) { /* storage is off */ }
+  }
+
+  // Leaving the page stops an upload that is still being sent, so until the server has it the browser asks first
+  function warnBeforeLeaving(e) {
+    e.preventDefault();
+    e.returnValue = true;   // older browsers ask only when this is set
   }
 
   function attachUploadHandler(formId, progressContainerId, progressBarId, progressTextId, submitBtnId) {
@@ -1385,15 +1411,15 @@
             try {
               // Try to parse JSON response
               const response = JSON.parse(xhr.responseText);
-              if (response.success) {
-                // Success: Reload page to show new data
+              if (response.success || response.reload) {
+                // Done, or the server left a message for the page (views.keep_messages_for_reload): reload to show it
                 window.location.reload();
               } else {
                 // Server returned success status but indicated failure
                 showError('Error: ' + (response.error || 'Unknown error'));
               }
             } catch (err) {
-              // Not JSON: the view redirected back here with a message; reload to show it
+              // Not JSON: a page (e.g. the sign-in page after being signed out); reload
               window.location.reload();
             }
           } else {
@@ -1425,53 +1451,141 @@
       }
 
       // A file named in data-chunk-input goes up first in pieces of CHUNK_BYTES: Cloudflare refuses any single
-      // request over 100 MB, and pieces also survive a dropped connection (each is retried).
+      // request over 100 MB, and pieces survive a dropped connection (each is tried again, and an upload that
+      // stopped carries on where it stopped when the same file is sent again).
       const chunkName = form.dataset.chunkInput;
       const chunkInput = chunkName ? form.querySelector('input[name="' + chunkName + '"]') : null;
       if (chunkInput && chunkInput.files.length) {
-        const file = chunkInput.files[0];
-        sendInPieces(file).then(function (uploadId) {
-          formData.delete(chunkName);
-          formData.append(chunkName + '_upload_id', uploadId);
-          formData.append(chunkName + '_total', file.size);
-          formData.append(chunkName + '_name', file.name);
-          sendForm();
-        }).catch(function (err) {
-          showError((err && err.message) || 'The upload did not finish. Please try again.', idleLabel);
-        });
+        sendChunked(chunkInput.files[0]);
       } else {
         sendForm();
       }
 
+      // Until the server has the file and the form that names it, leaving the page would stop the upload
+      async function sendChunked(file) {
+        window.addEventListener('beforeunload', warnBeforeLeaving);
+        try {
+          const uploadId = await sendInPieces(file);
+          formData.delete(chunkName);
+          formData.append(chunkName + '_upload_id', uploadId);
+          formData.append(chunkName + '_total', file.size);
+          formData.append(chunkName + '_name', file.name);
+          await sendNamingForm();
+          forgetUploadId(file);
+          window.removeEventListener('beforeunload', warnBeforeLeaving);
+          window.location.reload();   // shows the server's message (it says the page can be closed) and the new batch
+        } catch (err) {
+          window.removeEventListener('beforeunload', warnBeforeLeaving);
+          showError((err && err.message) || 'The upload did not finish. Please try again.', idleLabel);
+        }
+      }
+
+      // Sends the file in pieces and resolves with its upload id. The server's copy says what has arrived: a file
+      // this browser sent before carries on where that copy ends (kept for a day after its last piece arrived).
       async function sendInPieces(file) {
-        const uploadId = newUploadId();
         const csrf = form.querySelector('input[name="csrfmiddlewaretoken"]').value;
-        for (let offset = 0; offset < file.size; offset += CHUNK_BYTES) {
+        const headers = { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest' };
+        function stopped(offset) {
+          return new Error((offset > 0
+            ? 'The upload stopped at ' + formatBytes(offset) + ' of ' + formatBytes(file.size) + '.'
+            : 'Could not reach the server.') +
+            ' Press ' + idleLabel + ' again with the same ZIP within a day to continue where it stopped.');
+        }
+
+        let uploadId = rememberedUploadId(file);
+        let offset = 0;
+        if (uploadId) {
+          const answer = await askServer(CHUNK_STATUS_URL + '?upload_id=' + encodeURIComponent(uploadId),
+            { headers: headers, cache: 'no-store' });
+          if (!answer) throw stopped(0);
+          offset = answer.data.received;
+        }
+        if (!uploadId || !Number.isInteger(offset) || offset < 0 || offset > file.size) {
+          uploadId = newUploadId();
+          offset = 0;
+          rememberUploadId(file, uploadId);
+        }
+        if (offset > 0) {
+          progressBar.classList.remove('upload-working');
+          progressBar.style.width = Math.round((offset / file.size) * 100) + '%';
+          progressText.innerText =
+            'Resuming: ' + formatBytes(offset) + ' of ' + formatBytes(file.size) + ' already uploaded.';
+        }
+
+        let rewinds = 0;
+        while (offset < file.size) {
+          const end = Math.min(file.size, offset + CHUNK_BYTES);
           const body = new FormData();
           body.append('upload_id', uploadId);
           body.append('offset', offset);
           body.append('total', file.size);
-          body.append('chunk', file.slice(offset, offset + CHUNK_BYTES), 'chunk');
-          for (let attempt = 1; ; attempt++) {
-            try {
-              const res = await fetch(CHUNK_URL, { method: 'POST', body: body,
-                headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest' } });
-              const data = await res.json().catch(function () { return {}; });
-              if (!res.ok) throw new Error(data.error || ('Server error ' + res.status));
-              break;
-            } catch (err) {
-              if (attempt >= 3) throw err;
-              progressText.innerText = 'Connection hiccup, trying that piece again...';
-              await new Promise(function (r) { setTimeout(r, 2000 * attempt); });
-            }
+          body.append('chunk', file.slice(offset, end), 'chunk');
+          const answer = await askServer(CHUNK_URL, { method: 'POST', body: body, headers: headers });
+          if (!answer) throw stopped(offset);
+          if (answer.status === 409) {
+            // The server's copy ends before this piece (one went missing): carry on from where it ends
+            const have = answer.data.received;
+            if (++rewinds > 3 || !Number.isInteger(have) || have < 0 || have >= offset) throw stopped(offset);
+            offset = have;
+            continue;
           }
-          const sent = Math.min(file.size, offset + CHUNK_BYTES);
-          const percent = Math.round((sent / file.size) * 100);
+          offset = end;
+          const percent = Math.round((offset / file.size) * 100);
           progressBar.classList.remove('upload-working');
           progressBar.style.width = percent + '%';
-          progressText.innerText = 'Uploading images: ' + percent + '% (' + formatBytes(sent) + ' of ' + formatBytes(file.size) + ')';
+          progressText.innerText = 'Uploading images: ' + percent + '% (' + formatBytes(offset) + ' of ' +
+            formatBytes(file.size) + '). Keep this page open.';
         }
         return uploadId;
+      }
+
+      // One request, tried up to CHUNK_ATTEMPTS times while the connection or the server has a hiccup. Resolves
+      // with {status, data} (a 409 too: the caller carries on from data.received), or null once every try failed.
+      // A request the server refuses fails at once: trying it again would not help.
+      async function askServer(url, options) {
+        for (let attempt = 1; attempt <= CHUNK_ATTEMPTS; attempt++) {
+          if (attempt > 1) {
+            const seconds = 3 * 2 ** (attempt - 2);
+            progressText.innerText = 'Connection hiccup, trying again in ' + seconds + ' s...';
+            await new Promise(function (resolve) { setTimeout(resolve, seconds * 1000); });
+          }
+          let res = null;
+          let data = null;
+          try {
+            res = await fetch(url, options);
+            data = await res.json();
+          } catch (err) { /* no answer, or not one from the upload code: tried again */ }
+          if (res && res.redirected) {   // sent to the sign-in page
+            throw new Error('You are signed out. Sign in again, then upload the same ZIP: ' +
+              'it continues where it stopped.');
+          }
+          if (res && data && (res.ok || res.status === 409)) return { status: res.status, data: data };
+          if (res && res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429) {
+            throw new Error((data && data.error) || ('The server refused the upload (error ' + res.status + ').'));
+          }
+        }
+        return null;
+      }
+
+      // The form names the uploaded file by its id. It is sent once (a second copy could import the batch twice),
+      // and its redirect is not followed, so the message the server leaves (received, or what is wrong) is still
+      // there for the reload to show.
+      async function sendNamingForm() {
+        progressBar.classList.add('upload-working');
+        progressBar.style.width = '100%';
+        progressText.innerText = 'Upload complete. Saving it on the server...';
+        startDots('Processing');
+        let res = null;
+        try {
+          res = await fetch(form.action, { method: 'POST', body: formData, redirect: 'manual',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        } catch (err) { /* no answer: said below */ }
+        if (res && (res.type === 'opaqueredirect' || res.ok)) return;
+        if (res && res.status >= 400 && res.status < 500) {
+          throw new Error('The server refused the upload (error ' + res.status + ').');
+        }
+        throw new Error('The server did not confirm the upload. Reload the page: if it is not in the Activity ' +
+          'Logs, upload the same ZIP again within a day and it continues where it stopped.');
       }
     });
   }
