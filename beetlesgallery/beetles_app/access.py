@@ -1,7 +1,7 @@
 """
 Accounts and requests for more access.
 
-Someone fills in /accounts/request-access/ with who they are, the username and password they want and, optionally,
+Someone fills in the Sign up page (/accounts/signup/; the old /accounts/request-access/ still works) with who they are, the username and password they want and, optionally,
 what more than a Basic account they would like (and why). They get an inactive account and an email with a link to
 confirm their address. Confirming it **activates the account straight away as Basic** (areas.py): the image
 browser, taxonomy browser, interactions page, IBBI-AI and the game (Ambrosia Archive).

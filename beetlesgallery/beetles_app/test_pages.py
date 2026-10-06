@@ -26,6 +26,7 @@ PUBLIC_PAGES = [
     "interactions_preview",
     "tool_classify",
     "login",
+    "signup",
     "request_access",
     "request_access_sent",
     "interactions_records",
@@ -57,7 +58,7 @@ STAFF_POST_ONLY = [
 SUPERUSER_PAGES = [
     "admin_valid_species",
     "admin_described_names",
-    "signup",
+    "create_account",
     "upload_predictions",
     "access_requests",
     "upload_interaction_proposals",

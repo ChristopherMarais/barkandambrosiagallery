@@ -387,7 +387,7 @@ class SignInTests(AccessCase):
     def test_the_sign_in_page_links_to_reset_and_to_the_request_form(self):
         page = self.client.get(reverse("login"))
         self.assertContains(page, reverse("password_reset"))
-        self.assertContains(page, reverse("request_access"))
+        self.assertContains(page, reverse("signup"))
 
 
 class PasswordResetTests(AccessCase):

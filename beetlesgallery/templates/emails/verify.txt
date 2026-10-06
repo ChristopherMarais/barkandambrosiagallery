@@ -2,14 +2,13 @@
 
 Thank you for your interest in the Bark & Ambrosia Beetle Gallery. We are glad you found us!
 
-To finish your request, please confirm your email address by opening this link (it works for {{ days }} days):
+To finish signing up, please confirm your email address by opening this link (it works for {{ days }} days):
 
 {{ url }}
 
 What happens next:
   1. You confirm your email with the link above.
-  2. Our team reviews your request, usually within a day or two.
-  3. We email you as soon as it is decided. Then you can sign in with the username and password you chose.
+  2. Your account works straight away: sign in with the username and password you chose.
 
 If you did not ask for an account, you can simply ignore this email and nothing will happen.
 

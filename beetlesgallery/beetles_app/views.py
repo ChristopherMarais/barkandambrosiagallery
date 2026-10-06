@@ -833,10 +833,11 @@ def beetle_detail(request, beetle_id):
     )
 
 
-def signup(request):
-    # --- Security Check: only superusers make accounts ---
+def create_account(request):
+    """A superuser makes an account for someone (people make their own on the Sign up page)."""
+    # --- Security Check: only superusers make accounts for others ---
     if not request.user.is_superuser:
-        messages.info(request, "Accounts are given by approval. Use \"Request access\" to ask for one.")
+        messages.info(request, "Use \"Sign up\" to make an account.")
         return redirect("login")
     # ---------------------------------------------
     
@@ -852,7 +853,7 @@ def signup(request):
             
             # Do not log them in automatically; send them to login page with a message
             messages.success(request, "Username created successfully.")
-            return redirect("signup")
+            return redirect("create_account")
     else:
         form = TailwindUserCreationForm()
     return render(request, "accounts/signup.html", {"form": form})

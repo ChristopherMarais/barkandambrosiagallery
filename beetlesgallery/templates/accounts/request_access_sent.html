@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Request sent | Bark & Ambrosia Beetle Gallery{% endblock %}
+{% block title %}{% if user.is_authenticated %}Request sent{% else %}Check your email{% endif %} | Bark & Ambrosia Beetle Gallery{% endblock %}
 
 {% block content %}
 <section class="max-w-2xl">
@@ -10,7 +10,6 @@
   {% else %}
   <p class="text-gray-600 mb-6">
     We sent a link to the email address you gave. Open it to confirm the address, and your account works straight away.
-    If you asked for more access, we review it and email you our decision. You get that access once it is approved.
     If nothing arrives in a few minutes, check your spam folder.
   </p>
   <p class="text-gray-600 mb-6">Already have an account? <a href="{% url 'login' %}" class="underline hover:text-black">Sign in</a>.</p>
