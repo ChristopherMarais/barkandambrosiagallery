@@ -46,7 +46,7 @@ Status: built on branch `claude/funny-tesla-pi0iki` (PR #255). Classifier integr
 - The partner is picked at a random relationship (same species, genus, tribe, subfamily, or different), so answers are spread across ranks.
 - The two ROIs always come from different images, and their left/right order is random.
 
-### 4.3 Odd One Out (odd, #369)
+### 4.3 Imposter Picker (odd, #369; first called Odd One Out)
 - Shows 4, 9 or 16 ROI crops in a 2×2, 3×3 or 4×4 grid. All but one share a name at one rank; the player taps the one that doesn't, then Next.
 - **The grid ladder** (`game_grid_ladder`, #489), one per player and grid game: 12 steps, the size first and then the rank: 4, 9, 16 at subfamily, then the same at tribe, genus and species. Up a step after `GAME_GRID_UP_AFTER` (2) good grids in a row, down one after a poor grid (never below 1, never past the player's open ranks), starting at `GAME_GRID_START_STEP` (1). Good: the odd one found; poor: a validated beetle of the rest picked; a pick on an unvalidated ROI, a skip or a grid ended by flags is neither. A step that moves mid-batch rebuilds the batch's later grids.
 - When the ROIs for the step are short the grid falls back instead of giving up: the same grid without the sure + unsure AI pair, then smaller at that rank, then the nearest other ranks (shallower first). With a focus, only ranks below it. On harder rounds the odd one is a near relative (same parent, e.g. another genus of the same tribe).
@@ -56,8 +56,8 @@ Status: built on branch `claude/funny-tesla-pi0iki` (PR #255). Classifier integr
 - After answering, the odd one is outlined and named at the round's rank (it is always validated, so this is the truth); the odd one is then never scored for that player again.
 - Unlocks at level 2; Identification moves to level 4. Players who had Identification keep it (`GamePreference.kept_perks`).
 
-### 4.4 Select all (select, #370)
-- Shows 4, 9 or 16 ROI crops and a group: "Tap every Platypodinae · 9 beetles". The size and the rank follow the player's step on the grid ladder, with the same fallbacks, as in Odd One Out. Good: no wrong tap and at least `GAME_GRID_GOOD_SHARE` (75%) of the validated members found; poor: more wrong taps than right ones, or none right.
+### 4.4 Find Them All (select, #370; first called Select all)
+- Shows 4, 9 or 16 ROI crops and a group: "Tap every Platypodinae · 9 beetles". The size and the rank follow the player's step on the grid ladder, with the same fallbacks, as in Imposter Picker. Good: no wrong tap and at least `GAME_GRID_GOOD_SHARE` (75%) of the validated members found; poor: more wrong taps than right ones, or none right.
 - Validated members are about a quarter to under half of the grid (4: 1–2, 9: 3–4, 16: 5–7); the rest are validated beetles of other groups (near relatives on harder rounds), never fewer than the members, so tapping everything always loses. Unvalidated ROIs IBBI-AI puts in the group make up 1 of 4, up to 3 of 9 and up to 4 of 16, more as players rise (a sure and an unsure one when its predictions allow): taps on those are recorded (`picks`) and never scored. No two crops come from one image.
 - **Scoring** (`game_scoring.select_truth`): each validated member tapped earns a share of `GAME_POINTS_SELECT_WEIGHT` (2) × the Family Ties points for the grid's rank × the size factor, so a perfect grid of 4 earns about twice a Similarity answer; each validated non-member tapped costs `GAME_POINTS_SELECT_WRONG` (1.5) shares; a member left out, or flagged, costs nothing. Skip earns `GAME_POINTS_ODD_SKIP`. `correct_<rank>` records whether the grid was perfect; a grid counts once in the reliability rating (#381).
 - After answering: green for members tapped, red for wrong taps, a dashed line round members left out.
@@ -456,3 +456,12 @@ simultaneous answers can't overwrite each other. Recomputes take a Postgres advi
 players finishing at the same moment can't collide. Re-scoring the other players on the same beetles runs on the
 Celery worker in production (`GAME_RECOMPUTE_IN_BACKGROUND`, on unless `DEBUG`), so finishing stays quick; if the
 queue can't be reached it runs in the request instead.
+
+## Update: game names (#496)
+
+The owner renamed the games players see: Odd One Out is **Imposter Picker**, Select all is **Find Them All**, and the
+choice that mixes every unlocked game (Mix, stored as `both`) is **All modes**. Name That Beetle is now
+**Identification** everywhere, matching the toolbar. Only the labels changed: the stored modes (`odd`, `select`,
+`both`, `mixed`, `classify`), URLs and perk keys stay, and migration 0050 only updates the model choice labels. In the
+feed's toolbar, All modes sits apart from the four single games as its own dashed pill with a shuffle icon, so it reads
+as "all of them mixed", not as a fifth game.

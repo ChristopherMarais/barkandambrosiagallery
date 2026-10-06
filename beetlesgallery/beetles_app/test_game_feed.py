@@ -170,11 +170,11 @@ class PlayPageTests(GameCase):
         return self.client.get(reverse("game_play", args=[mode])).content.decode()
 
     def test_the_games_have_catchy_names(self):
-        self.assertIn("Name That Beetle", self.page("classify"))
-        self.assertIn("Family Ties", self.page("pair"))
+        self.assertIn("Identification", self.page("classify"))
+        self.assertIn("Similarity", self.page("pair"))
         mixed = self.page("mixed")
-        self.assertIn("Name That Beetle", mixed)
-        self.assertIn("Family Ties", mixed)
+        self.assertIn("Identification", mixed)
+        self.assertIn("Similarity", mixed)
         self.assertNotIn("Spot the relatives", mixed + self.page("pair"))
 
     def test_the_home_page_has_one_play_button_for_the_mixed_game(self):

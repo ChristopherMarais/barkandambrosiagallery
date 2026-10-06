@@ -16,7 +16,7 @@ def _said(answer):
         return f"{len(answer.picks or [])} tapped"
     if answer.mode == "odd":   # picked as the odd one out: "not one of the group"
         group = (answer.grid_group or {}).get(answer.grid_rank, "")
-        return f"Not {group}" if group else "Odd one out"
+        return f"Not {group}" if group else "The odd one"
     given = [getattr(answer, r) for r in RANKS[:3] if getattr(answer, r)]
     if answer.genus and answer.species:
         return f"{answer.genus} {answer.species}"

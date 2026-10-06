@@ -1336,9 +1336,9 @@ class GameRound(models.Model):
     class Mode(models.TextChoices):
         CLASSIFY = "classify", "Classify"
         PAIR = "pair", "Compare pairs"
-        ODD = "odd", "Odd One Out"
-        SELECT = "select", "Select all"
-        MIXED = "mixed", "Mixed"   # one feed of several games; each item carries its own mode
+        ODD = "odd", "Imposter Picker"
+        SELECT = "select", "Find Them All"
+        MIXED = "mixed", "All modes"   # one feed of several games; each item carries its own mode
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     player = models.ForeignKey(
@@ -1528,11 +1528,11 @@ class GamePreference(models.Model):
     """
 
     class PlayMode(models.TextChoices):
-        BOTH = "both", "Both"   # every game the player has unlocked, mixed
-        CLASSIFY = "classify", "Name That Beetle"
-        PAIR = "pair", "Family Ties"
-        ODD = "odd", "Odd One Out"
-        SELECT = "select", "Select all"
+        BOTH = "both", "All modes"   # every game the player has unlocked, mixed
+        CLASSIFY = "classify", "Identification"
+        PAIR = "pair", "Similarity"
+        ODD = "odd", "Imposter Picker"
+        SELECT = "select", "Find Them All"
 
     class FocusRank(models.TextChoices):
         NONE = "", "Everything"

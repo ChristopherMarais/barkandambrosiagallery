@@ -16,7 +16,7 @@
     </a>
     <div class="flex-1">
       <h1 class="page-title">Your answers</h1>
-      <p class="text-sm text-gray-500">{% if round.mode == 'classify' %}Identification{% elif round.mode == 'pair' %}Similarity{% elif round.mode == 'odd' %}Odd One Out{% elif round.mode == 'select' %}Select all{% else %}{{ game_name }}{% endif %} · {{ round.finished_at|date:"M j, Y H:i" }}</p>
+      <p class="text-sm text-gray-500">{% if round.mode == 'classify' %}Identification{% elif round.mode == 'pair' %}Similarity{% elif round.mode == 'odd' %}Imposter Picker{% elif round.mode == 'select' %}Find Them All{% else %}{{ game_name }}{% endif %} · {{ round.finished_at|date:"M j, Y H:i" }}</p>
     </div>
   </div>
 

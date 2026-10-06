@@ -52,7 +52,7 @@ class LadderTests(SelectCase):
         self.assertEqual(game_levels.game_level("select"), 3)
         self.level(60)
         res = self.post("game_prefs", {"play_mode": "select"})
-        self.assertEqual((res.status_code, res.json()["error"]), (403, "Select all unlocks at level 3."))
+        self.assertEqual((res.status_code, res.json()["error"]), (403, "Find Them All unlocks at level 3."))
 
 
 class BuildTests(SelectCase):
@@ -184,4 +184,4 @@ class PageTests(SelectCase):
             self.assertIn(marker, page)
         how = self.client.get(reverse("game_how")).content.decode()
         self.assertIn('data-testid="how-select"', how)
-        self.assertIn("Select all at level 3", how)
+        self.assertIn("Find Them All at level 3", how)
