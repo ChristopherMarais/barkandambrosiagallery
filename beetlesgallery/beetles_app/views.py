@@ -1479,7 +1479,11 @@ def tool_classify(request):
                                                        architecture, threshold)
                 data["saved"] = _keep_classifier_image(request, image_file, data)
         except classify_assist.ClassifyError as exc:
-            return JsonResponse({"status": "error", "message": str(exc)}, status=502)
+            logger.warning("AI classification service error: %s", exc, exc_info=True)
+            return JsonResponse({
+                "status": "error",
+                "message": "Classification service is temporarily unavailable. Please try again later."
+            }, status=502)
         except Exception:
             # Details go to the server log, not to the browser.
             logger.exception("AI classification request failed")
