@@ -21,7 +21,7 @@
         {% for key, label in sources %}<option value="{{ key }}" {% if key == source %}selected{% endif %}>{{ label }}</option>{% endfor %}
       </select></label>
     <label class="flex items-center gap-2 py-2 text-sm text-gray-700"><input type="checkbox" name="named" value="1" class="h-4 w-4 rounded border-gray-300" {% if named_only %}checked{% endif %}> Every ROI has a name</label>
-    <button type="submit" class="rounded-xl border border-gray-400 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-400 disabled:opacity-50">Filter</button>
+    <button type="submit" class="btn-main px-4 py-2 text-sm">Filter</button>
   </form>
 
   <form method="post" id="bulk-form" data-testid="bulk-form">
@@ -31,7 +31,7 @@
       <span class="text-sm text-gray-600"><span data-testid="bulk-total">{{ total|digit_groups }}</span> unvalidated image{{ total|pluralize }} with boxes</span>
       <span class="flex items-center gap-3">
         <label class="flex items-center gap-2 whitespace-nowrap text-sm text-gray-700"><input type="checkbox" id="select-page" class="h-4 w-4 rounded border-gray-300"> Select this page</label>
-        <button type="submit" id="validate-selected" class="rounded-xl border border-gray-400 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-400 disabled:opacity-50" disabled data-testid="validate-selected">Validate selected (<span id="selected-count">0</span>)</button>
+        <button type="submit" id="validate-selected" class="btn-main px-4 py-2 text-sm" disabled data-testid="validate-selected"><span>Validate selected (<span id="selected-count">0</span>)</span></button>
       </span>
     </div>
 
