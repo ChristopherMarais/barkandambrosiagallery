@@ -12,7 +12,6 @@ import logging
 import time
 from datetime import datetime, timedelta, timezone as dt_timezone
 from functools import wraps
-from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
@@ -22,7 +21,7 @@ from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Max
-from django.http import FileResponse, Http404, HttpResponse, JsonResponse
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse, QueryDict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -114,24 +113,47 @@ def _first_sight_of_proposals(player):
 
 @login_required
 def game_staff_unlocks(request):
+    """Old address of the unlocks: they now live on the Game settings page. Saves still work here (old open tabs)."""
+    if request.method == "POST":
+        return game_settings(request)
+    return redirect(_settings_url(request.GET, "unlocks"))
+
+
+def _settings_url(query, anchor):
+    """The Game settings page with ``query`` (a QueryDict) and opened at ``anchor``."""
+    query = query.urlencode()
+    return f"{reverse('game_settings')}{'?' + query if query else ''}#{anchor}"
+
+
+def _save_unlocks(request):
     """
     Superusers only: grant any player any unlock (or all of them), whatever their level, for people who need the
-    features and for testing. Stored in GamePreference.granted_perks.
+    features and for testing. Stored in GamePreference.granted_perks. Back to that player, with the page as it was.
     """
     from .models import GamePreference
 
     if not request.user.is_superuser:
         raise Http404("Not found")
+    player = get_object_or_404(get_user_model().objects.all(), id=request.POST.get("player"))
+    perks = ["all"] if request.POST.get("all") else [p for p in request.POST.getlist("perks") if p in game_levels.PERKS]
+    pref, _ = GamePreference.objects.get_or_create(player=player)
+    pref.granted_perks = perks
+    pref.save(update_fields=["granted_perks", "updated_at"])
+    if "back" in request.POST:   # the page's own query (search, sorting, paging), rebuilt so only a query gets through
+        query = QueryDict(request.POST["back"][:2000])
+    else:
+        query = QueryDict(mutable=True)
+        query["q"] = (request.POST.get("q") or "").strip()[:50]
+    return redirect(_settings_url(query, f"p{player.id}"))
+
+
+def _unlocks_context(request):
+    """The Unlocks section of the Game settings page: the players found (up to 100) and what each has been given."""
+    from .models import GamePreference
+
+    if not request.user.is_superuser:
+        raise Http404("Not found")
     users = get_user_model().objects.all()
-    if request.method == "POST":
-        player = get_object_or_404(users, id=request.POST.get("player"))
-        perks = ["all"] if request.POST.get("all") else [p for p in request.POST.getlist("perks") if p in game_levels.PERKS]
-        pref, _ = GamePreference.objects.get_or_create(player=player)
-        pref.granted_perks = perks
-        pref.save(update_fields=["granted_perks", "updated_at"])
-        q = (request.POST.get("q") or "").strip()[:50]
-        query = urlencode({"q": q})
-        return redirect(f"{reverse('game_staff_unlocks')}?{query}#p{player.id}")
     q = (request.GET.get("q") or "").strip()[:50]
     if q:
         users = users.filter(username__icontains=q)
@@ -147,7 +169,7 @@ def game_staff_unlocks(request):
         rows.append({"user": u, "level": info["level"], "name": info["name"], "all": "all" in mine,
                      "perks": [{"key": k, "title": t, "level": game_levels.perk_level(k), "on": "all" in mine or k in mine,
                                 "earned": k in info["perks"]} for k, (t, _) in game_levels.PERKS.items()]})
-    return render(request, "beetles/game_staff_unlocks.html", {"rows": rows, "q": q})
+    return {"rows": rows, "q": q}
 
 
 @login_required
@@ -1406,7 +1428,25 @@ def _cell_accuracy(cell):
 
 
 @login_required
+def game_settings(request):
+    """
+    Superusers only: the game's settings page, in two sections. "Review game labels" (open reports, players, label
+    proposals) and "Unlocks" (grant players unlocks). Each section checks its own permission.
+    """
+    if not request.user.is_superuser:
+        raise Http404("Not found")
+    if request.method == "POST":   # the only form that posts here: one player's unlocks
+        return _save_unlocks(request)
+    return render(request, "beetles/game_settings.html", {**_review_context(request), **_unlocks_context(request)})
+
+
+@login_required
 def game_review(request):
+    """Old address of the label review: it is now a section of the Game settings page (paging and sorting kept)."""
+    return redirect(_settings_url(request.GET, "review"))
+
+
+def _review_context(request):
     """Superusers only: open reports, every player's reliability and the label proposals, each paged and sortable."""
     if not request.user.is_superuser:
         raise Http404("Not found")
@@ -1439,7 +1479,7 @@ def game_review(request):
         label_keys[rank] = lambda e, rank=rank: (e["ranks"].get(rank) or {}).get("value")
     entries, labels_sort = _sort_rows(request, entries, "labels_sort", label_keys)   # default: most answered first
 
-    return render(request, "beetles/game_review.html", {
+    return {
         "open_reports": page(reports, "reports_page"),
         "reports_sort": reports_sort, "players_sort": players_sort, "labels_sort": labels_sort,
         "ranks": game.RANKS,
@@ -1450,7 +1490,7 @@ def game_review(request):
         "rounds": GameRound.objects.count(),
         "answers": GameAnswer.objects.count(),
         "per_species": game_trust.per_species(), "children_share": game_trust.children_share(),
-    })
+    }
 
 
 REVIEW_PER_PAGE = 25

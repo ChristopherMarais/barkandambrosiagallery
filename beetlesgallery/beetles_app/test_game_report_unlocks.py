@@ -77,8 +77,8 @@ class GrantTests(GameCase):
     def test_superusers_can_unlock_everything_for_anyone(self):
         boss = get_user_model().objects.create_superuser("boss", "b@example.com", "pw")
         self.client.force_login(boss)
-        self.assertEqual(self.client.get(reverse("game_staff_unlocks")).status_code, 200)
-        self.client.post(reverse("game_staff_unlocks"), {"player": self.user.id, "all": "1"})
+        self.assertEqual(self.client.get(reverse("game_settings")).status_code, 200)
+        self.client.post(reverse("game_settings"), {"player": self.user.id, "all": "1"})
         info = game_levels.for_player(self.user)
         self.assertEqual(info["perks"], set(game_levels.PERKS))
         self.assertTrue(info["proposals"])
@@ -88,9 +88,9 @@ class GrantTests(GameCase):
     def test_single_unlocks_and_taking_them_back(self):
         boss = get_user_model().objects.create_superuser("boss", "b@example.com", "pw")
         self.client.force_login(boss)
-        self.client.post(reverse("game_staff_unlocks"), {"player": self.user.id, "perks": ["focus_genus"]})
+        self.client.post(reverse("game_settings"), {"player": self.user.id, "perks": ["focus_genus"]})
         self.assertEqual(game_levels.for_player(self.user)["perks"], {"focus_genus"})
-        self.client.post(reverse("game_staff_unlocks"), {"player": self.user.id})
+        self.client.post(reverse("game_settings"), {"player": self.user.id})
         self.assertEqual(game_levels.for_player(self.user)["perks"], set())
         self.assertEqual(GamePreference.objects.get(player=self.user).granted_perks, [])
 
@@ -102,5 +102,5 @@ class GrantTests(GameCase):
 
     def test_only_superusers(self):
         self.client.force_login(self.staff)
-        self.assertEqual(self.client.get(reverse("game_staff_unlocks")).status_code, 404)
-        self.assertEqual(self.client.post(reverse("game_staff_unlocks"), {"player": self.user.id, "all": "1"}).status_code, 404)
+        self.assertEqual(self.client.get(reverse("game_settings")).status_code, 404)
+        self.assertEqual(self.client.post(reverse("game_settings"), {"player": self.user.id, "all": "1"}).status_code, 404)
