@@ -974,22 +974,34 @@ def start_round(player, mode, size=None, fresh_only=False):
     round's ``notice`` says so for the page ("" when there is nothing to say); it is not saved, so a reload that picks
     the batch up again doesn't repeat it.
     """
+    items, notice = batch_items(player, mode, size, fresh_only)
+    if not items:
+        return None
+    rnd = GameRound.objects.create(player=player, mode=mode, items=items)
+    rnd.notice = notice
+    return rnd
+
+
+def batch_items(player, mode, size=None, fresh_only=False, choice=None):
+    """
+    (items, notice) for a new batch (start_round), in the order shown; ([], "") when nothing is playable. ``choice``:
+    build the mixed feed for this game choice instead of the one the player saved, for a batch built before they
+    switch to it (game_warm).
+    """
     from . import game_relearn
 
     size = size or game_setting("GAME_ROUND_SIZE", 10)
     notice = ""
     if mode == GameRound.Mode.MIXED:
-        items = build_mixed_items(player, size, fresh_only=fresh_only)
+        items = build_mixed_items(player, size, fresh_only=fresh_only, choice=choice)
         if not items:
-            items, notice = fallback_mix(player, size, fresh_only)
+            items, notice = fallback_mix(player, size, fresh_only, choice=choice)
     else:
         items = build(mode, player, size, fresh_only)
     if not items:
-        return None
+        return [], ""
     # spread(), with the player's due mistakes in place of some scored items (#490)
-    rnd = GameRound.objects.create(player=player, mode=mode, items=game_relearn.feed_with_retries(player, mode, items))
-    rnd.notice = notice
-    return rnd
+    return game_relearn.feed_with_retries(player, mode, items), notice
 
 
 BUILDERS = {"pair": "build_pair_items", "odd": "build_odd_items", "select": "build_select_items",
@@ -1018,16 +1030,17 @@ def play_mode(player, info=None):
     return pref if pref in available else "both"
 
 
-def build_mixed_items(player, size, fresh_only=False):
+def build_mixed_items(player, size, fresh_only=False, choice=None):
     """
     One feed of every game the player has, mixed at random. Beginners see mostly Similarity and experts mostly
     Identification, with Odd One Out beside them (game_levels.game_shares); a player who chose one game sees only that
-    one. In the mix, a game that runs out of beetles is filled in by the others. Every item carries its own "mode".
+    one (or ``choice``, one they may switch to). In the mix, a game that runs out of beetles is filled in by the others.
+    Every item carries its own "mode".
     """
     from .game_levels import for_player, games
 
     info = for_player(player)
-    chosen = play_mode(player, info)
+    chosen = choice or play_mode(player, info)
     if chosen in BUILDERS:
         items = build(chosen, player, size, fresh_only)
         for it in items:
@@ -1036,7 +1049,7 @@ def build_mixed_items(player, size, fresh_only=False):
     return _mix(player, info["level"], games(info["perks"]), size, fresh_only)
 
 
-def fallback_mix(player, size, fresh_only=False):
+def fallback_mix(player, size, fresh_only=False, choice=None):
     """
     (items, notice) for a player whose chosen game has nothing for them right now (too few beetles of the kind it
     needs): a mix of their other games, and one line for the page that says so. Their choice is kept, so the next batch
@@ -1045,7 +1058,7 @@ def fallback_mix(player, size, fresh_only=False):
     from .game_levels import GAME_NAMES, for_player, games
 
     info = for_player(player)
-    chosen = play_mode(player, info)
+    chosen = choice or play_mode(player, info)
     others = [g for g in games(info["perks"]) if g != chosen]
     if chosen not in BUILDERS or not others:
         return [], ""

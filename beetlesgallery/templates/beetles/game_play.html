@@ -291,6 +291,7 @@
   data-home-url="{% url 'game_home' %}"
   data-taxa-url="{% url 'game_taxa' %}"
   data-prefs-url="{% url 'game_prefs' %}"
+  data-warm-url="{% url 'game_warm' %}"
   data-report-url="{% url 'game_report_item' %}"
   data-last-review-url="{{ last_review }}">
 
@@ -859,8 +860,9 @@
     }
   }));
 
-  // Warm the browser cache with the next beetle's crops while this one is answered (small ones first; on the last
-  // beetle of a batch, the next batch's first), decoded off the main thread.
+  // Warm the browser cache with the coming crops while this beetle is answered: the next beetle's (small ones first),
+  // and the small ones of the beetle after it; on the last beetle of a batch, the next batch's first (#542). Decoded
+  // off the main thread.
   function prefetch(urls) {
     prefetched.length = 0;
     (urls || []).forEach((url) => {
@@ -1136,8 +1138,16 @@
   $("caughtup-focus").addEventListener("click", () => savePrefs({ focus_rank: "" }));
 
   // ---------- the feed ----------
+  // While they play, the worker builds a batch for each game they could switch to, so a switch rarely waits (#542)
+  function warmOthers() {
+    if (PAGE_MODE === "mixed" && $("toolbar") && prefs && prefs.choose_game) api(root.dataset.warmUrl, { mode: PAGE_MODE }).catch(() => {});
+  }
   async function startFeed(fresh) {
-    show("loading");
+    // Switching game or focus: the beetle on screen stays, locked, with the slim bar, until the new one is in (#542)
+    const keep = !!fresh && !$("stage").classList.contains("hidden");
+    const before = phase;
+    if (keep) setPhase("next");
+    else show("loading");
     showError("");
     try {
       const data = await api(root.dataset.startUrl, { mode: PAGE_MODE, fresh: !!fresh });
@@ -1149,8 +1159,10 @@
       upcoming = null;
       await present(data.item);
       feedNotes(data);   // the feed had to change game: say why
+      warmOthers();
     } catch (e) {
-      $("loading").classList.add("hidden");
+      if (keep) setPhase(before);
+      else $("loading").classList.add("hidden");
       showError(e.message);
     }
   }
@@ -1337,7 +1349,7 @@
     if (data.chip) goalMet = !!data.chip.goal_met;
     noteAnswerForBreak();
     updateChip(data.chip);
-    if (data.prefs) renderPrefs(data.prefs);   // a new level: its unlocks show (and work) straight away
+    if (data.prefs) { renderPrefs(data.prefs); warmOthers(); }   // a new level: its unlocks show (and work) straight away
     bumpCombo(!skipping);
     upcoming = data;
     if (data.review) rememberPrevious(data.review);
