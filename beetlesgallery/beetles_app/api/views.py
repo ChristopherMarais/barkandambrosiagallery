@@ -418,6 +418,39 @@ class BeetlesViewSet(viewsets.ModelViewSet):
             'message': 'ROI validated successfully.'
         })
 
+    @action(detail=True, methods=['post'], permission_classes=[IsStaffUser], url_path='accept-ai-suggestion')
+    def accept_ai_suggestion(self, request, pk=None):
+        """
+        "Use <species>" under the AI suggestion on the annotation page: the ROI takes the species an IBBI-AI prediction
+        ranks first. A curator naming it makes it their Expert ID (identification.py), shown over any earlier name like
+        every hand edit; it is not validated. Returns the ROI.
+        POST /api/v1/beetles/{uuid}/accept-ai-suggestion/  {"valid_species_id": "1733"}
+        """
+        from beetlesgallery.beetles_app.models import ModelPrediction, Taxon
+        require_records(request)
+        beetle = self.get_object()
+        lock = ImageLock.objects.filter(image_asset_id=beetle.image_asset_id).select_related('locked_by').first()
+        if lock and lock.locked_by_id != request.user.id and not lock.is_expired():
+            return Response({'error': f'{lock.locked_by.username} is editing this image.'},
+                            status=status.HTTP_409_CONFLICT)
+        data = request.data if isinstance(request.data, dict) else {}
+        species = str(data.get('valid_species_id') or '').strip()
+        # newest model first, as the page lists them
+        prediction = ModelPrediction.objects.filter(roi=beetle, valid_species_id=species).first() if species else None
+        if prediction is None:
+            return Response({'error': 'IBBI-AI does not suggest that species for this ROI.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if not Taxon.objects.filter(valid_species_id=species).exists():
+            return Response({'error': 'That species is not in the species list.'}, status=status.HTTP_400_BAD_REQUEST)
+        beetle.depicts_valid_name_id = species
+        beetle.label_source = Beetles.LabelSource.EXPERT
+        beetle.label_source_detail = f'IBBI-AI suggestion accepted by {request.user.username}'[:255]
+        beetle.last_updated_by = request.user
+        beetle._name_by_hand = True   # a curator's choice always shows (identification.py)
+        beetle._change_reason = f'Accepted the IBBI-AI suggestion ({prediction.model_name})'[:100]
+        beetle.save()
+        return Response(self.get_serializer(beetle).data)
+
     @action(detail=False, methods=['patch'], url_path='bulk-update')
     def bulk_update(self, request):
         """
@@ -525,18 +558,16 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         # Game label proposals waiting for a curator (game_queue): filter to them, or sort them by confidence.
         from beetlesgallery.beetles_app import game_queue
         game_filter = request.GET.get('game', '')
-        if ordering == 'game_confidence' and game_filter not in ('any', 'expert'):
-            game_filter = 'any'
-        game_ranked = None
         queue = game_queue.by_image()
         if game_filter in ('any', 'expert'):
-            game_ranked = game_queue.ranked_ids(queue, expert_only=game_filter == 'expert')
-            image_qs = image_qs.filter(id__in=game_ranked)
+            image_qs = image_qs.filter(id__in=game_queue.ranked_ids(queue, expert_only=game_filter == 'expert'))
         elif game_filter == 'reported':
-            # photos players flagged from the game, waiting for a curator (they are out of the game until then)
+            # photos people flagged (in the game or on a details page), waiting for a curator (they are out of the game
+            # until then). The automatic label check's reports are not theirs: those are "disputed" below.
+            from beetlesgallery.beetles_app.game_label_check import LABEL_CHECK_USER
             from beetlesgallery.beetles_app.models import GameReport
             image_qs = image_qs.filter(id__in=GameReport.objects.filter(status=GameReport.Status.OPEN)
-                                       .values('roi__image_asset_id'))
+                                       .exclude(reporter__username=LABEL_CHECK_USER).values('roi__image_asset_id'))
         elif game_filter == 'applied':
             # labels the game wrote into the database (curator-accepted or automatic), to check or revert (#427)
             from beetlesgallery.beetles_app.game_applied import applied_rois
@@ -582,14 +613,11 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         image_qs = image_qs.order_by(*sorts.get(ordering, sorts['newest']), 'id')
 
         if ordering == 'game_confidence':
-            present = {str(i) for i in image_qs.values_list('id', flat=True)}
-            paginator = Paginator([i for i in game_ranked if i in present], page_size)
-            page_obj = paginator.get_page(page_num)
-            by_id = {str(img.id): img for img in image_qs.filter(id__in=list(page_obj.object_list))}
-            page_obj.object_list = [by_id[i] for i in page_obj.object_list if i in by_id]
+            # whatever the filter shows: the most confident proposal first, then the images without one, newest first
+            paginator = Paginator(game_queue.RankedFirst(image_qs, game_queue.ranked_ids(queue)), page_size)
         else:
             paginator = Paginator(image_qs, page_size)
-            page_obj = paginator.get_page(page_num)
+        page_obj = paginator.get_page(page_num)
         total_count = paginator.count
 
         ImageLock.cleanup_expired_locks()

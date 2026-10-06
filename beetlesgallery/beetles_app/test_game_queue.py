@@ -46,7 +46,7 @@ class QueueTests(TrustCase):
         return str(roi.image_asset_id)
 
     def test_sorted_from_most_to_least_confident(self):
-        order = self.ids(self.feed("ordering=game_confidence"))
+        order = self.ids(self.feed("game=any&ordering=game_confidence"))
         self.assertEqual(order, [self.img(self.expert), self.img(self.agreed), self.img(self.weak)])
 
     def test_filter_to_images_with_proposals_or_only_expert_backed(self):

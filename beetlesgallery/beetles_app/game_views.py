@@ -1220,10 +1220,12 @@ def game_resolve_reports(request, roi_id):
 @require_POST
 def game_proposal_review(request, roi_id):
     """
-    Accept or dismiss the game proposal for one ROI.
+    Accept or dismiss ("Reject" on the page) the game proposal for one ROI.
 
     Accepting sets the ROI's species to the proposal's species (it does not validate the
-    ROI; staff still do that as usual). Both decisions are recorded in LabelReview.
+    ROI; staff still do that as usual). Both decisions are recorded in LabelReview: either way
+    the proposal leaves the queue until new answers arrive (game_queue), and the game never
+    writes a label onto the ROI by itself afterwards (game_trust.auto_apply_expert_labels).
     """
     roi = get_object_or_404(Beetles, id=roi_id, is_deleted=False)
     body = _json_body(request) or {}
@@ -1252,6 +1254,7 @@ def game_proposal_review(request, roi_id):
         roi.label_source = Beetles.LabelSource.EXPERT   # a curator accepted the game's consensus
         roi.label_source_detail = f"{entry['answers']} game answers, accepted by {request.user.username}"[:255]
         roi.last_updated_by = request.user
+        roi._name_by_hand = True   # the curator chose it: it shows even over a Taxonomist ID (identification.py)
         roi.save()
         review.decision = LabelReview.Decision.ACCEPTED
     else:
