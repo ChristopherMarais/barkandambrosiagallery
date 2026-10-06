@@ -1,6 +1,8 @@
 # Getting Started
 
 This guide covers how to set up the project, run it locally, and make changes (Python, HTML, CSS).
+The site runs only in Docker: every command below goes through Docker Compose, and nothing else (Python, Node, Pixi)
+needs installing on your computer.
 
 See [Git Workflow](Git-Workflow) for how to share your changes, and [Code Map](Code-Map) to find your way around the code.
 
@@ -8,9 +10,8 @@ See [Git Workflow](Git-Workflow) for how to share your changes, and [Code Map](C
 
 Before starting, make sure you have:
 
-- **Docker Desktop** (must be running)
+- **Docker** with Docker Compose: Docker Desktop on Windows or Mac (start it and leave it running), or Docker Engine on Linux
 - **Git**
-- **(Optional)** [Pixi](https://prefix.dev/) — installed locally it helps with managing `pixi.lock`, though Docker handles the runtime.
 
 ## 2. Initial Setup (First Time Only)
 
@@ -87,7 +88,7 @@ Because we use Tailwind, changing classes in HTML (e.g. `text-red-500` to `text-
    docker compose run --rm web pixi run watch-css
    ```
    This runs in "watch mode" (it stays open — press `Ctrl+C` to stop it). As you save HTML or JS files, it regenerates `style.css` instantly.
-3. For a one-time rebuild without watching, use `pixi run build-css` instead of `pixi run watch-css`.
+3. For a one-time rebuild without watching: `docker compose run --rm web pixi run build-css`.
 
 ### Step D: Modifying the database (models)
 
@@ -104,7 +105,7 @@ If you edit `models.py` (e.g. adding a new field to `Beetles`), you must update 
 
 ### Step E: Adding new dependencies
 
-- **Python:** add the package to `pixi.toml` under `[dependencies]`, run `pixi install` locally (if you have Pixi) to update `pixi.lock`, then `docker compose build` to rebuild the container.
+- **Python:** add the package to `pixi.toml` under `[dependencies]`, update `pixi.lock` with `docker compose run --rm web pixi lock`, then `docker compose build` to rebuild the container.
 - **JavaScript:** edit `package.json`, then `docker compose run --rm web pixi run install-js` to update `node_modules/` and `package-lock.json`.
 
 ## 4. Running the Tests

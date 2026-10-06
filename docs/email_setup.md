@@ -30,7 +30,7 @@ Nothing leaves your computer, so you can test as much as you like with made-up a
 with an email address** to approve (My Account → edit the user, or `docker compose run --rm web pixi run python manage.py createsuperuser`).
 
 If the inbox page does not open, `docker compose ps` should list `mailpit` as running; if not, run `docker compose up -d`.
-Without the override (for example if you run the site outside Docker) emails are printed in the terminal instead.
+Without the override (`docker compose -f docker-compose.yml up`) emails are printed in the `web` log instead.
 
 The server is different: there the site needs a real SMTP account, see the next sections.
 
