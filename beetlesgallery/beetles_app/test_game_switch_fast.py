@@ -292,8 +292,9 @@ class PageTests(GameCase):
 
     def test_the_new_beetle_fades_in_only_where_motion_is_welcome(self):
         self.assertIn("@media (prefers-reduced-motion: no-preference)", PAGE)
-        self.assertIn("#photos.item-in canvas", PAGE)
-        self.assertIn('classList.add("item-in")', js_function("showItem"))
+        # since #602 the tiles are laid one after another and each photo lands in its own (test_grid_lay_and_reveal)
+        self.assertIn("#photos .cell.slot { animation: tile-lay", PAGE)
+        self.assertIn('cell.className = "cell slot";', js_function("showItem"))
 
     def test_next_to_photo_is_measured(self):
         self.assertIn('performance.mark("game:next")', js_function("next"))

@@ -23,10 +23,13 @@
   #photos .frame.dragging, #lb-frame.dragging { cursor: grabbing; }
   #photos.fade canvas { opacity: 0; }
   #photos canvas { transition: opacity 0.15s ease; }
-  /* Each new beetle fades in quickly, so one beetle gives way to the next instead of jumping (#575) */
+  /* Lay the tiles (#602): the new beetle's empty tiles go down at once, one after another (--i, --lay-step), and each
+     photo lands in its own tile when it is in, so one beetle gives way to the next instead of jumping (#575) */
+  #photos .cell.slot:not(.landed) { background: #e5e7eb; }
+  #photos .cell.slot:not(.landed) canvas { opacity: 0; }
   @media (prefers-reduced-motion: no-preference) {
-    #photos.item-in canvas { animation: item-in 0.14s ease-out; }
-    @keyframes item-in { from { opacity: 0.25; transform: scale(0.985); } }
+    #photos .cell.slot { animation: tile-lay 0.16s ease-out both; animation-delay: calc(var(--i, 0) * var(--lay-step, 0ms)); }
+    @keyframes tile-lay { from { opacity: 0; transform: scale(0.92); } }
   }
   /* Brighter / more contrast for dark photos: one control for every photo on screen, back to normal for the next beetle */
   #photos canvas, #lightbox-img { filter: var(--photo-filter, none); }
@@ -153,6 +156,10 @@
   .cell.ring-right, .cell.ring-missed { --ring: #16a34a; }
   .cell.ring-wrong, .cell.ring-avoided { --ring: #dc2626; }
   .cell.ring-open, .cell.ring-unknown { --ring: #6b7280; }
+  /* not checked yet, but someone has called it (#602): blue where the call is IBBI-AI's, purple where it is the other
+     players', as the dots of the names */
+  .cell:is(.ring-open, .ring-unknown).by-ai { --ring: #2563eb; }
+  .cell:is(.ring-open, .ring-unknown).by-players { --ring: #9333ea; }
   .cell.ring-partly { --ring: #f97316; }
   :is(#photos, #previous-photos) .cell:is(.ring-missed, .ring-avoided, .ring-unknown)::after { border-style: dashed; border-width: 2px; opacity: 0.7; }
   :is(#photos, #previous-photos) .cell.ring-avoided::after { opacity: 0.4; }
@@ -363,7 +370,15 @@
   /* After Submit the answer is locked in; a slim bar shows while the game waits (sending, or the next photos) */
   #game.answer-locked #panel:not(.reviewing) :is(#ranks, #ladder) { opacity: 0.55; pointer-events: none; }
   /* Faded only while waiting: on the review the photos are what the player studies next to the names */
-  #game.answer-locked:not([data-phase="review"]) #photos:not(.revealing) .cell:not(.picked):not(.tapped) canvas { opacity: 0.6; }
+  #game.answer-locked:not([data-phase="review"]) #photos:not(.revealing):not(.laying) .cell:not(.picked):not(.tapped) canvas { opacity: 0.6; }
+  /* the review tile by tile (#602): each tile's marks and names come in with a quick pop */
+  @media (prefers-reduced-motion: no-preference) {
+    #photos .cell > :is(.rv-num, .rv-badge, .rv-seen) { animation: rv-pop 0.16s ease-out; }
+    #photos .cell > .rv-names { animation: rv-fade 0.16s ease-out; }
+    #photos .cell.rv-in::after { animation: rv-fade 0.16s ease-out; }
+    @keyframes rv-pop { from { opacity: 0; transform: scale(0.6); } }
+    @keyframes rv-fade { from { opacity: 0; } }
+  }
   #wait-bar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; height: 3px; overflow: hidden; background: #e5e7eb; }
   #wait-bar.hidden { display: none; }
   #wait-bar span { position: absolute; top: 0; bottom: 0; left: -35%; width: 35%; background: #4b5563; animation: wait-slide 1.1s ease-in-out infinite; }
@@ -419,6 +434,8 @@
   data-prefs-url="{% url 'game_prefs' %}"
   data-warm-url="{% url 'game_warm' %}"
   data-upcoming-url="{% url 'game_upcoming' '00000000-0000-0000-0000-000000000000' %}"
+  data-item-url="{% url 'game_item' '00000000-0000-0000-0000-000000000000' 0 %}"
+  data-prepare-url="{% url 'game_prepare' '00000000-0000-0000-0000-000000000000' %}"
   data-report-url="{% url 'game_report_item' %}"
   data-last-review-url="{{ last_review }}">
 
@@ -685,7 +702,8 @@
   let openedAt = Date.now();
   // Crops loaded ahead and decoded, by URL (a URL names one photo and box for good), so Next draws at once (#575)
   const decoded = new Map();
-  const DECODED_KEEP = 128;   // enough for the biggest grids (25 beetles): three ahead and the one on screen
+  // enough for the biggest grids (25 beetles): the one on screen and the next, small and sharp, and two more ahead
+  const DECODED_KEEP = 160;
 
   // ---------- helpers ----------
   async function api(url, body) {
@@ -1153,6 +1171,19 @@
     }).catch(() => {});
   }
 
+  // While the player chooses (#602): the server works out what is known about the beetles on screen, so the review
+  // after Submit only reads it. The reply is empty: nothing about them reaches the page before the answer.
+  function prepareReview(at) {
+    if (!root.dataset.prepareUrl) return;
+    api(root.dataset.prepareUrl.replace("00000000-0000-0000-0000-000000000000", roundId) + "?index=" + at.index).catch(() => {});
+  }
+  // The next beetle after an answer sent with item_later (#602): asked for as soon as the review is in, while it is read
+  function fetchItem(data) {
+    const url = root.dataset.itemUrl.replace("00000000-0000-0000-0000-000000000000", data.round || roundId)
+      .replace(/\/0\/$/, "/" + data.next + "/");
+    return api(url).then((d) => { data.item = d.item; return d.item; }, () => null);
+  }
+
   // ---------- confetti (only ever for a correct answer, or a level) ----------
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   // The kind says who agreed and so the colours (game_answer_review._celebrate, static/js/beetle_confetti.js): green
@@ -1540,20 +1571,22 @@
     }
   }
 
+  // Lay the tiles (#602): the new beetle's empty tiles go down at once, quickly one after another, and each photo
+  // lands in its tile as soon as it is decoded (the small crop, then the sharp one). Usually the photos are in already
+  // (loaded ahead); otherwise the laying covers the wait. The answer opens once every photo is in.
+  const LAY_MS = 150;   // the last tile starts this long after the first, whatever the grid's size
   async function showItem(next) {
     item = next;
-    let images;
-    try {
-      images = await Promise.all(item.images.map(loadCrop));   // small crops: the whole photo loads only when opened
-    } catch (e) {
-      images = null;
-    }
-    setMode(item.mode || PAGE_MODE);   // once the photos are in: the last beetle (and its review) keeps its layout till then
+    // small crops, loading from now on (the whole photo loads only when opened); a failed one leaves its tile empty
+    const loads = item.images.map((im) => loadCrop(im).catch(() => null));
+    sweepStop();
+    setMode(item.mode || PAGE_MODE);
+    endReview();
     const holder = $("photos");
     holder.innerHTML = "";
-    holder.classList.remove("revealing", "item-in");
-    void holder.offsetWidth;   // so the fade-in starts again for this beetle
-    holder.classList.add("item-in");
+    holder.classList.remove("revealing");
+    holder.classList.add("laying");
+    holder.style.setProperty("--lay-step", Math.round(LAY_MS / Math.max(1, item.images.length - 1)) + "ms");
     // the grid games: 2×2 up to 5×5 by the grid's size, which grows as the player gets better (#489)
     const grid = MODE === "odd" || MODE === "select";
     holder.style.setProperty("--grid-cols", String(Math.ceil(Math.sqrt(item.images.length))));
@@ -1561,16 +1594,21 @@
     else delete holder.dataset.size;
     item.images.forEach((im, i) => {
       const cell = document.createElement("div");
-      cell.className = "cell";
+      cell.className = "cell slot";
+      cell.style.setProperty("--i", String(i));
       const frame = document.createElement("button");
       frame.type = "button";
       frame.className = "frame";
       frame.setAttribute("aria-label", MODE === "odd" ? "Pick this beetle" : MODE === "select" ? "Tap this beetle" : "See the whole image");
       const canvas = document.createElement("canvas");
-      if (images) drawCrop(canvas, images[i].img, im.box, images[i].cut);
-      if (images && images[i].cut && im.large) {   // then the sharp one, if this beetle is still on screen
-        loadImage(im.large).then((big) => { if (canvas.isConnected) drawCrop(canvas, big, im.box, true); }).catch(() => {});
-      }
+      loads[i].then((got) => {   // the photo lands in its tile (if this beetle is still on screen), then the sharp one
+        if (!got || !canvas.isConnected) return;
+        drawCrop(canvas, got.img, im.box, got.cut);
+        cell.classList.add("landed");
+        if (got.cut && im.large) {
+          loadImage(im.large).then((big) => { if (canvas.isConnected) drawCrop(canvas, big, im.box, true); }).catch(() => {});
+        }
+      });
       frame.appendChild(canvas);
       if (MODE === "pair") {
         const tag = document.createElement("span");
@@ -1648,7 +1686,6 @@
       });
       cell.appendChild(report);
     });
-    showError(images ? "" : "An image failed to load. You can skip this one.");
     oddWant = MODE === "odd" ? item.odds || 1 : 1;
     if (MODE === "odd") {
       $("odd-prompt").textContent = oddPrompt(item.rank, oddWant);
@@ -1666,6 +1703,11 @@
     resetLight();
     toggleLight(false);
     show("stage");
+    measureSince("game:next", "game:tiles");   // the tiles are down (the photos may still be on their way)
+    const got = await Promise.all(loads);     // every photo in its tile (each drew as it came)
+    if (item !== next) return false;          // a newer beetle took its place meanwhile
+    holder.classList.remove("laying");
+    showError(got.every(Boolean) ? "" : "An image failed to load. You can skip this one.");
     document.dispatchEvent(new CustomEvent("game:item-shown"));   // the new-player tour waits for the first beetle
     if (MODE === "odd" && window.gameTour && window.gameTour.unlocked) {
       // the first time: how to play it (once on this device)
@@ -1681,6 +1723,8 @@
     readyAt = performance.now() + MASH_GUARD_MS;
     prefetch(item.prefetch);
     lookAhead(item);
+    prepareReview(item);
+    return true;
   }
 
   // ---------- answering: Submit locks the answer in, the review shows what it earned, Next brings the next beetle ----------
@@ -1709,13 +1753,18 @@
     const where = { round: roundId, index: item.index };   // the answer's place, for a Flag from its review
     setPhase("send");
     showError("");
+    performance.mark("game:submit");   // until the review's first tile and the whole review (sweepTick)
+    // a grid's tiles get their numbers one by one while the answer is on its way (#602)
+    if (!skipping && (MODE === "odd" || MODE === "select")) sweepStart([...$("photos").querySelectorAll(".cell")]);
     let data;
     try {
       data = await api(
         root.dataset.answerUrl.replace("00000000-0000-0000-0000-000000000000", roundId),
-        Object.assign({ index: item.index, elapsed_ms: Date.now() - shownAt }, extra)
+        // the review first, the next beetle while it is read (#602); a skip goes straight on, so it takes both at once
+        Object.assign({ index: item.index, elapsed_ms: Date.now() - shownAt }, extra, skipping ? {} : { item_later: true })
       );
     } catch (e) {
+      sweepStop(true);
       setPhase("answer");   // unlocked again: change the answer, or try again
       if (e.status === 409) { await startFeed(); return; }   // out of step (another tab, a double tap): pick up where the server is
       showError(e.message);
@@ -1728,6 +1777,7 @@
     if (data.prefs) { renderPrefs(data.prefs); warmOthers(); }   // a new level: its unlocks show (and work) straight away
     bumpCombo(!skipping);
     upcoming = data;
+    if (!data.item && !data.done && data.next !== undefined) data.itemLoad = fetchItem(data);
     if (data.review) rememberPrevious(Object.assign(data.review, { where }));
     // A skip goes straight on; anything else stops on its review. Its confetti first, so a level-up's burst (a toast) wins.
     if (!skipping && data.review) showReview(data.review);
@@ -1755,12 +1805,14 @@
       return;
     }
     if (data.round) roundId = data.round;   // the feed moved on to its next batch; the player never notices
+    if (!data.item && data.itemLoad) await data.itemLoad;   // usually in long since: asked for with the review
+    if (!data.item) { await startFeed(); return; }          // it couldn't be had: pick up where the server is
     await present(data.item);
   }
 
   // Show a beetle and open it for answering
   async function present(next) {
-    await showItem(next);
+    if (!await showItem(next)) return;   // a newer beetle took its place while its photos came
     endReview();
     setPhase("answer");
     if (performance.getEntriesByName("game:next").length) {   // how long Next took to show the beetle (dev tools)
@@ -1775,14 +1827,21 @@
     $("panel").classList.add("reviewing");
     $("panel").scrollTop = 0;
     $("photos").classList.add("revealing");
-    markTiles($("photos").querySelectorAll(".cell"), review);
-    nameTiles($("photos").querySelectorAll(".cell"), review);
-    if (review.celebrate) confetti(review.celebrate.kind, review.celebrate.size);
-    // the next photos start loading now (usually they are in already; at the end of a batch they are not)
-    if (upcoming && upcoming.item) {   // the crops the next beetle shows: small ones first (#494)
-      const ims = upcoming.item.images;
-      prefetch(ims.map((im) => im.small || im.url).concat(ims.map((im) => im.large).filter(Boolean)));
+    const cells = [...$("photos").querySelectorAll(".cell")];
+    if (review.grid) sweepReview(cells, review);   // tile by tile (#602)
+    else {
+      markTiles(cells, review);
+      nameTiles(cells, review);
     }
+    if (review.celebrate) confetti(review.celebrate.kind, review.celebrate.size);
+    // the next photos start loading now (usually they are in already; at the end of a batch, or a grid built again at
+    // a new step, they are not): the crops the next beetle shows, small ones first (#494)
+    const loadNext = (it) => {
+      if (!it) return;
+      prefetch(it.images.map((im) => im.small || im.url).concat(it.images.map((im) => im.large).filter(Boolean)));
+    };
+    if (upcoming && upcoming.item) loadNext(upcoming.item);
+    else if (upcoming && upcoming.itemLoad) upcoming.itemLoad.then(loadNext);
     setPhase("review");
     readyAt = performance.now() + MASH_GUARD_MS;   // Enter pressed three times fast never skips the review
     swipeHint("next", $("photo-area"), "Swipe left for the next beetle");
@@ -1895,28 +1954,102 @@
       if (ring) cells.forEach((cellEl) => cellEl.classList.add(ring));
       return;
     }
-    cells.forEach((cellEl, i) => {
-      const t = g.tiles[i];
-      cellEl.classList.remove("picked", "tapped", "key-cursor");
-      if (!t) return;
-      if (t.state === "flagged") {   // a photo flagged in the grid: out of play, as it was while answering
-        cellEl.classList.add("flagged");
-        if (!cellEl.querySelector(".flag-badge")) cellEl.appendChild(node("span", "flag-badge", node("i", "fi fi-rr-flag"), "Flagged"));
-        return;
+    cells.forEach((cellEl, i) => markTile(cellEl, i, review));
+  }
+  // Who calls a tile nobody has checked yet (#602): the source of its name at the grid's rank, the surer of the other
+  // players and IBBI-AI (the players on a tie), as on its photo; null while nobody says
+  function callBy(t) {
+    const p = t.players, a = t.ai;
+    if (!p && !a) return null;
+    return p && (!a || p.sure >= a.sure) ? "players" : "ai";
+  }
+  // One grid tile's marks: its ring (blue or purple where it is called but not checked yet), number and points
+  function markTile(cellEl, i, review) {
+    const g = review.grid, t = g.tiles[i];
+    cellEl.classList.remove("picked", "tapped", "key-cursor");
+    if (!t) return;
+    if (t.state === "flagged") {   // a photo flagged in the grid: out of play, as it was while answering
+      cellEl.classList.add("flagged");
+      if (!cellEl.querySelector(".flag-badge")) cellEl.appendChild(node("span", "flag-badge", node("i", "fi fi-rr-flag"), "Flagged"));
+      return;
+    }
+    const ring = ringOf(review.mode, t);
+    cellEl.classList.add(ring, "rv-in");
+    const by = ring === "ring-open" || ring === "ring-unknown" ? callBy(t) : null;
+    if (by) cellEl.classList.add("by-" + by);
+    if (!cellEl.querySelector(".rv-num")) cellEl.appendChild(node("span", "rv-num", String(i + 1)));   // numbered at Submit
+    const badge = t.points ? [pts(t.points), t.points > 0 ? "up" : "down"] : t.state === "missed" ? ["missed", "flat"]
+                : t.state === "vote" || t.state === "pick" ? ["vote", "flat"] : null;
+    if (badge) cellEl.appendChild(node("span", "rv-badge " + badge[1], badge[0]));
+    if ((g.seen || []).includes(i)) {   // this very tile was seen before (#600): the headline pill is for one photo
+      const seen = node("span", "rv-seen", node("i", "fi fi-rr-eye"), node("span", "word", "Seen before"));
+      seen.title = "Seen before";
+      seen.setAttribute("aria-label", "Seen before");
+      seen.dataset.testid = "tile-seen";
+      cellEl.appendChild(seen);
+    }
+  }
+
+  // ---------- the review, tile by tile (#602) ----------
+  // From Submit a grid's tiles get their numbers one after another while the answer is on its way; once the review is
+  // in, each tile gets its ring, points and names in turn, quickly (a grid of 25 in about a second), the tiles already
+  // numbered catching up two at a time. With reduced motion it all shows at once when the review is in.
+  let sweep = null;
+  const sweepStep = (n) => Math.max(40, Math.min(80, Math.round(1000 / Math.max(1, n))));
+  function sweepStart(cells) {
+    sweepStop();
+    $("photos").classList.add("revealing");
+    sweep = { cells, review: null, at: 0, done: 0, timer: 0 };
+    if (reduceMotion) return;
+    sweep.timer = setInterval(sweepTick, sweepStep(cells.length));
+    sweepTick();
+  }
+  function revealTile(c, i, review) {
+    markTile(c, i, review);
+    nameTile(c, i, review);
+    if (i === 0) measureSince("game:submit", "game:first-tile");
+  }
+  function sweepTick() {
+    const s = sweep;
+    if (!s) return;
+    const n = s.cells.length;
+    if (s.review) {
+      for (let k = s.done < s.at ? 2 : 1; k > 0 && s.done < n; k--) {
+        revealTile(s.cells[s.done], s.done, s.review);
+        s.done += 1;
       }
-      cellEl.classList.add(ringOf(review.mode, t));
-      cellEl.appendChild(node("span", "rv-num", String(i + 1)));
-      const badge = t.points ? [pts(t.points), t.points > 0 ? "up" : "down"] : t.state === "missed" ? ["missed", "flat"]
-                  : t.state === "vote" || t.state === "pick" ? ["vote", "flat"] : null;
-      if (badge) cellEl.appendChild(node("span", "rv-badge " + badge[1], badge[0]));
-      if ((g.seen || []).includes(i)) {   // this very tile was seen before (#600): the headline pill is for one photo
-        const seen = node("span", "rv-seen", node("i", "fi fi-rr-eye"), node("span", "word", "Seen before"));
-        seen.title = "Seen before";
-        seen.setAttribute("aria-label", "Seen before");
-        seen.dataset.testid = "tile-seen";
-        cellEl.appendChild(seen);
-      }
-    });
+      s.at = Math.max(s.at, s.done);
+    } else if (s.at < n) {
+      const c = s.cells[s.at];
+      if (!c.classList.contains("flagged") && !c.querySelector(".rv-num")) c.appendChild(node("span", "rv-num", String(s.at + 1)));
+      s.at += 1;
+    }
+    if (s.done >= n) {
+      clearInterval(s.timer);
+      sweep = null;
+      measureSince("game:submit", "game:review");
+      performance.clearMarks("game:submit");
+    }
+  }
+  function sweepReview(cells, review) {
+    if (!sweep) sweepStart(cells);
+    sweep.review = review;
+    if (!reduceMotion) { sweepTick(); return; }
+    while (sweep) sweepTick();   // all at once
+  }
+  // Moving on (or the answer didn't go): the sweep stops; ``clear`` takes back the numbers it put on
+  function sweepStop(clear) {
+    if (!sweep) return;
+    clearInterval(sweep.timer);
+    if (clear) {
+      sweep.cells.forEach((c) => { const num = c.querySelector(".rv-num"); if (num) num.remove(); });
+      $("photos").classList.remove("revealing");
+    }
+    sweep = null;
+  }
+  // How long since a mark (dev tools, and the measurements of #602)
+  function measureSince(mark, name) {
+    if (performance.getEntriesByName(mark).length) performance.measure(name, mark);
   }
 
   // Every beetle's names on its photo, in every game (#541): four short lines, subfamily to species (the genus cut to
@@ -1970,21 +2103,21 @@
     return box;
   }
   function nameTiles(cells, review) {
-    (review.beetles || []).forEach((b, i) => {
-      const c = cells[i];
-      if (b && c && !c.classList.contains("flagged")) {
-        c.appendChild(namesLabel(b, review));
-        c.classList.add("has-names");
-        if (!c.querySelector(".zoom-chip")) {   // the whole photo on its own button: a finger's tap turns the names off (#600)
-          const whole = node("button", "zoom-chip rv-whole", node("i", "fi fi-rr-expand"));
-          whole.type = "button";
-          whole.dataset.testid = "review-whole-photo";
-          whole.setAttribute("aria-label", "See the whole photo");
-          whole.addEventListener("click", (e) => { e.stopPropagation(); openReviewPhoto(c); });
-          c.appendChild(whole);
-        }
-      }
-    });
+    (review.beetles || []).forEach((b, i) => nameTile(cells[i], i, review));
+  }
+  function nameTile(c, i, review) {   // one photo's names (#541), with its whole-photo button
+    const b = (review.beetles || [])[i];
+    if (!b || !c || c.classList.contains("flagged")) return;
+    c.appendChild(namesLabel(b, review));
+    c.classList.add("has-names");
+    if (!c.querySelector(".zoom-chip")) {   // the whole photo on its own button: a finger's tap turns the names off (#600)
+      const whole = node("button", "zoom-chip rv-whole", node("i", "fi fi-rr-expand"));
+      whole.type = "button";
+      whole.dataset.testid = "review-whole-photo";
+      whole.setAttribute("aria-label", "See the whole photo");
+      whole.addEventListener("click", (e) => { e.stopPropagation(); openReviewPhoto(c); });
+      c.appendChild(whole);
+    }
   }
   // On a review (after the answer, and under Back) a photo with its names never picks, taps or re-answers (#569).
   // A finger's tap turns its names off, and on again: they stay that way until the next tap (#600; holding to peek

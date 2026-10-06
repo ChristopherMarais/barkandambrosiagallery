@@ -73,7 +73,7 @@ class PageTests(GameCase):
     def test_the_review_replaces_the_last_beetle_bar_and_the_timed_reveal(self):
         page = self.page()
         self.assertIn('id="review"', page)
-        self.assertIn("markTiles($(\"photos\").querySelectorAll(\".cell\"), review);", page)
+        self.assertIn("markTiles(cells, review);", page)   # a grid tile by tile since #602 (test_grid_lay_and_reveal)
         self.assertIn("confetti(review.celebrate.kind, review.celebrate.size)", page)
         for gone in ('id="community"', "showCommunity", "Last beetle", "revealOdd", "revealSelect", "celebrate_size"):
             self.assertNotIn(gone, page)
