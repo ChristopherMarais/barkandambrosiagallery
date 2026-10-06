@@ -126,8 +126,8 @@ class AheadLeavesOutSpecimenMatesTests(GridCase):
 class HelpTests(GridCase):
     def test_how_it_works_says_bigger_grids_hide_more_odd_ones(self):
         how = " ".join(strip_tags(self.client.get(reverse("game_how")).content.decode()).split()).replace("’", "'")
-        self.assertIn("bigger grids hide two or three odd ones, and you pick that many", how)
-        self.assertIn("(in Odd One Out, then with two and three odd ones)", how)
+        self.assertIn("bigger grids hide two to four odd ones, and you pick that many", how)
+        self.assertIn("(in Odd One Out, then with two, three and four odd ones)", how)
         self.assertIn("in Similarity and Odd One Out, makes you a Distinction expert", how)
         self.assertNotIn("Imposter Picker", how)
         self.assertNotIn("Identification expert", how)
@@ -135,7 +135,7 @@ class HelpTests(GridCase):
     def test_the_play_page_help_and_tour_count_the_odd_ones(self):
         page = Path(settings.BASE_DIR, "beetlesgallery", "templates", "beetles", "game_play.html").read_text(
             encoding="utf-8")
-        self.assertIn("All but one share a name (bigger grids hide two or three). Select the ones that don't", page)
+        self.assertIn("All but one share a name (bigger grids hide up to four). Select the ones that don't", page)
         self.assertIn('"Odd One Out: all but " + (oddWant > 1 ? oddWant : "one")', page)
         self.assertIn("oddPrompt(item.rank, oddWant)", page)
         self.assertNotIn("odd_count", page)

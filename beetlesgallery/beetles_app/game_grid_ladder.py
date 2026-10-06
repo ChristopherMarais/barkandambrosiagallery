@@ -1,18 +1,19 @@
 """
 The grid games' ladder (#489): Odd One Out and Select all get harder as a player gets better, and easier again when
-they struggle, each game on its own. Select all has twelve steps, the grid's size first and then its rank (the owner's
-choice):
+they struggle, each game on its own. The grids grow from 4 to 9, 16 and 25 beetles: 5×5 is the most a phone shows
+comfortably. Select all has sixteen steps, the grid's size first and then its rank (the owner's choice):
 
-    step   1    2    3    4    5    6    7    8    9    10   11   12
-    size   4    9    16   4    9    16   4    9    16   4    9    16
-    rank   subfamily      tribe          genus          species
+    step   1    2    3    4    5 ... 8     9 ... 12    13 ... 16
+    size   4    9    16   25   as 1-4      as 1-4      as 1-4
+    rank   subfamily           tribe       genus       species
 
-Odd One Out has 24 (#540): at each rank the grid grows first, then hides more odd ones, then the next rank comes:
+Odd One Out has 40 (#540): at each rank the grid grows first, then hides more odd ones, then the next rank comes. The
+odd ones stay at most about a sixth of the grid (three in 16, four in 25):
 
-    step   1    2    3    4    5    6      7 ... 12    13 ... 18    19 ... 24
-    size   4    9    16   9    16   16     as 1-6      as 1-6       as 1-6
-    odd    1    1    1    2    2    3
-    rank   subfamily                       tribe       genus        species
+    step   1    2    3    4    5    6    7    8    9    10     11 ... 20   21 ... 30   31 ... 40
+    size   4    9    16   25   9    16   25   16   25   25     as 1-10     as 1-10     as 1-10
+    odd    1    1    1    1    2    2    2    3    3    4
+    rank   subfamily                                          tribe       genus       species
 
 A player starts on GAME_GRID_START_STEP, goes up a step after GAME_GRID_UP_AFTER good grids in a row and down one
 after a poor grid (outcome says which is which; skips and grids ended by flags are neither). No step goes deeper than
@@ -27,7 +28,7 @@ from .game import GRID_SIZES, RANKS, game_setting
 GRID_GAMES = ("odd", "select")
 LADDER = [(size, rank) for rank in RANKS for size in GRID_SIZES]   # Select all
 # Odd One Out (#540): (beetles, odd ones) at each rank, in turn
-ODD_SHAPES = ((4, 1), (9, 1), (16, 1), (9, 2), (16, 2), (16, 3))
+ODD_SHAPES = ((4, 1), (9, 1), (16, 1), (25, 1), (9, 2), (16, 2), (25, 2), (16, 3), (25, 3), (25, 4))
 ODD_LADDER = [(size, rank, odds) for rank in RANKS for size, odds in ODD_SHAPES]
 GOOD, POOR = "good", "poor"
 
@@ -38,7 +39,8 @@ def steps(game_key):
 
 
 def most_odds(size):
-    """The most odd ones an Odd One Out grid of ``size`` beetles hides (ODD_SHAPES): one in 4, two in 9, three in 16."""
+    """The most odd ones an Odd One Out grid of ``size`` beetles hides (ODD_SHAPES): one in 4, two in 9, three in 16, four in
+    25."""
     return max([odds for s, odds in ODD_SHAPES if s <= size] or [1])
 
 

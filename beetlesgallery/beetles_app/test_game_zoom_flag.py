@@ -88,9 +88,10 @@ class FlagTests(ZoomFlagCase):
         self.assertIn('word.className = "more-word";', page)
         self.assertIn("@media (max-width: 639px) { .more-chip .more-word { display: none; } }", page)
 
-    def test_grid_tiles_show_the_flag_alone(self):
+    def test_grid_tiles_have_their_flag_in_the_whole_photo(self):
         page = self.page()
-        self.assertIn('#game[data-mode="odd"] .report-chip span, #game[data-mode="select"] .report-chip span { display: none; }', page)
+        self.assertIn("if (!grid) holder.querySelectorAll(\".cell\").forEach((cell, i) => {", page)   # no Flag on a tile
+        self.assertIn("zoom.addEventListener(\"click\", (e) => { e.stopPropagation(); openTile(i); });", page)
 
     def test_the_whole_photo_has_its_flag_on_the_photo_with_the_reasons_above(self):
         page = self.page()

@@ -122,11 +122,21 @@
   @media (max-width: 639px) {
     #game[data-mode="pair"] #photos .cell:nth-child(1) .ab-tag { top: auto; bottom: 0.375rem; }
   }
-  /* The grid games: 2×2, 3×3 or 4×4 beetles (--grid-cols, set for each grid), growing as the player gets better.
+  /* The grid games: 2×2 up to 5×5 beetles (--grid-cols, set for each grid), growing as the player gets better.
+     The tiles are square and as big as the photo area allows: its width on a phone, its height on a wide screen,
+     less a strip at the bottom that keeps the Lighting button clear of the last row (--light).
      Odd One Out: tap one to pick it; your pick gets a dark ring, and after answering the odd one a green one. */
-  #game[data-mode="odd"] #photos, #game[data-mode="select"] #photos { display: grid; grid-template-columns: repeat(var(--grid-cols, 2), minmax(0, 1fr));
-      grid-auto-rows: minmax(0, 1fr); gap: 0.375rem; }
-  #photos[data-size="16"] { gap: 0.25rem; padding: 0.25rem; }
+  #photo-area { container-type: size; }
+  #game[data-mode="odd"] #photos, #game[data-mode="select"] #photos { --gap: 0.375rem; --pad: 0.5rem; --light: 2.375rem;
+      --tile: calc((min(100cqw, 100cqh - var(--light)) - 2 * var(--pad) - (var(--grid-cols, 2) - 1) * var(--gap)) / var(--grid-cols, 2));
+      display: grid; grid-template-columns: repeat(var(--grid-cols, 2), minmax(0, var(--tile))); grid-auto-rows: var(--tile);
+      justify-content: center; align-content: center; gap: var(--gap); padding: var(--pad) var(--pad) calc(var(--pad) + var(--light)); }
+  #game #photos[data-size="16"] { --gap: 0.25rem; --pad: 0.25rem; }
+  /* 25 (5×5), the biggest: the whole width of a phone, no side padding, hairline gaps, smaller corners */
+  #game #photos[data-size="25"] { --gap: 0.125rem; --pad: 0px; }
+  :is(#photos, #previous-photos)[data-size="25"] .cell { border-radius: 0.5rem; }
+  /* A grid of 16 or 25 keeps most of the screen while its review card is up: the card scrolls instead */
+  #stage:has(#photos:is([data-size="16"], [data-size="25"])) #panel { max-height: 45%; }
   #game[data-mode="odd"] #photos .cell, #game[data-mode="select"] #photos .cell { height: 100%; }
   /* The rings round the grid photos are drawn on top of the photo, so they show on a grid of 16 too (#541):
      dark for your pick or tap. After answering, one system in both grid games (#569): a solid ring on the photos you
@@ -149,11 +159,15 @@
   .tap-mark { position: absolute; left: 0.375rem; top: 0.375rem; z-index: 3; display: none; align-items: center; justify-content: center;
               width: 1.5rem; height: 1.5rem; border-radius: 9999px; background: #374151; color: #fff; font-size: 0.75rem; pointer-events: none; }
   .cell.tapped .tap-mark { display: inline-flex; }
-  /* In a grid each photo has the flag alone, and in a grid of 16 smaller buttons, so the beetle stays in view */
-  #game[data-mode="odd"] .report-chip span, #game[data-mode="select"] .report-chip span { display: none; }
-  #game[data-mode="odd"] .report-chip, #game[data-mode="select"] .report-chip { width: 1.875rem; padding: 0; justify-content: center; }
-  #photos[data-size="16"] .report-chip, #photos[data-size="16"] .zoom-chip { width: 1.5rem; height: 1.5rem; padding: 0; justify-content: center; }
+  /* A grid tile carries one faint button, the whole photo (top right), where the Flag and the beetle's other photos
+     are: clear while the pointer is on the tile, on the tile last tapped (for a moment), or with the keys. Smaller
+     in grids of 16 and 25, so the beetle stays in view. */
+  #game:is([data-mode="odd"], [data-mode="select"]) #photos .zoom-chip { opacity: 0.5; transition: opacity .2s; }
+  @media (hover: hover) { #game:is([data-mode="odd"], [data-mode="select"]) #photos .cell:hover .zoom-chip { opacity: 1; } }
+  #game #photos .cell:is(.chips-on, .key-cursor) .zoom-chip, #game #photos .zoom-chip:focus-visible { opacity: 1; }
+  #photos:is([data-size="16"], [data-size="25"]) .zoom-chip { width: 1.5rem; height: 1.5rem; top: 0.25rem; right: 0.25rem; }
   #photos[data-size="16"] .tap-mark { width: 1.25rem; height: 1.25rem; }
+  #photos[data-size="25"] .tap-mark { width: 1.125rem; height: 1.125rem; left: 0.25rem; top: 0.25rem; font-size: 0.625rem; }
   /* A photo flagged in a grid: greyed out with a "Flagged" badge, and out of play; the rest of the grid carries on */
   #photos .cell.flagged canvas, #previous-photos .cell.flagged canvas { opacity: 0.35; filter: grayscale(1); }
   #photos .cell.flagged .frame { pointer-events: none; }
@@ -161,6 +175,9 @@
   .flag-badge { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 3; display: inline-flex; align-items: center; gap: 0.25rem;
                 padding: 0.125rem 0.5rem; border-radius: 9999px; background: rgba(255,255,255,.95); border: 1px solid #d1d5db;
                 font-size: 0.6875rem; font-weight: 600; color: #374151; white-space: nowrap; pointer-events: none; }
+  /* a tile of 25 is too narrow for the word: the flag alone */
+  :is(#photos, #previous-photos)[data-size="25"] .flag-badge { font-size: 0; gap: 0; padding: 0.25rem; }
+  :is(#photos, #previous-photos)[data-size="25"] .flag-badge i { font-size: 0.75rem; }
   /* while the answer shows, the Flag steps aside (it is in the whole photo); the whole-photo button stays (#569) */
   #photos.revealing .report-chip { visibility: hidden; }
   /* The rank row the arrow keys (or WASD) are on */
@@ -240,6 +257,12 @@
   :is(#photos, #previous-photos)[data-size="16"] :is(.rv-num, .rv-badge) { font-size: 0.625rem; top: 0.25rem; height: 1.125rem; }
   :is(#photos, #previous-photos)[data-size="16"] .rv-num { left: 0.25rem; min-width: 1.125rem; }
   :is(#photos, #previous-photos)[data-size="16"] .rv-badge { left: 1.5rem; padding: 0 0.3rem; }
+  :is(#photos, #previous-photos)[data-size="25"] :is(.rv-num, .rv-badge) { font-size: 0.5625rem; top: 0.125rem; height: 1rem; }
+  :is(#photos, #previous-photos)[data-size="25"] .rv-num { left: 0.125rem; min-width: 1rem; padding: 0 0.2rem; }
+  :is(#photos, #previous-photos)[data-size="25"] .rv-badge { left: 1.25rem; padding: 0 0.25rem; }
+  /* On a phone the small tiles of 16 and 25 keep only the points: "missed" and "vote" would run into the tile's
+     number, and the dashed and grey rings already say them (the card lists them too) */
+  @media (max-width: 639px) { :is(#photos, #previous-photos):is([data-size="16"], [data-size="25"]) .rv-badge.flat { display: none; } }
   /* the photo's own buttons and tags stay on top of the names */
   .cell > :is(.ab-tag, .more-chip, .zoom-chip) { z-index: 5; }
   /* Every beetle's names after an answer (#541), subfamily to species: true names, or the likeliest with who says so
@@ -283,6 +306,14 @@
   }
   /* on the review a tap opens the whole photo and a long press peeks under the names: no text selection or menu */
   .cell.has-names { -webkit-touch-callout: none; user-select: none; cursor: zoom-in; }
+  /* In a grid of 25 four lines of names would hide most of a tile: they show on a tap (or while the pointer is on
+     it), the other way round; the card above lists every tile's name at the grid's rank. Only the names and dots. */
+  :is(#photos, #previous-photos)[data-size="25"] .cell > .rv-names { font-size: 0.5625rem; line-height: 1.15; gap: 0; padding: 1.25rem 0.1875rem 0.125rem; opacity: 0; }
+  :is(#photos, #previous-photos)[data-size="25"] .rv-names > span { gap: 0.2rem; }
+  :is(#photos, #previous-photos)[data-size="25"] .rv-names :is(.who, .tier, .fi) { display: none; }
+  :is(#photos, #previous-photos)[data-size="25"] .rv-names .rv-dot { width: 0.3125rem; height: 0.3125rem; margin-right: 0.125rem; }
+  :is(#photos, #previous-photos)[data-size="25"] .cell.names-off > .rv-names { opacity: 1; }
+  @media (hover: hover) { :is(#photos, #previous-photos)[data-size="25"] .cell:hover > .rv-names { opacity: 1; } }
   .rv-badge.up { background: #16a34a; color: #fff; }
   .rv-badge.down { background: #dc2626; color: #fff; }
   .rv-badge.flat { background: rgba(255,255,255,.95); border: 1px solid #d1d5db; color: #374151; }
@@ -298,6 +329,7 @@
   /* Back: the same card, with its photos */
   #previous-photos { flex: 1 1 0; min-height: 0; display: grid; gap: 0.375rem; padding: 0.5rem; background: #f3f4f6;
                      grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); }
+  #previous-photos[data-size="25"] { gap: 0.125rem; padding: 0.25rem 0; }
   #previous-photos .cell { position: relative; min-width: 0; min-height: 0; overflow: hidden; border-radius: 1rem; display: flex; align-items: center; justify-content: center; }
   #previous-photos canvas { display: block; width: 100%; height: 100%; object-fit: contain; }
   /* After a long session: a gentle, dismissible suggestion to take a break */
@@ -390,7 +422,7 @@
 
   <!-- The feed -->
   <div id="stage" class="hidden flex-1 min-h-0 flex flex-col">
-    <div class="relative flex-1 min-h-0 flex flex-col">
+    <div id="photo-area" class="relative flex-1 min-h-0 flex flex-col">
       <div id="photos"></div>
       <button type="button" id="light-btn" class="hidden" aria-expanded="false" aria-controls="light-panel" title="Make the photo brighter or sharper (E)"><i class="fi fi-rr-brightness"></i><span>Lighting</span></button>
       <div id="light-panel" class="hidden" role="group" aria-label="Photo brightness and contrast">
@@ -470,8 +502,8 @@
     <div class="p-5 text-gray-700 space-y-4 overflow-y-auto">
       <p class="hidden" data-help-mode="classify">Name it as far as you're sure: subfamily, tribe, genus, species.</p>
       <p class="hidden" data-help-mode="pair">How related are <strong>A</strong> and <strong>B</strong>? Pick the lowest line you're sure of.</p>
-      <p class="hidden" data-help-mode="odd">All but one share a name (bigger grids hide two or three). Select the ones that don't, then <strong>Submit</strong>. The grid grows as you get better.</p>
-      <p class="hidden" data-help-mode="select">Select every beetle of the group named below the photos, then <strong>Submit</strong>. A wrong tap costs, a missed one doesn't. The grid grows as you get better.</p>
+      <p class="hidden" data-help-mode="odd">All but one share a name (bigger grids hide up to four). Select the ones that don't, then <strong>Submit</strong>. The grid grows as you get better. A photo's corner button shows it whole, with its Flag.</p>
+      <p class="hidden" data-help-mode="select">Select every beetle of the group named below the photos, then <strong>Submit</strong>. A wrong tap costs, a missed one doesn't. The grid grows as you get better. A photo's corner button shows it whole, with its Flag.</p>
       <ul class="list-disc pl-5 space-y-2 text-sm" data-testid="help-rules">
         <li>Answer only as far as you're sure: a wrong guess costs more than stopping early.</li>
         <li>Unsure? <strong>Skip</strong> <span data-help-mode="classify pair">costs very little</span><span class="hidden" data-help-mode="odd select">earns a little</span>. Flagging a bad photo costs nothing.</li>
@@ -881,6 +913,24 @@
     if (gallery.length > 1) $("lb-count").textContent = "1 / " + gallery.length;
     $("lightbox").classList.remove("hidden");
   }
+  // A grid tile's whole photo: the one place its Flag is, and its beetle's other photos once they are unlocked (else a
+  // line saying which level opens them), so the tile itself carries a single small button
+  function openTile(i) {
+    const im = item.images[i];
+    openLightbox(im.url, im.box, i, im.more && im.photos ? [{ url: im.url, box: im.box }].concat(im.photos) : undefined);
+    if (im.more && !im.photos) {
+      $("lb-count").textContent = "+" + im.more + " photo" + (im.more === 1 ? "" : "s") + " of this beetle at level " + item.more_level;
+      $("lb-count").classList.remove("hidden");
+    }
+  }
+  // The tile just tapped shows its whole-photo button clearly for a moment, then it fades back
+  let chipsTimer = null;
+  function showChips(i) {
+    const cells = $("photos").querySelectorAll(".cell");
+    cells.forEach((c, j) => c.classList.toggle("chips-on", j === i));
+    clearTimeout(chipsTimer);
+    chipsTimer = setTimeout(() => cells.forEach((c) => c.classList.remove("chips-on")), 3000);
+  }
   $("lb-prev").addEventListener("click", (e) => { e.stopPropagation(); stepGallery(-1); });
   $("lb-next").addEventListener("click", (e) => { e.stopPropagation(); stepGallery(1); });
   document.addEventListener("keydown", (e) => {
@@ -1273,9 +1323,10 @@
     const holder = $("photos");
     holder.innerHTML = "";
     holder.classList.remove("revealing");
-    // the grid games: 2×2, 3×3 or 4×4 by the grid's size, which grows as the player gets better (#489)
+    // the grid games: 2×2 up to 5×5 by the grid's size, which grows as the player gets better (#489)
+    const grid = MODE === "odd" || MODE === "select";
     holder.style.setProperty("--grid-cols", String(Math.ceil(Math.sqrt(item.images.length))));
-    if (MODE === "odd" || MODE === "select") holder.dataset.size = String(item.images.length);
+    if (grid) holder.dataset.size = String(item.images.length);
     else delete holder.dataset.size;
     item.images.forEach((im, i) => {
       const cell = document.createElement("div");
@@ -1297,9 +1348,10 @@
         tag.textContent = i === 0 ? "A" : "B";
         cell.appendChild(tag);
       }
-      if (MODE === "odd" || MODE === "select") {
-        // a tap picks it (Select all: toggles it); the whole photo opens from its own small button (or the Q key)
-        makeZoomable(frame, canvas, () => (MODE === "odd" ? pickTile(i) : toggleTile(i)), true);
+      if (grid) {
+        // a tap picks it (Select all: toggles it) and brings up its button for a moment; the whole photo opens from
+        // that small button (or the Q key), with the Flag and the beetle's other photos
+        makeZoomable(frame, canvas, () => { showChips(i); MODE === "odd" ? pickTile(i) : toggleTile(i); }, true);
         if (MODE === "select") {
           const mark = document.createElement("span");
           mark.className = "tap-mark";
@@ -1312,13 +1364,13 @@
         zoom.dataset.testid = "whole-photo";
         zoom.setAttribute("aria-label", "See the whole photo");
         zoom.innerHTML = '<i class="fi fi-rr-expand"></i>';
-        zoom.addEventListener("click", (e) => { e.stopPropagation(); openLightbox(im.url, im.box, i); });
+        zoom.addEventListener("click", (e) => { e.stopPropagation(); openTile(i); });
         cell.appendChild(zoom);
       } else {
         makeZoomable(frame, canvas, () => openLightbox(im.url, im.box, i));
       }
       cell.appendChild(frame);
-      if (im.more) {
+      if (im.more && !grid) {   // a grid tile's other photos are in its whole-photo view (openTile)
         // Other photos of exactly this beetle: open them, or (still locked) say which level opens them
         const chip = document.createElement("button");
         chip.type = "button";
@@ -1346,8 +1398,9 @@
       peers.textContent = "Named by " + item.others + (item.others === 1 ? " other" : " others");
       holder.appendChild(peers);
     }
-    // A Flag on each photo (bottom left): opens that photo with the reasons ready to pick, at the same corner
-    holder.querySelectorAll(".cell").forEach((cell, i) => {
+    // A Flag on each photo (bottom left): opens that photo with the reasons ready to pick, at the same corner. Not on
+    // grid tiles: there it is in the whole photo, so nothing piles up on a small tile (openTile)
+    if (!grid) holder.querySelectorAll(".cell").forEach((cell, i) => {
       const im = item.images[i];
       const report = document.createElement("button");
       report.type = "button";
@@ -2239,7 +2292,8 @@
       const lone = MODE === "odd" && !multiPick() && oddPicks.size ? Array.from(oddPicks)[0] : null;
       const at = lone !== null ? lone : multiPick() && keyCursor !== null ? keyCursor : 0;
       if (item && item.images[at]) {
-        openLightbox(item.images[at].url, item.images[at].box, at);
+        if (MODE === "odd" || MODE === "select") openTile(at);
+        else openLightbox(item.images[at].url, item.images[at].box, at);
         if (pressed === "report") $("report-menu").classList.remove("hidden");
       }
     }
