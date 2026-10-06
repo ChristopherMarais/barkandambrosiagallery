@@ -1411,15 +1411,15 @@
             try {
               // Try to parse JSON response
               const response = JSON.parse(xhr.responseText);
-              if (response.success) {
-                // Success: Reload page to show new data
+              if (response.success || response.reload) {
+                // Done, or the server left a message for the page (views.keep_messages_for_reload): reload to show it
                 window.location.reload();
               } else {
                 // Server returned success status but indicated failure
                 showError('Error: ' + (response.error || 'Unknown error'));
               }
             } catch (err) {
-              // Not JSON: the view redirected back here with a message; reload to show it
+              // Not JSON: a page (e.g. the sign-in page after being signed out); reload
               window.location.reload();
             }
           } else {
