@@ -79,7 +79,7 @@ class DetailClassifyLinkTests(PageBehaviourCase):
         beetle = make_beetle(image=image)
         html = self.detail_html(beetle)
         self.assertIn("Generate AI recommendation", html)
-        self.assertIn(f'{reverse("tool_classify")}?image_url=', html)
+        self.assertIn(f'{reverse("tool_classify")}?asset={image.id}', html)
 
     def test_identified_specimen_has_no_classify_link(self):
         taxon = make_taxon("T-PLA", scientific_name="Platypus cylindrus")

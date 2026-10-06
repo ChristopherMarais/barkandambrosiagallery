@@ -941,7 +941,7 @@ def _experts_said(record, latest):
 def _model_leans(record):
     """
     What the species classifier leans to for this beetle, after the answer: its deepest rank with at least
-    GAME_FEEDBACK_AI_MIN (50%) confidence, e.g. "The species classifier leans genus Xyleborus (71%)". None without a
+    GAME_FEEDBACK_AI_MIN (50%) confidence, e.g. "IBBI-AI leans genus Xyleborus (71%)". None without a
     prediction or below that everywhere.
     """
     from .models import ModelPrediction
@@ -956,7 +956,7 @@ def _model_leans(record):
         tip = tips.get(rank)
         if tip and tip["confidence"] >= least:
             name = tip["value"] if rank == "species" else f"{rank} {tip['value']}"
-            return f"The species classifier leans {name} ({round(tip['confidence'] * 100)}%)."
+            return f"IBBI-AI leans {name} ({round(tip['confidence'] * 100)}%)."
     return None
 
 

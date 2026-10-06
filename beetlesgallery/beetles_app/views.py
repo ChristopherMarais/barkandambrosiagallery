@@ -7,7 +7,6 @@ import subprocess
 import sys
 import os
 import math
-import requests
 import time
 import logging
 from beetlesgallery.tools import ibbi_models
@@ -47,8 +46,6 @@ from .tasks import process_upload_task, process_update_task, build_downloads_tas
 
 import pandas as pd
 from io import BytesIO, StringIO
-
-MODAL_API_URL = settings.MODAL_API_URL
 
 logger = logging.getLogger(__name__)
 
@@ -1668,6 +1665,14 @@ def _run_update_batch(request, row_data, filename):
     process_update_task.delay(batch.id)
 
 
+def _hourly_saves(request):
+    """The cache key and count of what the AI page kept for this person (or address) this hour."""
+    from django.core.cache import cache
+    who = request.user.pk if request.user.is_authenticated else request.META.get("REMOTE_ADDR", "")
+    key = f"classifier-saves:{who}"
+    return key, cache.get(key, 0)
+
+
 def _keep_classifier_image(request, image_file, data):
     """
     Keep a submitted image that has a beetle in it (unvalidated, with the proposed labels). Never fails the
@@ -1681,9 +1686,7 @@ def _keep_classifier_image(request, image_file, data):
             return classify_assist.OPTED_OUT   # the person asked us not to keep it (or it is a built-in example)
         if data.get("status") != "success" or not data.get("detections"):
             return classify_assist.NOT_SAVED
-        who = request.user.pk if request.user.is_authenticated else request.META.get("REMOTE_ADDR", "")
-        key = f"classifier-saves:{who}"
-        count = cache.get(key, 0)
+        key, count = _hourly_saves(request)
         if count >= classify_assist.SUBMISSIONS_PER_HOUR:
             return classify_assist.NOT_SAVED
         image_file.seek(0)
@@ -1696,6 +1699,45 @@ def _keep_classifier_image(request, image_file, data):
         return "not_saved"
 
 
+def _keep_ai_suggestions(request, asset, data):
+    """
+    A gallery photo run from its specimen page: keep the AI's names on its ROIs that have no AI suggestion yet.
+    Limited like kept images (not for accounts that may generate AI recommendations on the annotation page anyway),
+    and never fails the classification. Returns (outcome, how many ROIs got one).
+    """
+    from django.core.cache import cache
+    from . import classify_assist
+
+    try:
+        if not data.get("detections"):
+            return classify_assist.NOT_SAVED, 0
+        limited = not has_area(request.user, AI_RECOMMEND)
+        key, count = _hourly_saves(request)
+        if limited and count >= classify_assist.SUBMISSIONS_PER_HOUR:
+            return classify_assist.NOT_SAVED, 0
+        user = request.user if request.user.is_authenticated else None
+        attached = classify_assist.attach_suggestions(asset, data, user)
+        if not attached:
+            return classify_assist.NOTHING_NEW, 0
+        if limited:
+            cache.set(key, count + 1, 3600)
+        return classify_assist.ATTACHED, attached
+    except Exception:
+        logger.exception("Could not keep the AI's names for a gallery photo")
+        return classify_assist.NOT_SAVED, 0
+
+
+def _gallery_photo(asset_id):
+    """The gallery photo (ImageAsset) with this id, if it is there and has a file; else None."""
+    if not asset_id:
+        return None
+    try:
+        asset = ImageAsset.objects.filter(pk=asset_id, is_deleted=False).first()
+    except (ValueError, ValidationError):
+        return None
+    return asset if asset is not None and asset.image_file else None
+
+
 # Built-in examples on the classifier page (files in static/img/classifier_examples/). They are never kept.
 CLASSIFIER_EXAMPLES = [
     {"file": "monarthrum_nudum.jpg", "title": "Monarthrum nudum", "credit": "SL Wood, Brigham Young University", "licence": "CC-BY-NC 4.0"},
@@ -1705,47 +1747,39 @@ CLASSIFIER_EXAMPLES = [
 ]
 
 
-# @login_required
+# Open to everyone on purpose (no sign-in); a signed-in visitor is recorded with what the page keeps.
 def tool_classify(request):
     """
-    Proxies image upload to Modal GPU API.
-    Returns JSON for AJAX requests, renders template for GET.
+    The AI page (IBBI-AI). GET shows it, with a gallery photo ready when ?asset=<image id> names one (the specimen
+    page's "Generate AI recommendation"). POST classifies the uploaded image, or with ``asset`` that gallery photo as
+    stored here, never an upload, so a record only gets the AI's names for its own photo. Answers in JSON, with what
+    was kept in "saved".
     """
-    if request.method == 'POST' and request.FILES.get('image'):
+    from . import classify_assist
+
+    # A POST names the gallery photo in its form: the page posts to its own address, which keeps ?asset= even after
+    # the visitor has picked another image instead.
+    asset = _gallery_photo(request.POST.get("asset") if request.method == "POST" else request.GET.get("asset"))
+    if request.method == 'POST' and (asset is not None or request.FILES.get('image')):
+        architecture = ibbi_models.resolve(request.POST.get('architecture')) or ibbi_models.DEFAULT
         try:
-            # 1. Prepare Data
-            image_file = request.FILES['image']
-            
-            # Extract form data
-            architecture = ibbi_models.resolve(request.POST.get('architecture')) or ibbi_models.DEFAULT
-            payload = {
-                'architecture': architecture,
-                'box_threshold': request.POST.get('box_threshold', 0.25),
-            }
-            
-            # Prepare file for upload
-            files = {
-                'image': (image_file.name, image_file.read(), image_file.content_type)
-            }
-
-            # 2. Call Modal API
-            response = requests.post(MODAL_API_URL, data=payload, files=files, timeout=300)
-            
-            if response.status_code == 200:
-                data = response.json()
-                data["saved"] = _keep_classifier_image(request, image_file, data)
-                return JsonResponse(data)
+            threshold = min(1.0, max(0.05, float(request.POST.get('box_threshold', 0.25))))
+        except (TypeError, ValueError):
+            threshold = 0.25
+        try:
+            if asset is not None:
+                with asset.image_file.open('rb') as fh:
+                    image_bytes = fh.read()
+                data = classify_assist.call_classifier(image_bytes, os.path.basename(asset.image_file.name),
+                                                       'image/jpeg', architecture, threshold)
+                data["saved"], data["attached"] = _keep_ai_suggestions(request, asset, data)
             else:
-                return JsonResponse({
-                    "status": "error", 
-                    "message": f"AI Service Error: {response.status_code}"
-                }, status=500)
-
-        except requests.exceptions.Timeout:
-            return JsonResponse({
-                "status": "error", 
-                "message": "The AI model is waking up (Cold Start). Please try again in 1 minute."
-            }, status=504)
+                image_file = request.FILES['image']
+                data = classify_assist.call_classifier(image_file.read(), image_file.name, image_file.content_type,
+                                                       architecture, threshold)
+                data["saved"] = _keep_classifier_image(request, image_file, data)
+        except classify_assist.ClassifyError as exc:
+            return JsonResponse({"status": "error", "message": str(exc)}, status=502)
         except Exception:
             # Details go to the server log, not to the browser.
             logger.exception("AI classification request failed")
@@ -1753,9 +1787,15 @@ def tool_classify(request):
                 "status": "error", 
                 "message": "Processing failed. Please try again later."
             }, status=500)
+        return JsonResponse(data)
+    if request.method == 'POST' and request.POST.get("asset"):
+        return JsonResponse({"status": "error", "message": "That photo is not in the gallery."}, status=404)
 
     # GET request: Render the page
-    return render(request, 'beetles/tool_classify.html', {'examples': CLASSIFIER_EXAMPLES, 'ibbi_docs_url': ibbi_models.IBBI_DOCS_URL})
+    gallery_photo = {"id": str(asset.id), "url": asset.display_url} if asset is not None else None
+    return render(request, 'beetles/tool_classify.html', {
+        'examples': CLASSIFIER_EXAMPLES, 'ibbi_docs_url': ibbi_models.IBBI_DOCS_URL, 'gallery_photo': gallery_photo,
+    })
 
 @login_required
 def stream_updates(request):

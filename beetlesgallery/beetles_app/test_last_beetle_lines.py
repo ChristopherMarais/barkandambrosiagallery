@@ -61,12 +61,12 @@ class LastBeetleLineTests(GameCase):
     def test_the_classifier_line_is_its_deepest_rank_at_half_or_more(self):
         self.predict(self.t_affinis, 0.64)
         self.assertEqual(_community(self.answer(self.user, **AFFINIS))["model"],
-                         "The species classifier leans Xyleborus affinis (64%).")
+                         "IBBI-AI leans Xyleborus affinis (64%).")
 
     def test_the_classifier_line_uses_a_rank_it_was_surer_of(self):
         self.predict(self.t_affinis, 0.3, said={"genus": {"value": "Xyleborus", "confidence": 0.71}})
         self.assertEqual(_community(self.answer(self.user, **AFFINIS))["model"],
-                         "The species classifier leans genus Xyleborus (71%).")
+                         "IBBI-AI leans genus Xyleborus (71%).")
 
     def test_no_prediction_no_line(self):
         self.assertNotIn("model", _community(self.answer(self.user, **AFFINIS)))
@@ -77,4 +77,4 @@ class LastBeetleLineTests(GameCase):
         self.predict(self.t_affinis, 0.8, roi=checked)
         out = _community(self.answer(self.user, roi=checked, is_check=True, **AFFINIS))
         self.assertEqual(out["experts"], "A proven expert agrees with you to species.")
-        self.assertEqual(out["model"], "The species classifier leans Xyleborus affinis (80%).")
+        self.assertEqual(out["model"], "IBBI-AI leans Xyleborus affinis (80%).")

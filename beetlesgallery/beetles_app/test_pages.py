@@ -193,7 +193,7 @@ class ClassifyErrorTests(PageTestCase):
         from django.core.files.uploadedfile import SimpleUploadedFile
 
         upload = SimpleUploadedFile("beetle.jpg", b"not really a jpeg", content_type="image/jpeg")
-        with mock.patch("beetlesgallery.beetles_app.views.requests.post", side_effect=RuntimeError("secret /opt/path")):
+        with mock.patch("beetlesgallery.beetles_app.classify_assist.requests.post", side_effect=RuntimeError("secret /opt/path")):
             with self.assertLogs("beetlesgallery.beetles_app.views", level="ERROR"):
                 response = self.client.post(reverse("tool_classify"), {"image": upload})
         self.assertEqual(response.status_code, 500)

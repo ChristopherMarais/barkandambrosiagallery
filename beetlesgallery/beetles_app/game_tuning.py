@@ -82,7 +82,7 @@ GROUPS = [
            "A judge counts by how their rating compares with yours (an Elo-like curve): smaller means stronger judges "
            "count far more than weaker ones.", 0.01, 1, 0.01),
         _t("GAME_REF_MODEL_MIN_CONFIDENCE", "Model: confidence to be a reference", 0.9,
-           "The classifier's name counts as a reference only when it is at least this sure about the beetle...", 0, 1, 0.01),
+           "The AI's name counts as a reference only when it is at least this sure about the beetle...", 0, 1, 0.01),
         _t("GAME_REF_MODEL_MIN_PRECISION", "Model: proven accuracy in that taxon", 0.95,
            "...and has been right this often about that very taxon on validated beetles...", 0, 1, 0.01),
         _t("GAME_REF_MODEL_MIN_CHECKED", "Model: sure calls checked in that taxon", 20,

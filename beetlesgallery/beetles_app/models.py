@@ -61,6 +61,14 @@ class ImageAsset(models.Model):
         related_name='updated_image_assets',
         help_text="User who last updated this image or its metadata"
     )
+    added_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="added_images",
+        help_text="Who added this photo to the gallery, when known (the AI page sets it for a signed-in visitor).",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -7,10 +7,9 @@ from beetlesgallery.tools import ibbi_models
 
 
 class AiWordingTests(ClassifyCase):
-    def test_model_names_are_short_and_say_classifier_or_detector(self):
+    def test_model_names_are_short_and_just_the_name(self):
         for key, spec in ibbi_models.MODELS.items():
-            expected = "Species classifier: " if spec["kind"] == "pipeline" else "Species detector: "
-            self.assertTrue(spec["label"].startswith(expected), key)
+            self.assertNotRegex(spec["label"].lower(), "classifier|detector", key)
             self.assertLessEqual(len(spec["label"]), 30, key)
         self.assertEqual(next(iter(ibbi_models.MODELS)), ibbi_models.DEFAULT)   # the first option is the default
 
@@ -18,7 +17,7 @@ class AiWordingTests(ClassifyCase):
         page = self.client.get(reverse("tool_classify")).content.decode()
         self.assertIn(f'href="{ibbi_models.IBBI_DOCS_URL}"', page)
         self.assertIn('data-testid="ibbi-link"', page)
-        self.assertIn("<strong>Species classifier:</strong>", page)
+        self.assertNotIn("Species classifier", page)
         self.assertNotIn("63 distinct species", page)
 
     def test_the_annotation_page_offers_an_ai_recommendation(self):

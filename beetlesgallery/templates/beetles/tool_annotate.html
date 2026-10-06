@@ -368,7 +368,7 @@
 
         <div class="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
           <div class="text-xs font-bold text-gray-500 uppercase mb-1">Generate AI recommendation</div>
-          <p class="text-[11px] text-gray-500 mb-2">Finds the beetles in this image, adds a box for each new one and suggests its name. Nothing is validated; boxes over an existing ROI are skipped.</p>
+          <p class="text-[11px] text-gray-500 mb-2">Finds the beetles in this image, adds a box for each new one and suggests its name. Nothing is validated; an existing ROI keeps its box and gets the AI's suggestion.</p>
           <div class="space-y-2" data-testid="ai-recommendation">
             <select id="classify-model" aria-label="AI model" class="block w-full min-w-0 rounded border border-gray-300 bg-white px-2 py-1.5 text-xs">
               {% ibbi_model_options %}
@@ -1184,7 +1184,12 @@ async function classifyCurrentImage() {
     if (!res.ok) throw new Error(data.error || 'The AI recommendation failed.');
     const img = state.images.find(i => i.image_asset_id === state.selectedImageId) || { image_asset_id: state.selectedImageId };
     await selectImage(img);
-    show(`${data.added} ROI${data.added === 1 ? '' : 's'} added (not validated)` + (data.already_boxed ? `, ${data.already_boxed} overlapped an existing ROI` : '') + '.');
+    // e.g. "2 ROIs added, 1 existing ROI got an AI suggestion (nothing validated)."
+    const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+    const parts = [`${plural(data.added, 'ROI')} added`];
+    if (data.attached) parts.push(`${plural(data.attached, 'existing ROI')} got an AI suggestion`);
+    if (data.already_boxed) parts.push(`${data.already_boxed} already there`);
+    show(`${parts.join(', ')} (nothing validated).`);
   } catch (e) {
     show(e.message);
   } finally {

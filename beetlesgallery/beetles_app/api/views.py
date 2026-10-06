@@ -112,7 +112,8 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='classify')
     def classify(self, request, pk=None):
         """
-        "Generate AI recommendation": add the classifier's boxes and species to this image as new, unvalidated ROIs.
+        "Generate AI recommendation": add IBBI-AI's boxes and species to this image as new, unvalidated ROIs, and its
+        name as a suggestion on an existing ROI under a found box (see classify_assist.add_rois).
         POST /api/v1/image-assets/{uuid}/classify/  {"architecture": "ibbi_dinov3", "box_threshold": 0.25}
         (the model keys are in beetlesgallery/tools/ibbi_models.py; the names from before ibbi 0.3 still work)
         """
@@ -136,10 +137,10 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
                 data = fh.read()
             result = call_classifier(data, os.path.basename(asset.image_file.name), 'image/jpeg',
                                      request.data.get('architecture') or ibbi_models.DEFAULT, threshold)
-            created, skipped = add_rois(asset, result, request.user)
+            counts = add_rois(asset, result, request.user)
         except ClassifyError as exc:
             return Response({'error': str(exc)}, status=502)
-        return Response({'added': len(created), 'already_boxed': skipped, 'model': result.get('model_used', '')})
+        return Response({**counts, 'model': result.get('model_used', '')})
 
     @action(detail=True, methods=['post'], url_path='heartbeat')
     def heartbeat(self, request, pk=None):
