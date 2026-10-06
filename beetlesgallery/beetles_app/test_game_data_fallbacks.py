@@ -81,7 +81,7 @@ class OnlyUnvalidatedTests(FallbackCase):
         self.grant("identification", "choose_game", play_mode="pair")
         data = self.started()
         self.assertEqual(data["item"]["mode"], "classify")
-        self.assertEqual(data["notice"], "Not enough beetles for Similarity right now: here's Identification instead.")
+        self.assertEqual(data["notice"], "Not enough beetles for Similarity right now: here's Naming instead.")
         self.assertEqual(data["prefs"]["play_mode"], "pair")
         self.assertEqual(GamePreference.objects.get(player=self.user).play_mode, "pair")
 
