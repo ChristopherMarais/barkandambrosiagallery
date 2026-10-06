@@ -40,8 +40,8 @@
   <section class="mb-4 p-3 border border-gray-200 rounded-xl text-sm text-gray-700" data-testid="expertise-rule">
     <h2 class="font-semibold text-gray-900 mb-1.5">What it takes</h2>
     <ul class="space-y-1 mb-1.5">
-      <li class="flex items-center gap-2"><span class="tree-dot mark-expert" aria-hidden="true"></span><span><strong>Identification expert</strong>: names a taxon&rsquo;s beetles.</span></li>
-      <li class="flex items-center gap-2"><span class="tree-tri mark-expert" aria-hidden="true"></span><span><strong>Distinction expert</strong>: tells them apart in Similarity, Imposter Picker and Find Them All.</span></li>
+      <li class="flex items-center gap-2"><span class="tree-dot mark-expert" aria-hidden="true"></span><span><strong>Identification expert</strong>: names a taxon&rsquo;s beetles in Identification and Find Them All.</span></li>
+      <li class="flex items-center gap-2"><span class="tree-tri mark-expert" aria-hidden="true"></span><span><strong>Distinction expert</strong>: tells them apart in Similarity and Imposter Picker.</span></li>
     </ul>
     <p>Either one, in a taxon: at least {% widthratio tree.min_accuracy 1 100 %}% correct over {{ tree.min_judged|digit_groups }} or more checked answers, covering {% widthratio tree.children_share 1 100 %}% of its members (a tribe&rsquo;s genera, a genus&rsquo;s species) with at least {{ tree.per_species|digit_groups }} answers each.</p>
   </section>
