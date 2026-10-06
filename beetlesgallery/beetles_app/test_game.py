@@ -103,13 +103,13 @@ class GamePageTests(GameCase):
         self.assertContains(self.client.get(reverse("image_browser")), reverse("game_home"))
 
     def test_review_is_superuser_only(self):
-        self.assertRedirectsToLogin(self.client.get(reverse("game_review")))
+        self.assertRedirectsToLogin(self.client.get(reverse("game_settings")))
         for account in (self.user, self.staff):
             self.client.force_login(account)
-            self.assertEqual(self.client.get(reverse("game_review")).status_code, 404)
+            self.assertEqual(self.client.get(reverse("game_settings")).status_code, 404)
             self.assertEqual(self.client.get(reverse("game_export", args=["labels"])).status_code, 404)
         self.client.force_login(self.superuser)
-        self.assertEqual(self.client.get(reverse("game_review")).status_code, 200)
+        self.assertEqual(self.client.get(reverse("game_settings")).status_code, 200)
         for kind in ["labels", "players"]:
             res = self.client.get(reverse("game_export", args=[kind]))
             self.assertEqual(res["Content-Type"], "text/csv")
@@ -801,4 +801,4 @@ class PlayerReportTests(FeedbackCase):
         self.assertContains(page, "gameReportsHtml")
         self.assertContains(page, "get('image')")  # ?image= deep link
         self.client.force_login(self.superuser)
-        self.assertContains(self.client.get(reverse("game_review")), "Open in annotator")
+        self.assertContains(self.client.get(reverse("game_settings")), "Open in annotator")

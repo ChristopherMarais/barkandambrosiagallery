@@ -1555,8 +1555,8 @@ class GamePreference(models.Model):
 
 class GridStep(models.Model):
     """
-    Where a player is on the ladder of one grid game, Odd One Out or Select all (#489): the grids growing from 4 to 9
-    to 16 beetles (and in Odd One Out then hiding more odd ones, #540) before going a rank deeper, from subfamily to
+    Where a player is on the ladder of one grid game, Odd One Out or Select all (#489): the grids growing from 4 to 9,
+    16 and 25 beetles (and in Odd One Out then hiding more odd ones, #540) before going a rank deeper, from subfamily to
     species (game_grid_ladder.steps). Up a step after a run of good grids, down one after a poor grid.
     """
 

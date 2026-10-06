@@ -6,11 +6,13 @@ from . import access
 
 User = get_user_model()
 
-# Updated styles to match your HTML template exactly (Dark mode + Padding)
+# A grey box that turns darker grey while typing in it. (The old "border-stroke" had no colour defined and
+# "focus:border-primary" is white, so a focused box, like the autofocused Username, lost its border.) Tailwind
+# only scans templates, so use classes that templates use too.
 TAILWIND_INPUT = (
-    "w-full rounded-lg border border-stroke bg-transparent "
+    "w-full rounded-lg border border-gray-300 bg-transparent "
     "py-4 pl-6 pr-10 outline-none "
-    "focus:border-primary focus-visible:shadow-none "
+    "focus:border-gray-500 focus-visible:shadow-none "
     "dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
 )
 

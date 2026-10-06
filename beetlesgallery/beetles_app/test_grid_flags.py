@@ -144,7 +144,7 @@ class PageTests(GridCase):
         self.assertIn('cell.classList.add("flagged")', page)
         self.assertIn("|| flagged.has(i)) return;", page)                  # no picking or tapping a flagged photo
         self.assertIn("flagged: flags", page)                              # the answer carries them
-        self.assertIn("repeat(var(--grid-cols, 2), minmax(0, 1fr))", page)  # 2x2, 3x3 or 4x4
+        self.assertIn("repeat(var(--grid-cols, 2), minmax(0, var(--tile)))", page)  # 2x2 up to 5x5, square tiles
         self.assertNotIn("#photos.six", page)
         self.assertIn('" beetles"', page)                                  # "Tap every Xyleborini · 9 beetles"
 

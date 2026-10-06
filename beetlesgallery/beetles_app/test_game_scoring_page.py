@@ -22,7 +22,7 @@ class ScoringPageTests(GameCase):
         self.assertContains(page, "How scoring works")
         self.assertContains(page, 'data-testid="scoring-examples"')
         self.assertContains(page, 'data-testid="tunable-GAME_POINTS_CONSENSUS_CAP"')
-        self.assertContains(self.client.get(reverse("game_review")), 'data-testid="to-scoring"')
+        self.assertContains(self.client.get(reverse("game_settings")), 'data-testid="to-scoring"')
 
     def test_the_defaults_pass_every_balance_check(self):
         self.assertTrue(all(ok for _, ok, _ in game_tuning.checks()), game_tuning.checks())

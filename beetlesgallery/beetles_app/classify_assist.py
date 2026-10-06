@@ -74,6 +74,11 @@ def user_message(error):
 # starting meanwhile, so the next try finds it ready.
 CONNECT_SECONDS, ANSWER_SECONDS = 10, 85
 WARM_SECONDS = 240   # at most one warm-up per model in this long (the service sleeps after 5 idle minutes)
+# The AI page asks IBBI-AI for every box it finds down to the lowest threshold, so its slider shows and hides boxes in
+# the browser without asking again. What it keeps for the gallery is only the boxes at KEEP_THRESHOLD or more, wherever
+# the slider is: a weak box would only make work for the experts who check it.
+LOWEST_THRESHOLD = 0.05
+KEEP_THRESHOLD = 0.25
 
 
 def outranked(model_name, other_names):
@@ -130,6 +135,11 @@ def call_classifier(image_bytes, filename, content_type, architecture, box_thres
     if not isinstance(data, dict) or data.get("status") != "success":
         raise ClassifyError("failed", str(data.get("message", ""))[:200] if isinstance(data, dict) else "")
     return data
+
+
+def keepable(result):
+    """The detections in ``result`` sure enough to keep (box score at KEEP_THRESHOLD or more)."""
+    return [det for det in result.get("detections") or [] if float(det.get("score") or 0) >= KEEP_THRESHOLD]
 
 
 def _tiny_photo():
@@ -334,10 +344,10 @@ def attach_suggestions(asset, result, user):
     A photo already in the gallery, run through the AI page from its specimen page: its ROIs that have no suggestion
     from this model or a better one yet get the AI's name, matched by box (SAME_BOX_IOU). When the photo has a single ROI without a box,
     the best box that matches no other ROI is taken to be that one. Never adds an ROI or an image, and never changes
-    an ROI. Returns how many ROIs got a suggestion.
+    an ROI. Only boxes sure enough to keep count (keepable). Returns how many ROIs got a suggestion.
     """
     width, height = _image_size(asset)
-    suggestions = _Suggestions(result, user)
+    suggestions = _Suggestions({**result, "detections": keepable(result)}, user)
     rois = list(Beetles.objects.filter(image_asset=asset, is_deleted=False))
     boxed = _boxed(rois)
     boxless = [r for r in rois if r.bbox_x is None]
@@ -369,8 +379,8 @@ SUBMISSIONS_PER_HOUR = 20
 def save_classifier_submission(image_bytes, filename, result, user=None):
     """
     Keep an image that was sent to the AI page and had at least one beetle found in it, as an unvalidated image with
-    the proposed boxes and species (see add_rois). Its institution says "AI page", and added_by is the person who
-    sent it when they were signed in.
+    the proposed boxes and species (see add_rois); only boxes sure enough to keep count (keepable). Its institution
+    says "AI page", and added_by is the person who sent it when they were signed in.
 
     An image already on the platform (same bytes, by SHA-256, deleted ones included) is never replaced, touched or
     given new ROIs: the platform's copy is kept. Returns SAVED, DUPLICATE or NOT_SAVED (no beetle, or not a usable image).
@@ -384,7 +394,8 @@ def save_classifier_submission(image_bytes, filename, result, user=None):
     from .image_pipeline import write_original_and_thumb96
     from .models import ImageAsset
 
-    if not result.get("detections") or len(image_bytes) > MAX_SUBMISSION_BYTES:
+    result = {**result, "detections": keepable(result)}
+    if not result["detections"] or len(image_bytes) > MAX_SUBMISSION_BYTES:
         return NOT_SAVED
     digest = hashlib.sha256(image_bytes).hexdigest()
     if ImageAsset.objects.filter(image_sha256=digest).exists():

@@ -444,6 +444,9 @@
   .order-2 {
     order: 2;
   }
+  .order-last {
+    order: 9999;
+  }
   .col-span-1 {
     grid-column: span 1 / span 1;
   }
@@ -515,6 +518,9 @@
   }
   .my-2 {
     margin-block: calc(var(--spacing) * 2);
+  }
+  .my-5 {
+    margin-block: calc(var(--spacing) * 5);
   }
   .my-6 {
     margin-block: calc(var(--spacing) * 6);
@@ -675,6 +681,9 @@
   }
   .mb-10 {
     margin-bottom: calc(var(--spacing) * 10);
+  }
+  .mb-12 {
+    margin-bottom: calc(var(--spacing) * 12);
   }
   .-ml-2 {
     margin-left: calc(var(--spacing) * -2);
@@ -1066,6 +1075,9 @@
   .resize {
     resize: both;
   }
+  .scroll-mt-4 {
+    scroll-margin-top: calc(var(--spacing) * 4);
+  }
   .scroll-mt-24 {
     scroll-margin-top: calc(var(--spacing) * 24);
   }
@@ -1092,6 +1104,9 @@
   }
   .grid-cols-4 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .grid-cols-5 {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
   .flex-col {
     flex-direction: column;
@@ -1263,8 +1278,14 @@
   .overflow-y-auto {
     overflow-y: auto;
   }
+  .overscroll-contain {
+    overscroll-behavior: contain;
+  }
   .scroll-smooth {
     scroll-behavior: smooth;
+  }
+  .rounded {
+    border-radius: 0.25rem;
   }
   .rounded-2xl {
     border-radius: var(--radius-2xl);
@@ -2619,9 +2640,6 @@
   .hover\:decoration-gray-900:hover {
     text-decoration-color: var(--color-gray-900);
   }
-  .hover\:accent-gray-700:hover {
-    accent-color: var(--color-gray-700);
-  }
   .hover\:opacity-100:hover {
     opacity: 100%;
   }
@@ -2691,6 +2709,31 @@
     --tw-shadow: 0 0 #0000;
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
   }
+  .focus-visible\:ring-2:focus-visible {
+    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color, currentcolor);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+  .focus-visible\:ring-gray-500:focus-visible {
+    --tw-ring-color: var(--color-gray-500);
+  }
+  .focus-visible\:ring-offset-2:focus-visible {
+    --tw-ring-offset-width: 2px;
+    --tw-ring-offset-shadow: var(--tw-ring-inset,) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+  }
+  .focus-visible\:outline-2:focus-visible {
+    outline-style: var(--tw-outline-style);
+    outline-width: 2px;
+  }
+  .focus-visible\:outline-offset-2:focus-visible {
+    outline-offset: 2px;
+  }
+  .focus-visible\:outline-gray-900:focus-visible {
+    outline-color: var(--color-gray-900);
+  }
+  .focus-visible\:outline-solid:focus-visible {
+    --tw-outline-style: solid;
+    outline-style: solid;
+  }
   .disabled\:cursor-not-allowed:disabled {
     cursor: not-allowed;
   }
@@ -2711,8 +2754,20 @@
     --tw-ring-color: var(--color-gray-400);
   }
   @media (width >= 40rem) {
+    .sm\:order-none {
+      order: 0;
+    }
     .sm\:col-span-2 {
       grid-column: span 2 / span 2;
+    }
+    .sm\:my-6 {
+      margin-block: calc(var(--spacing) * 6);
+    }
+    .sm\:mb-4 {
+      margin-bottom: calc(var(--spacing) * 4);
+    }
+    .sm\:ml-0 {
+      margin-left: 0px;
     }
     .sm\:block {
       display: block;
@@ -2735,6 +2790,9 @@
     .sm\:w-36 {
       width: calc(var(--spacing) * 36);
     }
+    .sm\:w-auto {
+      width: auto;
+    }
     .sm\:w-full {
       width: 100%;
     }
@@ -2743,6 +2801,9 @@
     }
     .sm\:max-w-md {
       max-width: var(--container-md);
+    }
+    .sm\:flex-1 {
+      flex: 1;
     }
     .sm\:grid-cols-2 {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2758,6 +2819,9 @@
     }
     .sm\:flex-row {
       flex-direction: row;
+    }
+    .sm\:flex-nowrap {
+      flex-wrap: nowrap;
     }
     .sm\:items-center {
       align-items: center;
@@ -2797,6 +2861,9 @@
     }
     .sm\:px-6 {
       padding-inline: calc(var(--spacing) * 6);
+    }
+    .sm\:pt-10 {
+      padding-top: calc(var(--spacing) * 10);
     }
     .sm\:pb-4 {
       padding-bottom: calc(var(--spacing) * 4);

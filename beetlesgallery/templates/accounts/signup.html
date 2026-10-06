@@ -1,12 +1,21 @@
 {% extends 'base.html' %}
 {% block content %}
-<main>
+<div>
   <div class="mx-auto max-w-(--breakpoint-2xl) p-4 md:p-6 2xl:p-10">
     <h2 class="text-title-md2 font-bold text-black mb-6">Create User</h2>
 
+    {% if created_username %}
+    {# Reached by a redirect after an account is made, so a refresh never makes it twice: the message only, no form. #}
+    <div data-testid="create-account-done">
+      <div class="mb-6 p-4 rounded-sm border bg-gray-50 border-gray-200 text-gray-800" role="status">
+        Username <strong>{{ created_username }}</strong> created successfully.
+      </div>
+      <a href="{% url 'create_account' %}" class="btn-secondary" data-testid="create-account-again"><i class="fi fi-rr-user-add"></i><span>Create another account</span></a>
+    </div>
+    {% else %}
     <div class="rounded-xs border border-gray-200 bg-white shadow-default">
       <div class="w-full p-4">
-        <form method="post" action="">
+        <form method="post" action="" data-testid="create-account-form">
           {% csrf_token %}
 
           {{ form.non_field_errors }}
@@ -67,8 +76,9 @@
         </form>
       </div>
     </div>
+    {% endif %}
   </div>
-</main>
+</div>
 
 <script>
   function togglePassword(fieldId, btn) {
@@ -85,6 +95,13 @@
       svgIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />';
     }
   }
+
+  // Coming Back after an account was made, browsers refill what was typed: start blank, as a fresh visit would.
+  window.addEventListener('pageshow', function (event) {
+    var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+    var form = document.querySelector('[data-testid="create-account-form"]');
+    if (form && (event.persisted || (nav && nav.type === 'back_forward'))) form.reset();
+  });
 </script>
 
 {% endblock %}

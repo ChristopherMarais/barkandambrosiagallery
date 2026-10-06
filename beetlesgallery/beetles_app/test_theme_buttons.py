@@ -67,7 +67,7 @@ class ThemeButtonTests(SimpleTestCase):
                              ("beetles/game_play.html", 'id="previous-done"'),   # Current beetle
                              ("beetles/game_play.html", 'id="focus-save"'),
                              ("beetles/includes/game_tour.html", 'id="tour-next"'),
-                             ("beetles/game_staff_unlocks.html", ">Save</button>"),
+                             ("beetles/game_settings.html", ">Save</button>"),
                              ("beetles/interaction_review.html", 'value="accept"')):
             with self.subTest(name=name, marker=marker):
                 tag = opening_tag(template(name), marker)

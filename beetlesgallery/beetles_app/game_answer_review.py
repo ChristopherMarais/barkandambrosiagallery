@@ -11,8 +11,8 @@ Every beetle on screen also gets its names at all four ranks (#541), shown on it
 beetle, or, for one nobody has validated, the most likely name at each rank from the other players or IBBI-AI with how
 sure they are. That gives every grid beetle away, so each one waits a while before it is scored for this player again
 (game.held_back_ids), and then it no longer counts towards their accuracy or expertise (GameAnswer.seen_before).
-A grid's card says, beetle by beetle, what it is next to the grid's group, what the player did with it, and whether
-that was correct, or, while nobody knows yet, whether it agrees with IBBI-AI and the players.
+The text under the photos stays short (#569): a headline and at most one line of what matters, such as the odd one or
+the beetles missed; the names, rings and each tile's points are on the photos.
 
 What it never shows: any name for a skipped answer, or for one held while its name is checked.
 """
@@ -151,8 +151,8 @@ def _pair(answer, item, basis, row, losses, opinions):
 def _odd(answer, item, basis, row, losses, opinions):
     """
     Odd One Out: every beetle in the order shown, which ones were odd, the picks and what each earned, its name at the
-    grid's rank, and for the beetles nobody has validated what the other players and IBBI-AI say about them; a line for
-    each. Each tile carries its own state ("odd" for an odd one not picked, "right", "wrong", or "pick" on a beetle
+    grid's rank, and for the beetles nobody has validated what the other players and IBBI-AI say about them, with a
+    line naming the odd ones (_explain). Each tile carries its own state ("odd" for an odd one not picked, "right", "wrong", or "pick" on a beetle
     nobody has validated) and points, so a grid hiding several odd ones (#540) reads tile by tile like Select all; "odd"
     and "pick" are the first of "odds" and "picks".
     """
@@ -210,7 +210,7 @@ def _select(answer, item, basis, row, losses, opinions):
     """
     Select all: every beetle in the order shown with its state (right, wrong, missed, clear, or a vote on one nobody
     has validated) and what it earned, its name at the grid's rank, and what the other players and IBBI-AI say about
-    the unvalidated ones; a line for each. The tiles add up to the grid's points (game_scoring.select_tile_points).
+    the unvalidated ones, with a line naming the beetles missed (_explain). The tiles add up to the grid's points (game_scoring.select_tile_points).
     """
     tiles = game_scoring.grid_tiles(answer)
     rank, target = answer.grid_rank, (answer.grid_group or {}).get(answer.grid_rank, "")
@@ -254,120 +254,38 @@ BODIES = {"classify": _classify, "pair": _pair, "odd": _odd, "select": _select}
 # ---------------------------------------------------------------------------
 # A grid, beetle by beetle (#541)
 # ---------------------------------------------------------------------------
-# What choosing a beetle says about it: an Odd One Out pick says it is not of the group, a Find Them All tap that it is.
-# Leaving a beetle out says the opposite. Only the beetles the player chose are scored, but the review judges them all.
-CLAIM = {"odd": False, "select": True}
-CHOSE = {"odd": "Your pick: not ", "select": "You selected it"}
-LEFT = {"odd": "Not picked", "select": "Not selected"}
-
-
 def _explain(mode, tiles, cells, chosen, rank, target):
     """
     Adds "belongs" (to the grid's group: True or False on a validated beetle, None while nobody knows) and "chosen" to
-    each tile, and returns {"lead", "lines"}: a line for the grid, and one for every beetle in the order shown, so none
-    goes unexplained. A line is a list of parts: text, {"name", "rank"} for a name, {"say", "tone"} for a verdict
-    ("good", "bad" or "flat"). Generic per beetle: a grid with several odd ones reads the same.
+    each tile, and returns {"note"}: at most one short line of what is worth learning, as a list of parts (text, and
+    {"name", "rank"} for a name): Odd One Out names the odd ones ("Odd one: 1 · Platypodinae"), Find Them All the
+    beetles of the group left out ("Missed 4 · Ipini"). Everything else is on the photos: every name, the rings and
+    each tile's points.
     """
-    group, claim = game._norm(target), CLAIM[mode]
-    lines, odd_ones = [], []
+    group = game._norm(target)
+    odd_ones, missed = [], []
     for i, (tile, cell) in enumerate(zip(tiles, cells)):
-        if tile is None:
-            lines.append({"tile": i + 1, "parts": ["This photo has been removed since."]})
-            continue
-        if cell["state"] == "flagged":
-            lines.append({"tile": i + 1, "parts": ["You flagged it: out of this grid."]})
+        if tile is None or cell["state"] == "flagged":
             continue
         chose = i in chosen
         belongs = (game._norm(_name_at(tile, rank)) == group) if game_scoring.is_truth(tile) and group else None
         cell.update(belongs=belongs, chosen=chose)
-        if belongs is None:
-            parts = _open_line(mode, cell, chose, rank, target)
-        else:
-            parts = _known_line(mode, tile, cell, chose, belongs, claim, rank, target)
-            if not belongs:
-                odd_ones.append(i)
-        lines.append({"tile": i + 1, "parts": parts})
-    name = _part(target, rank)
-    if mode == "select":
-        lead = ["Select every ", name, "."]   # as the question put it (#538)
-    else:
-        lead = ["Group: ", name, "."]
+        if belongs is False:
+            odd_ones.append(i)
+        elif belongs and not chose:   # one of the group, left out: missed in Find Them All
+            missed.append(i)
+    note = []
+    if mode == "odd" and odd_ones:
+        note = ["Odd ones: " if len(odd_ones) > 1 else "Odd one: "]   # several since #540
         for n, i in enumerate(odd_ones):
-            first = " The odd ones: " if len(odd_ones) > 1 else " The odd one: "   # several since #540
-            lead += [first if n == 0 else ", ", f"{i + 1} (", _part(_name_at(tiles[i], rank), rank), ")"]
-        lead += ["." if odd_ones else ""]
-        if len(odd_ones) > 1:   # each is one of several: "an odd one"
-            for line in lines:
-                line["parts"] = [", an odd one. " if p == ", the odd one. " else p for p in line["parts"]]
-    return {"lead": lead, "lines": lines}
-
-
-def _known_line(mode, tile, cell, chose, belongs, claim, rank, target):
-    """A validated beetle: its name, whether it belongs to the group, what the player did with it, and the verdict."""
-    name, group = _name_at(tile, rank), _part(target, rank)
-    if mode == "select":
-        parts = [_part(name, rank), ": belongs to " if belongs else ": doesn't belong to ", group, ". "]
-    else:
-        parts = [_part(name, rank)] + ([". "] if belongs else [": not ", group, ", the odd one. "])
-    if chose:
-        parts += [CHOSE[mode]] + ([group] if mode == "odd" else []) + [" — "]
-        parts.append(_say("correct", "good") if belongs == claim else _say("not correct", "bad"))
-    elif belongs == claim:   # left out, but it was one to choose
-        parts += ["You left it out — " if mode == "select" else "Not picked — ", _say("missed", "bad")]
-    else:
-        parts += [LEFT[mode] + " — ", _say("correct", "good")]
-    if cell.get("points"):
-        parts.append(f" · {_signed(cell['points'])} points")
-    return parts
-
-
-def _open_line(mode, cell, chose, rank, target):
-    """
-    A beetle nobody has validated: what IBBI-AI and the other players call it at the grid's rank and how sure, what the
-    player did with it, and whether that agrees with them; a choice is scored once the beetle is checked.
-    """
-    said = []
-    if cell.get("ai"):
-        said.append(["IBBI-AI says ", _part(cell["ai"]["name"], rank), f" ({cell['ai']['sure']}%)"])
-    if cell.get("players"):
-        votes = cell["players"]["votes"]
-        said.append([f"{votes} {'player says' if votes == 1 else 'players say'} ", _part(cell["players"]["name"], rank),
-                     f" ({cell['players']['sure']}%)"])
-    parts = ["Not checked yet: "]
-    for n, bit in enumerate(said):
-        parts += ([", " if n else ""] + bit)
-    parts += [". " if said else "nobody has named it yet. "]
-    if not chose:
-        return parts + [LEFT[mode] + "."]
-    parts += [CHOSE[mode]] + ([_part(target, rank)] if mode == "odd" else []) + [" — "]
-    claim = CLAIM[mode]
-    agree = [who for who, key in (("IBBI-AI", "ai"), ("the players", "players"))
-             if cell.get(key) and cell[key]["in"] is claim]
-    differ = [who for who, key in (("IBBI-AI", "ai"), ("the players", "players"))
-              if cell.get(key) and cell[key]["in"] is (not claim)]
-    if agree and differ:
-        parts.append(_say(f"agrees with {agree[0]}, not with {differ[0]}", "flat"))
-    elif agree:
-        parts.append(_say("agrees with " + " and ".join(agree), "good"))
-    elif differ:
-        parts.append(_say("doesn't agree with " + " or ".join(differ), "bad"))
-    else:
-        parts.append(_say("not known yet", "flat"))
-    if cell.get("points"):
-        parts.append(f" · {_signed(cell['points'])} points so far")
-    elif cell.get("pays") is True:
-        parts.append(" · points once it is checked")
-    elif cell.get("pays") is False:
-        parts.append(" · may cost points once it is checked")
-    return parts
+            note += [", " if n else "", f"{i + 1} · ", _part(_name_at(tiles[i], rank), rank)]
+    elif mode == "select" and missed:
+        note = ["Missed " + ", ".join(str(i + 1) for i in missed) + " · ", _part(target, rank)]
+    return {"note": note}
 
 
 def _part(name, rank):
     return {"name": name, "rank": rank}
-
-
-def _say(text, tone):
-    return {"say": text, "tone": tone}
 
 
 # ---------------------------------------------------------------------------
@@ -376,9 +294,11 @@ def _say(text, tone):
 def _beetles(answer, shown, opinions):
     """
     For each photo in the order shown (None for one gone since or flagged): {"validated", "tier", "ranks"}, ranks
-    being [{"rank", "name", "source", "sure", "votes"}] for all four ranks. A validated beetle gives its true names
-    (source "truth"); one nobody has validated the most likely name at each rank, from the other players ("players",
-    with how many named it) or IBBI-AI ("ai"), whichever is surer (the players on a tie); "" where nobody says.
+    being [{"rank", "name", "source", "sure", "votes", "expert"}] for all four ranks. A validated beetle gives its true
+    names (source "truth"); one nobody has validated the most likely name at each rank, from the other players
+    ("players", with how many named it, and "expert" when a proven Naming expert backs it, game_trust) or
+    IBBI-AI ("ai"), whichever is surer (the players on a tie); "" where nobody says. The page marks each source with a
+    coloured dot (#569).
     """
     flagged = set(answer.flagged or []) if answer.mode in ("odd", "select") else set()
     out = []
@@ -399,7 +319,8 @@ def _beetles(answer, shown, opinions):
 
 def _likeliest(rank, vote, tip):
     """The surer of the other players' name (a consensus rank) and IBBI-AI's best guess at one rank."""
-    players = ((vote["support"], 1, {"name": vote["value"], "source": "players", "votes": vote["votes"]})
+    players = ((vote["support"], 1, {"name": vote["value"], "source": "players", "votes": vote["votes"],
+                                     "expert": bool(vote.get("trusted"))})
                if vote else None)
     ai = (tip["confidence"], 0, {"name": tip["value"], "source": "ai"}) if tip else None
     best = max((c for c in (players, ai) if c), key=lambda c: c[:2], default=None)
@@ -619,18 +540,18 @@ def _signed(value):
 
 def _headline(out):
     """
-    One line for the top of the card: "Correct to species · +45 points", "Found 2 of 3 · 1 wrong · +1.7 points" (Select
-    all, or Odd One Out with several odd ones),
-    "Not checked yet · +3 points so far", "Skipped · −0.3 points".
+    One short line for the top of the card (#569): "Correct to species · +45", "Correct · Same tribe · +3", "Not quite ·
+    You said Same genus · It's Same tribe · −3", "Found 2 of 3 · 1 wrong · +1.7" (Select all, or Odd One Out with
+    several odd ones), "Not checked yet · +3 so far", "Skipped · −0.3".
     """
     points = out["points"]
-    amount = f"{_signed(points['earned'])} points"
+    amount = _signed(points["earned"])
     if out["skipped"]:
         return "Reported · no points" if out["reported"] else f"Skipped · {amount}"
     if out["held"]:
         return "Not counted while its name is checked"
     if points["basis"] != "truth":
-        return "Not checked yet · " + (f"{amount} so far" if points["earned"] > 0 else "no points yet")
+        return "Not checked yet" + (f" · {amount} so far" if points["earned"] > 0 else "")
     if out["mode"] == "classify":
         deepest = None
         for cell in out["classify"]["ranks"]:   # correct down to the first mistake ("stopped" ranks are blank)
@@ -639,6 +560,11 @@ def _headline(out):
             elif cell["state"] in ("wrong", "after"):
                 break
         lead = f"Correct to {deepest}" if deepest else "Not quite"
+    elif out["mode"] == "pair" and out["pair"]["truth"]:   # said once (#569): the result and the true rung
+        pair, lead = out["pair"], VERDICT_LEAD.get(out["verdict"], "Checked")
+        if out["verdict"] == "right":
+            return f"{lead} · {pair['truth']} · {amount}"
+        return f"{lead} · You said {pair['said']} · It's {pair['truth']} · {amount}"
     elif out["mode"] == "select":
         grid = out["grid"]
         lead = f"Found {grid['right']} of {grid['members']}" + (f" · {grid['wrong']} wrong" if grid["wrong"] else "")

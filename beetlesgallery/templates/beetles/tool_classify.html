@@ -54,15 +54,6 @@
                     </div>
                 </div>
 
-                <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <label for="confRange" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Confidence</label>
-                        <span id="confValue" class="text-xs font-mono text-gray-600 bg-gray-50 px-1.5 py-0.5 rounded-sm">25%</span>
-                    </div>
-                    <input type="range" id="confRange" name="box_threshold" min="0.05" max="0.99" step="0.01" value="0.25" 
-                        class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-500 hover:accent-gray-700">
-                </div>
-
                 <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
                     <label class="flex items-start gap-2 text-xs text-gray-700 cursor-pointer">
                         <input type="checkbox" id="dontKeep" class="mt-0.5 h-4 w-4 rounded-sm border-gray-300 accent-gray-600">
@@ -152,6 +143,20 @@
                 </div>
             </div>
 
+            {# Right under the photo: shows and hides IBBI-AI's boxes as it moves, without asking IBBI-AI again #}
+            <div id="confidenceBar" class="hidden bg-white px-4 py-3 rounded-xl border border-gray-200 shadow-xs" data-testid="confidence-bar">
+                {# On phones the slider gets a row of its own, so it is wide enough for a thumb #}
+                <div class="flex flex-wrap sm:flex-nowrap items-center gap-x-3">
+                    <label for="confRange" class="shrink-0 text-xs font-bold text-gray-500 uppercase tracking-wide">Confidence</label>
+                    <input type="range" id="confRange" min="{{ lowest_threshold|stringformat:'s' }}" max="0.99" step="0.01" value="{{ keep_threshold|stringformat:'s' }}"
+                        aria-describedby="confCount" data-testid="confidence-slider"
+                        class="order-last sm:order-none w-full sm:w-auto sm:flex-1 min-w-0 h-8 cursor-pointer accent-gray-600 rounded-sm focus:outline-hidden focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2">
+                    <span id="confValue" class="ml-auto sm:ml-0 w-10 shrink-0 text-right text-sm font-mono tabular-nums text-gray-700" aria-hidden="true">{% widthratio keep_threshold 1 100 %}%</span>
+                </div>
+                <p id="confCount" class="text-xs text-gray-600" role="status" aria-live="polite" data-testid="confidence-count"></p>
+                <p id="keepHint" class="hidden mt-0.5 text-xs text-gray-500" data-testid="keep-hint">Boxes under {% widthratio keep_threshold 1 100 %}% are not kept in the gallery.</p>
+            </div>
+
             <div id="analysisDetails" class="hidden bg-white p-6 rounded-xl border border-gray-200 shadow-xs transition-all">
                 <div class="flex items-center justify-between mb-4 border-b border-gray-100 pb-2">
                     <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Identification</h3>
@@ -238,12 +243,18 @@ document.addEventListener('DOMContentLoaded', () => {
         cancelCameraBtn: document.getElementById('cancelCameraBtn'),
         clearBtn: document.getElementById('clearBtn'),
         chartWrapper: document.getElementById('chartWrapper'),
-        savedNote: document.getElementById('savedNote')
+        savedNote: document.getElementById('savedNote'),
+        confidenceBar: document.getElementById('confidenceBar'),
+        confCount: document.getElementById('confCount'),
+        keepHint: document.getElementById('keepHint'),
+        ranksPanel: document.getElementById('ranksPanel')
     };
 
     // --- State ---
     let state = {
-        detections: [],
+        detections: [],   // every box IBBI-AI found (down to the lowest threshold), surest first
+        kept: false,   // the photo, or its records, kept IBBI-AI's boxes (only those at keepThreshold or more)
+        keepThreshold: {{ keep_threshold|stringformat:'s' }},
         classNames: [],
         hoveredIndex: -1,
         selectedIndex: -1,
@@ -339,6 +350,44 @@ document.addEventListener('DOMContentLoaded', () => {
         return det.confidence ?? det.score;
     }
 
+    // --- The confidence slider: filters the boxes, the list and the chart in the browser, never asks IBBI-AI again ---
+    const boxScore = det => det.score ?? det.confidence ?? 0;
+    const threshold = () => parseFloat(ui.confRange.value);
+    const isShown = i => boxScore(state.detections[i]) >= threshold();
+
+    function applyThreshold() {
+        const pct = Math.round(threshold() * 100);
+        ui.confValue.textContent = `${pct}%`;
+        ui.confRange.setAttribute('aria-valuetext', `${pct}%`);
+        const total = state.detections.length;
+        const shown = state.detections.filter((_, i) => isShown(i)).length;
+        ui.confCount.textContent = `${shown} of ${total} ${total === 1 ? 'beetle' : 'beetles'} above ${pct}%`;
+        ui.tagsContainer.querySelectorAll('[data-index]').forEach(tag => {
+            tag.classList.toggle('hidden', !isShown(Number(tag.dataset.index)));
+        });
+        // Only say what is kept when the slider shows boxes that were not
+        ui.keepHint.classList.toggle('hidden', !(state.kept && state.detections.some((det, i) => isShown(i) && boxScore(det) < state.keepThreshold)));
+
+        if (state.hoveredIndex !== -1 && !isShown(state.hoveredIndex)) state.hoveredIndex = -1;
+        if (state.selectedIndex === -1 || !isShown(state.selectedIndex)) {
+            select(state.detections.findIndex((_, i) => isShown(i)));
+        }
+        requestAnimationFrame(draw);
+    }
+
+    // Show one box's names (or none, when the slider hides every box)
+    function select(index) {
+        state.selectedIndex = index;
+        ui.chartWrapper.classList.toggle('hidden', index === -1);
+        if (index !== -1) { updateChartData(index); return; }
+        ui.ranksPanel.classList.add('hidden');
+        ui.chartLabel.textContent = state.detections.length ? 'Move the slider left to see boxes' : 'No beetles found';
+        ui.chartLabel.className = 'text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-sm';
+        ui.chartLabel.style.backgroundColor = '';
+    }
+
+    ui.confRange.addEventListener('input', applyThreshold);
+
     // Subfamily to species: what the model says at each rank, greyed where it is not sure
     function renderRanks(det) {
         const panel = document.getElementById('ranksPanel');
@@ -411,6 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const padding = 8 * scale;
 
         state.detections.forEach((det, i) => {
+            if (!isShown(i)) return;
             const [x1, y1, x2, y2] = det.box;
             const w = x2 - x1;
             const h = y2 - y1;
@@ -479,6 +529,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let found = -1;
         for (let i = state.detections.length - 1; i >= 0; i--) {
+            if (!isShown(i)) continue;
             const [x1, y1, x2, y2] = state.detections[i].box;
             if (mouseX >= x1 && mouseX <= x2 && mouseY >= y1 && mouseY <= y2) {
                 found = i;
@@ -499,15 +550,6 @@ document.addEventListener('DOMContentLoaded', () => {
             updateChartData(state.selectedIndex);
             requestAnimationFrame(draw);
         }
-    });
-
-    // --- Interaction Logic ---
-
-    // Update the % text when the slider moves
-    ui.confRange.addEventListener('input', (e) => {
-        // value is 0.01 - 0.95, so multiply by 100 to get percentage
-        const percent = Math.round(e.target.value * 100);
-        ui.confValue.innerText = `${percent}%`;
     });
 
     // --- File Handling (Drag & Drop + Input) ---
@@ -555,7 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
         offline: 'Could not reach the site. Check your connection and try again.',
         failed: 'Something went wrong. Please try again.',
         unreadable: "This photo can't be opened here. Please try a JPEG or PNG.",
-        noBeetles: 'No beetles found above the confidence threshold.'
+        noBeetles: 'IBBI-AI found no beetles in this photo.'
     };
     const TONES = {   // amber while waiting, red for a problem, grey for anything else
         wait: 'border-amber-300 bg-amber-50 text-amber-900',
@@ -634,6 +676,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.imageWrapper.classList.remove('hidden');
         ui.previewImage.classList.remove('opacity-0');
         ui.analysisDetails.classList.add('hidden');
+        ui.confidenceBar.classList.add('hidden');
 
         // Show the button
         ui.submitBtn.disabled = false;
@@ -770,6 +813,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.imageWrapper.classList.add('hidden');
         ui.placeholder.classList.remove('hidden');
         ui.analysisDetails.classList.add('hidden');
+        ui.confidenceBar.classList.add('hidden');
         
         // --- NEW LOGIC: HIDE BUTTON ---
         ui.submitBtn.classList.add('hidden'); // Hide the button
@@ -858,34 +902,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (data) {
                 clearMessage();
-                state.detections = data.detections;
+                // Surest first, so the list reads best first and each box keeps its colour as the slider moves
+                state.detections = (data.detections || []).slice().sort((a, b) => boxScore(b) - boxScore(a));
                 state.classNames = data.class_names;
+                state.keepThreshold = data.keep_threshold ?? state.keepThreshold;
+                state.kept = ['saved', 'attached'].includes(data.saved);
+                state.selectedIndex = -1;
+                state.hoveredIndex = -1;
                 
                 ui.analysisDetails.classList.remove('hidden');
                 initChart();
                 
-                // Tags
+                // Tags (the slider hides those below it)
                 ui.tagsContainer.innerHTML = '';
                 state.detections.forEach((det, i) => {
                     const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.dataset.index = i;
                     btn.className = "flex items-center gap-2 px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-medium transition-colors border border-transparent focus:border-gray-500 focus:ring-1 focus:ring-gray-500";
                     const color = getBoxColor(i);
                     btn.innerHTML = `<span class="w-2.5 h-2.5 rounded-full" style="background-color:${color}"></span> ${det.label} <span class="text-gray-400">${Math.round(confidenceOf(det)*100)}%</span>`;
                     btn.onclick = () => {
-                        state.selectedIndex = i;
-                        updateChartData(i);
+                        select(i);
                         draw(); 
                     };
                     ui.tagsContainer.appendChild(btn);
                 });
 
-                if (state.detections.length > 0) {
-                    state.selectedIndex = 0;
-                    updateChartData(0);
-                } else {
-                    showMessage(MESSAGES.noBeetles, 'info');
-                }
+                ui.confidenceBar.classList.toggle('hidden', !state.detections.length);
+                if (!state.detections.length) showMessage(MESSAGES.noBeetles, 'info');
                 showSaved(data);
+                applyThreshold();
 
                 draw();
                 setLoading(false);

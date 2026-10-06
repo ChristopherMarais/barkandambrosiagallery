@@ -197,7 +197,7 @@
   <div class="flex min-h-screen items-center justify-center p-4 text-center">
     <div class="relative w-full max-w-md transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all">
       
-      <form action="" method="post">
+      <form action="" method="post" id="create-user-form">
         {% csrf_token %}
         <input type="hidden" name="action_create_user" value="1">
         
@@ -383,6 +383,17 @@
           openModal(activeModal);
       }
   });
+
+  {% if request.user.is_superuser %}
+  // Coming Back after a user was made, browsers refill what was typed: the new-user window starts empty and shut.
+  window.addEventListener('pageshow', function (event) {
+      const nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+      if (event.persisted || (nav && nav.type === 'back_forward')) {
+          document.getElementById('create-user-form').reset();
+          closeModal('modal-create-user');
+      }
+  });
+  {% endif %}
 </script>
 
 {% endblock %}

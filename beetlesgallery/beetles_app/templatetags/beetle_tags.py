@@ -146,6 +146,13 @@ def percent(value):
 
 
 @register.filter
+def game_label(key):
+    """A game's name as players see it ("pair" -> "Similarity"), from game_levels.GAME_NAMES."""
+    from beetlesgallery.beetles_app.game_levels import GAME_NAMES
+    return GAME_NAMES.get(key, key)
+
+
+@register.filter
 def rarity(value):
     """A 0-1 value's rarity tier ("common" ... "mythic"), for the .rarity-<tier> / .rarity-fill-<tier> classes."""
     from beetlesgallery.beetles_app.game_rewards import rarity_tier

@@ -1,6 +1,6 @@
 """
 The grid games' ladder (#489): up a step after two good grids in a row, down one after a poor grid, never below 1 or
-above the top (24 in Odd One Out, #540), never past the ranks the player has open; skips and flagged grids count for
+above the top (40 in Odd One Out, #540), never past the ranks the player has open; skips and flagged grids count for
 neither.
 """
 from django.test import override_settings
@@ -78,21 +78,23 @@ class StepTests(LadderCase):
         self.assertEqual(self.step(), 5)   # one good since the poor one
 
     def test_never_above_the_top(self):
-        at(self.user, "odd", 24)
+        top = len(ladder.steps("odd"))
+        at(self.user, "odd", top)
         for _ in range(4):
             ladder.update(self.odd())
-        self.assertEqual(self.step(), 24)
+        self.assertEqual(self.step(), top)
 
     @override_settings(GAME_RANK_UNLOCK_ANSWERS={"tribe": 50, "genus": 50, "species": 50})
     def test_never_past_the_open_ranks(self):
         self.level(60)   # level 2, nothing answered: only the subfamily is open
-        at(self.user, "odd", 6)
+        last = ladder.step_for(25, "subfamily", 4)   # 25 beetles at subfamily, four of them odd
+        at(self.user, "odd", last)
         for _ in range(4):
             ladder.update(self.odd())
-        self.assertEqual(self.step(), 6)   # 16 beetles at subfamily, three of them odd
+        self.assertEqual(self.step(), last)
         plan = ladder.plan(self.user, "odd", "subfamily")
-        self.assertEqual((plan["size"], plan["rank"], plan["odds"]), (16, "subfamily", 3))
-        at(self.user, "odd", 24)
+        self.assertEqual((plan["size"], plan["rank"], plan["odds"]), (25, "subfamily", 4))
+        at(self.user, "odd", len(ladder.steps("odd")))
         self.assertEqual(ladder.plan(self.user, "odd", "tribe")["rank"], "tribe")   # capped at the open rank
 
     def test_each_answer_moves_it_once(self):
@@ -115,24 +117,26 @@ class StepTests(LadderCase):
         self.assertEqual(self.step(), 5)
 
     def test_the_steps(self):
-        self.assertEqual(len(ladder.LADDER), 12)
-        self.assertEqual(ladder.LADDER[:4], [(4, "subfamily"), (9, "subfamily"), (16, "subfamily"), (4, "tribe")])
-        self.assertEqual(ladder.LADDER[-1], (16, "species"))
+        self.assertEqual(len(ladder.LADDER), 16)
+        self.assertEqual(ladder.LADDER[:5], [(4, "subfamily"), (9, "subfamily"), (16, "subfamily"), (25, "subfamily"),
+                                             (4, "tribe")])
+        self.assertEqual(ladder.LADDER[-1], (25, "species"))
 
 
 class FeedTests(GridCase):
     """Through the feed: the answer moves the step, and the batch's next grid is built at the new step."""
 
     def test_a_poor_grid_makes_the_next_grid_smaller_straight_away(self):
-        at(self.user, "odd", ladder.step_for(16, "genus"))
+        start = ladder.step_for(16, "genus")
+        at(self.user, "odd", start)
         with override_settings(GAME_ROUND_SIZE=3):   # a short batch, leaving beetles for a fresh grid of nine
             res = self.post("game_start", {"mode": "odd"})
         rnd, item = GameRound.objects.get(id=res.json()["round"]), res.json()["item"]
-        self.assertEqual((item["size"], item["rank"], item["step"]), (16, "genus", 15))
+        self.assertEqual((item["size"], item["rank"], item["step"]), (16, "genus", start))
         grid = rnd.items[item["index"]]
         wrong = next(i for i, t in enumerate(grid["tiles"]) if t != grid["a"]
                      and game.Beetles.objects.get(id=t).bbox_is_validated)
         data = self.post("game_answer", {"index": item["index"], "pick": wrong}, rnd.id).json()
-        self.assertEqual(ladder.current(self.user, "odd"), 14)
-        self.assertEqual((data["item"]["size"], data["item"]["rank"], data["item"]["step"]), (9, "genus", 14))
-        self.assertEqual(GameAnswer.objects.get().grid_step, 15)
+        self.assertEqual(ladder.current(self.user, "odd"), start - 1)
+        self.assertEqual((data["item"]["size"], data["item"]["rank"], data["item"]["step"]), (9, "genus", start - 1))
+        self.assertEqual(GameAnswer.objects.get().grid_step, start)

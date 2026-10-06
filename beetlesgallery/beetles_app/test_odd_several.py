@@ -15,36 +15,40 @@ from beetlesgallery.beetles_app.test_grid_builders import GridCase, at
 
 
 class LadderShapeTests(GridCase):
-    def test_odd_one_out_has_24_steps_and_select_all_keeps_12(self):
-        self.assertEqual(len(ladder.steps("odd")), 24)
-        self.assertEqual(ladder.steps("odd")[:7], [
-            (4, "subfamily", 1), (9, "subfamily", 1), (16, "subfamily", 1), (9, "subfamily", 2),
-            (16, "subfamily", 2), (16, "subfamily", 3), (4, "tribe", 1)])
-        self.assertEqual(ladder.steps("odd")[-1], (16, "species", 3))
-        self.assertEqual(len(ladder.steps("select")), 12)
-        self.assertEqual(ladder.step_for(9, "species", game_key="select"), 11)
-        self.assertEqual((ladder.step_for(16, "genus"), ladder.step_for(16, "genus", 3)), (15, 18))
-        self.assertEqual([ladder.most_odds(n) for n in (4, 9, 16)], [1, 2, 3])
+    def test_odd_one_out_has_40_steps_and_select_all_16(self):
+        # the grids grow to 25 (a phone's 5×5): Odd One Out per rank 4·1, 9·1, 16·1, 25·1, 9·2, 16·2, 25·2, 16·3,
+        # 25·3, 25·4 (beetles·odd ones), Find Them All 4, 9, 16, 25
+        self.assertEqual(len(ladder.steps("odd")), 40)
+        self.assertEqual(ladder.steps("odd")[:11], [
+            (4, "subfamily", 1), (9, "subfamily", 1), (16, "subfamily", 1), (25, "subfamily", 1),
+            (9, "subfamily", 2), (16, "subfamily", 2), (25, "subfamily", 2), (16, "subfamily", 3),
+            (25, "subfamily", 3), (25, "subfamily", 4), (4, "tribe", 1)])
+        self.assertEqual(ladder.steps("odd")[-1], (25, "species", 4))
+        self.assertEqual(len(ladder.steps("select")), 16)
+        self.assertEqual(ladder.step_for(9, "species", game_key="select"), 14)
+        self.assertEqual((ladder.step_for(16, "genus"), ladder.step_for(16, "genus", 3)), (23, 28))
+        self.assertEqual([ladder.most_odds(n) for n in (4, 9, 16, 25)], [1, 2, 3, 4])
 
     def test_the_plan_says_how_many_odd_ones(self):
         at(self.user, "odd", ladder.step_for(9, "tribe", 2))
         plan = ladder.plan(self.user, "odd", "species")
         self.assertEqual((plan["size"], plan["rank"], plan["odds"]), (9, "tribe", 2))
-        at(self.user, "select", 12)
+        at(self.user, "select", 16)
         self.assertEqual(ladder.plan(self.user, "select", "species")["odds"], 1)
 
     def test_a_step_past_the_top_is_read_as_the_top(self):
         at(self.user, "select", 20)   # never saved, but a stale row must not break the feed
-        self.assertEqual(ladder.current(self.user, "select"), 12)
+        self.assertEqual(ladder.current(self.user, "select"), 16)
 
     def test_saved_steps_move_to_the_same_grid_on_the_new_ladder(self):
         migration = importlib.import_module("beetlesgallery.beetles_app.migrations.0051_odd_ladder_steps")
-        old = [(size, rank) for rank in game.RANKS for size in game.GRID_SIZES]
+        then = importlib.import_module("beetlesgallery.beetles_app.migrations.0054_grid_ladder_25").OLD["odd"]
+        old = [(size, rank) for rank in game.RANKS for size in (4, 9, 16)]
         for step, (size, rank) in enumerate(old, start=1):
             new = migration.old_to_new(step)
-            self.assertEqual(ladder.steps("odd")[new - 1], (size, rank, 1))
+            self.assertEqual(then[new - 1], (size, rank, 1))   # its ladder, before the grids grew to 25
             self.assertEqual(migration.new_to_old(new), step)
-        self.assertEqual(migration.new_to_old(ladder.step_for(16, "genus", 3)), 9)   # back to 16 at genus
+        self.assertEqual(migration.new_to_old(then.index((16, "genus", 3)) + 1), 9)   # back to 16 at genus
 
 
 class BuilderTests(GridCase):
@@ -119,7 +123,7 @@ class FeedTests(GridCase):
         self.assertEqual((answer.picks, answer.is_check, answer.correct_species), (sorted(self.odd_places), True, True))
         points = AnswerPoints.objects.get(answer=answer)
         self.assertEqual(points.basis, AnswerPoints.Basis.TRUTH)
-        self.assertAlmostEqual(points.points, points.detail["worth"], places=2)
+        self.assertAlmostEqual(points.points, points.detail["worth"], delta=0.006)   # worth is shown to two places
         review = data["review"]
         self.assertEqual((review["verdict"], review["grid"]["found"], review["grid"]["count"]), ("right", 2, 2))
         self.assertTrue(review["headline"].startswith("Found 2 of 2 · +"))
@@ -287,11 +291,11 @@ class PageTests(GridCase):
     def test_the_page_picks_up_to_that_many_and_sends_them_all(self):
         html = Path(settings.BASE_DIR, "beetlesgallery", "templates", "beetles", "game_play.html").read_text(encoding="utf-8")
         self.assertIn('oddWant = MODE === "odd" ? item.odds || 1 : 1;', html)
-        self.assertIn('oddPrompt(item.rank, oddWant)', html)   # "Find the 2 that don't share the same ..." (#538)
+        self.assertIn('oddPrompt(item.rank, oddWant)', html)   # "Which 2 are a different genus?" (#569)
         self.assertIn("else if (oddPicks.size < oddWant) oddPicks.add(i);", html)
         self.assertIn('MODE === "odd" ? oddPicks.size === oddWant', html)
         self.assertIn("picks: Array.from(oddPicks).sort((a, b) => a - b)", html)
-        self.assertIn('several ? "the odd ones" : "the odd one"', html)   # the card's lead says "The odd ones" (#541)
+        self.assertIn("parts(r.grid.note || [])", html)   # the card's one line says "Odd ones: 1 · …" (#569)
 
     def test_review_card_keeps_its_shape_for_one_odd_one(self):
         """The card's per-tile fields stay, and the new lists are added (#541 reworks how the names show)."""

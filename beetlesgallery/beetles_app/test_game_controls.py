@@ -32,10 +32,12 @@ class GameControlsTests(GameCase):
         self.assertNotIn('<kbd class="kbd">{{ forloop.counter }}</kbd>', page)
         self.assertIn("if (!closeOverlays()) $(\"exit\").click();", page)   # Esc with nothing open leaves
 
-    def test_back_shows_the_last_beetle_first_then_leaves(self):
+    def test_back_shows_the_last_beetle_and_the_back_gesture_closes_it(self):
         page = self.page()
         self.assertIn('data-testid="previous"', page)
-        self.assertIn("if (previous || previousUrl) { showPrevious(); return; }", page)
+        self.assertIn('$("back").addEventListener("click", showPrevious);', page)
+        # the phone's back gesture closes it, or else shows the recap (#578; test_game_leave_recap)
+        self.assertIn("if (closeOverlays()) return;   // your last beetle's review", page)
 
     def test_button_mashing_is_ignored(self):
         page = self.page()

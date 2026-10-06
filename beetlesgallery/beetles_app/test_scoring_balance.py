@@ -296,7 +296,7 @@ class VerdictTests(ReviewCase):
     def test_same_genus_for_two_subfamilies_is_not_quite(self):
         review = self.pair(self.roi(self.t_affinis), self.roi(self.t_plat), "genus")
         self.assertEqual((review["verdict"], review["pair"]["state"]), ("wrong", "wrong"))
-        self.assertTrue(review["headline"].startswith("Not quite · −"), review["headline"])
+        self.assertRegex(review["headline"], r"^Not quite · You said Same genus · It's Different subfamily · −")   # #569
         answer = GameAnswer.objects.get(player=self.user, mode="pair")
         self.assertIsNot(answer.correct_species, True)
         self.assertEqual(game_feedback.round_feedback(answer.round)["items"][0]["verdict"], "wrong")
@@ -318,7 +318,7 @@ class VerdictTests(ReviewCase):
         self.assertEqual([r["verdict"] for r in (right, stopped, overreach)], ["right", "partly", "wrong"])
         self.assertEqual(stopped["points"]["earned"], 21.0)
         self.assertEqual(overreach["points"]["earned"], -35.0)
-        self.assertEqual(overreach["headline"], "Correct to genus · −35 points")
+        self.assertEqual(overreach["headline"], "Correct to genus · −35")
 
 
 class ConsensusTests(SimpleTestCase):
