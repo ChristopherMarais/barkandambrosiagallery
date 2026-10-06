@@ -194,16 +194,32 @@ class UpcomingTests(FastCase):
         self.assertEqual([it["index"] for it in items], [1, 2, 3])
         self.assertEqual(len(GameRound.objects.get(id=rnd.id).items), 2 + game_grow.STEP)
 
+    @staticmethod
+    def coming_first(coming):
+        """
+        The batch built ahead draws one of the beetles still to come first, then others. It starts with only
+        game_grow.FIRST beetles and leaves out those still to come; left to chance it now and then draws exactly them
+        and is empty. This way it always has one to leave out and always keeps one.
+        """
+        def pick(candidates, n, target):
+            if len(candidates) <= n:
+                return list(candidates)
+            first = [c for c in candidates if str(c) in coming][:1]
+            return (first + [c for c in candidates if str(c) not in coming])[:n]
+        return mock.patch.object(game, "_pick_near", pick)
+
     def test_near_the_end_it_builds_the_next_batch_and_reaches_into_it(self):
         rnd, _, _ = self.start()
         game_grow.grow_now(str(rnd.id))
-        items = self.upcoming(rnd, 4).json()["items"]
+        rnd.refresh_from_db()                                       # grown to the whole batch
+        coming = {str(i) for item in rnd.items[4:] for i in game._item_ids(item)}
+        with self.coming_first(coming):
+            items = self.upcoming(rnd, 4).json()["items"]
         ahead = game_views._batch_ahead(rnd)
         self.assertIsNotNone(ahead)
         self.assertEqual(items[0], dict(items[0], round=str(rnd.id), index=5))
         self.assertEqual({it["round"] for it in items[1:]}, {str(ahead.id)})
-        coming = {i for item in rnd.items[4:] for i in game._item_ids(item)}
-        self.assertTrue(coming.isdisjoint(i for item in ahead.items for i in game._item_ids(item)))
+        self.assertTrue(coming.isdisjoint(str(i) for item in ahead.items for i in game._item_ids(item)))
 
     def test_not_while_the_worker_is_building_it(self):
         rnd, _, _ = self.start()
