@@ -99,7 +99,7 @@ class RenderedTests(SimpleTestCase):
         cards = {tier: render_to_string("beetles/includes/game_badge.html",
                                         {"b": {"key": "k", "name": "x", "how": "", "icon": "fi-rr-crown", "earned": True, "tier": tier}})
                  for tier in game_rewards.BADGE_TIERS}
-        self.assertEqual(list(cards), ["fair", "decent", "good", "great", "excellent"])
+        self.assertEqual(list(cards), ["fair", "decent", "good", "great", "excellent", "blue", "purple"])   # #608
         for tier, html in cards.items():
             self.assertIn(f"scale-card-{tier}", html)
             self.assertIn(f"scale-{tier}", html)
@@ -141,7 +141,7 @@ class LevelPopTests(SimpleTestCase):
         before = {"level": 4, "perks": [], "rank": None, "goal_met": True, "total": 5}
         now = dict(before, level=5, level_name="Tunnel master", streak=1, goal=20)
         with mock.patch.object(game_rewards, "progress", return_value=now):
-            event = game_rewards.play_events(SimpleNamespace(id=1), before)[0]
+            event = game_rewards.play_events(SimpleNamespace(id=1), before, badges=False)[0]
         self.assertEqual((event["kind"], event["level"], event["step"]), ("level", 5, "decent"))
         self.assertEqual((event["badge"], event["colour"]), ("level-5", "#f59e0b"))   # amber (#606)
         self.assertTrue(event["icon"].startswith("fi-rr-"))

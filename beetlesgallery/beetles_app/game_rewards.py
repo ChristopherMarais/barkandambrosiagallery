@@ -6,14 +6,15 @@ Everything is worked out from the player's answers (nothing new is stored), and 
 shown once they leave (see recap) so the score stays out of sight during play.
 """
 from collections import OrderedDict
-from datetime import timedelta
+from datetime import datetime, timedelta
+from datetime import timezone as dt_timezone
 
 from django.conf import settings
-from django.db.models import Count
+from django.db.models import Count, F
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 
-from .game_scale import level_classes, level_hex, level_step, value_step
+from .game_scale import HEX, level_classes, level_hex, level_step, value_step
 from .models import GameAnswer
 
 def daily_goal():
@@ -172,10 +173,21 @@ BADGES = OrderedDict([
     ("comeback", ("Comeback", "Get a beetle correct the second time", "fi-rr-refresh", False)),
     ("ahead", ("Ahead of the curators", "10 answers proven correct after curators reviewed them", "fi-rr-time-forward", False)),
     ("curator", ("Sharp-eyed", "3 of your reports led to a fix", "fi-rr-flag-alt", False)),
-    ("discovery3", ("Explorer", "Find 3 new species", "fi-rr-compass", False)),
+    ("discovery3", ("Explorer", "Find 3 new species", "fi-rr-map", False)),
     ("expert5", ("Polymath", "Be a Naming expert in 5 taxa", "fi-rr-graduation-cap", False)),
     ("king", ("Royalty", "Reach the top level", "fi-rr-crown", False)),
     ("discovery", ("New species finder", "Name a species the gallery had never validated, confirmed later by a curator", "fi-rr-sparkles", False)),
+    # round 4 (#608): a few more, some of them strange
+    ("fullhouse", ("Full house", "A perfect 25-beetle Find Them All grid", "fi-rr-grid", False)),
+    ("imposters", ("Imposter hunter", "Find every odd one in 50 Odd One Out grids", "fi-rr-incognito", False)),
+    ("splitter", ("Splitter", "Become a Distinction expert in a taxon", "fi-rr-split", False)),
+    ("lumpsplit", ("Lumper and splitter", "Naming and Distinction expert in the same taxon", "fi-rr-arrows-repeat", False)),
+    ("fungus", ("Fungus farmer", "Name 25 Xyleborini species correctly", "fi-rr-mushroom", False)),
+    ("machine", ("Beat the machine", "5 checked beetles right where IBBI-AI was sure and wrong", "fi-rr-robot", False)),
+    ("lonewolf", ("Lone wolf", "5 checked beetles right where most players were wrong", "fi-rr-paw", False)),
+    ("weekend", ("Weekend naturalist", "Reach the daily goal on a Saturday and the Sunday after", "fi-rr-calendar-day", True)),
+    ("leap", ("Leap beetle", "Play on 29 February", "fi-rr-frog", True)),
+    ("fullmoon", ("Full moon", "Play on a night of the full moon", "fi-rr-moon-stars", True)),
 ])
 
 
@@ -213,14 +225,20 @@ def earned_badges(player, before=None):
     if right_species >= 100:
         have.add("species100")
     have |= _harder_badges(player, answers, done, total, best, per_day)
+    have |= _calendar_badges(done, per_day)
     if before is None:
         from .game_levels import for_player
-        from .game_trust import skills_for
-        proven = sum(1 for s in skills_for(player) if s.proven)
+        from .game_trust import distinction_experts, skills_for
+        proven = {(s.rank, s.branch.lower()) for s in skills_for(player) if s.proven}
         if proven:
             have.add("expert")
-        if proven >= 5:
+        if len(proven) >= 5:
             have.add("expert5")
+        apart = {(rank, branch.lower()) for rank, branch in distinction_experts(player)}
+        if apart:
+            have.add("splitter")
+        if apart & proven:
+            have.add("lumpsplit")
         finds = player.species_discoveries.count()
         if finds:
             have.add("discovery")
@@ -265,6 +283,9 @@ def _harder_badges(player, answers, done, total, best, per_day):
         have.add("genera50")
     if right_species.filter(ref_subfamily__iexact="Platypodinae").count() >= 25:
         have.add("platypod")
+    if right_species.filter(ref_tribe__iexact="Xyleborini").count() >= 25:
+        have.add("fungus")
+    have |= _skill_badges(player, first, right_species)
     exact_pairs = first.filter(mode="pair").exclude(Q(correct_subfamily=False) | Q(correct_tribe=False)
                                                     | Q(correct_genus=False) | Q(correct_species=False))
     if exact_pairs.count() >= 50:
@@ -287,6 +308,77 @@ def _harder_badges(player, answers, done, total, best, per_day):
     return have
 
 
+def _skill_badges(player, first, right_species):
+    """Full house, Imposter hunter, Beat the machine and Lone wolf (#608), from scored answers."""
+    from django.db.models import Exists, OuterRef, Subquery
+    from django.db.models.functions import Coalesce
+
+    from .game import game_setting
+    from .models import AnswerPoints, ModelPrediction
+
+    have = set()
+    points = AnswerPoints.objects.filter(answer__in=first)
+    full = points.filter(answer__mode="select", detail__perfect=True).values_list("answer__tiles", flat=True)
+    if any(len(tiles or []) >= 25 for tiles in full):
+        have.add("fullhouse")
+    grids = points.filter(answer__mode="odd").values_list("detail", flat=True)
+    if sum(1 for d in grids if d.get("right") is True and "missed" not in (d.get("tiles") or [])) >= 50:
+        have.add("imposters")
+    # IBBI-AI sure of another species than the one the beetle is (GAME_AI_SURE_FROM, as the grids' "sure")
+    sure = game_setting("GAME_AI_SURE_FROM", 0.9)
+    fooled = ModelPrediction.objects.filter(roi=OuterRef("roi"), confidence__gte=sure).exclude(
+        valid_species_id=OuterRef("roi__depicts_valid_name_id"))
+    if right_species.filter(Exists(fooled)).count() >= 5:
+        have.add("machine")
+    # most of the other players who named the beetle got its species wrong (at least two of them)
+    others = GameAnswer.objects.filter(roi=OuterRef("roi"), mode="classify", skipped=False).exclude(player=player)
+
+    def tally(**judged):
+        return Coalesce(Subquery(others.filter(**judged).values("roi").annotate(n=Count("id")).values("n")[:1]), 0)
+
+    alone = right_species.annotate(others_wrong=tally(correct_species=False), others_right=tally(correct_species=True))
+    if alone.filter(others_wrong__gte=2, others_wrong__gt=F("others_right")).count() >= 5:
+        have.add("lonewolf")
+    return have
+
+
+# The moon (#608): new on 6 January 2000 at 18:14 UTC, and full half a synodic month after each new moon
+NEW_MOON = datetime(2000, 1, 6, 18, 14, tzinfo=dt_timezone.utc)
+SYNODIC_DAYS = 29.530588853
+
+
+def moon_age(when):
+    """Days since the last new moon at ``when`` (an aware datetime), 0 up to 29.53; the moon is full at about 14.77."""
+    return ((when - NEW_MOON).total_seconds() / 86400) % SYNODIC_DAYS
+
+
+def full_moon_night(when):
+    """Whether ``when`` is at night (6 pm to 6 am, local time) within a day of the full moon."""
+    local = timezone.localtime(when)
+    return (local.hour >= 18 or local.hour < 6) and abs(moon_age(when) - SYNODIC_DAYS / 2) <= 1.0
+
+
+def _calendar_badges(done, per_day):
+    """Weekend naturalist, Leap beetle and Full moon (#608), from the days and nights the player played."""
+    from django.db.models.functions import ExtractHour
+
+    have = set()
+    days = {row["day"] for row in per_day}
+    goal_days = {row["day"] for row in per_day if row["n"] >= row["goal"]}
+    if any(d.weekday() == 5 and d + timedelta(days=1) in goal_days for d in goal_days):
+        have.add("weekend")
+    if any((d.month, d.day) == (2, 29) for d in days):
+        have.add("leap")
+    zone = timezone.get_current_timezone()
+    near_full = [d for d in days if abs(moon_age(datetime(d.year, d.month, d.day, 12, tzinfo=zone)) - SYNODIC_DAYS / 2) <= 2]
+    if near_full:   # only then is it worth looking at the hours
+        nights = (done.annotate(day=TruncDate("answered_at", tzinfo=zone), h=ExtractHour("answered_at", tzinfo=zone))
+                  .filter(day__in=near_full).values_list("day", "h").distinct())
+        if any(full_moon_night(datetime(d.year, d.month, d.day, h, 30, tzinfo=zone)) for d, h in nights):
+            have.add("fullmoon")
+    return have
+
+
 def _best_streak(days):
     best = run = 0
     previous = None
@@ -299,14 +391,20 @@ def _best_streak(days):
 
 # How hard each badge is, on the site's one scale (game_scale.py), like the levels: the easiest red, then orange,
 # yellow, green, and the two hardest deep green and glowing like the top level.
+# Badges are the one exception to "blue is IBBI-AI, purple the players" (#608): the hardest are blue, and the strange
+# or secret ones purple. Royalty stays with the top level's colour.
 BADGE_TIERS = {
     "fair": ("first", "ten", "goal", "both", "streak3"),
-    "decent": ("hundred", "streak7", "species1", "comeback", "nightowl", "earlybird"),
-    "good": ("thousand", "streak30", "goal7", "species25", "fivehundred", "genera10", "similar50"),
-    "great": ("expert", "species100", "platypod", "twins", "ahead", "curator", "marathon", "discovery",
-              "tenthousand", "streak100", "flawless", "discovery3", "expert5", "genera50"),
-    "excellent": ("king", "streak365"),
+    "decent": ("hundred", "streak7", "species1", "comeback"),
+    "good": ("thousand", "streak30", "goal7", "species25", "fivehundred", "genera10", "similar50", "weekend"),
+    "great": ("expert", "species100", "platypod", "ahead", "curator", "marathon", "streak100", "discovery3",
+              "genera50", "fullhouse", "imposters", "splitter", "fungus"),
+    "excellent": ("king",),
+    "blue": ("flawless", "expert5", "tenthousand", "streak365", "discovery", "lumpsplit", "machine"),
+    "purple": ("nightowl", "earlybird", "twins", "lonewolf", "leap", "fullmoon"),
 }
+# Each tier as a colour, for drawing (a new badge's confetti)
+BADGE_HEX = {**HEX, "blue": "#3b82f6", "purple": "#a855f7"}
 BADGE_TIER = {key: tier for tier, keys in BADGE_TIERS.items() for key in keys}
 
 
@@ -329,10 +427,11 @@ def badge_cards(player):
 MILESTONES = (10, 25, 50, 100, 250, 500, 1000)
 
 
-def play_events(player, before):
+def play_events(player, before, badges=True):
     """
     What to celebrate after an answer, given ``before`` (the dict progress() returned before it) .
-    Returns a list of {"kind", "title", "text"} for the feed to show as a toast.
+    Returns a list of {"kind", "title", "text"} for the feed to show as a toast. With ``badges``, also one event for
+    each badge that answer earned (new_badges): {"kind": "badge", "title", "text", "icon", "tier", "colour"}.
     """
     now = progress(player)
     events = []
@@ -360,7 +459,58 @@ def play_events(player, before):
     for milestone in MILESTONES:
         if before["total"] < milestone <= now["total"]:
             events.append({"kind": "milestone", "title": f"{milestone:,} beetles", "text": "That's a lot of beetles."})
+    if badges:
+        for key in new_badges(player, before, now):
+            name, how, icon, _ = BADGES[key]
+            tier = badge_tier(key)
+            events.append({"kind": "badge", "title": name, "text": how, "icon": icon, "tier": tier,
+                           "colour": BADGE_HEX[tier]})
     return events
+
+
+COUNT_BADGES = (1, 10, 100, 500, 1000, 10000)   # the totals at which a count badge is earned (earned_badges)
+HOUR_BADGES = {"nightowl": (0, 1, 2, 3), "earlybird": (5,)}
+
+
+def new_badges(player, before, now):
+    """
+    The badges the player's latest answer earned, of those shown during play (BADGES: accuracy waits for the recap),
+    in BADGES' order. ``before`` and ``now`` are progress() around the answer. This runs on every answer, so it first
+    asks a few cheap questions (a total passed, the goal reached, a new game, the hour, the date) and only works the
+    badges out, before and after the answer, when one of them says a badge may have come.
+    """
+    latest = GameAnswer.objects.filter(player=player).order_by("-answered_at", "-id").first()
+    if latest is None or latest.skipped or not _badge_moment(player, before, now, latest):
+        return []
+    had = earned_badges(player, before=latest.answered_at)
+    have = earned_badges(player, before=latest.answered_at + timedelta(microseconds=1))
+    return [key for key, (_, _, _, during_play) in BADGES.items() if during_play and key in have - had]
+
+
+def _badge_moment(player, before, now, latest):
+    """Whether the latest answer may have earned a badge shown during play (new_badges): a few cheap checks."""
+    from django.db.models.functions import ExtractHour
+
+    if any(before["total"] < n <= now["total"] for n in COUNT_BADGES):
+        return True
+    if now["goal_met"] and not before["goal_met"]:   # the goal, the streaks, the weekend
+        return True
+    if before.get("today", 0) < 200 <= now["today"]:   # Marathon
+        return True
+    earlier = GameAnswer.objects.filter(player=player, skipped=False, answered_at__lt=latest.answered_at)
+    if not earlier.filter(mode=latest.mode).exists():   # a new game: All-rounder
+        return True
+    zone = timezone.get_current_timezone()
+    local = timezone.localtime(latest.answered_at)
+    for hours in HOUR_BADGES.values():
+        if local.hour in hours:
+            return not earlier.annotate(h=ExtractHour("answered_at", tzinfo=zone)).filter(h__in=hours).exists()
+    if (local.month, local.day) == (2, 29):
+        return not earlier.filter(answered_at__month=2, answered_at__day=29).exists()
+    if full_moon_night(latest.answered_at):
+        from django.core.cache import cache   # worked out once a night, not on every answer of it
+        return cache.add(f"game:fullmoon-checked:{player.pk}:{local.date()}", 1, 60 * 60 * 24)
+    return False
 
 
 def recap(player, since, until=None):

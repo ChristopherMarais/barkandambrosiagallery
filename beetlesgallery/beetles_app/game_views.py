@@ -907,7 +907,7 @@ def _late_level_events(player, before, events, level):
     # what the player had at the level last shown, plus any unlocks granted or kept outside the levels
     extra = set(before["perks"]) - game_levels.unlocked_perks(before["level"] - 1)
     then = dict(before, level=shown, perks=sorted(game_levels.unlocked_perks(shown - 1) | extra))
-    return [e for e in game_rewards.play_events(player, then) if e["kind"] in ("level", "proposals")]
+    return [e for e in game_rewards.play_events(player, then, badges=False) if e["kind"] in ("level", "proposals")]
 
 
 def _timed(view):

@@ -59,5 +59,5 @@ class LevelColourTests(SimpleTestCase):
         before = {"level": 6, "perks": [], "rank": None, "goal_met": True, "total": 5}
         now = dict(before, level=7, level_name="x", streak=1, goal=20)
         with mock.patch.object(game_rewards, "progress", return_value=now):
-            event = game_rewards.play_events(SimpleNamespace(id=1), before)[0]
+            event = game_rewards.play_events(SimpleNamespace(id=1), before, badges=False)[0]
         self.assertEqual((event["badge"], event["colour"]), ("level-7", "#84cc16"))

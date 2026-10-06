@@ -127,7 +127,8 @@ class PlayEventsTests(RewardsCase):
     def test_nothing_to_celebrate_midway(self):
         before = rewards.progress(self.user)
         self.answers(1)
-        self.assertEqual(rewards.play_events(self.user, before), [])   # the streak waits for the goal (#423)
+        events = [e for e in rewards.play_events(self.user, before) if e["kind"] != "badge"]   # First steps (#608)
+        self.assertEqual(events, [])   # the streak waits for the goal (#423)
 
     @override_settings(GAME_DAILY_GOAL=2)
     def test_reaching_the_goal_grows_the_streak_in_one_toast(self):
@@ -207,7 +208,8 @@ class FeedAndHomeTests(RewardsCase):
         self.assertEqual({k: res["chip"][k] for k in ("today", "goal", "goal_met", "streak")},
                          {"today": 1, "goal": 20, "goal_met": False, "streak": 0})
         self.assertEqual((res["chip"]["level"], res["chip"]["next_at"]), (1, 50))   # the level bar in the top bar
-        self.assertEqual(res["events"], [])   # the streak only grows once the day's goal is reached
+        # the streak only grows once the day's goal is reached; the first answer's badge pops up (#608)
+        self.assertEqual([(e["kind"], e["title"]) for e in res["events"]], [("badge", "First steps")])
         self.assertNotIn("accuracy", json.dumps(res))
 
     def test_the_start_response_carries_the_chip(self):
