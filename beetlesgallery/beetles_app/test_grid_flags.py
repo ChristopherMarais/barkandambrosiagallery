@@ -51,7 +51,7 @@ class SelectFlagTests(FlagCase):
         data = self.answer(picks=members[1:], flagged=[members[0]]).json()
         ans = GameAnswer.objects.get()
         self.assertEqual((ans.flagged, ans.skipped, ans.score_hold, ans.correct_species), ([members[0]], False, False, True))
-        self.assertEqual(data["reveal"]["tiles"][members[0]], "flagged")
+        self.assertEqual(data["review"]["grid"]["tiles"][members[0]]["state"], "flagged")   # the review card (#488)
         points = AnswerPoints.objects.get(answer=ans)
         self.assertEqual((points.detail["members"], points.detail["missed"]), (len(members) - 1, 0))
         self.assertGreater(points.points, 0)
