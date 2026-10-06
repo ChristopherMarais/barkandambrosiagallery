@@ -28,7 +28,10 @@ APP_NAME = os.environ.get("IBBI_MODAL_APP") or "ibbi-api"   # "ibbi-api-staging"
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install("libgl1", "libglib2.0-0")
-    .pip_install(f"ibbi=={ibbi_models.IBBI_VERSION}", "fastapi", "python-multipart", "pillow")
+    # The web parts have lower bounds with their security fixes (starlette 1.3.1, python-multipart 0.0.31, Pillow 12.3);
+    # changing this list makes Modal build the image afresh on the next deploy.
+    .pip_install(f"ibbi=={ibbi_models.IBBI_VERSION}", "fastapi>=0.142", "starlette>=1.3.1", "python-multipart>=0.0.31",
+                 "pillow>=12.3")
     .env({
         # Every model download lands on the volume below, so a cold start does not fetch the weights again
         "IBBI_CACHE_DIR": f"{CACHE_DIR}/ibbi",

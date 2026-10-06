@@ -89,7 +89,7 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="modelprediction",
             constraint=models.CheckConstraint(
-                check=models.Q(("confidence__gte", 0), ("confidence__lte", 1)),
+                condition=models.Q(("confidence__gte", 0), ("confidence__lte", 1)),
                 name="model_prediction_confidence_0_1",
             ),
         ),

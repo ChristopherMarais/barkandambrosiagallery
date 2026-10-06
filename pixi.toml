@@ -33,14 +33,14 @@ gunicorn = "gunicorn beetlesgallery.wsgi:application --bind 0.0.0.0:8000 --worke
 # --- Dependencies for ALL platforms (Windows, Mac, Linux) ---
 [dependencies]
 python = "3.11.*"
-django = "5.0.*"
+django = "5.2.*"     # LTS, supported until April 2028
 psycopg2 = "2.9.*"
 dj-database-url = "*"
 python-dotenv = "*"
 pandas = "*"
 openpyxl = "*"       # For reading Excel files
 xlsxwriter = "*"     # For writing Excel files (downloads)
-pillow = "<12.0.0"         # For ImageFields
+pillow = ">=12.3,<13"   # For ImageFields
 django-crispy-forms = "*"
 django-filter = "*"
 django-simple-history = "*"
@@ -51,7 +51,7 @@ whitenoise = ">=6.11.0,<7"
 redis-py = ">=7.1.0,<8"
 django-redis = "*"
 celery = ">=5.5.3,<6"
-python-multipart = ">=0.0.21,<0.0.22"
+python-multipart = ">=0.0.31,<0.1"
 django-treebeard = ">=4.8.0,<5"
 
 # --- Dependencies for LINUX/MAC ONLY (Server/Docker) ---
