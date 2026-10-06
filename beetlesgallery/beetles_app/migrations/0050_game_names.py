@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('beetles_app', '0045_gamepreference_board_privacy'),
+        ('beetles_app', '0049_gameanswer_difficulty'),
     ]
 
     operations = [
@@ -24,5 +24,10 @@ class Migration(migrations.Migration):
             model_name='gameround',
             name='mode',
             field=models.CharField(choices=[('classify', 'Classify'), ('pair', 'Compare pairs'), ('odd', 'Imposter Picker'), ('select', 'Find Them All'), ('mixed', 'All modes')], db_index=True, max_length=10),
+        ),
+        migrations.AlterField(   # the grid ladder (0048) names its games the same way
+            model_name='gridstep',
+            name='game',
+            field=models.CharField(choices=[('odd', 'Imposter Picker'), ('select', 'Find Them All')], max_length=10),
         ),
     ]

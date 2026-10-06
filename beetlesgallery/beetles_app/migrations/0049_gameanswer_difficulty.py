@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("beetles_app", "0045_gamepreference_board_privacy"),
+        ("beetles_app", "0048_grid_ladder"),
     ]
 
     operations = [

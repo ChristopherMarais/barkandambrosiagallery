@@ -221,7 +221,7 @@ class OldAiPagePhotosTests(PageBehaviourCase):
     def test_the_migration_is_marked_as_reviewed_and_can_be_undone(self):
         module = importlib.import_module(MIGRATION)
         self.assertTrue(module.Migration.DATA_MIGRATION_REVIEWED)
-        self.assertEqual(module.Migration.dependencies[0], ("beetles_app", "0045_gamepreference_board_privacy"))
+        self.assertEqual(module.Migration.dependencies[0], ("beetles_app", "0046_remove_board_privacy"))
         run = module.Migration.operations[-1]
         self.assertTrue(run.reversible)
 

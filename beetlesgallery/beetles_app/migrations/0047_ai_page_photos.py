@@ -39,7 +39,7 @@ class Migration(migrations.Migration):
     )
 
     dependencies = [
-        ('beetles_app', '0045_gamepreference_board_privacy'),
+        ('beetles_app', '0046_remove_board_privacy'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
