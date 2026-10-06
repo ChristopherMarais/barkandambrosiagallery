@@ -107,13 +107,13 @@ class ScoringTests(SelectCase):
     def points(self, ans):
         return game_scoring.score(ans, lambda rid: [], game_scoring._NoJudges())[0]
 
-    def test_a_perfect_grid_earns_twice_a_similarity_answer_at_that_rank_times_its_size_factor(self):
-        self.assertAlmostEqual(self.points(self.grid_answer([0, 1, 2])),
-                               2 * game_scoring.PAIR_POINTS[2] * game_scoring.size_factor(9))
+    def test_a_perfect_grid_earns_its_weight_times_a_similarity_answer_at_that_rank(self):
+        # no ladder step: a grid from before the ladder keeps ×1 for its size (#530)
+        self.assertAlmostEqual(self.points(self.grid_answer([0, 1, 2])), 1.25 * game_scoring.PAIR_POINTS[2])
 
-    def test_a_wrong_tap_costs_one_and_a_half_right_ones_and_a_missed_one_nothing(self):
-        share = 2 * game_scoring.PAIR_POINTS[2] * game_scoring.size_factor(9) / 3
-        self.assertAlmostEqual(self.points(self.grid_answer([0, 1, 3])), share * (2 - 1.5))
+    def test_a_wrong_tap_costs_k_right_ones_and_a_missed_one_nothing(self):
+        share = 1.25 * game_scoring.PAIR_POINTS[2] / 3
+        self.assertAlmostEqual(self.points(self.grid_answer([0, 1, 3])), share * (2 - game_scoring.wrong_cost()))
         self.assertAlmostEqual(self.points(self.grid_answer([0, 1])), share * 2)
         self.assertLess(self.points(self.grid_answer(list(range(9)))), 0)   # tapping everything loses
 

@@ -106,7 +106,7 @@ class ParticipationTests(ScoringCase):
     def test_wrong_answers_still_cost_overall(self):
         wrong = self.answer(self.user, self.roi(self.t_affinis), PLAT)
         scoring.recompute([self.user.id])
-        self.assertEqual(AnswerPoints.objects.get(answer=wrong).points, -10.75)
+        self.assertEqual(AnswerPoints.objects.get(answer=wrong).points, -34.5)
 
 
 class PageTests(ScoringCase):

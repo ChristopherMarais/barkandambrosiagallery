@@ -39,12 +39,12 @@ class SizeTests(GridCase):
         right = {n: self.points(self.odd(n)).points for n in (4, 9, 16)}
         self.assertEqual(right, {4: 1.5, 9: 2.25, 16: 3.0})
         wrong = self.points(self.odd(16, right=False))
-        self.assertAlmostEqual(wrong.points, -3.0 * 1.25)
+        self.assertAlmostEqual(wrong.points, -3.0 * game_scoring.wrong_cost(), places=2)
         self.assertEqual((wrong.detail["size"], wrong.detail["step"], wrong.detail["worth"]), (16, 7, 3.0))
 
     def test_select_all_pays_by_size_and_tells_the_review_each_beetles_share(self):
         perfect = {n: self.points(self.select(m, n - m)) for n, m in ((4, 1), (9, 3), (16, 6))}
-        worth = 2 * game_scoring.PAIR_POINTS[1]   # genus grid: Similarity's "same tribe"
+        worth = 1.25 * game_scoring.PAIR_POINTS[1]   # genus grid: Similarity's "same tribe"
         self.assertEqual({n: p.points for n, p in perfect.items()}, {4: worth, 9: worth * 1.5, 16: worth * 2})
         detail = perfect[16].detail
         self.assertEqual((detail["size"], detail["step"], detail["members"], detail["share"]), (16, 8, 6, round(worth * 2 / 6, 3)))
@@ -85,11 +85,14 @@ class BalanceTests(GridCase):
                         self.assertEqual(m + a + k, size)
 
     def test_tunings_that_reward_guessing_or_staying_small_are_flagged(self):
-        GameTuning.objects.create(key="GAME_POINTS_SELECT_WRONG", value=0.9)
         GameTuning.objects.create(key="GAME_GRID_SIZE_FACTOR", value={"4": 2.0, "9": 1.5, "16": 1.0})
         game_tuning.forget()
         failing = [rule for rule, ok, _ in game_tuning.checks() if not ok]
-        self.assertEqual(failing, ["Tapping everything in Find Them All loses", "Bigger grids are worth at least as much"])
+        self.assertIn("Bigger grids are worth at least as much", failing)
+        GameTuning.objects.all().delete()
+        GameTuning.objects.create(key="GAME_POINTS_CONFIDENCE", value=0.5)   # a wrong tap costs only what a right one earns
+        game_tuning.forget()
+        self.assertIn("Tapping everything in Find Them All loses", [r for r, ok, _ in game_tuning.checks() if not ok])
 
     def test_the_scoring_page_has_the_grid_games(self):
         self.client.force_login(self.superuser)

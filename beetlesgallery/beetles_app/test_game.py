@@ -38,8 +38,8 @@ class ScoringTests(SimpleTestCase):
             "subfamily": True, "tribe": True, "genus": True, "species": True,
         })
         self.assertEqual(game.score_pair("species", a, b)["species"], False)
-        self.assertEqual(game.score_pair("tribe", a, b), {
-            "subfamily": True, "tribe": True, "genus": False, "species": True,
+        self.assertEqual(game.score_pair("tribe", a, b), {   # nothing judged below the first mistake (#530)
+            "subfamily": True, "tribe": True, "genus": False, "species": None,
         })
 
     def test_pair_different_subfamily(self):
@@ -673,7 +673,7 @@ class FeedbackTests(FeedbackCase):
         self.assertEqual((fb["right"], fb["scored"]), (1, 2))
         first, second, third = fb["items"]
         self.assertEqual(first["verdict"], "right")
-        self.assertEqual(second["verdict"], "partly")
+        self.assertEqual(second["verdict"], "wrong")   # a wrong species is wrong, not partly correct (#530)
         self.assertFalse(second["results"]["species"])
         self.assertTrue(second["sides"][0]["verified"])
         self.assertEqual(second["sides"][0]["label"]["species"], "Xyleborus affinis")

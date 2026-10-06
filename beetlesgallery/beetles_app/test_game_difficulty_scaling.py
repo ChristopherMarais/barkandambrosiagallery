@@ -127,25 +127,26 @@ class PointsFollowDifficultyTests(ScoringCase):
     def test_hard_beetles_pay_more_and_cost_less_easy_ones_the_reverse(self):
         self.assertEqual(self.points(self.at(1.0, AFFINIS)).points, 18.75)        # 15 × 1.25
         self.assertEqual(self.points(self.at(0.0, AFFINIS)).points, 11.25)        # 15 × 0.75
-        self.assertEqual(self.points(self.at(1.0, PLAT)).points, -8.438)          # -11.25 × 0.75
-        self.assertEqual(self.points(self.at(0.0, PLAT)).points, -14.062)         # -11.25 × 1.25
+        self.assertEqual(self.points(self.at(1.0, PLAT)).points, -26.25)          # -35 × 0.75
+        self.assertEqual(self.points(self.at(0.0, PLAT)).points, -43.75)          # -35 × 1.25
         self.assertEqual(self.points(self.at(0.5, AFFINIS)).points, 15.0)         # the middle: as before
         self.assertEqual(self.points(self.at(1.0, skipped=True)).points, -0.188)  # a skip is a loss too
 
     def test_one_factor_per_answer_keeps_the_order_of_answers(self):
         right_genus_wrong_species = self.points(self.at(1.0, FERR)).points
         stopped_at_genus = self.points(self.at(1.0, dict(AFFINIS, species=""))).points
-        self.assertEqual((right_genus_wrong_species, stopped_at_genus), (5.25, 8.75))   # 4.2 and 7, × 1.25
+        self.assertEqual((right_genus_wrong_species, stopped_at_genus), (-8.75, 8.75))   # -11.67 × 0.75, 7 × 1.25
+        self.assertLess(right_genus_wrong_species, stopped_at_genus)
 
     def test_similarity_uses_the_anchor(self):
         ans = self.answer(self.user, self.roi(self.t_affinis), mode="pair", roi_b=self.roi(self.t_ferr), pair="genus")
         GameAnswer.objects.filter(pk=ans.pk).update(difficulty=1.0)
-        self.assertEqual(self.points(ans).points, 6.25)                           # 5 × 1.25
+        self.assertEqual(self.points(ans).points, 8.75)                           # 7 × 1.25
 
     @override_settings(GAME_POINTS_DIFFICULTY_SPREAD=0)
     def test_spread_zero_gives_the_old_points(self):
         self.assertEqual(self.points(self.at(1.0, AFFINIS)).points, 15.0)
-        self.assertEqual(self.points(self.at(0.0, PLAT)).points, -11.25)
+        self.assertEqual(self.points(self.at(0.0, PLAT)).points, -35.0)
 
     def test_old_answers_keep_their_points(self):
         old = self.answer(self.user, self.roi(self.t_affinis), AFFINIS)
@@ -174,14 +175,16 @@ class PointsFollowDifficultyTests(ScoringCase):
         scoring.recompute([self.user.id])
         self.assertEqual({a.answer_id: (a.points, a.detail) for a in AnswerPoints.objects.all()}, live)
         self.assertAlmostEqual(PlayerScore.objects.get(player=self.user).score, total, places=2)
-        self.assertEqual(live[answers[0].id][0], -9.0)     # -11.25 × 0.8, the first answer: the total stays at 0
-        # 0, then +18 (15 × 1.2), -13.5 (-11.25 × 1.2), +3.57 (4.2 × 0.85), -0.24 (skip × 0.95), +15 (an old answer)
-        self.assertAlmostEqual(total, 22.83, places=2)
+        self.assertEqual(live[answers[0].id][0], -28.0)    # -35 × 0.8, the first answer: the total stays at 0
+        # 0, then +18 (15 × 1.2), -42 (-35 × 1.2) back to 0, -13.4 (-11.67 × 1.15) and -0.24 (skip × 0.95) at 0,
+        # +15 (an old answer)
+        self.assertAlmostEqual(total, 15.0, places=2)
 
     def test_where_points_went_follows_the_multiplier(self):
         ans = self.at(1.0, FERR)                    # right genus, wrong species on the hardest beetle
         self.points(ans)
         loss = game_feedback.answer_losses(GameAnswer.objects.select_related("points").get(pk=ans.pk))
-        self.assertEqual((loss["earned"], loss["multiplier"]), (5.2, 1.25))
-        self.assertEqual(loss["ranks"]["genus"]["points"], 5.0)            # 4 × 1.25
-        self.assertEqual(loss["lost"], 13.5)                                # (8 + 2.8) × 1.25: worth plus the penalty
+        # a loss: the whole answer × (2 − m) = 0.75, so each rank's share of it too
+        self.assertEqual((loss["earned"], loss["multiplier"]), (-8.8, 1.25))
+        self.assertEqual(loss["ranks"]["genus"]["points"], 3.0)            # 4 × 0.75
+        self.assertEqual(loss["lost"], 20.0)                                # (8 + 18.67) × 0.75: worth plus the cost

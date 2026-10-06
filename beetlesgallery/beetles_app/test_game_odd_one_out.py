@@ -189,7 +189,7 @@ class AnswerTests(OddCase):
         wrong = GameAnswer.objects.get()
         self.assertEqual((wrong.is_check, wrong.correct_species), (True, False))
         worth = game_scoring.odd_base(wrong)
-        self.assertAlmostEqual(wrong.points.points, -1.25 * worth)
+        self.assertAlmostEqual(wrong.points.points, -game_scoring.wrong_cost() * worth, places=2)
         rnd2, item2 = self.odd_round("species")   # the same feed, carrying on
         self.answer(rnd2, item2, skipped=True)
         skipped = GameAnswer.objects.get(round=rnd2, index=item2["index"])

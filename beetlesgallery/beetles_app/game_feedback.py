@@ -60,13 +60,37 @@ def _results(answer):
 
 
 def _verdict(answer):
-    """ "right", "partly", "wrong" or None for an answer that wasn't judged."""
-    judged = [v for v in _results(answer).values() if v is not None]
-    if not judged:
+    """
+    "right", "partly", "wrong" or None for an answer that wasn't judged. Anything claimed that isn't true makes it
+    "wrong", however much else was right (#530); "partly" is an answer true as far as it goes that stopped short of the
+    truth: a name left blank where the beetle has one, or a Similarity rung more cautious than the truth.
+    """
+    results = _results(answer)
+    if not any(v is not None for v in results.values()):
         return None
-    if all(judged):
-        return "right"
-    return "partly" if any(judged) else "wrong"
+    if answer.mode == "pair":
+        return pair_verdict(game.PAIR_DEPTH.get(answer.pair_answer), results)
+    if False in results.values():
+        return "wrong"
+    if answer.mode == "classify" and any(getattr(answer, f"ref_{r}") and not _claimed(answer, r) for r in game.RANKS):
+        return "partly"
+    return "right"
+
+
+def pair_verdict(depth, results):
+    """
+    A Similarity answer's verdict from the rung said (``depth``, -1 different subfamilies ... 3 same species) and its
+    per-rank results (game.score_pair): "wrong" when a rank it says the two share is not shared (closer than they are),
+    or when "different subfamilies" is said of relatives; "partly" when they are closer than said; else "right".
+    """
+    if depth is None:
+        return None
+    if False in [results[r] for r in game.RANKS[: depth + 1]]:
+        return "wrong"
+    below = results[game.RANKS[depth + 1]] if depth + 1 < len(game.RANKS) else None
+    if depth < 0:
+        return {True: "right", False: "wrong"}.get(below)
+    return "partly" if below is False else "right"
 
 
 def grid_verdict(grid):
@@ -260,8 +284,12 @@ def answer_losses(answer, points=None):
     bonus = 1 + game.game_setting("GAME_POINTS_SIMILARITY_BONUS", 0.25) * float(detail.get("similarity", 0.0) or 0.0)
     worth = PAIR_POINTS[depth] * bonus * factor
     given = game.PAIR_DEPTH.get(answer.pair_answer)
-    right = detail.get("right")
-    state = "right" if right is True else "wrong" if right is False else ("cautious" if given is not None and given < depth else "too_close")
+    if given is None or given == depth:
+        state = "right" if detail.get("right") is True else "wrong"
+    elif given >= 0 and depth >= 0:
+        state = "cautious" if given < depth else "too_close"   # too close is wrong (#530), but says how
+    else:
+        state = "wrong"
     return {"kind": "pair", "state": state, "said": answer.get_pair_answer_display(), "truth": truth,
             "earned": earned, "lost": round(max(0.0, worth - earned), 1), "multiplier": detail.get("multiplier")}
 

@@ -64,11 +64,11 @@ class IdentificationTests(ReviewCase):
 
     def test_a_wrong_species_after_a_correct_genus(self):
         review = self.classify(self.roi(self.t_affinis), FERR)
-        self.assertEqual(review["verdict"], "partly")
+        self.assertEqual(review["verdict"], "wrong")   # anything claimed that isn't true is wrong (#530)
         species = review["classify"]["ranks"][3]
         self.assertEqual((species["yours"], species["truth"], species["state"], species["points"]),
-                         ("Xyleborus ferrugineus", "Xyleborus affinis", "wrong", -8.4))
-        self.assertEqual(review["headline"], "Correct to genus · +12.6 points")
+                         ("Xyleborus ferrugineus", "Xyleborus affinis", "wrong", -56.0))   # 8 × 3 × 2⅓
+        self.assertEqual(review["headline"], "Correct to genus · −35 points")
         self.assertAlmostEqual(sum(c["points"] for c in review["classify"]["ranks"]), self.earned(), places=1)
 
     def test_stopping_at_the_genus_and_getting_it_all_wrong(self):
@@ -76,7 +76,7 @@ class IdentificationTests(ReviewCase):
         self.assertEqual(genus_only["headline"], "Correct to genus · +21 points")
         self.assertEqual(genus_only["classify"]["ranks"][3]["state"], "stopped")
         wrong = self.classify(self.roi(self.t_affinis), PLAT)
-        self.assertEqual((wrong["verdict"], wrong["headline"]), ("wrong", "Not quite · −33.8 points"))
+        self.assertEqual((wrong["verdict"], wrong["headline"]), ("wrong", "Not quite · −105 points"))
         self.assertIsNone(wrong["celebrate"])
 
     def test_an_unvalidated_beetle_shows_what_the_other_players_and_ibbi_ai_say(self):
@@ -246,17 +246,18 @@ class SelectAllTests(ReviewCase):
         # each tile is rounded to 2 places, so the sum may be a few hundredths off
         self.assertAlmostEqual(sum(t["points"] or 0 for t in grid["tiles"]), self.earned("select"), delta=0.02)
         self.assertGreater(grid["tiles"][0]["points"], 0)
-        self.assertAlmostEqual(grid["tiles"][3]["points"], -1.5 * grid["tiles"][0]["points"], places=2)
+        self.assertAlmostEqual(grid["tiles"][3]["points"], -game_scoring.wrong_cost() * grid["tiles"][0]["points"],
+                               delta=0.01)
         self.assertEqual((grid["tiles"][2]["points"], grid["tiles"][6]["points"]), (0.0, None))
         vote = grid["tiles"][6]
         self.assertEqual((vote["validated"], vote["ai"]["in"], vote["pays"]), (False, True, True))
-        self.assertEqual(review["headline"], "Found 2 of 3 · 1 wrong · +1.7 points")
-        self.assertEqual(review["celebrate"]["kind"], "partial")   # points, from a partly correct grid
+        self.assertEqual(review["headline"], "Found 2 of 3 · 1 wrong · −1 points")
+        self.assertIsNone(review["celebrate"])   # the wrong tap cost more than two members earned (#530)
 
     def test_a_perfect_grid(self):
         review = self.grid([*self.members, *self.others], [0, 1, 2])
         self.assertEqual((review["verdict"], review["celebrate"]["kind"]), ("right", "validated"))
-        self.assertEqual(review["headline"], "Found 3 of 3 · +10 points")
+        self.assertEqual(review["headline"], "Found 3 of 3 · +8.8 points")   # 1.25 × 7, a grid from before the ladder
 
     def test_names_stop_at_the_grids_rank(self):
         review = self.grid([*self.members, *self.others], [0, 1, 2], rank="genus")
@@ -279,7 +280,7 @@ class ConfettiTests(ReviewCase):
 
     def test_more_points_more_confetti_and_none_without_points(self):
         full = self.classify(self.roi(self.t_affinis), AFFINIS)["celebrate"]
-        part = self.classify(self.roi(self.t_affinis), FERR)["celebrate"]
+        part = self.classify(self.roi(self.t_affinis), dict(AFFINIS, species=""))["celebrate"]   # stopped at the genus
         self.assertEqual((full["kind"], part["kind"]), ("validated", "partial"))
         self.assertGreater(full["size"], part["size"])
         self.assertIsNone(self.classify(self.roi(self.t_affinis, validated=False), AFFINIS)["celebrate"])

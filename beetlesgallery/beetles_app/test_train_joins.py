@@ -47,7 +47,7 @@ class BigGridPointsTests(ReviewCase):
     def grid(self, picks, **extra):
         item = dict({"a": str(self.members[0].id), "b": None, "check": True, "mode": "select",
                      "tiles": [str(t.id) for t in self.members + self.others], "rank": "species",
-                     "group": game.lineage(self.t_affinis, "species")}, **extra)
+                     "group": game.lineage(self.t_affinis, "species"), "step": 12}, **extra)
         return self.answer(item, {"picks": picks})
 
     def test_sixteen_tiles_add_up_to_the_points_with_the_size_factor(self):
@@ -56,7 +56,7 @@ class BigGridPointsTests(ReviewCase):
         self.assertEqual(len(tiles), 16)
         self.assertAlmostEqual(sum(t["points"] or 0 for t in tiles), self.earned("select"), delta=0.03)
         depth = game.RANKS.index("species") - 1   # the Similarity points for the grid's rank
-        worth = game.game_setting("GAME_POINTS_SELECT_WEIGHT", 2.0) * game_scoring.PAIR_POINTS[depth] * game_scoring.size_factor(16)
+        worth = game.game_setting("GAME_POINTS_SELECT_WEIGHT", 1.25) * game_scoring.PAIR_POINTS[depth] * game_scoring.size_factor(16)
         self.assertAlmostEqual(self.points_of("select").detail["worth"], worth, places=2)
         self.assertGreater(game_scoring.size_factor(16), game_scoring.size_factor(4))
 

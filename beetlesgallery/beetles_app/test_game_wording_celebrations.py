@@ -47,8 +47,8 @@ class CelebrationTierTests(GameCase):
         return self.post("game_answer", dict(answer, index=item["index"]), rnd.id).json()
 
     def test_partial_answers_get_a_smaller_celebration(self):
-        data = self.answer({"subfamily": "Scolytinae", "tribe": "Xyleborini", "genus": "Xyleborus", "species": "ferrugineus"})
-        celebrate = data["review"]["celebrate"]   # #488: sized by the points (12.6 of a full 45)
+        data = self.answer({"subfamily": "Scolytinae", "tribe": "Xyleborini", "genus": "Xyleborus"})
+        celebrate = data["review"]["celebrate"]   # #488: sized by the points (21 of a full 45, stopped at the genus)
         self.assertEqual(celebrate["kind"], "partial")
         self.assertTrue(0.2 < celebrate["size"] < 1)
 

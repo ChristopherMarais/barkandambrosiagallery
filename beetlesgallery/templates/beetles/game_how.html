@@ -30,22 +30,22 @@
       <h2 class="text-lg font-semibold text-gray-900 mb-2">1. Beetles we already know</h2>
       <p class="text-sm text-gray-600 mb-3">Some beetles in the feed have an expert-checked name. You never know which ones, so treat every beetle as if it counts.</p>
       <h3 class="text-sm font-semibold text-gray-900 mb-1">Identification</h3>
-      <p class="text-sm text-gray-600 mb-2">Naming a beetle is the harder game, so it is worth {{ classify_weight }}&times; the points. You get partial credit: each rank you get correct earns its points.</p>
+      <p class="text-sm text-gray-600 mb-2">Naming a beetle is the harder game, so it is worth {{ classify_weight }}&times; the points. Each rank you get correct earns its points:</p>
       <table class="text-sm mb-3"><tbody>
         {% for rank, pts in rank_points.items %}<tr><td class="pr-6 py-0.5 capitalize text-gray-700">{{ rank }}</td><td class="font-semibold text-gray-900 tabular-nums">{{ pts|digit_groups }}</td></tr>{% endfor %}
       </tbody></table>
-      <p class="text-sm text-gray-600 mb-4">Going one rank too far costs a little ({% widthratio overreach 1 100 %}% of that rank): correct genus but wrong species earns {{ classify_examples.overreach }}, stopping at the genus {{ classify_examples.genus }}, the exact species {{ classify_examples.species }}. A wrong subfamily costs {% widthratio wrong 1 100 %}% of everything you claimed.</p>
+      <p class="text-sm text-gray-600 mb-4" data-testid="how-confidence">A wrong rank costs {{ wrong_cost }}&times; its points, so name a rank only when you&rsquo;re at least {{ confidence }}% sure: the exact species earns {{ classify_examples.species }}, stopping at the genus {{ classify_examples.genus }}, correct genus but wrong species {{ classify_examples.overreach }}. Every rank you name is a claim, so a wrong subfamily makes the ranks under it wrong too.</p>
       <h3 class="text-sm font-semibold text-gray-900 mb-1">Similarity</h3>
       <p class="text-sm text-gray-600 mb-2">The correct answer earns more the finer the difference you had to spot:</p>
       <table class="text-sm mb-3"><tbody>
         {% for name, pts in pair_points %}<tr><td class="pr-6 py-0.5 text-gray-700">{{ name|capfirst }}</td><td class="font-semibold text-gray-900 tabular-nums">{{ pts|digit_groups }}</td></tr>{% endfor %}
       </tbody></table>
-      <p class="text-sm text-gray-600 mb-4">Two photos that look alike (same photographer, place or magnification) earn up to a quarter more. Partial credit here too: &ldquo;same tribe&rdquo; for two beetles of one genus is true, so it earns the tribe&rsquo;s points; &ldquo;same species&rdquo; earns the genus&rsquo;s points minus a little. Calling relatives strangers (or strangers relatives) loses 1 point per step.</p>
+      <p class="text-sm text-gray-600 mb-4">Two photos that look alike (same photographer, place or magnification) earn up to a quarter more. A cautious answer is partly correct: &ldquo;same tribe&rdquo; for two beetles of one genus is true, so it earns the tribe&rsquo;s points. Calling them closer relatives than they are is wrong and costs {{ wrong_cost }}&times; what it claimed too much, and so does calling relatives strangers (or strangers relatives).</p>
       {% if difficulty_spread %}<p class="text-sm text-gray-600 mb-4" data-testid="how-difficulty">In both games, harder beetles are worth more: up to {{ difficulty_spread }}% more on the hardest, where a miss also costs up to {{ difficulty_spread }}% less. Easy beetles work the other way round.</p>{% endif %}
       <h3 class="text-sm font-semibold text-gray-900 mb-1" data-testid="how-odd">Imposter Picker</h3>
-      <p class="text-sm text-gray-600">All but one beetle share a name at one rank. Picking the odd one earns {{ odd_weight }}&times; what Similarity pays for telling those two apart. Picking one of the rest costs a little more than a correct pick earns, so pick only when you&rsquo;re fairly sure: <strong>Skip</strong> here earns {{ odd_skip }}.</p>
+      <p class="text-sm text-gray-600">All but one beetle share a name at one rank. Picking the odd one earns {{ odd_weight }}&times; what Similarity pays for telling those two apart. Picking one of the rest costs {{ wrong_cost }}&times; what a correct pick earns, so pick only when you&rsquo;re at least {{ confidence }}% sure: <strong>Skip</strong> here earns {{ odd_skip }}.</p>
       <h3 class="text-sm font-semibold text-gray-900 mb-1 mt-4" data-testid="how-select">Find Them All</h3>
-      <p class="text-sm text-gray-600">Tap every beetle of the group named under the photos. A perfect grid earns about twice a Similarity answer. Every wrong tap costs {{ select_wrong }} times a correct one, and a member you leave out costs nothing, so leave out any you&rsquo;re unsure of. Some beetles in the grid haven&rsquo;t been checked yet: your taps on those help name them and are never held against you.</p>
+      <p class="text-sm text-gray-600">Tap every beetle of the group named under the photos. Every wrong tap costs {{ wrong_cost }}&times; a correct one, and a member you leave out costs nothing, so leave out any you&rsquo;re less than {{ confidence }}% sure of. Some beetles in the grid haven&rsquo;t been checked yet: your taps on those help name them and are never held against you.</p>
       <p class="text-sm text-gray-600 mt-4" data-testid="how-grids">Both grids grow as you get better: from 4 to 9 to 16 beetles, then a rank deeper, from subfamily to species. A run of good grids takes you up a step, a poor one back down. Bigger grids are worth more. A bad photo in a grid? Flag it and carry on with the rest.</p>
     </section>
 
@@ -56,8 +56,8 @@
         <li>Only players in the better half on known beetles count as judges, and Identification experts for that part of the tree count the most.</li>
         <li>Agreeing with players stronger than you earns nearly full credit; agreeing with weaker players earns very little.</li>
         <li>If a stronger player disagrees with you, agreeing with lots of weaker players does not help.</li>
-        <li>The more strong players agree with you, the more you earn, up to {{ cap }}% of what the same answer would earn on a known beetle. It never costs you points.</li>
-        <li>You can also earn that straight away when you match what <strong>Identification experts</strong> said about the beetle, or what the <strong>identification model</strong> says when it is sure and has a good record on that exact group. Not matching them costs nothing, and none of this counts towards your accuracy: only checked beetles do.</li>
+        <li>The more strong players agree with you, the more you earn, up to {{ cap }}% of what the same answer would earn on a known beetle. A name strong players disagree with takes points back, but an answer here never costs you points overall.</li>
+        <li>You can also earn that straight away when you match what <strong>Identification experts</strong> said about the beetle, or what the <strong>identification model</strong> says when it is sure and has a good record on that exact group. Naming a rank differently takes points back from the rest of that answer (never below zero), and none of this counts towards your accuracy: only checked beetles do.</li>
       </ul>
     </section>
 
