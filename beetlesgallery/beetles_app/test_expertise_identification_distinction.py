@@ -170,7 +170,7 @@ class TreeTests(ExpertCase):
     def test_the_legend_explains_both_markers(self):
         text = text_of(self.page)
         self.assertIn("Identification: naming in Identification. Gold and glowing: Identification expert.", text)
-        self.assertIn("Distinction: telling apart in Similarity, Odd One Out and Select all. Gold: Distinction "
+        self.assertIn("Distinction: telling apart in Similarity, Imposter Picker and Find Them All. Gold: Distinction "
                       "expert; it unlocks nothing.", text)
         self.assertNotIn("Two dots", self.page)
         self.assertIn('data-testid="legend-identification"><span class="tree-dot mark-expert', self.page)

@@ -66,7 +66,7 @@ bonus = {{ v.GAME_POINTS_SIMILARITY_BONUS|floatformat:"-2" }}   step = {{ v.GAME
 
     <div class="p-4 rounded-xl border border-gray-200" data-testid="scoring-grids">
       <h3 class="font-semibold text-gray-900 mb-1">The grid games grow with the player</h3>
-      <p class="text-sm mb-2">Odd One Out and Select all each have 12 steps: 4, 9 and 16 beetles at subfamily, then the same at tribe, genus and species. A player goes up a step after {{ v.GAME_GRID_UP_AFTER }} good grids in a row and down one after a poor grid, and never past the ranks they have open. When the beetles for a step are short, the grid is built smaller, or at the nearest other rank, rather than not at all. Every point of a grid is times its size: 4 beetles <b>×{{ v.GAME_GRID_SIZE_FACTOR.4|floatformat:"-2" }}</b>, 9 <b>×{{ v.GAME_GRID_SIZE_FACTOR.9|floatformat:"-2" }}</b>, 16 <b>×{{ v.GAME_GRID_SIZE_FACTOR.16|floatformat:"-2" }}</b>. A photo flagged as bad leaves the grid and counts for nothing; half of them flagged (or the odd one) ends the grid, unscored.</p>
+      <p class="text-sm mb-2">Imposter Picker and Find Them All each have 12 steps: 4, 9 and 16 beetles at subfamily, then the same at tribe, genus and species. A player goes up a step after {{ v.GAME_GRID_UP_AFTER }} good grids in a row and down one after a poor grid, and never past the ranks they have open. When the beetles for a step are short, the grid is built smaller, or at the nearest other rank, rather than not at all. Every point of a grid is times its size: 4 beetles <b>×{{ v.GAME_GRID_SIZE_FACTOR.4|floatformat:"-2" }}</b>, 9 <b>×{{ v.GAME_GRID_SIZE_FACTOR.9|floatformat:"-2" }}</b>, 16 <b>×{{ v.GAME_GRID_SIZE_FACTOR.16|floatformat:"-2" }}</b>. A photo flagged as bad leaves the grid and counts for nothing; half of them flagged (or the odd one) ends the grid, unscored.</p>
     </div>
 
     <div class="p-4 rounded-xl border border-gray-200">
@@ -176,7 +176,7 @@ if Identification experts (or a trusted model) name that rank and you match them
       <li><b>Reliability (rating)</b> is the lower end of a Wilson interval on how often the player is correct, rank by rank, the first time they see each validated beetle. A few lucky answers don't make anyone an authority: the rating rises only with many correct answers. A Find Them All grid counts once, as correct only when perfect.</li>
       <li><b>Levels</b> need points <em>and</em> a rating (none at levels 1–2, 35% at 3, rising to 92% at the top), so the top levels are kept only while answers stay good.</li>
       <li><b>Identification experts</b> in a taxon have answered {{ v.GAME_TRUST_IMAGES_PER_SPECIES }} validated images each of at least {{ v.GAME_TRUST_CHILDREN_SHARE|floatformat:"-2" }} of its members (a genus's species, a tribe's genera, a subfamily's tribes; at least {{ v.GAME_TRUST_MIN_JUDGED }} answers in all) and been correct at least {{ v.GAME_TRUST_MIN_ACCURACY|floatformat:"-2" }} of the time, and are among the top {{ v.GAME_EXPERT_PERCENTILE|floatformat:"-2" }} of players by rating. Their agreeing labels go to curators as trusted suggestions; when two such experts agree on a beetle with no name, it is written in as an Expert ID, still unvalidated for a curator to confirm.</li>
-      <li><b>Distinction experts</b> reach the same coverage and accuracy telling a taxon's members apart in Similarity, Odd One Out and Select all (each judged answer covers the members it showed). It is shown on their expertise tree and profile only: it never makes a label trusted, weighs as a judge or writes anything in.</li>
+      <li><b>Distinction experts</b> reach the same coverage and accuracy telling a taxon's members apart in Similarity, Imposter Picker and Find Them All (each judged answer covers the members it showed). It is shown on their expertise tree and profile only: it never makes a label trusted, weighs as a judge or writes anything in.</li>
     </ul>
   </section>
 
@@ -197,7 +197,7 @@ start = {{ v.GAME_DIFFICULTY_START|floatformat:"-3" }}   per_batch = {{ v.GAME_D
       <pre class="text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">p    = how hard the beetle is among all playable beetles when answered (0 easiest, 1 hardest; 0.5 if unknown)
 m    = 1 + spread × (2p − 1)                                spread = {{ v.GAME_POINTS_DIFFICULTY_SPREAD|floatformat:"-2" }}
 gain × m,   loss (skips too) × (2 − m)                       the point for taking part is not scaled</pre>
-      <p class="text-sm mt-2">One factor for the whole answer, so a wrong answer never turns into a gain and every comparison between answers on one beetle stays as above. Odd One Out and Select all are priced by their own grid instead. Answers from before this have no p and keep ×1.</p>
+      <p class="text-sm mt-2">One factor for the whole answer, so a wrong answer never turns into a gain and every comparison between answers on one beetle stays as above. Imposter Picker and Find Them All are priced by their own grid instead. Answers from before this have no p and keep ×1.</p>
       <div class="overflow-x-auto rounded-xl border border-gray-200 mt-3">
         <table class="w-full text-sm" data-testid="difficulty-examples">
           <thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr><th class="text-left px-3 py-2">Game</th><th class="text-left px-3 py-2">Answer</th>

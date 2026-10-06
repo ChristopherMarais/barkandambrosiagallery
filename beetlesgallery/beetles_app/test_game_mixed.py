@@ -124,7 +124,7 @@ class ChooseGameTests(MixedFeedCase):
         with mock.patch.object(game, "build_pair_items", return_value=[]):   # no pairs at all: their other game, and a note
             rnd = game.start_round(self.user, "mixed", size=6)
             self.assertEqual(set(self.modes(rnd)), {"odd"})
-            self.assertEqual(rnd.notice, "Not enough beetles for Similarity right now: here's Odd One Out instead.")
+            self.assertEqual(rnd.notice, "Not enough beetles for Similarity right now: here's Imposter Picker instead.")
         for _ in range(5):
             self.assertEqual(set(self.modes(game.start_round(self.user, "mixed", size=10))), {"pair"})
 

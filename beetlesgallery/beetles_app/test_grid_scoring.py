@@ -89,7 +89,7 @@ class BalanceTests(GridCase):
         GameTuning.objects.create(key="GAME_GRID_SIZE_FACTOR", value={"4": 2.0, "9": 1.5, "16": 1.0})
         game_tuning.forget()
         failing = [rule for rule, ok, _ in game_tuning.checks() if not ok]
-        self.assertEqual(failing, ["Tapping everything in Select all loses", "Bigger grids are worth at least as much"])
+        self.assertEqual(failing, ["Tapping everything in Find Them All loses", "Bigger grids are worth at least as much"])
 
     def test_the_scoring_page_has_the_grid_games(self):
         self.client.force_login(self.superuser)

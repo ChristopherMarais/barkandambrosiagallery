@@ -71,24 +71,24 @@ GROUPS = [
         _t("GAME_POINTS_PARTICIPATION", "Taking part", 0.5,
            "Every real answer earns this on top, so the score grows with play; accuracy still decides most of it.", 0, 5),
     ]),
-    ("Grid games: Odd One Out and Select all", [
+    ("Grid games: Imposter Picker and Find Them All", [
         _t("GAME_GRID_SIZE_FACTOR", "Points by grid size", {"4": 1.0, "9": 1.5, "16": 2.0},
            "Every point of a grid, gained or lost, is times this for its number of beetles, on top of what its rank is "
            "worth: a bigger grid takes longer and is harder.", 0.5, 5, 0.25, keys=GRID_SIZES),
         _t("GAME_GRID_UP_AFTER", "Good grids in a row to go up a step", 2,
            "The grids grow from 4 to 9 to 16 beetles, then go a rank deeper, from subfamily to species: 12 steps. A "
            "player goes up a step after this many good grids in a row and down one after a poor grid.", 1, 10, 1),
-        _t("GAME_GRID_GOOD_SHARE", "Select all: share of the group to find", 0.75,
-           "A Select all grid is good with no wrong tap and at least this share of the validated members found, poor "
-           "with more wrong taps than right ones or none right. In Odd One Out the odd one found is good, a wrong pick "
+        _t("GAME_GRID_GOOD_SHARE", "Find Them All: share of the group to find", 0.75,
+           "A Find Them All grid is good with no wrong tap and at least this share of the validated members found, poor "
+           "with more wrong taps than right ones or none right. In Imposter Picker the odd one found is good, a wrong pick "
            "poor. Skips are neither.", 0.25, 1, 0.05),
         _t("GAME_GRID_START_STEP", "Step a new player starts on", 1,
            "1 is 4 beetles at subfamily, 12 is 16 beetles at species. Every player has a step in each grid game.",
            1, 12, 1),
-        _t("GAME_ODD_OPEN_SHARE_START", "Odd One Out: AI beetles among the rest at level 1", 0.25,
+        _t("GAME_ODD_OPEN_SHARE_START", "Imposter Picker: AI beetles among the rest at level 1", 0.25,
            "This share of the beetles that share the group are ones nobody has validated that IBBI-AI puts in it...",
            0, 1, 0.05),
-        _t("GAME_ODD_OPEN_SHARE_END", "Odd One Out: AI beetles among the rest at the top level", 0.5,
+        _t("GAME_ODD_OPEN_SHARE_END", "Imposter Picker: AI beetles among the rest at the top level", 0.5,
            "...rising to this share at the top level. A pick on one is scored by agreement, never below zero.", 0, 1, 0.05),
         _t("GAME_AI_SURE_FROM", "IBBI-AI is sure from", 0.9,
            "When its predictions allow, every grid holds an AI beetle IBBI-AI is at least this sure of...", 0.5, 1, 0.01),
