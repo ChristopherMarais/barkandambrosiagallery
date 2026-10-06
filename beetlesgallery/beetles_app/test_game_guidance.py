@@ -17,7 +17,7 @@ class GuidanceTests(GameCase):
         self.assertIn("Stop at the rank you're sure of.", page)
         self.assertIn("There is no timer", page)
         self.assertIn("keys, papers or a reference collection", page)
-        self.assertIn("Still answer as far as you can", page)
+        self.assertIn("isn't bad: answer as far as you can", page)   # a clear photo from an unusual side (#498)
 
     def test_the_tour_says_it_too(self):
         tour = (Path(settings.BASE_DIR) / "beetlesgallery/static/js/game_tour.js").read_text()

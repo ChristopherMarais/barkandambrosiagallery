@@ -55,8 +55,9 @@ DISCUSSIONS_URL = "https://github.com/ChristopherMarais/barkandambrosiagallery/d
 
 # Reporting a photo from the feed, before answering (a wrong name is reported from the round review instead)
 FEED_REPORT_REASONS = [("bad_box", "Box doesn't fit"), ("bad_image", "Bad photo"), ("other", "Something else")]
-# A short line under a reason in that menu, so a clear photo that just shows little isn't reported as bad (#360)
-FEED_REPORT_HINTS = {"bad_box": "Misses the beetle or frames the label", "bad_image": "Blurry, dark, or not a beetle"}
+# A short line under a reason in that menu (#360): a photo must show a good part of the beetle (#498)
+FEED_REPORT_HINTS = {"bad_box": "Misses the beetle or frames the label",
+                     "bad_image": "Blurry, dark, too little of the beetle, or not a beetle"}
 
 
 def discussions_url():
@@ -882,7 +883,8 @@ def _ahead_of(player):
 def _community(record):
     """
     The "Last beetle" bar after a Name That Beetle answer: how far players ranked above this one agree
-    (_players_ahead), and what proven experts said (_experts_said) and the species classifier leans to (_model_leans).
+    (_players_ahead), and what Identification experts said (_experts_said) and the species classifier leans to
+    (_model_leans).
     The same for every beetle, validated or not, so it never shows which ones are (#382); and it is agreement, never
     "correct".
     """
@@ -901,10 +903,10 @@ def _community(record):
 
 def _experts_said(record, latest):
     """
-    What proven experts (game_trust) said about this beetle, as agreement: "A proven expert agrees with you to genus",
-    "2 proven experts agree with you to tribe; on genus they said Xylosandrus". A rank counts only where every expert
-    who named it agrees, as for reference points (game_reference). ``latest``: each other player's latest answer.
-    None when no proven expert has named it.
+    What Identification experts (game_trust) said about this beetle, as agreement: "An Identification expert agrees
+    with you to genus", "2 Identification experts agree with you to tribe; on genus they said Xylosandrus". A rank
+    counts only where every expert who named it agrees, as for reference points (game_reference). ``latest``: each
+    other player's latest answer. None when no Identification expert has named it.
     """
     votes = [(pid, game.implied_labels(ans)) for pid, ans in latest.items()]
     trust = game_trust.TrustContext({pid for pid, labels in votes if labels})
@@ -917,7 +919,7 @@ def _experts_said(record, latest):
     if not said:
         return None
     one = len(experts) == 1
-    who, agree = ("A proven expert", "agrees") if one else (f"{len(experts)} proven experts", "agree")
+    who, agree = ("An Identification expert", "agrees") if one else (f"{len(experts)} Identification experts", "agree")
     mine = game.answer_values({r: getattr(record, r) for r in game.RANKS})
     agreed = ""
     for rank in game.RANKS:
@@ -925,7 +927,7 @@ def _experts_said(record, latest):
             continue
         if len(said[rank]) > 1:
             return (f"{who} {agree} with you to {agreed}; they're split on {rank}." if agreed
-                    else f"Proven experts are split on {rank}.")
+                    else f"Identification experts are split on {rank}.")
         value, name = next(iter(said[rank].items()))
         if mine[rank] == value:
             agreed = rank

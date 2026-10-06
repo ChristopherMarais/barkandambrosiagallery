@@ -18,12 +18,13 @@ levels are kept only while the answers stay good.
     9      Colony founder                10000      85%
     10     King of Bark and Ambrosia     25000      92%
 
-Separately from levels, a player who proves themselves on one part of the tree is an *expert* there (game_trust.py:
-at least GAME_TRUST_MIN_JUDGED answers on validated beetles in that branch, with a Wilson lower bound on their
-accuracy of at least GAME_TRUST_MIN_LOWER_BOUND, 90% by default, and among the most reliable players overall). When
-at least two experts, each proven directly in every branch of the label, agree on a beetle that has no name yet,
-their name is written straight into the database (game_trust.auto_apply_expert_labels), still marked unvalidated so
-a curator can confirm it. Nobody else's labels skip review.
+Separately from levels, a player who proves themselves on one part of the tree is an *Identification expert* there
+(game_trust.py: GAME_TRUST_IMAGES_PER_SPECIES validated images named in each of at least GAME_TRUST_CHILDREN_SHARE of
+its members, at least GAME_TRUST_MIN_JUDGED answers in all, and at least GAME_TRUST_MIN_ACCURACY of them right, 90%
+by default). When at least GAME_AUTO_APPLY_MIN_EXPERTS (two) of them, each proven directly in the label's genus and
+among the most reliable players overall, agree on a beetle that has no name yet, their name is written straight into
+the database (game_trust.auto_apply_expert_labels), still marked unvalidated so a curator can confirm it. Nobody
+else's labels skip review: a *Distinction expert*, who tells a taxon's beetles apart as reliably, unlocks nothing.
 """
 from .game import game_setting
 
@@ -277,8 +278,8 @@ def proposals_enabled():
 
 def suggestion_voters():
     """
-    Whose game labels reach the curators as suggestions: players at the suggestions level, and anyone who is a
-    proven expert somewhere. None (everyone) when GAME_PROPOSALS_NEED_LEVEL is off.
+    Whose game labels reach the curators as suggestions: players at the suggestions level, and anyone who is an
+    Identification expert somewhere. None (everyone) when GAME_PROPOSALS_NEED_LEVEL is off.
     """
     if not proposals_enabled():
         return None

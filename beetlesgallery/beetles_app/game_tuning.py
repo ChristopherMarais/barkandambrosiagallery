@@ -73,8 +73,8 @@ GROUPS = [
         _t("GAME_POINTS_CONSENSUS_CAP", "Most an agreed answer earns", 0.6,
            "An answer on an unvalidated beetle earns at most this share of what it would on a validated one, when "
            "strong players agree with it; never less than zero. Below 1, known beetles always pay more.", 0, 1),
-        _t("GAME_POINTS_REFERENCE_CAP", "Matching proven experts or a trusted model", 0.6,
-           "An answer that matches what proven experts (or a trusted model) say earns up to this share.", 0, 1),
+        _t("GAME_POINTS_REFERENCE_CAP", "Matching Identification experts or a trusted model", 0.6,
+           "An answer that matches what Identification experts (or a trusted model) say earns up to this share.", 0, 1),
         _t("GAME_RATER_MIN_JUDGED", "Answers on known beetles before a player can judge", 10,
            "Only players with at least this many answers on validated beetles, and a rating at or above the median, "
            "count as judges.", 1, 500, 1),
@@ -91,7 +91,8 @@ GROUPS = [
     ("Naming confidence: what a beetle is, and is not", [
         _t("GAME_SELECT_TAP_WEIGHT", "A Select all tap, against a name", 0.8,
            "Tapping an unvalidated beetle in Select all counts as this share of a direct identification towards its "
-           "name (down to the grid's rank). Taps never make an expert's verdict on their own.", 0, 1, 0.05),
+           "name (down to the grid's rank). Taps never make an Identification expert's verdict on their own.",
+           0, 1, 0.05),
         _t("GAME_TIP_MIN_VOTES", "Players needed for a name tip", 3,
            "Curators see 'N reliable players say genus X' once at least this many players agree...", 1, 50, 1),
         _t("GAME_TIP_MIN_SUPPORT", "Share of the weighted vote for a tip", 0.75,
@@ -99,23 +100,26 @@ GROUPS = [
            "applies to 'not in' tips.", 0.5, 1, 0.05),
         _t("GAME_TIP_MIN_NOT_VOTES", "Players needed for a 'not in' tip", 2,
            "Curators see 'Players are confident it is not in genus X' once at least this many say so.", 1, 50, 1),
-        _t("GAME_AUTO_APPLY_MIN_EXPERTS", "Experts who must agree to write a name in", 2,
-           "Proven experts who must give the same species before it is written onto an unnamed beetle as an "
-           "Expert ID (still unvalidated, for a curator to confirm).", 1, 10, 1),
+        _t("GAME_AUTO_APPLY_MIN_EXPERTS", "Identification experts who must agree to write a name in", 2,
+           "Identification experts who must give the same species before it is written onto an unnamed beetle as "
+           "an Expert ID (still unvalidated, for a curator to confirm).", 1, 10, 1),
     ]),
-    ("Experts (whose answers become trusted labels)", [
-        _t("GAME_TRUST_MIN_ACCURACY", "Accuracy an expert needs", 0.9,
-           "In a taxon, a player must be correct at least this often on validated beetles.", 0.5, 1, 0.01),
+    ("Identification experts (whose answers become trusted labels)", [
+        _t("GAME_TRUST_MIN_ACCURACY", "Accuracy an Identification expert needs", 0.9,
+           "In a taxon, a player must be correct at least this often on validated beetles. The same rules on "
+           "telling its beetles apart make a Distinction expert, which unlocks nothing.", 0.5, 1, 0.01),
         _t("GAME_TRUST_IMAGES_PER_SPECIES", "Images that cover a species, genus or tribe", 5,
-           "An expert must have answered this many validated images of each child they cover (all of them for one "
-           "with fewer): the species of a genus, the genera of a tribe, the tribes of a subfamily.", 1, 100, 1),
-        _t("GAME_TRUST_CHILDREN_SHARE", "Share of a taxon's children an expert must cover", 0.75,
+           "An Identification expert must have answered this many validated images of each child they cover (all of "
+           "them for one with fewer): the species of a genus, the genera of a tribe, the tribes of a subfamily.",
+           1, 100, 1),
+        _t("GAME_TRUST_CHILDREN_SHARE", "Share of a taxon's children an Identification expert must cover", 0.75,
            "Rounded up, so a taxon with three or fewer children (at 75%) needs all of them. A rare genus no "
-           "longer stops anyone becoming a tribe expert.", 0.1, 1, 0.05),
-        _t("GAME_TRUST_MIN_JUDGED", "Fewest answers in a taxon for an expert", 10,
+           "longer stops anyone becoming an Identification expert in a tribe.", 0.1, 1, 0.05),
+        _t("GAME_TRUST_MIN_JUDGED", "Fewest answers in a taxon for an Identification expert", 10,
            "Also the fewest validated images a taxon needs before anyone can be proven in it.", 1, 500, 1),
-        _t("GAME_EXPERT_PERCENTILE", "Experts come from the top share of players", 0.25,
-           "Only the most reliable players overall (this share, by rating) can be experts.", 0.01, 1, 0.01),
+        _t("GAME_EXPERT_PERCENTILE", "Identification experts come from the top share of players", 0.25,
+           "Only the most reliable players overall (this share, by rating) are trusted as Identification experts.",
+           0.01, 1, 0.01),
     ]),
 ]
 TUNABLES = {t["key"]: dict(t, group=g) for g, items in GROUPS for t in items}
@@ -261,6 +265,6 @@ def checks():
          "So the score follows accuracy, not just the number of answers."),
         ("A tap counts less than a name", v["GAME_SELECT_TAP_WEIGHT"] < 1,
          "Tapping a beetle among nine is a quicker, weaker judgement than naming it."),
-        ("Experts must be very accurate", v["GAME_TRUST_MIN_ACCURACY"] >= 0.85,
-         "Expert labels reach curators as trusted: below 85% that trust is not earned."),
+        ("Identification experts must be very accurate", v["GAME_TRUST_MIN_ACCURACY"] >= 0.85,
+         "Identification experts' labels reach curators as trusted: below 85% that trust is not earned."),
     ]

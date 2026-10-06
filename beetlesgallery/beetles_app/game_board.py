@@ -14,7 +14,7 @@ from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncWeek
 from django.utils import timezone
 
-from . import game, game_levels, game_rewards
+from . import game, game_levels, game_rewards, game_trust
 from .models import AnswerPoints, GameAnswer, PlayerScore, PlayerSkill, SpeciesDiscovery
 
 SORTS = {"score": "Score", "identification": "Identification accuracy", "similarity": "Similarity accuracy",
@@ -213,14 +213,14 @@ def profile(player):
 
     s = score_for(player)
     proven = list(PlayerSkill.objects.filter(player=player, proven=True).order_by("rank", "branch"))
+    what = {"tribe": "tribes of", "genus": "genera of", "species": "species of", "subfamily": "subfamilies"}
     return {
         "score": s, "level": game_levels.describe(s.score, s.rating), "badges": game_rewards.badge_cards(player),
         "streak": game_rewards.streak_days(game_rewards.goal_days(player)),
         "accuracy": s.accuracy if s.judged >= game.game_setting("GAME_MIN_JUDGED_FOR_ACCURACY", 10) else None,
-        "expert_in": [
-            {"what": {"tribe": "tribes of", "genus": "genera of", "species": "species of", "subfamily": "subfamilies"}[k.rank],
-             "branch": k.branch} for k in proven
-        ],
+        "expert_in": [{"what": what[k.rank], "branch": k.branch} for k in proven],   # Identification experts
+        "distinction_in": [{"what": what[rank], "branch": branch}
+                           for rank, branch in game_trust.distinction_experts(player)],   # #498
         "discoveries": list(player.species_discoveries.order_by("genus", "species")),
         "modes": dict(GameAnswer.objects.filter(player=player, skipped=False).values_list("mode").annotate(n=Count("id"))),
         "games": mode_stats([player.id])[player.id],

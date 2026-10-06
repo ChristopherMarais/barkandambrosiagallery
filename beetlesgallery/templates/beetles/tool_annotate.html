@@ -1442,10 +1442,11 @@ async function resolveGameReports(idx, outcome) {
 function gameTipText(t) {
   const name = t.rank === 'species' || t.rank === 'genus' ? `<i>${escHtml(t.value)}</i>` : escHtml(t.value);
   if (t.kind === 'not') {
-    const who = t.experts ? 'Experts and players are' : 'Players are';
+    const who = t.experts ? 'Identification experts and players are' : 'Players are';
     return `${who} confident it is <b>not</b> in ${t.rank} ${name} <span class="text-gray-400">(${digitGroupsText(t.count)} said so${t.against ? `, ${digitGroupsText(t.against)} disagreed` : ''})</span>`;
   }
-  const who = t.kind === 'expert' ? `Expert${t.count > 1 ? 's' : ''} say` : `${digitGroupsText(t.count)} reliable players say`;
+  const who = t.kind === 'expert' ? (t.count > 1 ? 'Identification experts say' : 'An Identification expert says')
+    : `${digitGroupsText(t.count)} reliable players say`;
   const clash = t.conflicts ? ` <span class="text-amber-800">· the current label says ${escHtml(t.current)}</span>` : '';
   return `${who} ${t.rank} <b>${name}</b> <span class="text-gray-400">(${Math.round(t.support * 100)}%)</span>${clash}`;
 }
@@ -1536,7 +1537,7 @@ async function acceptAiSuggestion(idx, n) {
 function gameAppliedHtml(b, i) {
   const a = (state.gameApplied || {})[b.id];
   if (!a) return '';
-  const who = a.automatic ? 'automatically (proven experts agreed)' : `by ${escHtml(a.by)}`;
+  const who = a.automatic ? 'automatically (Identification experts agreed)' : `by ${escHtml(a.by)}`;
   const when = new Date(a.at).toLocaleDateString();
   const locked = state.isLockedByOther ? 'disabled' : '';
   const action = a.current
@@ -1577,7 +1578,7 @@ function gameProposalHtml(b, i) {
   const cells = ranks.map(r => {
     const v = p.ranks[r];
     if (!v) return `<span class="text-gray-300">—</span>`;
-    const tick = v.trusted ? `<i class="fi fi-rr-shield-check text-green-600" title="Backed by ${v.trusted_votes} proven expert(s)"></i>` : '';
+    const tick = v.trusted ? `<i class="fi fi-rr-shield-check text-green-600" title="Backed by ${v.trusted_votes} Identification expert(s)"></i>` : '';
     return `<span class="${r === 'species' ? 'italic' : ''} ${v.trusted ? 'font-semibold text-gray-900' : 'text-gray-700'}">${escHtml(v.value)}</span>
             <span class="text-[10px] text-gray-400">${Math.round(v.support * 100)}%·${v.votes}</span> ${tick}`;
   }).join('<span class="text-gray-300 mx-1">›</span>');

@@ -32,7 +32,7 @@
       <li><strong>Precise beats vague,</strong> when correct: species is worth the most, then genus, tribe, subfamily.</li>
       <li><strong>Not knowing is cheap.</strong> A skip costs less than the smallest mistake (and earns a little in the grid games), so guessing never pays.</li>
       <li><strong>The truth decides where we have it.</strong> On validated beetles answers are scored against the real name. Players are never told which beetles those are, so they have to try their best on every one.</li>
-      <li><strong>Elsewhere, agreement with strong players.</strong> On unvalidated beetles an answer earns points only when players with a better record (or proven experts, or a model proven in that group) agree. It never costs points there, and it earns less than on validated beetles.</li>
+      <li><strong>Elsewhere, agreement with strong players.</strong> On unvalidated beetles an answer earns points only when players with a better record (or Identification experts, or a model proven in that group) agree. It never costs points there, and it earns less than on validated beetles.</li>
       <li><strong>Scores follow the truth over time.</strong> When a beetle is validated or its name corrected, every answer on it is re-scored, up or down: when the player leaves the game, every night, or with "Re-score everyone" below.</li>
       <li><strong>Levels need reliability as well as points,</strong> so playing a lot is not enough to reach the top; being correct is.</li>
     </ol>
@@ -95,11 +95,11 @@ members left out cost nothing; taps on unvalidated beetles are recorded, not sco
     <h2 class="text-xl font-semibold text-gray-900">Unvalidated beetles: scored by agreement</h2>
     <p class="text-sm">Here nobody knows the answer yet, so a player earns points when stronger players agree with them. It is never negative, so honest answers on hard beetles are never punished.</p>
     <pre class="text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">for each rank the player named:
-  judge weight  = 1                                        a proven expert for that part of the tree
+  judge weight  = 1                                        an Identification expert for that part of the tree
                 = 1 / (1 + e^−(judge rating − your rating) / spread)   otherwise (spread = {{ v.GAME_RATER_SPREAD|floatformat:"-2" }})
   c             = (Σ weight agreeing − Σ weight disagreeing) / (Σ all weights + 1)      from −1 to +1
   points        = cap × P[rank] × max(0, c)                                         cap = {{ v.GAME_POINTS_CONSENSUS_CAP|floatformat:"-2" }}
-if proven experts (or a trusted model) name that rank and you match them:
+if Identification experts (or a trusted model) name that rank and you match them:
   points        = max(points, reference_cap × P[rank])                              reference_cap = {{ v.GAME_POINTS_REFERENCE_CAP|floatformat:"-2" }}
 (Identification answers then × weight {{ v.GAME_POINTS_CLASSIFY_WEIGHT|floatformat:"-2" }})</pre>
     <ul class="list-disc pl-5 text-sm space-y-1">
@@ -130,9 +130,9 @@ if proven experts (or a trusted model) name that rank and you match them:
   tally[name]          = Σ weight × vote                    (vote = 1, or {{ v.GAME_SELECT_TAP_WEIGHT|floatformat:"-2" }} for a tap)
   support              = tally[leading name] / Σ tally       0 to 1</pre>
       <ul class="list-disc pl-5 mt-2 space-y-1">
-        <li><b>Trusted</b> at a rank: a proven expert for that part of the tree supports the name and no trusted player disagrees. Taps alone never make a name trusted.</li>
+        <li><b>Trusted</b> at a rank: an Identification expert for that part of the tree supports the name and no trusted player disagrees. Taps alone never make a name trusted.</li>
         <li><b>Curator tip</b> on the Image Annotation page: the deepest rank that is trusted, or has at least {{ v.GAME_TIP_MIN_VOTES }} players and {{ v.GAME_TIP_MIN_SUPPORT|floatformat:"-2" }} support ("3 reliable players say genus <i>Xyleborus</i>"), flagged when it disagrees with the current label.</li>
-        <li><b>Written in:</b> when {{ v.GAME_AUTO_APPLY_MIN_EXPERTS }} proven experts give the same species for a beetle with no species name, it is written in as an <b>Expert ID</b>, still unvalidated for a curator to confirm. Otherwise names only reach a beetle through a curator.</li>
+        <li><b>Written in:</b> when {{ v.GAME_AUTO_APPLY_MIN_EXPERTS }} Identification experts give the same species for a beetle with no species name, it is written in as an <b>Expert ID</b>, still unvalidated for a curator to confirm. Otherwise names only reach a beetle through a curator.</li>
         <li><b>The AI</b> adds its own suggestion (shown separately); it becomes a reference for scoring only when proven in that group (see above).</li>
       </ul>
     </div>
@@ -147,7 +147,7 @@ if proven experts (or a trusted model) name that rank and you match them:
           <tr><td class="pr-3 py-1.5">Select all, left untapped (when the player tapped something)</td><td>in the grid's group</td></tr>
         </tbody>
       </table></div>
-      <p class="mt-2">A <b>"not in" tip</b> ("Players are confident it is not in genus <i>Xyleborus</i>", or "Experts and players…") appears once at least {{ v.GAME_TIP_MIN_NOT_VOTES }} players say so and they are at least {{ v.GAME_TIP_MIN_SUPPORT|floatformat:"-2" }} of everyone who spoke to that group either way. It helps a curator rule names out, and flags a current label that players reject.</p>
+      <p class="mt-2">A <b>"not in" tip</b> ("Players are confident it is not in genus <i>Xyleborus</i>", or "Identification experts and players…") appears once at least {{ v.GAME_TIP_MIN_NOT_VOTES }} players say so and they are at least {{ v.GAME_TIP_MIN_SUPPORT|floatformat:"-2" }} of everyone who spoke to that group either way. It helps a curator rule names out, and flags a current label that players reject.</p>
     </div>
 
     <div class="p-4 rounded-xl border border-gray-200 text-sm">
@@ -167,7 +167,8 @@ if proven experts (or a trusted model) name that rank and you match them:
     <ul class="list-disc pl-5 text-sm space-y-1">
       <li><b>Reliability (rating)</b> is the lower end of a Wilson interval on how often the player is correct, rank by rank, the first time they see each validated beetle. A few lucky answers don't make anyone an authority: the rating rises only with many correct answers. A Select all grid counts once, as correct only when perfect.</li>
       <li><b>Levels</b> need points <em>and</em> a rating (none at levels 1–2, 35% at 3, rising to 92% at the top), so the top levels are kept only while answers stay good.</li>
-      <li><b>Experts</b> in a taxon have answered {{ v.GAME_TRUST_IMAGES_PER_SPECIES }} validated images each of at least {{ v.GAME_TRUST_CHILDREN_SHARE|floatformat:"-2" }} of its members (a genus's species, a tribe's genera, a subfamily's tribes; at least {{ v.GAME_TRUST_MIN_JUDGED }} answers in all) and been correct at least {{ v.GAME_TRUST_MIN_ACCURACY|floatformat:"-2" }} of the time, and are among the top {{ v.GAME_EXPERT_PERCENTILE|floatformat:"-2" }} of players by rating. Their agreeing labels go to curators as trusted suggestions; when two such experts agree on a beetle with no name, it is written in as an Expert ID, still unvalidated for a curator to confirm.</li>
+      <li><b>Identification experts</b> in a taxon have answered {{ v.GAME_TRUST_IMAGES_PER_SPECIES }} validated images each of at least {{ v.GAME_TRUST_CHILDREN_SHARE|floatformat:"-2" }} of its members (a genus's species, a tribe's genera, a subfamily's tribes; at least {{ v.GAME_TRUST_MIN_JUDGED }} answers in all) and been correct at least {{ v.GAME_TRUST_MIN_ACCURACY|floatformat:"-2" }} of the time, and are among the top {{ v.GAME_EXPERT_PERCENTILE|floatformat:"-2" }} of players by rating. Their agreeing labels go to curators as trusted suggestions; when two such experts agree on a beetle with no name, it is written in as an Expert ID, still unvalidated for a curator to confirm.</li>
+      <li><b>Distinction experts</b> reach the same coverage and accuracy telling a taxon's members apart in Similarity, Odd One Out and Select all (each judged answer covers the members it showed). It is shown on their expertise tree and profile only: it never makes a label trusted, weighs as a judge or writes anything in.</li>
     </ul>
   </section>
 
