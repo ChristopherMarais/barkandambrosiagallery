@@ -306,7 +306,6 @@ def game_how(request):
         "overreach": game.game_setting("GAME_POINTS_OVERREACH", 0.35),
         "cap": int(game.game_setting("GAME_POINTS_CONSENSUS_CAP", 0.6) * 100),
         "unsure": game.game_setting("GAME_POINTS_UNSURE", 0.25),
-        "retry_days": game.game_setting("GAME_RETRY_AFTER_DAYS", 2),
         "rank_steps": game_levels.rank_steps(), "ranks_all_level": game_levels.RANKS_ALL_FROM_LEVEL,
         "odd_level": game_levels.game_level("odd"), "identify_level": game_levels.game_level("classify"),
         "select_level": game_levels.game_level("select"),

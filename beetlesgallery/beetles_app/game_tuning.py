@@ -130,6 +130,24 @@ GROUPS = [
            "Identification experts who must give the same species before it is written onto an unnamed beetle as "
            "an Expert ID (still unvalidated, for a curator to confirm).", 1, 10, 1),
     ]),
+    ("Feeds: mistakes come back, hard beetles go to the easier games first", [
+        _t("GAME_RETRY_PER_BATCH", "Mistakes back per batch", 2,
+           "Up to this many validated beetles the player got wrong come back in each batch of the feed, spread "
+           "through it: first in an easier game than the one they were missed in, then in that game.", 0, 10, 1),
+        _t("GAME_RETRY_MAX", "Tries at one mistake", 3,
+           "A mistake stops coming back after this many tries, right or wrong.", 0, 20, 1),
+        _t("GAME_SESSION_GAP_MINUTES", "Break that ends a sitting (minutes)", 30,
+           "A mistake comes back only in a later sitting: one that starts after at least this long without an "
+           "answer.", 1, 1440, 1),
+        _t("GAME_HARD_FROM", "A beetle nobody has validated is hard from", 0.5,
+           "Hard when players disagree on its genus this much, or IBBI-AI is this unsure (0 to 1); also when nobody "
+           "could take it to species, or nobody has answered it and IBBI-AI has no confident call. Similarity shows "
+           "hard beetles more.", 0, 1, 0.05),
+        _t("GAME_ID_PLACED_SHARE", "Identification: share already placed", 0.5,
+           "At least this share of the new beetles in Identification (when there are enough) are ones Similarity or "
+           "a confident IBBI-AI has already put in a subfamily or tribe. Hard ones not placed yet wait for the "
+           "easier games while there are others.", 0, 1, 0.05),
+    ]),
     ("Identification experts (whose answers become trusted labels)", [
         _t("GAME_TRUST_MIN_ACCURACY", "Accuracy an Identification expert needs", 0.9,
            "In a taxon, a player must be correct at least this often on validated beetles. The same rules on "

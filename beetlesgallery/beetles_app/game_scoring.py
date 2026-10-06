@@ -512,20 +512,20 @@ def _score(answer, votes_for, judges, model_refs):
         return setting("GAME_POINTS_ODD_SKIP", 0.25), AnswerPoints.Basis.UNSURE, {}
     if answer.skipped or (answer.mode == "pair" and answer.pair_answer == "unsure"):
         return -setting("GAME_POINTS_UNSURE", 0.25), AnswerPoints.Basis.UNSURE, {}
+    retry = setting("GAME_POINTS_RETRY_FACTOR", 0.5) if answer.is_retry else 1.0
     if answer.mode == "select":
         scored = select_truth(answer)
         if scored:
-            return scored[0], AnswerPoints.Basis.TRUTH, scored[1]
+            return scored[0] * retry, AnswerPoints.Basis.TRUTH, _retried(scored[1], answer, retry)
         return 0.0, AnswerPoints.Basis.NONE, {}
     if answer.mode == "odd":
         if is_truth(answer.roi):
             scored = odd_truth(answer)
             if scored:
-                return scored[0], AnswerPoints.Basis.TRUTH, scored[1]
+                return scored[0] * retry, AnswerPoints.Basis.TRUTH, _retried(scored[1], answer, retry)
             return 0.0, AnswerPoints.Basis.NONE, {}
         points, detail = odd_consensus(answer, votes_for(answer.roi_id), judges, model_refs)
         return points, AnswerPoints.Basis.CONSENSUS, detail
-    retry = setting("GAME_POINTS_RETRY_FACTOR", 0.5) if answer.is_retry else 1.0
     if answer.mode == "classify":
         weight = classify_weight()
         if is_truth(answer.roi):
@@ -549,6 +549,13 @@ def _score(answer, votes_for, judges, model_refs):
         points, detail = consensus_points(answer, votes_for(answer.roi_id), judges)
         return points, AnswerPoints.Basis.CONSENSUS, detail
     return 0.0, AnswerPoints.Basis.NONE, {}
+
+
+def _retried(detail, answer, factor):
+    """A grid answer's detail on a retry (#490): marked, with what it was worth scaled like its points."""
+    if not answer.is_retry:
+        return detail
+    return dict(detail, retry=True, worth=round(float(detail.get("worth", 0.0)) * factor, 2))
 
 
 def _with_reference(answer, reference, detail):

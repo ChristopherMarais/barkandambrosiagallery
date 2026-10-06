@@ -6,7 +6,7 @@ from django.core.management import call_command
 from django.test import override_settings
 from django.utils import timezone
 
-from beetlesgallery.beetles_app import game, game_scoring as scoring
+from beetlesgallery.beetles_app import game, game_relearn, game_scoring as scoring
 from beetlesgallery.beetles_app.models import AnswerPoints, Beetles, GameAnswer, GameRound, PlayerScore
 from beetlesgallery.beetles_app.test_game import AFFINIS, FERR, FeedbackCase
 
@@ -246,28 +246,30 @@ class RetroactiveTests(ScoringCase):
 
 
 class RetryTests(ScoringCase):
-    def test_a_beetle_got_wrong_comes_back_after_a_while(self):
-        roi = self.roi(self.t_affinis)
-        self.answer(self.user, roi, FERR, when=timezone.now() - timedelta(days=3))
-        self.assertEqual(game.retry_ids(self.user, 5), [roi.id])
+    """A beetle got wrong comes back in a later sitting (game_relearn; test_game_relearn has the rest)."""
 
-    def test_not_too_soon(self):
+    def test_a_beetle_got_wrong_comes_back_in_a_later_sitting(self):
         roi = self.roi(self.t_affinis)
-        self.answer(self.user, roi, FERR, when=timezone.now() - timedelta(hours=5))
-        self.assertEqual(game.retry_ids(self.user, 5), [])
+        self.answer(self.user, roi, FERR, when=timezone.now() - timedelta(hours=3))
+        self.assertEqual(list(game_relearn.due(self.user)), [roi.id])
+
+    def test_not_in_the_same_sitting(self):
+        roi = self.roi(self.t_affinis)
+        self.answer(self.user, roi, FERR, when=timezone.now() - timedelta(minutes=5))
+        self.assertEqual(game_relearn.due(self.user), {})
 
     def test_not_once_they_got_it_right(self):
         roi = self.roi(self.t_affinis)
         self.answer(self.user, roi, FERR, when=timezone.now() - timedelta(days=9))
         self.answer(self.user, roi, AFFINIS, retry=True, when=timezone.now() - timedelta(days=5))
-        self.assertEqual(game.retry_ids(self.user, 5), [])
+        self.assertEqual(game_relearn.due(self.user), {})
 
     @override_settings(GAME_RETRY_MAX=2)
     def test_at_most_a_few_times(self):
         roi = self.roi(self.t_affinis)
         for days in (9, 6, 3):
             self.answer(self.user, roi, FERR, retry=days != 9, when=timezone.now() - timedelta(days=days))
-        self.assertEqual(game.retry_ids(self.user, 5), [])
+        self.assertEqual(game_relearn.due(self.user), {})
 
     def test_retries_do_not_count_towards_accuracy(self):
         roi = self.roi(self.t_affinis)
@@ -280,7 +282,7 @@ class RetryTests(ScoringCase):
     @override_settings(GAME_ROUND_SIZE=4)
     def test_the_feed_includes_one(self):
         roi = self.roi(self.t_affinis)
-        self.answer(self.user, roi, FERR, when=timezone.now() - timedelta(days=3))
+        self.answer(self.user, roi, FERR, when=timezone.now() - timedelta(hours=3))
         for _ in range(4):
             self.roi(self.t_affinis)
         rnd = game.start_round(self.user, "classify")
