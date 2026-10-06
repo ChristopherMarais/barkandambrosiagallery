@@ -5,6 +5,7 @@ from django.contrib.auth.views import PasswordResetConfirmView, PasswordResetVie
 from django.db.models.functions import Lower
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
+from django.views.decorators.cache import never_cache
 
 from . import access
 from .forms import AccessRequestForm
@@ -14,8 +15,14 @@ from .views import superuser_required
 RECENT_DECISIONS = 25
 
 
+@never_cache
 def request_access(request):
-    """Public form. The person is told the same thing whether or not a request was already waiting."""
+    """Public form. The person is told the same thing whether or not a request was already waiting.
+
+    A request that goes through redirects to the "sent" page (post, redirect, get), so the form is never shown
+    again with a success message and refreshing cannot send it twice. never_cache: going Back fetches a blank form
+    instead of the browser's copy with what was typed.
+    """
     signed_in = request.user.is_authenticated
     if request.method == "POST":
         if request.POST.get("leave_blank"):  # the hidden field: a bot

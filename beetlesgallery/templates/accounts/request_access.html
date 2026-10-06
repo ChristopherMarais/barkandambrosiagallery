@@ -10,7 +10,7 @@
     {% if signed_in %}Your account already works. Tick what more you'd like below: we review it and email you our decision, and you get the access once it is approved.{% else %}Choose a username and password and tell us who you are. Confirm your email and your account works straight away.{% endif %}
   </p>
 
-  <form method="post" novalidate class="bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm space-y-5">
+  <form method="post" novalidate data-testid="signup-form" class="bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm space-y-5">
     {% csrf_token %}
     {% if form.non_field_errors %}
     <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{{ form.non_field_errors }}</div>
@@ -99,4 +99,16 @@
     </button>
   </form>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Coming Back here after signing up, browsers refill what was typed: start blank, as a fresh visit would.
+  window.addEventListener('pageshow', function (event) {
+    var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+    if (event.persisted || (nav && nav.type === 'back_forward')) {
+      document.querySelector('[data-testid="signup-form"]').reset();
+    }
+  });
+</script>
 {% endblock %}

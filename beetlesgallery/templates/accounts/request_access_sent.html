@@ -3,7 +3,8 @@
 {% block title %}{% if user.is_authenticated %}Request sent{% else %}Check your email{% endif %} | Bark & Ambrosia Beetle Gallery{% endblock %}
 
 {% block content %}
-<section class="max-w-2xl">
+{# Where a sign-up ends, reached by a redirect so a refresh never sends it twice: the message only, never the form. #}
+<section class="max-w-2xl" data-testid="signup-done">
   <h1 class="page-title">{% if user.is_authenticated %}Request sent{% else %}Check your email{% endif %}</h1>
   {% if user.is_authenticated %}
   <p class="text-gray-600 mb-6">Thank you. We review your request and email you our decision. You get the access once it is approved.</p>
@@ -12,7 +13,10 @@
     We sent a link to the email address you gave. Open it to confirm the address, and your account works straight away.
     If nothing arrives in a few minutes, check your spam folder.
   </p>
-  <p class="text-gray-600 mb-6">Already have an account? <a href="{% url 'login' %}" class="underline hover:text-black">Sign in</a>.</p>
+  <div class="flex flex-wrap items-center gap-3 mb-6">
+    <a href="{% url 'login' %}" class="btn-main" data-testid="signup-done-signin"><i class="fi fi-rr-sign-in-alt"></i><span>Sign in</span></a>
+    <a href="{% url 'signup' %}" class="btn-secondary" data-testid="signup-done-again"><i class="fi fi-rr-user-add"></i><span>Sign up again</span></a>
+  </div>
   {% endif %}
   <a href="{% url 'image_browser' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Back to the gallery</a>
 </section>
