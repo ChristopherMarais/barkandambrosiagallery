@@ -218,7 +218,7 @@ def target_difficulty(player, mode=None):
     top = game_setting("GAME_DIFFICULTY_MAX", 0.9)
     target = min(top, target)
     share = recent_share_right(player, mode) if mode else None
-    if share is not None and share < game_setting("GAME_DIFFICULTY_EASE_BELOW", 0.5):
+    if share is not None and share < game_setting("GAME_DIFFICULTY_EASE_BELOW", 0.6):
         target = max(min(target, DIFFICULTY_FLOOR), target - game_setting("GAME_DIFFICULTY_EASE", 0.15))
     elif share is not None and share > game_setting("GAME_DIFFICULTY_PUSH_ABOVE", 0.85):
         target = max(target, min(top, target + game_setting("GAME_DIFFICULTY_PUSH", 0.05)))
@@ -582,7 +582,7 @@ def odd_open_count(level, tiles):
 
 # Select all by the grid's size: the fewest and most validated members (about a quarter to under half of the grid),
 # and its AI beetles at level 1 and at the top level. Validated non-members are never fewer than the members, so
-# tapping everything loses while a wrong tap costs more than a member earns (GAME_POINTS_SELECT_WRONG above 1).
+# tapping everything loses while a wrong tap costs more than a member earns (k above 1: GAME_POINTS_CONFIDENCE over 50%).
 SELECT_MEMBERS = {4: (1, 2), 9: (3, 4), 16: (5, 7)}
 SELECT_AI = {4: (1, 1), 9: (1, 3), 16: (2, 4)}
 
@@ -1276,15 +1276,18 @@ def score_pair(pair_answer, taxon_a, taxon_b):
     """
     Per-rank correctness of a pair answer. "Same genus" claims the pair shares
     subfamily, tribe and genus but not species; each of those claims is scored.
+    Below the first wrong one nothing is judged (#530): "same genus" for beetles of two subfamilies is wrong, and its
+    "but not the same species" is no right answer, only a consequence of the mistake.
     """
     if pair_answer not in PAIR_DEPTH:
         return {r: None for r in RANKS}
     depth = PAIR_DEPTH[pair_answer]
     truth = shared_ranks(taxon_a, taxon_b)
-    return {
-        r: ((i <= depth) == truth[r]) if truth[r] is not None else None
-        for i, r in enumerate(RANKS)
-    }
+    out, wrong = {}, False
+    for i, r in enumerate(RANKS):
+        out[r] = None if wrong or truth[r] is None else (i <= depth) == truth[r]
+        wrong = wrong or out[r] is False
+    return out
 
 
 def group_taxon(group):

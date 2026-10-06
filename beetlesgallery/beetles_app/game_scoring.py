@@ -4,39 +4,44 @@ Points for the Beetle ID game.
 Every answer is worth some points (AnswerPoints) and a player's score is the running total, never below zero
 (PlayerScore). The rules, all adjustable with GAME_POINTS_* settings:
 
+One rule runs through every game (#530): a claim pays on average only when the player is at least
+GAME_POINTS_CONFIDENCE (t, 70%) sure of it. Every claim earns its points when right and costs k = t / (1 − t) (2⅓)
+times those points when wrong, so at t claiming and not claiming are worth the same and below it stopping earns more.
+A name left blank, a Similarity rung more cautious than the truth and a member left out of a Find Them All grid are
+never wrong; anything claimed that isn't true is wrong, however much else was right.
+
 Identification is the harder and more useful game, so every Name That Beetle answer counts
 GAME_POINTS_CLASSIFY_WEIGHT (3) times the points below, gains and losses alike: a perfect identification
-earns 45, a perfect similarity answer at most about 6.
+earns 45, a perfect similarity answer at most 15.
 
 Beetles we know the answer to (validated) are scored against the truth. These earn the most.
-  Name That Beetle   partial credit: each rank you get right earns its weight (subfamily 1, tribe 2, genus 4,
-                     species 8), so naming the exact species is worth the most. Where you go wrong, only the first
-                     wrong rank costs anything: a small penalty (GAME_POINTS_OVERREACH, 35% of its weight) when the
-                     ranks above it were right, e.g. right genus but wrong species = 7 - 2.8 = 4.2, less than
-                     stopping at the genus (7). A wrong subfamily, with nothing right, costs 3/4 of everything you
-                     claimed (GAME_POINTS_WRONG_FACTOR).
+  Name That Beetle   each rank named earns its points when right (subfamily 1, tribe 2, genus 4, species 8) and
+                     costs k times them when wrong, also when it is wrong because a rank above it was: naming the
+                     species is a claim about every rank. Right genus but wrong species = 7 − 18.7 = −11.7, against
+                     7 for stopping at the genus.
   Family Ties        the right answer earns more the finer the line you had to draw: different subfamilies 1,
-                     same subfamily 2, same tribe 3, same genus 5, same species 5, plus up to a quarter more when
-                     the two photos are alike (same photographer, place, magnification...). Partial credit too:
-                     a cautious answer that is true as far as it goes ("same tribe" for two beetles of one genus)
-                     earns that rung's points; claiming too close a tie ("same genus" for two of one tribe) earns
-                     the true rung's points minus the small penalty for every rung too far. Calling related beetles
-                     "different subfamilies", or unrelated ones related, loses 1 point per step it is off.
+                     same subfamily 2, same tribe 4, same genus 7, same species 12 (P), plus up to a quarter more when
+                     the two photos are alike (same photographer, place, magnification...). A cautious answer that is
+                     true as far as it goes ("same tribe" for two beetles of one genus) earns that rung's points.
+                     Claiming too close a tie is wrong: the true rung's points less k times the points of every rung
+                     claimed beyond it, P[true] − k × (P[said] − P[true]), and nothing for alike photos. Calling
+                     related beetles "different subfamilies" costs k × P[different] per step it is off.
   Odd One Out        picking the beetle that doesn't belong earns GAME_POINTS_ODD_WEIGHT (1.5) times what Family Ties
                      pays for telling apart the odd one and the rest (another subfamily 1, another tribe of the same
-                     subfamily 2, another genus of the same tribe 3, another species of the same genus 5). Picking one
-                     of the rest costs GAME_POINTS_ODD_WRONG_FACTOR (1.25) times that, so guessing loses on average,
-                     and Skip earns a little instead of costing (GAME_POINTS_ODD_SKIP, 0.25). A pick on a beetle nobody
-                     has validated yet is scored like a name on it: by agreement that it doesn't belong.
-  Select all         every validated member tapped earns a share of GAME_POINTS_SELECT_WEIGHT (2) times the Family
-                     Ties points for the grid's rank (another subfamily 1 ... another species of one genus 5), so a
-                     perfect grid earns about twice a Similarity answer; every validated non-member tapped costs
-                     GAME_POINTS_SELECT_WRONG (1.5) shares, and a member left out costs nothing. Taps on beetles nobody
-                     has validated are recorded, never scored. Skip earns GAME_POINTS_ODD_SKIP, as in Odd One Out.
+                     subfamily 2, another genus of the same tribe 4, another species of the same genus 7). Picking one
+                     of the rest costs k times that, and Skip earns a little instead of costing (GAME_POINTS_ODD_SKIP,
+                     0.25). A pick on a beetle nobody has validated yet is scored like a name on it: by agreement that
+                     it doesn't belong.
+  Select all         every validated member tapped earns a share of GAME_POINTS_SELECT_WEIGHT (1.25) times the Family
+                     Ties points for the grid's rank (another subfamily 1 ... another species of one genus 7); every
+                     validated non-member tapped costs k shares, and a member left out costs nothing. A grid never
+                     loses more than a perfect one earns. Taps on beetles nobody has validated are recorded, never
+                     scored. Skip earns GAME_POINTS_ODD_SKIP, as in Odd One Out.
                      In the reliability rating a grid counts once, at its rank: correct only when perfect (#381).
   Grid size          both grid games grow from 4 to 9 to 16 beetles as the player gets better (game_grid_ladder), and
-                     every point of a grid, gained or lost, is times GAME_GRID_SIZE_FACTOR for its size (1, 1.5, 2).
-                     A photo the player flagged as bad before answering counts for nothing (#489).
+                     every point of a grid built on that ladder, gained or lost, is times GAME_GRID_SIZE_FACTOR for its
+                     size (1, 1.5, 2). Grids from before the ladder (no grid_step) keep ×1, so a re-score doesn't
+                     inflate them. A photo the player flagged as bad before answering counts for nothing (#489).
   Seen again        a beetle shown again so you can learn it (a retry) earns GAME_POINTS_RETRY_FACTOR (half), in every
                      game (#490).
 
@@ -48,7 +53,9 @@ of what the same answer would earn on a validated beetle, and never less than ze
     agreeing with weaker ones very little;
   * a stronger player who disagrees cancels out agreement from weaker ones, so siding with many weak players
     against one strong one earns nothing;
-  * the more judges agree, the closer it gets to the cap.
+  * the more judges agree, the closer it gets to the cap;
+  * a rank the judges (or the experts and trusted model) disagree with costs k times what agreeing would have
+    earned, taken off the ranks they agree with: a deep guess on an unvalidated beetle doesn't pay either.
 
 Not sure / skip costs a little (GAME_POINTS_UNSURE, 0.25). Every real answer earns a small participation point
 (GAME_POINTS_PARTICIPATION, 0.5), so the score grows with play.
@@ -98,7 +105,7 @@ class _Points(Mapping):
 
 RANK_POINTS = _Points("GAME_POINTS_RANK", {"subfamily": 1.0, "tribe": 2.0, "genus": 4.0, "species": 8.0})
 # Family Ties: points for the right answer, by how related the two beetles really are (-1 = different subfamilies)
-PAIR_POINTS = _Points("GAME_PAIR_POINTS", {-1: 1.0, 0: 2.0, 1: 3.0, 2: 5.0, 3: 5.0})
+PAIR_POINTS = _Points("GAME_PAIR_POINTS", {-1: 1.0, 0: 2.0, 1: 4.0, 2: 7.0, 3: 12.0})
 DEPTH_NAME = {-1: "different subfamilies", 0: "same subfamily", 1: "same tribe", 2: "same genus", 3: "same species"}
 # The grid games: every point of a grid, gained or lost, times this for its number of beetles (#489)
 GRID_SIZE_FACTOR = _Points("GAME_GRID_SIZE_FACTOR", {4: 1.0, 9: 1.5, 16: 2.0})
@@ -111,6 +118,47 @@ def setting(name, default):
 def classify_weight():
     """How many times more a Name That Beetle answer counts than the base points (GAME_POINTS_CLASSIFY_WEIGHT)."""
     return float(setting("GAME_POINTS_CLASSIFY_WEIGHT", 3.0))
+
+
+def confidence():
+    """How sure a player should be of a claim before it pays on average (GAME_POINTS_CONFIDENCE, #530)."""
+    return min(0.95, max(0.05, float(setting("GAME_POINTS_CONFIDENCE", 0.7))))
+
+
+def wrong_cost():
+    """
+    k = t / (1 − t): what a wrong claim costs for every point it earns when right. Then a claim right with chance p is
+    worth p − (1 − p) × k on average, which is above zero only when p is above t: below it, stopping earns more.
+    """
+    t = confidence()
+    return t / (1 - t)
+
+
+def classify_points(results):
+    """
+    {rank: points} for a Name That Beetle answer from score_classification's {rank: True/False/None}, before the
+    Identification weight: a right rank earns its points, a wrong one costs k times them (#530).
+    """
+    k = wrong_cost()
+    return {r: RANK_POINTS[r] if ok else -k * RANK_POINTS[r] for r, ok in results.items() if ok is not None}
+
+
+def pair_points(given, truth, bonus=1.0):
+    """
+    A Similarity answer's points and how it went ("right", "cautious", "too_close", "wrong"), from the rung said and
+    the true one (-1 different subfamilies ... 3 same species). ``bonus`` (alike photos) raises only what is earned.
+    """
+    if given == truth:
+        return PAIR_POINTS[truth] * bonus, "right"
+    k = wrong_cost()
+    if given < 0:   # "different subfamilies" for related beetles: k × that rung's points per step off
+        return -k * PAIR_POINTS[-1] * (truth + 1), "wrong"
+    if truth < 0:   # related, said of beetles that aren't: every rung claimed is wrong
+        return -k * PAIR_POINTS[given], "wrong"
+    if given < truth:   # cautious but true as far as it goes: that rung's points
+        return PAIR_POINTS[given] * bonus, "cautious"
+    # too close a tie: the true rung's points, less k times those of every rung claimed beyond it
+    return PAIR_POINTS[truth] - k * (PAIR_POINTS[given] - PAIR_POINTS[truth]), "too_close"
 
 
 # ---------------------------------------------------------------------------
@@ -163,54 +211,34 @@ def photo_similarity(roi_a, roi_b):
 
 def classify_truth(answer, taxon):
     """
-    (points, detail) for a Name That Beetle answer on a validated beetle, with partial credit: every right rank
-    earns its weight, and only the first wrong rank costs anything (the ranks below it are wrong because of it).
-    That costs a small GAME_POINTS_OVERREACH share of its weight after a right rank, or GAME_POINTS_WRONG_FACTOR of
-    everything claimed when even the subfamily is wrong.
+    (points, detail) for a Name That Beetle answer on a validated beetle: every rank named earns its points when
+    right and costs k times them when wrong (classify_points), a rank below a wrong one too: it claimed that as well.
     """
     given = {r: getattr(answer, r) for r in RANKS}
     results = game.score_classification(given, taxon)
-    points, ranks, any_right = 0.0, {}, False
-    for r in RANKS:
-        ok = results[r]
-        if ok is None:
-            continue
-        if ok:
-            p = RANK_POINTS[r]
-            any_right = True
-        elif any(v.get("right") is False for v in ranks.values()):
-            p = 0.0   # already wrong above: this rank couldn't be right
-        elif any_right:
-            p = -RANK_POINTS[r] * setting("GAME_POINTS_OVERREACH", 0.35)
-        else:
-            claimed = sum(RANK_POINTS[x] for x in RANKS if results[x] is not None)
-            p = -claimed * setting("GAME_POINTS_WRONG_FACTOR", 0.75)
-        ranks[r] = {"right": ok, "points": round(p, 2)}
-        points += p
-    return points, {"ranks": ranks}
+    per_rank = classify_points(results)
+    ranks = {r: {"right": results[r], "points": round(p, 2)} for r, p in per_rank.items()}
+    return sum(per_rank.values()), {"ranks": ranks}
 
 
 def pair_truth(answer, roi_a, roi_b):
-    """(points, detail) for a Family Ties answer when both beetles are validated, or None if it can't be told."""
+    """
+    (points, detail) for a Family Ties answer when both beetles are validated, or None if it can't be told
+    (pair_points). ``right`` in the detail is True, "partial" for a cautious answer (true as far as it goes), or False
+    for anything claiming more than the truth, closer or further: never partly right (#530).
+    """
     truth = true_depth(roi_a.taxon, roi_b.taxon)
     given = PAIR_DEPTH.get(answer.pair_answer)
     if truth is None or given is None:
         return None
     sim = photo_similarity(roi_a, roi_b)
     bonus = 1 + setting("GAME_POINTS_SIMILARITY_BONUS", 0.25) * sim
-    if given == truth:
-        return PAIR_POINTS[truth] * bonus, {"right": True, "truth": DEPTH_NAME[truth], "similarity": sim}
-    steps = abs(given - truth)
-    if given >= 0 and truth >= 0:
-        if given < truth:
-            # cautious but true as far as it goes: that rung's points
-            return PAIR_POINTS[given] * bonus, {"right": "partial", "truth": DEPTH_NAME[truth], "similarity": sim,
-                                               "steps": steps}
-        # too close a tie: the true rung's points, less a small penalty per rung too far
-        penalty = setting("GAME_POINTS_OVERREACH", 0.35) * PAIR_POINTS[truth + 1] * steps
-        return PAIR_POINTS[truth] * bonus - penalty, {"right": "partial", "truth": DEPTH_NAME[truth],
-                                                      "similarity": sim, "steps": steps}
-    return -setting("GAME_POINTS_PAIR_STEP", 1.0) * steps, {"right": False, "truth": DEPTH_NAME[truth], "steps": steps}
+    points, state = pair_points(given, truth, bonus)
+    detail = {"right": {"right": True, "cautious": "partial"}.get(state, False), "truth": DEPTH_NAME[truth],
+              "similarity": sim}
+    if state != "right":
+        detail["steps"] = abs(given - truth)
+    return points, detail
 
 
 def size_factor(tiles):
@@ -220,6 +248,14 @@ def size_factor(tiles):
     """
     reached = [s for s in GRID_SIZE_FACTOR if s <= tiles] or [min(GRID_SIZE_FACTOR)]
     return GRID_SIZE_FACTOR[max(reached)]
+
+
+def grid_size_factor(answer):
+    """
+    size_factor for a grid answer built on the ladder (it recorded its step), 1 for one from before: those were scored
+    without it, so a re-score must not inflate them (#530).
+    """
+    return 1.0 if answer.grid_step is None else size_factor(len(answer.tiles or []))
 
 
 def _grid_detail(answer):
@@ -235,7 +271,7 @@ def odd_base(answer):
     """
     odd = answer.roi_b.taxon if answer.roi_b_id and answer.roi_b else None
     depth = true_depth(odd, game.group_taxon(answer.grid_group)) if odd is not None and answer.grid_group else None
-    weight = setting("GAME_POINTS_ODD_WEIGHT", 1.5) * size_factor(len(answer.tiles or []))
+    weight = setting("GAME_POINTS_ODD_WEIGHT", 1.5) * grid_size_factor(answer)
     return PAIR_POINTS[depth if depth is not None and depth < 3 else -1] * weight
 
 
@@ -248,7 +284,7 @@ def odd_truth(answer):
     detail = {"right": ok, "rank": answer.grid_rank, "worth": round(base, 2), **_grid_detail(answer)}
     if ok:
         return base, detail
-    return -base * setting("GAME_POINTS_ODD_WRONG_FACTOR", 1.25), detail
+    return -base * wrong_cost(), detail
 
 
 def grid_tiles(answer):
@@ -263,27 +299,38 @@ def grid_tiles(answer):
 def select_truth(answer):
     """
     (points, detail) for a Select all grid, or None if it holds no validated member to score against. Photos the player
-    flagged count for nothing. ``share`` in the detail is what each member found earns (a wrong tap costs
-    GAME_POINTS_SELECT_WRONG of it), so the review can show each beetle's points.
+    flagged count for nothing. ``share`` in the detail is what each member found earns (a wrong tap costs k of it),
+    so the review can show each beetle's points.
     """
     result = game.score_select(grid_tiles(answer), answer.picks, answer.grid_rank, answer.grid_group, answer.flagged)
     if not result["members"]:
         return None
     depth = game.RANKS.index(answer.grid_rank) - 1 if answer.grid_rank in game.RANKS else -1
-    worth = setting("GAME_POINTS_SELECT_WEIGHT", 2.0) * PAIR_POINTS[depth] * size_factor(len(answer.tiles or []))
+    worth = setting("GAME_POINTS_SELECT_WEIGHT", 1.25) * PAIR_POINTS[depth] * grid_size_factor(answer)
     share = worth / result["members"]
-    points = share * (result["right"] - setting("GAME_POINTS_SELECT_WRONG", 1.5) * result["wrong"])
+    points = select_points(worth, result["members"], result["right"], result["wrong"])
     detail = {k: result[k] for k in ("right", "wrong", "missed", "members", "perfect", "tiles")}
     return points, dict(detail, rank=answer.grid_rank, worth=round(worth, 2), share=round(share, 3), **_grid_detail(answer))
+
+
+def select_points(worth, members, right, wrong):
+    """
+    A Find Them All grid's points: a share of ``worth`` for every member tapped, k shares off for every non-member
+    tapped (a tap pays only when the player is at least GAME_POINTS_CONFIDENCE sure of it), and never below −worth,
+    so one grid can't lose more than a perfect one earns.
+    """
+    share = worth / members
+    return max(-worth, share * (right - wrong_cost() * wrong))
 
 
 def select_tile_points(detail):
     """
     What one tile of a scored Select all grid earned, from the grid's stored detail (select_truth): (a member tapped,
-    a non-member tapped). A member left out and everything else earn nothing, so the tiles add up to the grid's points.
+    a non-member tapped). A member left out and everything else earn nothing, so the tiles add up to the grid's points
+    (unless the grid hit its floor, −worth).
     """
     share = float(detail.get("worth", 0.0)) / detail["members"] if detail.get("members") else 0.0
-    return share, -share * setting("GAME_POINTS_SELECT_WRONG", 1.5)
+    return share, -share * wrong_cost()
 
 
 def odd_consensus(answer, votes, judges, model_refs):
@@ -416,24 +463,36 @@ def agreement(player_id, claims, votes, judges):
     return out
 
 
+def agreed(worth, c, cap):
+    """
+    One claim on an unvalidated beetle: cap × worth × c while the judges agree (c > 0), and k times that off when they
+    disagree, as a wrong claim costs on a validated beetle, so a deep guess doesn't pay here either (#530). The answer
+    as a whole is never below zero (consensus_points).
+    """
+    return cap * worth * (c if c >= 0 else wrong_cost() * c)
+
+
 def consensus_points(answer, votes, judges):
-    """(points, detail) for an answer on a beetle not validated yet: agreement only, never negative."""
+    """
+    (points, detail) for an answer on a beetle not validated yet: agreement rank by rank (agreed), never negative in
+    all.
+    """
     claims = game.implied_labels(answer)
     if not claims:
         return 0.0, {"agreement": {}}
     cap = setting("GAME_POINTS_CONSENSUS_CAP", 0.6)
     c = agreement(answer.player_id, claims, votes, judges)
     if answer.mode == "classify":
-        points = sum(cap * RANK_POINTS[r] * max(0.0, c[r]) for r in claims)
+        points = sum(agreed(RANK_POINTS[r], c[r], cap) for r in claims)
     else:
-        # partial credit per rung: agreement on "same tribe" earns the tribe rung even if the genus is disputed
+        # rung by rung: agreement on "same tribe" earns the tribe rung, a disputed genus rung costs
         depth = PAIR_DEPTH[answer.pair_answer]
         points, below = 0.0, 0.0
         for d in range(depth + 1):
             step = PAIR_POINTS[d] - below
             below = PAIR_POINTS[d]
-            points += cap * step * max(0.0, c.get(RANKS[d], 0.0))
-    return points, {"agreement": {r: round(v, 3) for r, v in c.items()}}
+            points += agreed(step, c.get(RANKS[d], 0.0), cap)
+    return max(0.0, points), {"agreement": {r: round(v, 3) for r, v in c.items()}}
 
 
 # ---------------------------------------------------------------------------
@@ -565,16 +624,24 @@ def _retried(detail, answer, factor):
 def _with_reference(answer, reference, detail):
     """
     Agreement points per rank, raised to the reference's where the answer matches what proven experts or a trusted
-    model say (game_reference). The best of the two per rank, so nothing is counted twice; never negative.
+    model say (game_reference), and lowered to k times the reference's points off where it names that rank otherwise.
+    The best (or worst) of the two per rank, so nothing is counted twice; never negative in all.
     """
     claims = game.implied_labels(answer)
     cap = setting("GAME_POINTS_CONSENSUS_CAP", 0.6)
-    agreed = {r: cap * RANK_POINTS[r] * max(0.0, detail["agreement"].get(r, 0.0)) for r in claims}
+    by_agreement = {r: agreed(RANK_POINTS[r], detail["agreement"].get(r, 0.0), cap) for r in claims}
     matched = game_reference.reference_points(claims, reference, RANK_POINTS)
-    points = sum(max(agreed.get(r, 0.0), matched.get(r, 0.0)) for r in claims)
+    points = 0.0
+    for r in claims:
+        if r in matched:
+            points += max(by_agreement[r], matched[r])
+        elif r in reference:   # the experts or a trusted model say otherwise
+            points += min(by_agreement[r], -wrong_cost() * setting("GAME_POINTS_REFERENCE_CAP", 0.6) * RANK_POINTS[r])
+        else:
+            points += by_agreement[r]
     shown = {r: {"name": name, "source": source, "match": r in matched}
              for r, (name, source) in reference.items() if r in claims}
-    return points, dict(detail, reference=shown)
+    return max(0.0, points), dict(detail, reference=shown)
 
 
 def votes_on(roi_ids):

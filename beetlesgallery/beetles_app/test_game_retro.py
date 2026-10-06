@@ -54,7 +54,7 @@ class LateValidationTests(ScoringCase):
         game_scoring.recompute([self.staff.id])
         credit = RetroCredit.objects.get(answer=wrong)
         self.assertLess(credit.points_after, 15.0)
-        self.assertEqual(credit.points_after, 4.2)   # right genus, wrong species
+        self.assertEqual(credit.points_after, -11.667)   # right genus, wrong species: 7 − 8 × 2⅓
 
     def test_losing_validation_undoes_it(self):
         self.validate()

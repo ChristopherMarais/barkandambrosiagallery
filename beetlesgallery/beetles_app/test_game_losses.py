@@ -22,8 +22,8 @@ class AnswerLossTests(ScoringCase):
         loss = self.losses(dict(AFFINIS, species="nope"))
         species = loss["ranks"]["species"]
         self.assertEqual(species["state"], "wrong")
-        self.assertAlmostEqual(species["lost"], 8 + 2.8)
-        self.assertAlmostEqual(loss["earned"], 4.2)
+        self.assertAlmostEqual(species["lost"], 8 + 8 * 7 / 3, delta=0.06)   # what it was worth, and k times that
+        self.assertAlmostEqual(loss["earned"], -11.7)
 
     def test_stopping_early_is_points_left_on_the_table(self):
         loss = self.losses(dict(AFFINIS, species=""))
@@ -32,7 +32,7 @@ class AnswerLossTests(ScoringCase):
     def test_a_wrong_subfamily_makes_everything_below_wrong_too(self):
         loss = self.losses(PLAT)
         self.assertEqual([loss["ranks"][r]["state"] for r in game.RANKS], ["wrong", "after", "after", "after"])
-        self.assertAlmostEqual(loss["lost"], 15 + 11.25, delta=0.06)   # shown to one decimal
+        self.assertAlmostEqual(loss["lost"], 15 + 35, delta=0.06)   # shown to one decimal
 
     def test_only_validated_beetles_count(self):
         ans = self.answer(self.user, self.roi(self.t_affinis, validated=False), AFFINIS)

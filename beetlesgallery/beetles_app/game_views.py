@@ -282,10 +282,12 @@ def _weight_label(weight):
 def _classify_examples():
     """The worked examples on the How it works page, with today's settings."""
     w = game_scoring.classify_weight()
-    rp = game_scoring.RANK_POINTS
-    over = game.game_setting("GAME_POINTS_OVERREACH", 0.35)
-    genus = sum(rp[r] for r in ("subfamily", "tribe", "genus"))
-    nums = {"overreach": (genus - rp["species"] * over) * w, "genus": genus * w, "species": sum(rp.values()) * w}
+
+    def points(right, named=4):
+        results = {r: i < right for i, r in enumerate(game.RANKS[:named])}
+        return sum(game_scoring.classify_points(results).values()) * w
+
+    nums = {"overreach": points(3), "genus": points(3, named=3), "species": points(4)}
     return {k: _weight_label(round(v, 1)) for k, v in nums.items()}
 
 
@@ -302,14 +304,13 @@ def game_how(request):
         "rank_points": {r: p * game_scoring.classify_weight() for r, p in game_scoring.RANK_POINTS.items()},
         "classify_examples": _classify_examples(), "pair_points": [
             (game_scoring.DEPTH_NAME[d], p) for d, p in sorted(game_scoring.PAIR_POINTS.items())],
-        "wrong": game.game_setting("GAME_POINTS_WRONG_FACTOR", 0.75),
-        "overreach": game.game_setting("GAME_POINTS_OVERREACH", 0.35),
+        "confidence": round(game_scoring.confidence() * 100),
+        "wrong_cost": _weight_label(round(game_scoring.wrong_cost(), 1)),   # what a wrong claim costs, × its points
         "cap": int(game.game_setting("GAME_POINTS_CONSENSUS_CAP", 0.6) * 100),
         "unsure": game.game_setting("GAME_POINTS_UNSURE", 0.25),
         "rank_steps": game_levels.rank_steps(), "ranks_all_level": game_levels.RANKS_ALL_FROM_LEVEL,
         "odd_level": game_levels.game_level("odd"), "identify_level": game_levels.game_level("classify"),
         "select_level": game_levels.game_level("select"),
-        "select_wrong": game.game_setting("GAME_POINTS_SELECT_WRONG", 1.5),
         "odd_weight": _weight_label(game.game_setting("GAME_POINTS_ODD_WEIGHT", 1.5)),
         "odd_skip": game.game_setting("GAME_POINTS_ODD_SKIP", 0.25),
         "difficulty_spread": round(game_scoring.difficulty_spread() * 100),

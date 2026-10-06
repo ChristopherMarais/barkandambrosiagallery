@@ -62,20 +62,19 @@ class TruthPointsTests(ScoringCase):
     def test_how_wrong_matters(self):
         near = self.points(self.answer(self.user, self.roi(self.t_affinis), FERR)).points      # right genus, wrong species
         far = self.points(self.answer(self.staff, self.roi(self.t_affinis), PLAT)).points      # everything wrong
-        self.assertEqual(near, 4.2)       # 1 + 2 + 4 - 8 * 0.35: partial credit, a small penalty for the species
-        self.assertEqual(far, -11.25)     # -(1 + 2 + 4 + 8) * 0.75
+        self.assertEqual(near, -11.667)   # 1 + 2 + 4 - 8 × 2⅓: the wrong species costs k times its points
+        self.assertEqual(far, -35.0)      # -(1 + 2 + 4 + 8) × 2⅓: every rank claimed is wrong
         self.assertGreater(near, far)
 
     def test_partial_credit_is_less_than_being_right_and_less_than_stopping(self):
         right_tribe = dict(AFFINIS, genus="Ambrosiodmus", species="")
         tribe_wrong_genus = self.points(self.answer(self.user, self.roi(self.t_affinis), right_tribe)).points
-        self.assertEqual(tribe_wrong_genus, 1.6)    # 1 + 2 - 4 * 0.35
+        self.assertEqual(tribe_wrong_genus, -6.333)    # 1 + 2 - 4 × 2⅓
         tribe_only = dict(AFFINIS, genus="", species="")
         stopped = self.points(self.answer(self.staff, self.roi(self.t_affinis), tribe_only)).points
         self.assertEqual(stopped, 3.0)
-        self.assertLess(tribe_wrong_genus, stopped)         # guessing past what you know costs a little
-        self.assertGreater(tribe_wrong_genus, 0)            # but the right tribe still earns something
-        self.assertLess(4.2, 7.0)                           # right genus + wrong species < right genus alone < species
+        self.assertLess(tribe_wrong_genus, stopped)         # guessing past what you know costs
+        self.assertLess(tribe_wrong_genus, 0)               # and a wrong rank never pays (#530)
 
     def test_not_sure_costs_a_little(self):
         p = self.points(self.answer(self.user, self.roi(self.t_affinis), skipped=True))
@@ -93,19 +92,19 @@ class IdentificationWeightTests(ScoringCase):
         self.assertEqual(self.points(self.answer(self.user, self.roi(self.t_affinis), AFFINIS)).points, 45.0)
         genus_only = dict(AFFINIS, species="")
         self.assertEqual(self.points(self.answer(self.user, self.roi(self.t_affinis), genus_only)).points, 21.0)
-        self.assertEqual(self.points(self.answer(self.player("x"), self.roi(self.t_affinis), PLAT)).points, -33.75)
+        self.assertEqual(self.points(self.answer(self.player("x"), self.roi(self.t_affinis), PLAT)).points, -105.0)
 
     def test_a_perfect_identification_is_worth_many_similarity_answers(self):
         name = self.points(self.answer(self.user, self.roi(self.t_affinis), AFFINIS)).points
         b = self.roi(self.t_affinis)
         pair = self.points(self.answer(self.player("p"), self.roi(self.t_affinis), mode="pair", roi_b=b, pair="species")).points
-        self.assertGreaterEqual(name / pair, 5)
+        self.assertGreaterEqual(name / pair, 3)   # 45 against the best Similarity answer, 12
 
     def test_the_explanation_shows_the_weighted_points(self):
         self.client.force_login(self.user)
         page = self.client.get("/game/how-it-works/").content.decode()
         self.assertIn("worth 3&times; the points", page)
-        self.assertIn("the exact species 45", page)
+        self.assertIn("the exact species earns 45", page)
 
 
 class PairPointsTests(ScoringCase):
@@ -120,23 +119,23 @@ class PairPointsTests(ScoringCase):
     def test_finer_lines_earn_more(self):
         same_genus = self.pair(self.user, self.t_affinis, self.t_ferr, "genus")
         different = self.pair(self.user, self.t_affinis, self.t_plat, "different")
-        self.assertEqual((same_genus, different), (5.0, 1.0))
+        self.assertEqual((same_genus, different), (7.0, 1.0))
 
     def test_how_far_off_matters(self):
         one_step = self.pair(self.user, self.t_affinis, self.t_ferr, "species")       # same genus, said same species
         three_steps = self.pair(self.user, self.t_affinis, self.t_ferr, "different")  # same genus, said different subfamilies
-        self.assertEqual(one_step, 3.25)       # same genus is right (5), one rung too far costs 5 * 0.35
-        self.assertEqual(three_steps, -3.0)    # calling relatives strangers is plain wrong
+        self.assertEqual(one_step, -4.667)     # same genus (7), less 2⅓ × (12 - 7) for the rung too far: wrong
+        self.assertEqual(three_steps, -7.0)    # calling relatives strangers: 2⅓ per rung off
 
     def test_a_cautious_true_answer_earns_its_rung(self):
         cautious = self.pair(self.user, self.t_affinis, self.t_ferr, "tribe")    # true, but they share the genus
         exact = self.pair(self.user, self.t_affinis, self.t_ferr, "genus")
-        self.assertEqual((cautious, exact), (3.0, 5.0))
+        self.assertEqual((cautious, exact), (4.0, 7.0))
 
     def test_alike_photos_earn_a_bonus(self):
         plain = self.pair(self.user, self.t_affinis, self.t_ferr, "genus")
         alike = self.pair(self.user, self.t_affinis, self.t_ferr, "genus", photographer="J. Hulcr", image_institution="UF")
-        self.assertEqual(alike, 5.0 * 1.25)
+        self.assertEqual(alike, 7.0 * 1.25)
         self.assertGreater(alike, plain)
 
     def test_not_sure(self):
@@ -202,13 +201,18 @@ class AgreementTests(ScoringCase):
         self.assertLess(mine.detail["agreement"]["species"], 0)
 
     def test_it_is_judged_rank_by_rank(self):
-        # a strong player says another species of the same genus: the genus and above still earn
+        # a strong player says another species of the same genus: the genus and above earn, the disputed species
+        # takes back k times what agreeing on it would earn (#530), never below zero in all
         self.answer(self.strong("strong"), self.open_roi, FERR)
         mine = self.points(self.answer(self.user, self.open_roi, AFFINIS))
         agreement = mine.detail["agreement"]
         self.assertGreater(agreement["genus"], 0)
         self.assertLess(agreement["species"], 0)
-        self.assertAlmostEqual(mine.points, 0.6 * (1 + 2 + 4) * agreement["genus"], places=2)
+        k = scoring.wrong_cost()
+        expected = 0.6 * ((1 + 2 + 4) * agreement["genus"] + 8 * k * agreement["species"])
+        self.assertAlmostEqual(mine.points, max(0.0, expected), places=2)
+        stopped = self.points(self.answer(self.staff, self.open_roi, dict(AFFINIS, species="")))
+        self.assertGreater(stopped.points, mine.points)   # stopping at the genus beats guessing the species
 
     def test_disagreement_never_costs_points_on_an_unvalidated_beetle(self):
         self.answer(self.strong("strong"), self.open_roi, AFFINIS)
@@ -233,7 +237,7 @@ class RetroactiveTests(ScoringCase):
         Beetles.objects.filter(pk=roi.pk).update(bbox_is_validated=True)
         call_command("recompute_game_scores", stdout=open("/dev/null", "w"))
         self.assertEqual((AnswerPoints.objects.get(answer=right).points, AnswerPoints.objects.get(answer=right).basis), (15.0, "truth"))
-        self.assertEqual(AnswerPoints.objects.get(answer=wrong).points, -11.25)
+        self.assertEqual(AnswerPoints.objects.get(answer=wrong).points, -35.0)
 
     def test_the_answer_api_scores_straight_away_and_moves_the_total(self):
         self.roi(self.t_affinis)

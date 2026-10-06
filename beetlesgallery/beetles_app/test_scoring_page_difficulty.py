@@ -47,9 +47,9 @@ class ScoringPageDifficultyTests(ScoringCase):
 
     def test_the_defaults_pass_every_check_and_a_wide_spread_is_flagged(self):
         self.assertTrue(all(ok for _, ok, _ in game_tuning.checks()), game_tuning.checks())
-        GameTuning.objects.create(key="GAME_POINTS_DIFFICULTY_SPREAD", value=0.6)
+        GameTuning.objects.create(key="GAME_POINTS_DIFFICULTY_SPREAD", value=0.85)
         failing = [rule for rule, ok, _ in game_tuning.checks() if not ok]
-        self.assertEqual(failing, ["A careless answer still loses on the hardest beetles"])
+        self.assertIn("A careless answer still loses on the hardest beetles", failing)
         GameTuning.objects.filter(key="GAME_POINTS_DIFFICULTY_SPREAD").update(value=1.0)
         game_tuning.forget()
         self.assertIn("Points by difficulty never make a mistake free", [r for r, ok, _ in game_tuning.checks() if not ok])
@@ -60,7 +60,7 @@ class ScoringPageDifficultyTests(ScoringCase):
                                                            ("Hard", 0.9, 1.2, 0.8)])
         rows = {what: cells for _, what, cells in ex["rows"]}
         self.assertEqual(rows["Species correct (every rank)"], [36.0, 45.0, 54.0])
-        self.assertEqual(rows["Wrong subfamily, claimed down to species"], [-40.5, -33.75, -27.0])
+        self.assertEqual(rows["Wrong subfamily, claimed down to species"], [-126.0, -105.0, -84.0])
         self.assertIn('data-testid="difficulty-examples"', self.page())
 
     def test_distributions_with_no_data(self):

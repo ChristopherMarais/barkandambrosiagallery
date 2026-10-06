@@ -148,17 +148,19 @@ class SavedPhotoTests(ClassifyCase):
             self.assertEqual(post.call_args.kwargs["data"]["box_threshold"], expected, sent)
 
     def test_service_problems_come_back_as_a_short_message(self):
-        for kwargs, message in (({"status": 500}, "The AI service returned an error (500)."),
-                                ({"body_status": "error"}, "The AI service could not process this image.")):
+        # one generic message whatever went wrong: the service's details stay in the server log (CodeQL, ca7a6c1)
+        message = "Classification service is temporarily unavailable. Please try again later."
+        for kwargs in ({"status": 500}, {"body_status": "error"}):
             upload = SimpleUploadedFile("a.jpg", b"x", content_type="image/jpeg")
             with mock.patch("requests.post", return_value=fake_response([], **kwargs)):
                 response = self.client.post(reverse("tool_classify"), {"image": upload})
             self.assertEqual((response.status_code, response.json()["message"]), (502, message))
+            self.assertNotIn("500", response.json()["message"])
         with mock.patch("requests.post", side_effect=requests.exceptions.Timeout()):
             upload = SimpleUploadedFile("a.jpg", b"x", content_type="image/jpeg")
             response = self.client.post(reverse("tool_classify"), {"image": upload})
         self.assertEqual(response.status_code, 502)
-        self.assertIn("waking up", response.json()["message"])
+        self.assertEqual(response.json()["message"], message)
         self.assertFalse(ImageAsset.objects.filter(full_path_at_import__startswith="classifier/").exists())
 
 

@@ -52,9 +52,10 @@ class ScoringPageTests(GameCase):
         self.assertEqual(game_tuning.clean("GAME_POINTS_CONSENSUS_CAP", "x")[1], "must be a number")
 
     def test_a_tuning_that_rewards_guessing_is_flagged(self):
-        GameTuning.objects.create(key="GAME_POINTS_ODD_WRONG_FACTOR", value=0.1)
+        GameTuning.objects.create(key="GAME_POINTS_CONFIDENCE", value=0.5)   # a coin flip would break even
         failing = [rule for rule, ok, _ in game_tuning.checks() if not ok]
-        self.assertEqual(failing, ["A blind guess in Imposter Picker loses on average"])
+        self.assertIn("A blind guess in Imposter Picker loses on average", failing)
+        self.assertIn("A claim beyond the truth is wrong, never partly right", failing)
 
     def test_rescore_everyone_runs_in_the_background(self):
         self.client.force_login(self.superuser)
