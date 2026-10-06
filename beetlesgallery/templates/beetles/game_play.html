@@ -152,7 +152,7 @@
   #photos[data-size="16"] .report-chip, #photos[data-size="16"] .zoom-chip { width: 1.5rem; height: 1.5rem; padding: 0; justify-content: center; }
   #photos[data-size="16"] .tap-mark { width: 1.25rem; height: 1.25rem; }
   /* A photo flagged in a grid: greyed out with a "Flagged" badge, and out of play; the rest of the grid carries on */
-  #photos .cell.flagged canvas { opacity: 0.35; filter: grayscale(1); }
+  #photos .cell.flagged canvas, #previous-photos .cell.flagged canvas { opacity: 0.35; filter: grayscale(1); }
   #photos .cell.flagged .frame { pointer-events: none; }
   #photos .cell.flagged .report-chip, #photos .cell.flagged .tap-mark { display: none; }
   .flag-badge { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 3; display: inline-flex; align-items: center; gap: 0.25rem;
@@ -203,17 +203,55 @@
   #chip.lit.s6 { background: #facc15; color: #422006; box-shadow: 0 0 0 1px #ca8a04, 0 0 12px rgba(250,204,21,.9); }
   #chip.pop { animation: chip-pop .6s ease; }
   @keyframes chip-pop { 40% { transform: scale(1.18); } }
-  /* What the other players called the last beetle: stays until closed or the next one replaces it */
-  #community { display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.5rem; padding: 0.4rem 0.4rem 0.4rem 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.75rem;
-               background: #fff; color: #374151; font-size: 0.8125rem; line-height: 1.35; }
-  #community.agree { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
-  #community.hidden { display: none; }
+  /* The review after an answer (#488): it takes the answer's place in the panel until Next; the photos get marks */
+  #review.hidden { display: none; }
+  #panel.reviewing :is(#ranks, #ladder, #odd, #select, #rank-lock) { display: none; }
+  .rv-head { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9375rem; font-weight: 600; color: #111827; }
+  .rv-head .fi { font-size: 1.125rem; line-height: 1; }
+  .rv-good, .rv-yes { color: #16a34a; }
+  .rv-part { color: #d97706; }
+  .rv-bad, .rv-no { color: #dc2626; }
+  .rv-flat { color: #6b7280; }
+  .rv-pill { margin-left: auto; padding: 0.0625rem 0.5rem; border-radius: 9999px; background: #f3f4f6; color: #374151; font-size: 0.6875rem; font-weight: 600; white-space: nowrap; }
+  .rv-table { width: 100%; margin-top: 0.375rem; border-collapse: collapse; font-size: 0.8125rem; color: #111827; }
+  .rv-table th { padding-bottom: 0.125rem; text-align: left; font-size: 0.625rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #9ca3af; }
+  .rv-table td { padding: 0.25rem 0.375rem 0.25rem 0; border-top: 1px solid #f3f4f6; vertical-align: top; }
+  .rv-table td:first-child { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280; }
+  .rv-table .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .rv-table small, .rv-note { display: block; font-size: 0.6875rem; color: #6b7280; }
+  .rv-lines { margin-top: 0.375rem; font-size: 0.8125rem; color: #374151; }
+  .rv-lines > * + * { margin-top: 0.25rem; }
+  /* the marks on the grid tiles: points, a number to find each one in the card, a name to the grid's rank */
+  #game[data-mode="select"] #photos .cell.sel-vote, #game[data-mode="odd"] #photos .cell.odd-pick { outline-color: #9ca3af; }
+  #game[data-mode="odd"] #photos .cell.odd-wrong { outline-color: #dc2626; }
+  #previous-photos .cell.sel-right, #previous-photos .cell.odd-one { outline: 3px solid #16a34a; outline-offset: -3px; }
+  #previous-photos .cell.sel-wrong, #previous-photos .cell.odd-wrong { outline: 3px solid #dc2626; outline-offset: -3px; }
+  #previous-photos .cell.sel-missed { outline: 3px dashed #16a34a; outline-offset: -3px; }
+  #previous-photos .cell.sel-vote, #previous-photos .cell.odd-pick { outline: 3px solid #9ca3af; outline-offset: -3px; }
+  .rv-num, .rv-badge { position: absolute; z-index: 3; display: inline-flex; align-items: center; justify-content: center; pointer-events: none; font-weight: 700; white-space: nowrap; }
+  .rv-num { left: 0.375rem; top: 0.375rem; min-width: 1.375rem; height: 1.375rem; padding: 0 0.3rem; border-radius: 9999px; background: rgba(255,255,255,.92); border: 1px solid #d1d5db; color: #374151; font-size: 0.6875rem; }
+  .rv-badge { left: 50%; bottom: 0.375rem; transform: translateX(-50%); padding: 0.0625rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; }
+  #photos[data-size="16"] :is(.rv-num, .rv-badge) { font-size: 0.625rem; }
+  .rv-badge.up { background: #16a34a; color: #fff; }
+  .rv-badge.down { background: #dc2626; color: #fff; }
+  .rv-badge.flat { background: rgba(255,255,255,.95); border: 1px solid #d1d5db; color: #374151; }
+  /* After Submit the answer is locked in; a slim bar shows while the game waits (sending, or the next photos) */
+  #game.answer-locked #panel:not(.reviewing) :is(#ranks, #ladder) { opacity: 0.55; pointer-events: none; }
+  #game.answer-locked #photos:not(.revealing) .cell:not(.picked):not(.tapped) canvas { opacity: 0.6; }
+  #wait-bar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; height: 3px; overflow: hidden; background: #e5e7eb; }
+  #wait-bar.hidden { display: none; }
+  #wait-bar span { position: absolute; top: 0; bottom: 0; left: -35%; width: 35%; background: #4b5563; animation: wait-slide 1.1s ease-in-out infinite; }
+  @keyframes wait-slide { to { left: 100%; } }
+  @media (prefers-reduced-motion: reduce) { #wait-bar span { animation: none; left: 0; width: 100%; opacity: 0.5; } }
+  /* Back: the same card, with its photos */
+  #previous-photos { flex: 1 1 0; min-height: 0; display: grid; gap: 0.375rem; padding: 0.5rem; background: #f3f4f6;
+                     grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); }
+  #previous-photos .cell { position: relative; min-width: 0; min-height: 0; overflow: hidden; border-radius: 1rem; display: flex; align-items: center; justify-content: center; }
+  #previous-photos canvas { display: block; width: 100%; height: 100%; object-fit: contain; }
   /* After a long session: a gentle, dismissible suggestion to take a break */
   #break-nudge { margin-bottom: 0.5rem; padding: 0.625rem 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.75rem; background: #f9fafb; color: #374151; font-size: 0.8125rem; }
   #break-nudge.hidden { display: none; }
   #break-nudge button { margin-top: 0.5rem; margin-right: 0.5rem; padding: 0.3rem 0.75rem; border-radius: 0.5rem; border: 1px solid #d1d5db; background: #fff; font-weight: 600; font-size: 0.8125rem; }
-  #community button { flex: 0 0 auto; width: 1.75rem; height: 1.75rem; margin-top: -0.125rem; border-radius: 0.5rem; color: inherit; opacity: 0.6; }
-  #community button:hover { opacity: 1; background: rgba(0,0,0,.05); }
   /* On a phone the two photos of Family Ties sit one above the other so each gets the full width */
   @media (max-width: 639px) { #game[data-mode="pair"] #photos { flex-direction: column; } #game[data-mode="pair"] #photos .cell { height: auto; width: 100%; } }
   /* On a wide screen keep the answer buttons a comfortable width in the middle */
@@ -249,7 +287,8 @@
   data-home-url="{% url 'game_home' %}"
   data-taxa-url="{% url 'game_taxa' %}"
   data-prefs-url="{% url 'game_prefs' %}"
-  data-report-url="{% url 'game_report_item' %}">
+  data-report-url="{% url 'game_report_item' %}"
+  data-last-review-url="{{ last_review }}">
 
   <!-- Header: leave any time; your score is on the game home, not here -->
   <header class="flex items-center gap-1 px-2 h-14 border-b border-gray-200 bg-white">
@@ -306,6 +345,7 @@
         <label><span>Contrast</span><input type="range" id="light-contrast" min="50" max="200" step="5" value="100" aria-label="Contrast"></label>
         <button type="button" id="light-reset" class="mt-2 text-xs font-semibold text-gray-600 underline">Reset</button>
       </div>
+      <div id="wait-bar" class="hidden" role="progressbar" aria-label="Loading" data-testid="wait-bar"><span></span></div>
     </div>
 
     <div id="panel">
@@ -313,8 +353,7 @@
         <div><span class="font-semibold" id="break-title">Nice session.</span> <span id="break-text"></span></div>
         <button type="button" id="break-done">Done for today</button><button type="button" id="break-more">Keep going</button>
       </div>
-      <div id="community" class="hidden" role="status" data-testid="community"><span id="community-text" class="flex-1 min-w-0 pt-0.5"></span>
-        <button type="button" id="community-close" aria-label="Close"><i class="fi fi-rr-cross-small"></i></button></div>
+      <div id="review" class="hidden" role="status" aria-live="polite" data-testid="review"></div>
       <div class="space-y-2 hidden" id="ranks">
         {% for rank, label in ranks %}
         <div class="rank-row relative" data-row="{{ rank }}">
@@ -347,7 +386,7 @@
         <button type="button" id="skip"><span id="skip-text">Skip</span><kbd class="kbd">Del</kbd></button>
         <span class="gap"></span>
         <button type="button" id="back" disabled title="Your last beetle">Back<kbd class="kbd">&#9003;</kbd></button>
-        <button type="button" id="submit" disabled>Next<kbd class="kbd">Enter</kbd></button>
+        <button type="button" id="submit" disabled><span id="submit-text">Submit</span><kbd class="kbd">Enter</kbd></button>
       </div>
     </div>
   </div>
@@ -380,8 +419,8 @@
     <div class="p-5 text-gray-700 space-y-4 overflow-y-auto">
       <p class="hidden" data-help-mode="classify">Name it as far as you're sure: subfamily, tribe, genus, species.</p>
       <p class="hidden" data-help-mode="pair">How related are <strong>A</strong> and <strong>B</strong>? Pick the lowest line you're sure of.</p>
-      <p class="hidden" data-help-mode="odd">All but one share a name. Tap the one that doesn't, then <strong>Next</strong>. The grid grows as you get better.</p>
-      <p class="hidden" data-help-mode="select">Tap every beetle of the group named below the photos, then <strong>Next</strong>. A wrong tap costs, a missed one doesn't. The grid grows as you get better.</p>
+      <p class="hidden" data-help-mode="odd">All but one share a name. Tap the one that doesn't, then <strong>Submit</strong>. The grid grows as you get better.</p>
+      <p class="hidden" data-help-mode="select">Tap every beetle of the group named below the photos, then <strong>Submit</strong>. A wrong tap costs, a missed one doesn't. The grid grows as you get better.</p>
       <ul class="list-disc pl-5 space-y-2 text-sm" data-testid="help-rules">
         <li>Answer only as far as you're sure: a wrong guess costs more than stopping early.</li>
         <li>Unsure? <strong>Skip</strong> <span data-help-mode="classify pair">costs very little</span><span class="hidden" data-help-mode="odd select">earns a little</span>. Reporting a bad photo costs nothing.</li>
@@ -393,17 +432,15 @@
     </div>
   </div>
 
-  <!-- Back: your last beetle and what you answered (it is saved; this is to look, not to change it) -->
+  <!-- Back: your last beetle's review, the same card as after the answer (it is saved; this is to look, not to change it) -->
   <div id="previous" class="hidden absolute inset-0 z-10 bg-white flex flex-col" data-testid="previous">
     <div class="flex items-center gap-2 px-2 h-14 border-b border-gray-200">
       <button type="button" id="close-previous" class="icon-btn" aria-label="Current beetle"><i class="fi fi-rr-cross text-lg"></i></button>
       <h2 class="font-semibold text-gray-900">Your last beetle</h2>
     </div>
-    <div id="previous-photos" class="flex-1 min-h-0 flex items-center justify-center gap-2 p-2 bg-gray-100"></div>
-    <div class="p-4 space-y-2">
-      <p class="text-gray-900"><span class="text-gray-500">You said:</span> <strong id="previous-answer"></strong></p>
-      <p id="previous-truth" class="text-sm text-gray-900" data-testid="previous-truth"></p>
-      <p id="previous-community" class="text-sm text-gray-600"></p>
+    <div id="previous-photos"></div>
+    <div class="p-4 space-y-3 overflow-y-auto max-h-[60%]">
+      <div id="previous-review" data-testid="previous-review"></div>
       <button type="button" id="previous-done" class="btn-primary w-full h-12 text-base rounded-xl">Current beetle</button>
     </div>
   </div>
@@ -501,7 +538,11 @@
 
   let roundId = null;
   let item = null;
-  let busy = false;
+  // After Submit the answer is locked in until the next beetle shows: "send" (on its way), "review" (the card is up,
+  // the main button says Next), "next" (the next photos are loading). "answer": open for answering.
+  let phase = "answer";
+  let busy = false;              // phase !== "answer": the beetle on screen can't be changed or answered again
+  let upcoming = null;           // what comes after the review: the next beetle, or the end of the feed
   let shownAt = 0;
   let readyAt = 0;               // performance.now() before which answers are ignored (button mashing)
   const MASH_GUARD_MS = 400;
@@ -825,29 +866,8 @@
   $("break-more").addEventListener("click", () => $("break-nudge").classList.add("hidden"));
   $("break-done").addEventListener("click", () => { $("break-nudge").classList.add("hidden"); $("exit").click(); });
 
-  // ---------- after each answer: what others said, and the combo ----------
+  // ---------- the combo ----------
   let combo = 0;
-  // c.text says how far players ranked above you agree with you; c.experts what proven experts said, c.model what the
-  // species classifier leans to (game_views._community). One line each.
-  function communityLines(c) {
-    return [c.players ? c.text : "you're the first to name it.", c.experts, c.model].filter(Boolean);
-  }
-  function linesOf(lines) {
-    const out = [];
-    lines.forEach((line, i) => { if (i) out.push(document.createElement("br")); out.push(line); });
-    return out;
-  }
-  function showCommunity(c) {
-    if (!c) return;
-    const lines = communityLines(c);
-    lines[0] = "Last beetle: " + lines[0];
-    // green only when it means something: everyone ahead of you who went that far agrees
-    $("community").classList.toggle("agree", c.agree === true);
-    $("community-text").replaceChildren(...linesOf(lines));
-    $("community").classList.remove("hidden");
-  }
-  $("community-close").addEventListener("click", () => $("community").classList.add("hidden"));
-
   // Beetles answered in a row: 2 is a start, 20 is perfect
   const COMBO_PERFECT = 20;
   function bumpCombo(answered) {
@@ -1034,8 +1054,9 @@
       renderPrefs(data.prefs);
       $("focus-line").textContent = data.focus ? "Focus: " + data.focus.replace(/^[^:]+: /, "") : "";
       $("focus-line").classList.toggle("hidden", !data.focus || !!$("toolbar"));
-      await showItem(data.item);
-      feedNotes(data);
+      upcoming = null;
+      await present(data.item);
+      feedNotes(data);   // the feed had to change game: say why
     } catch (e) {
       $("loading").classList.add("hidden");
       showError(e.message);
@@ -1044,13 +1065,13 @@
 
   async function showItem(next) {
     item = next;
-    setMode(item.mode || PAGE_MODE);
     let images;
     try {
       images = await Promise.all(item.images.map((im) => loadImage(im.url)));
     } catch (e) {
       images = null;
     }
+    setMode(item.mode || PAGE_MODE);   // once the photos are in: the last beetle (and its review) keeps its layout till then
     const holder = $("photos");
     holder.innerHTML = "";
     holder.classList.remove("revealing");
@@ -1165,166 +1186,267 @@
     if (MODE === "odd" && window.gameTour && window.gameTour.unlocked) {
       // the first time: how to play it (once on this device)
       setTimeout(() => window.gameTour.unlocked([{ key: "odd-intro", el: "photos", text:
-        "Odd One Out: all but one of these share a " + item.rank + ". Tap the one that doesn't, then Next. Not sure? Skip earns a little, a wrong pick costs." }]), 400);
+        "Odd One Out: all but one of these share a " + item.rank + ". Tap the one that doesn't, then Submit. Not sure? Skip earns a little, a wrong pick costs." }]), 400);
     }
     if (MODE === "select" && window.gameTour && window.gameTour.unlocked) {
       setTimeout(() => window.gameTour.unlocked([{ key: "select-intro", el: "photos", text:
-        "Select all: tap every beetle of the group named below, then Next. Leave out any you're unsure of: a wrong tap costs, a missed one doesn't." }]), 400);
+        "Select all: tap every beetle of the group named below, then Submit. Leave out any you're unsure of: a wrong tap costs, a missed one doesn't." }]), 400);
     }
     shownAt = Date.now();
     readyAt = performance.now() + MASH_GUARD_MS;
     prefetch(item.prefetch);
   }
 
+  // ---------- answering: Submit locks the answer in, the review shows what it earned, Next brings the next beetle ----------
+  let waitTimer = null;
+  function waiting(on) {   // the slim bar, for dead time; not for a blink (a fast answer shows nothing)
+    clearTimeout(waitTimer);
+    if (on) waitTimer = setTimeout(() => $("wait-bar").classList.remove("hidden"), 150);
+    else $("wait-bar").classList.add("hidden");
+  }
+  function setPhase(p) {
+    phase = p;
+    busy = p !== "answer";
+    root.classList.toggle("answer-locked", busy);
+    if (busy && document.activeElement && $("panel").contains(document.activeElement)) document.activeElement.blur();
+    waiting(p === "send" || p === "next");
+    $("skip").disabled = busy;
+    updateBack();
+    updateSubmit();
+  }
+
   async function send(extra) {
     // Button mashing: nothing counts until the new beetle has been on screen for a moment
     if (busy || performance.now() < readyAt) return;
-    busy = true;
-    const answeredItem = item;
-    $("submit").disabled = true;
-    $("skip").disabled = true;
+    const skipping = !!extra.skipped || extra.pair_answer === "unsure";
+    setPhase("send");
     showError("");
+    let data;
     try {
-      const data = await api(
+      data = await api(
         root.dataset.answerUrl.replace("00000000-0000-0000-0000-000000000000", roundId),
         Object.assign({ index: item.index, elapsed_ms: Date.now() - shownAt }, extra)
       );
-      answered += 1;
-      if (data.chip) goalMet = !!data.chip.goal_met;
-      noteAnswerForBreak();
-      if (data.celebrate) confetti(data.celebrate, data.celebrate_size);
-      updateChip(data.chip);
-      if (data.prefs) renderPrefs(data.prefs);   // a new level: its unlocks show (and work) straight away
-      (data.events || []).forEach(toast);
-      showCommunity(data.community);
-      rememberPrevious(answeredItem, extra, data.community, data.reveal, data.verified);
-      bumpCombo(!extra.skipped && extra.pair_answer !== "unsure");
-      if (data.reveal) await (answeredItem.mode === "select" ? revealSelect(data.reveal) : revealOdd(data.reveal, extra));
-      feedNotes(data);   // the next batch had to change game, or the feed ended: say why
-      if (data.done) {
-        $("review-link").href = data.review_url;
-        $("sum-round").textContent = answered;
-        $("sum-total").textContent = data.summary.labelled;
-        $("sum-accuracy").textContent = data.summary.accuracy === null ? "–" : Math.round(data.summary.accuracy * 100) + "%";
-        show("caughtup");
-      } else {
-        if (data.round) roundId = data.round;   // the feed moved on to its next batch; the player never notices
-        await showItem(data.item);
-      }
     } catch (e) {
-      if (e.status === 409) {
-        // Out of step (another tab, double tap): pick the feed up where the server has it.
-        busy = false;
-        await startFeed();
+      setPhase("answer");   // unlocked again: change the answer, or try again
+      if (e.status === 409) { await startFeed(); return; }   // out of step (another tab, a double tap): pick up where the server is
+      showError(e.message);
+      return;
+    }
+    answered += 1;
+    if (data.chip) goalMet = !!data.chip.goal_met;
+    noteAnswerForBreak();
+    updateChip(data.chip);
+    if (data.prefs) renderPrefs(data.prefs);   // a new level: its unlocks show (and work) straight away
+    bumpCombo(!skipping);
+    upcoming = data;
+    if (data.review) rememberPrevious(data.review);
+    // A skip goes straight on; anything else stops on its review. Its confetti first, so a level-up's burst (a toast) wins.
+    if (!skipping && data.review) showReview(data.review);
+    (data.events || []).forEach(toast);
+    if (skipping || !data.review) await next();
+  }
+
+  // Next, on the review: the next beetle. Its photos have been loading meanwhile; if they aren't in yet the bar shows
+  // and the review stays up (never a blank screen).
+  async function next() {
+    const data = upcoming;
+    if (!data) return;
+    upcoming = null;
+    setPhase("next");
+    feedNotes(data);   // the next batch had to change game, or the feed ended: say why
+    if (data.done) {
+      $("review-link").href = data.review_url;
+      $("sum-round").textContent = answered;
+      $("sum-total").textContent = data.summary.labelled;
+      $("sum-accuracy").textContent = data.summary.accuracy === null ? "–" : Math.round(data.summary.accuracy * 100) + "%";
+      endReview();
+      setPhase("answer");
+      show("caughtup");
+      return;
+    }
+    if (data.round) roundId = data.round;   // the feed moved on to its next batch; the player never notices
+    await present(data.item);
+  }
+
+  // Show a beetle and open it for answering
+  async function present(next) {
+    await showItem(next);
+    endReview();
+    setPhase("answer");
+  }
+
+  function showReview(review) {
+    renderReview(review, $("review"));
+    $("review").classList.remove("hidden");
+    $("panel").classList.add("reviewing");
+    $("panel").scrollTop = 0;
+    if (review.grid) {
+      $("photos").classList.add("revealing");
+      markTiles($("photos").querySelectorAll(".cell"), review);
+    }
+    if (review.celebrate) confetti(review.celebrate.kind, review.celebrate.size);
+    // the next photos start loading now (usually they are in already; at the end of a batch they are not)
+    if (upcoming && upcoming.item) prefetch(upcoming.item.images.map((im) => im.url));
+    setPhase("review");
+    readyAt = performance.now() + MASH_GUARD_MS;   // Enter pressed three times fast never skips the review
+  }
+  function endReview() {
+    $("review").classList.add("hidden");
+    $("review").replaceChildren();
+    $("panel").classList.remove("reviewing");
+  }
+
+  // ---------- the review card (game_answer_review.py builds it): after an answer, and again under Back ----------
+  function node(tag, cls, ...kids) {
+    const el = document.createElement(tag);
+    if (cls) el.className = cls;
+    el.append(...kids.filter((k) => k !== null && k !== undefined && k !== ""));
+    return el;
+  }
+  const taxonName = (name, rank) => node(rank === "genus" || rank === "species" ? "em" : "span", "", name);
+  const pts = (n) => (n > 0 ? "+" : n < 0 ? "−" : "") + digitGroupsText(Math.abs(n), Number.isInteger(n) ? 0 : 1);
+  function tick(ok, yes, no) {   // green tick, red cross, or nothing when it can't be said
+    if (ok !== true && ok !== false) return null;
+    const i = node("i", ok ? "fi fi-rr-check rv-yes" : "fi fi-rr-cross-small rv-no");
+    i.setAttribute("aria-label", ok ? yes : no);
+    return i;
+  }
+  const VERDICT_ICON = { right: "fi-rr-check rv-good", partly: "fi-rr-minus rv-part", wrong: "fi-rr-cross-small rv-bad" };
+
+  function renderReview(r, holder) {
+    const icon = r.skipped ? "fi-rr-forward rv-flat" : VERDICT_ICON[r.verdict] || "fi-rr-hourglass rv-flat";
+    const head = node("p", "rv-head", node("i", "fi " + icon), node("span", "", r.headline),
+                      r.again ? node("span", "rv-pill", "Seen before") : null);
+    const body = r.classify ? classifyCard(r.classify) : r.pair ? pairCard(r.pair) : r.grid ? gridCard(r) : [];
+    holder.replaceChildren(head, ...body);
+  }
+
+  // Identification: rank by rank, yours next to the truth and its points, or next to the players and IBBI-AI
+  function opinion(v, withVotes) {
+    if (!v) return "—";
+    const how = v.sure + "%" + (withVotes ? " · " + v.votes + (v.votes === 1 ? " vote" : " votes") : "") +
+                (v.experts ? " · " + v.experts + (v.experts === 1 ? " expert" : " experts") : "");
+    return [v.name, " ", tick(v.agrees, "agrees with you", "differs from you"), node("small", "", how)];
+  }
+  function cell(content, cls) {
+    const td = node("td", cls || "");
+    td.append(...[].concat(content).filter((k) => k !== null && k !== undefined));
+    return td;
+  }
+  function classifyCard(c) {
+    const truth = !!c.truth;
+    const head = node("tr", "", node("th", ""), node("th", "", "You said"),
+                      node("th", "", truth ? "Answer" : "Players"), node("th", truth ? "num" : "", truth ? "Pts" : "IBBI-AI"));
+    const rows = c.ranks.map((r) => node("tr", "", cell(r.rank),
+      cell(r.yours ? taxonName(r.yours, r.rank) : "—"),
+      truth ? cell([r.truth ? taxonName(r.truth, r.rank) : "—", " ", tick(r.state === "right" ? true : r.state ? false : null, "correct", "wrong")])
+            : cell(opinion(r.players, true)),
+      truth ? cell(r.state === "right" || r.state === "wrong" ? pts(r.points) : r.state ? "0" : "", "num")
+            : cell(opinion(r.ai, false))));
+    const out = [node("table", "rv-table", node("thead", "", head), node("tbody", "", ...rows))];
+    if (truth) out.push(node("p", "rv-note", "Name: ", taxonName(c.truth.name, c.truth.rank), " · " + c.truth.tier));
+    else if (!c.players) out.push(node("p", "rv-note", "No other players have named it yet."));
+    return out;
+  }
+
+  // Similarity: your rung, and the true one with both names, or what players and IBBI-AI make of the open one
+  const PAIR_NOTE = { cautious: "True, but they are closer relatives than that.", too_close: "They are not that closely related.",
+                      wrong: "Related beetles called strangers, or the other way round." };
+  function pairCard(p) {
+    const lines = [node("p", "", "You said: ", node("strong", "", p.said))];
+    if (p.truth) lines.push(node("p", "", "Answer: ", node("strong", "", p.truth)), p.state !== "right" && PAIR_NOTE[p.state] ? node("p", "rv-note", PAIR_NOTE[p.state]) : null);
+    p.sides.forEach((s) => {
+      if (s.validated) { lines.push(node("p", "", node("strong", "", s.letter + ": "), taxonName(s.name, s.rank), " · " + s.tier)); return; }
+      lines.push(node("p", "", node("strong", "", s.letter + ": "), "not checked yet"));
+      [["Players", s.players], ["IBBI-AI", s.ai]].forEach(([who, v]) => {
+        if (!v) return;
+        const how = v.sure + "%" + (v.votes ? ", " + v.votes + (v.votes === 1 ? " vote" : " votes") : "");
+        lines.push(node("p", "rv-note", who + ": ", taxonName(v.name, v.rank), " (" + how + ")",
+                        v.rung ? " → " + v.rung + " " : "", tick(v.agrees, "agrees with you", "differs from you")));
+      });
+    });
+    return [node("div", "rv-lines", ...lines.filter(Boolean))];
+  }
+
+  // Odd One Out and Select all: the marks are on the photos; the card says what they mean, and what players and
+  // IBBI-AI say about the beetles nobody has checked yet (numbered as on the photos)
+  function gridCard(r) {
+    const g = r.grid, odd = r.mode === "odd";
+    const lines = [];
+    if (odd && g.odd_name) lines.push(node("p", "", "The odd one: ", taxonName(g.odd_name, g.rank), " · the rest: ", taxonName(g.target, g.rank)));
+    if (!odd) lines.push(node("p", "", "Tap every ", taxonName(g.target, g.rank)));
+    lines.push(node("p", "rv-note", odd ? "Green: the odd one. Red: your pick, one of the rest. Grey: your pick, not checked yet."
+                                        : "Green: in it, tapped. Red: tapped, not in it. Dashed: in it, left out. Grey: your tap on one not checked yet."));
+    g.tiles.forEach((t, i) => {
+      if (!t || t.validated || !(t.ai || t.players)) return;
+      const chosen = odd ? i === g.pick : t.state === "vote";
+      const views = [["IBBI-AI", t.ai], ["players", t.players]].filter(([, v]) => v)
+        .map(([who, v]) => who + " " + (v.in ? "in it" : "says " + v.name) + " (" + v.sure + "%" + (v.votes ? ", " + v.votes + (v.votes === 1 ? " vote" : " votes") : "") + ")");
+      const outlook = t.pays === true ? (chosen ? "earns points once confirmed" : odd ? "picking it would earn points once confirmed" : "a tap would earn points once confirmed")
+                    : t.pays === false && chosen ? "may cost points once confirmed" : "";
+      lines.push(node("p", "rv-note", node("strong", "", (i + 1) + (chosen ? " (yours)" : "") + ": "), views.join(" · ") + (outlook ? ". " + outlook[0].toUpperCase() + outlook.slice(1) + "." : "")));
+    });
+    return [node("div", "rv-lines", ...lines)];
+  }
+
+  // The marks on the grid tiles (live, or under Back): the colours, each tile's number and points, names to the grid's rank
+  const MARK = { select: { right: "sel-right", wrong: "sel-wrong", missed: "sel-missed", vote: "sel-vote" },
+                 odd: { right: "odd-one", odd: "odd-one", wrong: "odd-wrong", pick: "odd-pick" } };
+  function markTiles(cells, review) {
+    const g = review.grid;
+    if (!g) return;
+    cells.forEach((cellEl, i) => {
+      const t = g.tiles[i];
+      cellEl.classList.remove("picked", "tapped", "key-cursor");
+      if (!t) return;
+      if (t.state === "flagged") {   // a photo flagged in the grid: out of play, as it was while answering
+        cellEl.classList.add("flagged");
+        if (!cellEl.querySelector(".flag-badge")) cellEl.appendChild(node("span", "flag-badge", node("i", "fi fi-rr-flag"), "Flagged"));
         return;
       }
-      showError(e.message);
-    } finally {
-      busy = false;
-      $("skip").disabled = false;
-      updateSubmit();
-    }
-  }
-
-  // ---------- Odd One Out: after answering, which one was odd ----------
-  const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-  // "Odd one: Ipini · the rest: Xyleborini", genus and species names in italics
-  function oddLine(r) {
-    if (!r.odd_name || !r.group) return [];
-    const name = (text) => { const el = document.createElement(r.rank === "genus" || r.rank === "species" ? "em" : "span"); el.textContent = text; return el; };
-    return ["Odd one: ", name(r.odd_name), " · the rest: ", name(r.group)];
-  }
-  async function revealOdd(r, extra) {
-    $("photos").classList.add("revealing");
-    const cell = $("photos").querySelectorAll(".cell")[r.odd];
-    if (cell) {
-      cell.classList.add("odd-one");
-      const tag = document.createElement("span");
-      tag.className = "odd-name";
-      tag.textContent = r.odd_name || "Odd one";
-      cell.appendChild(tag);
-    }
-    $("odd-result").replaceChildren(...oddLine(r));
-    // long enough to see it, a little longer when the pick was another one
-    await pause(reduceMotion ? 900 : extra.pick === r.odd ? 1100 : 2000);
-  }
-
-  // ---------- Select all: after answering, which were members ----------
-  const SELECT_CLASS = { right: "sel-right", wrong: "sel-wrong", missed: "sel-missed" };
-  function selectLine(r) {
-    if (!r.members) return [];
-    return ["Found " + r.right + " of " + r.members + (r.wrong ? " · " + r.wrong + " wrong" : "")];
-  }
-  async function revealSelect(r) {
-    $("photos").classList.add("revealing");
-    $("photos").querySelectorAll(".cell").forEach((cell, i) => {
-      const cls = SELECT_CLASS[r.tiles[i]];
-      if (cls) { cell.classList.remove("tapped"); cell.classList.add(cls); }
+      const mark = (MARK[review.mode] || {})[t.state];
+      if (mark) cellEl.classList.add(mark);
+      cellEl.appendChild(node("span", "rv-num", String(i + 1)));
+      const badge = t.points ? [pts(t.points), t.points > 0 ? "up" : "down"] : t.state === "missed" ? ["missed", "flat"]
+                  : t.state === "vote" || t.state === "pick" ? ["vote", "flat"] : null;
+      if (badge) cellEl.appendChild(node("span", "rv-badge " + badge[1], badge[0]));
+      if (t.name && (t.state === "odd" || t.state === "right" && review.mode === "odd" || t.state === "wrong"))
+        cellEl.appendChild(node("span", "odd-name", t.name));
     });
-    $("select-result").replaceChildren(...selectLine(r));
-    await pause(reduceMotion ? 1200 : 2200);   // nine photos: a little longer to look
   }
 
-  // ---------- Back: your last beetle and what you said ----------
-  let previous = null;
-  function describeAnswer(extra) {
-    if (extra.reported) return "Reported";
-    if (extra.skipped || extra.pair_answer === "unsure") return "Skipped";
-    if (extra.pick !== undefined) return "The one with the dark ring";
-    if (extra.picks) return extra.picks.length + " tapped";
-    if (extra.pair_answer) {
-      const rung = rungs.find((r) => r.dataset.choice === extra.pair_answer);
-      return rung ? rung.firstChild.textContent.trim() : extra.pair_answer;
-    }
-    const names = RANKS.map((r) => extra[r]).filter(Boolean);
-    return names.length ? names.join(" › ") : "Skipped";
-  }
-  function rememberPrevious(it, extra, community, reveal, verified) {
-    previous = { item: it, answer: describeAnswer(extra), community, reveal, verified: verified || [], pick: extra.pick, picks: extra.picks || [] };
-    if (reveal && extra.pick !== undefined && extra.pick === reveal.odd) previous.answer = "The odd one";
-    $("back").disabled = false;
-  }
+  // ---------- Back: your last beetle's review ----------
+  let previous = null;                                  // the last answer's review, from memory...
+  let previousUrl = root.dataset.lastReviewUrl || "";   // ...or, after a reload, where to fetch it
+  function rememberPrevious(review) { previous = review; previousUrl = ""; }
+  function updateBack() { $("back").disabled = busy || !(previous || previousUrl); }
   async function showPrevious() {
-    if (!previous) return false;
-    const box = $("previous-photos");
-    const odd = previous.item.mode === "odd" || previous.item.mode === "select";
-    box.innerHTML = "";
-    // Odd One Out: the same grid, your pick ringed dark and the odd one green
-    box.className = odd ? "flex-1 min-h-0 grid gap-2 p-2 bg-gray-100 auto-rows-fr " + (previous.item.images.length > 4 ? "grid-cols-3" : "grid-cols-2")
-                        : "flex-1 min-h-0 flex items-center justify-center gap-2 p-2 bg-gray-100";
-    previous.item.images.forEach((im, i) => {
-      const canvas = document.createElement("canvas");
-      canvas.className = "max-h-full max-w-full rounded-2xl";
-      if (odd) {
-        let ring = previous.reveal && i === previous.reveal.odd ? " ring-4 ring-green-600" : previous.pick === i ? " ring-4 ring-gray-700" : "";
-        if (previous.item.mode === "select" && previous.reveal) {   // the same colours as after answering
-          const state = previous.reveal.tiles[i];
-          ring = { right: " ring-4 ring-green-600", wrong: " ring-4 ring-red-600", missed: " outline-dashed outline-4 outline-green-600 -outline-offset-4",
-                   vote: " ring-4 ring-gray-700" }[state] || "";
-        }
-        canvas.className = "w-full h-full min-h-0 object-contain rounded-2xl" + ring;
+    if (busy) return false;   // never over a review in progress
+    if (!previous && previousUrl) {
+      try {
+        previous = (await api(previousUrl)).review;
+      } catch (e) {
+        showError(e.message);
       }
-      box.appendChild(canvas);
-      loadImage(im.url).then((img) => drawCrop(canvas, img, im.box)).catch(() => {});
-      if (previous.item.images.length === 2) canvas.title = i === 0 ? "A" : "B";
-    });
-    $("previous-answer").textContent = previous.answer;
-    // A validated beetle: its true name and how reliable it is (#424), "A: ... · B: ..." for the two of Similarity
-    const truth = [];
-    previous.verified.forEach((v, i) => {
-      if (truth.length) truth.push(document.createElement("br"));
-      const label = previous.verified.length > 1 ? (i === 0 ? "A: " : "B: ") : "Verified: ";
-      if (!v) { truth.push(label + "not verified yet"); return; }
-      const name = document.createElement(v.rank === "species" || v.rank === "genus" ? "em" : "span");
-      name.textContent = v.name;
-      truth.push(label, name, " · " + v.tier);
-    });
-    $("previous-truth").replaceChildren(...truth);
-    $("previous-community").replaceChildren(...(previous.community ? linesOf(communityLines(previous.community)) : []));
-    if (odd && previous.reveal) {
-      $("previous-community").replaceChildren(...(previous.item.mode === "select"
-        ? ["Tap every " + previous.reveal.target + ". ", ...selectLine(previous.reveal)] : oddLine(previous.reveal)));
+      previousUrl = "";
+      updateBack();
+      if (busy) return false;
     }
+    if (!previous) return false;
+    const box = $("previous-photos"), n = previous.images.length;
+    box.style.setProperty("--cols", n > 2 ? Math.ceil(Math.sqrt(n)) : n);
+    const cells = previous.images.map((im, i) => {
+      const c = node("div", "cell");
+      const canvas = document.createElement("canvas");
+      c.appendChild(canvas);
+      if (n === 2) c.appendChild(node("span", "rv-num", i === 0 ? "A" : "B"));
+      if (im) loadImage(im.url).then((img) => drawCrop(canvas, img, im.box)).catch(() => {});
+      return c;
+    });
+    box.replaceChildren(...cells);
+    markTiles(cells, previous);
+    renderReview(previous, $("previous-review"));
     $("previous").classList.remove("hidden");
     return true;
   }
@@ -1340,7 +1462,11 @@
   $("skip").addEventListener("click", () => {
     send(MODE === "pair" ? { pair_answer: "unsure" } : { skipped: true });
   });
-  $("submit").addEventListener("click", () => send(currentAnswer()));
+  // The main button: Submit while answering, Next on the review
+  $("submit").addEventListener("click", () => {
+    if (phase === "review") { if (performance.now() >= readyAt) next(); }
+    else send(currentAnswer());
+  });
 
   // Leave: close the feed so the answers count, show how the sitting went, then the game home has the score.
   let leaving = false;
@@ -1350,7 +1476,8 @@
     let data = null;
     try {
       data = await Promise.race([
-        api(root.dataset.exitUrl, { round: roundId, since: openedAt }),
+        // on a review that ended a batch, the next batch is the open one
+        api(root.dataset.exitUrl, { round: (upcoming && upcoming.round) || roundId, since: openedAt }),
         new Promise((resolve) => setTimeout(() => resolve(null), 2500)),
       ]);
     } catch (e) { /* the home page closes anything left open */ }
@@ -1389,7 +1516,7 @@
   let pairChoice = null;
   const rungs = Array.from(document.querySelectorAll(".rung"));
   function setRung(index) {
-    if (index < 0 || index >= rungs.length || rungs[index].classList.contains("locked")) return;
+    if (busy || index < 0 || index >= rungs.length || rungs[index].classList.contains("locked")) return;
     pairChoice = rungs[index].dataset.choice;
     rungs.forEach((r, i) => {
       r.classList.toggle("selected", i === index);
@@ -1486,6 +1613,7 @@
 
   Object.entries(selects).forEach(([rank, select]) => {
     select.addEventListener("change", () => {
+      if (busy) { select.value = pick[rank]; return; }   // locked in after Submit
       const v = select.value;
       if (rank === "subfamily") pick = { subfamily: v, tribe: "", genus: "", species: "" };
       if (rank === "tribe") pick = { subfamily: pick.subfamily, tribe: v, genus: "", species: "" };
@@ -1541,6 +1669,7 @@
     });
   }
   function openFinder(rank, text) {
+    if (busy) return;
     if (finding && finding !== rank) closeFinder();
     finding = rank;
     findActive = 0;
@@ -1694,7 +1823,11 @@
     return MODE === "classify" ? Object.assign({}, pick) : { pair_answer: pairChoice };
   }
 
+  // Submit while answering (once there is an answer), Next on the review (off while the next beetle loads)
   function updateSubmit() {
+    const onReview = phase === "review" || phase === "next";
+    $("submit-text").textContent = onReview ? "Next" : "Submit";
+    if (onReview) { $("submit").disabled = phase === "next"; return; }
     const ready = MODE === "classify" ? RANKS.some((r) => pick[r]) : MODE === "odd" ? oddPick !== null
       : MODE === "select" ? tapped.size > 0 : !!pairChoice;
     $("submit").disabled = busy || !ready;
@@ -1736,7 +1869,8 @@
     // Back once shows your last beetle; back again (from there) leaves
     if (!$("previous").classList.contains("hidden")) { hidePrevious(); $("exit").click(); return; }
     if (closeOverlays()) return;
-    if (previous) { showPrevious(); return; }
+    if (busy) { $("exit").click(); return; }   // the review on screen is already your last beetle
+    if (previous || previousUrl) { showPrevious(); return; }
     $("exit").click();
   });
 
@@ -1744,7 +1878,7 @@
   //   arrows                     WASD
   //   Up/Down: rank or line      W/S: rank or line
   //   Left/Right: change it      A/D: change it
-  //   Enter or Space: Next       Delete or End (or X): Skip       Backspace (or Z): Back, your last beetle
+  //   Enter or Space: Submit, then Next (on the review)    Delete or End (or X): Skip    Backspace (or Z): Back, your last beetle
   //   Home (or Q, V): whole photo    Page Up (or E, L): Lighting    Page Down (or R): Report    Esc: close, or exit
   // A letter typed on a focused list still searches it (the lists keep their own keys).
   function isTyping(el) { return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable); }
@@ -1807,8 +1941,8 @@
     if (!pressed) return;
     e.preventDefault();   // also keeps a focused list from opening, and Space from scrolling
     if ((pressed === "next" || pressed === "skip") && e.repeat) return;   // a held key is not a burst of answers
-    // Select all: Space taps the beetle the arrows are on (Enter is Next)
-    if (MODE === "select" && key === " ") { if (keyCursor !== null) toggleTile(keyCursor); return; }
+    // Select all: Space taps the beetle the arrows are on (Enter is Submit); on the review it is Next, as everywhere
+    if (MODE === "select" && key === " " && !busy) { if (keyCursor !== null) toggleTile(keyCursor); return; }
     if (pressed === "next") { if (!$("submit").disabled) $("submit").click(); }
     else if (pressed === "skip") { if (!$("skip").disabled) $("skip").click(); }
     else if (pressed === "back") { if (!$("back").disabled) showPrevious(); }
@@ -1821,6 +1955,7 @@
       }
     }
     else if (pressed === "light") { if (!$("light-btn").classList.contains("hidden")) toggleLight(); }
+    else if (busy) { /* locked in after Submit: no more changes */ }
     else if (MODE === "odd" || MODE === "select") {
       // move around the grid, over flagged photos; in Odd One Out the first press picks the first beetle
       const count = item ? item.images.length : 0;

@@ -20,7 +20,7 @@
     { el: "find-btn-genus", text: "Long list? Tap the magnifier, or just start typing, to search it." },
     { el: "skip", text: "Not sure? Skip it. It costs very little." },
     { el: "back", text: "Back shows your last beetle and what you answered." },
-    { el: "submit", text: "Next saves your answer and brings the next beetle. Naming a beetle earns the most points, but a sure tribe beats a wrong genus." },
+    { el: "submit", text: "Submit locks in your answer and shows what it earned; Next brings the next beetle. Naming a beetle earns the most points, but a sure tribe beats a wrong genus." },
     { el: "chip", text: "Beetles today against your daily goal. The flame is your streak: days in a row you reached the goal." },
     { el: "level-chip", text: "Your level and points. New levels unlock more of the game." },
     { el: "open-help", text: "How to play: the rules in short, any time." },

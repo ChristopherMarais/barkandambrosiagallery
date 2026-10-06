@@ -292,9 +292,11 @@ Full rules for players are on the "How scoring works" page (`/game/how-it-works/
 
 ## Update: the quick loop
 
-- **After each Name That Beetle answer** a small card says what other players said about that beetle (their latest
-  answer each, never the truth): the most common name at the most specific rank most of them reached, how many,
-  and whether you agree (green only when you do). The first to name a beetle is told so.
+- **After each answer** (#488) the main button changes from **Submit** to **Next** and a review takes the answer's
+  place: on a validated beetle the true name, its tier and the points rank by rank (tile by tile in the grid games,
+  names only to the grid's rank); on one nobody has validated yet what the other players (reliability-weighted, with
+  the proven experts among them) and IBBI-AI say it is, with how sure they are. The confetti follows the points.
+  Skip goes straight on; **Back** shows the last review again, also after a reload.
 - **Before answering** a beetle others have named shows "Named by N other players" (the count only, so nobody is led).
 - **Beetles others named come first**: about half (`GAME_PEER_SHARE`) of the unvalidated beetles in a batch are ones
   1 to `GAME_PEER_MAX_OTHERS` (4) other players have named and you have not, so names get second and third opinions.

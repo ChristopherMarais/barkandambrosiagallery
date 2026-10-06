@@ -58,16 +58,16 @@ class ConfettiTests(GameCase):
             self.roi(self.t_ferr)
         rnd, item = self.play(mode)
         body = answer if mode == "classify" else {"pair_answer": answer}
-        return self.post("game_answer", dict(body, index=item["index"], **extra), rnd.id).json()
+        return self.post("game_answer", dict(body, index=item["index"], **extra), rnd.id).json()["review"]
 
     def test_a_right_species_on_a_scored_beetle_gets_confetti(self):
         self.assertTrue(self.answer(self.t_affinis, AFFINIS)["celebrate"])
 
     def test_a_wrong_species_with_the_right_genus_gets_the_small_partial_kind(self):
-        self.assertEqual(self.answer(self.t_affinis, FERR)["celebrate"], "partial")
+        self.assertEqual(self.answer(self.t_affinis, FERR)["celebrate"]["kind"], "partial")
 
     def test_a_genus_only_answer_gets_the_partial_kind(self):
-        self.assertEqual(self.answer(self.t_affinis, {"subfamily": "Scolytinae", "genus": "Xyleborus"})["celebrate"], "partial")
+        self.assertEqual(self.answer(self.t_affinis, {"subfamily": "Scolytinae", "genus": "Xyleborus"})["celebrate"]["kind"], "partial")
 
     def test_no_confetti_on_a_beetle_we_do_not_know_the_answer_to(self):
         self.assertFalse(self.answer(self.t_affinis, AFFINIS, validated=False)["celebrate"])
@@ -209,7 +209,7 @@ class PlayPageTests(GameCase):
         self.assertNotIn('id="open-search"', page)
         self.assertIn('(hover: hover) and (pointer: fine)', page)   # shortcuts only shown on a computer
         self.assertIn('addEventListener("popstate"', page)          # the phone's back button acts like Exit
-        self.assertIn('id="community"', page)                        # what others said stays until closed
+        self.assertIn('id="review"', page)                           # the review after each answer, in the panel
 
     def test_each_rank_list_has_its_own_search(self):
         self.client.force_login(self.user)

@@ -144,16 +144,16 @@ class AnswerTests(SelectCase):
         data = self.answer(rnd, item, picks=members).json()
         ans = GameAnswer.objects.get()
         self.assertEqual((ans.mode, ans.picks, ans.correct_species, ans.is_check), ("select", members, True, True))
-        self.assertEqual(data["celebrate"], "validated")
-        self.assertEqual([i for i, s in enumerate(data["reveal"]["tiles"]) if s == "right"], members)
+        self.assertEqual(data["review"]["celebrate"]["kind"], "validated")
+        self.assertEqual([i for i, t in enumerate(data["review"]["grid"]["tiles"]) if t["state"] == "right"], members)
 
     def test_missing_one_is_partly_correct_and_a_wrong_tap_shows(self):
         rnd, item = self.grid("species")
         members = self.members(rnd, item)
         other = next(i for i in range(9) if i not in members)
         data = self.answer(rnd, item, picks=members[1:] + [other]).json()
-        self.assertEqual(data["reveal"]["tiles"][members[0]], "missed")
-        self.assertEqual(data["reveal"]["tiles"][other], "wrong")
+        self.assertEqual(data["review"]["grid"]["tiles"][members[0]]["state"], "missed")
+        self.assertEqual(data["review"]["grid"]["tiles"][other]["state"], "wrong")
         self.assertFalse(GameAnswer.objects.get().correct_species)
 
     def test_taps_must_be_places_in_the_grid(self):
