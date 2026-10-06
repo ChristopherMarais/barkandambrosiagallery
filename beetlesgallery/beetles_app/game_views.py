@@ -1285,7 +1285,9 @@ def game_applied_revert(request, roi_id):
     try:
         before = game_applied.revert(roi, request.user)
     except game_applied.RevertError as e:
-        return JsonResponse({"error": str(e)}, status=409)
+        # A fixed text per reason, never the exception itself (CodeQL py/stack-trace-exposure)
+        return JsonResponse({"error": game_applied.REVERT_MESSAGES.get(e.code, "This label cannot be reverted.")},
+                            status=409)
     game_queue.forget()
     return JsonResponse({"depicts_valid_name_id": before["depicts_valid_name_id"]})
 

@@ -38,14 +38,37 @@ AI_PAGE_INSTITUTION = "AI page"   # ImageAsset.image_institution of a photo kept
 
 
 class ClassifyError(Exception):
-    """A problem to show the annotator; nothing was added."""
+    """A problem to show the annotator; nothing was added. ``code`` says which (a key of MESSAGES); the exception's
+    own text is for the server log only, and pages show user_message(error) instead."""
+
+    code = "failed"
+
+    def __init__(self, code=None, detail=""):
+        self.code = code or self.code
+        super().__init__(f"{self.code}: {detail}" if detail else self.code)
 
 
 class ClassifyTimeout(ClassifyError):
     """The service took too long: usually the model is starting up, so trying again in a minute helps."""
 
+    code = "timeout"
+
 
 TIMEOUT_MESSAGE = "IBBI-AI is waking up. Please try again in a minute."
+# What the annotator reads for each ClassifyError code. Fixed texts: nothing of an exception reaches the browser.
+MESSAGES = {
+    "unknown_model": "Unknown model.",
+    "timeout": TIMEOUT_MESSAGE,
+    "unreachable": "The AI service could not be reached. Please try again later.",
+    "service_error": "The AI service returned an error. Please try again later.",
+    "unreadable": "The AI service sent an answer that could not be read.",
+    "failed": "The AI service could not process this image.",
+}
+
+
+def user_message(error):
+    """The fixed text to show for a ClassifyError."""
+    return MESSAGES.get(error.code, MESSAGES["failed"])
 # How long to wait for IBBI-AI's answer. Cloudflare gives up on a request after 100 s and shows the browser an HTML
 # error page instead of our JSON, so the site stops waiting first and says the model is waking up. The service keeps
 # starting meanwhile, so the next try finds it ready.
@@ -88,24 +111,24 @@ def call_classifier(image_bytes, filename, content_type, architecture, box_thres
     """The Modal service's answer for one image, or ClassifyError."""
     architecture = ibbi_models.resolve(architecture)
     if architecture is None:
-        raise ClassifyError("Unknown model.")
+        raise ClassifyError("unknown_model", repr(architecture))
     try:
         response = requests.post(
             settings.MODAL_API_URL, data={"architecture": architecture, "box_threshold": box_threshold},
             files={"image": (filename, image_bytes, content_type)}, timeout=(CONNECT_SECONDS, ANSWER_SECONDS),
         )
     except requests.exceptions.Timeout:
-        raise ClassifyTimeout(TIMEOUT_MESSAGE)
-    except requests.exceptions.RequestException:
-        raise ClassifyError("The AI service could not be reached. Please try again later.")
+        raise ClassifyTimeout()
+    except requests.exceptions.RequestException as exc:
+        raise ClassifyError("unreachable", type(exc).__name__)
     if response.status_code != 200:
-        raise ClassifyError(f"The AI service returned an error ({response.status_code}).")
+        raise ClassifyError("service_error", f"HTTP {response.status_code}")
     try:
         data = response.json()
     except ValueError:
-        raise ClassifyError("The AI service sent an answer that could not be read.")
+        raise ClassifyError("unreadable")
     if not isinstance(data, dict) or data.get("status") != "success":
-        raise ClassifyError("The AI service could not process this image.")
+        raise ClassifyError("failed", str(data.get("message", ""))[:200] if isinstance(data, dict) else "")
     return data
 
 

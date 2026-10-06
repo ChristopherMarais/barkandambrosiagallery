@@ -48,17 +48,27 @@ def label_before(roi, when, applied_id):
 
 
 class RevertError(Exception):
-    pass
+    """Why a game label cannot be taken back. ``code`` is a key of REVERT_MESSAGES, the text a curator sees."""
+
+    def __init__(self, code):
+        super().__init__(code)
+        self.code = code
+
+
+REVERT_MESSAGES = {
+    "nothing": "No label from the game to revert on this beetle.",
+    "changed": "Its label has been changed since the game set it; edit it directly instead.",
+}
 
 
 def revert(roi, user):
     """Put back the label the beetle had before the game's, and record that a curator took it back."""
     review = applied_for([roi.id]).get(roi.id)
     if review is None:
-        raise RevertError("No label from the game to revert on this beetle.")
+        raise RevertError("nothing")
     applied = review.taxon.valid_species_id if review.taxon else None
     if applied and str(roi.depicts_valid_name_id or "") != str(applied):
-        raise RevertError("Its label has been changed since the game set it; edit it directly instead.")
+        raise RevertError("changed")
     before = label_before(roi, review.reviewed_at, applied)
     roi.depicts_valid_name_id = before["depicts_valid_name_id"]
     roi.label_source = before["label_source"] or ""

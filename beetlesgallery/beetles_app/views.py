@@ -22,7 +22,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.files.storage import default_storage
-from django.core.management import call_command
+from django.core.management import CommandError, call_command
 
 from . import chunked_upload
 from .areas import (CURATOR_AREAS, page_groups, AI_RECOMMEND, ANNOTATE, BOXES, PREDICTIONS, UPDATE, VALIDATE, DETAILS,
@@ -1209,8 +1209,13 @@ def admin_valid_species(request):
             try:
                 call_command('migrate_taxonomy_to_db')
                 messages.success(request, "Accepted species uploaded: the taxonomy was successfully rebuilt and every beetle re-linked.")
-            except Exception as e:
-                messages.error(request, f"File saved, but database rebuild failed: {str(e)}")
+            except CommandError as e:
+                # The command's own words for a file it refuses, e.g. "... The existing taxonomy was kept."
+                messages.error(request, f"File saved, but database rebuild failed: {e}")
+            except Exception:
+                # Anything else goes to the server log, not into the page (CodeQL py/stack-trace-exposure)
+                logger.exception("Taxonomy rebuild after a reference upload failed")
+                messages.error(request, "File saved, but database rebuild failed. The server log has the details.")
 
             return redirect("admin_valid_species")
         else:
@@ -1243,8 +1248,13 @@ def admin_described_names(request):
             try:
                 call_command('migrate_taxonomy_to_db')
                 messages.success(request, "Synonyms and old names uploaded: the taxonomy was successfully rebuilt and every beetle re-linked.")
-            except Exception as e:
-                messages.error(request, f"File saved, but database rebuild failed: {str(e)}")
+            except CommandError as e:
+                # The command's own words for a file it refuses, e.g. "... The existing taxonomy was kept."
+                messages.error(request, f"File saved, but database rebuild failed: {e}")
+            except Exception:
+                # Anything else goes to the server log, not into the page (CodeQL py/stack-trace-exposure)
+                logger.exception("Taxonomy rebuild after a reference upload failed")
+                messages.error(request, "File saved, but database rebuild failed. The server log has the details.")
 
             return redirect("admin_described_names")
         else:

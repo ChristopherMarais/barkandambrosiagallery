@@ -144,30 +144,22 @@ def _to_rpn(parts):
         output.append({"op": stack.pop()})
     return output
 
-_NUM_OP_RE = re.compile(r"^\s*(<=|>=|<|>|=)?\s*([+-]?\d+(?:\.\d+)?)\s*$")
+# A number with an optional comparison in front, e.g. ">= 10" or "-3.5". The operator and the spaces are taken off
+# with string methods and the regex only checks the number, which it does in linear time: the old single pattern
+# (spaces, operator, spaces, number, spaces) backtracked polynomially on long runs of spaces (CodeQL py/polynomial-redos).
+_NUMBER_RE = re.compile(r"[+-]?\d+(?:\.\d+)?")
+_NUM_OPS = (("<=", "lte"), (">=", "gte"), ("<", "lt"), (">", "gt"), ("=", "exact"))
 
 def _parse_numeric(value: str):
-    m = _NUM_OP_RE.match(value or "")
-    if not m:
+    text = (value or "").strip()
+    op = "exact"
+    for symbol, name in _NUM_OPS:   # two-character operators first, so "<=" is not read as "<" and "=5"
+        if text.startswith(symbol):
+            op, text = name, text[len(symbol):].lstrip()
+            break
+    if not _NUMBER_RE.fullmatch(text):
         return None, None
-    raw_op, num_s = m.groups()
-    if raw_op in (None, "", "="):
-        op = "exact"
-    elif raw_op == "<":
-        op = "lt"
-    elif raw_op == "<=":
-        op = "lte"
-    elif raw_op == ">":
-        op = "gt"
-    elif raw_op == ">=":
-        op = "gte"
-    else:
-        return None, None
-    try:
-        num = float(num_s)
-    except Exception:
-        return None, None
-    return op, num
+    return op, float(text)
 
 def _parse_date_prefix(v: str):
     s = (v or "").strip()

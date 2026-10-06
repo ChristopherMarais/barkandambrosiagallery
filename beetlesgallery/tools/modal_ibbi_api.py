@@ -90,10 +90,10 @@ class ModelService:
             else:
                 detections = ibbi_models.from_detector(self._model(spec["detector"]).predict(img, conf=conf))
             return ibbi_models.response(key, detections)
-        except Exception as e:
+        except Exception:
             import traceback
-            traceback.print_exc()
-            return {"status": "error", "message": f"Server Error: {e}"}
+            traceback.print_exc()   # in the Modal log; the caller only learns that it failed
+            return {"status": "error", "message": "Server error: the image could not be processed."}
 
 
 # 3. Download every model's weights to the volume once
