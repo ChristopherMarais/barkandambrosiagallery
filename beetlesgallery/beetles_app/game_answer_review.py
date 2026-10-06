@@ -22,7 +22,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from django.db.models import Q
 
-from . import game, game_feedback, game_scoring
+from . import game, game_feedback, game_levels, game_scoring
 from .game import RANKS, game_setting
 from .models import AnswerPoints, Beetles, GameAnswer, ModelPrediction
 from .predictions import best_predictions, rank_tips
@@ -50,7 +50,9 @@ def review(answer, item):
     losses = game_feedback.answer_losses(answer, row) if row is not None and basis == "truth" else None
     out = {
         "mode": answer.mode, "skipped": skipped, "reported": answer.skipped and answer.score_hold, "held": held,
-        "again": answer.is_retry, "images": _images(answer, item), "verdict": None,
+        # "Seen before" on the headline, for one photo or a pair; a grid marks the tiles (grid "seen", #600)
+        "again": (answer.is_retry or answer.seen_before) and answer.mode not in ("odd", "select"),
+        "images": _images(answer, item), "verdict": None,
         "points": _points(row, basis, losses),
     }
     facts = {}
@@ -60,6 +62,10 @@ def review(answer, item):
         body, facts = BODIES[answer.mode](answer, item, basis, row, losses, opinions)
         out.update(body)
         out["beetles"] = _beetles(answer, shown, opinions)
+        if answer.mode in ("odd", "select"):   # which tiles the player had seen before, each marked (#600)
+            seen = game.seen_recently_ids(answer.player, [t.id for t in shown if t is not None],
+                                          now=answer.answered_at, exclude=answer.pk)
+            out["grid"]["seen"] = [i for i, t in enumerate(shown) if t is not None and t.id in seen]
         facts.update(_agreed(answer, row, basis, facts))
     out["headline"] = _headline(out)
     out["celebrate"] = _celebrate(out, facts)
@@ -121,9 +127,10 @@ def _pair(answer, item, basis, row, losses, opinions):
     """
     shown = [answer.roi_b, answer.roi] if item.get("flip") else [answer.roi, answer.roi_b]
     mine = game.PAIR_DEPTH.get(answer.pair_answer)
-    data = {"said": RUNG.get(answer.pair_answer, ""), "truth": None, "state": None, "sides": []}
+    data = {"said": RUNG.get(answer.pair_answer, ""), "truth": None, "state": None, "sides": [], "shared": None}
     if basis == "truth" and losses:
-        data.update(truth=DEPTH_RUNG.get(TRUTH_DEPTH.get(losses["truth"])), state=losses["state"],
+        depth = TRUTH_DEPTH.get(losses["truth"])
+        data.update(truth=DEPTH_RUNG.get(depth), state=losses["state"], shared=_shared_rank(depth),
                     sides=[dict(_truth(roi), letter=letter, validated=True) for letter, roi in zip("AB", shown)])
         verdict = game_feedback._verdict(answer)
         return {"verdict": verdict, "pair": data}, {"complete": verdict == "right"}
@@ -135,18 +142,25 @@ def _pair(answer, item, basis, row, losses, opinions):
     least = game_setting("GAME_FEEDBACK_AI_MIN", 0.5)
     sure = {r: t for r, t in tips.items() if t["confidence"] >= least}   # only where IBBI-AI is sure sets its rung
     ai_relation = _relation({r: t["value"] for r, t in sure.items()}, partner)
+    players_relation = _relation({r: v["value"] for r, v in votes.items()}, partner)
+    # the rank the two probably share, from the players (else IBBI-AI): underlined on both photos (#600)
+    data["shared"] = _shared_rank((players_relation or ai_relation or (None,))[0])
     for letter, roi in zip("AB", shown):
         if roi is None:
             continue
         if roi.id == answer.roi_id:
             side = {"letter": letter, "validated": False,
-                    "players": _pair_view(votes, "support", _relation({r: v["value"] for r, v in votes.items()}, partner),
-                                          mine),
+                    "players": _pair_view(votes, "support", players_relation, mine),
                     "ai": _pair_view(sure or tips, "confidence", ai_relation, mine)}
         else:
             side = dict(_truth(roi), letter=letter, validated=True) if partner else {"letter": letter, "validated": False}
         data["sides"].append(side)
     return {"pair": data}, {"ai_agrees": ai_relation is not None and ai_relation == (mine, True)}
+
+
+def _shared_rank(depth):
+    """The deepest rank a pair shares at a Similarity depth (-1 different subfamilies .. 3 same species), or None."""
+    return RANKS[depth] if depth is not None and 0 <= depth < len(RANKS) else None
 
 
 def _odd(answer, item, basis, row, losses, opinions):
@@ -298,8 +312,10 @@ def _beetles(answer, shown, opinions):
     being [{"rank", "name", "source", "sure", "votes", "expert"}] for all four ranks. A validated beetle gives its true
     names (source "truth"); one nobody has validated the most likely name at each rank, from the other players
     ("players", with how many named it, and "expert" when a proven Naming expert backs it, game_trust) or
-    IBBI-AI ("ai"), whichever is surer (the players on a tie); "" where nobody says. The page marks each source with a
-    coloured dot (#569).
+    IBBI-AI ("ai"), whichever is surer (the players on a tie); "" where nobody says. When the other source says the
+    same name at a rank, "also" carries its confidence too, so the photo shows both (#600).
+    Each photo has one "source" (and "expert"), the source of its deepest name: the page marks it with a single
+    coloured dot (#569, #600).
     """
     flagged = set(answer.flagged or []) if answer.mode in ("odd", "select") else set()
     out = []
@@ -308,13 +324,15 @@ def _beetles(answer, shown, opinions):
             out.append(None)
         elif game_scoring.is_truth(roi):
             label = game_feedback._label(roi.taxon)
-            out.append({"validated": True, "tier": roi.get_label_source_display() or "Verified",
-                        "ranks": [{"rank": r, "name": label[r], "source": "truth"} for r in RANKS]})
+            out.append({"validated": True, "tier": roi.get_label_source_display() or "Verified", "source": "truth",
+                        "expert": False, "ranks": [{"rank": r, "name": label[r], "source": "truth"} for r in RANKS]})
         else:
             said = (opinions.said(roi.id) or {}).get("ranks") or {}
             tips = opinions.tips(roi.id)
-            out.append({"validated": False, "tier": None,
-                        "ranks": [_likeliest(r, said.get(r), tips.get(r)) for r in RANKS]})
+            ranks = [_likeliest(r, said.get(r), tips.get(r)) for r in RANKS]
+            deepest = next((r for r in reversed(ranks) if r["name"]), None)
+            out.append({"validated": False, "tier": None, "source": deepest["source"] if deepest else "",
+                        "expert": bool(deepest and deepest.get("expert")), "ranks": ranks})
     return out
 
 
@@ -327,7 +345,12 @@ def _likeliest(rank, vote, tip):
     best = max((c for c in (players, ai) if c), key=lambda c: c[:2], default=None)
     if best is None:
         return {"rank": rank, "name": "", "source": "", "sure": None}
-    return dict(best[2], rank=rank, sure=round(best[0] * 100))
+    out = dict(best[2], rank=rank, sure=round(best[0] * 100))
+    other = ai if best is players else players
+    if other and game._norm(other[2]["name"]) == game._norm(best[2]["name"]):   # both say it: both confidences (#600)
+        out["also"] = dict(other[2], sure=round(other[0] * 100))
+        out["also"].pop("name")
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -505,9 +528,33 @@ def _shown(answer, item):
 
 
 def _images(answer, item):
-    """The photos as they were shown, for Back."""
-    return [None if r is None else {"url": r.display_url, "box": [r.bbox_x, r.bbox_y, r.bbox_width, r.bbox_height]}
-            for r in _shown(answer, item)]
+    """
+    The photos as they were shown, for Back, each with its thumbnail (shown first in the whole-photo view, #601) and,
+    for one photo or a pair, the specimen's other photos once the player has unlocked them, so the whole photo opened
+    from the review goes through them all.
+    """
+    shown = _shown(answer, item)
+    out = [None if r is None else photo(r) for r in shown]
+    if answer.mode in ("odd", "select"):   # a grid shows each beetle on its own
+        return out
+    others = [game.specimen_photos(r) if r is not None else [] for r in shown]
+    if any(others) and game_levels.SPECIMEN_PHOTOS in game_levels.for_player(answer.player)["perks"]:
+        for image, more in zip(out, others):
+            if image is not None and more:
+                image["photos"] = [dict(photo(m), aspect=m.aspect or "") for m in more]
+    return out
+
+
+def thumb_url(roi):
+    """The small thumbnail of a beetle's whole photo, or "" when it has none."""
+    asset = roi.image_asset
+    return asset.thumb_small.url if asset is not None and asset.thumb_small else ""
+
+
+def photo(roi):
+    """A whole photo for the page: where it is, the beetle's box, and its thumbnail (#601)."""
+    return {"url": roi.display_url, "box": [roi.bbox_x, roi.bbox_y, roi.bbox_width, roi.bbox_height],
+            "thumb": thumb_url(roi)}
 
 
 def _truth(roi):

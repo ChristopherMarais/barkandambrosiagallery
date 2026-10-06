@@ -686,8 +686,9 @@ def _item_images(rnd, index, extras=False):
     (game_levels.SPECIMEN_PHOTOS). Odd One Out shows its beetles in a grid, each on its own (no other photos of them).
     """
     rois = _shown_rois(rnd.items[index])
-    images = [{"url": r.display_url, "box": _box(r), "small": _crop_url(rnd, index, i, r, "small"),
-               "large": _crop_url(rnd, index, i, r, "large")} for i, r in enumerate(rois)]
+    images = [{"url": r.display_url, "box": _box(r), "thumb": game_answer_review.thumb_url(r),
+               "small": _crop_url(rnd, index, i, r, "small"), "large": _crop_url(rnd, index, i, r, "large")}
+              for i, r in enumerate(rois)]
     if rnd.items[index].get("tiles"):
         return images
     if extras:
@@ -697,7 +698,7 @@ def _item_images(rnd, index, extras=False):
             if more:
                 image["more"] = len(more)
                 if unlocked:
-                    image["photos"] = [{"url": m.display_url, "box": _box(m), "aspect": m.aspect or ""} for m in more]
+                    image["photos"] = [dict(game_answer_review.photo(m), aspect=m.aspect or "") for m in more]
     return images
 
 

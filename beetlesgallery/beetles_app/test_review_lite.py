@@ -2,8 +2,8 @@
 A lighter review card (#569): the names on the photos in the annotation page's Save grey, big and over the whole photo,
 with a coloured dot for who says so (green validated, blue IBBI-AI, purple the players, glowing purple when an expert
 backs them) and the confidence on every line; under the photos a headline and at most one short line; one ring scheme
-for every game (solid on what was chosen, fainter dashed on what was left); a tap on a reviewed photo opens it whole
-and a long press peeks under the names, and its Flag never re-answers.
+for every game (solid on what was chosen, fainter dashed on what was left); a reviewed photo opens whole from a click
+or its own button (a tap turns its names off, #600), and its Flag never re-answers.
 """
 from django.urls import reverse
 

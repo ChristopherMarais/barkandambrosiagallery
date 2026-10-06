@@ -193,6 +193,16 @@
   #report-cog { left: 0.5rem; bottom: 0.5rem; }
   #report-menu { left: 0.5rem; bottom: 2.75rem; z-index: 4; }
   #lightbox #light-panel { position: fixed; left: auto; right: 0.75rem; bottom: 4rem; z-index: 101; }
+  /* Swipes (#603): the review card and Back's card take a sideways finger (the panel still scrolls up and down) */
+  #game[data-phase="review"] :is(#photos, #panel), #previous { touch-action: pan-y; }
+  #lightbox { touch-action: none; }
+  /* the first-time line about swiping: a quiet pill near the bottom, gone by itself */
+  .swipe-hint { position: absolute; left: 50%; bottom: 3.25rem; z-index: 6; transform: translate(-50%, 0.5rem); padding: 0.375rem 0.875rem; border-radius: 9999px;
+                background: rgba(17,24,39,.85); color: #fff; font-size: 0.8125rem; font-weight: 600; white-space: nowrap; pointer-events: none;
+                opacity: 0; transition: opacity .3s, transform .3s; }
+  .swipe-hint.shown { opacity: 1; transform: translate(-50%, 0); }
+  #lightbox .swipe-hint { position: fixed; bottom: 4.5rem; z-index: 101; }
+  @media (prefers-reduced-motion: reduce) { .swipe-hint { transition: none; transform: translate(-50%, 0); } }
   /* Your last beetle (Back) */
   #previous.hidden { display: none; }
   #submit:disabled { background: #d1d5db; }
@@ -243,13 +253,13 @@
   .rv-line { margin-top: 0.25rem; font-size: 0.8125rem; color: #374151; }
   .rv-line .fi { vertical-align: -0.125em; }
   /* Where a name comes from (#569): green validated, blue IBBI-AI, purple the players, glowing purple when a proven
-     expert backs them. A thin white rim keeps each dot clear on the grey name panels. */
-  .rv-dot { display: inline-block; flex: none; width: 0.5rem; height: 0.5rem; margin-right: 0.25rem; border-radius: 9999px; vertical-align: 0.05em; box-shadow: 0 0 0 1px rgba(255,255,255,.85); }
+     expert backs them. One dot per photo, no rim (#600). */
+  .rv-dot { display: inline-block; flex: none; width: 0.5rem; height: 0.5rem; margin-right: 0.25rem; border-radius: 9999px; vertical-align: 0.05em; }
   .rv-dot.truth { background: #16a34a; }
   .rv-dot.ai { background: #2563eb; }
   .rv-dot.players, .rv-dot.expert { background: #9333ea; }
-  .rv-dot.expert { box-shadow: 0 0 0 1px rgba(255,255,255,.85), 0 0 5px 1px rgba(192,132,252,.9); animation: rv-glow 2.4s ease-in-out infinite; }
-  @keyframes rv-glow { 50% { box-shadow: 0 0 0 1px rgba(255,255,255,.85), 0 0 9px 3px rgba(192,132,252,1); } }
+  .rv-dot.expert { box-shadow: 0 0 5px 1px rgba(192,132,252,.9); animation: rv-glow 2.4s ease-in-out infinite; }
+  @keyframes rv-glow { 50% { box-shadow: 0 0 9px 3px rgba(192,132,252,1); } }
   @media (prefers-reduced-motion: reduce) { .rv-dot.expert { animation: none; } }
   /* the marks on the grid tiles (#569): the number to the top left, its points next to it; the whole-photo button
      keeps the top right */
@@ -280,6 +290,26 @@
   .rv-names .src { flex: none; display: inline-flex; align-items: center; color: #f3f4f6; font-size: 0.8em; }
   .rv-names .src .fi { font-size: 0.85em; margin-right: 0.125rem; }
   .rv-names .none { color: #e5e7eb; font-weight: 400; }
+  /* the photo's one dot sits in a slot of its own before the first name, so the names stay in line (#600) */
+  :is(.rv-names, .lb-names) .lead { flex: none; display: inline-flex; width: 0.5rem; margin-right: -0.25rem; }
+  :is(.rv-names, .lb-names) .lead .rv-dot { margin-right: 0; }
+  /* Similarity: the rank the two share (the answer, or probably), underlined on both photos (#600) */
+  :is(.rv-names, .lb-names) .nm.shared { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+  /* the whole photo opens from its own button on a reviewed photo, bottom left; a tap on the photo turns its names off (#600) */
+  .cell > .rv-whole { top: auto; right: auto; left: 0.375rem; bottom: 0.375rem; z-index: 5; }
+  @media (hover: hover) and (pointer: fine) { .cell > .rv-whole { display: none; } }
+  /* the whole photo opened from a review: its names under it, every rank in full (#600) */
+  #lb-names.hidden { display: none; }
+  .lb-names { display: flex; flex-direction: column; gap: 0.125rem; width: min(94vw, 26rem); margin: 0.5rem auto 0; color: #fff; font-size: 0.9375rem; line-height: 1.3; }
+  .lb-names > span { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+  .lb-names .rk { flex: 0 0 5rem; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #9ca3af; }
+  .lb-names .nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+  .lb-names .src { flex: none; display: inline-flex; align-items: center; color: #d1d5db; font-size: 0.8em; }
+  .lb-names .src .fi { font-size: 0.85em; margin-right: 0.125rem; }
+  .lb-names .none { color: #9ca3af; font-weight: 400; }
+  :is(.rv-names, .lb-names) .also { margin-left: 0.3em; }
+  .lb-names .who { white-space: pre; }
+  #lightbox.with-names #lightbox-img { max-height: calc(85vh - 7rem); }
   /* grids: smaller tiles, smaller text and corners; the text keeps clear of the rounded corners and the marks above */
   #game:is([data-mode="odd"], [data-mode="select"]) #photos .rv-names, #previous-photos:is([data-size="4"], [data-size="9"], [data-size="16"]) .rv-names {
       padding: 1.875rem 0.625rem 0.625rem; gap: 0.125rem; font-size: 0.9375rem; }
@@ -294,6 +324,8 @@
     /* the small grid tiles of a phone keep the names: the dot alone says who (its words on the dot) */
     :is(#photos, #previous-photos):is([data-size="4"], [data-size="9"], [data-size="16"]) .rv-names :is(.tier, .fi) { display: none; }
     :is(#photos, #previous-photos):is([data-size="9"], [data-size="16"]) .rv-names .who { display: none; }
+    /* small tiles: one confidence only, the photo's own source's */
+    :is(#photos, #previous-photos):is([data-size="9"], [data-size="16"]) .rv-names .also { display: none; }
   }
   .cell.names-off .rv-names { opacity: 0; }
   @media (hover: hover) { .cell:hover .rv-names { opacity: 0; } }
@@ -306,7 +338,7 @@
     #photos > .peers-tag { transition: opacity .15s; }
     #photos:has(.cell:hover) > .peers-tag { opacity: 0; }
   }
-  /* on the review a tap opens the whole photo and a long press peeks under the names: no text selection or menu */
+  /* on the review a tap turns the names off and on (a click with a mouse opens the whole photo): no text selection or menu */
   .cell.has-names { -webkit-touch-callout: none; user-select: none; cursor: zoom-in; }
   /* In a grid of 25 four lines of names would hide most of a tile: they show on a tap (or while the pointer is on
      it), the other way round; the card above lists every tile's name at the grid's rank. Only the names and dots. */
@@ -315,7 +347,16 @@
   :is(#photos, #previous-photos)[data-size="25"] .rv-names :is(.who, .tier, .fi) { display: none; }
   :is(#photos, #previous-photos)[data-size="25"] .rv-names .rv-dot { width: 0.3125rem; height: 0.3125rem; margin-right: 0.125rem; }
   :is(#photos, #previous-photos)[data-size="25"] .cell.names-off .rv-names { opacity: 1; }
+  :is(#photos, #previous-photos)[data-size="25"] .rv-names .also { display: none; }
   @media (hover: hover) { :is(#photos, #previous-photos)[data-size="25"] .cell:hover .rv-names { opacity: 1; } }
+  /* a grid tile seen before (#600): bottom right, the eye alone on the small tiles of 16 and 25 */
+  .rv-seen { position: absolute; right: 0.375rem; bottom: 0.375rem; z-index: 5; display: inline-flex; align-items: center; gap: 0.25rem; height: 1.375rem;
+             padding: 0 0.45rem; border-radius: 9999px; background: rgba(255,255,255,.92); border: 1px solid #d1d5db; color: #374151;
+             font-size: 0.6875rem; font-weight: 600; white-space: nowrap; pointer-events: none; }
+  :is(#photos, #previous-photos):is([data-size="9"], [data-size="16"], [data-size="25"]) .rv-seen .word { display: none; }
+  :is(#photos, #previous-photos)[data-size="16"] .rv-seen { right: 0.25rem; bottom: 0.25rem; height: 1.125rem; padding: 0 0.25rem; font-size: 0.625rem; }
+  :is(#photos, #previous-photos)[data-size="25"] .rv-seen { right: 0.125rem; bottom: 0.125rem; height: 1rem; padding: 0 0.2rem; font-size: 0.5625rem; }
+  @media (hover: hover) { .cell > .rv-seen { transition: opacity .15s; } .cell:hover > .rv-seen { opacity: 0; } }
   .rv-badge.up { background: #16a34a; color: #fff; }
   .rv-badge.down { background: #dc2626; color: #fff; }
   .rv-badge.flat { background: rgba(255,255,255,.95); border: 1px solid #d1d5db; color: #374151; }
@@ -349,6 +390,9 @@
   #lb-primary { position: absolute; top: 0.5rem; left: 0.5rem; z-index: 2; width: 1.75rem; height: 1.75rem; border-radius: 9999px;
                 display: inline-flex; align-items: center; justify-content: center; background: #fff; color: #111827; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
   #lb-primary.hidden { display: none; }
+  #lightbox-box.hidden { display: none; }
+  /* the photo before stays, faded, until the next one is on screen (#601) */
+  #lb-photo.loading #lightbox-img { opacity: 0.4; }
   #lightbox-box { border-radius: 0.5rem; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.7), inset 0 0 0 1px rgba(0,0,0,.7), 0 0 0 9999px rgba(0,0,0,.35); }
   .more-chip { position: absolute; right: 0.375rem; top: 0.375rem; z-index: 2; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem;
                border-radius: 9999px; background: rgba(17,24,39,.78); color: #fff; font-size: 0.75rem; font-weight: 600; }
@@ -578,7 +622,7 @@
 <canvas id="confetti" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:95"></canvas>
 
 <!-- Full image viewer -->
-<div id="lightbox" class="hidden fixed inset-0 z-100 bg-black/90 flex items-center justify-center p-3" role="dialog" aria-label="Whole image">
+<div id="lightbox" class="hidden fixed inset-0 z-100 bg-black/90 flex flex-col items-center justify-center p-3" role="dialog" aria-label="Whole image">
   <button type="button" class="absolute top-3 right-3 p-3 text-white text-xl" aria-label="Close"><i class="fi fi-rr-cross"></i></button>
   <div id="lb-photo" class="relative">
     <div id="lb-frame" class="relative block overflow-hidden rounded-lg" title="Scroll, pinch or double-click to zoom">
@@ -597,6 +641,7 @@
       {% endfor %}
     </div>
   </div>
+  <div id="lb-names" class="hidden"></div>
   <button type="button" id="lb-light" class="hidden absolute bottom-3 right-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white text-gray-900 text-sm font-semibold shadow-lg" aria-label="Lighting" data-testid="lightbox-lighting"><i class="fi fi-rr-brightness"></i><span>Lighting</span></button>
   <button type="button" id="lb-prev" class="lb-nav hidden" aria-label="Previous photo of this beetle"><i class="fi fi-rr-angle-left"></i></button>
   <button type="button" id="lb-next" class="lb-nav hidden" aria-label="Next photo of this beetle"><i class="fi fi-rr-angle-right"></i></button>
@@ -723,10 +768,11 @@
   // most once per frame on the GPU (translate3d), and the browser's own image drag and text selection never take
   // over a drag. Lifting one finger of a pinch carries on as a drag.
   const ZOOM_STEP = 2.5, ZOOM_MAX = 5, TAP_MS = 300, DRAG_SLOP = 4;
+  const TAP_SLOP = 10;   // a finger that slides further than this is a swipe, never a tap (#603)
   const zoomEase = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   function makeZoomable(frame, canvas, onTap, immediate) {
     let z = 1, tx = 0, ty = 0, lastTap = 0, tapTimer = null, drag = null, pinch = null, moved = false;
-    let rect = null, raf = 0, wheelEnd = null;
+    let rect = null, raf = 0, wheelEnd = null, down = null;
     const pointers = new Map();   // pointerId -> [clientX, clientY]
     const measure = () => { rect = frame.getBoundingClientRect(); return rect; };
     const local = (x, y) => { const r = rect || measure(); return [x - r.left, y - r.top]; };
@@ -774,7 +820,7 @@
     }, { passive: false });
     frame.addEventListener("pointerdown", (e) => {
       if (e.button > 0) return;   // the main button, a finger or a pen
-      if (!pointers.size) { measure(); moved = false; }
+      if (!pointers.size) { measure(); moved = false; down = [e.clientX, e.clientY]; }
       pointers.set(e.pointerId, [e.clientX, e.clientY]);
       try { frame.setPointerCapture(e.pointerId); } catch (err) { /* already gone */ }
       if (pointers.size === 2) { startPinch(); moved = true; }
@@ -800,6 +846,8 @@
         ty = e.clientY - drag.y;
         frame.classList.add("dragging");
         update();
+      } else if (down && !moved && Math.hypot(e.clientX - down[0], e.clientY - down[1]) > TAP_SLOP) {
+        moved = true;   // a slide (a swipe), not a tap: it picks and opens nothing (#603)
       }
     });
     const up = (e) => {
@@ -826,7 +874,7 @@
       if (immediate) { if (z === 1) onTap(); return; }
       tapTimer = setTimeout(() => { if (z === 1) onTap(); }, TAP_MS);
     });
-    return { reset: () => {
+    return { zoomed: () => z > 1, reset: () => {
       z = 1; tx = 0; ty = 0;
       cancelAnimationFrame(raf);
       canvas.style.transition = "";
@@ -864,6 +912,56 @@
   $("light-reset").addEventListener("click", resetLight);
   document.addEventListener("game:close-overlays", () => toggleLight(false));   // Esc
 
+  // Swipes on a phone (#603), only where they are obvious: one finger (never a mouse, never two fingers: that is a
+  // pinch), far enough or quick enough, and mostly in one direction (a mostly vertical move is never a sideways
+  // swipe). Not from the very edge of the screen (the phone's own back gesture), not on a slider. ``when(e)``: whether
+  // a swipe may start here now; ``act(dir)``: "left", "right" or "down". A swipe never ends in a tap.
+  const SWIPE_MIN = 60, SWIPE_DOWN_MIN = 80, SWIPE_QUICK = 30, SWIPE_SPEED = 0.5, SWIPE_EDGE = 16;
+  function onSwipe(el, when, act) {
+    let start = null;
+    const fingers = new Set();
+    el.addEventListener("pointerdown", (e) => {
+      if (e.pointerType !== "touch") return;
+      fingers.add(e.pointerId);
+      if (fingers.size > 1) { start = null; return; }   // two fingers: a pinch
+      const edge = e.clientX < SWIPE_EDGE || e.clientX > innerWidth - SWIPE_EDGE;
+      const busyHere = e.target.closest && e.target.closest("input, select, #light-panel, #report-menu");
+      start = edge || busyHere || !when(e) ? null : { id: e.pointerId, x: e.clientX, y: e.clientY, t: e.timeStamp };
+    }, true);
+    const end = (e) => {
+      if (!fingers.delete(e.pointerId) || !start || start.id !== e.pointerId) return;
+      const s = start;
+      start = null;
+      if (e.type !== "pointerup" || !when(e)) return;
+      const dx = e.clientX - s.x, dy = e.clientY - s.y, dt = Math.max(1, e.timeStamp - s.t);
+      const quick = (d) => d >= SWIPE_QUICK && d / dt >= SWIPE_SPEED;
+      let dir = null;
+      if (Math.abs(dx) > 1.5 * Math.abs(dy) && (Math.abs(dx) >= SWIPE_MIN || quick(Math.abs(dx)))) dir = dx < 0 ? "left" : "right";
+      else if (dy > 1.5 * Math.abs(dx) && (dy >= SWIPE_DOWN_MIN || quick(dy))) dir = "down";
+      if (!dir || act(dir) === false) return;
+      // the click the browser may send after the finger lifts is not a tap on whatever is under it now
+      const eat = (c) => { c.stopPropagation(); c.preventDefault(); };
+      document.addEventListener("click", eat, true);
+      setTimeout(() => document.removeEventListener("click", eat, true), 400);
+    };
+    ["pointerup", "pointercancel"].forEach((t) => el.addEventListener(t, end, true));
+  }
+  // A short line the first time a swipe can be used, on this device (#603): a finger device only, gone by itself
+  const FINGERS = window.matchMedia("(pointer: coarse)").matches;
+  function swipeHint(key, host, text) {
+    if (!FINGERS) return;
+    try {
+      if (localStorage.getItem("game-swipe-hint-" + key)) return;
+      localStorage.setItem("game-swipe-hint-" + key, "1");
+    } catch (e) { /* private window: show it anyway */ }
+    const hint = node("div", "swipe-hint", text);
+    hint.setAttribute("role", "status");
+    hint.dataset.testid = "swipe-hint";
+    host.appendChild(hint);
+    requestAnimationFrame(() => hint.classList.add("shown"));
+    setTimeout(() => { hint.classList.remove("shown"); setTimeout(() => hint.remove(), 400); }, 3500);
+  }
+
   // Load an image and decode it off the main thread (decode()), so drawing it doesn't stall the page. A crop is kept
   // by URL: loaded ahead, it is drawn straight away when its beetle comes; one that failed is tried again next time.
   // Whole photos (large files, rarely shown twice) are not kept.
@@ -893,51 +991,89 @@
   let lightboxImage = 0;   // which photo of the item is open (A = 0, B = 1), for reporting it
   let gallery = [];         // with the unlock: this photo first, then other photos of the same beetle
   let galleryAt = 0;
+  let photoShown = 0;       // the whole photo asked for last: a slower one that arrives after it is dropped
   // The whole photo zooms like the crops (scroll, pinch, double-click, drag); a single tap closes it
   const lbZoom = makeZoomable($("lb-frame"), $("lb-zoom"), () => { $("lightbox").classList.add("hidden"); toggleLight(false); });
   $("lb-frame").addEventListener("click", (e) => e.stopPropagation());
-  function showPhoto(url, box) {
+  // A beetle's whole photos (#601): this one first, then the specimen's other photos once they are unlocked
+  function galleryOf(im) {
+    return im && im.photos ? [{ url: im.url, box: im.box, thumb: im.thumb }].concat(im.photos) : [];
+  }
+  // One whole photo (#601): its thumbnail at once, the full photo swapped in when it arrives; its box only once a
+  // picture of that photo is on screen, so the next photo's box never shows over the one before. The photo before
+  // stays, faded, until then.
+  function showPhoto(p) {
     lbZoom.reset();
-    $("lightbox-img").src = url;
-    const b = $("lightbox-box");
-    b.style.left = box[0] * 100 + "%";
-    b.style.top = box[1] * 100 + "%";
-    b.style.width = box[2] * 100 + "%";
-    b.style.height = box[3] * 100 + "%";
+    const token = ++photoShown, img = $("lightbox-img"), b = $("lightbox-box");
+    b.classList.add("hidden");
+    b.style.left = p.box[0] * 100 + "%";
+    b.style.top = p.box[1] * 100 + "%";
+    b.style.width = p.box[2] * 100 + "%";
+    b.style.height = p.box[3] * 100 + "%";
+    $("lb-photo").classList.add("loading");
+    let sharp = false;
+    const put = (url, full) => {
+      if (token !== photoShown || sharp) return;   // moved on, or the full photo is already up
+      sharp = full;
+      $("lightbox-img").src = url;
+      (img.decode ? img.decode() : Promise.resolve()).catch(() => {}).then(() => {
+        if (token !== photoShown || img.getAttribute("src") !== url) return;
+        b.classList.remove("hidden");
+        $("lb-photo").classList.remove("loading");
+      });
+    };
+    if (p.thumb) loadImage(p.thumb).then(() => put(p.thumb, false), () => {});
+    loadImage(p.url).then(() => put(p.url, true), () => put(p.url, true));
+  }
+  function showCount() {
+    const p = gallery[galleryAt] || {};
+    $("lb-count").textContent = (galleryAt + 1) + " / " + gallery.length + (p.aspect ? " · " + p.aspect : "");
   }
   function stepGallery(step) {
     if (gallery.length < 2) return;
     galleryAt = (galleryAt + step + gallery.length) % gallery.length;
-    showPhoto(gallery[galleryAt].url, gallery[galleryAt].box);
-    $("lb-count").textContent = (galleryAt + 1) + " / " + gallery.length + (gallery[galleryAt].aspect ? " · " + gallery[galleryAt].aspect : "");
+    showPhoto(gallery[galleryAt]);
+    showCount();
     $("lb-primary").classList.toggle("hidden", galleryAt !== 0);   // the photo to name, among its other photos
     $("report-menu").classList.add("hidden");
   }
   // A photo opened from a review (after the answer, or under Back) is already answered: its Flag only sends the report,
   // it never skips or re-answers (#569). ``lightboxReview``: that answer's {round, index}, else null.
   let lightboxReview = null;
+  // Every photo of the beetle by default (#601): ``photos`` only to give them some other way; else they come from the
+  // beetle on screen, or from the review the photo was opened from.
   function openLightbox(url, box, which, photos, review) {
     lightboxReview = review || (phase === "review" || phase === "next" ? (previous && previous.where) || null : null);
     lightboxImage = which || 0;
-    gallery = photos || [];
+    const from = lightboxReview ? previous && (previous.images || [])[lightboxImage] : item && item.images[lightboxImage];
+    const own = from && from.url === url ? from : null;
+    gallery = photos || galleryOf(own);
     galleryAt = 0;
     $("report-menu").classList.add("hidden");
     $("report-cog").classList.remove("hidden");
-    showPhoto(url, box);
+    $("lightbox-img").removeAttribute("src");   // never the last beetle's photo while this one loads
+    showPhoto(gallery[0] || { url, box, thumb: own ? own.thumb : "" });
+    gallery.forEach((p) => { if (p.thumb) loadImage(p.thumb).catch(() => {}); });   // the others' thumbnails, ready
     $("lb-primary").classList.toggle("hidden", gallery.length < 2);
+    // from a review: the beetle's names under the photo, every rank in full (#600); the same specimen in every photo
+    const names = lightboxReview && previous && (previous.beetles || [])[lightboxImage];
+    $("lb-names").replaceChildren(...(names ? [namesLabel(names, previous, true)] : []));
+    $("lb-names").classList.toggle("hidden", !names);
+    $("lightbox").classList.toggle("with-names", !!names);
     ["lb-prev", "lb-next", "lb-count"].forEach((id) => $(id).classList.toggle("hidden", gallery.length < 2));
-    if (gallery.length > 1) $("lb-count").textContent = "1 / " + gallery.length;
+    if (gallery.length > 1) showCount();
+    else if (own && own.more && !own.photos && item && item.more_level) {   // still locked: which level opens them
+      $("lb-count").textContent = "+" + own.more + " photo" + (own.more === 1 ? "" : "s") + " of this beetle at level " + item.more_level;
+      $("lb-count").classList.remove("hidden");
+    }
     $("lightbox").classList.remove("hidden");
+    swipeHint(gallery.length > 1 ? "photos" : "close", $("lightbox"), gallery.length > 1 ? "Swipe for the other photos, down to close" : "Swipe down to close");
   }
   // A grid tile's whole photo: the one place its Flag is, and its beetle's other photos once they are unlocked (else a
   // line saying which level opens them), so the tile itself carries a single small button
   function openTile(i) {
     const im = item.images[i];
-    openLightbox(im.url, im.box, i, im.more && im.photos ? [{ url: im.url, box: im.box }].concat(im.photos) : undefined);
-    if (im.more && !im.photos) {
-      $("lb-count").textContent = "+" + im.more + " photo" + (im.more === 1 ? "" : "s") + " of this beetle at level " + item.more_level;
-      $("lb-count").classList.remove("hidden");
-    }
+    openLightbox(im.url, im.box, i);
   }
   // The tile just tapped shows its whole-photo button clearly for a moment, then it fades back
   let chipsTimer = null;
@@ -947,6 +1083,14 @@
     clearTimeout(chipsTimer);
     chipsTimer = setTimeout(() => cells.forEach((c) => c.classList.remove("chips-on")), 3000);
   }
+  // Swipe on the whole photo (#603): left and right for the specimen's other photos, down to close. Not while it is
+  // zoomed in: then a finger moves the photo.
+  function closeLightbox() { $("lightbox").classList.add("hidden"); toggleLight(false); }
+  onSwipe($("lightbox"), () => !$("lightbox").classList.contains("hidden") && !lbZoom.zoomed(), (dir) => {
+    if (dir === "down") { closeLightbox(); return; }
+    if (gallery.length < 2) return false;
+    stepGallery(dir === "left" ? 1 : -1);
+  });
   $("lb-prev").addEventListener("click", (e) => { e.stopPropagation(); stepGallery(-1); });
   $("lb-next").addEventListener("click", (e) => { e.stopPropagation(); stepGallery(1); });
   document.addEventListener("keydown", (e) => {
@@ -1050,22 +1194,36 @@
     }
   }
 
-  // A new level: a card in the middle of the screen with the level's badge in its colour on the scale
-  // (game_rewards.play_events), over gold and brown beetles with a sprinkle of that colour.
-  function levelPop(event) {
+  // A pop-up in the middle of the screen, over gold and brown beetles with a sprinkle of its colour: a new level, with
+  // the level's badge in its colour on the scale, or a badge just earned (#608). Several wait their turn, one after
+  // another. With reduced motion, the card without the confetti.
+  const POP_MS = 4200;
+  const popQueue = [];
+  let popping = false;
+  function queuePop(show) {
+    popQueue.push(show);
+    if (!popping) nextPop();
+  }
+  function nextPop() {
+    const show = popQueue.shift();
+    popping = !!show;
+    if (show) { show(); setTimeout(nextPop, POP_MS + 450); }
+  }
+  function showPop(event, badgeClass, badgeText, testid, badgeColour) {
     const pop = document.createElement("div");
     pop.className = "level-pop";
     pop.setAttribute("role", "status");
-    pop.dataset.testid = "level-pop";
+    pop.dataset.testid = testid;
     const card = document.createElement("div");
     card.className = "level-pop-card";
     card.style.setProperty("--level-colour", event.colour || "#6b7280");
     const badge = document.createElement("div");
-    badge.className = "level-pop-badge " + (event.badge || "scale-chip-none");
+    badge.className = "level-pop-badge " + badgeClass;
+    if (badgeColour) { badge.style.background = badgeColour; badge.style.color = "#fff"; }
     const icon = document.createElement("i");
     icon.className = "fi " + (event.icon || "fi-rr-egg");
     icon.setAttribute("aria-hidden", "true");
-    badge.append(icon, document.createTextNode(event.level || ""));
+    badge.append(icon, document.createTextNode(badgeText));
     const title = document.createElement("div");
     title.className = "mt-3 text-lg font-bold text-gray-900";
     title.textContent = event.title;
@@ -1076,12 +1234,23 @@
     pop.appendChild(card);
     document.body.appendChild(pop);
     requestAnimationFrame(() => pop.classList.add("shown"));
-    setTimeout(() => { pop.classList.remove("shown"); setTimeout(() => pop.remove(), 400); }, 4200);
+    setTimeout(() => { pop.classList.remove("shown"); setTimeout(() => pop.remove(), 400); }, POP_MS);
     if (!reduceMotion && window.beetleConfetti) window.beetleConfetti($("confetti"), "level", 1, event.colour);
+  }
+  function levelPop(event) {
+    queuePop(() => showPop(event, event.badge || "scale-chip-none", event.level || "", "level-pop"));
+  }
+  // A badge earned with this answer (#608): its icon on its colour, its name and how it was earned. "tier" is a step
+  // of the site's scale (its .scale-chip-* colours) or a colour of its own ("blue", "purple": event.colour)
+  const SCALE_STEPS = ["none", "fair", "decent", "good", "great", "excellent"];
+  function badgePop(event) {
+    const onScale = SCALE_STEPS.includes(event.tier);
+    queuePop(() => showPop(event, onScale ? "scale-chip-" + event.tier : "", "", "badge-pop", onScale ? "" : event.colour || "#6b7280"));
   }
 
   function toast(event) {
     if (event.kind === "level") { levelPop(event); return; }
+    if (event.kind === "badge") { badgePop(event); return; }
     const box = document.createElement("div");
     box.style.cssText = "background:#374151;color:#fff;padding:0.625rem 1rem;border-radius:0.75rem;box-shadow:0 4px 12px rgba(0,0,0,.2);max-width:90vw;text-align:center;transition:opacity .4s,transform .4s;opacity:0;transform:translateY(-8px)";
     const title = document.createElement("div");
@@ -1443,7 +1612,7 @@
         chip.addEventListener("click", (e) => {
           e.stopPropagation();
           if (!im.photos) { toast({ kind: "lock", title: "Locked", text: "More photos of each beetle unlock at level " + item.more_level + "." }); return; }
-          openLightbox(im.url, im.box, i, [{ url: im.url, box: im.box }].concat(im.photos));
+          openLightbox(im.url, im.box, i);
         });
         cell.appendChild(chip);
       }
@@ -1612,6 +1781,7 @@
     }
     setPhase("review");
     readyAt = performance.now() + MASH_GUARD_MS;   // Enter pressed three times fast never skips the review
+    swipeHint("next", $("photo-area"), "Swipe left for the next beetle");
   }
   function endReview() {
     $("review").classList.add("hidden");
@@ -1735,36 +1905,63 @@
       const badge = t.points ? [pts(t.points), t.points > 0 ? "up" : "down"] : t.state === "missed" ? ["missed", "flat"]
                   : t.state === "vote" || t.state === "pick" ? ["vote", "flat"] : null;
       if (badge) cellEl.appendChild(node("span", "rv-badge " + badge[1], badge[0]));
+      if ((g.seen || []).includes(i)) {   // this very tile was seen before (#600): the headline pill is for one photo
+        const seen = node("span", "rv-seen", node("i", "fi fi-rr-eye"), node("span", "word", "Seen before"));
+        seen.title = "Seen before";
+        seen.setAttribute("aria-label", "Seen before");
+        seen.dataset.testid = "tile-seen";
+        cellEl.appendChild(seen);
+      }
     });
   }
 
   // Every beetle's names on its photo, in every game (#541): four short lines, subfamily to species (the genus cut to
-  // its letter in the species), true names with how reliable they are, or the likeliest with who says so and how sure,
-  // each source marked with its dot (#569)
-  const NAME_SOURCE = { ai: (r) => [[sourceDot("ai"), node("span", "who", "AI "), r.sure + "%"], "IBBI-AI: " + r.sure + "%"],
-                        players: (r) => [[playersDot(r.expert), node("i", "fi fi-rr-users"), node("span", "who", r.votes + " · "), r.sure + "%"],
+  // its letter in the species), true names with how reliable they are, or the likeliest with who says so and how sure.
+  // One dot per photo says where its names come from (#600): the source of its deepest name. Where IBBI-AI and the
+  // players say the same name, both confidences show ("AI 82% · 67%").
+  const NAME_SOURCE = { ai: (r) => [[node("span", "who", "AI "), r.sure + "%"], "IBBI-AI: " + r.sure + "%"],
+                        players: (r) => [[node("i", "fi fi-rr-users"), node("span", "who", r.votes + " · "), r.sure + "%"],
                                          r.votes + (r.votes === 1 ? " player: " : " players: ") + r.sure + "%" +
                                          (r.expert ? ", backed by an expert" : "")] };
-  function namesLabel(b) {
-    const box = node("div", "rv-names");
+  // the photo's one dot: validated, IBBI-AI, or the players (glowing with an expert: playersDot(r.expert))
+  function photoDot(b) {
+    const kind = b.source || (b.validated ? "truth" : "");
+    return kind === "players" ? playersDot(b.expert) : SOURCE_DOT[kind] ? sourceDot(kind) : null;
+  }
+  // The rank a Similarity pair shares, when it is the answer or probably is (#600): underlined on both photos, only
+  // where the two photos show the same name there
+  function sharedRank(review) {
+    const rank = review && review.pair && review.pair.shared, [a, b] = (review && review.beetles) || [];
+    if (!rank || !a || !b) return null;
+    const at = (x) => ((x.ranks.find((r) => r.rank === rank) || {}).name || "").trim().toLowerCase();
+    return at(a) && at(a) === at(b) ? rank : null;
+  }
+  // ``full``: for the whole photo opened from a review, under the photo: every rank by name, nothing cut short
+  function namesLabel(b, review, full) {
+    const box = node("div", full ? "lb-names" : "rv-names");
     box.dataset.testid = "beetle-names";
+    if (full) box.dataset.testid = "photo-names";
     if (!b.validated && b.ranks.every((r) => !r.name)) {
       box.append(node("span", "", node("span", "nm none", "Not named yet")));
       return box;
     }
-    let genus = "";
+    const shared = sharedRank(review);
+    let genus = "", dot = photoDot(b);
     b.ranks.forEach((r, i) => {
       let name = r.name;
       if (r.rank === "genus") genus = name;
-      if (r.rank === "species" && genus && name.startsWith(genus + " ")) name = genus[0] + ". " + name.slice(genus.length + 1);
-      const nm = name ? node("span", "nm", taxonName(name, r.rank)) : node("span", "nm none", "—");
+      if (!full && r.rank === "species" && genus && name.startsWith(genus + " ")) name = genus[0] + ". " + name.slice(genus.length + 1);
+      const nm = name ? node("span", "nm" + (r.rank === shared ? " shared" : ""), taxonName(name, r.rank)) : node("span", "nm none", "—");
       nm.title = r.rank + ": " + (r.name || "not known");
-      // who says so and how sure, on every line (#569); a validated name its dot on every line, and how reliable it
-      // is on the first
-      const how = r.source === "truth" ? [[sourceDot("truth"), i === 0 ? node("span", "tier", b.tier) : ""], b.tier]
+      // who says so and how sure, on every line (#569); how reliable a validated name is, on the first
+      const how = r.source === "truth" ? [[i === 0 ? node("span", "tier", b.tier) : ""], b.tier]
                 : NAME_SOURCE[r.source] && NAME_SOURCE[r.source](r);
-      nm.title += how ? " (" + how[1] + ")" : "";
-      box.append(node("span", "", nm, how ? node("span", "src", ...[].concat(how[0])) : null));
+      const also = r.also && NAME_SOURCE[r.also.source] && NAME_SOURCE[r.also.source](r.also);
+      nm.title += how ? " (" + how[1] + (also ? "; " + also[1] : "") + ")" : "";
+      const lead = node("span", "lead", name && dot ? dot : null);
+      if (name) dot = null;   // the one dot, on the first line with a name
+      box.append(node("span", "", lead, full ? node("span", "rk", r.rank) : null, nm,
+                      how ? node("span", "src", ...[].concat(how[0]), also ? node("span", "also", "· ", ...also[0]) : null) : null));
     });
     return box;
   }
@@ -1772,45 +1969,57 @@
     (review.beetles || []).forEach((b, i) => {
       const c = cells[i];
       if (b && c && !c.classList.contains("flagged")) {
-        c.appendChild(namesLabel(b));
+        c.appendChild(namesLabel(b, review));
         c.classList.add("has-names");
+        if (!c.querySelector(".zoom-chip")) {   // the whole photo on its own button: a finger's tap turns the names off (#600)
+          const whole = node("button", "zoom-chip rv-whole", node("i", "fi fi-rr-expand"));
+          whole.type = "button";
+          whole.dataset.testid = "review-whole-photo";
+          whole.setAttribute("aria-label", "See the whole photo");
+          whole.addEventListener("click", (e) => { e.stopPropagation(); openReviewPhoto(c); });
+          c.appendChild(whole);
+        }
       }
     });
   }
-  // On a review (after the answer, and under Back) a photo with its names never picks, taps or re-answers (#569):
-  // a tap opens the whole photo, as in play (zoom, Lighting, Flag), and pressing and holding hides the names while
-  // the finger (or button) stays down, to see the beetle under them; with a mouse, pointing at the photo does that.
-  const PEEK_MS = 300;
+  // On a review (after the answer, and under Back) a photo with its names never picks, taps or re-answers (#569).
+  // A finger's tap turns its names off, and on again: they stay that way until the next tap (#600; holding to peek
+  // was not discoverable, and the finger covered the photo). The whole photo opens from its own button on the photo.
+  // With a mouse, pointing at the photo clears the names and a click opens the whole photo, as before.
+  function openReviewPhoto(c) {
+    const i = [...c.parentElement.querySelectorAll(".cell")].indexOf(c), im = previous && (previous.images || [])[i];
+    if (im) openLightbox(im.url, im.box, i, null, previous.where);
+  }
   function reviewPhotos(box) {
-    let peek = null;   // {cell, timer, shown}: a press that may become a peek
-    const endPeek = () => {
-      if (!peek) return;
-      clearTimeout(peek.timer);
-      peek.cell.classList.remove("names-off");
-    };
+    let byMouse = false;   // the press was a mouse's, not a finger's or a pen's
     box.addEventListener("pointerdown", (e) => {
-      const c = e.target.closest(".cell.has-names");
-      if (!c || e.button > 0 || e.target.closest("button:not(.frame)")) return;
-      endPeek();
-      peek = { cell: c, shown: false };
-      peek.timer = setTimeout(() => { peek.shown = true; c.classList.add("names-off"); }, PEEK_MS);
+      if (e.target.closest(".cell.has-names")) byMouse = e.pointerType === "mouse";
     }, true);
-    ["pointerup", "pointercancel", "pointerleave"].forEach((t) => box.addEventListener(t, endPeek, true));
     box.addEventListener("contextmenu", (e) => { if (e.target.closest(".cell.has-names")) e.preventDefault(); });
     box.addEventListener("click", (e) => {
       const c = e.target.closest(".cell.has-names");
       if (!c || e.target.closest("button:not(.frame)")) return;
       e.stopPropagation();
       e.preventDefault();
-      const peeked = peek && peek.cell === c && peek.shown;
-      peek = null;
-      if (peeked || !previous) return;   // the end of a peek, not a tap
-      const i = [...box.querySelectorAll(".cell")].indexOf(c), im = (previous.images || [])[i];
-      if (im) openLightbox(im.url, im.box, i, null, previous.where);
+      if (!previous) return;
+      if (byMouse) openReviewPhoto(c);
+      else c.classList.toggle("names-off");
     }, true);
   }
   reviewPhotos($("photos"));
   reviewPhotos($("previous-photos"));
+  // Swipe on the review card (#603): left for the next beetle, as Next; on your last beetle's card (Back), left
+  // returns to the current one. Never while answering: no swipe picks or submits an answer. Not on a zoomed photo.
+  const unzoomed = (e) => !(e.target.closest && e.target.closest(".frame.zoomed"));
+  const nothingOver = () => $("lightbox").classList.contains("hidden") && $("recap").classList.contains("hidden") && !document.querySelector("[data-overlay-open]");
+  onSwipe($("stage"), (e) => phase === "review" && $("previous").classList.contains("hidden") && nothingOver() && unzoomed(e), (dir) => {
+    if (dir !== "left" || $("submit").disabled || performance.now() < readyAt) return false;
+    $("submit").click();
+  });
+  onSwipe($("previous"), (e) => !$("previous").classList.contains("hidden") && nothingOver() && unzoomed(e), (dir) => {
+    if (dir !== "left") return false;
+    hidePrevious();
+  });
 
   // ---------- Back: your last beetle's review ----------
   let previous = null;                                  // the last answer's review, from memory...

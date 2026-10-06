@@ -210,6 +210,42 @@ def seen_recently(player, roi_ids, now=None):
     return was_shown(player, roi_ids, since=(now or timezone.now()) - timedelta(days=days))
 
 
+def seen_recently_ids(player, roi_ids, now=None, exclude=None):
+    """
+    seen_recently, photo by photo: which of these ROIs (UUIDs) the player was shown the names of, or of another photo
+    of the same specimen, in the GAME_EXPERTISE_RECALL_DAYS before ``now``. ``exclude``: an answer left out (the one
+    being reviewed). A grid's review marks each of these tiles "Seen before" (#600). A few queries for the whole grid.
+    """
+    from django.db.models.functions import Lower, Trim
+
+    ids = [uuid.UUID(str(i)) for i in roi_ids if i]
+    if not ids:
+        return set()
+    by_specimen = Beetles.objects.annotate(specimen=Lower(Trim("depicts_specimen"))).exclude(specimen="")
+    specimen_of = {i: s for i, s in by_specimen.filter(id__in=ids).values_list("id", "specimen") if s}
+    photos = defaultdict(set)
+    if specimen_of:
+        for i, s in by_specimen.filter(specimen__in=set(specimen_of.values())).values_list("id", "specimen"):
+            photos[s].add(i)
+    family = {i: {i} | photos.get(specimen_of.get(i), set()) for i in ids}
+    every = set().union(*family.values())
+    days = game_setting("GAME_EXPERTISE_RECALL_DAYS", 30)
+    answers = GameAnswer.objects.filter(player=player, answered_at__gte=(now or timezone.now()) - timedelta(days=days))
+    if now is not None:
+        answers = answers.filter(answered_at__lte=now)
+    if exclude is not None:
+        answers = answers.exclude(pk=exclude)
+    shown = set(answers.filter(is_check=True, roi_id__in=every).values_list("roi_id", flat=True))
+    shown |= set(answers.filter(mode__in=["pair", "odd"], roi_b_id__in=every).values_list("roi_b_id", flat=True))
+    in_grid = Q()
+    for i in every:
+        in_grid |= Q(tiles__contains=[str(i)])
+    grids = answers.filter(mode__in=["odd", "select"]).filter(Q(skipped=False) | Q(grid_rank="species")).filter(in_grid)
+    for tiles in grids.values_list("tiles", flat=True):
+        shown |= {uuid.UUID(str(t)) for t in tiles or []} & every
+    return {i for i in ids if family[i] & shown}
+
+
 def same_specimen(roi_ids):
     """These ROIs (UUIDs) and every other photo of the same specimens (#386): showing one names them all."""
     from django.db.models.functions import Lower, Trim
