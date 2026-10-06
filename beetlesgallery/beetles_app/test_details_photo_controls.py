@@ -119,17 +119,15 @@ class DetailsPhotoControlsTests(PageBehaviourCase):
 
     # --- a click on the photo -----------------------------------------------------------------------------------------
 
-    def test_a_click_or_enter_or_space_on_the_photo_shows_the_whole_photo_and_back(self):
+    def test_a_click_on_the_photo_hides_the_boxes_and_back(self):
+        # Since #536 the photo holds links (the other beetles' boxes), so it is no longer a button itself: the switch in
+        # its corner is the keyboard's way (test_details_photo_boxes.py).
         page = self.page(self.user)
         frame = Outline(page).elements["roi-frame"]
-        self.assertEqual((frame["role"], frame["tabindex"]), ("button", "0"))
-        self.assertEqual((frame["title"], frame["aria-label"]), ("Show the whole photo",) * 2)
+        for attribute in ("role", "tabindex", "aria-label"):
+            self.assertNotIn(attribute, frame)
         self.assertIn("cursor-pointer", frame["class"].split())
-        for code in ("frame.addEventListener('click'", "frame.addEventListener('keydown'",
-                     "if (e.key !== 'Enter' && e.key !== ' ') return;", "e.preventDefault();",
-                     "box.classList.toggle('hidden', !show);",
-                     "const label = show ? 'Show the whole photo' : \"Show the beetle's box\";",
-                     "frame.title = label;", "frame.setAttribute('aria-label', label);"):
+        for code in ("frame.addEventListener('click'", "photo.dataset.box = show ? 'shown' : 'hidden';"):
             self.assertIn(code, page)
 
     def test_without_a_box_the_photo_is_just_a_photo_and_has_no_flag(self):
@@ -147,7 +145,7 @@ class DetailsPhotoControlsTests(PageBehaviourCase):
         page = self.page(self.user)
         elements = Outline(page).elements
         flag, menu = elements["report-roi-btn"], elements["report-roi-menu"]
-        self.assertEqual((flag["aria-label"], flag["title"]), ("Flag this photo",) * 2)
+        self.assertEqual((flag["aria-label"], flag["title"]), ("Flag this",) * 2)
         self.assertLessEqual({"btn-secondary", "rounded-full", "absolute", "bottom-2", "right-2"}, set(flag["class"].split()))
         start = page.index('id="report-roi-btn"')
         inside = page[page.index(">", start) + 1:page.index("</button>", start)]
@@ -173,7 +171,7 @@ class DetailsPhotoControlsTests(PageBehaviourCase):
             self.assertIn(rule, page)
         self.assertEqual(Outline(page).elements["roi-photo"]["data-box"], "shown")
         self.assertIn("photo.dataset.box = show ? 'shown' : 'hidden';", page)
-        self.assertIn("if (!menuOpen()) toggleBox();", page)   # with the menu open, a click on the photo only closes it
+        self.assertIn("if (!menuOpen()) toggleBoxes();", page)   # with the menu open, a click on the photo only closes it
 
     def test_anyone_who_can_open_the_page_can_flag_the_beetle(self):
         member = self.account(DETAILS)

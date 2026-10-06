@@ -10,6 +10,19 @@
   @media (hover: none) { #report-roi-btn { opacity: 1; } }
   #roi-photo[data-box="hidden"] #report-roi-btn { display: none; }
   #report-roi-btn:disabled { cursor: default; }
+
+  /* Every beetle's box on the photo (#536): a white line with a darker outline; this page's beetle the other way
+     round, a dark line with a white outline. The other boxes are links to their beetles' pages; a click on this one
+     does nothing (it isn't "outside the boxes"). */
+  .roi-box { position: absolute; border: 2px solid rgb(255 255 255 / 0.9); border-radius: 0.375rem;
+             box-shadow: 0 0 0 1px rgb(0 0 0 / 0.4), inset 0 0 0 1px rgb(0 0 0 / 0.4); }
+  .roi-box-current { cursor: default; border-color: rgb(17 24 39 / 0.9);
+                     box-shadow: 0 0 0 1px rgb(255 255 255 / 0.9), inset 0 0 0 1px rgb(255 255 255 / 0.9); }
+  a.roi-box:hover { background: rgb(255 255 255 / 0.15); }
+  a.roi-box:focus-visible { outline: 3px solid rgb(107 114 128); outline-offset: 1px; }
+  #roi-frame { isolation: isolate; }   /* the boxes stack inside the photo, under the switch and the flag */
+  #roi-photo[data-box="hidden"] #roi-boxes { display: none; }
+  #roi-boxes-btn[aria-pressed="true"] .boxes-off { display: none; }
 </style>
 {% endblock %}
 
@@ -55,11 +68,10 @@
       {% if beetle.image_asset and beetle.image_asset.image_file %}
         <figure class="rounded-xl bg-primary2 p-3 ring-1 ring-text/10 flex flex-col items-center">
 
-          {# THE PHOTO, with the flag in its corner. Not clipped itself, so the flag's menu can reach past the photo. #}
-          <div id="roi-photo" class="relative max-w-full"{% if beetle.bbox_x is not None %} data-box="shown"{% endif %}>
-            {# IMAGE WRAPPER (Hooks absolute positioning to the actual image bounds). With a box, a click, Enter or Space shows the whole photo, then the box again. #}
-            <div id="roi-frame" class="relative block max-h-[70vh] max-w-full overflow-hidden rounded-lg{% if beetle.bbox_x is not None %} cursor-pointer focus:outline-none focus-visible:ring-4 focus-visible:ring-gray-500{% endif %}"
-                 {% if beetle.bbox_x is not None %}role="button" tabindex="0" title="Show the whole photo" aria-label="Show the whole photo"{% endif %}>
+          {# THE PHOTO, with the boxes switch and the flag in its corners. Not clipped itself, so the flag's menu can reach past the photo. #}
+          <div id="roi-photo" class="relative max-w-full"{% if photo_boxes %} data-box="shown"{% endif %}>
+            {# IMAGE WRAPPER (Hooks absolute positioning to the actual image bounds). A click outside every box hides the boxes, the next one shows them again. #}
+            <div id="roi-frame" class="relative block max-h-[70vh] max-w-full overflow-hidden rounded-lg{% if photo_boxes %} cursor-pointer{% endif %}">
               <img
                 src="{{ beetle.display_url }}"
                 alt="Specimen Image"
@@ -70,29 +82,42 @@
                 decoding="async"
               />
 
-              {# BOUNDING BOX OVERLAY #}
-              {% if beetle.bbox_x is not None %}
-                <div id="roi-bbox"
-                     class="absolute border-2 border-white/90 transition-opacity duration-200 pointer-events-none rounded-md"
-                     style="
-                       box-shadow:
-                         0 0 0 1px rgba(0, 0, 0, 0.4),
-                         inset 0 0 0 1px rgba(0, 0, 0, 0.4),
-                         0 0 0 9999px rgba(255, 255, 255, 0.25);
-                       left: calc({{ beetle.bbox_x|stringformat:'f' }} * 100%);
-                       top: calc({{ beetle.bbox_y|stringformat:'f' }} * 100%);
-                       width: calc({{ beetle.bbox_width|stringformat:'f' }} * 100%);
-                       height: calc({{ beetle.bbox_height|stringformat:'f' }} * 100%);
-                     ">
+              {# EVERY BEETLE'S BOX, with a haze over everything outside them. The other boxes link to their beetles' pages. #}
+              {% if photo_boxes %}
+                <div id="roi-boxes" class="absolute inset-0">
+                  <svg id="roi-haze" class="absolute inset-0 h-full w-full pointer-events-none" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true">
+                    <mask id="roi-haze-holes" maskUnits="userSpaceOnUse" x="0" y="0" width="1" height="1">
+                      <rect width="1" height="1" fill="white"/>
+                      {% for box in photo_boxes %}<rect x="{{ box.roi.bbox_x|stringformat:'f' }}" y="{{ box.roi.bbox_y|stringformat:'f' }}" width="{{ box.roi.bbox_width|stringformat:'f' }}" height="{{ box.roi.bbox_height|stringformat:'f' }}" fill="black"/>{% endfor %}
+                    </mask>
+                    <rect width="1" height="1" fill="white" fill-opacity="0.25" mask="url(#roi-haze-holes)"/>
+                  </svg>
+                  {% for box in photo_boxes %}
+                    {% if box.current %}
+                      <div id="roi-bbox" class="roi-box roi-box-current" data-testid="roi-box-{{ box.number }}"
+                           style="left: calc({{ box.roi.bbox_x|stringformat:'f' }} * 100%); top: calc({{ box.roi.bbox_y|stringformat:'f' }} * 100%); width: calc({{ box.roi.bbox_width|stringformat:'f' }} * 100%); height: calc({{ box.roi.bbox_height|stringformat:'f' }} * 100%);"></div>
+                    {% else %}
+                      <a href="{% url 'beetle_detail' beetle_id=box.roi.id %}" class="roi-box" data-testid="roi-box-{{ box.number }}"
+                         title="Show ROI {{ box.number|digit_groups_text }} of {{ total_siblings|digit_groups_text }}" aria-label="Show ROI {{ box.number|digit_groups_text }} of {{ total_siblings|digit_groups_text }}"
+                         style="left: calc({{ box.roi.bbox_x|stringformat:'f' }} * 100%); top: calc({{ box.roi.bbox_y|stringformat:'f' }} * 100%); width: calc({{ box.roi.bbox_width|stringformat:'f' }} * 100%); height: calc({{ box.roi.bbox_height|stringformat:'f' }} * 100%);"></a>
+                    {% endif %}
+                  {% endfor %}
                 </div>
               {% endif %}
             </div>
 
+            {% if photo_boxes %}
+              {# BOXES SWITCH: shows or hides the boxes and the haze, as a click outside the boxes does; for the keyboard and for those who don't know that click. #}
+              <button type="button" id="roi-boxes-btn" class="btn-secondary absolute bottom-2 left-2 h-9 w-9 p-0 rounded-full shadow-md" aria-pressed="true" aria-label="Hide the boxes" title="Hide the boxes">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="11" height="9" rx="1.5"/><rect x="10" y="10" width="11" height="9" rx="1.5"/><path class="boxes-off" stroke-linecap="round" d="M3 3l18 18"/></svg>
+              </button>
+            {% endif %}
+
             {% if beetle.bbox_x is not None %}
               {# FLAG: sends this beetle to the curators, as Report does in the game. Shown on hover and focus, always on touch screens, only with the box (see the CSS). #}
-              <button type="button" id="report-roi-btn" class="btn-secondary absolute bottom-2 right-2 h-9 w-9 p-0 rounded-full text-base shadow-md" aria-haspopup="menu" aria-expanded="false" aria-label="Flag this photo" title="Flag this photo" data-testid="report-roi"><i class="fi fi-rr-flag" aria-hidden="true"></i></button>
-              <div id="report-roi-menu" class="hidden absolute bottom-12 right-2 z-20 scroll-mt-24 p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Flag this photo" data-url="{% url 'report_roi' beetle.id %}">
-                <div class="px-2 py-1 text-xs font-semibold text-gray-500">Flag this photo</div>
+              <button type="button" id="report-roi-btn" class="btn-secondary absolute bottom-2 right-2 h-9 w-9 p-0 rounded-full text-base shadow-md" aria-haspopup="menu" aria-expanded="false" aria-label="Flag this" title="Flag this" data-testid="report-roi"><i class="fi fi-rr-flag" aria-hidden="true"></i></button>
+              <div id="report-roi-menu" class="hidden absolute bottom-12 right-2 z-20 scroll-mt-24 p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Flag this" data-url="{% url 'report_roi' beetle.id %}">
+                <div class="px-2 py-1 text-xs font-semibold text-gray-500">Flag this</div>
                 {% for value, label in report_reasons %}
                 <button type="button" class="report-roi-reason block w-full text-left px-2 py-2 rounded-lg hover:bg-gray-100" data-reason="{{ value }}" role="menuitem">{{ label }}</button>
                 {% endfor %}
@@ -355,42 +380,46 @@
     } catch (err) { console.error(err); }
   });
 
-  // The photo: a click on it (or Enter or Space) shows the whole photo, and the next one this beetle's box again. The
-  // flag in its corner sends the beetle to the curators; it shows only with the box (the CSS reads data-box).
+  // The photo: every beetle's box, the other beetles' boxes linking to their pages. A click outside every box (or the
+  // switch in the corner) hides the boxes and the haze, the next one shows them again. The flag in the other corner
+  // sends this beetle to the curators; it shows only with the boxes (the CSS reads data-box).
   (function () {
     const photo = document.getElementById('roi-photo');
     const frame = document.getElementById('roi-frame');
-    const box = document.getElementById('roi-bbox');
+    const boxes = document.getElementById('roi-boxes');
+    const toggle = document.getElementById('roi-boxes-btn');
     const flag = document.getElementById('report-roi-btn');
     const menu = document.getElementById('report-roi-menu');
     const status = document.getElementById('report-roi-status');
-    if (!photo || !box) return;   // no photo, or no box to show or flag
+    if (!photo || !boxes) return;   // no photo, or no box on it
 
-    const menuOpen = () => !menu.classList.contains('hidden');
+    const menuOpen = () => !!menu && !menu.classList.contains('hidden');
     function setMenu(open) {
+      if (!menu) return;   // this beetle has no box to flag
       menu.classList.toggle('hidden', !open);
       flag.setAttribute('aria-expanded', String(open));
       if (open) menu.scrollIntoView({ block: 'nearest' });   // it opens upwards: a short photo high on a phone's screen
     }
 
-    function toggleBox() {
-      const show = box.classList.contains('hidden');
-      box.classList.toggle('hidden', !show);
+    function toggleBoxes() {
+      const show = photo.dataset.box === 'hidden';
       photo.dataset.box = show ? 'shown' : 'hidden';
-      const label = show ? 'Show the whole photo' : "Show the beetle's box";
-      frame.title = label;
-      frame.setAttribute('aria-label', label);
+      const label = show ? 'Hide the boxes' : 'Show the boxes';
+      toggle.title = label;
+      toggle.setAttribute('aria-label', label);
+      toggle.setAttribute('aria-pressed', String(show));
       setMenu(false);
     }
-    frame.addEventListener('click', () => {
-      if (!menuOpen()) toggleBox();   // while the flag's menu is open, a click on the photo only closes the menu
+    frame.addEventListener('click', (e) => {
+      if (e.target.closest('.roi-box')) return;   // on a box: another beetle's opens its page, this one's does nothing
+      if (!menuOpen()) toggleBoxes();   // while the flag's menu is open, a click on the photo only closes the menu
     });
-    frame.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      e.preventDefault();   // Space would scroll the page
-      toggleBox();
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleBoxes();
     });
 
+    if (!flag) return;
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
     flag.addEventListener('click', (e) => {
       e.stopPropagation();

@@ -776,6 +776,14 @@ def beetle_detail(request, beetle_id):
                     next_sibling = siblings[i + 1]
                 break
 
+    # Every boxed ROI of the photo, drawn on it as a link to its own page (#536). Numbered as in "ROI n of m"; the
+    # biggest come first, so a box inside another is drawn over it and gets its own clicks.
+    photo_boxes = sorted(
+        ({"roi": s, "number": i, "current": s.id == beetle.id}
+         for i, s in enumerate(siblings, start=1) if s.bbox_x is not None),
+        key=lambda b: -(b["roi"].bbox_width or 0) * (b["roi"].bbox_height or 0),
+    )
+
     # 2. Related Specimens (Same Specimen ID, different Images) - For "More images" section
     related_specimens = []
     if beetle.depicts_specimen and beetle.depicts_specimen.strip():
@@ -827,6 +835,7 @@ def beetle_detail(request, beetle_id):
             "current_sibling_index": current_index,
             "prev_sibling": prev_sibling,
             "next_sibling": next_sibling,
+            "photo_boxes": photo_boxes,
             "related_specimens": related_specimens,
             "ai_suggestions": suggestions_for([beetle]).get(beetle.id, []),
         },
