@@ -241,7 +241,8 @@
   .rv-badge.flat { background: rgba(255,255,255,.95); border: 1px solid #d1d5db; color: #374151; }
   /* After Submit the answer is locked in; a slim bar shows while the game waits (sending, or the next photos) */
   #game.answer-locked #panel:not(.reviewing) :is(#ranks, #ladder) { opacity: 0.55; pointer-events: none; }
-  #game.answer-locked #photos:not(.revealing) .cell:not(.picked):not(.tapped) canvas { opacity: 0.6; }
+  /* Faded only while waiting: on the review the photos are what the player studies next to the names */
+  #game.answer-locked:not([data-phase="review"]) #photos:not(.revealing) .cell:not(.picked):not(.tapped) canvas { opacity: 0.6; }
   #wait-bar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; height: 3px; overflow: hidden; background: #e5e7eb; }
   #wait-bar.hidden { display: none; }
   #wait-bar span { position: absolute; top: 0; bottom: 0; left: -35%; width: 35%; background: #4b5563; animation: wait-slide 1.1s ease-in-out infinite; }
@@ -1306,6 +1307,7 @@
     phase = p;
     busy = p !== "answer";
     root.classList.toggle("answer-locked", busy);
+    root.dataset.phase = p;
     if (busy && document.activeElement && $("panel").contains(document.activeElement)) document.activeElement.blur();
     waiting(p === "send" || p === "next");
     $("skip").disabled = busy;
@@ -1424,11 +1426,11 @@
   }
 
   // Identification: rank by rank, yours next to the truth and its points, or next to the players and IBBI-AI
-  function opinion(v, withVotes) {
+  function opinion(v, withVotes, rank) {
     if (!v) return "—";
     const how = v.sure + "%" + (withVotes ? " · " + v.votes + (v.votes === 1 ? " vote" : " votes") : "") +
                 (v.experts ? " · " + v.experts + (v.experts === 1 ? " expert" : " experts") : "");
-    return [v.name, " ", tick(v.agrees, "agrees with you", "differs from you"), node("small", "", how)];
+    return [taxonName(v.name, rank), " ", tick(v.agrees, "agrees with you", "differs from you"), node("small", "", how)];
   }
   function cell(content, cls) {
     const td = node("td", cls || "");
@@ -1442,9 +1444,9 @@
     const rows = c.ranks.map((r) => node("tr", "", cell(r.rank),
       cell(r.yours ? taxonName(r.yours, r.rank) : "—"),
       truth ? cell([r.truth ? taxonName(r.truth, r.rank) : "—", " ", tick(r.state === "right" ? true : r.state ? false : null, "correct", "wrong")])
-            : cell(opinion(r.players, true)),
+            : cell(opinion(r.players, true, r.rank)),
       truth ? cell(r.state === "right" || r.state === "wrong" ? pts(r.points) : r.state ? "0" : "", "num")
-            : cell(opinion(r.ai, false))));
+            : cell(opinion(r.ai, false, r.rank))));
     const out = [node("table", "rv-table", node("thead", "", head), node("tbody", "", ...rows))];
     if (truth) out.push(node("p", "rv-note", "Name: ", taxonName(c.truth.name, c.truth.rank), " · " + c.truth.tier));
     else if (!c.players) out.push(node("p", "rv-note", "No other players have named it yet."));
@@ -1483,7 +1485,7 @@
       if (!t || t.validated || !(t.ai || t.players)) return;
       const chosen = odd ? i === g.pick : t.state === "vote";
       const views = [["IBBI-AI", t.ai], ["players", t.players]].filter(([, v]) => v)
-        .map(([who, v]) => who + " " + (v.in ? "in it" : "says " + v.name) + " (" + v.sure + "%" + (v.votes ? ", " + v.votes + (v.votes === 1 ? " vote" : " votes") : "") + ")");
+        .map(([who, v]) => who + " " + (v.in ? (odd ? "says it's one of the rest" : "in it") : "says " + v.name) + " (" + v.sure + "%" + (v.votes ? ", " + v.votes + (v.votes === 1 ? " vote" : " votes") : "") + ")");
       const outlook = t.pays === true ? (chosen ? "earns points once confirmed" : odd ? "picking it would earn points once confirmed" : "a tap would earn points once confirmed")
                     : t.pays === false && chosen ? "may cost points once confirmed" : "";
       lines.push(node("p", "rv-note", node("strong", "", (i + 1) + (chosen ? " (yours)" : "") + ": "), views.join(" · ") + (outlook ? ". " + outlook[0].toUpperCase() + outlook.slice(1) + "." : "")));
