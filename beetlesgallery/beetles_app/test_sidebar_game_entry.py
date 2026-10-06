@@ -57,7 +57,7 @@ class GameEntryTests(PageBehaviourCase):
         self.assertIn('<span class="digit-group">1</span><span class="digit-group" style="margin-left:0.4em">234</span> pts',
                       phone)
         self.assertIn(f'title="Ambrosia Archive: user, level 5 (Tunnel master), {digit_groups_text(1234)} pts"', desktop)
-        self.assertIn(">Beta</span>", phone)   # the phone menu keeps its Beta pill, beside the name
+        self.assertNotIn(">Beta</span>", phone)   # out of beta (#538): the phone menu's pill is gone too
 
     def test_a_long_level_name_is_shortened_but_never_the_points(self):
         self.sign_in(30000, 0.95)   # level 10, King of Bark and Ambrosia

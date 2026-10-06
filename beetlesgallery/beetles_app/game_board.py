@@ -17,8 +17,8 @@ from django.utils import timezone
 from . import game, game_levels, game_rewards, game_trust
 from .models import AnswerPoints, GameAnswer, PlayerScore, PlayerSkill, SpeciesDiscovery
 
-SORTS = {"score": "Score", "identification": "Identification accuracy", "similarity": "Similarity accuracy",
-         "odd": "Imposter Picker accuracy", "select": "Find Them All accuracy", "viewed": "Beetles seen"}
+SORTS = {"score": "Score", "identification": "Naming accuracy", "similarity": "Similarity accuracy",
+         "odd": "Odd One Out accuracy", "select": "Find Them All accuracy", "viewed": "Beetles seen"}
 PERIODS = {"week": "This week", "month": "This month", "year": "This year", "all": "All time"}
 GAMES = ("classify", "pair", "odd", "select")   # Identification, Similarity, Odd One Out, Select all
 # each game's accuracy column on the board, and the sort that ranks by it (#543)
@@ -224,7 +224,7 @@ def profile(player):
         "score": s, "level": game_levels.describe(s.score, s.rating), "badges": game_rewards.badge_cards(player),
         "streak": game_rewards.streak_days(game_rewards.goal_days(player)),
         "accuracy": s.accuracy if s.judged >= game.game_setting("GAME_MIN_JUDGED_FOR_ACCURACY", 10) else None,
-        "expert_in": [{"what": what[k.rank], "branch": k.branch} for k in proven],   # Identification experts
+        "expert_in": [{"what": what[k.rank], "branch": k.branch} for k in proven],   # Naming experts
         "distinction_in": [{"what": what[rank], "branch": branch}
                            for rank, branch in game_trust.distinction_experts(player)],   # #498
         "discoveries": list(player.species_discoveries.order_by("genus", "species")),

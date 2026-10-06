@@ -103,7 +103,7 @@ class ToggleTests(ScoringCase):
     def test_the_game_types_are_identification_and_similarity(self):
         self.client.force_login(self.user)
         page = self.client.get(reverse("game_play", args=["mixed"])).content.decode()
-        self.assertIn(">Identification<", page)
+        self.assertIn(">Naming<", page)
         self.assertIn(">Similarity<", page)
         self.assertNotIn(">Ties<", page)
         self.assertIn('data-reason="bad_image" role="menuitem">Bad photo<', page)

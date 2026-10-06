@@ -31,12 +31,12 @@
   <section id="principles" class="mb-10 space-y-3 text-gray-700">
     <h2 class="text-xl font-semibold text-gray-900">Principles</h2>
     <ol class="list-decimal pl-5 space-y-2">
-      <li><strong>Claim only what you are sure of.</strong> Every claim (a rank named, a Similarity rung, an Imposter Picker pick, a Find Them All tap) earns its points when correct and costs <b>k = {{ wrong_cost|floatformat:2 }}</b> times them when wrong. So a claim pays on average only when the player is at least <b>{% widthratio v.GAME_POINTS_CONFIDENCE 1 100 %}%</b> sure of it; below that, stopping a rank earlier, a more cautious rung or leaving a beetle untapped earns more.</li>
+      <li><strong>Claim only what you are sure of.</strong> Every claim (a rank named, a Similarity rung, an Odd One Out pick, a Find Them All tap) earns its points when correct and costs <b>k = {{ wrong_cost|floatformat:2 }}</b> times them when wrong. So a claim pays on average only when the player is at least <b>{% widthratio v.GAME_POINTS_CONFIDENCE 1 100 %}%</b> sure of it; below that, stopping a rank earlier, a more cautious rung or leaving a beetle untapped earns more.</li>
       <li><strong>Wrong is wrong.</strong> Anything claimed that isn't true is a mistake, however much else was right: "same genus" for beetles of two subfamilies is wrong, not partly correct. "Partly correct" is kept for answers that are true as far as they go and stop short.</li>
       <li><strong>Precise beats vague,</strong> when correct: species is worth the most, then genus, tribe, subfamily, and each step deeper is worth more than the one before.</li>
       <li><strong>Not knowing is cheap.</strong> A skip costs less than the smallest mistake (and earns a little in the grid games), so guessing never pays.</li>
       <li><strong>The truth decides where we have it.</strong> On validated beetles answers are scored against the real name. Players are never told which beetles those are, so they have to try their best on every one.</li>
-      <li><strong>Elsewhere, agreement with strong players.</strong> On unvalidated beetles an answer earns points only when players with a better record (or Identification experts, or a model proven in that group) agree. A rank they dispute takes points back from the rest of the answer, which never goes below zero there, and it earns less than on validated beetles.</li>
+      <li><strong>Elsewhere, agreement with strong players.</strong> On unvalidated beetles an answer earns points only when players with a better record (or Naming experts, or a model proven in that group) agree. A rank they dispute takes points back from the rest of the answer, which never goes below zero there, and it earns less than on validated beetles.</li>
       <li><strong>Scores follow the truth over time.</strong> When a beetle is validated or its name corrected, every answer on it is re-scored, up or down: when the player leaves the game, every night, or with "Re-score everyone" below.</li>
       <li><strong>Levels need reliability as well as points,</strong> so playing a lot is not enough to reach the top; being correct is.</li>
     </ol>
@@ -62,7 +62,7 @@
     </div>
     <div class="p-4 rounded-xl border border-gray-200">
       <h3 class="font-semibold text-gray-900 mb-1">What careful players earn, per answer and per minute</h3>
-      <p class="text-sm mb-2">A model, not a measurement: three players who claim only what they are at least {% widthratio v.GAME_POINTS_CONFIDENCE 1 100 %}% sure of, on validated beetles of middling difficulty, the point for taking part included. How often each is right naming a rank: novice 80/55/35/20% (subfamily/tribe/genus/species), average 95/85/72/50%, strong 99/96/90/78%; telling two beetles apart is a little easier. Their grids sit where the ladder settles them: novice 9 beetles at subfamily, average 9 at genus, strong 16 at species. Seconds per answer: Identification 6 plus 6 per rank named, Similarity 10/8/7, a grid 8 to 28 by size. Harder tasks pay more per answer; per minute, no game earns more than &times;2 another for the same player, so none is the way to farm points.</p>
+      <p class="text-sm mb-2">A model, not a measurement: three players who claim only what they are at least {% widthratio v.GAME_POINTS_CONFIDENCE 1 100 %}% sure of, on validated beetles of middling difficulty, the point for taking part included. How often each is right naming a rank: novice 80/55/35/20% (subfamily/tribe/genus/species), average 95/85/72/50%, strong 99/96/90/78%; telling two beetles apart is a little easier. Their grids sit where the ladder settles them: novice 9 beetles at subfamily, average 9 at genus, strong 16 at species. Seconds per answer: Naming 6 plus 6 per rank named, Similarity 10/8/7, a grid 8 to 28 by size. Harder tasks pay more per answer; per minute, no game earns more than &times;2 another for the same player, so none is the way to farm points.</p>
       <div class="overflow-x-auto rounded-xl border border-gray-200">
         <table class="w-full text-sm" data-testid="scoring-play">
           <thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr><th class="text-left px-3 py-2">Game</th>{% for name in play.players %}<th class="text-right px-3 py-2">{{ name }}<div class="normal-case font-normal">per answer · per minute</div></th>{% endfor %}</tr></thead>
@@ -83,8 +83,8 @@
     <h2 class="text-xl font-semibold text-gray-900">Validated beetles: scored against the truth</h2>
 
     <div class="p-4 rounded-xl border border-gray-200">
-      <h3 class="font-semibold text-gray-900 mb-1">Identification (name the beetle)</h3>
-      <p class="text-sm mb-2">Points per rank named correctly: subfamily <b>{{ v.GAME_POINTS_RANK.subfamily|floatformat:"-2" }}</b>, tribe <b>{{ v.GAME_POINTS_RANK.tribe|floatformat:"-2" }}</b>, genus <b>{{ v.GAME_POINTS_RANK.genus|floatformat:"-2" }}</b>, species <b>{{ v.GAME_POINTS_RANK.species|floatformat:"-2" }}</b>, all times the Identification weight <b>×{{ v.GAME_POINTS_CLASSIFY_WEIGHT|floatformat:"-2" }}</b>.</p>
+      <h3 class="font-semibold text-gray-900 mb-1">Naming (name the beetle)</h3>
+      <p class="text-sm mb-2">Points per rank named correctly: subfamily <b>{{ v.GAME_POINTS_RANK.subfamily|floatformat:"-2" }}</b>, tribe <b>{{ v.GAME_POINTS_RANK.tribe|floatformat:"-2" }}</b>, genus <b>{{ v.GAME_POINTS_RANK.genus|floatformat:"-2" }}</b>, species <b>{{ v.GAME_POINTS_RANK.species|floatformat:"-2" }}</b>, all times the Naming weight <b>×{{ v.GAME_POINTS_CLASSIFY_WEIGHT|floatformat:"-2" }}</b>.</p>
       <pre class="text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">points = weight × ( Σ points of each correct rank − k × Σ points of each wrong rank )
 k      = t ÷ (1 − t) = {{ wrong_cost|floatformat:2 }}      t = {{ v.GAME_POINTS_CONFIDENCE|floatformat:"-2" }}   weight = {{ v.GAME_POINTS_CLASSIFY_WEIGHT|floatformat:"-2" }}</pre>
       <p class="text-sm mt-2">A rank below a wrong one is wrong too: naming the species claims every rank above it. Leaving a rank blank costs nothing, so a player names each rank only while at least t sure of it.</p>
@@ -104,11 +104,11 @@ bonus = {{ v.GAME_POINTS_SIMILARITY_BONUS|floatformat:"-2" }}   k = {{ wrong_cos
 
     <div class="p-4 rounded-xl border border-gray-200" data-testid="scoring-grids">
       <h3 class="font-semibold text-gray-900 mb-1">The grid games grow with the player</h3>
-      <p class="text-sm mb-2">Imposter Picker and Find Them All each have 12 steps: 4, 9 and 16 beetles at subfamily, then the same at tribe, genus and species. A player goes up a step after {{ v.GAME_GRID_UP_AFTER }} good grids in a row and down one after a poor grid, and never past the ranks they have open. When the beetles for a step are short, the grid is built smaller, or at the nearest other rank, rather than not at all. Every point of a grid built on the ladder is times its size (grids from before it keep &times;1, so a re-score doesn't inflate them): 4 beetles <b>×{{ v.GAME_GRID_SIZE_FACTOR.4|floatformat:"-2" }}</b>, 9 <b>×{{ v.GAME_GRID_SIZE_FACTOR.9|floatformat:"-2" }}</b>, 16 <b>×{{ v.GAME_GRID_SIZE_FACTOR.16|floatformat:"-2" }}</b>. A photo flagged as bad leaves the grid and counts for nothing; half of them flagged (or the odd one) ends the grid, unscored.</p>
+      <p class="text-sm mb-2">Odd One Out and Find Them All each have 12 steps: 4, 9 and 16 beetles at subfamily, then the same at tribe, genus and species. A player goes up a step after {{ v.GAME_GRID_UP_AFTER }} good grids in a row and down one after a poor grid, and never past the ranks they have open. When the beetles for a step are short, the grid is built smaller, or at the nearest other rank, rather than not at all. Every point of a grid built on the ladder is times its size (grids from before it keep &times;1, so a re-score doesn't inflate them): 4 beetles <b>×{{ v.GAME_GRID_SIZE_FACTOR.4|floatformat:"-2" }}</b>, 9 <b>×{{ v.GAME_GRID_SIZE_FACTOR.9|floatformat:"-2" }}</b>, 16 <b>×{{ v.GAME_GRID_SIZE_FACTOR.16|floatformat:"-2" }}</b>. A photo flagged as bad leaves the grid and counts for nothing; half of them flagged (or the odd one) ends the grid, unscored.</p>
     </div>
 
     <div class="p-4 rounded-xl border border-gray-200">
-      <h3 class="font-semibold text-gray-900 mb-1">Imposter Picker</h3>
+      <h3 class="font-semibold text-gray-900 mb-1">Odd One Out</h3>
       <pre class="text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">worth   = odd_weight × P[how related the odd one is to the rest] × size   odd_weight = {{ v.GAME_POINTS_ODD_WEIGHT|floatformat:"-2" }}
 correct = + worth
 wrong   = − k × worth                                                   k = {{ wrong_cost|floatformat:2 }}
@@ -128,7 +128,7 @@ members left out cost nothing; taps on unvalidated beetles are recorded, not sco
       <h3 class="font-semibold text-gray-900 mb-1">In every game</h3>
       <ul class="list-disc pl-5 space-y-1">
         <li><b>Taking part:</b> every real answer earns +{{ v.GAME_POINTS_PARTICIPATION|floatformat:"-2" }} on top, so the score grows with play.</li>
-        <li><b>Skip</b> in Identification and Similarity costs {{ v.GAME_POINTS_UNSURE|floatformat:"-2" }}; in Imposter Picker and Find Them All it earns {{ v.GAME_POINTS_ODD_SKIP|floatformat:"-2" }}.</li>
+        <li><b>Skip</b> in Naming and Similarity costs {{ v.GAME_POINTS_UNSURE|floatformat:"-2" }}; in Odd One Out and Find Them All it earns {{ v.GAME_POINTS_ODD_SKIP|floatformat:"-2" }}.</li>
         <li><b>Seen again:</b> a beetle the player got wrong comes back to be learned and earns ×{{ v.GAME_POINTS_RETRY_FACTOR|floatformat:"-2" }}. Only the first time counts towards accuracy.</li>
         <li><b>Reported:</b> while a player's report on a beetle is open, their answers on it are held (no points either way).</li>
         <li><b>Score</b> is the running total, never below zero.</li>
@@ -140,15 +140,15 @@ members left out cost nothing; taps on unvalidated beetles are recorded, not sco
     <h2 class="text-xl font-semibold text-gray-900">Unvalidated beetles: scored by agreement</h2>
     <p class="text-sm">Here nobody knows the answer yet, so a player earns points when stronger players agree with them. A rank they disagree with takes back k times what agreeing would earn, so a deep guess doesn't pay here either; an answer is never below zero in all, so honest answers on hard beetles are never punished.</p>
     <pre class="text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">for each rank the player named:
-  judge weight  = 1                                        an Identification expert for that part of the tree
+  judge weight  = 1                                        a Naming expert for that part of the tree
                 = 1 / (1 + e^−(judge rating − your rating) / spread)   otherwise (spread = {{ v.GAME_RATER_SPREAD|floatformat:"-2" }})
   c             = (Σ weight agreeing − Σ weight disagreeing) / (Σ all weights + 1)      from −1 to +1
   points        = cap × P[rank] × c          when c ≥ 0                             cap = {{ v.GAME_POINTS_CONSENSUS_CAP|floatformat:"-2" }}
                 = cap × P[rank] × k × c      when c &lt; 0 (judges disagree)         k = {{ wrong_cost|floatformat:2 }}
-if Identification experts (or a trusted model) name that rank:
+if Naming experts (or a trusted model) name that rank:
   you match     points = max(points, reference_cap × P[rank])                       reference_cap = {{ v.GAME_POINTS_REFERENCE_CAP|floatformat:"-2" }}
   you don't     points = min(points, − k × reference_cap × P[rank])
-answer = max(0, Σ points)   (Identification answers then × weight {{ v.GAME_POINTS_CLASSIFY_WEIGHT|floatformat:"-2" }})</pre>
+answer = max(0, Σ points)   (Naming answers then × weight {{ v.GAME_POINTS_CLASSIFY_WEIGHT|floatformat:"-2" }})</pre>
     <ul class="list-disc pl-5 text-sm space-y-1">
       <li><b>Judges</b> are players with at least {{ v.GAME_RATER_MIN_JUDGED }} answers on validated beetles and a rating at or above the median. Weaker players never move anyone's points.</li>
       <li>Agreeing with stronger players earns almost full credit; with weaker ones, very little. A stronger player who disagrees cancels out agreement from weaker ones, so a crowd of weak players can't outvote one strong one.</li>
@@ -167,10 +167,10 @@ answer = max(0, Σ points)   (Identification answers then × weight {{ v.GAME_PO
       <div class="overflow-x-auto"><table class="w-full">
         <thead class="text-xs uppercase text-gray-500"><tr><th class="text-left pr-3 pb-1">Answer</th><th class="text-left pr-3 pb-1">Says the beetle is</th><th class="text-right pb-1">Counts</th></tr></thead>
         <tbody class="divide-y divide-gray-100">
-          <tr><td class="pr-3 py-1.5">Identification</td><td class="pr-3">each rank the player named</td><td class="text-right">1 vote</td></tr>
+          <tr><td class="pr-3 py-1.5">Naming</td><td class="pr-3">each rank the player named</td><td class="text-right">1 vote</td></tr>
           <tr><td class="pr-3 py-1.5">Similarity, with a validated partner</td><td class="pr-3">the partner's name down to the rung chosen ("same genus" → its subfamily, tribe and genus)</td><td class="text-right">1 vote</td></tr>
           <tr><td class="pr-3 py-1.5">Find Them All, a tap</td><td class="pr-3">the grid's group, down to the grid's rank</td><td class="text-right">{{ v.GAME_SELECT_TAP_WEIGHT|floatformat:"-2" }} of a vote</td></tr>
-          <tr><td class="pr-3 py-1.5">Imposter Picker, left with the rest when the odd one was found</td><td class="pr-3">the rest's group, down to the grid's rank</td><td class="text-right">{{ v.GAME_SELECT_TAP_WEIGHT|floatformat:"-2" }} of a vote</td></tr>
+          <tr><td class="pr-3 py-1.5">Odd One Out, left with the rest when the odd one was found</td><td class="pr-3">the rest's group, down to the grid's rank</td><td class="text-right">{{ v.GAME_SELECT_TAP_WEIGHT|floatformat:"-2" }} of a vote</td></tr>
         </tbody>
       </table></div>
       <pre class="mt-3 text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">at each rank, for each name given:
@@ -178,9 +178,9 @@ answer = max(0, Σ points)   (Identification answers then × weight {{ v.GAME_PO
   tally[name]          = Σ weight × vote                    (vote = 1, or {{ v.GAME_SELECT_TAP_WEIGHT|floatformat:"-2" }} for a tap)
   support              = tally[leading name] / Σ tally       0 to 1</pre>
       <ul class="list-disc pl-5 mt-2 space-y-1">
-        <li><b>Trusted</b> at a rank: an Identification expert for that part of the tree supports the name and no trusted player disagrees. Taps alone never make a name trusted.</li>
+        <li><b>Trusted</b> at a rank: a Naming expert for that part of the tree supports the name and no trusted player disagrees. Taps alone never make a name trusted.</li>
         <li><b>Curator tip</b> on the Image Annotation page: the deepest rank that is trusted, or has at least {{ v.GAME_TIP_MIN_VOTES }} players and {{ v.GAME_TIP_MIN_SUPPORT|floatformat:"-2" }} support ("3 reliable players say genus <i>Xyleborus</i>"), flagged when it disagrees with the current label.</li>
-        <li><b>Written in:</b> when {{ v.GAME_AUTO_APPLY_MIN_EXPERTS }} Identification experts give the same species for a beetle with no species name, it is written in as an <b>Expert ID</b>, still unvalidated for a curator to confirm. Otherwise names only reach a beetle through a curator.</li>
+        <li><b>Written in:</b> when {{ v.GAME_AUTO_APPLY_MIN_EXPERTS }} Naming experts give the same species for a beetle with no species name, it is written in as an <b>Expert ID</b>, still unvalidated for a curator to confirm. Otherwise names only reach a beetle through a curator.</li>
         <li><b>The AI</b> adds its own suggestion (shown separately); it becomes a reference for scoring only when proven in that group (see above).</li>
       </ul>
     </div>
@@ -191,11 +191,11 @@ answer = max(0, Σ points)   (Identification answers then × weight {{ v.GAME_PO
         <thead class="text-xs uppercase text-gray-500"><tr><th class="text-left pr-3 pb-1">Answer</th><th class="text-left pr-3 pb-1">Says the beetle is not</th></tr></thead>
         <tbody class="divide-y divide-gray-100">
           <tr><td class="pr-3 py-1.5">Similarity, a rung short of a validated partner</td><td>in the partner's next rank ("same tribe" with a <i>Xyleborus</i> → not genus <i>Xyleborus</i>)</td></tr>
-          <tr><td class="pr-3 py-1.5">Imposter Picker, picked as the odd one</td><td>in the group of the rest, at the round's rank</td></tr>
+          <tr><td class="pr-3 py-1.5">Odd One Out, picked as the odd one</td><td>in the group of the rest, at the round's rank</td></tr>
           <tr><td class="pr-3 py-1.5">Find Them All, left untapped (when the player tapped something)</td><td>in the grid's group</td></tr>
         </tbody>
       </table></div>
-      <p class="mt-2">A <b>"not in" tip</b> ("Players are confident it is not in genus <i>Xyleborus</i>", or "Identification experts and players…") appears once at least {{ v.GAME_TIP_MIN_NOT_VOTES }} players say so and they are at least {{ v.GAME_TIP_MIN_SUPPORT|floatformat:"-2" }} of everyone who spoke to that group either way. It helps a curator rule names out, and flags a current label that players reject.</p>
+      <p class="mt-2">A <b>"not in" tip</b> ("Players are confident it is not in genus <i>Xyleborus</i>", or "Naming experts and players…") appears once at least {{ v.GAME_TIP_MIN_NOT_VOTES }} players say so and they are at least {{ v.GAME_TIP_MIN_SUPPORT|floatformat:"-2" }} of everyone who spoke to that group either way. It helps a curator rule names out, and flags a current label that players reject.</p>
     </div>
 
     <div class="p-4 rounded-xl border border-gray-200 text-sm">
@@ -215,8 +215,8 @@ answer = max(0, Σ points)   (Identification answers then × weight {{ v.GAME_PO
     <ul class="list-disc pl-5 text-sm space-y-1">
       <li><b>Reliability (rating)</b> is the lower end of a Wilson interval on how often the player is correct, rank by rank, the first time they see each validated beetle. A few lucky answers don't make anyone an authority: the rating rises only with many correct answers. A Find Them All grid counts once, as correct only when perfect.</li>
       <li><b>Levels</b> need points <em>and</em> a rating (none at levels 1–2, 35% at 3, rising to 92% at the top), so the top levels are kept only while answers stay good.</li>
-      <li><b>Identification experts</b> in a taxon have named {{ v.GAME_TRUST_IMAGES_PER_SPECIES }} validated images each of at least {{ v.GAME_TRUST_CHILDREN_SHARE|floatformat:"-2" }} of its members (a genus's species, a tribe's genera, a subfamily's tribes; at least {{ v.GAME_TRUST_MIN_JUDGED }} answers in all) and been correct at least {{ v.GAME_TRUST_MIN_ACCURACY|floatformat:"-2" }} of the time, and are among the top {{ v.GAME_EXPERT_PERCENTILE|floatformat:"-2" }} of players by rating. Naming counts Identification answers and Find Them All grids: a member tapped is a correct name for its taxon, a wrong tap or a member left out a wrong one, and a grid counts once per taxon it showed, each beetle once per rank. Their agreeing labels go to curators as trusted suggestions; when two such experts agree on a beetle with no name, it is written in as an Expert ID, still unvalidated for a curator to confirm.</li>
-      <li><b>Distinction experts</b> reach the same coverage and accuracy telling a taxon's members apart in Similarity and Imposter Picker (each judged answer covers the members it showed). It is shown on their expertise tree and profile only: it never makes a label trusted, weighs as a judge or writes anything in.</li>
+      <li><b>Naming experts</b> in a taxon have named {{ v.GAME_TRUST_IMAGES_PER_SPECIES }} validated images each of at least {{ v.GAME_TRUST_CHILDREN_SHARE|floatformat:"-2" }} of its members (a genus's species, a tribe's genera, a subfamily's tribes; at least {{ v.GAME_TRUST_MIN_JUDGED }} answers in all) and been correct at least {{ v.GAME_TRUST_MIN_ACCURACY|floatformat:"-2" }} of the time, and are among the top {{ v.GAME_EXPERT_PERCENTILE|floatformat:"-2" }} of players by rating. Naming counts Naming answers and Find Them All grids: a member tapped is a correct name for its taxon, a wrong tap or a member left out a wrong one, and a grid counts once per taxon it showed, each beetle once per rank. Their agreeing labels go to curators as trusted suggestions; when two such experts agree on a beetle with no name, it is written in as an Expert ID, still unvalidated for a curator to confirm.</li>
+      <li><b>Distinction experts</b> reach the same coverage and accuracy telling a taxon's members apart in Similarity and Odd One Out (each judged answer covers the members it showed). It is shown on their expertise tree and profile only: it never makes a label trusted, weighs as a judge or writes anything in.</li>
     </ul>
   </section>
 
@@ -226,18 +226,18 @@ answer = max(0, Σ points)   (Identification answers then × weight {{ v.GAME_PO
       <h3 class="font-semibold text-gray-900 mb-1">Which beetles</h3>
       <p class="text-sm mb-2">Each beetle has a difficulty from 0 (easy) to 1 (hard): 1 − IBBI-AI's confidence, or else how often players get it wrong. Beetles are picked near the player's target:</p>
       <pre class="text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">target = start + per_batch × finished batches + skill_weight × rating     (at most max)
-in Identification and Similarity, over the player's last {{ v.GAME_DIFFICULTY_RECENT }} answers on validated beetles in that game:
+in Naming and Similarity, over the player's last {{ v.GAME_DIFFICULTY_RECENT }} answers on validated beetles in that game:
   share correct &lt; {{ v.GAME_DIFFICULTY_EASE_BELOW|floatformat:"-2" }}   target − {{ v.GAME_DIFFICULTY_EASE|floatformat:"-2" }}   (never below 0.05)
   share correct &gt; {{ v.GAME_DIFFICULTY_PUSH_ABOVE|floatformat:"-2" }}   target + {{ v.GAME_DIFFICULTY_PUSH|floatformat:"-2" }}   (never above max)
 start = {{ v.GAME_DIFFICULTY_START|floatformat:"-3" }}   per_batch = {{ v.GAME_DIFFICULTY_PER_ROUND|floatformat:"-3" }}   skill_weight = {{ v.GAME_DIFFICULTY_SKILL_WEIGHT|floatformat:"-2" }}   max = {{ v.GAME_DIFFICULTY_MAX|floatformat:"-2" }}</pre>
       <p class="text-sm mt-2">The rating moves slowly; the recent answers react within a few batches, so a player who struggles gets a breather and one who is doing well keeps being stretched.</p>
     </div>
     <div class="p-4 rounded-xl border border-gray-200">
-      <h3 class="font-semibold text-gray-900 mb-1">What they are worth (Identification and Similarity)</h3>
+      <h3 class="font-semibold text-gray-900 mb-1">What they are worth (Naming and Similarity)</h3>
       <pre class="text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">p    = how hard the beetle is among all playable beetles when answered (0 easiest, 1 hardest; 0.5 if unknown)
 m    = 1 + spread × (2p − 1)                                spread = {{ v.GAME_POINTS_DIFFICULTY_SPREAD|floatformat:"-2" }}
 gain × m,   loss (skips too) × (2 − m)                       the point for taking part is not scaled</pre>
-      <p class="text-sm mt-2">One factor for the whole answer, so a wrong answer never turns into a gain and every comparison between answers on one beetle stays as above. Imposter Picker and Find Them All are priced by their own grid instead. Answers from before this have no p and keep ×1.</p>
+      <p class="text-sm mt-2">One factor for the whole answer, so a wrong answer never turns into a gain and every comparison between answers on one beetle stays as above. Odd One Out and Find Them All are priced by their own grid instead. Answers from before this have no p and keep ×1.</p>
       <div class="overflow-x-auto rounded-xl border border-gray-200 mt-3">
         <table class="w-full text-sm" data-testid="difficulty-examples">
           <thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr><th class="text-left px-3 py-2">Game</th><th class="text-left px-3 py-2">Answer</th>
@@ -292,7 +292,7 @@ gain × m,   loss (skips too) × (2 − m)                       the point for t
       <div class="p-4 rounded-xl border border-gray-200" data-testid="dist-right">
         <h3 class="font-semibold text-gray-900 mb-2">Share correct by how hard the beetle is</h3>
         {% if distributions.right.answers %}
-        <p class="text-xs text-gray-500 mb-1">{{ distributions.right.answers|digit_groups }} Identification and Similarity answers on validated beetles, by tenth of beetles from easiest to hardest. Falling bars: the difficulty predicts mistakes.</p>
+        <p class="text-xs text-gray-500 mb-1">{{ distributions.right.answers|digit_groups }} Naming and Similarity answers on validated beetles, by tenth of beetles from easiest to hardest. Falling bars: the difficulty predicts mistakes.</p>
         <div class="h-14 flex items-end gap-0.5" aria-hidden="true">{% for d in distributions.right.deciles %}<div class="flex-1 rounded-t bg-gray-400" style="height: {{ d.height }}%; min-height: 1px" title="{% if d.share is not None %}{% widthratio d.share 1 100 %}% correct of {{ d.answers|digit_groups_text }}{% else %}no answers{% endif %}"></div>{% endfor %}</div>
         <div class="flex gap-0.5 text-[10px] text-gray-400 mt-1 tabular-nums">{% for d in distributions.right.deciles %}<span class="flex-1 text-center">×{{ d.multiplier|floatformat:2 }}</span>{% endfor %}</div>
         <p class="text-[11px] text-gray-400 mt-1">Under each bar: the points multiplier on a gain there.</p>

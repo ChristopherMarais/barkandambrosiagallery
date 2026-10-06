@@ -11,7 +11,7 @@
   {% if losses.ranks %}
   <table class="w-full text-sm">
     <thead class="text-[11px] uppercase tracking-wider text-gray-400">
-      <tr><th class="text-left font-semibold pb-1">Identification</th><th class="text-right font-semibold pb-1 px-2">Correct</th><th class="text-right font-semibold pb-1 px-2">Wrong</th><th class="text-right font-semibold pb-1 px-2" title="Left blank though the beetle has one">Stopped</th><th class="text-right font-semibold pb-1">Lost</th></tr>
+      <tr><th class="text-left font-semibold pb-1">Naming</th><th class="text-right font-semibold pb-1 px-2">Correct</th><th class="text-right font-semibold pb-1 px-2">Wrong</th><th class="text-right font-semibold pb-1 px-2" title="Left blank though the beetle has one">Stopped</th><th class="text-right font-semibold pb-1">Lost</th></tr>
     </thead>
     <tbody>
       {% for row in losses.ranks %}
@@ -29,7 +29,7 @@
   {% if losses.odd %}
   <table class="w-full text-sm{% if losses.ranks %} mt-3{% endif %}" data-testid="losses-odd">
     <thead class="text-[11px] uppercase tracking-wider text-gray-400">
-      <tr><th class="text-left font-semibold pb-1">Imposter Picker</th><th class="text-right font-semibold pb-1 px-2">Correct</th><th class="text-right font-semibold pb-1 px-2">Wrong</th><th class="text-right font-semibold pb-1">Lost</th></tr>
+      <tr><th class="text-left font-semibold pb-1">Odd One Out</th><th class="text-right font-semibold pb-1 px-2">Correct</th><th class="text-right font-semibold pb-1 px-2">Wrong</th><th class="text-right font-semibold pb-1">Lost</th></tr>
     </thead>
     <tbody>
       {% for row in losses.odd %}

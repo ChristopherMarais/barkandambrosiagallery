@@ -1,7 +1,8 @@
 """
-The games' names (#496, owner's choice): Odd One Out is Imposter Picker, Select all is Find Them All, and the choice
-that mixes them (Mix) is All modes, which looks unlike the single games in the toolbar. Identification is one name
-everywhere (no more Name That Beetle). Only what players see changed: the stored modes and URLs stay.
+The games' names (#496, #538, owner's choice): Odd One Out (for a while Imposter Picker), Select all is Find Them
+All, and the choice that mixes them (Mix) is All modes, which looks unlike the single games in the toolbar. Naming is
+one name everywhere (no more Name That Beetle or Identification). Only what players see changed: the stored modes and
+URLs stay.
 """
 import re
 from pathlib import Path
@@ -15,7 +16,7 @@ from beetlesgallery.beetles_app.test_game import GameCase
 
 TEMPLATES = Path(settings.BASE_DIR) / "beetlesgallery" / "templates" / "beetles"
 GAME_TEMPLATES = sorted(TEMPLATES.glob("game*.html")) + sorted((TEMPLATES / "includes").glob("game*.html"))
-OLD = re.compile(r"[Oo]dd [Oo]nes? [Oo]ut|Select all|Name That Beetle|\bMix\b|>Mixed<")   # "to mix them" is fine
+OLD = re.compile(r"Imposter|Select all|Name That Beetle|\bIdentification\b|\bMix\b|>Mixed<")   # "to mix them" is fine
 
 
 def without_comments(text):
@@ -37,17 +38,17 @@ class NamesInTemplatesTests(GameCase):
     def test_the_feed_shows_the_new_names(self):
         self.client.force_login(self.user)
         page = self.client.get(reverse("game_play", args=["mixed"])).content.decode()
-        for name in ("Imposter Picker", "Find Them All", "All modes", "Identification", "Similarity"):
+        for name in ("Odd One Out", "Find Them All", "All modes", "Naming", "Similarity"):
             self.assertIn(name, page)
-        self.assertIn('const GAME_NAMES = { classify: "Identification", pair: "Similarity", odd: "Imposter Picker", '
+        self.assertIn('const GAME_NAMES = { classify: "Naming", pair: "Similarity", odd: "Odd One Out", '
                       'select: "Find Them All" };', page)
-        self.assertIn("New game: Imposter Picker.", page)
+        self.assertIn("New game: Odd One Out.", page)
         self.assertIn("New game: Find Them All.", page)
 
     def test_the_how_to_play_page_uses_the_new_names(self):
         self.client.force_login(self.user)
         page = self.client.get(reverse("game_how")).content.decode()
-        self.assertIn('data-testid="how-odd">Imposter Picker<', page)
+        self.assertIn('data-testid="how-odd">Odd One Out<', page)
         self.assertIn('data-testid="how-select">Find Them All<', page)
 
 
@@ -76,7 +77,7 @@ class AllModesLooksDifferentTests(GameCase):
     def test_short_names_fit_a_phone(self):
         _, bar = self.toolbar()
         shorts = re.findall(r'data-short="([^"]+)"', bar)
-        self.assertEqual(shorts, ["All", "Similar", "Imposter", "Find all", "ID"])
+        self.assertEqual(shorts, ["All", "Similar", "Odd one", "Find all", "Name"])
         self.assertTrue(all(len(s) <= 8 for s in shorts))
 
     def test_the_feed_keeps_it_distinct_when_it_redraws_the_toolbar(self):
@@ -90,24 +91,24 @@ class AllModesLooksDifferentTests(GameCase):
 
 class NamesInCodeTests(GameCase):
     def test_one_name_per_game(self):
-        expected = {"classify": "Identification", "pair": "Similarity", "odd": "Imposter Picker",
+        expected = {"classify": "Naming", "pair": "Similarity", "odd": "Odd One Out",
                     "select": "Find Them All"}
         self.assertEqual({k: game_views.GAME_NAMES[k] for k in expected}, expected)
         self.assertEqual(game_levels.GAME_NAMES, expected)
         self.assertEqual(dict(GamePreference.PlayMode.choices), {"both": "All modes", **expected})
         self.assertEqual((GameRound.Mode.ODD.label, GameRound.Mode.SELECT.label, GameRound.Mode.MIXED.label),
-                         ("Imposter Picker", "Find Them All", "All modes"))
+                         ("Odd One Out", "Find Them All", "All modes"))
         self.assertEqual(GamePreference.PlayMode.BOTH.value, "both")   # stored values unchanged
         self.assertEqual(GameRound.Mode.ODD.value, "odd")
 
     def test_perks_and_tuning_labels_use_the_new_names(self):
-        self.assertEqual(game_levels.PERKS[game_levels.ODD_ONE_OUT][0], "Imposter Picker")
+        self.assertEqual(game_levels.PERKS[game_levels.ODD_ONE_OUT][0], "Odd One Out")
         self.assertEqual(game_levels.PERKS[game_levels.SELECT_ALL][0], "Find Them All")
         self.assertIn("All modes", game_levels.PERKS[game_levels.CHOOSE_GAME][1])
         text = repr([(t["label"], t["help"]) for t in game_tuning.TUNABLES.values()])
         text += repr(game_tuning.examples()) + repr(game_tuning.checks())
         self.assertEqual(OLD.findall(text), [])
-        self.assertIn("Imposter Picker", text)
+        self.assertIn("Odd One Out", text)
         self.assertIn("Find Them All", text)
 
     def test_the_level_toast_keeps_a_games_capitals(self):
@@ -117,10 +118,10 @@ class NamesInCodeTests(GameCase):
         before = game_rewards.progress(self.user)
         PlayerScore.objects.update_or_create(player=self.user, defaults={"score": 55, "rating": 0.0})
         level = next(e for e in game_rewards.play_events(self.user, before) if e["kind"] == "level")
-        self.assertIn("Imposter Picker", level["text"])
+        self.assertIn("Odd One Out", level["text"])
         self.assertIn("choose your game", level["text"])   # other perks still read as part of the sentence
 
     def test_a_locked_game_is_named_in_its_error(self):
         self.client.force_login(self.user)
         res = self.client.post(reverse("game_prefs"), {"play_mode": "odd"}, content_type="application/json")
-        self.assertEqual((res.status_code, res.json()["error"]), (403, "Imposter Picker unlocks at level 2."))
+        self.assertEqual((res.status_code, res.json()["error"]), (403, "Odd One Out unlocks at level 2."))

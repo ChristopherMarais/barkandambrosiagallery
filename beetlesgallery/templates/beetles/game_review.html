@@ -24,7 +24,7 @@
   <div class="mb-8 p-4 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg">
     <p class="font-semibold text-gray-800 mb-1">How labels become expert-backed</p>
     <p>
-      A player is an Identification expert at a rank within a taxon (species within a genus, genus within a tribe, tribe within a subfamily,
+      A player is a Naming expert at a rank within a taxon (species within a genus, genus within a tribe, tribe within a subfamily,
       or subfamily overall) once they have answered {{ per_species }} validated images each of at least {% widthratio children_share 1 100 %}% of its members
       with validated images (its species, genera or tribes; all images of one with fewer; at least 10 answers in total) and got at least 90% correct. Larger taxa need more answers.
       A proposal is expert-backed at a rank when an expert for that exact branch agrees and no expert disagrees, and every rank above it is
@@ -78,9 +78,9 @@
         <tr>
           <th class="px-3 py-2 text-left" rowspan="2">{% sort_link "players_sort" "player" "Player" "players" %}</th>
           <th class="px-3 py-2 text-right" rowspan="2">{% sort_link "players_sort" "labelled" "Labelled" "players" %}</th>
-          <th class="px-3 py-2 text-center border-l border-gray-200" colspan="4">Identification</th>
+          <th class="px-3 py-2 text-center border-l border-gray-200" colspan="4">Naming</th>
           <th class="px-3 py-2 text-center border-l border-gray-200" colspan="4">Similarity</th>
-          <th class="px-3 py-2 text-left border-l border-gray-200" rowspan="2">{% sort_link "players_sort" "expert" "Identification expert in" "players" %}</th>
+          <th class="px-3 py-2 text-left border-l border-gray-200" rowspan="2">{% sort_link "players_sort" "expert" "Naming expert in" "players" %}</th>
         </tr>
         <tr>
           {% for r in ranks %}<th class="px-3 py-1 text-right {% if forloop.first %}border-l border-gray-200{% endif %}">{% with "id_"|add:r as key %}{% sort_link "players_sort" key r "players" %}{% endwith %}</th>{% endfor %}

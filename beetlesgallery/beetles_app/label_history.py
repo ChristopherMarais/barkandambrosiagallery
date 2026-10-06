@@ -75,7 +75,7 @@ def _reviews(roi_ids, out, reverts):
         by = review.reviewed_by.username if review.reviewed_by else ""
         if review.decision == LabelReview.Decision.ACCEPTED:
             kind, what = ("game_accepted", "Game proposal accepted") if by else (
-                "game_applied", "Game label applied automatically (Identification experts agreed)")
+                "game_applied", "Game label applied automatically (Naming experts agreed)")
         elif any(review.reviewed_at - _REVERT_WINDOW <= at <= review.reviewed_at and who in ("", None, by)
                  for at, who in reverts.get(review.roi_id, [])):
             kind, what = "game_reverted", "Game label reverted"

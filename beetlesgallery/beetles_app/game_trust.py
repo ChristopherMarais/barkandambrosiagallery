@@ -10,7 +10,7 @@ know were being scored:
     tribe     within a subfamily
     subfamily overall
 
-A player is *proven*, an *Identification expert*, at a rank in a taxon once they have covered it: answered at least
+A player is *proven*, an *Naming expert*, at a rank in a taxon once they have covered it: answered at least
 GAME_TRUST_IMAGES_PER_SPECIES validated images (all of them for one with fewer) of at least GAME_TRUST_CHILDREN_SHARE
 of its children with validated images (the species of a genus, the genera of a tribe, the tribes of a subfamily),
 rounded up so a taxon with three or fewer needs all of them; at least GAME_TRUST_MIN_JUDGED answers in total; and at
@@ -123,7 +123,7 @@ def is_reliable(ok, n):
 
 def is_distinction_expert(ok, n, cover):
     """
-    Tells a taxon's members apart as reliably as an Identification expert names them (#498): the same coverage, and
+    Tells a taxon's members apart as reliably as a Naming expert names them (#498): the same coverage, and
     at least GAME_TRUST_MIN_ACCURACY right over at least GAME_TRUST_MIN_JUDGED judged answers (apart_counts).
     """
     return bool(cover["complete"]) and is_reliable(ok, n)
@@ -597,8 +597,8 @@ def direct_experts(entry, trust):
 # ---------------------------------------------------------------------------
 EXPERTISE_FLOOR = 0.5
 # Accuracy bands in the levels' rarity colours: under 50% grey, then four equal steps from 50% up to what an expert
-# needs (green, blue, purple, orange). An Identification expert's dot glows gold like the top level; a Distinction
-# expert's triangle is plain dark gold, since it unlocks nothing (#498, #539).
+# needs (green, blue, purple, orange). A Naming expert's dot glows gold like the top level; a Distinction expert's
+# triangle is plain dark gold, since it unlocks nothing (#498, #539).
 EXPERTISE_TIERS = ("uncommon", "rare", "epic", "legendary")
 
 
@@ -707,8 +707,8 @@ def expertise_tree(player):
     """
     The taxonomy as subfamily > tribe > genus, each branch with how well the player identifies what is inside it:
     a subfamily shows their tribe calls within it, a tribe their genus calls, a genus their species calls; and how
-    well they tell those apart in Similarity and Odd One Out (apart_counts). ``status`` is expert for an
-    Identification expert, ``apart_status`` for a Distinction expert. Branches they have not played are counted but
+    well they tell those apart in Similarity and Odd One Out (apart_counts). ``status`` is expert for a Naming expert,
+    ``apart_status`` for a Distinction expert. Branches they have not played are counted but
     not listed one by one.
     """
     min_shown = game_setting("GAME_REPORT_MIN_JUDGED", 5)

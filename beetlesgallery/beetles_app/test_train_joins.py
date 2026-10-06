@@ -128,10 +128,10 @@ class AheadNoticeTests(FallbackCase):
     def test_a_batch_built_ahead_keeps_its_notice_until_the_feed_reaches_it(self):
         data = self.started()
         ahead = GameRound.objects.exclude(id=data["round"]).get()   # built ahead, not reached yet
-        self.assertIn("Imposter Picker", cache.get(game_views.AHEAD_NOTICE.format(ahead.id)))
+        self.assertIn("Odd One Out", cache.get(game_views.AHEAD_NOTICE.format(ahead.id)))
         res = self.answer(data, self.answer_for(data["item"]))
         self.assertEqual(res["round"], str(ahead.id))
-        self.assertIn("Imposter Picker", res["notice"])
+        self.assertIn("Odd One Out", res["notice"])
 
     def test_without_it_in_the_cache_the_feed_carries_on_without_a_notice(self):
         data = self.started()

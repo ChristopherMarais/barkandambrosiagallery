@@ -116,7 +116,7 @@ class ChooseGameTests(MixedFeedCase):
         self.post("game_prefs", {"play_mode": "odd"})
         self.assertEqual(set(self.modes(game.start_round(self.user, "mixed", size=3))), {"odd"})
         res = self.post("game_prefs", {"play_mode": "classify"})   # Identification is level 4 now
-        self.assertEqual((res.status_code, res.json()["error"]), (403, "Identification unlocks at level 4."))
+        self.assertEqual((res.status_code, res.json()["error"]), (403, "Naming unlocks at level 4."))
 
     def test_a_chosen_game_is_never_topped_up_with_the_other(self):
         self.level(60)
@@ -124,7 +124,7 @@ class ChooseGameTests(MixedFeedCase):
         with mock.patch.object(game, "build_pair_items", return_value=[]):   # no pairs at all: their other game, and a note
             rnd = game.start_round(self.user, "mixed", size=6)
             self.assertEqual(set(self.modes(rnd)), {"odd"})
-            self.assertEqual(rnd.notice, "Not enough beetles for Similarity right now: here's Imposter Picker instead.")
+            self.assertEqual(rnd.notice, "Not enough beetles for Similarity right now: here's Odd One Out instead.")
         for _ in range(5):
             self.assertEqual(set(self.modes(game.start_round(self.user, "mixed", size=10))), {"pair"})
 

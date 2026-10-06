@@ -3,8 +3,8 @@ Tips for curators on the Image Annotation page, from what Beetle ID players said
 
 Two kinds:
 
-* **Agreement**: Identification experts, or many reliable players, agree on a name at some rank. The deepest such
-  rank is the tip ("Identification experts say genus Xyleborus"). If it disagrees with the beetle's current label,
+* **Agreement**: Naming experts, or many reliable players, agree on a name at some rank. The deepest such
+  rank is the tip ("Naming experts say genus Xyleborus"). If it disagrees with the beetle's current label,
   the tip says so.
 * **Not in**: answers also say what a beetle is *not*. In Odd One Out the picked beetle is not of the rest's group;
   in Select all the beetles left untapped are not of the grid's group (game.grid_exclusions). And Family Ties answers: A player who says an unnamed beetle and a
@@ -137,9 +137,9 @@ def text(tip):
     """One plain sentence for a tip (the annotation page builds the same sentence in JavaScript)."""
     rank = tip["rank"]
     if tip["kind"] == "not":
-        who = "Identification experts and players" if tip.get("experts") else "Players"
+        who = "Naming experts and players" if tip.get("experts") else "Players"
         return f"{who} are confident it is not in {rank} {tip['value']}."
-    who = "Identification experts" if tip["kind"] == "expert" else f"{tip['count']} reliable players"
+    who = "Naming experts" if tip["kind"] == "expert" else f"{tip['count']} reliable players"
     line = f"{who} say {rank} {tip['value']}."
     if tip.get("conflicts"):
         line += f" The current label says {tip['current']}."

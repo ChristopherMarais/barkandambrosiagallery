@@ -287,7 +287,7 @@ class PageTests(GridCase):
     def test_the_page_picks_up_to_that_many_and_sends_them_all(self):
         html = Path(settings.BASE_DIR, "beetlesgallery", "templates", "beetles", "game_play.html").read_text(encoding="utf-8")
         self.assertIn('oddWant = MODE === "odd" ? item.odds || 1 : 1;', html)
-        self.assertIn('"Find the " + oddWant + " that don\'t share the same " + item.rank', html)
+        self.assertIn('oddPrompt(item.rank, oddWant)', html)   # "Find the 2 that don't share the same ..." (#538)
         self.assertIn("else if (oddPicks.size < oddWant) oddPicks.add(i);", html)
         self.assertIn('MODE === "odd" ? oddPicks.size === oddWant', html)
         self.assertIn("picks: Array.from(oddPicks).sort((a, b) => a - b)", html)

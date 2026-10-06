@@ -54,7 +54,7 @@ class ScoringPageTests(GameCase):
     def test_a_tuning_that_rewards_guessing_is_flagged(self):
         GameTuning.objects.create(key="GAME_POINTS_CONFIDENCE", value=0.5)   # a coin flip would break even
         failing = [rule for rule, ok, _ in game_tuning.checks() if not ok]
-        self.assertIn("A blind guess in Imposter Picker loses on average", failing)
+        self.assertIn("A blind guess in Odd One Out loses on average", failing)
         self.assertIn("A claim beyond the truth is wrong, never partly right", failing)
 
     def test_rescore_everyone_runs_in_the_background(self):

@@ -89,7 +89,7 @@ class ScoringPageDifficultyTests(ScoringCase):
         self.assertEqual((unvalidated["total"], unvalidated["unknown"]), (0, 1))
         self.assertEqual([b["count"] for b in dist["ratings"]["bars"]][4], 1)
         [ident] = dist["points"]
-        self.assertEqual((ident["game"], ident["answers"], ident["lost_share"]), ("Identification", 2, 0.5))
+        self.assertEqual((ident["game"], ident["answers"], ident["lost_share"]), ("Naming", 2, 0.5))
         deciles = dist["right"]["deciles"]
         self.assertEqual(dist["right"]["answers"], 2)
         self.assertEqual((deciles[1]["share"], deciles[8]["share"]), (1.0, 0.0))   # easiest of 3: decile 1, hardest: 8
@@ -98,7 +98,7 @@ class ScoringPageDifficultyTests(ScoringCase):
         page = self.page()
         for testid in ("dist-beetles", "dist-ratings", "dist-points", "dist-right"):
             self.assertIn(f'data-testid="{testid}"', page)
-        self.assertIn("Identification and Similarity answers on validated beetles", page)
+        self.assertIn("Naming and Similarity answers on validated beetles", page)
 
     def test_large_counts_are_grouped_in_threes(self):
         chart = {"label": "Validated", "total": 12345, "unknown": 0, "bars": game_difficulty._bars([12345] + [0] * 9)}

@@ -1320,7 +1320,7 @@ class GameRound(models.Model):
     class Mode(models.TextChoices):
         CLASSIFY = "classify", "Classify"
         PAIR = "pair", "Compare pairs"
-        ODD = "odd", "Imposter Picker"
+        ODD = "odd", "Odd One Out"
         SELECT = "select", "Find Them All"
         MIXED = "mixed", "All modes"   # one feed of several games; each item carries its own mode
 
@@ -1519,9 +1519,9 @@ class GamePreference(models.Model):
 
     class PlayMode(models.TextChoices):
         BOTH = "both", "All modes"   # every game the player has unlocked, mixed
-        CLASSIFY = "classify", "Identification"
+        CLASSIFY = "classify", "Naming"
         PAIR = "pair", "Similarity"
-        ODD = "odd", "Imposter Picker"
+        ODD = "odd", "Odd One Out"
         SELECT = "select", "Find Them All"
 
     class FocusRank(models.TextChoices):

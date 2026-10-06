@@ -239,7 +239,7 @@ class PageTests(ScoringCase):
     def test_the_unlocks_page(self):
         self.client.force_login(self.user)
         page = self.client.get("/game/unlocks/").content.decode()
-        for text in ("Levels and unlocks", "Colony founder", "Focus on a genus", "Your labels go to curators", "Identification experts", "expertise tree"):
+        for text in ("Levels and unlocks", "Colony founder", "Focus on a genus", "Your labels go to curators", "Naming experts", "expertise tree"):
             self.assertIn(text, page)
 
     def test_it_says_when_your_labels_go_to_curators(self):
