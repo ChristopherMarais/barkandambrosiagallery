@@ -1301,6 +1301,7 @@ def game_answer(request, round_id):
             if first is not None:
                 return JsonResponse(dict(extra, round=str(fresh.id), item=_item_payload(fresh, first), notice=fresh.notice))
     nxt = _next_index(rnd, index + 1)
+    later = bool(body.get("item_later"))
     if nxt is None and game_grow.wanted(rnd):
         # a batch started small (#575) that neither the worker nor the look-ahead has grown yet: its next beetles now
         game_grow.grow_or_wait(rnd, game_grow.FIRST)
@@ -1313,7 +1314,44 @@ def game_answer(request, round_id):
             game.finish_round_later(rnd)
             return JsonResponse(dict(extra, round=str(fresh.id), item=_item_payload(fresh, first), notice=fresh.notice))
         return JsonResponse(dict(_finish(rnd), **extra))
+    if later:
+        # The review first (#602): the next beetle of this batch (a grid built again at a new step can take a while)
+        # comes from game_item, which the page asks for while the player reads the review
+        return JsonResponse(dict(extra, next=nxt))
     return JsonResponse(dict(extra, item=_item_payload(rnd, nxt)))
+
+
+@login_required
+@require_GET
+@_timed
+def game_item(request, round_id, index):
+    """
+    The next beetle of the player's batch, after an answer sent with "item_later" (#602): the same as the answer would
+    have carried, asked for while its review is up. Only the next one to answer; anything else is out of step.
+    """
+    rnd = get_object_or_404(GameRound, id=round_id, player=request.user)
+    if rnd.finished_at is not None or _next_index(rnd) != index:
+        return JsonResponse({"error": "Out of step with the round; please reload."}, status=409)
+    return JsonResponse({"item": _item_payload(rnd, index)})
+
+
+@login_required
+@require_GET
+def game_prepare(request, round_id):
+    """
+    While the player chooses (#602): work out what is known about the beetles on screen (?index=), what the other
+    players and IBBI-AI say about the ones nobody has validated, so the review after Submit only reads it. Kept on the
+    server (game_answer_review.prepare); the reply says nothing about them, so it gives nothing away before the answer.
+    """
+    rnd = get_object_or_404(GameRound, id=round_id, player=request.user)
+    try:
+        index = int(request.GET.get("index", ""))
+    except ValueError:
+        return JsonResponse({"error": "Which beetle?"}, status=400)
+    if rnd.finished_at is None and 0 <= index < len(rnd.items):
+        rois = _shown_rois(rnd.items[index]) or []
+        game_answer_review.prepare(request.user.pk, [r.id for r in rois if not game_scoring.is_truth(r)])
+    return JsonResponse({})
 
 
 @login_required

@@ -20,6 +20,7 @@ import math
 import uuid
 from decimal import ROUND_HALF_UP, Decimal
 
+from django.core.cache import cache
 from django.db.models import Q
 
 from . import game, game_feedback, game_levels, game_scoring
@@ -356,10 +357,36 @@ def _likeliest(rank, vote, tip):
 # ---------------------------------------------------------------------------
 # What others say about a beetle nobody has validated
 # ---------------------------------------------------------------------------
+# What others say about the beetles on screen, worked out while the player is still choosing (#602): the review after
+# Submit then only reads it. Kept on the server, never sent before the answer: it names the beetles.
+PREPARED = "game:opinions:{}:{}"   # player, beetle
+PREPARED_SECONDS = 10 * 60
+
+
+def prepare(player_id, roi_ids):
+    """
+    Work out what the other players and IBBI-AI say about these beetles, for the review of an answer this player is
+    still choosing (game_views.game_prepare), and keep it for a while. Nothing of it leaves the server until the answer
+    is in. A beetle's entry says so when nobody says anything about it, so the review never looks again.
+    """
+    ids = list(dict.fromkeys(roi_ids))
+    if not ids:
+        return
+    said, tips = _said(ids, player_id), _ai(ids)
+    cache.set_many({PREPARED.format(player_id, i): {"said": _kept(said.get(i)), "tips": tips.get(i) or {}} for i in ids},
+                   PREPARED_SECONDS)
+
+
+def _kept(entry):
+    """The part of a consensus entry the review reads (the names by rank, how many players), or None."""
+    return None if entry is None else {"ranks": entry["ranks"], "players": entry["players"]}
+
+
 class Opinions:
     """
     What the other players (_said) and IBBI-AI (_ai) say about the beetles on screen nobody has validated, loaded for
-    them all at once; a beetle asked about later is loaded then.
+    them all at once; a beetle asked about later is loaded then. What was prepared while the player chose (prepare) is
+    taken as it is; the rest is worked out now.
     """
 
     def __init__(self, player_id, roi_ids):
@@ -368,10 +395,20 @@ class Opinions:
 
     def load(self, roi_ids):
         ids = [i for i in dict.fromkeys(roi_ids) if i not in self._loaded]
-        if ids:
-            self._said.update(_said(ids, self.player_id))
-            self._tips.update(_ai(ids))
-            self._loaded.update(ids)
+        if not ids:
+            return
+        keys = {PREPARED.format(self.player_id, i): i for i in ids}
+        ready = {keys[k]: v for k, v in cache.get_many(list(keys)).items()}
+        for i, v in ready.items():
+            if v["said"]:
+                self._said[i] = v["said"]
+            if v["tips"]:
+                self._tips[i] = v["tips"]
+        rest = [i for i in ids if i not in ready]
+        if rest:
+            self._said.update(_said(rest, self.player_id))
+            self._tips.update(_ai(rest))
+        self._loaded.update(ids)
 
     def said(self, roi_id):
         self.load([roi_id])
