@@ -25,6 +25,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from . import game, game_board, game_checked, game_discoveries, game_feedback, game_queue, game_levels, game_rewards, game_scoring, game_tips, game_trust
 from . import game_applied
+from . import game_grid_ladder
 from . import game_taxa as taxa_tree
 from .areas import ANNOTATE, BOXES, VALIDATE, area_required, has_area
 from .models import Beetles, GameAnswer, GameReport, GameRound, ImageLock, LabelReview, PlayerScore, RetroCredit, Taxon
@@ -411,9 +412,10 @@ def game_report_item(request):
     """
     A player reports a photo straight from the feed (the cog in the full-image view): the beetle goes to the
     curators on the Image Annotation page and stays out of the game until they deal with it.
-    Body: {"round", "index", "image": 0 or 1 (A or B, as shown; in Odd One Out the beetle's place in the grid), "reason",
+    Body: {"round", "index", "image": 0 or 1 (A or B, as shown; in a grid the beetle's place in it), "reason",
     "note"}, and "photo": n to report the beetle's n-th other photo (the "More photos" gallery, 1 = its first) instead
-    of the one in play.
+    of the one in play. In a grid the player carries on without the flagged photo: the reply lists the places flagged so
+    far ("flagged") and says whether that ends the grid ("end", see _grid_over).
     """
     body = _json_body(request) or {}
     rnd = GameRound.objects.filter(id=body.get("round"), player=request.user).first() if _is_uuid(body.get("round")) else None
@@ -442,7 +444,11 @@ def game_report_item(request):
             return JsonResponse({"error": "Unknown photo."}, status=400)
         roi = others[photo - 1]
     report = game_feedback.create_report(request.user, roi, reason, str(body.get("note") or ""))
-    return JsonResponse({"status": report.status, "reason": report.get_reason_display()})
+    out = {"status": report.status, "reason": report.get_reason_display()}
+    if rnd.items[index].get("tiles"):
+        out["flagged"] = _flagged_places(shown, request.user)
+        out["end"] = _grid_over(rnd.items[index], _item_mode(rnd, index), out["flagged"])
+    return JsonResponse(out)
 
 
 def _is_uuid(value):
@@ -471,12 +477,29 @@ def _box(roi):
 
 
 def _item_tiles(item):
-    """The Beetles rows of an Odd One Out item, in the order shown. None if any is gone."""
+    """The Beetles rows of a grid item (Odd One Out, Select all), in the order shown. None if any is gone."""
     ids = item.get("tiles") or []
     found = {str(k): v for k, v in Beetles.objects.select_related("image_asset", "taxon").in_bulk(ids).items()}
     if not ids or any(i not in found or not found[i].has_bbox() for i in ids):
         return None
     return [found[i] for i in ids]
+
+
+def _flagged_places(tiles, player):
+    """The places in a grid whose photo this player has an open report on: the ones they flagged (#489)."""
+    reported = set(GameReport.objects.filter(reporter=player, status=GameReport.Status.OPEN,
+                                             roi_id__in=[t.id for t in tiles]).values_list("roi_id", flat=True))
+    return [i for i, t in enumerate(tiles) if t.id in reported]
+
+
+def _grid_over(item, mode, flagged):
+    """
+    Whether flags end a grid, unscored like a reported photo (#489): once half its photos are flagged, or in Odd One Out
+    the odd one is, since without it there is nothing to find.
+    """
+    tiles = item.get("tiles") or []
+    odd = tiles.index(item["a"]) if mode == GameRound.Mode.ODD and item["a"] in tiles else None
+    return 2 * len(flagged) >= len(tiles) or odd in flagged
 
 
 def _item_rois(item):
@@ -533,6 +556,7 @@ def _item_mode(rnd, index):
 
 
 def _item_payload(rnd, index):
+    game_grid_ladder.restep(rnd, index)   # grids picked before the player's step moved are built again at the new one
     payload = {
         "index": index,
         "mode": _item_mode(rnd, index),
@@ -545,11 +569,12 @@ def _item_payload(rnd, index):
         payload["more_level"] = game_levels.perk_level(game_levels.SPECIMEN_PHOTOS)
     if rnd.items[index].get("retry"):
         payload["again"] = True   # a beetle they got wrong before, shown again so they can learn it
-    if payload["mode"] == GameRound.Mode.ODD:
-        payload["rank"] = rnd.items[index]["rank"]   # all but one share a name at this rank
-    if payload["mode"] == GameRound.Mode.SELECT:   # "Tap every <target>"
-        payload["rank"] = rnd.items[index]["rank"]
-        payload["target"] = rnd.items[index]["group"][rnd.items[index]["rank"]]
+    if payload["mode"] in (GameRound.Mode.ODD, GameRound.Mode.SELECT):
+        grid = rnd.items[index]
+        # Odd One Out: all but one share a name at this rank; the grid's size, and the player's step when it was built
+        payload.update(rank=grid["rank"], size=len(grid["tiles"]), step=grid.get("step"))
+        if payload["mode"] == GameRound.Mode.SELECT:   # "Tap every <target>"
+            payload["target"] = grid["group"][grid["rank"]]
     if payload["mode"] == GameRound.Mode.CLASSIFY:
         others = (GameAnswer.objects.filter(roi_id=rnd.items[index]["a"], skipped=False)
                   .exclude(player=rnd.player).values("player").distinct().count())
@@ -733,7 +758,17 @@ def game_answer(request, round_id):
     if record.mode in (GameRound.Mode.ODD, GameRound.Mode.SELECT):
         tiles = _item_tiles(item)
         record.tiles, record.grid_rank, record.grid_group = item["tiles"], item["rank"], item["group"]
+        record.grid_step = item.get("step")
         record._grid_tiles = tiles
+        # Photos flagged before answering (each one reported) are left out; half of them, or the odd one, end the grid
+        # unscored like a reported photo (#489)
+        flagged = body.get("flagged") or []
+        if (not isinstance(flagged, list) or len(set(map(str, flagged))) != len(flagged)
+                or any(not isinstance(i, int) or isinstance(i, bool) or not 0 <= i < len(tiles) for i in flagged)):
+            return JsonResponse({"error": "Unknown flagged photo."}, status=400)
+        record.flagged = sorted(set(flagged) & set(_flagged_places(tiles, request.user)))
+        if _grid_over(item, record.mode, record.flagged):
+            record.skipped = record.score_hold = True
     if record.mode == GameRound.Mode.ODD:
         # roi_b: the odd one the round was built around. Only a pick on a validated beetle is scored straight away.
         record.roi_b, record.is_check = roi_a, False
@@ -761,6 +796,8 @@ def game_answer(request, round_id):
             pick = body.get("pick")
             if not isinstance(pick, int) or isinstance(pick, bool) or not 0 <= pick < len(tiles):
                 return JsonResponse({"error": "Please pick a beetle."}, status=400)
+            if pick in record.flagged:
+                return JsonResponse({"error": "That photo is flagged: pick another beetle."}, status=400)
             record.roi = tiles[pick]
             record.is_check = game_scoring.is_truth(record.roi)
             if record.is_check:
@@ -773,8 +810,10 @@ def game_answer(request, round_id):
             if (not isinstance(picks, list) or not picks or len(set(map(str, picks))) != len(picks)
                     or any(not isinstance(i, int) or isinstance(i, bool) or not 0 <= i < len(tiles) for i in picks)):
                 return JsonResponse({"error": "Tap the beetles first."}, status=400)
+            if set(picks) & set(record.flagged):
+                return JsonResponse({"error": "A flagged photo can't be tapped."}, status=400)
             record.picks = sorted(picks)
-            grid = game.score_select(tiles, record.picks, record.grid_rank, record.grid_group)
+            grid = game.score_select(tiles, record.picks, record.grid_rank, record.grid_group, record.flagged)
             if grid["members"]:
                 scores = {record.grid_rank: grid["perfect"]}   # the rank's "correct": a perfect grid
         else:
@@ -796,6 +835,7 @@ def game_answer(request, round_id):
         return JsonResponse({"error": "That answer was already saved; please reload."}, status=409)
 
     game_scoring.score_new_answer(record)
+    game_grid_ladder.update(record)   # the grid games grow, or shrink, with each grid answered (#489)
     extra = {
         "community": None if record.skipped else _community(record),
         "celebrate": _worth_celebrating(record, scores),
@@ -808,7 +848,7 @@ def game_answer(request, round_id):
         extra["reveal"] = _odd_reveal(item, tiles)
     elif record.mode == GameRound.Mode.SELECT:
         # which were members: tapped right, tapped wrong, left out (votes on unchecked beetles stay as they were)
-        grid = grid or game.score_select(tiles, [], record.grid_rank, record.grid_group)
+        grid = grid or game.score_select(tiles, [], record.grid_rank, record.grid_group, record.flagged)
         extra["reveal"] = {"rank": item["rank"], "target": item["group"][item["rank"]], "tiles": grid["tiles"],
                            "right": grid["right"], "members": grid["members"], "wrong": grid["wrong"]}
     if any(e["kind"] == "level" for e in extra["events"]):
@@ -1037,7 +1077,7 @@ def _worth_celebrating(record, scores):
     if record.skipped:
         return False
     if record.mode == GameRound.Mode.SELECT:   # a perfect grid; some found and nothing wrong: a few grey beetles
-        grid = game.score_select(record._grid_tiles, record.picks, record.grid_rank, record.grid_group)
+        grid = game.score_select(record._grid_tiles, record.picks, record.grid_rank, record.grid_group, record.flagged)
         if grid["perfect"]:
             return "validated"
         return "partial" if grid["right"] and not grid["wrong"] else False
@@ -1058,7 +1098,7 @@ def _celebration_size(record, scores):
     all, the share of the group found.
     """
     if record.mode == GameRound.Mode.SELECT and not record.skipped:
-        grid = game.score_select(record._grid_tiles, record.picks, record.grid_rank, record.grid_group)
+        grid = game.score_select(record._grid_tiles, record.picks, record.grid_rank, record.grid_group, record.flagged)
         return round(max(0.25, grid["right"] / grid["members"]), 2) if grid["members"] else 1.0
     judged = [ok for ok in scores.values() if ok is not None]
     if record.skipped or not judged:

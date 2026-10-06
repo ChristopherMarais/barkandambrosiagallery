@@ -38,7 +38,7 @@ LIGHT = "light"
 PERKS = {
     ODD_ONE_OUT: ("Odd One Out", "A new game: tap the beetle that doesn't belong with the rest."),
     CHOOSE_GAME: ("Choose your game", "Play one game, or a mix of every game you have."),
-    SELECT_ALL: ("Select all", "A new game: tap every beetle of one group in a grid of nine."),
+    SELECT_ALL: ("Select all", "A new game: tap every beetle of one group in a grid."),
     IDENTIFY: ("Identification game", "Name beetles: subfamily, tribe, genus and species."),
     "focus_subfamily": ("Focus on a subfamily", "Choose one subfamily and the game shows you only its beetles."),
     "focus_tribe": ("Focus on a tribe", "Narrow your focus to a single tribe."),

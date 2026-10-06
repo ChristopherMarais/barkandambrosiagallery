@@ -51,7 +51,7 @@ def scoring(request):
         for t in items:
             value = game_tuning.current(t["key"])
             rows.append(dict(t, value=value, changed=value != t["default"],
-                             parts=[(k, game_tuning.RUNG_LABELS.get(k, k.capitalize()), value[k], t["default"][k])
+                             parts=[(k, game_tuning.PART_LABELS.get(k, k.capitalize()), value[k], t["default"][k])
                                     for k in t["keys"]] if t["keys"] else None))
         groups.append((title, rows))
     log = (GameTuning.history.select_related("history_user").order_by("-history_date")[:25])

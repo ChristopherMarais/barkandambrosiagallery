@@ -113,12 +113,13 @@ def round_feedback(rnd):
         truth_odd = truth_select = select_verdict = None
         if a.mode == "select":
             shown = [tiles.get(str(t)) for t in a.tiles or []]
-            grid = game.score_select(shown, a.picks, a.grid_rank, a.grid_group)
+            grid = game.score_select(shown, a.picks, a.grid_rank, a.grid_group, a.flagged)
             sides = []
             for i, tile in enumerate(shown):
                 if tile is not None:
                     side = _side(tile, player_reports, others)
                     side.update(state=grid["tiles"][i], picked=i in set(a.picks or []), odd=False,
+                                flagged=i in set(a.flagged or []),
                                 label=_rank_label(tile.taxon, a.grid_rank))   # only as far as the round showed
                     sides.append(side)
             truth_select = {"rank": a.grid_rank, "target": (a.grid_group or {}).get(a.grid_rank, ""),
@@ -128,11 +129,12 @@ def round_feedback(rnd):
                 select_verdict = "right" if grid["perfect"] else "partly" if grid["right"] and not grid["wrong"] else "wrong"
         elif a.mode == "odd":
             sides = []
-            for tile_id in a.tiles or []:
+            for i, tile_id in enumerate(a.tiles or []):
                 if str(tile_id) in tiles:
                     side = _side(tiles[str(tile_id)], player_reports, others)
                     side["picked"] = not a.skipped and str(tile_id) == str(a.roi_id)
                     side["odd"] = str(tile_id) == str(a.roi_b_id)
+                    side["flagged"] = i in set(a.flagged or [])
                     if not (side["picked"] or side["odd"]):
                         side["label"] = _rank_label(tiles[str(tile_id)].taxon, a.grid_rank)
                     sides.append(side)
@@ -367,7 +369,7 @@ def rescore_roi(roi):
             ans.ref_species = roi.taxon.species or ""
         elif ans.mode == "select":
             from .game_scoring import grid_tiles
-            grid = game.score_select(grid_tiles(ans), ans.picks, ans.grid_rank, ans.grid_group)
+            grid = game.score_select(grid_tiles(ans), ans.picks, ans.grid_rank, ans.grid_group, ans.flagged)
             scores = {r: None for r in game.RANKS}
             if not ans.skipped and grid["members"]:
                 scores[ans.grid_rank] = grid["perfect"]

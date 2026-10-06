@@ -1,6 +1,6 @@
 """
-Odd One Out (#369): four (or six) beetles, all but one share a name at one rank, and the player picks the odd one.
-It opens at level 2, Identification moves to level 4, and players who had Identification keep it.
+Odd One Out (#369): 4, 9 or 16 beetles (the grid ladder, #489), all but one share a name at one rank, and the player
+picks the odd one. It opens at level 2, Identification moves to level 4, and players who had Identification keep it.
 """
 import importlib
 from types import SimpleNamespace
@@ -10,9 +10,9 @@ from django.apps import apps
 from django.test import override_settings
 from django.urls import reverse
 
-from beetlesgallery.beetles_app import game, game_feedback, game_levels, game_scoring
+from beetlesgallery.beetles_app import game, game_feedback, game_grid_ladder, game_levels, game_scoring
 from beetlesgallery.beetles_app.models import (
-    AnswerPoints, GameAnswer, GamePreference, GameReport, GameRound, ModelPrediction, PlayerScore,
+    AnswerPoints, GameAnswer, GamePreference, GameReport, GameRound, GridStep, ModelPrediction, PlayerScore,
 )
 from beetlesgallery.beetles_app.test_game import AFFINIS, GameCase
 
@@ -32,12 +32,16 @@ class OddCase(GameCase):
         roi = game.Beetles.objects.select_related("taxon").get(id=roi_id)
         return game.lineage(roi.taxon, rank)[rank]
 
+    def at(self, rank, size=4):
+        """Every rank open, and the player on the grid ladder's step for ``size`` beetles at ``rank``."""
+        self.level(200, 0.4)
+        GridStep.objects.update_or_create(player=self.user, game="odd",
+                                          defaults={"step": game_grid_ladder.step_for(size, rank)})
+
     def odd_round(self, rank="species"):
         """A round of Odd One Out at one rank, started through the API like the feed does."""
-        self.level(60)
-        with mock.patch.object(game, "_relation_order", return_value=[rank]):
-            rnd, item = self.play("odd")
-        return rnd, item
+        self.at(rank)
+        return self.play("odd")
 
     def answer(self, rnd, item, **body):
         return self.post("game_answer", dict(body, index=item["index"]), rnd.id)
@@ -102,25 +106,22 @@ class BuildTests(OddCase):
         self.assertEqual(len(set(photos)), tiles)   # no two from one photo
 
     def test_every_item_has_exactly_one_odd_one_at_its_rank(self):
-        self.level(60)
         for rank in game.RANKS:
-            with self.subTest(rank=rank), mock.patch.object(game, "_relation_order", return_value=[rank]):
+            with self.subTest(rank=rank):
+                self.at(rank)
                 items = game.build_odd_items(self.user, 2)
                 self.assertTrue(items)
                 for item in items:
                     self.assertEqual(item["rank"], rank)
                     self.check(item)
 
-    def test_higher_levels_get_six(self):
-        for taxon in (self.t_affinis, self.t_ferr, self.t_plat):   # enough for a group of five whichever comes first
-            for _ in range(2):
-                self.roi(taxon)
-        self.level(900, 0.65)   # level 5
-        with mock.patch.object(game, "_relation_order", return_value=["subfamily"]):
-            self.check(game.build_odd_items(self.user, 1)[0], tiles=6)
+    def test_a_higher_step_gets_a_bigger_grid(self):
+        self.at("subfamily", size=9)   # eight Scolytinae and a Platypodinae
+        self.check(game.build_odd_items(self.user, 1)[0], tiles=9)
 
     def test_the_rank_never_goes_past_the_players_open_ranks(self):
         self.level(60)
+        GridStep.objects.create(player=self.user, game="odd", step=12)   # 16 beetles at species, were every rank open
         with override_settings(GAME_RANK_UNLOCK_ANSWERS={"tribe": 50, "genus": 50, "species": 50}):
             ranks = {it["rank"] for _ in range(3) for it in game.build_odd_items(self.user, 3)}
         self.assertEqual(ranks, {"subfamily"})
@@ -131,7 +132,7 @@ class BuildTests(OddCase):
                                        confidence=conf, model_name="m", model_version="1")
 
     def test_every_grid_has_a_sure_and_an_unsure_ai_beetle(self):
-        self.level(60)
+        self.at("species")
         # only Xyleborus affinis has enough beetles to be the group; one other species each can be the odd one
         for roi in self.rois["ferrugineus"][1:] + self.rois["cylindrus"][1:]:
             roi.delete()
@@ -139,20 +140,18 @@ class BuildTests(OddCase):
         self.predict(sure, 0.95)
         self.predict(unsure, 0.3)
         for target in (0.2, 0.8):   # easy and hard rounds alike
-            with self.subTest(target=target), mock.patch.object(game, "_relation_order", return_value=["species"]), \
-                    mock.patch.object(game, "target_difficulty", return_value=target):
+            with self.subTest(target=target), mock.patch.object(game, "target_difficulty", return_value=target):
                 item = game.build_odd_items(self.user, 1)[0]
                 self.assertIn(str(sure.id), item["tiles"])
                 self.assertIn(str(unsure.id), item["tiles"])
                 validated = game.Beetles.objects.filter(id__in=item["tiles"], bbox_is_validated=True)
                 self.assertEqual(validated.count(), 2)   # the odd one and one of the rest
 
-    def test_without_both_kinds_of_ai_beetle_there_is_no_grid(self):
-        self.level(60)
+    def test_without_both_kinds_of_ai_beetle_there_is_still_a_grid(self):   # the staging bug (#489)
+        self.at("species")
         self.predict(self.roi(self.t_affinis, validated=False), 0.95)   # sure ones only, nothing unsure
-        with mock.patch.object(game, "_relation_order", return_value=["species"]):
-            self.assertEqual(game.build_odd_items(self.user, 1), [])
-        with override_settings(GAME_GRID_REQUIRE_AI=False), mock.patch.object(game, "_relation_order", return_value=["species"]):
+        self.assertTrue(game.build_odd_items(self.user, 1))
+        with override_settings(GAME_GRID_PREFER_AI=False):
             self.assertTrue(game.build_odd_items(self.user, 1))
 
     def test_an_odd_one_the_player_has_been_shown_is_never_used_again(self):

@@ -62,21 +62,26 @@ bonus = {{ v.GAME_POINTS_SIMILARITY_BONUS|floatformat:"-2" }}   step = {{ v.GAME
       <p class="text-sm mt-2">Photo likeness (0 to 1) counts what two photos share: photographer, institution, magnification, country, view. Alike photos are harder to tell apart, so they pay a little more.</p>
     </div>
 
+    <div class="p-4 rounded-xl border border-gray-200" data-testid="scoring-grids">
+      <h3 class="font-semibold text-gray-900 mb-1">The grid games grow with the player</h3>
+      <p class="text-sm mb-2">Odd One Out and Select all each have 12 steps: 4, 9 and 16 beetles at subfamily, then the same at tribe, genus and species. A player goes up a step after {{ v.GAME_GRID_UP_AFTER }} good grids in a row and down one after a poor grid, and never past the ranks they have open. When the beetles for a step are short, the grid is built smaller, or at the nearest other rank, rather than not at all. Every point of a grid is times its size: 4 beetles <b>×{{ v.GAME_GRID_SIZE_FACTOR.4|floatformat:"-2" }}</b>, 9 <b>×{{ v.GAME_GRID_SIZE_FACTOR.9|floatformat:"-2" }}</b>, 16 <b>×{{ v.GAME_GRID_SIZE_FACTOR.16|floatformat:"-2" }}</b>. A photo flagged as bad leaves the grid and counts for nothing; half of them flagged (or the odd one) ends the grid, unscored.</p>
+    </div>
+
     <div class="p-4 rounded-xl border border-gray-200">
       <h3 class="font-semibold text-gray-900 mb-1">Odd One Out</h3>
-      <pre class="text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">worth   = odd_weight × P[how related the odd one is to the rest]      odd_weight = {{ v.GAME_POINTS_ODD_WEIGHT|floatformat:"-2" }}
+      <pre class="text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">worth   = odd_weight × P[how related the odd one is to the rest] × size   odd_weight = {{ v.GAME_POINTS_ODD_WEIGHT|floatformat:"-2" }}
 correct = + worth
 wrong   = − odd_wrong × worth                                           odd_wrong = {{ v.GAME_POINTS_ODD_WRONG_FACTOR|floatformat:"-2" }}
 skip    = + {{ v.GAME_POINTS_ODD_SKIP|floatformat:"-2" }}</pre>
-      <p class="text-sm mt-2">With four beetles a blind guess is correct one time in four, so a wrong pick costing more than a third of a correct one makes guessing lose on average. A pick on an unvalidated beetle is scored like a name on it (below): by agreement that it doesn't belong, never negative.</p>
+      <p class="text-sm mt-2">A blind guess is correct one time in 4, 9 or 16 and wrong on every validated beetle of the rest, so a wrong pick costing more than a correct one earns makes guessing lose on average at every size (see the checks below). A pick on an unvalidated beetle is scored like a name on it (below): by agreement that it doesn't belong, never negative.</p>
     </div>
 
     <div class="p-4 rounded-xl border border-gray-200">
       <h3 class="font-semibold text-gray-900 mb-1">Select all</h3>
-      <pre class="text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">share  = select_weight × P[the grid's rank] ÷ validated members        select_weight = {{ v.GAME_POINTS_SELECT_WEIGHT|floatformat:"-2" }}
+      <pre class="text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">share  = select_weight × P[the grid's rank] × size ÷ validated members   select_weight = {{ v.GAME_POINTS_SELECT_WEIGHT|floatformat:"-2" }}
 points = share × ( members tapped − select_wrong × non-members tapped )   select_wrong = {{ v.GAME_POINTS_SELECT_WRONG|floatformat:"-2" }}
 members left out cost nothing; taps on unvalidated beetles are recorded, not scored; skip = + {{ v.GAME_POINTS_ODD_SKIP|floatformat:"-2" }}</pre>
-      <p class="text-sm mt-2">Grids always hold more non-members than members, so tapping everything loses while wrong taps cost more than a member earns.</p>
+      <p class="text-sm mt-2">Members are about a quarter to under half of a grid (4 beetles: 1–2, 9: 3–4, 16: 5–7) and validated non-members are never fewer, so tapping everything loses while wrong taps cost more than a member earns.</p>
     </div>
 
     <div class="p-4 rounded-xl border border-gray-200 text-sm">
@@ -123,6 +128,7 @@ if Identification experts (or a trusted model) name that rank and you match them
           <tr><td class="pr-3 py-1.5">Identification</td><td class="pr-3">each rank the player named</td><td class="text-right">1 vote</td></tr>
           <tr><td class="pr-3 py-1.5">Similarity, with a validated partner</td><td class="pr-3">the partner's name down to the rung chosen ("same genus" → its subfamily, tribe and genus)</td><td class="text-right">1 vote</td></tr>
           <tr><td class="pr-3 py-1.5">Select all, a tap</td><td class="pr-3">the grid's group, down to the grid's rank</td><td class="text-right">{{ v.GAME_SELECT_TAP_WEIGHT|floatformat:"-2" }} of a vote</td></tr>
+          <tr><td class="pr-3 py-1.5">Odd One Out, left with the rest when the odd one was found</td><td class="pr-3">the rest's group, down to the grid's rank</td><td class="text-right">{{ v.GAME_SELECT_TAP_WEIGHT|floatformat:"-2" }} of a vote</td></tr>
         </tbody>
       </table></div>
       <pre class="mt-3 text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">at each rank, for each name given:

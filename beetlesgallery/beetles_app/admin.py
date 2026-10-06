@@ -3,7 +3,7 @@ from django.utils.html import format_html, mark_safe
 from django.utils import timezone
 from .models import (
     UploadBatch, UpdateBatch, Beetles, ImageAsset, DownloadJob, ImageLock,
-    Taxon, Synonym, CategoryMapping, GameRound, GameAnswer,
+    Taxon, Synonym, CategoryMapping, GameRound, GameAnswer, GridStep,
     PlayerSkill, SpeciesDiscovery, RetroCredit, AnswerPoints, PlayerScore, GamePreference, LabelReview, RoiDifficulty, GameReport, ModelPrediction, PathogenInteraction, AccessRequest, InteractionProposal, AreaGrant, SiteNotice, GameTuning, PredictionUpload, RoiName,
 )
 from simple_history.admin import SimpleHistoryAdmin
@@ -851,6 +851,15 @@ class PlayerScoreAdmin(admin.ModelAdmin):
 class GamePreferenceAdmin(admin.ModelAdmin):
     list_display = ("player", "focus_rank", "focus_value", "updated_at")
     search_fields = ("player__username", "focus_value")
+
+
+@admin.register(GridStep)
+class GridStepAdmin(admin.ModelAdmin):
+    """Each player's step on the grid games' ladder (#489); a superuser can move a player by hand."""
+    list_display = ("player", "game", "step", "good_run", "updated_at")
+    list_filter = ("game",)
+    search_fields = ("player__username",)
+    raw_id_fields = ("player", "last_answer")
 
 
 @admin.register(AnswerPoints)
