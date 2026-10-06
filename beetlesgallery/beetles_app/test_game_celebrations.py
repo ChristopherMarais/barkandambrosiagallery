@@ -32,7 +32,7 @@ class CelebrationKindTests(GameCase):
             return (points + 6, basis, detail) if basis == AnswerPoints.Basis.CONSENSUS else (points, basis, detail)
 
         with mock.patch.object(game_scoring, "score", agreed):
-            self.assertEqual(self.answer(validated=False)["celebrate"]["kind"], "strong")
+            self.assertEqual(self.answer(validated=False)["celebrate"]["kind"], "players")   # purple (#572)
 
     def test_a_plain_unvalidated_answer_gets_nothing(self):
         self.assertIsNone(self.answer(validated=False)["celebrate"])
@@ -41,7 +41,7 @@ class CelebrationKindTests(GameCase):
         self.client.force_login(self.user)
         page = self.client.get(reverse("game_play", args=["classify"])).content.decode()
         self.assertIn("js/beetle_confetti.js", page)
-        self.assertIn('kind === "strong" ? "plain" : (kind || "validated")', page)
+        self.assertIn('window.beetleConfetti($("confetti"), kind || "validated", size)', page)
 
 
 class StrongAnswerTests(GameCase):
@@ -56,7 +56,7 @@ class StrongAnswerTests(GameCase):
         return game_answer_review.past(rnd, 0)["celebrate"]
 
     def test_backed_by_experts_or_a_trusted_model(self):
-        self.assertEqual(self.celebrate(11.3, {"reference": {"genus": {"match": True}}})["kind"], "strong")
+        self.assertEqual(self.celebrate(11.3, {"reference": {"genus": {"match": True}}})["kind"], "players")
 
     def test_more_agreement_more_confetti_and_none_without_points(self):
         small, big = self.celebrate(2.0, {"agreement": {"species": 0.4}}), self.celebrate(20.0, {"agreement": {"species": 0.9}})

@@ -60,6 +60,7 @@ def review(answer, item):
         body, facts = BODIES[answer.mode](answer, item, basis, row, losses, opinions)
         out.update(body)
         out["beetles"] = _beetles(answer, shown, opinions)
+        facts.update(_agreed(answer, row, basis, facts))
     out["headline"] = _headline(out)
     out["celebrate"] = _celebrate(out, facts)
     return out
@@ -576,20 +577,63 @@ def _headline(out):
     return f"{lead} · {amount}"
 
 
+# The confetti's colours say who agreed (#572): green for correct on a validated beetle, blue for IBBI-AI, purple for
+# the players, glowing purple for a Naming expert among them, grey for the rest (static/js/beetle_confetti.js).
+POP_SIZE = 0.3   # at or under this size (very few points), a partly correct or unexplained win is just a small grey pop
+
+
 def _celebrate(out, facts):
     """
-    The confetti for this answer, which follows its points ({"kind", "size"}, or None): "validated" (brown beetles) for
-    a fully correct answer on a validated beetle (the species, the true rung, the odd one, a perfect grid), "partial"
-    (grey beetles) for points from a partly correct one, "strong" (paper confetti) for points by agreement on a beetle
-    nobody has validated yet, or, with no points yet, for agreeing with IBBI-AI where it is sure (the smallest burst).
-    Nothing for no points or a loss. A level-up has its own burst (its toast).
+    The confetti for this answer, which follows its points ({"kind", "size"}, or None). On a validated beetle:
+    "validated" (green beetles) for a fully correct answer (the species, the true rung, the odd one, a perfect grid),
+    "validated_agreed" when IBBI-AI and the other players had said the same, "partial" (grey) for points from a partly
+    correct one. On a beetle nobody has validated, by who it agrees with: "expert" (a Naming expert's name), "ai_players",
+    "ai" or "players"; with no points yet, agreeing with a sure IBBI-AI still gets the smallest burst. Very few points
+    with nobody named are a "pop". Nothing for no points or a loss. A level-up has its own burst (its pop-up).
     """
     if out["skipped"] or out["held"]:
         return None
     earned, basis = out["points"]["earned"], out["points"]["basis"]
-    if earned > 0:
-        kind = ("validated" if facts.get("complete") else "partial") if basis == "truth" else "strong"
-        return {"kind": kind, "size": confetti_size(earned)}
-    if basis != "truth" and facts.get("ai_agrees"):
-        return {"kind": "strong", "size": SMALLEST_BURST}
-    return None
+    ai, players = facts.get("ai_agrees"), facts.get("players_agree")
+    if earned <= 0 and not (basis != "truth" and ai):
+        return None
+    size = confetti_size(earned) if earned > 0 else SMALLEST_BURST
+    if basis == "truth":
+        if facts.get("complete"):
+            kind = "validated_agreed" if ai and players else "validated"
+        else:
+            kind = "pop" if size <= POP_SIZE else "partial"
+    elif facts.get("expert_agrees"):
+        kind = "expert"
+    elif ai or players:
+        kind = "ai_players" if ai and players else "ai" if ai else "players"
+    else:   # points on a beetle nobody has validated come from the players' vote
+        kind = "pop" if size <= POP_SIZE else "players"
+    return {"kind": kind, "size": size}
+
+
+def _agreed(answer, row, basis, facts):
+    """
+    Who said the same as the player, for the confetti: {"ai_agrees", "players_agree", "expert_agrees"}. On a beetle
+    nobody has validated it is in the points (agreement with the players' vote, and a reference by proven experts or a
+    trusted model, game_scoring); a fully correct name on a validated beetle is compared with IBBI-AI and with the
+    other players' names for it.
+    """
+    if basis == "agreement" and row is not None:
+        detail = row.detail or {}
+        parts = [detail] + [v for v in (detail.get("votes") or {}).values() if isinstance(v, dict)]
+        players = any(isinstance(c, (int, float)) and c > 0 for p in parts for c in (p.get("agreement") or {}).values())
+        refs = [r for p in parts for r in (p.get("reference") or {}).values() if isinstance(r, dict) and r.get("match")]
+        return {"players_agree": players, "expert_agrees": any(r.get("source") == "expert" for r in refs),
+                "ai_agrees": bool(facts.get("ai_agrees")) or any(r.get("source") == "model" for r in refs)}
+    if basis == "truth" and facts.get("complete") and answer.mode == "classify":
+        mine = game.answer_values({r: getattr(answer, r) for r in RANKS})
+        deepest = next((r for r in reversed(RANKS) if mine.get(r)), None)
+        others = [game.answer_values(row)[deepest] for row in
+                  GameAnswer.objects.filter(roi_id=answer.roi_id, mode="classify", skipped=False)
+                  .exclude(player_id=answer.player_id).values(*RANKS)] if deepest else []
+        others = [name for name in others if name]   # only those who named that rank
+        same = sum(1 for name in others if name == mine[deepest])
+        return {"ai_agrees": _agrees_with_ai(mine, _ai([answer.roi_id]).get(answer.roi_id, {})),
+                "players_agree": bool(others) and same * 2 > len(others)}
+    return {}

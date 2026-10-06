@@ -18,13 +18,13 @@
     <p class="mt-1 text-sm text-gray-500">{{ r.labelled|digit_groups }} beetle{{ r.labelled|pluralize }} labelled. Level {{ r.level }}, {{ r.level_name }}. {{ r.today }} of {{ r.goal }} beetles today.</p>
     <div class="grid grid-cols-2 gap-2 mt-3">
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" data-testid="last-session-points">{% if r.points > 0 %}+{% endif %}{{ r.points|digit_groups }}</div><div class="text-xs text-gray-500">points &middot; <a href="{% url 'game_how' %}#scoring" class="underline hover:text-gray-800">why?</a></div></div>
-      <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold rarity-{{ r.accuracy_tier }}">{% if r.scored %}{{ r.right|digit_groups }}/{{ r.scored|digit_groups }}{% else %}&ndash;{% endif %}</div><div class="text-xs text-gray-500">known beetles correct</div></div>
-      <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold rarity-{{ r.challenge_tier }}">{{ r.challenge }}/100</div><div class="text-xs text-gray-500">challenge</div></div>
+      <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold scale-{{ r.accuracy_tier }}">{% if r.scored %}{{ r.right|digit_groups }}/{{ r.scored|digit_groups }}{% else %}&ndash;{% endif %}</div><div class="text-xs text-gray-500">known beetles correct</div></div>
+      <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold scale-{{ r.challenge_tier }}">{{ r.challenge }}/100</div><div class="text-xs text-gray-500">challenge</div></div>
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900">{{ r.streak }}</div><div class="text-xs text-gray-500">day streak</div></div>
     </div>
     {% for b in r.badges %}
     <div class="flex items-center gap-3 mt-2 p-3 border border-gray-300 rounded-2xl text-left">
-      <i class="fi {{ b.icon }} text-2xl rarity-{{ b.tier }}"></i>
+      <i class="fi {{ b.icon }} text-2xl scale-{{ b.tier }}"></i>
       <div><div class="text-sm font-semibold text-gray-900">New badge: {{ b.name }}</div><div class="text-xs text-gray-500">{{ b.how }}</div></div>
     </div>
     {% endfor %}

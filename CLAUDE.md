@@ -14,7 +14,8 @@
 
 ## Working style
 - Small, reviewable PRs, one topic each, with tests. New tests go in new files where possible, so open PRs merge cleanly.
-- Grey/white/black theme; colour only where it carries meaning. Keep player-facing text short.
+- Grey/white/black theme; colour only where it carries meaning. Ratings use one scale (grey, then red → orange →
+  yellow → green; `game_scale.py`); blue means IBBI-AI and purple the players. Keep player-facing text short.
 - The house style is written down at the top of `beetlesgallery/static/css/input.css`: three button looks
   (`.btn-main` light grey with dark bold text, `.btn-primary` dark grey with white text, `.btn-secondary` white with
   a grey outline; never black), dark-grey ticks, numbers grouped in threes. Follow it on new pages.

@@ -1,8 +1,3 @@
-{# One badge card in its rarity colour when earned (grey while locked): the same colours as the levels, so easy badges look like early levels. Needs ``b`` from game_rewards.badge_cards. #}
+{# One badge card on the site's one scale when earned (grey while locked): the same colours as the levels, so easy badges look like early levels and the hardest glow like the top one. Needs ``b`` from game_rewards.badge_cards. #}
 {% if not b.earned %}{% with ring="border-gray-100 bg-gray-50" ink="text-gray-300" %}{% include "beetles/includes/game_badge_card.html" %}{% endwith %}
-{% elif b.tier == "mythic" %}{% with ring="border-yellow-400 bg-yellow-50 badge-glow" ink="text-yellow-600" %}{% include "beetles/includes/game_badge_card.html" %}{% endwith %}
-{% elif b.tier == "legendary" %}{% with ring="border-orange-300 bg-orange-50" ink="text-orange-600" %}{% include "beetles/includes/game_badge_card.html" %}{% endwith %}
-{% elif b.tier == "epic" %}{% with ring="border-purple-300 bg-purple-50" ink="text-purple-600" %}{% include "beetles/includes/game_badge_card.html" %}{% endwith %}
-{% elif b.tier == "rare" %}{% with ring="border-blue-300 bg-blue-50" ink="text-blue-600" %}{% include "beetles/includes/game_badge_card.html" %}{% endwith %}
-{% elif b.tier == "uncommon" %}{% with ring="border-green-300 bg-green-50" ink="text-green-600" %}{% include "beetles/includes/game_badge_card.html" %}{% endwith %}
-{% else %}{% with ring="border-gray-300 bg-white" ink="text-gray-600" %}{% include "beetles/includes/game_badge_card.html" %}{% endwith %}{% endif %}
+{% else %}{% with ring="scale-card-"|add:b.tier ink="scale-"|add:b.tier %}{% include "beetles/includes/game_badge_card.html" %}{% endwith %}{% endif %}

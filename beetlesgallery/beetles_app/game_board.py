@@ -15,6 +15,7 @@ from django.db.models.functions import TruncWeek
 from django.utils import timezone
 
 from . import game, game_levels, game_rewards, game_trust
+from .game_scale import WORDS
 from .models import AnswerPoints, GameAnswer, PlayerScore, PlayerSkill, SpeciesDiscovery
 
 SORTS = {"score": "Score", "identification": "Naming accuracy", "similarity": "Similarity accuracy",
@@ -243,10 +244,9 @@ def _player_weeks(player_id):
     return {"wins": sum(1 for w in weeks if w["place"] == 1), "podiums": len(weeks), "weeks": weeks[:10]}
 
 
-# Accuracy tiers by percentile among rated players, in RPG rarity colours (see includes/game_accuracy.html)
-ACCURACY_TIERS = [   # (lowest percentile, key, name)
-    (0, "common", "Common"), (25, "uncommon", "Uncommon"), (50, "rare", "Rare"),
-    (75, "epic", "Epic"), (90, "legendary", "Legendary"), (98, "mythic", "Mythic"),
+# Accuracy tiers by percentile among rated players, on the site's one scale (game_scale.py, includes/game_accuracy.html)
+ACCURACY_TIERS = [   # (lowest percentile, step, word)
+    (lo, step, WORDS[step]) for lo, step in ((0, "fair"), (25, "decent"), (50, "good"), (75, "great"), (90, "excellent"))
 ]
 
 
@@ -272,7 +272,7 @@ def accuracy_standing(player, bins=10):
         key, name = next((k, n) for lo, k, n in reversed(ACCURACY_TIERS) if pct >= lo)
         out["me"] = {"accuracy": mine, "percentile": pct, "tier": key, "tier_name": name, "bin": min(bins - 1, int(mine * bins))}
     elif mine is not None:
-        out["me"] = {"accuracy": mine, "percentile": None, "tier": "common", "tier_name": "Common", "bin": min(bins - 1, int(mine * bins))}
+        out["me"] = {"accuracy": mine, "percentile": None, "tier": "none", "tier_name": WORDS["none"], "bin": min(bins - 1, int(mine * bins))}
     else:
         judged = PlayerScore.objects.filter(player=player).values_list("judged", flat=True).first() or 0
         out["needed"] = max(0, min_judged - judged)

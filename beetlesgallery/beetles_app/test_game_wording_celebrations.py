@@ -1,11 +1,11 @@
-"""Game wording ("correct", "Reviewed by curators"), celebration tiers and rarity colours after a session."""
+"""Game wording ("correct", "Reviewed by curators"), celebration tiers and the colour scale after a session."""
 from pathlib import Path
 
 from django.conf import settings
 from django.test import SimpleTestCase, override_settings
 from django.urls import reverse
 
-from beetlesgallery.beetles_app.game_rewards import rarity_tier
+from beetlesgallery.beetles_app.game_scale import value_step
 from beetlesgallery.beetles_app.test_game import GameCase
 
 TEMPLATES = Path(settings.BASE_DIR) / "beetlesgallery" / "templates" / "beetles"
@@ -28,9 +28,9 @@ class WordingTests(SimpleTestCase):
             self.assertNotIn("Checked later", text)
             self.assertNotIn("Checked since you played", text)
 
-    def test_rarity_tiers(self):
-        self.assertEqual([rarity_tier(v) for v in (None, 0.1, 0.4, 0.6, 0.8, 0.9, 0.97)],
-                         ["common", "common", "uncommon", "rare", "epic", "legendary", "mythic"])
+    def test_scale_steps(self):
+        self.assertEqual([value_step(v) for v in (None, 0.1, 0.4, 0.6, 0.8, 0.9, 0.97)],
+                         ["none", "fair", "decent", "good", "great", "excellent", "excellent"])
 
     def test_the_confetti_uses_the_logo_and_has_tiers(self):
         js = (Path(settings.BASE_DIR) / "beetlesgallery" / "static" / "js" / "beetle_confetti.js").read_text()
@@ -60,5 +60,5 @@ class CelebrationTierTests(GameCase):
         self.client.force_login(self.user)
         page = self.client.get(reverse("game_play", args=["classify"])).content.decode()
         self.assertIn("window.BEETLE_LOGO_URL", page)
-        self.assertIn('confetti("level")', page)
+        self.assertIn('window.beetleConfetti($("confetti"), "level", 1, event.colour)', page)
         self.assertIn('id="recap-challenge"', page)

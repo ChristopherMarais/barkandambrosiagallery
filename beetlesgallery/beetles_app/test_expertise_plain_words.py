@@ -104,11 +104,11 @@ class KeyAndIntroTests(PlainWordsCase):
         for gone in ("Gold: Distinction expert; it unlocks nothing.", "Gold and glowing", "unlocks nothing"):
             self.assertNotIn(gone, text)
         key = text_of(page[page.index('data-testid="expertise-legend"'):page.index('id="tree"')])
-        self.assertIn("naming telling apart fewer than 5 answers under 50%", key)
+        self.assertIn("naming telling apart Not yet: fewer than 5 answers Fair under 50%", key)   # words of the scale (#572)
         self.assertNotIn(".", key)   # labels only, no sentences
         self.assertIn('data-testid="legend-expert"><span class="tree-dot mark-expert"></span>'
-                      '<span class="tree-tri mark-expert"></span>expert</span>', page)
-        self.assertIn('<span class="tree-tri mark-unknown"></span>fewer than 5 answers', page)
+                      '<span class="tree-tri mark-expert"></span>Expert</span>', page)
+        self.assertIn('<span class="tree-tri mark-unknown"></span>Not yet: fewer than 5 answers', page)
 
     def test_the_intro_is_short_and_says_how_it_works(self):
         intro = self.section(self.page(), "expertise-intro")

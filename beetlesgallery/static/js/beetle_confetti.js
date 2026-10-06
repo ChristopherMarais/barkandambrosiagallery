@@ -1,21 +1,42 @@
 /*
- * Confetti for Ambrosia Archive, made of the site's beetle logo (its silhouette, tinted). One call per celebration:
- *   beetleConfetti(canvas, "partial", size)    a few grey beetles: a beetle named correctly to some rank
- *   beetleConfetti(canvas, "validated", size)  brown beetles: a right species or a perfect grid; at full size a second wave
- *   beetleConfetti(canvas, "plain", size)      ordinary paper confetti: a strong answer on a beetle nobody checked yet
- *   beetleConfetti(canvas, "level")            the biggest: gold beetles from both sides and a centre burst with paper
+ * Confetti for Ambrosia Archive, made of the site's beetle logo (its silhouette, tinted). One call per celebration,
+ * beetleConfetti(canvas, kind, size), the kind saying who agreed and so the colours (#572: green is correct, blue is
+ * IBBI-AI, purple the players, grey a little; game_answer_review._celebrate picks it):
+ *   "pop"               a few small grey beetles: very few points
+ *   "partial"           grey beetles: a beetle named correctly to some rank
+ *   "validated"         green beetles: a right species or a perfect grid on a checked beetle; at full size a second wave
+ *   "validated_agreed"  green, blue and purple beetles: that, and IBBI-AI and the other players said the same
+ *   "ai", "players", "ai_players"  grey with blue (IBBI-AI), purple (the players) or both: a beetle nobody checked yet
+ *   "expert"            glowing purple beetles: a Naming expert among the players said the same
+ *   "plain"             ordinary paper confetti
+ *   "level"             the biggest: gold and brown beetles from both sides and a centre burst with paper; a fourth
+ *                       argument, the new level's colour on the scale, adds a sprinkle of beetles in it
  * ``size`` (0.2 to 1, from the answer's points) scales how many pieces there are, how big and how far they fly.
  * Bursts run side by side in one shared animation loop, so a daily-goal burst never wipes out a level-up. The total
  * is capped (lower on phones): the oldest pieces fade out early to make room. Nothing moves under reduced motion.
  * The logo URL comes from window.BEETLE_LOGO_URL; until it has loaded, a drawn beetle stands in.
  */
 (function () {
+  const GREY = ["#6b7280", "#9ca3af", "#4b5563"];
+  const GREEN = ["#15803d", "#16a34a", "#22c55e"];
+  const BLUE = ["#1d4ed8", "#2563eb", "#3b82f6"];
+  const PURPLE = ["#7e22ce", "#9333ea", "#a855f7"];
   const PALETTES = {
-    partial: ["#6b7280", "#9ca3af", "#4b5563"],
-    validated: ["#3f2a14", "#5b3a1e", "#7c4a1e", "#8b5a2b", "#a0522d"],
-    level: ["#ca8a04", "#eab308", "#facc15", "#a16207", "#111827"],
+    pop: GREY,
+    partial: GREY,
+    validated: GREEN,
+    validated_agreed: [...GREEN, ...GREEN, ...BLUE, ...PURPLE],
+    ai: [...GREY, ...BLUE, ...BLUE],
+    players: [...GREY, ...PURPLE, ...PURPLE],
+    ai_players: [...GREY, ...BLUE, ...PURPLE],
+    expert: PURPLE,
+    level: ["#ca8a04", "#eab308", "#facc15", "#a16207", "#3f2a14", "#5b3a1e", "#7c4a1e", "#8b5a2b"],
     plain: ["#111827", "#374151", "#9ca3af", "#d1d5db", "#ffffff", "#16a34a"],
   };
+  // How each kind's pieces look: [base size, how much it varies]; paper is the only kind that isn't beetles
+  const LOOK = { pop: [10, 5], partial: [13, 7], level: [26, 16], plain: [6, 6], accent: [22, 12] };
+  const BEETLE_LOOK = [18, 12];
+  const GLOWS = { expert: "rgba(168, 85, 247, 0.9)" };   // these pieces shine
   const MASK_HEIGHT = 96;
   const GRAVITY = 0.35;     // px per frame², at 60 frames a second
   const FADE = 0.35;        // the last share of a piece's life is spent fading out
@@ -76,7 +97,7 @@
       try {
         mask = buildMask(img);
         // tint every colour now, while nothing is celebrating, so the first big burst has no work to do
-        ["partial", "validated", "level"].forEach((kind) => PALETTES[kind].forEach(silhouette));
+        Object.keys(PALETTES).filter((kind) => kind !== "plain").forEach((kind) => PALETTES[kind].forEach(silhouette));
       } catch (e) { mask = null; }
     };
     img.src = window.BEETLE_LOGO_URL;
@@ -102,11 +123,10 @@
    * (ms) say when it appears and how long it lasts. Speeds grow with the square root of the screen height, so a burst
    * fills a tall screen as well as a short one.
    */
-  function piece(kind, size, from, born, life) {
+  function piece(kind, size, from, born, life, palette) {
     const beetle = kind !== "plain";
-    const palette = PALETTES[kind];
-    const base = { partial: 13, validated: 18, level: 26, plain: 6 }[kind];
-    const vary = { partial: 7, validated: 12, level: 16, plain: 6 }[kind];
+    palette = palette || PALETTES[kind];
+    const [base, vary] = LOOK[kind] || BEETLE_LOOK;
     const reach = Math.sqrt(Math.max(0.6, Math.min(1.6, innerHeight / 800)));
     const p = {
       beetle,
@@ -115,6 +135,7 @@
       vs: rand(-0.5, 0.5) * (beetle ? 0.2 : 0.4),
       flip: Math.random() * Math.PI * 2,   // paper turns over as it falls
       colour: palette[(Math.random() * palette.length) | 0],
+      glow: GLOWS[kind] || null,
       born,
       end: born + life * rand(0.8, 1),
     };
@@ -136,19 +157,25 @@
     return p;
   }
 
-  // What each kind of celebration throws: lists of [kind, count, from, delay ms, life ms].
-  function waves(kind, size) {
+  // What each kind of celebration throws: lists of [kind, count, from, delay ms, life ms]. ``accent``: the level's
+  // colour, a sprinkle of beetles in it.
+  function waves(kind, size, accent) {
     if (kind === "level") {
-      return [
+      const list = [
         ["level", 46, "left", 0, 3500], ["level", 46, "right", 0, 3500],
         ["level", 30, "centre", 120, 3300], ["plain", 70, "centre", 120, 3300],
         ["level", 18, "left", 650, 2800], ["level", 18, "right", 650, 2800],
       ];
+      if (accent) list.push(["accent", 24, "centre", 300, 3200]);
+      return list;
     }
+    if (kind === "pop") return [["pop", 5 + Math.round(6 * size), "centre", 0, 1200]];
     if (kind === "partial") return [["partial", 6 + Math.round(14 * size), "centre", 0, 1500]];
     if (kind === "plain") return [["plain", 40 + Math.round(60 * size), "centre", 0, 2000]];
-    const list = [["validated", 28 + Math.round(52 * size), "centre", 0, 2200]];
-    if (size >= 0.95) list.push(["validated", 36, "centre", 380, 2000], ["plain", 30, "centre", 380, 2000]);
+    if (kind === "ai" || kind === "players" || kind === "ai_players") return [[kind, 16 + Math.round(40 * size), "centre", 0, 2000]];
+    if (kind === "expert") return [["expert", 14 + Math.round(36 * size), "centre", 0, 2400]];
+    const list = [[kind, 28 + Math.round(52 * size), "centre", 0, 2200]];   // validated, validated_agreed
+    if (size >= 0.95) list.push([kind, 36, "centre", 380, 2000], ["plain", 30, "centre", 380, 2000]);
     return list;
   }
 
@@ -171,6 +198,8 @@
     const cos = Math.cos(p.spin) * dpr, sin = Math.sin(p.spin) * dpr;
     ctx.setTransform(cos, sin, -sin, cos, p.x * dpr, p.y * dpr);
     ctx.globalAlpha = alpha;
+    ctx.shadowBlur = p.glow ? 10 * dpr : 0;
+    ctx.shadowColor = p.glow || "transparent";
     if (p.beetle) {
       const shape = silhouette(p.colour);
       if (shape) {
@@ -225,9 +254,10 @@
     requestAnimationFrame(frame);
   }
 
-  window.beetleConfetti = function (canvas, kind, size) {
+  window.beetleConfetti = function (canvas, kind, size, accent) {
     if (!canvas || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     kind = PALETTES[kind] ? kind : (kind === "beetles" ? "validated" : "plain");
+    accent = /^#[0-9a-f]{6}$/i.test(accent || "") ? accent : null;
     size = Math.max(0.2, Math.min(1, Number(size) || 1));
     let scene = scenes.get(canvas);
     if (!scene) {
@@ -236,8 +266,8 @@
     }
     fit(scene);
     const now = performance.now();
-    waves(kind, size).forEach(([k, count, from, delay, life]) => {
-      for (let i = 0; i < count; i++) scene.pieces.push(piece(k, size, from, now + delay, life));
+    waves(kind, size, accent).forEach(([k, count, from, delay, life]) => {
+      for (let i = 0; i < count; i++) scene.pieces.push(piece(k, size, from, now + delay, life, k === "accent" ? [accent] : null));
     });
     // Over the cap: the oldest pieces (the front of the list) fade out within a quarter second.
     const extra = scene.pieces.length - maxPieces();
