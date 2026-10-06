@@ -13,7 +13,7 @@ from django.db.models import Count
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 
-from .game_scale import HEX, level_classes, level_step, value_step
+from .game_scale import level_classes, level_hex, level_step, value_step
 from .models import GameAnswer
 
 def daily_goal():
@@ -342,10 +342,9 @@ def play_events(player, before):
         games = set(GAME_PERK.values())   # a game's name keeps its capitals ("Odd One Out")
         unlocked = " Unlocked: " + ", ".join(PERKS[p][0] if p in games else PERKS[p][0].lower() for p in gained) + "." if gained else ""
         # the pop-up and its confetti take the new level's colour on the scale
-        step = level_step(now["level"])[0]
         events.append({"kind": "level", "title": f"Level {now['level']}", "text": f"You are now a {now['level_name']}.{unlocked}",
-                       "level": now["level"], "icon": level_icon(now["level"]), "step": step, "badge": level_classes(now["level"]),
-                       "colour": HEX[step]})
+                       "level": now["level"], "icon": level_icon(now["level"]), "step": level_step(now["level"]),
+                       "badge": level_classes(now["level"]), "colour": level_hex(now["level"])})
         if PROPOSALS in gained:
             events.append({"kind": "proposals", "title": "Your labels now count", "text": PERKS[PROPOSALS][1]})
     if before.get("rank") and now["rank"] != before["rank"]:

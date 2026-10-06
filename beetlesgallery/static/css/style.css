@@ -42,6 +42,9 @@
     --color-yellow-700: #a16207;
     --color-yellow-800: #854d0e;
     --color-yellow-950: #422006;
+    --color-lime-100: #ecfccb;
+    --color-lime-400: #a3e635;
+    --color-lime-800: #3f6212;
     --color-green-50: #f0fdf4;
     --color-green-100: #dcfce7;
     --color-green-200: #bbf7d0;
@@ -3445,6 +3448,64 @@
 }
 .scale-glow {
   box-shadow: 0 0 0 1px var(--color-green-800), 0 0 10px rgba(34, 197, 94, 0.85);
+}
+.level-1 {
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-700);
+  box-shadow: inset 0 0 0 1px var(--color-gray-300);
+}
+.level-2 {
+  background-color: var(--color-red-100);
+  color: var(--color-red-800);
+  box-shadow: inset 0 0 0 1px var(--color-red-300);
+}
+.level-3 {
+  background-color: color-mix(in srgb, #fee2e2, #ffedd5);
+  @supports (color: color-mix(in lab, red, red)) {
+    background-color: color-mix(in oklab, var(--color-red-100), var(--color-orange-100));
+  }
+  color: color-mix(in srgb, #991b1b, #9a3412);
+  @supports (color: color-mix(in lab, red, red)) {
+    color: color-mix(in oklab, var(--color-red-800), var(--color-orange-800));
+  }
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #fca5a5, #fdba74);
+  @supports (color: color-mix(in lab, red, red)) {
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-red-300), var(--color-orange-300));
+  }
+}
+.level-4 {
+  background-color: var(--color-orange-100);
+  color: var(--color-orange-800);
+  box-shadow: inset 0 0 0 1px var(--color-orange-300);
+}
+.level-5 {
+  background-color: var(--color-amber-100);
+  color: var(--color-amber-800);
+  box-shadow: inset 0 0 0 1px var(--color-amber-300);
+}
+.level-6 {
+  background-color: var(--color-yellow-100);
+  color: var(--color-yellow-800);
+  box-shadow: inset 0 0 0 1px var(--color-yellow-400);
+}
+.level-7 {
+  background-color: var(--color-lime-100);
+  color: var(--color-lime-800);
+  box-shadow: inset 0 0 0 1px var(--color-lime-400);
+}
+.level-8 {
+  background-color: var(--color-green-100);
+  color: var(--color-green-800);
+  box-shadow: inset 0 0 0 1px var(--color-green-300);
+}
+.level-9 {
+  background-color: var(--color-green-200);
+  color: var(--color-green-900);
+  box-shadow: inset 0 0 0 1px var(--color-green-500);
+}
+.level-10 {
+  background-color: var(--color-green-700);
+  color: #fff;
 }
 @property --tw-translate-x {
   syntax: "*";

@@ -164,7 +164,7 @@ def scale(value):
 
 @register.filter
 def level_scale(level):
-    """The classes of a level's badge on the scale: {{ 10|level_scale }} -> "scale-chip-excellent scale-glow"."""
+    """The classes of a level's badge, its own colour (#606): {{ 10|level_scale }} -> "level-10 scale-glow"."""
     from beetlesgallery.beetles_app.game_scale import level_classes
     return level_classes(level)
 
