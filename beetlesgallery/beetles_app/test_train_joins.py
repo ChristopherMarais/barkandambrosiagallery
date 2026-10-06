@@ -106,8 +106,12 @@ class AheadNoticeTests(FallbackCase):
             ModelPrediction.objects.create(roi=unchecked, valid_species_id=taxon.valid_species_id, taxon=taxon,
                                            confidence=0.75, model_name="m", model_version="1")
         self.no_grids()
-        self.grant("odd_one_out", "select_all", "choose_game", play_mode="odd")
+        self.grant("odd_one_out", "select_all", "choose_game")
         self.enterContext(mock.patch.object(game, "start_round", self.start_round_apart))
+        # a chosen game no longer hands over to the others with a note (#604): a note of some other kind, made up
+        real_batch = game.batch_items
+        self.enterContext(mock.patch.object(
+            game, "batch_items", lambda *a, **k: (real_batch(*a, **k)[0], "A note about Odd One Out.")))
 
     real_start_round = staticmethod(game.start_round)
 

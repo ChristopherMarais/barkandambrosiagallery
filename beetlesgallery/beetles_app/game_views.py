@@ -981,14 +981,16 @@ def game_start(request):
         # else a new one: its first beetles now, the rest on the worker or as the feed goes (game_grow, #575)
         rnd = (fresh and game_warm.take(request.user, mode)) or game_grow.start_round(request.user, mode)
         index = _next_index(rnd, 0) if rnd else None
-    if index is None:   # nothing in any of their games: say why (no beetles yet, all seen, their focus, ...)
-        return JsonResponse({"error": game.nothing_to_play(request.user, mode)["text"]}, status=404)
+    if index is None:   # nothing in their game: say why (no beetles yet, all seen, their focus, ...)
+        # with the toolbar's choices, so the page can offer another game (#604)
+        return JsonResponse({"error": game.nothing_to_play(request.user, mode)["text"], "prefs": _prefs(request.user)},
+                            status=404)
     focus = game.player_focus(request.user)
     return JsonResponse({
         "round": str(rnd.id), "item": _item_payload(rnd, index), "chip": _chip(request.user),
         "focus": f"{focus[0].capitalize()}: {focus[1]}" if focus else "",
         "prefs": _prefs(request.user),
-        # the game they chose has nothing for them right now, so the feed plays their other games (game.start_round)
+        # a line for the page about this batch, "" when there is nothing to say (game.start_round)
         "notice": getattr(rnd, "notice", ""),
     })
 

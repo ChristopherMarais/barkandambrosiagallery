@@ -233,6 +233,10 @@ def revealed_ids(player):
     return set(reveals(player))
 
 
+# On while a chosen game that came up empty tries again with a wider pool (build_chosen)
+widened = contextvars.ContextVar("game_widened", default=False)
+
+
 def held_back_ids(player, now=None, shown=None):
     """
     The revealed ROIs that are not scored for this player yet: shown in the current sitting (game_relearn.sitting_start,
@@ -244,7 +248,9 @@ def held_back_ids(player, now=None, shown=None):
 
     now = now or timezone.now()
     shown = reveals(player) if shown is None else shown
-    cutoff = min(sitting_start(player, now), now - timedelta(hours=game_setting("GAME_REVEAL_COOLDOWN_HOURS", 2)))
+    cutoff = sitting_start(player, now)
+    if not widened.get():   # a chosen game that ran short (build_chosen) takes back what was shown before this sitting
+        cutoff = min(cutoff, now - timedelta(hours=game_setting("GAME_REVEAL_COOLDOWN_HOURS", 2)))
     return {roi_id for roi_id, entry in shown.items() if entry["at"] >= cutoff} | set(open_mistakes(player))
 
 
@@ -1103,9 +1109,10 @@ def start_round(player, mode, size=None, fresh_only=False):
     ``fresh_only`` leaves out unscored items the player has already answered: used to carry on from one batch
     into the next, where running out of new beetles should end the feed rather than repeat what they've seen.
 
-    When the game a player chose has nothing for them, the feed plays their other games instead (fallback_mix). The
-    round's ``notice`` says so for the page ("" when there is nothing to say); it is not saved, so a reload that picks
-    the batch up again doesn't repeat it.
+    A game the player chose stays that game (#604): when it runs short it widens its own pool (build_chosen), and when
+    there is still nothing the feed ends with a line that says so (nothing_to_play), never another game. The round's
+    ``notice`` is a line for the page ("" when there is nothing to say); it is not saved, so a reload that picks the
+    batch up again doesn't repeat it.
     """
     items, notice = batch_items(player, mode, size, fresh_only)
     if not items:
@@ -1127,10 +1134,8 @@ def batch_items(player, mode, size=None, fresh_only=False, choice=None):
     notice = ""
     if mode == GameRound.Mode.MIXED:
         items = build_mixed_items(player, size, fresh_only=fresh_only, choice=choice)
-        if not items:
-            items, notice = fallback_mix(player, size, fresh_only, choice=choice)
     else:
-        items = build(mode, player, size, fresh_only)
+        items = build_chosen(mode, player, size, fresh_only)
     if not items:
         return [], ""
     # spread(), with the player's due mistakes in place of some scored items (#490)
@@ -1167,39 +1172,36 @@ def build_mixed_items(player, size, fresh_only=False, choice=None):
     """
     One feed of every game the player has, mixed at random. Beginners see mostly Similarity and experts mostly
     Identification, with Odd One Out beside them (game_levels.game_shares); a player who chose one game sees only that
-    one (or ``choice``, one they may switch to). In the mix, a game that runs out of beetles is filled in by the others.
-    Every item carries its own "mode".
+    one (or ``choice``, one they may switch to), never another (#604). In the mix, a game that runs out of beetles is
+    filled in by the others. Every item carries its own "mode".
     """
     from .game_levels import for_player, games
 
     info = for_player(player)
     chosen = choice or play_mode(player, info)
     if chosen in BUILDERS:
-        items = build(chosen, player, size, fresh_only)
+        items = build_chosen(chosen, player, size, fresh_only)
         for it in items:
             it["mode"] = chosen
         return items
     return _mix(player, info["level"], games(info["perks"]), size, fresh_only)
 
 
-def fallback_mix(player, size, fresh_only=False, choice=None):
+def build_chosen(game_key, player, size, fresh_only=False):
     """
-    (items, notice) for a player whose chosen game has nothing for them right now (too few beetles of the kind it
-    needs): a mix of their other games, and one line for the page that says so. Their choice is kept, so the next batch
-    tries their game again. ([], "") when they play the mix already, or their other games have nothing either.
+    Items for the one game a player chose (#604). When it has nothing, it tries again with a wider pool before giving
+    up: validated beetles whose names the player was shown before this sitting come back, though it is less than
+    GAME_REVEAL_COOLDOWN_HOURS ago (held_back_ids). Their answers then count for points, not for accuracy or expertise
+    (seen_recently). Never another game: when this is empty too, the feed says so (nothing_to_play).
     """
-    from .game_levels import GAME_NAMES, for_player, games
-
-    info = for_player(player)
-    chosen = choice or play_mode(player, info)
-    others = [g for g in games(info["perks"]) if g != chosen]
-    if chosen not in BUILDERS or not others:
-        return [], ""
-    items = _mix(player, info["level"], others, size, fresh_only)
-    if not items:
-        return [], ""
-    instead = f"here's {GAME_NAMES[others[0]]} instead" if len(others) == 1 else "here's a mix of your other games"
-    return items, f"Not enough beetles for {GAME_NAMES[chosen]} right now: {instead}."
+    items = build(game_key, player, size, fresh_only)
+    if items:
+        return items
+    token = widened.set(True)
+    try:
+        return build(game_key, player, size, fresh_only)
+    finally:
+        widened.reset(token)
 
 
 def _mix(player, level, game_keys, size, fresh_only=False):
@@ -1260,8 +1262,13 @@ def nothing_to_play(player, mode=GameRound.Mode.MIXED):
         return {"text": "You've seen every beetle we have. New photos are added regularly.", "clear_focus": False}
     if player_focus(player) and not new(*pools(player)):
         return {"text": "You've seen every beetle in your focus. Clear it to see more.", "clear_focus": True}
-    mine = [mode] if mode in GAME_NAMES else games(for_player(player)["perks"])
+    info = for_player(player)
+    mode = mode if mode in GAME_NAMES else play_mode(player, info)   # the feed plays the game they chose (#604)
+    mine = [mode] if mode in GAME_NAMES else games(info["perks"])
     which = GAME_NAMES[mine[0]] if len(mine) == 1 else "your games"
+    if len(mine) == 1 and len(games(info["perks"])) > 1:   # they could switch: say so
+        return {"text": f"Not enough beetles for {which} right now. Pick another game, or check back soon.",
+                "clear_focus": False}
     return {"text": f"Not enough checked beetles for {which} yet. Please check back soon.", "clear_focus": False}
 
 

@@ -78,12 +78,12 @@ class OnlyUnvalidatedTests(FallbackCase):
         rnd = game.start_round(self.user, "mixed", size=6)
         self.assertEqual(({i["mode"] for i in rnd.items}, rnd.notice), ({"classify"}, ""))
 
-    def test_similarity_chosen_falls_back_to_the_other_game_and_the_choice_is_kept(self):
-        self.grant("identification", "choose_game", play_mode="pair")
-        data = self.started()
-        self.assertEqual(data["item"]["mode"], "classify")
-        self.assertEqual(data["notice"], "Not enough beetles for Similarity right now: here's Naming instead.")
-        self.assertEqual(data["prefs"]["play_mode"], "pair")
+    def test_similarity_chosen_says_so_and_offers_another_game(self):
+        self.grant("identification", "choose_game", play_mode="pair")   # never Naming in its place (#604)
+        res = self.start()
+        self.assertEqual(res.status_code, 404)
+        self.assertEqual(res.json()["error"], "Not enough beetles for Similarity right now. Pick another game, or check back soon.")
+        self.assertEqual(res.json()["prefs"]["play_mode"], "pair")
         self.assertEqual(GamePreference.objects.get(player=self.user).play_mode, "pair")
 
     def test_a_player_with_only_similarity_is_told_why(self):
@@ -93,7 +93,7 @@ class OnlyUnvalidatedTests(FallbackCase):
 
     def test_a_player_whose_games_all_need_checked_beetles_is_told_why(self):
         self.no_grids()
-        self.grant("odd_one_out", "choose_game", play_mode="odd")
+        self.grant("odd_one_out", "choose_game")
         res = self.start()
         self.assertEqual(res.status_code, 404)
         self.assertEqual(res.json()["error"], "Not enough checked beetles for your games yet. Please check back soon.")
@@ -133,12 +133,14 @@ class SingleSpeciesTests(FallbackCase):
     def test_identification_works(self):
         self.assertTrue(game.start_round(self.user, "classify", size=4).items)
 
-    def test_a_chosen_grid_game_never_dead_ends(self):
-        # no grid can hold an odd one out of a single species; whatever the grid builder does, the player gets a beetle
+    def test_a_chosen_grid_game_plays_itself_or_says_so(self):
+        # no grid can hold an odd one out of a single species; whatever the grid builder does, never another game (#604)
         self.grant("odd_one_out", "choose_game", play_mode="odd")
-        data = self.started()
-        if data["item"]["mode"] != "odd":
-            self.assertEqual(data["notice"], "Not enough beetles for Odd One Out right now: here's Similarity instead.")
+        res = self.start()
+        if res.status_code == 200:
+            self.assertEqual(res.json()["item"]["mode"], "odd")
+        else:
+            self.assertIn("Odd One Out", res.json()["error"])
 
 
 class PredictionsButNoGridTests(FallbackCase):
@@ -154,26 +156,12 @@ class PredictionsButNoGridTests(FallbackCase):
         self.no_grids()
         self.grant("odd_one_out", "select_all", "choose_game", play_mode="odd")
 
-    def test_the_chosen_grid_game_falls_back_to_a_mix_with_a_notice(self):
-        data = self.started()
-        self.assertEqual(data["item"]["mode"], "pair")
-        self.assertEqual(data["notice"], "Not enough beetles for Odd One Out right now: here's a mix of your other games.")
-        self.assertEqual(data["prefs"]["play_mode"], "odd")   # the choice is kept: the next batch tries it again
+    def test_the_chosen_grid_game_says_so_and_keeps_the_choice(self):
+        res = self.start()   # never a mix of the other games in its place (#604)
+        self.assertEqual(res.status_code, 404)
+        self.assertEqual(res.json()["error"], "Not enough beetles for Odd One Out right now. Pick another game, or check back soon.")
+        self.assertEqual(res.json()["prefs"]["play_mode"], "odd")
         self.assertEqual(GamePreference.objects.get(player=self.user).play_mode, "odd")
-
-    def test_a_reload_picks_the_batch_up_without_the_notice(self):
-        first = self.started()
-        again = self.started()
-        self.assertEqual((again["round"], again["notice"]), (first["round"], ""))
-
-    @override_settings(GAME_ROUND_SIZE=1)
-    def test_the_next_batch_falls_back_too(self):
-        data = self.started()
-        res = self.answer(data, self.answer_for(data["item"]))
-        self.assertNotIn("done", res)
-        self.assertNotEqual(res["round"], data["round"])
-        self.assertEqual(res["item"]["mode"], "pair")
-        self.assertIn("Odd One Out", res["notice"])
 
     def test_a_player_back_on_the_mix_needs_no_notice(self):
         GamePreference.objects.filter(player=self.user).update(play_mode="both")
