@@ -555,7 +555,10 @@ def _retried(detail, answer, factor):
     """A grid answer's detail on a retry (#490): marked, with what it was worth scaled like its points."""
     if not answer.is_retry:
         return detail
-    return dict(detail, retry=True, worth=round(float(detail.get("worth", 0.0)) * factor, 2))
+    scaled = dict(detail, retry=True, worth=round(float(detail.get("worth", 0.0)) * factor, 2))
+    if "share" in detail:
+        scaled["share"] = round(float(detail["share"]) * factor, 3)
+    return scaled
 
 
 def _with_reference(answer, reference, detail):

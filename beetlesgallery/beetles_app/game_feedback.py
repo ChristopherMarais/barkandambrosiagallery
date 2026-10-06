@@ -220,7 +220,8 @@ def answer_losses(answer, points=None):
     detail = points.detail or {}
     earned = round(points.points - detail.get("participation", 0.0), 1)
     # what a rank or rung was worth follows the beetle's difficulty, like the points themselves (#492)
-    factor = (0.5 if detail.get("retry") else 1.0) * difficulty_factor(detail, earned)
+    retry = game.game_setting("GAME_POINTS_RETRY_FACTOR", 0.5) if detail.get("retry") else 1.0
+    factor = retry * difficulty_factor(detail, earned)
     if answer.mode == "classify":
         weight = float(detail.get("weight", 1.0)) * factor
         ranks, lost, wrong_above = {}, 0.0, False

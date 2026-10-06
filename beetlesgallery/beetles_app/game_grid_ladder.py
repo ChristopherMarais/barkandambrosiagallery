@@ -73,12 +73,13 @@ def outcome(answer):
     GOOD, POOR or None (neither) for one grid answer. Odd One Out: the odd one picked is good, a validated beetle of the
     rest poor; a pick on a beetle nobody has validated says nothing yet. Select all: good with no wrong tap and at least
     GAME_GRID_GOOD_SHARE of the validated members found; poor with more wrong taps than right ones, or none right.
-    Skips, held answers and grids ended by flags are neither.
+    Skips, held answers, grids ended by flags and retries (a small grid at the rank of a mistake, #490) are neither.
     """
     from . import game
     from .game_scoring import grid_tiles
 
-    if answer.mode not in GRID_GAMES or answer.skipped or answer.score_hold or answer.grid_rank not in RANKS:
+    if (answer.mode not in GRID_GAMES or answer.skipped or answer.score_hold or answer.is_retry
+            or answer.grid_rank not in RANKS):
         return None
     if answer.mode == "odd":
         right = getattr(answer, f"correct_{answer.grid_rank}")

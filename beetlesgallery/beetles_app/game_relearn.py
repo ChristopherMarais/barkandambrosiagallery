@@ -92,7 +92,7 @@ def _select_misses(rows):
     out = {}
     for r in grids:
         tiles = [found.get(uuid.UUID(str(t))) for t in r["tiles"] or []]
-        states = game.score_select(tiles, r["picks"], r["grid_rank"], r["grid_group"])["tiles"]
+        states = game.score_select(tiles, r["picks"], r["grid_rank"], r["grid_group"], r["flagged"])["tiles"]
         out[r["id"]] = [t.id for t, s in zip(tiles, states) if t is not None and s in ("wrong", "missed")]
     return out
 
@@ -111,7 +111,7 @@ def _events(player):
         GameAnswer.objects.filter(player=player, is_check=True, skipped=False, score_hold=False, mode__in=LADDER)
         .order_by("answered_at", "index")
         .values("id", "roi_id", "roi_b_id", "mode", "is_retry", "answered_at", "pair_answer", "tiles", "picks",
-                "grid_rank", "grid_group", *[f"correct_{r}" for r in RANKS])
+                "grid_rank", "grid_group", "flagged", *[f"correct_{r}" for r in RANKS])
     )
     misses = _select_misses(rows)
     events = defaultdict(list)
