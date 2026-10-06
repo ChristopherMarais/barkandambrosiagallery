@@ -21,6 +21,8 @@ def _t(key, label, default, help, lo=0.0, hi=10.0, step=0.05, keys=None):
 RANKS = ["subfamily", "tribe", "genus", "species"]
 RUNGS = ["-1", "0", "1", "2", "3"]   # Family Ties depth: different subfamilies ... same species
 RUNG_LABELS = {"-1": "Different subfamilies", "0": "Same subfamily", "1": "Same tribe", "2": "Same genus", "3": "Same species"}
+GRID_SIZES = ["4", "9", "16"]   # the grid games' sizes (#489)
+PART_LABELS = dict(RUNG_LABELS, **{size: f"{size} beetles" for size in GRID_SIZES})
 
 GROUPS = [
     ("Beetles we know (validated): what an answer earns", [
@@ -68,6 +70,30 @@ GROUPS = [
            "In the grid games a skip earns this, to reward knowing when you don't know.", 0, 5),
         _t("GAME_POINTS_PARTICIPATION", "Taking part", 0.5,
            "Every real answer earns this on top, so the score grows with play; accuracy still decides most of it.", 0, 5),
+    ]),
+    ("Grid games: Odd One Out and Select all", [
+        _t("GAME_GRID_SIZE_FACTOR", "Points by grid size", {"4": 1.0, "9": 1.5, "16": 2.0},
+           "Every point of a grid, gained or lost, is times this for its number of beetles, on top of what its rank is "
+           "worth: a bigger grid takes longer and is harder.", 0.5, 5, 0.25, keys=GRID_SIZES),
+        _t("GAME_GRID_UP_AFTER", "Good grids in a row to go up a step", 2,
+           "The grids grow from 4 to 9 to 16 beetles, then go a rank deeper, from subfamily to species: 12 steps. A "
+           "player goes up a step after this many good grids in a row and down one after a poor grid.", 1, 10, 1),
+        _t("GAME_GRID_GOOD_SHARE", "Select all: share of the group to find", 0.75,
+           "A Select all grid is good with no wrong tap and at least this share of the validated members found, poor "
+           "with more wrong taps than right ones or none right. In Odd One Out the odd one found is good, a wrong pick "
+           "poor. Skips are neither.", 0.25, 1, 0.05),
+        _t("GAME_GRID_START_STEP", "Step a new player starts on", 1,
+           "1 is 4 beetles at subfamily, 12 is 16 beetles at species. Every player has a step in each grid game.",
+           1, 12, 1),
+        _t("GAME_ODD_OPEN_SHARE_START", "Odd One Out: AI beetles among the rest at level 1", 0.25,
+           "This share of the beetles that share the group are ones nobody has validated that IBBI-AI puts in it...",
+           0, 1, 0.05),
+        _t("GAME_ODD_OPEN_SHARE_END", "Odd One Out: AI beetles among the rest at the top level", 0.5,
+           "...rising to this share at the top level. A pick on one is scored by agreement, never below zero.", 0, 1, 0.05),
+        _t("GAME_AI_SURE_FROM", "IBBI-AI is sure from", 0.9,
+           "When its predictions allow, every grid holds an AI beetle IBBI-AI is at least this sure of...", 0.5, 1, 0.01),
+        _t("GAME_AI_UNSURE_BELOW", "IBBI-AI is unsure below", 0.6,
+           "...and one it is less sure of than this. Where no group has both, grids are built without them.", 0, 1, 0.01),
     ]),
     ("Beetles nobody has validated yet", [
         _t("GAME_POINTS_CONSENSUS_CAP", "Most an agreed answer earns", 0.6,
@@ -152,7 +178,7 @@ def clean(key, raw):
         for k in t["keys"]:
             value, error = clean_number(t, (raw or {}).get(k))
             if error:
-                return None, f"{t['label']} ({RUNG_LABELS.get(k, k)}): {error}"
+                return None, f"{t['label']} ({PART_LABELS.get(k, k)}): {error}"
             out[k] = value
         return out, None
     return clean_number(t, raw)
@@ -206,6 +232,7 @@ def examples():
     part = v["GAME_POINTS_PARTICIPATION"]
     cap = v["GAME_POINTS_CONSENSUS_CAP"]
     upto_genus = rank["subfamily"] + rank["tribe"] + rank["genus"]
+    size = {int(k): f for k, f in v["GAME_GRID_SIZE_FACTOR"].items()}
     odd_species = v["GAME_POINTS_ODD_WEIGHT"] * pair[2]
     select_species = v["GAME_POINTS_SELECT_WEIGHT"] * pair[2]
     rows = [
@@ -221,16 +248,45 @@ def examples():
         ("Similarity", "'Same genus' for two of one tribe (one rung too close)",
          pair[1] - v["GAME_POINTS_OVERREACH"] * pair[2]),
         ("Similarity", "'Different subfamilies' for two of one genus", -v["GAME_POINTS_PAIR_STEP"] * 3),
-        ("Odd One Out", "Correct pick, species round", odd_species),
-        ("Odd One Out", "Wrong pick, species round", -odd_species * v["GAME_POINTS_ODD_WRONG_FACTOR"]),
-        ("Select all", "Perfect grid, species", select_species),
-        ("Select all", "3 of 3 found plus one wrong tap, species",
-         select_species / 3 * (3 - v["GAME_POINTS_SELECT_WRONG"])),
+        ("Odd One Out", "Correct pick, species round, 4 beetles", odd_species * size[4]),
+        ("Odd One Out", "Correct pick, species round, 16 beetles", odd_species * size[16]),
+        ("Odd One Out", "Wrong pick, species round, 4 beetles", -odd_species * size[4] * v["GAME_POINTS_ODD_WRONG_FACTOR"]),
+        ("Select all", "Perfect grid, species, 9 beetles", select_species * size[9]),
+        ("Select all", "Perfect grid, species, 16 beetles", select_species * size[16]),
+        ("Select all", "3 of 3 found plus one wrong tap, species, 9 beetles",
+         select_species * size[9] / 3 * (3 - v["GAME_POINTS_SELECT_WRONG"])),
         ("Any game", "Skip (Identification, Similarity)", -v["GAME_POINTS_UNSURE"]),
         ("Any game", "Skip (Odd One Out, Select all)", v["GAME_POINTS_ODD_SKIP"]),
         ("Any game", "Taking part (added to every real answer)", part),
     ]
     return [(game, what, round(p, 2)) for game, what, p in rows]
+
+
+def odd_guess(size):
+    """
+    What a blind Odd One Out pick in a grid of ``size`` is worth on average, as a share of a correct pick: correct 1 time
+    in ``size``, wrong on every validated beetle of the rest, nothing on an AI beetle (scored by agreement, never below
+    zero). The grid with the most AI beetles a player meets, so the fewest wrong picks, is the test.
+    """
+    from .game import odd_open_count
+    from .game_levels import LEVELS
+
+    ai = min(size - 2, max(2, odd_open_count(len(LEVELS), size)))
+    return (1 - current("GAME_POINTS_ODD_WRONG_FACTOR") * (size - 1 - ai)) / size
+
+
+def select_tap_all(size):
+    """
+    What tapping every beetle of a Select all grid of ``size`` is worth, as a share of a perfect grid: every validated
+    member correct, every validated non-member wrong, AI beetles nothing. The grid with the most members for its
+    non-members is the test.
+    """
+    from .game import SELECT_AI, SELECT_MEMBERS
+
+    low, high = SELECT_MEMBERS[size]
+    wrong = current("GAME_POINTS_SELECT_WRONG")
+    return max((m - wrong * (size - m - a)) / m for m in range(low, high + 1)
+               for a in range(SELECT_AI[size][1] + 1) if size - m - a >= m)
 
 
 def checks():
@@ -242,7 +298,10 @@ def checks():
     wrong_least = min(v["GAME_POINTS_OVERREACH"] * rank["tribe"] * w, v["GAME_POINTS_PAIR_STEP"],
                       v["GAME_POINTS_OVERREACH"] * pair[1])
     deeper = all(rank[RANKS[i]] >= rank[RANKS[i - 1]] for i in range(1, 4))
-    odd_ev = 0.25 - 0.75 * v["GAME_POINTS_ODD_WRONG_FACTOR"]
+    sizes = [int(s) for s in GRID_SIZES]
+    guesses, taps = {n: odd_guess(n) for n in sizes}, {n: select_tap_all(n) for n in sizes}
+    factor = [v["GAME_GRID_SIZE_FACTOR"][s] for s in GRID_SIZES]
+    per_size = lambda values: ", ".join(f"{n} beetles {e:+.2f}" for n, e in values.items())   # noqa: E731
     return [
         ("Stopping where you're sure beats guessing one rank further", overreach_ok,
          "Going one rank too far must earn less than stopping (the overreach cost is above 0)."),
@@ -250,10 +309,16 @@ def checks():
          "Species ≥ genus ≥ tribe ≥ subfamily, so precise names pay most."),
         ("Skipping costs less than the smallest mistake", v["GAME_POINTS_UNSURE"] < wrong_least,
          f"A skip costs {v['GAME_POINTS_UNSURE']:g}; the smallest mistake costs about {wrong_least:.2f}."),
-        ("A blind guess in Odd One Out loses on average", odd_ev < 0,
-         f"With four beetles a guess is right 1 time in 4: expected {odd_ev * v['GAME_POINTS_ODD_WEIGHT']:+.2f} × the round's points."),
-        ("Tapping everything in Select all loses", v["GAME_POINTS_SELECT_WRONG"] > 1,
-         "Non-members always outnumber members, so wrong taps must cost more than a member earns."),
+        ("A blind guess in Odd One Out loses on average", all(e < 0 for e in guesses.values()),
+         f"Correct 1 time in 4, 9 or 16, and wrong on each validated beetle of the rest: expected {per_size(guesses)} "
+         "× what a correct pick earns."),
+        ("Tapping everything in Select all loses", all(e < 0 for e in taps.values()),
+         f"Non-members are never fewer than members, so a wrong tap must cost more than a member earns: expected "
+         f"{per_size(taps)} × a perfect grid."),
+        ("Bigger grids are worth at least as much", factor == sorted(factor),
+         "Points by grid size must not fall as the grids grow, or a player would do better to stay small."),
+        ("IBBI-AI's sure calls are surer than its unsure ones", v["GAME_AI_SURE_FROM"] >= v["GAME_AI_UNSURE_BELOW"],
+         "A grid's sure AI beetle and its unsure one come from bands that must not overlap."),
         ("Known beetles pay more than agreement on unknown ones",
          v["GAME_POINTS_CONSENSUS_CAP"] < 1 and v["GAME_POINTS_REFERENCE_CAP"] < 1,
          "Points on validated beetles are the real test of accuracy; agreement is capped below them."),

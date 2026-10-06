@@ -34,7 +34,10 @@ Beetles we know the answer to (validated) are scored against the truth. These ea
                      GAME_POINTS_SELECT_WRONG (1.5) shares, and a member left out costs nothing. Taps on beetles nobody
                      has validated are recorded, never scored. Skip earns GAME_POINTS_ODD_SKIP, as in Odd One Out.
                      Select all is left out of the reliability rating for now: a grid is many judgements at once (#381).
-  Seen again         a beetle shown again so you can learn it (a retry) earns half.
+  Grid size          both grid games grow from 4 to 9 to 16 beetles as the player gets better (game_grid_ladder), and
+                     every point of a grid, gained or lost, is times GAME_GRID_SIZE_FACTOR for its size (1, 1.5, 2).
+                     A photo the player flagged as bad before answering counts for nothing (#489).
+  Seen again        a beetle shown again so you can learn it (a retry) earns half.
 
 Beetles nobody has validated yet are scored by agreement, never more than GAME_POINTS_CONSENSUS_CAP (60%)
 of what the same answer would earn on a validated beetle, and never less than zero:
@@ -91,6 +94,8 @@ RANK_POINTS = _Points("GAME_POINTS_RANK", {"subfamily": 1.0, "tribe": 2.0, "genu
 # Family Ties: points for the right answer, by how related the two beetles really are (-1 = different subfamilies)
 PAIR_POINTS = _Points("GAME_PAIR_POINTS", {-1: 1.0, 0: 2.0, 1: 3.0, 2: 5.0, 3: 5.0})
 DEPTH_NAME = {-1: "different subfamilies", 0: "same subfamily", 1: "same tribe", 2: "same genus", 3: "same species"}
+# The grid games: every point of a grid, gained or lost, times this for its number of beetles (#489)
+GRID_SIZE_FACTOR = _Points("GAME_GRID_SIZE_FACTOR", {4: 1.0, 9: 1.5, 16: 2.0})
 
 
 def setting(name, default):
@@ -202,14 +207,30 @@ def pair_truth(answer, roi_a, roi_b):
     return -setting("GAME_POINTS_PAIR_STEP", 1.0) * steps, {"right": False, "truth": DEPTH_NAME[truth], "steps": steps}
 
 
+def size_factor(tiles):
+    """
+    What a grid of ``tiles`` beetles is worth against one of four (GAME_GRID_SIZE_FACTOR): more beetles take longer and
+    are harder. A grid of another size (six, from before the grids grew) counts as the biggest size it reaches.
+    """
+    reached = [s for s in GRID_SIZE_FACTOR if s <= tiles] or [min(GRID_SIZE_FACTOR)]
+    return GRID_SIZE_FACTOR[max(reached)]
+
+
+def _grid_detail(answer):
+    """What the review shows of a grid besides its points: how many beetles it had, and the player's step then."""
+    return {"size": len(answer.tiles or []), "step": answer.grid_step}
+
+
 def odd_base(answer):
     """
     What a right Odd One Out pick is worth: GAME_POINTS_ODD_WEIGHT times the Family Ties points for how related the
-    round's odd one (``roi_b``) is to the rest. The closer they are, the harder it was to tell.
+    round's odd one (``roi_b``) is to the rest, times the grid's size factor. The closer they are, and the more beetles
+    to choose from, the harder it was to tell.
     """
     odd = answer.roi_b.taxon if answer.roi_b_id and answer.roi_b else None
     depth = true_depth(odd, game.group_taxon(answer.grid_group)) if odd is not None and answer.grid_group else None
-    return PAIR_POINTS[depth if depth is not None and depth < 3 else -1] * setting("GAME_POINTS_ODD_WEIGHT", 1.5)
+    weight = setting("GAME_POINTS_ODD_WEIGHT", 1.5) * size_factor(len(answer.tiles or []))
+    return PAIR_POINTS[depth if depth is not None and depth < 3 else -1] * weight
 
 
 def odd_truth(answer):
@@ -218,7 +239,7 @@ def odd_truth(answer):
     if ok is None:
         return None
     base = odd_base(answer)
-    detail = {"right": ok, "rank": answer.grid_rank, "worth": round(base, 2)}
+    detail = {"right": ok, "rank": answer.grid_rank, "worth": round(base, 2), **_grid_detail(answer)}
     if ok:
         return base, detail
     return -base * setting("GAME_POINTS_ODD_WRONG_FACTOR", 1.25), detail
@@ -234,15 +255,20 @@ def grid_tiles(answer):
 
 
 def select_truth(answer):
-    """(points, detail) for a Select all grid, or None if it holds no validated member to score against."""
-    result = game.score_select(grid_tiles(answer), answer.picks, answer.grid_rank, answer.grid_group)
+    """
+    (points, detail) for a Select all grid, or None if it holds no validated member to score against. Photos the player
+    flagged count for nothing. ``share`` in the detail is what each member found earns (a wrong tap costs
+    GAME_POINTS_SELECT_WRONG of it), so the review can show each beetle's points.
+    """
+    result = game.score_select(grid_tiles(answer), answer.picks, answer.grid_rank, answer.grid_group, answer.flagged)
     if not result["members"]:
         return None
     depth = game.RANKS.index(answer.grid_rank) - 1 if answer.grid_rank in game.RANKS else -1
-    share = setting("GAME_POINTS_SELECT_WEIGHT", 2.0) * PAIR_POINTS[depth] / result["members"]
+    worth = setting("GAME_POINTS_SELECT_WEIGHT", 2.0) * PAIR_POINTS[depth] * size_factor(len(answer.tiles or []))
+    share = worth / result["members"]
     points = share * (result["right"] - setting("GAME_POINTS_SELECT_WRONG", 1.5) * result["wrong"])
     detail = {k: result[k] for k in ("right", "wrong", "missed", "members", "perfect", "tiles")}
-    return points, dict(detail, rank=answer.grid_rank, worth=round(share * result["members"], 2))
+    return points, dict(detail, rank=answer.grid_rank, worth=round(worth, 2), share=round(share, 3), **_grid_detail(answer))
 
 
 def odd_consensus(answer, votes, judges, model_refs):
@@ -487,7 +513,8 @@ def votes_on(roi_ids):
         labels = game.implied_labels(ans)
         if labels:
             latest[(ans.roi_id, ans.player_id)] = labels
-    # Select all taps count too, a little less than a name (game.tap_votes), unless the player also named it
+    # The grid games count too (Select all taps, the rest of a solved Odd One Out grid), a little less than a name
+    # (game.tap_votes), unless the player also named it
     for roi_id, pid, vote in game.tap_votes(roi_ids):
         latest.setdefault((roi_id, pid), vote)
     out = defaultdict(list)

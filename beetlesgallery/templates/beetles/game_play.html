@@ -120,10 +120,11 @@
     #game[data-mode="pair"] #photos .cell:nth-child(2) .report-chip { top: auto; bottom: 0.375rem; }
     #game[data-mode="pair"] #photos .cell:nth-child(2) .more-chip { bottom: auto; top: 0.375rem; }
   }
-  /* Odd One Out: the beetles in a grid, two across (three across for six on a wider screen); tap one to pick it.
-     Your pick gets a dark ring; after answering the odd one gets a green one. */
-  #game[data-mode="odd"] #photos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); }
-  @media (min-width: 640px) { #game[data-mode="odd"] #photos.six { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  /* The grid games: 2×2, 3×3 or 4×4 beetles (--grid-cols, set for each grid), growing as the player gets better.
+     Odd One Out: tap one to pick it; your pick gets a dark ring, and after answering the odd one a green one. */
+  #game[data-mode="odd"] #photos, #game[data-mode="select"] #photos { display: grid; grid-template-columns: repeat(var(--grid-cols, 2), minmax(0, 1fr));
+      grid-auto-rows: minmax(0, 1fr); gap: 0.375rem; }
+  #photos[data-size="16"] { gap: 0.25rem; padding: 0.25rem; }
   #game[data-mode="odd"] #photos .cell { height: 100%; outline: 3px solid transparent; outline-offset: -3px; }
   #game[data-mode="odd"] #photos .cell.picked { outline-color: #374151; }
   #game[data-mode="odd"] #photos .cell.odd-one { outline-color: #16a34a; }
@@ -134,9 +135,8 @@
               border-radius: 0.5rem; background: rgba(255,255,255,.95); border: 1px solid #d1d5db; font-size: 0.75rem; font-weight: 600; color: #111827;
               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
   #odd.hidden, #select.hidden { display: none; }
-  /* Select all: nine beetles, three across; a tap toggles one. After Next: green for a member you tapped, red for one
-     you shouldn't have, a dashed green line round a member you left out. */
-  #game[data-mode="select"] #photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: 0.375rem; }
+  /* Select all: a tap toggles one. After Next: green for a member you tapped, red for one you shouldn't have, a dashed
+     green line round a member you left out. */
   #game[data-mode="select"] #photos .cell { height: 100%; outline: 3px solid transparent; outline-offset: -3px; }
   #game[data-mode="select"] #photos .cell.tapped { outline-color: #374151; }
   #game[data-mode="select"] #photos .cell.sel-right { outline-color: #16a34a; }
@@ -146,8 +146,18 @@
   .tap-mark { position: absolute; left: 0.375rem; top: 0.375rem; z-index: 3; display: none; align-items: center; justify-content: center;
               width: 1.5rem; height: 1.5rem; border-radius: 9999px; background: #374151; color: #fff; font-size: 0.75rem; pointer-events: none; }
   .cell.tapped .tap-mark { display: inline-flex; }
-  #game[data-mode="select"] .report-chip span { display: none; }   /* nine photos: the flag alone */
-  #game[data-mode="select"] .report-chip { padding: 0 0.5rem; }
+  /* In a grid each photo has the flag alone, and in a grid of 16 smaller buttons, so the beetle stays in view */
+  #game[data-mode="odd"] .report-chip span, #game[data-mode="select"] .report-chip span { display: none; }
+  #game[data-mode="odd"] .report-chip, #game[data-mode="select"] .report-chip { padding: 0 0.5rem; }
+  #photos[data-size="16"] .report-chip, #photos[data-size="16"] .zoom-chip { width: 1.5rem; height: 1.5rem; padding: 0; justify-content: center; }
+  #photos[data-size="16"] .tap-mark { width: 1.25rem; height: 1.25rem; }
+  /* A photo flagged in a grid: greyed out with a "Flagged" badge, and out of play; the rest of the grid carries on */
+  #photos .cell.flagged canvas { opacity: 0.35; filter: grayscale(1); }
+  #photos .cell.flagged .frame { pointer-events: none; }
+  #photos .cell.flagged .report-chip, #photos .cell.flagged .tap-mark { display: none; }
+  .flag-badge { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 3; display: inline-flex; align-items: center; gap: 0.25rem;
+                padding: 0.125rem 0.5rem; border-radius: 9999px; background: rgba(255,255,255,.95); border: 1px solid #d1d5db;
+                font-size: 0.6875rem; font-weight: 600; color: #374151; white-space: nowrap; pointer-events: none; }
   /* while the answer shows, only the names: the photo buttons step aside so nothing covers them */
   #photos.revealing .report-chip, #photos.revealing .zoom-chip { visibility: hidden; }
   /* The rank row the arrow keys (or WASD) are on */
@@ -368,8 +378,8 @@
     <div class="p-5 text-gray-700 space-y-4 overflow-y-auto">
       <p class="hidden" data-help-mode="classify">Name it as far as you're sure: subfamily, tribe, genus, species.</p>
       <p class="hidden" data-help-mode="pair">How related are <strong>A</strong> and <strong>B</strong>? Pick the lowest line you're sure of.</p>
-      <p class="hidden" data-help-mode="odd">All but one share a name. Tap the one that doesn't, then <strong>Next</strong>.</p>
-      <p class="hidden" data-help-mode="select">Tap every beetle of the group named below the photos, then <strong>Next</strong>. A wrong tap costs, a missed one doesn't.</p>
+      <p class="hidden" data-help-mode="odd">All but one share a name. Tap the one that doesn't, then <strong>Next</strong>. The grid grows as you get better.</p>
+      <p class="hidden" data-help-mode="select">Tap every beetle of the group named below the photos, then <strong>Next</strong>. A wrong tap costs, a missed one doesn't. The grid grows as you get better.</p>
       <ul class="list-disc pl-5 space-y-2 text-sm" data-testid="help-rules">
         <li>Answer only as far as you're sure: a wrong guess costs more than stopping early.</li>
         <li>Unsure? <strong>Skip</strong> <span data-help-mode="classify pair">costs very little</span><span class="hidden" data-help-mode="odd select">earns a little</span>. Reporting a bad photo costs nothing.</li>
@@ -710,10 +720,16 @@
   document.querySelectorAll(".report-reason").forEach((btn) => btn.addEventListener("click", async () => {
     try {
       // galleryAt > 0: one of the beetle's other photos (the server finds it the same way it listed them)
-      await api(root.dataset.reportUrl, { round: roundId, index: item.index, image: lightboxImage, photo: galleryAt, reason: btn.dataset.reason });
+      const data = await api(root.dataset.reportUrl, { round: roundId, index: item.index, image: lightboxImage, photo: galleryAt, reason: btn.dataset.reason });
       $("lightbox").classList.add("hidden");
+      if (data.flagged && !data.end) {
+        // a grid carries on without that photo, until half of them are flagged (#489)
+        flagTile(lightboxImage);
+        toast({ kind: "report", title: "Thanks!", text: "Sent to the curators. Carry on with the rest." });
+        return;
+      }
       toast({ kind: "report", title: "Thanks!", text: "Sent to the curators to check." });
-      send({ skipped: true, reported: true });   // on to the next beetle, no points lost
+      send(Object.assign({ skipped: true, reported: true }, data.flagged ? { flagged: data.flagged } : {}));   // on to the next beetle, no points lost
     } catch (err) {
       $("report-menu").classList.add("hidden");
       toast({ kind: "report", title: "Couldn't send", text: err.message });
@@ -1018,14 +1034,17 @@
     const holder = $("photos");
     holder.innerHTML = "";
     holder.classList.remove("revealing");
-    holder.classList.toggle("six", MODE === "odd" && item.images.length > 4);
+    // the grid games: 2×2, 3×3 or 4×4 by the grid's size, which grows as the player gets better (#489)
+    holder.style.setProperty("--grid-cols", String(Math.ceil(Math.sqrt(item.images.length))));
+    if (MODE === "odd" || MODE === "select") holder.dataset.size = String(item.images.length);
+    else delete holder.dataset.size;
     item.images.forEach((im, i) => {
       const cell = document.createElement("div");
       cell.className = "cell";
       const frame = document.createElement("button");
       frame.type = "button";
       frame.className = "frame";
-      frame.setAttribute("aria-label", MODE === "odd" ? "Pick this beetle" : "See the whole image");
+      frame.setAttribute("aria-label", MODE === "odd" ? "Pick this beetle" : MODE === "select" ? "Tap this beetle" : "See the whole image");
       const canvas = document.createElement("canvas");
       if (images) drawCrop(canvas, images[i], im.box);
       frame.appendChild(canvas);
@@ -1112,7 +1131,10 @@
     if (MODE === "select") {
       const name = document.createElement(item.rank === "genus" || item.rank === "species" ? "em" : "span");
       name.textContent = item.target;
-      $("select-prompt").replaceChildren("Tap every ", name);
+      const size = document.createElement("span");   // the grid's size, quietly: it grows as the player gets better
+      size.className = "font-normal text-gray-500";
+      size.textContent = " · " + item.images.length + " beetles";
+      $("select-prompt").replaceChildren("Tap every ", name, size);
     }
 
     resetAnswer();
@@ -1600,7 +1622,7 @@
   // ---------- Odd One Out: picking a beetle ----------
   let oddPick = null;
   function pickTile(i) {
-    if (MODE !== "odd" || busy) return;
+    if (MODE !== "odd" || busy || flagged.has(i)) return;
     oddPick = i;
     $("photos").querySelectorAll(".cell").forEach((c, j) => c.classList.toggle("picked", j === i));
     updateSubmit();
@@ -1609,7 +1631,7 @@
   // ---------- Select all: tapping beetles ----------
   const tapped = new Set();
   function toggleTile(i) {
-    if (MODE !== "select" || busy) return;
+    if (MODE !== "select" || busy || flagged.has(i)) return;
     if (tapped.has(i)) tapped.delete(i); else tapped.add(i);
     $("photos").querySelectorAll(".cell").forEach((c, j) => c.classList.toggle("tapped", tapped.has(j)));
     updateSubmit();
@@ -1620,10 +1642,34 @@
     $("photos").querySelectorAll(".cell").forEach((c, j) => c.classList.toggle("key-cursor", j === i && MODE === "select"));
   }
 
+  // ---------- the grid games: a flagged photo drops out and the grid carries on (#489) ----------
+  const flagged = new Set();
+  function flagTile(i) {
+    const cell = $("photos").querySelectorAll(".cell")[i];
+    if (!cell || flagged.has(i)) return;
+    flagged.add(i);
+    if (oddPick === i) oddPick = null;
+    tapped.delete(i);
+    cell.classList.remove("picked", "tapped");
+    cell.classList.add("flagged");
+    const badge = document.createElement("span");
+    badge.className = "flag-badge";
+    badge.innerHTML = '<i class="fi fi-rr-flag"></i>';
+    badge.append(document.createTextNode("Flagged"));
+    cell.appendChild(badge);
+    updateSubmit();
+  }
+  // The next beetle from ``from`` in steps of ``step`` that isn't flagged; ``from`` itself when there is none
+  function nextTile(from, step, count) {
+    for (let i = from + step; i >= 0 && i < count; i += step) if (!flagged.has(i)) return i;
+    return from;
+  }
+
   // ---------- shared ----------
   function currentAnswer() {
-    if (MODE === "odd") return { pick: oddPick };
-    if (MODE === "select") return { picks: Array.from(tapped).sort((a, b) => a - b) };
+    const flags = Array.from(flagged).sort((a, b) => a - b);   // photos flagged in this grid, left out of its score
+    if (MODE === "odd") return { pick: oddPick, flagged: flags };
+    if (MODE === "select") return { picks: Array.from(tapped).sort((a, b) => a - b), flagged: flags };
     return MODE === "classify" ? Object.assign({}, pick) : { pair_answer: pairChoice };
   }
 
@@ -1637,6 +1683,7 @@
     pairChoice = null;
     oddPick = null;
     tapped.clear();
+    flagged.clear();
     keyCursor = null;
     $("odd-result").replaceChildren();
     $("select-result").replaceChildren();
@@ -1753,17 +1800,14 @@
       }
     }
     else if (pressed === "light") { if (!$("light-btn").classList.contains("hidden")) toggleLight(); }
-    else if (MODE === "odd") {
-      // move around the grid: the first press picks the first beetle
+    else if (MODE === "odd" || MODE === "select") {
+      // move around the grid, over flagged photos; in Odd One Out the first press picks the first beetle
       const count = item ? item.images.length : 0;
       const cols = getComputedStyle($("photos")).gridTemplateColumns.split(" ").length || 2;
       const step = { left: -1, right: 1, up: -cols, down: cols }[pressed];
-      if (count && step !== undefined) pickTile(oddPick === null ? 0 : Math.max(0, Math.min(count - 1, oddPick + step)));
-    } else if (MODE === "select") {
-      // move around the grid, three across
-      const count = item ? item.images.length : 0;
-      const step = { left: -1, right: 1, up: -3, down: 3 }[pressed];
-      if (count && step !== undefined) moveCursor(keyCursor === null ? 0 : Math.max(0, Math.min(count - 1, keyCursor + step)));
+      const from = MODE === "odd" ? oddPick : keyCursor;
+      const at = from === null ? nextTile(-1, 1, count) : nextTile(from, step, count);
+      if (count && step !== undefined && at >= 0) (MODE === "odd" ? pickTile : moveCursor)(at);
     } else if (MODE === "pair" && (pressed === "up" || pressed === "down")) {
       const now = rungs.findIndex((r) => r.classList.contains("selected"));
       const open = rungs.filter((r) => !r.classList.contains("locked")).length;

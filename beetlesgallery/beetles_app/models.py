@@ -1347,6 +1347,8 @@ class GameAnswer(models.Model):
     Select all: ``tiles`` are the regions shown, ``picks`` the places of those the player tapped as ``grid_group`` at
     ``grid_rank``, and ``roi`` one validated member of the group; ``correct_<grid_rank>`` says whether the grid was
     perfect (every validated member tapped, nothing else), the taps themselves are scored in game_scoring.
+    In both grid games ``flagged`` are the places the player flagged as a bad photo before answering: they are left
+    out of scoring and of what the grid says about each beetle (#489).
 
     ``correct_<rank>`` is only filled for check items: True/False when that rank was
     judged, None when it was not answered or has no reference value.
@@ -1386,6 +1388,13 @@ class GameAnswer(models.Model):
     grid_group = models.JSONField(
         default=dict, blank=True,
         help_text='Grid games: the names of the group, down to grid_rank, e.g. {"subfamily": "Scolytinae", "tribe": "Xyleborini"}.',
+    )
+    flagged = models.JSONField(
+        default=list, blank=True,
+        help_text="Grid games: the places in tiles the player flagged as a bad photo; left out of scoring and votes.",
+    )
+    grid_step = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="Grid games: the player's step on the grid ladder (1-12) when the grid was built.",
     )
 
     correct_subfamily = models.BooleanField(null=True, blank=True)
@@ -1526,6 +1535,33 @@ class GamePreference(models.Model):
 
     class Meta:
         db_table = "game_preference"
+
+
+class GridStep(models.Model):
+    """
+    Where a player is on the ladder of one grid game, Odd One Out or Select all (#489): twelve steps, the grids growing
+    from 4 to 9 to 16 beetles and then going a rank deeper, from subfamily to species (game_grid_ladder.LADDER). Up a
+    step after a run of good grids, down one after a poor grid.
+    """
+
+    GAMES = [(GameRound.Mode.ODD.value, GameRound.Mode.ODD.label), (GameRound.Mode.SELECT.value, GameRound.Mode.SELECT.label)]
+
+    player = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="grid_steps")
+    game = models.CharField(max_length=10, choices=GAMES)
+    step = models.PositiveSmallIntegerField(default=1)
+    good_run = models.PositiveSmallIntegerField(default=0, help_text="Good grids in a row since the step last moved.")
+    last_answer = models.ForeignKey(
+        GameAnswer, on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+        help_text="The last answer that moved the ladder, so no answer ever counts twice.",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "game_grid_step"
+        constraints = [models.UniqueConstraint(fields=["player", "game"], name="game_grid_step_player_game_uniq")]
+
+    def __str__(self):
+        return f"{self.player} {self.game} step {self.step}"
 
 
 class RetroCredit(models.Model):
