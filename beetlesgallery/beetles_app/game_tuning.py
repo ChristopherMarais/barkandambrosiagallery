@@ -21,7 +21,7 @@ def _t(key, label, default, help, lo=0.0, hi=10.0, step=0.05, keys=None):
 RANKS = ["subfamily", "tribe", "genus", "species"]
 RUNGS = ["-1", "0", "1", "2", "3"]   # Family Ties depth: different subfamilies ... same species
 RUNG_LABELS = {"-1": "Different subfamilies", "0": "Same subfamily", "1": "Same tribe", "2": "Same genus", "3": "Same species"}
-GRID_SIZES = ["4", "9", "16"]   # the grid games' sizes (#489)
+GRID_SIZES = ["4", "9", "16", "25"]   # the grid games' sizes (#489)
 PART_LABELS = dict(RUNG_LABELS, **{size: f"{size} beetles" for size in GRID_SIZES})
 
 GROUPS = [
@@ -63,20 +63,22 @@ GROUPS = [
            "Every real answer earns this on top, so the score grows with play; accuracy still decides most of it.", 0, 5),
     ]),
     ("Grid games: Odd One Out and Find Them All", [
-        _t("GAME_GRID_SIZE_FACTOR", "Points by grid size", {"4": 1.0, "9": 1.5, "16": 2.0},
+        _t("GAME_GRID_SIZE_FACTOR", "Points by grid size", {"4": 1.0, "9": 1.5, "16": 2.0, "25": 2.5},
            "Every point of a grid, gained or lost, is times this for its number of beetles, on top of what its rank is "
            "worth: a bigger grid takes longer and is harder. Only grids from the ladder: older ones keep ×1.",
            0.5, 5, 0.25, keys=GRID_SIZES),
         _t("GAME_GRID_UP_AFTER", "Good grids in a row to go up a step", 2,
-           "The grids grow from 4 to 9 to 16 beetles, then go a rank deeper, from subfamily to species: 12 steps. A "
-           "player goes up a step after this many good grids in a row and down one after a poor grid.", 1, 10, 1),
+           "The grids grow from 4 to 9, 16 and 25 beetles, then go a rank deeper, from subfamily to species: 16 steps "
+           "(Odd One Out 40: more odd ones in the bigger grids). A player goes up a step after this many good grids in "
+           "a row and down one after a poor grid.", 1, 10, 1),
         _t("GAME_GRID_GOOD_SHARE", "Find Them All: share of the group to find", 0.75,
            "A Find Them All grid is good with no wrong tap and at least this share of the validated members found, poor "
            "when it lost points or found none. In Odd One Out the odd one found is good, a wrong pick poor. Skips "
            "are neither.", 0.25, 1, 0.05),
         _t("GAME_GRID_START_STEP", "Step a new player starts on", 1,
-           "1 is 4 beetles at subfamily, 12 is 16 beetles at species. Every player has a step in each grid game.",
-           1, 12, 1),
+           "1 is 4 beetles at subfamily; 16 is 25 beetles at species in Find Them All (40 in Odd One Out), and a "
+           "higher number stops at a game's last step. Every player has a step in each grid game.",
+           1, 40, 1),
         _t("GAME_ODD_OPEN_SHARE_START", "Odd One Out: AI beetles among the rest at level 1", 0.25,
            "This share of the beetles that share the group are ones nobody has validated that IBBI-AI puts in it...",
            0, 1, 0.05),
@@ -218,7 +220,11 @@ def forget():
 
 def current(key):
     from .game import game_setting
-    return game_setting(key, TUNABLES[key]["default"])
+    t = TUNABLES[key]
+    value = game_setting(key, t["default"])
+    if t["keys"] and isinstance(value, dict):   # a part added since it was saved (a grid of 25) takes its default
+        return {**t["default"], **value}
+    return value
 
 
 def clean(key, raw):
@@ -315,10 +321,12 @@ def examples():
         ("Similarity", "'Different subfamilies' for two of one genus (wrong)", pair_points(-1, 2)[0]),
         ("Odd One Out", "Correct pick, species round, 4 beetles", _grid_worth(odd_w, pair, "species", 4)),
         ("Odd One Out", "Correct pick, species round, 16 beetles", _grid_worth(odd_w, pair, "species", 16)),
+        ("Odd One Out", "Correct pick, species round, 25 beetles", _grid_worth(odd_w, pair, "species", 25)),
         ("Odd One Out", "Wrong pick, subfamily round, 4 beetles", -k * _grid_worth(odd_w, pair, "subfamily", 4)),
         ("Odd One Out", "Wrong pick, species round, 4 beetles", -k * _grid_worth(odd_w, pair, "species", 4)),
         ("Find Them All", "Perfect grid, species, 9 beetles", sel9),
         ("Find Them All", "Perfect grid, species, 16 beetles", _grid_worth(sel_w, pair, "species", 16)),
+        ("Find Them All", "Perfect grid, species, 25 beetles", _grid_worth(sel_w, pair, "species", 25)),
         ("Find Them All", "3 of 3 found plus one wrong tap, species, 9 beetles", select_points(sel9, 3, 3, 1)),
         ("Find Them All", "One wrong tap, species, 9 beetles with 3 to find", select_points(sel9, 3, 0, 1)),
         ("Find Them All", "The most a grid can lose, species, 9 beetles", -sel9),
@@ -373,7 +381,7 @@ def thresholds():
     for d in range(1, len(RANKS)):
         row("Similarity", f"Say '{RUNG_LABELS[str(d)].lower()}', not one rung less",
             (pair_points(d, d)[0], pair_points(d, d - 1)[0]), (pair_points(d - 1, d)[0], pair_points(d - 1, d - 1)[0]))
-    for rank_name, size in (("subfamily", 4), ("species", 16)):
+    for rank_name, size in (("subfamily", 4), ("species", 25)):
         worth = _grid_worth(v["GAME_POINTS_ODD_WEIGHT"], pair, rank_name, size)
         row("Odd One Out", f"Pick, or skip ({rank_name}, {size} beetles)", (worth, -k * worth),
             (grid_skip, grid_skip), True, scaled=False)
@@ -389,9 +397,9 @@ def thresholds():
 PLAYERS = [
     ("Novice", (0.80, 0.55, 0.35, 0.20), (0.88, 0.73, 0.61, 0.52), ("subfamily", 9), 10),
     ("Average", (0.95, 0.85, 0.72, 0.50), (0.97, 0.91, 0.83, 0.70), ("genus", 9), 8),
-    ("Strong", (0.99, 0.96, 0.90, 0.78), (0.99, 0.98, 0.94, 0.87), ("species", 16), 7),
+    ("Strong", (0.99, 0.96, 0.90, 0.78), (0.99, 0.98, 0.94, 0.87), ("species", 25), 7),
 ]
-GRID_SECONDS = {"odd": {4: 8, 9: 12, 16: 18}, "select": {4: 10, 9: 18, 16: 28}}
+GRID_SECONDS = {"odd": {4: 8, 9: 12, 16: 18, 25: 26}, "select": {4: 10, 9: 18, 16: 28, 25: 40}}
 CAREFUL_SLIP = 0.4    # a careful player taps a non-member this share as often as a blind tapper would
 FARM_BAND = 2.0       # per player, no game earns more than this many times another per minute
 GAMES = [("classify", "Naming"), ("pair", "Similarity"), ("odd", "Odd One Out"), ("select", "Find Them All")]
@@ -522,8 +530,8 @@ def checks():
     factor = [v["GAME_GRID_SIZE_FACTOR"][s] for s in GRID_SIZES]
     per_size = lambda values: ", ".join(f"{n} beetles {e:+.2f}" for n, e in values.items())   # noqa: E731
     play = expected_play()
-    top_grid = max(_grid_worth(v["GAME_POINTS_ODD_WEIGHT"], pair, "species", 16),
-                   _grid_worth(v["GAME_POINTS_SELECT_WEIGHT"], pair, "species", 16))
+    top_grid = max(_grid_worth(v["GAME_POINTS_ODD_WEIGHT"], pair, "species", 25),
+                   _grid_worth(v["GAME_POINTS_SELECT_WEIGHT"], pair, "species", 25))
     top_pair = pair[3] * (1 + v["GAME_POINTS_SIMILARITY_BONUS"])
     return [
         ("Precise beats vague", specific,

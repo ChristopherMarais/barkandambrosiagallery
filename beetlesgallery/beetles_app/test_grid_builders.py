@@ -1,5 +1,5 @@
 """
-The grid games' builders (#489): every grid is built at the player's step on the ladder (4, 9 or 16 beetles, from
+The grid games' builders (#489): every grid is built at the player's step on the ladder (4, 9, 16 or 25 beetles, from
 subfamily to species), and when the beetles for that are short they fall back to an easier grid instead of giving up.
 """
 import random
@@ -25,9 +25,9 @@ TREE = [
 
 
 class GridCase(GameCase):
-    """A seeded tree with enough validated beetles of every species, each on its own photo, for a grid of 16."""
+    """A seeded tree with enough validated beetles of every species, each on its own photo, for a grid of 25."""
 
-    PER_SPECIES = 16
+    PER_SPECIES = 25
     OPEN_PER_SPECIES = 2
 
     @classmethod
@@ -94,7 +94,7 @@ class StagingBugTests(GridCase):
         for key in ("odd", "select"):
             at(self.user, key, len(game_grid_ladder.steps(key)))
             item = (game.build_odd_items if key == "odd" else game.build_select_items)(self.user, 1)[0]
-            self.assertEqual((item["size"], item["rank"]), (16, "species"))
+            self.assertEqual((item["size"], item["rank"]), (25, "species"))
 
 
 def at(player, game_key, step):
