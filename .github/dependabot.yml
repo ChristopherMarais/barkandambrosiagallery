@@ -1,0 +1,13 @@
+# Security updates only (no scheduled version bumps), but never a new major Tailwind: the stylesheet
+# (beetlesgallery/static/css/input.css, tailwind.config.js) is written for Tailwind 3, and Tailwind 4 stops the
+# deploys' CSS build. Upgrading Tailwind is a deliberate change of its own.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    ignore:
+      - dependency-name: tailwindcss
+        update-types: ["version-update:semver-major"]

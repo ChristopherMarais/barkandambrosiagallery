@@ -25,6 +25,29 @@ jobs:
           version: "0.16.10"
           args: "check --output-format=github"
 
+  # The deploys rebuild style.css with these exact commands (deploy.yml, scripts/staging_deploy.sh); a Tailwind
+  # upgrade the stylesheet isn't written for stops a deploy, so check it here first.
+  css:
+    name: CSS build (Tailwind)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.81.0
+          cache: true
+          environments: default
+
+      - name: Install environment
+        run: pixi install --frozen
+
+      - name: Build the stylesheet as the deploys do
+        run: |
+          pixi run install-js
+          pixi run build-css
+
   test:
     name: Django tests
     runs-on: ubuntu-latest
