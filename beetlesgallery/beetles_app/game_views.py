@@ -308,6 +308,7 @@ def game_how(request):
         "select_wrong": game.game_setting("GAME_POINTS_SELECT_WRONG", 1.5),
         "odd_weight": _weight_label(game.game_setting("GAME_POINTS_ODD_WEIGHT", 1.5)),
         "odd_skip": game.game_setting("GAME_POINTS_ODD_SKIP", 0.25),
+        "difficulty_spread": round(game_scoring.difficulty_spread() * 100),
     })
 
 
@@ -828,6 +829,7 @@ def game_answer(request, round_id):
                 scores = game.score_pair(choice, roi_a.taxon, roi_b.taxon)
     for r, ok in scores.items():
         setattr(record, f"correct_{r}", ok)
+    game_scoring.note_difficulty(record)   # how hard the beetle is now: its points follow it (#492)
     try:
         with transaction.atomic():
             record.save()

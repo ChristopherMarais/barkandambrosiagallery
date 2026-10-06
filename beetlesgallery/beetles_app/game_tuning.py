@@ -147,6 +147,31 @@ GROUPS = [
            "Only the most reliable players overall (this share, by rating) are trusted as Identification experts.",
            0.01, 1, 0.01),
     ]),
+    ("Difficulty: which beetles a player sees, and what they are worth", [
+        _t("GAME_DIFFICULTY_START", "Where a new player starts", 0.15,
+           "The difficulty (0 easy, 1 hard) a new player's beetles sit around.", 0, 1, 0.01),
+        _t("GAME_DIFFICULTY_PER_ROUND", "Rise per finished batch", 0.005,
+           "Added for every batch the player has finished, so it keeps creeping up.", 0, 0.1, 0.001),
+        _t("GAME_DIFFICULTY_SKILL_WEIGHT", "How much reliability raises it", 0.7,
+           "Times the player's rating (0 to 1): reliable players get harder beetles.", 0, 2, 0.05),
+        _t("GAME_DIFFICULTY_MAX", "Hardest it goes", 0.9,
+           "The target never goes above this.", 0, 1, 0.01),
+        _t("GAME_DIFFICULTY_RECENT", "Recent answers looked at", 10,
+           "The rating moves slowly, so the target also follows the player's last this many answers on validated "
+           "beetles in the game they are playing (skips count as not correct).", 3, 100, 1),
+        _t("GAME_DIFFICULTY_EASE_BELOW", "Ease off when fewer are correct than", 0.5,
+           "When less than this share of those answers is correct, the next beetles are easier...", 0, 1, 0.05),
+        _t("GAME_DIFFICULTY_EASE", "...by this much", 0.15,
+           "...this much lower on the 0 to 1 scale (never below 0.05).", 0, 1, 0.01),
+        _t("GAME_DIFFICULTY_PUSH_ABOVE", "Push up when more are correct than", 0.85,
+           "When more than this share is correct, the next beetles are harder...", 0, 1, 0.01),
+        _t("GAME_DIFFICULTY_PUSH", "...by this much", 0.05,
+           "...this much higher (never above the hardest).", 0, 1, 0.01),
+        _t("GAME_POINTS_DIFFICULTY_SPREAD", "Points by how hard the beetle is", 0.25,
+           "Identification and Similarity: a gain is multiplied by 1 + spread × (2p − 1), where p is how hard the "
+           "beetle is among all beetles (0 easiest, 1 hardest), and a loss by 1 − spread × (2p − 1). So the hardest "
+           "pay up to this share more and cost this share less when missed. 0 turns it off.", 0, 0.95, 0.05),
+    ]),
 ]
 TUNABLES = {t["key"]: dict(t, group=g) for g, items in GROUPS for t in items}
 
@@ -332,4 +357,50 @@ def checks():
          "Tapping a beetle among nine is a quicker, weaker judgement than naming it."),
         ("Identification experts must be very accurate", v["GAME_TRUST_MIN_ACCURACY"] >= 0.85,
          "Identification experts' labels reach curators as trusted: below 85% that trust is not earned."),
+        *difficulty_checks(v, rank, pair, w),
     ]
+
+
+DIFFICULTY_EXAMPLES = [("Easy", 0.1), ("Middling", 0.5), ("Hard", 0.9)]   # harder than 10%, 50%, 90% of beetles
+
+
+def difficulty_checks(v, rank, pair, w):
+    """
+    Points by difficulty (#492) scale a whole answer by one factor, so every check above that compares answers on one
+    beetle holds at any difficulty. What can still break: on the hardest beetles a mistake costs only (1 − spread)
+    of its usual amount, while the point for taking part stays the same.
+    """
+    s = v["GAME_POINTS_DIFFICULTY_SPREAD"]
+    # the cheapest answer with nothing right: a wrong subfamily alone, or related and unrelated mixed up by one step
+    cheapest = min(v["GAME_POINTS_WRONG_FACTOR"] * rank["subfamily"] * w, v["GAME_POINTS_PAIR_STEP"])
+    hardest = (1 - s) * cheapest
+    return [
+        ("Points by difficulty never make a mistake free", 0 <= s < 1,
+         f"The hardest beetles pay ×{1 + s:.2f} and a mistake there costs ×{1 - s:.2f}; the easiest the reverse. "
+         "The spread must stay below 1."),
+        ("A careless answer still loses on the hardest beetles", hardest > v["GAME_POINTS_PARTICIPATION"],
+         f"The cheapest wrong answer costs {hardest:.2f} there, against +{v['GAME_POINTS_PARTICIPATION']:g} for "
+         "taking part: it must cost more, or careless answers would pay."),
+    ]
+
+
+def difficulty_examples():
+    """
+    {"columns": [(name, p, gain ×, loss ×)], "rows": [(game, what, [points per column])]}: the multiplier for an easy, middling
+    and hard beetle, and what it does to typical answers (before the point for taking part).
+    """
+    from .game_scoring import by_difficulty
+
+    v, rank, pair, w = numbers()
+    s = v["GAME_POINTS_DIFFICULTY_SPREAD"]
+    columns = [(name, p, 1 + s * (2 * p - 1)) for name, p in DIFFICULTY_EXAMPLES]
+    total = sum(rank.values())
+    base = [
+        ("Identification", "Species correct (every rank)", total * w),
+        ("Identification", "Wrong subfamily, claimed down to species", -total * v["GAME_POINTS_WRONG_FACTOR"] * w),
+        ("Similarity", "Correct: same genus", pair[2]),
+        ("Similarity", "'Different subfamilies' for two of one genus", -v["GAME_POINTS_PAIR_STEP"] * 3),
+        ("Both", "Skip", -v["GAME_POINTS_UNSURE"]),
+    ]
+    rows = [(game, what, [round(by_difficulty(p, m), 2) for _, _, m in columns]) for game, what, p in base]
+    return {"columns": [(name, p, round(m, 2), round(2 - m, 2)) for name, p, m in columns], "rows": rows}

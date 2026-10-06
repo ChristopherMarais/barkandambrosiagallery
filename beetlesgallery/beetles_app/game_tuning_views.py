@@ -5,7 +5,7 @@ from django.http import Http404
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
-from . import game_tuning
+from . import game_difficulty, game_tuning
 from .models import GameTuning
 
 
@@ -63,6 +63,8 @@ def scoring(request):
         "log": log,
         "pair_text": "   ".join(f"{label.lower()} {game_tuning.current('GAME_PAIR_POINTS')[k]:g}"
                                for k, label in game_tuning.RUNG_LABELS.items()),
+        "difficulty_examples": game_tuning.difficulty_examples(),   # points by how hard the beetle is (#492)
+        "distributions": game_difficulty.distributions(),
     })
 
 

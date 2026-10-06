@@ -158,9 +158,41 @@ def revealed_ids(player):
 # Difficulty
 # ---------------------------------------------------------------------------
 UNKNOWN_DIFFICULTY = 0.5
+DIFFICULTY_FLOOR = 0.05   # easing off never takes the target below this
+
+# An answer on a validated beetle counts as right when nothing in it was wrong and something was judged right; a skip
+# or "Not sure" is not right. ANSWERED_RIGHT says the same in SQL (the Scoring page's distributions).
+JUDGED = [f"correct_{r}" for r in RANKS]
+ANSWERED_RIGHT = (
+    Q(skipped=False) & ~Q(correct_subfamily=False) & ~Q(correct_tribe=False) & ~Q(correct_genus=False)
+    & ~Q(correct_species=False)
+    & (Q(correct_subfamily=True) | Q(correct_tribe=True) | Q(correct_genus=True) | Q(correct_species=True))
+)
 
 
-def target_difficulty(player):
+def answered_right(skipped, judged):
+    return not skipped and True in judged and False not in judged
+
+
+def recent_share_right(player, mode):
+    """
+    How many of the player's last GAME_DIFFICULTY_RECENT answers on validated beetles in this game were right
+    (0 to 1), or None until they have given that many. Held answers (reported photos) are left out.
+    """
+    n = int(game_setting("GAME_DIFFICULTY_RECENT", 10))
+    if n <= 0:
+        return None
+    rows = list(
+        GameAnswer.objects.filter(player=player, mode=mode, score_hold=False)
+        .filter(Q(is_check=True) | Q(validated_later=True))
+        .order_by("-answered_at").values_list("skipped", *JUDGED)[:n]
+    )
+    if len(rows) < n:
+        return None
+    return sum(answered_right(skipped, judged) for skipped, *judged in rows) / n
+
+
+def target_difficulty(player, mode=None):
     """
     The difficulty this player's next items should sit around, from 0 (easy) to 1.
 
@@ -168,17 +200,29 @@ def target_difficulty(player):
     hard beetles and novices easy ones, plus a little for every finished round so it keeps creeping up.
     How hard a beetle is comes from how often other players get it right (update_difficulty); how hard a
     Family Ties pair is also depends on how close the two beetles are (RELATION_DIFFICULTY). GAME_DIFFICULTY_*.
+
+    The rating moves slowly, so with a ``mode`` the target also follows how the player is doing in that game right
+    now (#492): when under GAME_DIFFICULTY_EASE_BELOW of their recent answers there are right it eases off by
+    GAME_DIFFICULTY_EASE (never below DIFFICULTY_FLOOR), and over GAME_DIFFICULTY_PUSH_ABOVE it rises by
+    GAME_DIFFICULTY_PUSH (never above the maximum). Struggling players get a breather; strong ones keep being stretched.
     """
     from .models import PlayerScore
 
     rounds = GameRound.objects.filter(player=player, finished_at__isnull=False).count()
     skill = PlayerScore.objects.filter(player=player).values_list("rating", flat=True).first() or 0.0
     target = (
-        game_setting("GAME_DIFFICULTY_START", 0.2)
-        + game_setting("GAME_DIFFICULTY_PER_ROUND", 0.02) * rounds
-        + game_setting("GAME_DIFFICULTY_SKILL_WEIGHT", 0.3) * skill
+        game_setting("GAME_DIFFICULTY_START", 0.15)
+        + game_setting("GAME_DIFFICULTY_PER_ROUND", 0.005) * rounds
+        + game_setting("GAME_DIFFICULTY_SKILL_WEIGHT", 0.7) * skill
     )
-    return min(game_setting("GAME_DIFFICULTY_MAX", 0.9), target)
+    top = game_setting("GAME_DIFFICULTY_MAX", 0.9)
+    target = min(top, target)
+    share = recent_share_right(player, mode) if mode else None
+    if share is not None and share < game_setting("GAME_DIFFICULTY_EASE_BELOW", 0.5):
+        target = max(min(target, DIFFICULTY_FLOOR), target - game_setting("GAME_DIFFICULTY_EASE", 0.15))
+    elif share is not None and share > game_setting("GAME_DIFFICULTY_PUSH_ABOVE", 0.85):
+        target = max(target, min(top, target + game_setting("GAME_DIFFICULTY_PUSH", 0.05)))
+    return target
 
 
 def _difficulties(ids):
@@ -376,7 +420,7 @@ def peer_rois(player, pool):
 def build_classify_items(player, size, fresh_only=False):
     n_checks, n_open = _split_round(player, "classify", size)
     check_pool, open_pool = pools(player)
-    target = target_difficulty(player)
+    target = target_difficulty(player, "classify")
     revealed = list(revealed_ids(player))
     seen_open = _seen(player, "classify", False)
     focus = focus_filter(player)
@@ -506,7 +550,7 @@ def stuck_rois(player, pool):
 def build_pair_items(player, size, fresh_only=False):
     n_checks, n_open = _split_round(player, "pair", size)
     check_pool, open_pool = pools(player)
-    target = target_difficulty(player)
+    target = target_difficulty(player, "pair")
     revealed = list(revealed_ids(player))
     seen_open = _seen(player, "pair", False)
 
