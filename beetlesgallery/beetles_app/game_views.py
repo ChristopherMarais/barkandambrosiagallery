@@ -16,7 +16,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
-from django.db.models import Max, Q
+from django.db.models import Max
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -24,7 +24,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from . import game, game_board, game_checked, game_discoveries, game_feedback, game_queue, game_levels, game_rewards, game_scoring, game_tips, game_trust
-from . import game_applied
+from . import game_answer_review, game_applied
 from . import game_taxa as taxa_tree
 from .areas import ANNOTATE, BOXES, VALIDATE, area_required, has_area
 from .models import Beetles, GameAnswer, GameReport, GameRound, ImageLock, LabelReview, PlayerScore, RetroCredit, Taxon
@@ -338,8 +338,15 @@ def game_play(request, mode):
         "break_minutes": game.game_setting("GAME_BREAK_NUDGE_MINUTES", 60),   # 0 turns the break nudge off
         "ranks": [(r, r.capitalize()) for r in game.RANKS],
         "rungs": RUNGS,
+        "last_review": _last_review_url(request.user),
         **_onboarding(request),
     })
+
+
+def _last_review_url(player):
+    """Where Back finds the review of the player's latest answer after a reload ("" before their first answer)."""
+    last = GameAnswer.objects.filter(player=player).order_by("-answered_at").values_list("round_id", "index").first()
+    return reverse("game_past_review", args=last) if last else ""
 
 
 def _onboarding(request):
@@ -811,20 +818,11 @@ def game_answer(request, round_id):
 
     game_scoring.score_new_answer(record)
     extra = {
-        "community": None if record.skipped else _community(record),
-        "celebrate": _worth_celebrating(record, scores),
-        "celebrate_size": _celebration_size(record, scores),
+        # what the answer earned next to what is known about the beetle, shown before the next one (#488)
+        "review": game_answer_review.review(record, item),
         "events": game_rewards.play_events(request.user, before),
         "chip": _chip(request.user),
     }
-    extra["verified"] = _verified_names(record, item)   # for Back (#424)
-    if record.mode == GameRound.Mode.ODD:
-        extra["reveal"] = _odd_reveal(item, tiles)
-    elif record.mode == GameRound.Mode.SELECT:
-        # which were members: tapped right, tapped wrong, left out (votes on unchecked beetles stay as they were)
-        grid = grid or game.score_select(tiles, [], record.grid_rank, record.grid_group)
-        extra["reveal"] = {"rank": item["rank"], "target": item["group"][item["rank"]], "tiles": grid["tiles"],
-                           "right": grid["right"], "members": grid["members"], "wrong": grid["wrong"]}
     if any(e["kind"] == "level" for e in extra["events"]):
         # A new level's unlocks apply at once: the toolbar learns about them, and when the level opens a new game
         # the rest of this batch (picked under the old rules) is set aside for a fresh one.
@@ -848,250 +846,18 @@ def game_answer(request, round_id):
     return JsonResponse(dict(extra, item=_item_payload(rnd, nxt)))
 
 
-def _verified_names(record, item):
+@login_required
+@require_GET
+def game_past_review(request, round_id, index):
     """
-    For Back (#424): each validated beetle just answered in Identification or Similarity, in the order shown, with its
-    true name and how reliable that name is, e.g. [{"name": "Xyleborus affinis", "rank": "species", "tier": "Taxonomist
-    ID"}] (None for a beetle not validated). Empty when none is validated (Back then shows what other players said) and
-    in the grid games, whose answer already names them.
+    The review of one of the player's own answers (its round and place in it), for Back after a reload: the same card
+    the feed showed after the answer (game_answer_review). Anyone else's answer is a 404, like one that doesn't exist.
     """
-    if record.mode == GameRound.Mode.CLASSIFY:
-        rois = [record.roi]
-    elif record.mode == GameRound.Mode.PAIR:
-        rois = [record.roi_b, record.roi] if item.get("flip") else [record.roi, record.roi_b]
-    else:
-        return []
-    out = []
-    for roi in rois:
-        if roi is None or not game_scoring.is_truth(roi):
-            out.append(None)
-            continue
-        t = roi.taxon
-        name, rank = (f"{t.genus} {t.species}", "species") if t.genus and t.species else (t.genus, "genus")
-        out.append({"name": name, "rank": rank, "tier": roi.get_label_source_display() or "Verified"})
-    return out if any(out) else []
-
-
-def _odd_reveal(item, tiles):
-    """
-    After an Odd One Out answer: which beetle was the odd one, and the names at the round's rank, e.g. {"odd": 2,
-    "rank": "tribe", "odd_name": "Ipini", "group": "Xyleborini"}. The odd one is always validated, so this is the truth.
-    """
-    rank = item["rank"]
-    odd = next(i for i, t in enumerate(tiles) if str(t.id) == item["a"])
-    values = game.lineage(tiles[odd].taxon, rank) if tiles[odd].taxon else None
-    return {"odd": odd, "rank": rank, "odd_name": (values or {}).get(rank, ""), "group": item["group"].get(rank, "")}
-
-
-def _ahead_of(player):
-    """Players ranked above this one: a higher all-time score, or (both rated) a higher overall accuracy."""
-    min_judged = game.game_setting("GAME_MIN_JUDGED_FOR_ACCURACY", 10)
-    me = PlayerScore.objects.filter(player=player).first()
-    my_score, my_acc = (me.score, me.accuracy if me.judged >= min_judged else None) if me else (0.0, None)
-    ahead = Q(score__gt=my_score)
-    if my_acc is not None:
-        ahead |= Q(judged__gte=min_judged, accuracy__gt=my_acc)
-    return set(PlayerScore.objects.filter(ahead).exclude(player=player).values_list("player_id", flat=True))
-
-
-def _community(record):
-    """
-    The "Last beetle" bar after a Name That Beetle answer: how far players ranked above this one agree
-    (_players_ahead), and what proven experts said (_experts_said) and the species classifier leans to (_model_leans).
-    The same for every beetle, validated or not, so it never shows which ones are (#382); and it is agreement, never
-    "correct".
-    """
-    if record.mode != GameRound.Mode.CLASSIFY:
-        return None
-    latest = {}
-    for ans in (GameAnswer.objects.filter(roi=record.roi, skipped=False).exclude(player=record.player)
-                .order_by("answered_at")):
-        latest[ans.player_id] = ans
-    out = _players_ahead(record, latest)
-    for key, line in (("experts", _experts_said(record, latest)), ("model", _model_leans(record))):
-        if line:
-            out[key] = line
-    return out
-
-
-def _experts_said(record, latest):
-    """
-    What proven experts (game_trust) said about this beetle, as agreement: "A proven expert agrees with you to genus",
-    "2 proven experts agree with you to tribe; on genus they said Xylosandrus". A rank counts only where every expert
-    who named it agrees, as for reference points (game_reference). ``latest``: each other player's latest answer.
-    None when no proven expert has named it.
-    """
-    votes = [(pid, game.implied_labels(ans)) for pid, ans in latest.items()]
-    trust = game_trust.TrustContext({pid for pid, labels in votes if labels})
-    said, experts = {}, set()
-    for pid, labels in votes:
-        for rank, value in labels.items():
-            if trust.trusted_through(pid, rank, labels):
-                said.setdefault(rank, {}).setdefault(game._norm(value), value.strip())
-                experts.add(pid)
-    if not said:
-        return None
-    one = len(experts) == 1
-    who, agree = ("A proven expert", "agrees") if one else (f"{len(experts)} proven experts", "agree")
-    mine = game.answer_values({r: getattr(record, r) for r in game.RANKS})
-    agreed = ""
-    for rank in game.RANKS:
-        if rank not in said:
-            continue
-        if len(said[rank]) > 1:
-            return (f"{who} {agree} with you to {agreed}; they're split on {rank}." if agreed
-                    else f"Proven experts are split on {rank}.")
-        value, name = next(iter(said[rank].items()))
-        if mine[rank] == value:
-            agreed = rank
-        elif not mine[rank]:
-            return (f"{who} {agree} with you to {agreed} and went on to {rank} {name}." if agreed
-                    else f"{who} went on to {rank} {name}.")
-        else:
-            return (f"{who} {agree} with you to {agreed}; on {rank} they said {name}." if agreed
-                    else f"On {rank}, {who[0].lower() + who[1:]} said {name}.")
-    return f"{who} {agree} with you to {agreed}."
-
-
-def _model_leans(record):
-    """
-    What the species classifier leans to for this beetle, after the answer: its deepest rank with at least
-    GAME_FEEDBACK_AI_MIN (50%) confidence, e.g. "The species classifier leans genus Xyleborus (71%)". None without a
-    prediction or below that everywhere.
-    """
-    from .models import ModelPrediction
-    from .predictions import rank_tips
-
-    prediction = ModelPrediction.objects.filter(roi=record.roi).order_by("-created_at").first()
-    if prediction is None:
-        return None
-    tips = rank_tips(prediction)
-    least = game.game_setting("GAME_FEEDBACK_AI_MIN", 0.5)
-    for rank in reversed(game.RANKS):
-        tip = tips.get(rank)
-        if tip and tip["confidence"] >= least:
-            name = tip["value"] if rank == "species" else f"{rank} {tip['value']}"
-            return f"The species classifier leans {name} ({round(tip['confidence'] * 100)}%)."
-    return None
-
-
-def _players_ahead(record, latest):
-    """
-    What players ranked above this one said about the beetle just answered (Name That Beetle), rank by rank, and
-    how far they agree with this player: "Players ahead of you agree with you to tribe; on genus, 3 of 4 said
-    Xylosandrus." Only players ahead count, so newcomers learn from better players, not from each other. Their
-    latest answer each, never the truth.
-    """
-    if not latest:
-        return {"players": 0}
-    ahead = _ahead_of(record.player)
-    above = [a for pid, a in latest.items() if pid in ahead]
-    out = {"players": len(latest), "ahead": len(above), "ranks": []}
-    if not above:
-        out["text"] = (f"{len(latest)} other player{'s' if len(latest) != 1 else ''} named it, "
-                       "none of them ranked above you yet.")
-        return out
-    mine = game.answer_values({r: getattr(record, r) for r in game.RANKS})
-    for rank in game.RANKS:
-        names = {}
-        for ans in above:
-            value = game.answer_values({r: getattr(ans, r) for r in game.RANKS})[rank]
-            if value:
-                display = f"{ans.genus} {ans.species}" if rank == "species" else getattr(ans, rank)
-                names.setdefault(value, [display, 0])[1] += 1
-        named = sum(n for _, n in names.values())
-        if not named:
-            continue   # nobody ahead named this rank (some name only the genus, say)
-        value, (display, count) = max(names.items(), key=lambda kv: kv[1][1])
-        majority = count * 2 > named
-        out["ranks"].append({
-            "rank": rank, "name": display if majority else "", "count": count, "of": named, "split": not majority,
-            "agree": (mine[rank] == value) if (mine[rank] and majority) else None,
-        })
-    if not out["ranks"]:
-        out["text"] = f"{len(above)} player{'s' if len(above) != 1 else ''} ahead of you named it."
-        return out
-    agreed = [r for r in _leading(out["ranks"], lambda r: r["agree"] is True)]
-    rest = out["ranks"][len(agreed):]
-    who = "Players ahead of you"
-    if agreed and not rest:
-        out["text"] = f"{who} agree with you to {agreed[-1]['rank']}."
-        out["agree"] = True
-        return out
-    lead = f"{who} agree with you to {agreed[-1]['rank']}; " if agreed else f"{who}: "
-    nxt = rest[0]
-    if nxt["split"]:
-        out["text"] = lead + f"they're split on {nxt['rank']}."
-    elif nxt["agree"] is None and agreed:
-        out["text"] = lead + f"{nxt['count']} of {nxt['of']} went on to {nxt['rank']} {nxt['name']}."
-    else:
-        out["text"] = lead + f"on {nxt['rank']}, {nxt['count']} of {nxt['of']} said {nxt['name']}."
-    out["agree"] = False if nxt["agree"] is False else None
-    return out
-
-
-def _leading(items, ok):
-    """The items from the start for which ok() holds, up to the first that fails."""
-    for item in items:
-        if not ok(item):
-            return
-        yield item
-
-
-def _worth_celebrating(record, scores):
-    """
-    What to celebrate after an answer (#425): "validated" (beetle confetti) for a checked beetle the player got right,
-    the species or a pair with every judged claim right; "partial" (a few grey beetles) for a checked beetle named
-    correctly to some rank but not the species; "strong" (ordinary confetti) for an Identification answer
-    on an unchecked beetle that proven experts or a trusted model back to genus or species, or that most reliable
-    players agree with at species; otherwise False. Validated and strong look different, but neither shows on a
-    wrong or weak answer, so it hints at little.
-    """
-    if record.skipped:
-        return False
-    if record.mode == GameRound.Mode.SELECT:   # a perfect grid; some found and nothing wrong: a few grey beetles
-        grid = game.score_select(record._grid_tiles, record.picks, record.grid_rank, record.grid_group)
-        if grid["perfect"]:
-            return "validated"
-        return "partial" if grid["right"] and not grid["wrong"] else False
-    if record.is_check:
-        if record.mode == GameRound.Mode.CLASSIFY:
-            if scores.get("species") is True:
-                return "validated"
-            return "partial" if any(ok is True for ok in scores.values()) else False
-        judged = [ok for ok in scores.values() if ok is not None]
-        return "validated" if judged and all(judged) else False
-    strong = record.mode in (GameRound.Mode.CLASSIFY, GameRound.Mode.ODD) and _strong_unvalidated(record)
-    return "strong" if strong else False
-
-
-def _celebration_size(record, scores):
-    """
-    How big the celebration is, 0.25 to 1: the share of the ranks the player got correct (all of them: 1); in Select
-    all, the share of the group found.
-    """
-    if record.mode == GameRound.Mode.SELECT and not record.skipped:
-        grid = game.score_select(record._grid_tiles, record.picks, record.grid_rank, record.grid_group)
-        return round(max(0.25, grid["right"] / grid["members"]), 2) if grid["members"] else 1.0
-    judged = [ok for ok in scores.values() if ok is not None]
-    if record.skipped or not judged:
-        return 1.0
-    return round(max(0.25, sum(1 for ok in judged if ok) / len(judged)), 2)
-
-
-def _strong_unvalidated(record):
-    """An unchecked beetle's answer that the references (experts, a trusted model) or a clear consensus back."""
-    from .models import AnswerPoints
-
-    row = AnswerPoints.objects.filter(answer=record).values_list("detail", flat=True).first() or {}
-    reference = row.get("reference") or {}
-    if record.mode == GameRound.Mode.ODD:   # experts, a trusted model or most strong players agree it doesn't belong
-        rank = record.grid_rank
-        return bool(reference.get(rank, {}).get("match")) or \
-            (row.get("agreement") or {}).get(rank, 0) >= game.game_setting("GAME_CELEBRATE_AGREEMENT", 0.75)
-    if any(reference.get(r, {}).get("match") for r in ("genus", "species")):
-        return True
-    return (row.get("agreement") or {}).get("species", 0) >= game.game_setting("GAME_CELEBRATE_AGREEMENT", 0.75)
+    rnd = GameRound.objects.filter(id=round_id, player=request.user).first()
+    card = game_answer_review.past(rnd, index) if rnd else None
+    if card is None:
+        return JsonResponse({"error": "No such answer."}, status=404)
+    return JsonResponse({"review": card})
 
 
 @login_required

@@ -69,6 +69,11 @@ def _verdict(answer):
     return "partly" if any(judged) else "wrong"
 
 
+def grid_verdict(grid):
+    """A Select all grid's verdict (game.score_select): "right" when perfect, "partly" with some found and none wrong."""
+    return "right" if grid["perfect"] else "partly" if grid["right"] and not grid["wrong"] else "wrong"
+
+
 def _side(roi, player_reports, others):
     """What the database says about one ROI in a feedback item."""
     verified = bool(roi.bbox_is_validated and roi.taxon)
@@ -125,7 +130,7 @@ def round_feedback(rnd):
                             "right": grid["right"], "wrong": grid["wrong"], "missed": grid["missed"],
                             "members": grid["members"]}
             if not a.skipped and not a.score_hold and grid["members"]:
-                select_verdict = "right" if grid["perfect"] else "partly" if grid["right"] and not grid["wrong"] else "wrong"
+                select_verdict = grid_verdict(grid)
         elif a.mode == "odd":
             sides = []
             for tile_id in a.tiles or []:

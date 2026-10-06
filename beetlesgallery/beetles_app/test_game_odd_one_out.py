@@ -179,9 +179,9 @@ class AnswerTests(OddCase):
         self.assertEqual((ans.mode, ans.grid_rank, ans.is_check, ans.roi_id, ans.correct_species),
                          ("odd", "species", True, ans.roi_b_id, True))
         self.assertEqual(len(ans.tiles), 4)
-        self.assertEqual(data["celebrate"], "validated")
-        self.assertEqual(data["reveal"]["odd"], self.pick(rnd, item, odd=True))
-        self.assertEqual(data["reveal"]["rank"], "species")
+        self.assertEqual(data["review"]["celebrate"]["kind"], "validated")
+        self.assertEqual(data["review"]["grid"]["odd"], self.pick(rnd, item, odd=True))
+        self.assertEqual(data["review"]["grid"]["rank"], "species")
         self.assertGreater(ans.points.points, 0)
 
     def test_a_wrong_pick_costs_more_than_a_correct_one_earns_and_skip_earns_a_little(self):

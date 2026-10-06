@@ -7,7 +7,7 @@ from unittest import mock
 from django.test import override_settings
 from django.urls import reverse
 
-from beetlesgallery.beetles_app.game_views import _strong_unvalidated
+from beetlesgallery.beetles_app import game_answer_review, game_scoring
 from beetlesgallery.beetles_app.models import AnswerPoints, GameAnswer, GameRound, RetroCredit
 from beetlesgallery.beetles_app.test_game import GameCase
 
@@ -19,17 +19,23 @@ class CelebrationKindTests(GameCase):
     def answer(self, validated):
         self.roi(self.t_affinis, validated=validated)
         rnd, item = self.play("classify")
-        return self.post("game_answer", dict(AFFINIS, index=item["index"]), rnd.id).json()
+        return self.post("game_answer", dict(AFFINIS, index=item["index"]), rnd.id).json()["review"]
 
     def test_a_validated_hit_gets_beetles(self):
-        self.assertEqual(self.answer(validated=True)["celebrate"], "validated")
+        self.assertEqual(self.answer(validated=True)["celebrate"]["kind"], "validated")
 
-    def test_a_strong_unvalidated_answer_gets_ordinary_confetti(self):
-        with mock.patch("beetlesgallery.beetles_app.game_views._strong_unvalidated", return_value=True):
-            self.assertEqual(self.answer(validated=False)["celebrate"], "strong")
+    def test_points_by_agreement_get_ordinary_confetti(self):   # #488: the confetti follows the points
+        real = game_scoring.score
+
+        def agreed(answer, *args, **kwargs):
+            points, basis, detail = real(answer, *args, **kwargs)
+            return (points + 6, basis, detail) if basis == AnswerPoints.Basis.CONSENSUS else (points, basis, detail)
+
+        with mock.patch.object(game_scoring, "score", agreed):
+            self.assertEqual(self.answer(validated=False)["celebrate"]["kind"], "strong")
 
     def test_a_plain_unvalidated_answer_gets_nothing(self):
-        self.assertFalse(self.answer(validated=False)["celebrate"])
+        self.assertIsNone(self.answer(validated=False)["celebrate"])
 
     def test_the_game_page_draws_both_kinds(self):
         self.client.force_login(self.user)
@@ -39,20 +45,23 @@ class CelebrationKindTests(GameCase):
 
 
 class StrongAnswerTests(GameCase):
-    def points(self, detail):
-        rnd = GameRound.objects.create(player=self.user, mode="classify", items=[])
+    """#488: on a beetle nobody has checked, the paper confetti comes with points (agreement or reference), sized by them."""
+
+    def celebrate(self, points, detail):
+        rnd = GameRound.objects.create(player=self.user, mode="classify", items=[{"a": "", "b": None, "check": False}])
         ans = GameAnswer.objects.create(round=rnd, player=self.user, mode="classify", index=0,
                                         roi=self.roi(self.t_affinis, validated=False), **AFFINIS)
-        AnswerPoints.objects.create(answer=ans, points=3, detail=detail)
-        return ans
+        AnswerPoints.objects.create(answer=ans, points=points, basis=AnswerPoints.Basis.CONSENSUS,
+                                    detail=dict(detail, participation=0.5))
+        return game_answer_review.past(rnd, 0)["celebrate"]
 
-    def test_backed_by_experts_or_a_trusted_model_to_genus_or_species(self):
-        self.assertTrue(_strong_unvalidated(self.points({"reference": {"genus": {"match": True}}})))
-        self.assertFalse(_strong_unvalidated(self.points({"reference": {"tribe": {"match": True}}})))
+    def test_backed_by_experts_or_a_trusted_model(self):
+        self.assertEqual(self.celebrate(11.3, {"reference": {"genus": {"match": True}}})["kind"], "strong")
 
-    def test_or_clear_agreement_at_species(self):
-        self.assertTrue(_strong_unvalidated(self.points({"agreement": {"species": 0.8}})))
-        self.assertFalse(_strong_unvalidated(self.points({"agreement": {"species": 0.4}})))
+    def test_more_agreement_more_confetti_and_none_without_points(self):
+        small, big = self.celebrate(2.0, {"agreement": {"species": 0.4}}), self.celebrate(20.0, {"agreement": {"species": 0.9}})
+        self.assertLess(small["size"], big["size"])
+        self.assertIsNone(self.celebrate(0.5, {"agreement": {"species": -0.4}}))
 
 
 class LaterPointsInHistoryTests(GameCase):

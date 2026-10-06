@@ -245,6 +245,15 @@ def select_truth(answer):
     return points, dict(detail, rank=answer.grid_rank, worth=round(share * result["members"], 2))
 
 
+def select_tile_points(detail):
+    """
+    What one tile of a scored Select all grid earned, from the grid's stored detail (select_truth): (a member tapped,
+    a non-member tapped). A member left out and everything else earn nothing, so the tiles add up to the grid's points.
+    """
+    share = float(detail.get("worth", 0.0)) / detail["members"] if detail.get("members") else 0.0
+    return share, -share * setting("GAME_POINTS_SELECT_WRONG", 1.5)
+
+
 def odd_consensus(answer, votes, judges, model_refs):
     """
     (points, detail) for an Odd One Out pick on a beetle not validated yet: like a name on it, scored by how far the
