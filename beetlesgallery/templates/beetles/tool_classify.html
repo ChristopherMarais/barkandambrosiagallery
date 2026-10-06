@@ -10,8 +10,9 @@
     </div>
 </section>
 
-<div class="py-8">
-    
+{# On phones the Classify button floats at the bottom of the screen: the space below the page keeps it off the text #}
+<div class="pt-8 pb-28 lg:pb-8" data-testid="ai-page">
+
     <div class="pb-6 flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div class="max-w-3xl mx-auto text-center">
             <div class="mt-3" data-testid="server-info">
@@ -75,6 +76,7 @@
 
                 {# On phones the button floats at the bottom of the screen, since the image is below this form #}
                 <button type="submit" id="submitBtn" disabled data-testid="classify-button"
+                    style="bottom: max(1rem, env(safe-area-inset-bottom));"
                     class="btn-main hidden flex fixed bottom-4 inset-x-4 z-30 lg:static lg:inset-auto lg:z-auto lg:w-full px-6 py-4 lg:py-5 text-base lg:text-lg shadow-lg cursor-pointer">
                     <i class="fi fi-rr-sparkles text-xl lg:text-2xl"></i>
                     <span>Classify Image</span>
@@ -89,7 +91,7 @@
                     {% for ex in examples %}
                     <button type="button" class="example-btn group text-left rounded-lg border border-gray-200 overflow-hidden hover:border-gray-500 transition"
                         data-src="{{ ex.src }}" data-name="{{ ex.file }}" title="{{ ex.title }}{% if ex.credit %} &middot; {{ ex.credit }}{% endif %}{% if ex.licence %} &middot; {{ ex.licence }}{% endif %}">
-                        <img src="{{ ex.src }}" alt="{{ ex.title }}" class="w-full h-16 object-cover" loading="lazy">
+                        <img src="{{ ex.src }}" alt="{{ ex.title }}" class="block w-full h-20 lg:h-16 object-cover bg-gray-100" loading="lazy" decoding="async">
                         <div class="px-1.5 py-1 text-[10px] text-gray-600 italic truncate">{{ ex.title }}</div>
                     </button>
                     {% endfor %}
@@ -110,8 +112,11 @@
         </div>
 
         <div class="lg:col-span-9 flex flex-col gap-6">
-            
-            <div class="bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 shadow-sm overflow-hidden relative min-h-[500px] flex items-center justify-center group hover:border-gray-400 hover:bg-gray-100 transition-all cursor-pointer" id="canvasContainer">
+
+            {# What went wrong, or that IBBI-AI is waking up: short and plain, never a raw error #}
+            <p id="classifyMessage" class="hidden rounded-lg border px-4 py-3 text-sm" role="alert" data-testid="classify-message"></p>
+
+            <div class="bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 shadow-sm overflow-hidden relative min-h-[280px] lg:min-h-[500px] flex items-center justify-center group hover:border-gray-400 hover:bg-gray-100 transition-all cursor-pointer" id="canvasContainer">
                 
                 <div id="placeholderState" class="text-center p-8 w-full h-full flex flex-col items-center justify-center transition-opacity duration-300">
                     <div class="bg-white w-24 h-24 rounded-full flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 group-hover:shadow-md transition-all duration-300">
@@ -168,8 +173,8 @@
         </div>
     </div>
 
-    {# About IBBI-AI, under the tool; on phones the space below keeps it clear of the floating Classify button #}
-    <section class="max-w-3xl mx-auto mt-12 pb-24 lg:pb-0 text-center text-md text-gray-600 space-y-2" data-testid="ibbi-about">
+    {# About IBBI-AI, under the tool #}
+    <section class="max-w-3xl mx-auto mt-12 text-center text-md text-gray-600 space-y-2" data-testid="ibbi-about">
         <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wide">About IBBI-AI</h2>
         <p>
             IBBI-AI is our Intelligent Bark Beetle Identifier. Its models come from <a href="{{ ibbi_docs_url }}" target="_blank" rel="noopener" class="text-gray-600 hover:text-gray-800 underline">IBBI</a>, our open-source package for detecting and identifying bark and ambrosia beetles
@@ -541,40 +546,99 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    function handleFile(file, options) {
+    // --- Short messages instead of raw errors ---
+    const MESSAGES = {
+        waking: 'IBBI-AI is waking up. This can take a few minutes the first time.',
+        stillWaking: 'IBBI-AI is still waking up. Please try again in a minute.',
+        tooLarge: 'This photo is too large. Please try a smaller one.',
+        expired: 'This page has expired. Please reload it and try again.',
+        offline: 'Could not reach the site. Check your connection and try again.',
+        failed: 'Something went wrong. Please try again.',
+        unreadable: "This photo can't be opened here. Please try a JPEG or PNG.",
+        noBeetles: 'No beetles found above the confidence threshold.'
+    };
+    const TONES = {   // amber while waiting, red for a problem, grey for anything else
+        wait: 'border-amber-300 bg-amber-50 text-amber-900',
+        problem: 'border-red-300 bg-red-50 text-red-800',
+        info: 'border-gray-200 bg-gray-50 text-gray-700'
+    };
+    function showMessage(text, tone = 'problem') {
+        const el = document.getElementById('classifyMessage');
+        el.className = `rounded-lg border px-4 py-3 text-sm ${TONES[tone]}`;
+        el.textContent = text;
+        el.classList.toggle('hidden', !text);
+        if (text) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    const clearMessage = () => showMessage('');
+
+    // --- Phone photos are large: shrink them before they are shown and sent ---
+    // The preview and the upload are the same picture, so IBBI-AI's boxes land where they belong.
+    const MAX_SIDE = 2048, SMALL_BYTES = 3 * 1024 * 1024;
+    async function shrink(file) {
+        const url = URL.createObjectURL(file);
+        try {
+            const img = new Image();
+            img.src = url;
+            await img.decode();
+            const scale = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+            if (scale === 1 && file.size <= SMALL_BYTES) return file;
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(img.naturalWidth * scale);
+            canvas.height = Math.round(img.naturalHeight * scale);
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+            if (!blob) return file;
+            const name = (file.name || 'photo').replace(/\.[^.]*$/, '') + '.jpg';
+            return new File([blob], name, { type: 'image/jpeg' });
+        } catch (e) {
+            return file;   // the browser can't read it: the preview says so
+        } finally {
+            URL.revokeObjectURL(url);
+        }
+    }
+
+    let previewUrl = null;
+    async function handleFile(original, options) {
+        clearMessage();
+        // A gallery photo is classified from the server's copy, so its preview stays as it is
+        const file = options && options.asset ? original : await shrink(original);
         state.currentFile = file;
         state.isExample = !!(options && options.example);
         state.assetId = (options && options.asset) || null;
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            ui.previewImage.src = e.target.result;
-            
-            // Reset state
-            state.detections = [];
-            state.selectedIndex = -1;
-            state.hoveredIndex = -1;
-            
-            // Toggle UI elements
-            ui.placeholder.classList.add('hidden');
-            ui.imageWrapper.classList.remove('hidden');
-            ui.previewImage.classList.remove('opacity-0');
-            ui.analysisDetails.classList.add('hidden');
-            
-            // --- NEW LOGIC: SHOW BUTTON ---
-            ui.submitBtn.disabled = false;     // Ensure it's enabled
-            ui.submitBtn.classList.remove('hidden'); // Show the button
-            // -----------------------------
-            // On phones the image is below the settings: bring it into view, with the button floating under it
-            if (window.innerWidth < 1024) ui.canvasContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
-            // Clear canvas
-            setTimeout(() => {
-                const ctx = ui.canvas.getContext('2d');
-                ctx.clearRect(0,0,ui.canvas.width, ui.canvas.height);
-            }, 50);
+
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        previewUrl = URL.createObjectURL(file);   // lighter than a data: URL, which large photos can break on phones
+        ui.previewImage.onerror = () => {
+            state.currentFile = null;
+            ui.imageWrapper.classList.add('hidden');
+            ui.placeholder.classList.remove('hidden');
+            ui.submitBtn.classList.add('hidden');
+            showMessage(MESSAGES.unreadable);
         };
-        reader.readAsDataURL(file);
+        ui.previewImage.src = previewUrl;
+
+        // Reset state
+        state.detections = [];
+        state.selectedIndex = -1;
+        state.hoveredIndex = -1;
+
+        // Toggle UI elements
+        ui.placeholder.classList.add('hidden');
+        ui.imageWrapper.classList.remove('hidden');
+        ui.previewImage.classList.remove('opacity-0');
+        ui.analysisDetails.classList.add('hidden');
+
+        // Show the button
+        ui.submitBtn.disabled = false;
+        ui.submitBtn.classList.remove('hidden');
+        // On phones the image is below the settings: bring it into view, with the button floating under it
+        if (window.innerWidth < 1024) ui.canvasContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Clear canvas
+        setTimeout(() => {
+            const ctx = ui.canvas.getContext('2d');
+            ctx.clearRect(0,0,ui.canvas.width, ui.canvas.height);
+        }, 50);
     }
 
     // --- A gallery photo, from its specimen page (?asset=<image id>) ---
@@ -600,9 +664,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Examples and the "keep my image" choice ---
     document.querySelectorAll('.example-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            fetch(btn.dataset.src).then(r => r.blob()).then(blob => {
-                handleFile(new File([blob], btn.dataset.name, { type: blob.type || 'image/jpeg' }), { example: true });
-            }).catch(err => console.error('Could not load the example:', err));
+            btn.classList.add('opacity-60', 'cursor-wait');   // a large example takes a moment on a phone
+            fetch(btn.dataset.src).then(r => {
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                return r.blob();
+            }).then(blob => handleFile(new File([blob], btn.dataset.name, { type: blob.type || 'image/jpeg' }), { example: true }))
+              .catch(err => { console.error('Could not load the example:', err); showMessage(MESSAGES.failed); })
+              .finally(() => btn.classList.remove('opacity-60', 'cursor-wait'));
         });
     });
 
@@ -689,7 +757,8 @@ document.addEventListener('DOMContentLoaded', () => {
         state.currentFile = null;
         state.assetId = null;
         state.detections = [];
-        ui.fileInput.value = ''; 
+        ui.fileInput.value = '';
+        clearMessage();
         
         ui.imageWrapper.classList.add('hidden');
         ui.placeholder.classList.remove('hidden');
@@ -760,22 +829,28 @@ document.addEventListener('DOMContentLoaded', () => {
             if (state.isExample || document.getElementById('dontKeep').checked) formData.set('keep_image', '0');
         }
         
+        clearMessage();
         setLoading(true, "Processing image...");
         const pIntv = animateProgress();
 
         try {
-            const response = await fetch(window.location.href, {
-                method: 'POST',
-                body: formData,
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            });
-            const data = await response.json();
-            
+            // While IBBI-AI wakes up the site answers "waking" (well before Cloudflare's limit): ask again by itself
+            let outcome;
+            for (let attempt = 1; ; attempt++) {
+                outcome = await post(formData);
+                if (!outcome.waking || attempt >= WAKE_TRIES) break;
+                ui.loadingStatus.innerText = 'IBBI-AI is waking up...';
+                showMessage(MESSAGES.waking, 'wait');
+                await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+            const data = outcome.data;
+
             clearInterval(pIntv);
             ui.progressBar.style.width = '100%';
             ui.loadingPercent.innerText = '100%';
-            
-            if (data.status === 'success') {
+
+            if (data) {
+                clearMessage();
                 state.detections = data.detections;
                 state.classNames = data.class_names;
                 
@@ -801,23 +876,60 @@ document.addEventListener('DOMContentLoaded', () => {
                     state.selectedIndex = 0;
                     updateChartData(0);
                 } else {
-                    alert("No beetles detected above the confidence threshold.");
+                    showMessage(MESSAGES.noBeetles, 'info');
                 }
                 showSaved(data);
 
                 draw();
                 setLoading(false);
-                
+
             } else {
                 setLoading(false);
-                alert("Error: " + data.message);
+                showMessage(outcome.waking ? MESSAGES.stillWaking : outcome.message, outcome.waking ? 'wait' : 'problem');
             }
         } catch (err) {
+            // Only a bug in this page lands here; the details go to the console
+            console.error('Classifying failed:', err);
             clearInterval(pIntv);
             setLoading(false);
-            alert("Network Error: " + err.message);
+            showMessage(MESSAGES.failed);
         }
     });
+
+    // One request to the site. Returns {data} on success, else {message} (and waking when IBBI-AI is starting).
+    // Anything that is not our JSON (Cloudflare's or the server's error pages) becomes a short message, never a raw error.
+    const WAKE_TRIES = 3;
+    const GATEWAY = [502, 503, 504, 520, 521, 522, 523, 524];
+    async function post(formData) {
+        let response;
+        try {
+            response = await fetch(window.location.href, {
+                method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+        } catch (e) {
+            return { message: MESSAGES.offline };
+        }
+        let data = null;
+        if ((response.headers.get('content-type') || '').includes('application/json')) {
+            try { data = await response.json(); } catch (e) { data = null; }
+        }
+        if (response.ok && data && data.status === 'success') return { data };
+        if (data && data.waking) return { waking: true, message: MESSAGES.stillWaking };
+        if (response.status === 413) return { message: MESSAGES.tooLarge };
+        if (response.status === 403) return { message: MESSAGES.expired };
+        if (!data && GATEWAY.includes(response.status)) return { waking: true, message: MESSAGES.stillWaking };
+        return { message: (data && data.message) || MESSAGES.failed };
+    }
+
+    // --- Wake IBBI-AI as the page opens (and for another model when one is picked), so a photo finds it ready ---
+    function warmUp() {
+        const body = new FormData();
+        body.set('csrfmiddlewaretoken', ui.form.querySelector('[name=csrfmiddlewaretoken]').value);
+        body.set('architecture', document.getElementById('modelSelect').value);
+        fetch("{% url 'tool_classify_warm' %}", { method: 'POST', body, keepalive: true }).catch(() => {});
+    }
+    warmUp();
+    document.getElementById('modelSelect').addEventListener('change', warmUp);
 });
 </script>
 {% endblock %}

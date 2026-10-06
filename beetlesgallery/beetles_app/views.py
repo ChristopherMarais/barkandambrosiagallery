@@ -1510,7 +1510,9 @@ def tool_classify(request):
         except classify_assist.ClassifyTimeout:
             # The one hint worth giving: the model is starting up. A fixed text, so nothing of the error leaks.
             logger.warning("AI classification service timed out")
-            return JsonResponse({"status": "error", "message": classify_assist.TIMEOUT_MESSAGE}, status=502)
+            # "waking" lets the page try again by itself.
+            return JsonResponse({"status": "error", "message": classify_assist.TIMEOUT_MESSAGE, "waking": True},
+                                status=502)
         except classify_assist.ClassifyError as exc:
             logger.warning("AI classification service error: %s", exc, exc_info=True)
             return JsonResponse({
@@ -1533,6 +1535,16 @@ def tool_classify(request):
     return render(request, 'beetles/tool_classify.html', {
         'examples': _classifier_examples(), 'ibbi_docs_url': ibbi_models.IBBI_DOCS_URL, 'gallery_photo': gallery_photo,
     })
+
+
+def tool_classify_warm(request):
+    """The AI page asks for this as it opens: IBBI-AI starts waking up before the visitor's photo is sent."""
+    from . import classify_assist
+
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    started = classify_assist.warm_up(request.POST.get("architecture"))
+    return JsonResponse({"status": "warming" if started else "already_warming"})
 
 @login_required
 def stream_updates(request):
