@@ -16,9 +16,3 @@ def ibbi_model_options():
           f"{spec['label']} (recommended)" if key == ibbi_models.DEFAULT else spec["label"])
          for key, spec in ibbi_models.MODELS.items()),
     )
-
-
-@register.simple_tag
-def ibbi_recommended_name():
-    """The recommended model's name, e.g. "DINOv3"."""
-    return ibbi_models.MODELS[ibbi_models.DEFAULT]["label"]

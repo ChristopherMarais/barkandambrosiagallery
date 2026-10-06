@@ -3,8 +3,9 @@
 
 The new ROIs are never validated: a person does that. A box that overlaps an existing ROI of the image adds no new
 ROI, so running it twice, or on an image that already has boxes, adds only what is new; the existing ROI gets the
-AI's name as a suggestion if it has none from that model yet (its name, tier and box stay as they are). Each proposed
-species is kept as a ModelPrediction, so the model's confidence and runners-up are not lost.
+AI's name as a suggestion if it has none from that model or a better one yet (its name, tier and box stay as they
+are). Each proposed species is kept as a ModelPrediction, so the model's confidence and runners-up are not lost. Only
+the best model's suggestion is shown (ibbi_models.MODEL_PREFERENCE), so a worse model's is never added next to it.
 
 A new ROI gets the same metadata as one drawn with the mouse (see roi_defaults.py): the first box fills the image's
 box-less template ROI if it has one, and every other box copies the specimen and collection details (aspect, country,
@@ -12,7 +13,7 @@ sex, notes...) of the ROI that was most recently updated. The species is the mod
 for a box the model labelled differently or not at all.
 
 The AI page uses the same code: a photo kept from it gets its ROIs here, and a photo already in the gallery (opened
-from its specimen page) only gets suggestions on its ROIs that have none yet (attach_suggestions).
+from its specimen page) only gets suggestions on its ROIs that have none as good yet (attach_suggestions).
 """
 import re
 
@@ -38,6 +39,19 @@ AI_PAGE_INSTITUTION = "AI page"   # ImageAsset.image_institution of a photo kept
 
 class ClassifyError(Exception):
     """A problem to show the annotator; nothing was added."""
+
+
+class ClassifyTimeout(ClassifyError):
+    """The service took too long: usually the model is starting up, so trying again in a minute helps."""
+
+
+TIMEOUT_MESSAGE = "The AI model is waking up. Please try again in a minute."
+
+
+def outranked(model_name, other_names):
+    """True when one of ``other_names`` is a better model than ``model_name`` (ibbi_models.MODEL_PREFERENCE)."""
+    rank = ibbi_models.preference(model_name)
+    return any(ibbi_models.preference(name) < rank for name in other_names)
 
 
 def iou(a, b):
@@ -76,7 +90,7 @@ def call_classifier(image_bytes, filename, content_type, architecture, box_thres
             files={"image": (filename, image_bytes, content_type)}, timeout=300,
         )
     except requests.exceptions.Timeout:
-        raise ClassifyError("The AI model is waking up (cold start). Please try again in a minute.")
+        raise ClassifyTimeout(TIMEOUT_MESSAGE)
     except requests.exceptions.RequestException:
         raise ClassifyError("The AI service could not be reached. Please try again later.")
     if response.status_code != 200:
@@ -149,9 +163,14 @@ class _Suggestions:
         return self.names.get(_norm(det.get("species") or det.get("label")))
 
     def save(self, roi, det):
-        """Keep the model's name for this box on ``roi``, once. True when a suggestion was added."""
+        """
+        Keep the model's name for this box on ``roi``, once, unless a better model already named it (only the best
+        model's suggestion is shown). True when a suggestion was added.
+        """
         best = self.best(det)
         if best is None:
+            return False
+        if outranked(self.model_name, ModelPrediction.objects.filter(roi=roi).values_list("model_name", flat=True)):
             return False
         if det.get("candidates") is not None:
             pairs = [(c.get("name"), c.get("prob")) for c in det["candidates"]]
@@ -188,7 +207,7 @@ def _boxed(rois):
 def add_rois(asset, result, user):
     """
     Create unvalidated ROIs from IBBI-AI's ``result``. A found box over an existing ROI adds no ROI: that ROI gets the
-    AI's name as a suggestion if it has none from this model yet, and nothing else about it changes.
+    AI's name as a suggestion if it has none from this model or a better one yet, and nothing else about it changes.
     Returns {"added": new ROIs, "attached": existing ROIs that got a suggestion, "already_boxed": boxes already there
     that added nothing}.
     """
@@ -246,8 +265,8 @@ def add_rois(asset, result, user):
 
 def attach_suggestions(asset, result, user):
     """
-    A photo already in the gallery, run through the AI page from its specimen page: its ROIs that have no AI
-    suggestion yet get the AI's name, matched by box (SAME_BOX_IOU). When the photo has a single ROI without a box,
+    A photo already in the gallery, run through the AI page from its specimen page: its ROIs that have no suggestion
+    from this model or a better one yet get the AI's name, matched by box (SAME_BOX_IOU). When the photo has a single ROI without a box,
     the best box that matches no other ROI is taken to be that one. Never adds an ROI or an image, and never changes
     an ROI. Returns how many ROIs got a suggestion.
     """
@@ -257,7 +276,7 @@ def attach_suggestions(asset, result, user):
     boxed = _boxed(rois)
     boxless = [r for r in rois if r.bbox_x is None]
     only_boxless = boxless[0] if len(boxless) == 1 else None
-    suggested = set(ModelPrediction.objects.filter(roi__in=rois).values_list("roi_id", flat=True))
+    suggested = set()   # ROIs named in this run (the first, surest box wins)
     attached = 0
     with transaction.atomic():
         for box, det in suggestions.detections(width, height):

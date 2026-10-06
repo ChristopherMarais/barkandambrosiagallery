@@ -19,7 +19,7 @@ from django.db.models import Q
 from . import game, game_feedback, game_scoring
 from .game import RANKS, game_setting
 from .models import AnswerPoints, Beetles, GameAnswer, ModelPrediction
-from .predictions import rank_tips
+from .predictions import best_predictions, rank_tips
 from .templatetags.beetle_tags import digit_groups_text
 
 # How the points were made, for the player: anything not listed has no points to show yet ("pending")
@@ -237,11 +237,10 @@ def _said(roi_ids, player_id):
 
 
 def _ai(roi_ids):
-    """{roi_id: {rank: {"value", "confidence", ...}}}: IBBI-AI's best guess at each rank, from the newest prediction."""
-    newest = {}
-    for prediction in ModelPrediction.objects.filter(roi_id__in=roi_ids).order_by("created_at"):
-        newest[prediction.roi_id] = prediction
-    return {roi_id: rank_tips(prediction) for roi_id, prediction in newest.items()}
+    """{roi_id: {rank: {"value", "confidence", ...}}}: IBBI-AI's best guess at each rank, from the prediction people
+    see (the best model's, predictions.best_predictions)."""
+    shown = best_predictions(ModelPrediction.objects.filter(roi_id__in=roi_ids))
+    return {roi_id: rank_tips(prediction) for roi_id, prediction in shown.items()}
 
 
 def _view(name, share, against, key):
