@@ -732,7 +732,8 @@ def game_crop(request, round_id, index, image, size):
     One beetle of the player's own batch, as the crop the feed shows (game_crops), cut on first request. The URL names
     the batch, the item and the photo, never the beetle, so it gives away nothing the feed doesn't show.
     """
-    if size not in game_crops.SIZES:
+    size = game_crops.size_name(size)   # from here on, SIZES' own key: the request's string never reaches a path
+    if size is None:
         raise Http404("Unknown size.")
     rnd = get_object_or_404(GameRound, id=round_id, player=request.user)
     rois = _shown_rois(rnd.items[index]) if index < len(rnd.items) else None
