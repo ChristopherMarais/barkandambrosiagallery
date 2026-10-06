@@ -20,5 +20,3 @@ ignore = [
 [lint.per-file-ignores]
 # AppConfig.ready() imports modules for their side effects (signal receivers).
 "**/apps.py" = ["F401"]
-# views.py is being split into smaller modules by PRs still in flight; its imports are tidied once that settles.
-"beetlesgallery/beetles_app/views.py" = ["F401"]

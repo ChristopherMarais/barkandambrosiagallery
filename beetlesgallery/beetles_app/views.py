@@ -3,11 +3,9 @@ import zipfile
 import uuid
 import json
 import math
-import time
 import logging
 from beetlesgallery.tools import ibbi_models
 from datetime import date, timedelta
-from io import BytesIO
 
 from django.db.models import Q, F
 from django.utils import timezone
@@ -15,12 +13,10 @@ from django.urls import reverse
 from django.db import transaction
 from django.conf import settings
 from django.contrib import messages
-from django.utils.http import url_has_allowed_host_and_scheme
 from django.http import HttpResponseNotAllowed, FileResponse, Http404, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth import update_session_auth_hash, get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.views.decorators.http import require_POST
 from django.contrib.auth.views import LoginView as DjangoLoginView, LogoutView
 from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
@@ -40,7 +36,6 @@ from .roi_reports import REASONS as REPORT_REASONS
 from .tasks import process_upload_task, process_update_task, build_downloads_task
 
 import pandas as pd
-from io import StringIO
 
 logger = logging.getLogger(__name__)
 
