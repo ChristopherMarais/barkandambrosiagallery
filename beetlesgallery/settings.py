@@ -49,7 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',
+    'beetlesgallery.apps.GalleryStaticFilesConfig',  # django.contrib.staticfiles, without the Tailwind source
     'django.contrib.humanize',      # Required for template filters
     
     # Third-party libraries
@@ -155,13 +155,9 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Check if we are in production (Debug is False)
-IS_PRODUCTION = os.environ.get('DJANGO_DEBUG', 'False') == 'False'
-
 STORAGES = {
     "default": {
-        # In PROD, use standard storage. LOCALLY, use the Windows fix.
-        "BACKEND": "django.core.files.storage.FileSystemStorage" if IS_PRODUCTION else "beetlesgallery.custom_storage.WindowsDockerStorage",
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
@@ -223,6 +219,7 @@ MODAL_API_URL = os.environ.get("MODAL_API_URL", "https://christophermarais--ibbi
 
 # Beetle ID game (beetles_app/game.py)
 GAME_ROUND_SIZE = 10                  # items per round
+GAME_FIRST_ITEMS = 2                  # a batch built while the player waits starts with these, the rest later (0: whole)
 # Re-score other players on the Celery worker when someone finishes playing (on in production)
 GAME_RECOMPUTE_IN_BACKGROUND = os.environ.get("GAME_RECOMPUTE_IN_BACKGROUND", "0" if DEBUG else "1") == "1"
 # what the game is called on the site (one place to rename it)
@@ -288,7 +285,7 @@ VALID_SPECIES_VERSION_CACHE_KEY = "valid_species:version"
 VALID_SPECIES_VERSION_LABEL_CACHE_KEY = "valid_species:label"
 VALID_SPECIES_UPDATING_CACHE_KEY = "valid_species:updating"
 
-# Force explicit permissions to stabilize Docker on Windows file syncing
+# Django doesn't chmod uploaded files or the folders it creates: they get the container's default modes (umask).
 FILE_UPLOAD_PERMISSIONS = None
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = None
 
@@ -354,6 +351,13 @@ if STAGING:
     CSRF_COOKIE_NAME = "staging_csrftoken"
     SESSION_COOKIE_DOMAIN = None
     CSRF_COOKIE_DOMAIN = None
+
+# The live and staging sites are only reached over HTTPS (Cloudflare), so their sign-in and CSRF cookies are never
+# sent over plain HTTP (manage.py check --deploy). Local runs with DEBUG keep plain cookies; SECURE_COOKIES=0/1 overrides.
+IS_PRODUCTION = os.environ.get('DJANGO_DEBUG', 'False') == 'False'   # the live and staging sites run without DEBUG
+SECURE_COOKIES = os.environ.get("SECURE_COOKIES", "1" if IS_PRODUCTION else "0") == "1"
+SESSION_COOKIE_SECURE = SECURE_COOKIES
+CSRF_COOKIE_SECURE = SECURE_COOKIES
 
 # --- Django REST Framework Configuration ---
 REST_FRAMEWORK = {

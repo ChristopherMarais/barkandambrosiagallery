@@ -116,6 +116,7 @@ urlpatterns = [
     path('game/api/applied/<uuid:roi_id>/revert/', game_views.game_applied_revert, name='game_applied_revert'),
     path('game/api/round/<uuid:round_id>/answer/', game_views.game_answer, name='game_answer'),
     path('game/api/round/<uuid:round_id>/review/<int:index>/', game_views.game_past_review, name='game_past_review'),
+    path('game/api/round/<uuid:round_id>/upcoming/', game_views.game_upcoming, name='game_upcoming'),
     path('game/api/round/<uuid:round_id>/crop/<int:index>/<int:image>/<str:size>/', game_views.game_crop, name='game_crop'),
     path('game/api/taxa/', game_views.game_taxa, name='game_taxa'),
     path('game/settings/', game_views.game_settings, name='game_settings'),

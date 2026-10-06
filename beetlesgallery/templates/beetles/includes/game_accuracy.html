@@ -11,7 +11,7 @@
   {% if standing.players %}
   <div class="relative h-16 flex items-end gap-0.5" aria-hidden="true">
     {% for b in standing.bins %}
-    <div class="flex-1 rounded-t {% if me and forloop.counter0 == me.bin %}{% if me.tier == 'none' %}bg-gray-500{% else %}scale-fill-{{ me.tier }}{% endif %}{% else %}bg-gray-300{% endif %}"
+    <div class="flex-1 rounded-t-sm {% if me and forloop.counter0 == me.bin %}{% if me.tier == 'none' %}bg-gray-500{% else %}scale-fill-{{ me.tier }}{% endif %}{% else %}bg-gray-300{% endif %}"
       style="height: {{ b.height }}%; min-height: {% if b.count %}3px{% else %}1px{% endif %}"></div>
     {% endfor %}
     {% if standing.average is not None %}<div class="absolute bottom-0 top-0 border-l border-dashed border-gray-500" style="left: {% widthratio standing.average 1 100 %}%" title="Average"></div>{% endif %}

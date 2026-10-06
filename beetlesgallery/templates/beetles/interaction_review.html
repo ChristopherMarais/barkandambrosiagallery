@@ -43,7 +43,7 @@
   </form>
 
   {% for claim in claims %}
-  <article class="mb-5 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" data-testid="claim">
+  <article class="mb-5 bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden" data-testid="claim">
     <header class="px-5 py-4 border-b border-gray-100 bg-gray-50">
       <div class="flex flex-wrap items-baseline justify-between gap-2">
         <h2 class="text-lg font-semibold text-gray-900">
@@ -59,12 +59,12 @@
         {{ claim.category|default:"category not known" }} &middot; {{ claim.relationship|default:"relationship not stated" }}
       </p>
       {% if claim.covered_by %}
-      <p class="mt-2 text-sm text-green-900 bg-green-50 border border-green-200 rounded px-3 py-2">
+      <p class="mt-2 text-sm text-green-900 bg-green-50 border border-green-200 rounded-sm px-3 py-2">
         Already in the published dataset (record {{ claim.covered_by.record_number|default:"-" }}: {{ claim.covered_by.pathogen }}, {{ claim.covered_by.source|default:"no citation" }}).
         These papers may be extra evidence.
       </p>
       {% elif claim.existing %}
-      <p class="mt-2 text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+      <p class="mt-2 text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-sm px-3 py-2">
         The dataset already has {{ claim.existing|length }} record{{ claim.existing|length|pluralize }} for this beetle with the same genus:
         {% for row in claim.existing|slice:":4" %}<em>{{ row.pathogen }}</em>{% if not forloop.last %}, {% endif %}{% endfor %}.
       </p>
@@ -79,13 +79,13 @@
         </p>
         <p class="text-xs text-gray-500">
           {% if p.source_authors %}{{ p.source_authors }} &middot; {% endif %}{% if p.source_journal %}{{ p.source_journal }} &middot; {% endif %}{{ p.source_year|default_if_none:"" }}
-          {% if p.open_access %}<span class="ml-1 rounded bg-green-100 text-green-800 border border-green-200 px-1.5 py-0.5 font-semibold">Open access</span>{% endif %}
+          {% if p.open_access %}<span class="ml-1 rounded-sm bg-green-100 text-green-800 border border-green-200 px-1.5 py-0.5 font-semibold">Open access</span>{% endif %}
           {% if p.doi_link %}&middot; <a href="{{ p.doi_link }}" target="_blank" rel="noopener noreferrer nofollow" class="underline hover:text-black">DOI {{ p.source_doi }}</a>{% endif %}
           {% if p.score is not None %}&middot; score {{ p.score|floatformat:2 }}{% endif %}
           {% if p.evidence_location %}&middot; in the {{ p.evidence_location }}{% endif %}
         </p>
         {% if p.evidence %}
-        <blockquote class="mt-2 border-l-4 border-gray-200 pl-3 text-gray-800 [&_mark]:bg-yellow-100 [&_mark]:px-0.5 [&_mark]:rounded">{{ p.evidence_html }}</blockquote>
+        <blockquote class="mt-2 border-l-4 border-gray-200 pl-3 text-gray-800 [&_mark]:bg-yellow-100 [&_mark]:px-0.5 [&_mark]:rounded-sm">{{ p.evidence_html }}</blockquote>
         {% endif %}
         {% if p.reviewed_by %}<p class="mt-1 text-xs text-gray-500">{{ p.get_status_display }} by {{ p.reviewed_by.username }}{% if p.review_note %}: &ldquo;{{ p.review_note }}&rdquo;{% endif %}</p>{% endif %}
       </div>

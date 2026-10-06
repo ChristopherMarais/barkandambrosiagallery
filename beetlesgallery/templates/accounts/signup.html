@@ -1,20 +1,20 @@
 {% extends 'base.html' %}
 {% block content %}
 <div>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
+  <div class="mx-auto max-w-(--breakpoint-2xl) p-4 md:p-6 2xl:p-10">
     <h2 class="text-title-md2 font-bold text-black mb-6">Create User</h2>
 
     {% if created_username %}
     {# Reached by a redirect after an account is made, so a refresh never makes it twice: the message only, no form. #}
     <div data-testid="create-account-done">
-      <div class="mb-6 p-4 rounded border bg-gray-50 border-gray-200 text-gray-800" role="status">
+      <div class="mb-6 p-4 rounded-sm border bg-gray-50 border-gray-200 text-gray-800" role="status">
         Username <strong>{{ created_username }}</strong> created successfully.
       </div>
       <a href="{% url 'create_account' %}" class="btn-secondary" data-testid="create-account-again"><i class="fi fi-rr-user-add"></i><span>Create another account</span></a>
     </div>
     {% else %}
-    <div class="rounded-sm border border-gray-200 bg-white shadow-default">
-      <div class="w-full p-4 sm:p-12.5">
+    <div class="rounded-xs border border-gray-200 bg-white shadow-default">
+      <div class="w-full p-4">
         <form method="post" action="" data-testid="create-account-form">
           {% csrf_token %}
 

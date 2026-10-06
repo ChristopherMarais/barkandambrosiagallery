@@ -18,7 +18,7 @@ class AnnotatePolishTests(GameCase):
         line = re.search(r"<li class=\"([^\"]*)\" data-kind=", body)
         self.assertIsNotNone(line)
         classes = line.group(1).split()
-        self.assertIn("break-words", classes)            # long names split rather than run off the panel
+        self.assertIn("wrap-break-word", classes)        # long names split rather than run off the panel
         for clipping in ("truncate", "whitespace-nowrap", "text-ellipsis", "overflow-hidden"):
             self.assertNotIn(clipping, classes)
 

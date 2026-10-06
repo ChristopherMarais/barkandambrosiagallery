@@ -3,7 +3,6 @@ import hashlib
 import json
 import os
 import unicodedata
-import time
 import math
 
 from beetlesgallery.beetles_app.models import UploadBatch, ImageAsset
@@ -127,14 +126,6 @@ class Command(BaseCommand):
 
         errors = []
         csv_path = batch.file.path
-
-        # --- FIX: Wait for file to sync (Windows/Docker lag) ---
-        retries = 5
-        while not os.path.exists(csv_path) and retries > 0:
-            self.stdout.write(f"Waiting for file sync: {csv_path}")
-            time.sleep(1)
-            retries -= 1
-        # -------------------------------------------------------
 
         try:
             df = pd.read_csv(csv_path)

@@ -135,15 +135,15 @@
 </style>
 
 <div class="h-full flex flex-col">
-  <div class="flex items-center justify-between mb-4 flex-shrink-0">
+  <div class="flex items-center justify-between mb-4 shrink-0">
     <div>
       <h1 class="page-title" style="margin-bottom: 0.25rem">Image Annotation</h1>
       <p class="text-xs text-gray-500 mt-1 hidden md:block">
-        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-[10px]">W/S or Up/Down</kbd> Prev/Next Image
-        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-[10px] ml-2">D</kbd> Switch Tab
-        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-[10px] ml-2">A</kbd> Save Target
-        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-[10px] ml-2">F</kbd> Validate ROI
-        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-[10px] ml-2">Space</kbd> Validate All & Next
+        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded-sm text-[10px]">W/S or Up/Down</kbd> Prev/Next Image
+        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded-sm text-[10px] ml-2">D</kbd> Switch Tab
+        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded-sm text-[10px] ml-2">A</kbd> Save Target
+        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded-sm text-[10px] ml-2">F</kbd> Validate ROI
+        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded-sm text-[10px] ml-2">Space</kbd> Validate All & Next
       </p>
     </div>
   </div>
@@ -151,27 +151,27 @@
   <div id="annot-row" class="flex h-full min-h-0" style="height: calc(100vh - 8rem);">
     
     <div id="panel-left" class="space-y-4 overflow-y-auto flex flex-col panel-transition" style="width: 25%; min-width: 320px; height: 100%;">
-      <div id="browser-card" class="bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col flex-1 min-h-0">
-        <div id="browser-card-header" class="p-4 border-b border-gray-200 flex-shrink-0">
+      <div id="browser-card" class="bg-white border border-gray-200 rounded-lg shadow-xs flex flex-col flex-1 min-h-0">
+        <div id="browser-card-header" class="p-4 border-b border-gray-200 shrink-0">
           <h2 class="text-lg font-semibold text-gray-900">Image Browser</h2>
           
-          <div id="filter-stats" class="mt-2 hidden flex-col gap-3 text-[11px] bg-gray-50 px-3 py-2.5 rounded border border-gray-200">
+          <div id="filter-stats" class="mt-2 hidden flex-col gap-3 text-[11px] bg-gray-50 px-3 py-2.5 rounded-sm border border-gray-200">
             <div class="space-y-1.5">
               <div class="font-bold text-gray-700 tracking-wider uppercase text-[10px]">Images</div>
               <div class="flex flex-wrap gap-x-5 gap-y-2">
                 <div title="Validated" class="flex items-center">
                   <span class="text-gray-600 mr-2">Validated:</span>
-                  <span class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mr-1.5"></span>
+                  <span class="w-2 h-2 rounded-full bg-green-500 shrink-0 mr-1.5"></span>
                   <span id="stat-img-val" class="text-gray-900 font-bold truncate">0</span>
                 </div>
                 <div title="Not Validated" class="flex items-center">
                   <span class="text-gray-600 mr-2">Not Validated:</span>
-                  <span class="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0 mr-1.5"></span>
+                  <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0 mr-1.5"></span>
                   <span id="stat-img-unval" class="text-gray-900 font-bold truncate">0</span>
                 </div>
                 <div title="No Bounding Boxes" class="flex items-center">
                   <span class="text-gray-600 mr-2">No Bounding Box:</span>
-                  <span class="w-2 h-2 rounded-full bg-gray-300 flex-shrink-0 mr-1.5"></span>
+                  <span class="w-2 h-2 rounded-full bg-gray-300 shrink-0 mr-1.5"></span>
                   <span id="stat-img-empty" class="text-gray-900 font-bold truncate">0</span>
                 </div>
               </div>
@@ -181,12 +181,12 @@
               <div class="flex flex-wrap gap-x-5 gap-y-2">
                 <div title="Validated ROIs" class="flex items-center">
                   <span class="text-gray-600 mr-2">Validated:</span>
-                  <span class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mr-1.5"></span>
+                  <span class="w-2 h-2 rounded-full bg-green-500 shrink-0 mr-1.5"></span>
                   <span id="stat-roi-val" class="text-gray-900 font-bold truncate">0</span>
                 </div>
                 <div title="Not Validated ROIs" class="flex items-center">
                   <span class="text-gray-600 mr-2">Not Validated:</span>
-                  <span class="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0 mr-1.5"></span>
+                  <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0 mr-1.5"></span>
                   <span id="stat-roi-unval" class="text-gray-900 font-bold truncate">0</span>
                 </div>
               </div>
@@ -201,7 +201,7 @@
             <div class="p-3 space-y-4 border-t border-gray-200" style="overflow: visible;">
               <div class="space-y-1">
                 <label for="image-sort" class="block text-xs font-bold text-gray-500 uppercase">Sort by</label>
-                <select id="image-sort" class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs focus:ring-1 focus:ring-gray-500 outline-none">
+                <select id="image-sort" class="w-full rounded-sm border border-gray-300 bg-white px-2 py-1.5 text-xs focus:ring-1 focus:ring-gray-500 outline-hidden">
                   <option value="newest">Newest added</option>
                   <option value="oldest">Oldest added</option>
                   <option value="unvalidated_first">Not validated first</option>
@@ -214,7 +214,7 @@
               </div>
               <div class="space-y-1">
                 <label for="game-filter" class="block text-xs font-bold text-gray-500 uppercase">Game label proposals</label>
-                <select id="game-filter" class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs focus:ring-1 focus:ring-gray-500 outline-none">
+                <select id="game-filter" class="w-full rounded-sm border border-gray-300 bg-white px-2 py-1.5 text-xs focus:ring-1 focus:ring-gray-500 outline-hidden">
                   <option value="">All images</option>
                   <option value="any">Proposals waiting</option>
                   <option value="expert">Expert-backed proposals</option>
@@ -239,22 +239,22 @@
                                   <option value="{{ opt }}" {% if opt in f.selected %}selected{% endif %}>{{ opt }}</option>
                               {% endfor %}
                           </select>
-                          <button type="button" class="filter-toggle-btn w-full text-left rounded border border-gray-300 bg-white px-2 py-1.5 text-xs flex items-center justify-between hover:border-gray-400 transition" onclick="toggleFilterDropdown(this)">
+                          <button type="button" class="filter-toggle-btn w-full text-left rounded-sm border border-gray-300 bg-white px-2 py-1.5 text-xs flex items-center justify-between hover:border-gray-400 transition" onclick="toggleFilterDropdown(this)">
                               <span class="truncate pr-2">{% if f.selected %}{{ f.selected|length }} Selected{% else %}All{% endif %}</span>
                               <i class="fi fi-rr-angle-small-down text-gray-400"></i>
                           </button>
                           
-                          <div class="filter-dropdown hidden relative w-full mt-1 rounded shadow-lg border border-gray-200 bg-white p-2 flex flex-col gap-2">
-                              <input type="text" placeholder="Search..." class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500 outline-none" onkeyup="filterDropdownOptions(this)">
+                          <div class="filter-dropdown hidden relative w-full mt-1 rounded-sm shadow-lg border border-gray-200 bg-white p-2 flex flex-col gap-2">
+                              <input type="text" placeholder="Search..." class="w-full rounded-sm border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500 outline-hidden" onkeyup="filterDropdownOptions(this)">
                               <div class="flex justify-between border-b border-gray-100 pb-1">
                                   <button type="button" class="text-[10px] font-bold text-gray-600 hover:underline" onclick="selectVisibleOptions(this)">Select All</button>
                                   <button type="button" class="text-[10px] font-bold text-gray-500 hover:underline" onclick="clearFilterSelection(this)">Clear All</button>
                               </div>
                               <div class="max-h-40 overflow-y-auto flex flex-col gap-0.5">
                                   {% for opt in f.options %}
-                                      <div class="filter-option cursor-pointer select-none rounded px-2 py-1.5 text-xs flex items-center justify-between hover:bg-gray-100 {% if opt in f.selected %}bg-gray-100 font-semibold text-gray-900{% else %}text-gray-700{% endif %}" data-value="{{ opt }}" onclick="toggleDropdownOption(this)">
+                                      <div class="filter-option cursor-pointer select-none rounded-sm px-2 py-1.5 text-xs flex items-center justify-between hover:bg-gray-100 {% if opt in f.selected %}bg-gray-100 font-semibold text-gray-900{% else %}text-gray-700{% endif %}" data-value="{{ opt }}" onclick="toggleDropdownOption(this)">
                                           <span class="truncate">{{ opt }}</span>
-                                          <div class="w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors {% if opt in f.selected %}bg-gray-500 border-gray-500 text-white{% else %}border-gray-300 bg-white{% endif %}">
+                                          <div class="w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 transition-colors {% if opt in f.selected %}bg-gray-500 border-gray-500 text-white{% else %}border-gray-300 bg-white{% endif %}">
                                               <svg class="w-3 h-3 {% if opt not in f.selected %}hidden{% endif %} check-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                                           </div>
                                       </div>
@@ -303,10 +303,10 @@
       </div>
     </div>
 
-    <div id="panel-center" class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden flex flex-col relative flex-1 panel-transition" style="min-width: 0; height: 100%;">
+    <div id="panel-center" class="bg-white border border-gray-200 rounded-lg shadow-xs overflow-hidden flex flex-col relative flex-1 panel-transition" style="min-width: 0; height: 100%;">
       <div class="hidden bg-gray-300 bg-amber-500 bg-green-500 bg-blue-500"></div>
       
-      <div class="border-b border-gray-200 p-3 flex items-center justify-between bg-gray-50 flex-shrink-0">
+      <div class="border-b border-gray-200 p-3 flex items-center justify-between bg-gray-50 shrink-0">
         <div class="flex items-center gap-3">
           <div id="main-status-indicator" class="w-3 h-3 rounded-full hidden"></div>
           <div>
@@ -317,10 +317,10 @@
         
         <div class="flex items-center gap-3">
             <div id="normal-mode-actions" class="flex gap-1 hidden">
-              <button type="button" onclick="zoomIn()" class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-200" title="Zoom In"><i class="fi fi-rr-zoom-in"></i></button>
+              <button type="button" onclick="zoomIn()" class="px-2 py-1 text-sm border border-gray-300 rounded-sm hover:bg-gray-200" title="Zoom In"><i class="fi fi-rr-zoom-in"></i></button>
               <span id="footer-zoom" class="px-2 py-1 text-xs text-gray-600 font-mono self-center">100%</span>
-              <button type="button" onclick="zoomOut()" class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-200" title="Zoom Out"><i class="fi fi-rr-zoom-out"></i></button>
-              <button type="button" onclick="fitToScreen()" class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-200 ml-2" title="Fit to Screen"><i class="fi fi-rr-search"></i> Fit</button>
+              <button type="button" onclick="zoomOut()" class="px-2 py-1 text-sm border border-gray-300 rounded-sm hover:bg-gray-200" title="Zoom Out"><i class="fi fi-rr-zoom-out"></i></button>
+              <button type="button" onclick="fitToScreen()" class="px-2 py-1 text-sm border border-gray-300 rounded-sm hover:bg-gray-200 ml-2" title="Fit to Screen"><i class="fi fi-rr-search"></i> Fit</button>
             </div>
         </div>
       </div>
@@ -350,8 +350,8 @@
       </div>
     </div>
 
-    <div id="panel-right" class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden flex flex-col panel-transition" style="width: 25%; min-width: 320px; height: 100%; flex-shrink: 0;">      
-      <div class="flex border-b border-gray-200 flex-shrink-0 bg-gray-50">
+    <div id="panel-right" class="bg-white border border-gray-200 rounded-lg shadow-xs overflow-hidden flex flex-col panel-transition" style="width: 25%; min-width: 320px; height: 100%; flex-shrink: 0;">      
+      <div class="flex border-b border-gray-200 shrink-0 bg-gray-50">
         <button id="tab-btn-image" onclick="switchRightTab('image')" class="flex-1 py-3 text-sm tab-inactive transition-colors">
           Image Details
         </button>
@@ -361,7 +361,7 @@
       </div>
 
       <div id="tab-content-image" class="hidden flex-1 overflow-y-auto p-4 flex flex-col relative">
-        <div id="lock-warning" class="hidden bg-red-50 border border-red-200 text-red-800 text-xs p-3 rounded-lg mb-4 flex items-center gap-2 font-medium shadow-sm">
+        <div id="lock-warning" class="hidden bg-red-50 border border-red-200 text-red-800 text-xs p-3 rounded-lg mb-4 flex items-center gap-2 font-medium shadow-xs">
           <i class="fi fi-rr-lock text-base"></i>
           <span id="lock-warning-text">Locked by another user. Viewing only.</span>
         </div>
@@ -370,7 +370,7 @@
           <div class="text-xs font-bold text-gray-500 uppercase mb-1">Generate AI recommendation</div>
           <p class="text-[11px] text-gray-500 mb-2">Finds the beetles in this image, adds a box for each new one and suggests its name. Nothing is validated; an existing ROI keeps its box and gets the AI's suggestion.</p>
           <div class="space-y-2" data-testid="ai-recommendation">
-            <select id="classify-model" aria-label="AI model" class="block w-full min-w-0 rounded border border-gray-300 bg-white px-2 py-1.5 text-xs">
+            <select id="classify-model" aria-label="AI model" class="block w-full min-w-0 rounded-sm border border-gray-300 bg-white px-2 py-1.5 text-xs">
               {% ibbi_model_options %}
             </select>
             <button type="button" id="classify-btn" onclick="classifyCurrentImage()"
@@ -385,25 +385,25 @@
             <div class="space-y-3">
               <div>
                 <label class="block text-xs text-gray-600 mb-1">Institution</label>
-                <input type="text" name="image_institution" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500">
+                <input type="text" name="image_institution" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500">
               </div>
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs text-gray-600 mb-1">Photographer</label>
-                  <input type="text" name="photographer" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500">
+                  <input type="text" name="photographer" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500">
                 </div>
                 <div>
                   <label class="block text-xs text-gray-600 mb-1">Date Taken</label>
-                  <input type="date" name="image_date_taken" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500 text-gray-700">
+                  <input type="date" name="image_date_taken" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500 text-gray-700">
                 </div>
               </div>
               <div>
                 <label class="block text-xs text-gray-600 mb-1">Contact Email</label>
-                <input type="email" name="image_email" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500">
+                <input type="email" name="image_email" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500">
               </div>
               <div>
                 <label class="block text-xs text-gray-600 mb-1">Usage Statement (License)</label>
-                <input type="text" name="photo_usage_statement" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500">
+                <input type="text" name="photo_usage_statement" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500">
               </div>
             </div>
           </div>
@@ -412,16 +412,16 @@
             <label class="block text-xs font-semibold text-gray-700 mb-2 uppercase">Technical</label>
             <div class="space-y-3">
               <div class="flex items-center gap-2 mt-2">
-                <input type="checkbox" id="image_has_multiple_individuals" name="image_has_multiple_individuals" class="rounded text-gray-500 accent-gray-500 focus:ring-gray-500 w-4 h-4 cursor-pointer border-gray-300">
+                <input type="checkbox" id="image_has_multiple_individuals" name="image_has_multiple_individuals" class="rounded-sm text-gray-500 accent-gray-500 focus:ring-gray-500 w-4 h-4 cursor-pointer border-gray-300">
                 <label for="image_has_multiple_individuals" class="text-xs text-gray-700 font-medium cursor-pointer">Image has multiple individuals</label>
               </div>
               <div>
                 <label class="block text-xs text-gray-600 mb-1">Resolution (Pixels per mm)</label>
-                <input type="number" step="0.0001" name="resolution_in_ppmm" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500">
+                <input type="number" step="0.0001" name="resolution_in_ppmm" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500">
               </div>
               <div>
                 <label class="block text-xs text-gray-600 mb-1">Image Notes</label>
-                <textarea name="image_notes" rows="3" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500"></textarea>
+                <textarea name="image_notes" rows="3" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500"></textarea>
               </div>
             </div>
           </div>
@@ -1002,7 +1002,7 @@ function gameBadgeHtml(g) {
   const title = `Game proposal: ${where}. ${Math.round(g.support * 100)}% agreement from ${g.players} player(s)` +
     (g.trusted_rank ? `, expert-backed to ${g.trusted_rank}` : '');
   const cls = g.trusted_rank ? 'bg-green-50 text-green-800 border-green-200' : 'bg-gray-50 text-gray-600 border-gray-200';
-  return `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-semibold ${cls}" title="${title}" data-testid="game-badge">
+  return `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm border text-[10px] font-semibold ${cls}" title="${title}" data-testid="game-badge">
     <i class="fi ${g.trusted_rank ? 'fi-rr-shield-check' : 'fi-rr-gamepad'}"></i>${g.trusted_rank ? 'expert · ' + g.trusted_rank
       : (g.rank ? Math.round(g.support * 100) + '% · ' + g.rank : g.players + (g.players === 1 ? ' vote' : ' votes'))}</span>`;
 }
@@ -1018,15 +1018,15 @@ function renderImageList(imagesToRender, append = false) {
     btn.onclick = () => selectImage(img);
 
     btn.innerHTML = `
-      <div class="w-10 h-10 flex-shrink-0 rounded bg-gray-200 flex items-center justify-center overflow-hidden border border-gray-300">
+      <div class="w-10 h-10 shrink-0 rounded-sm bg-gray-200 flex items-center justify-center overflow-hidden border border-gray-300">
         ${img.thumbnail_url ? `<img src="${img.thumbnail_url}" class="w-full h-full object-cover">` : `<i class="fi fi-rr-picture text-gray-400"></i>`}
       </div>
       <div class="flex-1 min-w-0 text-left">
         <p class="text-sm font-medium text-gray-900 truncate" title="${img.image_asset_id}">${img.image_asset_id}</p>
         <p class="text-xs text-gray-500 mt-0.5 truncate flex items-center gap-1.5">${img.is_validated ? 'Validated' : 'Not Validated'} ${gameBadgeHtml(img.game)}</p>
       </div>
-      <div class="flex-shrink-0">
-        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${img.annotation_count === 0 ? 'bg-gray-100 text-gray-600 border border-gray-200' : (img.has_unvalidated_boxes ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-green-100 text-green-800 border border-green-200')} shadow-sm" title="ROIs">
+      <div class="shrink-0">
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${img.annotation_count === 0 ? 'bg-gray-100 text-gray-600 border border-gray-200' : (img.has_unvalidated_boxes ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-green-100 text-green-800 border border-green-200')} shadow-xs" title="ROIs">
           ${digitGroupsText(img.annotation_count)}
         </span>
       </div>
@@ -1457,7 +1457,7 @@ function gameTipsHtml(b) {
   if (!tips || !tips.length) return '';
   const items = tips.map(t => {
     const icon = t.kind === 'not' ? 'fi-rr-cross-circle text-gray-500' : (t.kind === 'expert' ? 'fi-rr-shield-check text-green-600' : 'fi-rr-users text-gray-500');
-    return `<li class="flex gap-2 text-xs text-gray-700 ${t.conflicts ? 'bg-amber-50 border border-amber-200 rounded px-2 py-1' : ''}" data-tip="${t.kind}">
+    return `<li class="flex gap-2 text-xs text-gray-700 ${t.conflicts ? 'bg-amber-50 border border-amber-200 rounded-sm px-2 py-1' : ''}" data-tip="${t.kind}">
       <i class="fi ${icon} mt-0.5"></i><span>${gameTipText(t)}</span></li>`;
   }).join('');
   return `
@@ -1543,7 +1543,7 @@ function gameAppliedHtml(b, i) {
   const locked = state.isLockedByOther ? 'disabled' : '';
   const action = a.current
     ? `<button type="button" onclick="revertGameLabel(${i})" ${locked} data-testid="revert-game-label"
-         class="mt-2 px-3 py-1.5 text-xs text-gray-700 border border-gray-300 rounded bg-white hover:bg-gray-100 disabled:opacity-50">
+         class="mt-2 px-3 py-1.5 text-xs text-gray-700 border border-gray-300 rounded-sm bg-white hover:bg-gray-100 disabled:opacity-50">
          <i class="fi fi-rr-undo"></i> Revert to the earlier label</button>`
     : `<div class="text-[10px] text-gray-500 mt-1">The label has been changed since.</div>`;
   return `
@@ -1585,8 +1585,8 @@ function gameProposalHtml(b, i) {
   }).join('<span class="text-gray-300 mx-1">›</span>');
 
   const trusted = p.trusted_rank
-    ? `<span class="bg-green-100 text-green-800 border border-green-200 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase">Expert-backed to ${escHtml(p.trusted_rank)}</span>`
-    : `<span class="bg-gray-100 text-gray-600 border border-gray-200 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase">Not expert-backed</span>`;
+    ? `<span class="bg-green-100 text-green-800 border border-green-200 px-2 py-0.5 rounded-sm text-[10px] font-bold tracking-wide uppercase">Expert-backed to ${escHtml(p.trusted_rank)}</span>`
+    : `<span class="bg-gray-100 text-gray-600 border border-gray-200 px-2 py-0.5 rounded-sm text-[10px] font-bold tracking-wide uppercase">Not expert-backed</span>`;
   let reviewed = '';
   if (p.review) {
     const newer = p.answers > p.review.answers ? ` · ${p.answers - p.review.answers} new answer(s) since` : '';
@@ -1666,11 +1666,11 @@ function renderRoiAccordions() {
 
     let badgeHtml = '';
     if (isSyncing) {
-        badgeHtml = `<span class="bg-gray-100 text-gray-500 border border-gray-200 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ml-2"><i class="fi fi-rr-spinner animate-spin"></i> Saving</span>`;
+        badgeHtml = `<span class="bg-gray-100 text-gray-500 border border-gray-200 px-2 py-0.5 rounded-sm text-[10px] font-bold tracking-wide uppercase ml-2"><i class="fi fi-rr-spinner animate-spin"></i> Saving</span>`;
     } else {
         badgeHtml = b.bbox_is_validated 
-            ? `<span class="bg-green-100 text-green-800 border border-green-200 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ml-2">Validated</span>`
-            : `<span class="bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ml-2">Unvalidated</span>`;
+            ? `<span class="bg-green-100 text-green-800 border border-green-200 px-2 py-0.5 rounded-sm text-[10px] font-bold tracking-wide uppercase ml-2">Validated</span>`
+            : `<span class="bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-sm text-[10px] font-bold tracking-wide uppercase ml-2">Unvalidated</span>`;
     }
 
     // 1. Determine the correct ID safely
@@ -1698,7 +1698,7 @@ function renderRoiAccordions() {
         
         <button type="button" onclick="selectBox(${i})" class="accordion-header w-full flex items-center justify-between p-3 text-left transition-colors hover:bg-gray-50">
           <div class="flex items-center gap-2">
-            <span class="bg-gray-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-sm">${i + 1}</span>
+            <span class="bg-gray-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-xs">${i + 1}</span>
             ${badgeHtml}
           </div>
           <i class="fi fi-rr-angle-small-down text-gray-400 accordion-icon transition-transform"></i>
@@ -1717,36 +1717,36 @@ function renderRoiAccordions() {
                 <input type="hidden" name="depicts_valid_name_id" id="hidden-tax-${i}" value="${b.depicts_valid_name_id || ''}">
                 
                 <input type="text" id="search-tax-${i}" placeholder="Search taxonomy..." value="${taxDisplay}" data-current-display="${taxDisplay}"
-                       class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500 bg-white" 
+                       class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500 bg-white" 
                        onfocus="openTaxonomyDropdown(${i})" oninput="filterTaxonomyDropdown(${i}, this.value)" autocomplete="off" ${disabledAttr}>
                 
-                <div id="tax-preview-${i}" class="text-[10px] text-gray-500 mt-1.5 min-h-[1rem] leading-tight">
+                <div id="tax-preview-${i}" class="text-[10px] text-gray-500 mt-1.5 min-h-4 leading-tight">
                   ${currentTaxon ? `<span class="font-semibold text-gray-700">${currentTaxon.subfamily || 'Unknown'} > ${currentTaxon.tribe || 'Unknown'} > ${currentTaxon.genus || ''} ${currentTaxon.species || ''}</span>` : 'No taxonomy ID linked.'}
                 </div>
 
-                <div id="dropdown-tax-${i}" class="hidden absolute top-full left-0 z-50 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-64 overflow-y-auto">
+                <div id="dropdown-tax-${i}" class="hidden absolute top-full left-0 z-50 w-full mt-1 bg-white border border-gray-200 rounded-sm shadow-lg max-h-64 overflow-y-auto">
                    </div>
               </div>
               <div class="grid grid-cols-2 gap-3 mt-3" data-testid="label-source">
                 <div>
                   <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-wide">Identification</label>
-                  <select name="label_source" class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                  <select name="label_source" class="w-full rounded-sm border border-gray-300 bg-white px-2 py-1.5 text-xs focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
                     ${LABEL_SOURCES.map(([v, l]) => `<option value="${v}" ${(b.label_source || '') === v ? 'selected' : ''}>${l}</option>`).join('')}
                   </select>
                 </div>
                 <div>
                   <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-wide">Source detail</label>
-                  <input type="text" name="label_source_detail" maxlength="255" placeholder="Who, or which database / URL" value="${escHtml(b.label_source_detail || '')}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-xs focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                  <input type="text" name="label_source_detail" maxlength="255" placeholder="Who, or which database / URL" value="${escHtml(b.label_source_detail || '')}" class="w-full rounded-sm border border-gray-300 px-2 py-1.5 text-xs focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
                 </div>
               </div>
               <div class="grid grid-cols-2 gap-3 mt-3">
                 <div>
                   <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-wide">Described Name ID</label>
-                  <input type="text" name="depicts_described_name_id" value="${b.depicts_described_name_id || ''}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-xs focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                  <input type="text" name="depicts_described_name_id" value="${b.depicts_described_name_id || ''}" class="w-full rounded-sm border border-gray-300 px-2 py-1.5 text-xs focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
                 </div>
                 <div>
                   <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-wide">Name Verbatim</label>
-                  <input type="text" name="depicts_name_verbatim" value="${b.depicts_name_verbatim || ''}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-xs focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                  <input type="text" name="depicts_name_verbatim" value="${b.depicts_name_verbatim || ''}" class="w-full rounded-sm border border-gray-300 px-2 py-1.5 text-xs focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
                 </div>
               </div>
             </div>
@@ -1758,44 +1758,44 @@ function renderRoiAccordions() {
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <label class="block text-xs text-gray-600 mb-1">Specimen ID</label>
-                    <input type="text" name="depicts_specimen" value="${b.depicts_specimen || ''}" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                    <input type="text" name="depicts_specimen" value="${b.depicts_specimen || ''}" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
                   </div>
                   <div>
                     <label class="block text-xs text-gray-600 mb-1" title="Your own ID for this record, e.g. a catalogue number or file name from your database. Optional; we keep it unchanged and include it in every download so you can link our records back to yours.">Alias ID</label>
-                    <input type="text" name="alias_id" value="${b.alias_id || ''}" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                    <input type="text" name="alias_id" value="${b.alias_id || ''}" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
                   </div>
                 </div>
                 <div class="grid grid-cols-3 gap-3">
                   <div>
                     <label class="block text-xs text-gray-600 mb-1">Aspect</label>
-                    <input type="text" name="aspect" value="${b.aspect || ''}" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                    <input type="text" name="aspect" value="${b.aspect || ''}" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
                   </div>
                   <div>
                     <label class="block text-xs text-gray-600 mb-1">Sex</label>
-                    <input type="text" name="specimen_sex" value="${b.specimen_sex || ''}" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                    <input type="text" name="specimen_sex" value="${b.specimen_sex || ''}" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
                   </div>
                   <div>
                     <label class="block text-xs text-gray-600 mb-1">Type Status</label>
-                    <input type="text" name="specimen_type_status" value="${b.specimen_type_status || ''}" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                    <input type="text" name="specimen_type_status" value="${b.specimen_type_status || ''}" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
                   </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <label class="block text-xs text-gray-600 mb-1">Country</label>
-                    <input type="text" name="collection_country" value="${b.collection_country || ''}" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                    <input type="text" name="collection_country" value="${b.collection_country || ''}" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
                   </div>
                   <div>
                     <label class="block text-xs text-gray-600 mb-1">State/Province</label>
-                    <input type="text" name="collection_stateProvince" value="${b.collection_stateProvince || ''}" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
+                    <input type="text" name="collection_stateProvince" value="${b.collection_stateProvince || ''}" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
                   </div>
                 </div>
                 <div>
                   <label class="block text-xs text-gray-600 mb-1">Specimen Notes</label>
-                  <textarea name="specimen_notes" rows="1" class="w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>${b.specimen_notes || ''}</textarea>
+                  <textarea name="specimen_notes" rows="1" class="w-full rounded-sm border border-gray-300 px-3 py-1.5 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>${b.specimen_notes || ''}</textarea>
                 </div>
                 <div>
                   <label class="block text-xs text-gray-600 mb-1">Update Notes</label>
-                  <textarea name="update_notes" rows="1" class="w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>${b.update_notes || ''}</textarea>
+                  <textarea name="update_notes" rows="1" class="w-full rounded-sm border border-gray-300 px-3 py-1.5 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>${b.update_notes || ''}</textarea>
                 </div>
               </div>
             </div>
@@ -1805,19 +1805,19 @@ function renderRoiAccordions() {
               <div class="grid grid-cols-4 gap-2">
                 <div>
                   <label class="block text-[9px] text-gray-500 uppercase font-semibold">X</label>
-                  <input type="number" step="0.0001" min="0" max="1" name="bbox_x" id="input-bbox-x-${i}" value="${b.bbox_x !== null ? Number(b.bbox_x).toFixed(4) : ''}" class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500" oninput="updateBboxFromInput(${i})" ${disabledAttr}>
+                  <input type="number" step="0.0001" min="0" max="1" name="bbox_x" id="input-bbox-x-${i}" value="${b.bbox_x !== null ? Number(b.bbox_x).toFixed(4) : ''}" class="w-full rounded-sm border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500" oninput="updateBboxFromInput(${i})" ${disabledAttr}>
                 </div>
                 <div>
                   <label class="block text-[9px] text-gray-500 uppercase font-semibold">Y</label>
-                  <input type="number" step="0.0001" min="0" max="1" name="bbox_y" id="input-bbox-y-${i}" value="${b.bbox_y !== null ? Number(b.bbox_y).toFixed(4) : ''}" class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500" oninput="updateBboxFromInput(${i})" ${disabledAttr}>
+                  <input type="number" step="0.0001" min="0" max="1" name="bbox_y" id="input-bbox-y-${i}" value="${b.bbox_y !== null ? Number(b.bbox_y).toFixed(4) : ''}" class="w-full rounded-sm border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500" oninput="updateBboxFromInput(${i})" ${disabledAttr}>
                 </div>
                 <div>
                   <label class="block text-[9px] text-gray-500 uppercase font-semibold">w</label>
-                  <input type="number" step="0.0001" min="0" max="1" name="bbox_width" id="input-bbox-w-${i}" value="${b.bbox_width !== null ? Number(b.bbox_width).toFixed(4) : ''}" class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500" oninput="updateBboxFromInput(${i})" ${disabledAttr}>
+                  <input type="number" step="0.0001" min="0" max="1" name="bbox_width" id="input-bbox-w-${i}" value="${b.bbox_width !== null ? Number(b.bbox_width).toFixed(4) : ''}" class="w-full rounded-sm border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500" oninput="updateBboxFromInput(${i})" ${disabledAttr}>
                 </div>
                 <div>
                   <label class="block text-[9px] text-gray-500 uppercase font-semibold">h</label>
-                  <input type="number" step="0.0001" min="0" max="1" name="bbox_height" id="input-bbox-h-${i}" value="${b.bbox_height !== null ? Number(b.bbox_height).toFixed(4) : ''}" class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500" oninput="updateBboxFromInput(${i})" ${disabledAttr}>
+                  <input type="number" step="0.0001" min="0" max="1" name="bbox_height" id="input-bbox-h-${i}" value="${b.bbox_height !== null ? Number(b.bbox_height).toFixed(4) : ''}" class="w-full rounded-sm border border-gray-300 px-2 py-1 text-xs focus:ring-1 focus:ring-gray-500" oninput="updateBboxFromInput(${i})" ${disabledAttr}>
                 </div>
               </div>
             </div>
@@ -1893,7 +1893,7 @@ function setLabelHistoryCount(el, n) {
 }
 
 // One line per event: "5 Oct 2026 · Xyleborus affinis · Expert ID · by jdoe". It wraps rather than truncates, so the
-// whole event stays readable on a phone (#537); break-words also splits a long user name or species epithet.
+// whole event stays readable on a phone (#537); wrap-break-word also splits a long user name or species epithet.
 function labelHistoryLine(e) {
   const when = new Date(e.at);
   const parts = [escHtml(when.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))];
@@ -1902,7 +1902,7 @@ function labelHistoryLine(e) {
   if (e.tier) parts.push(escHtml(e.tier));
   if (e.by) parts.push(`by ${escHtml(e.by)}`);
   const detail = e.detail ? ` <span class="text-gray-400">· ${escHtml(e.detail)}</span>` : '';
-  return `<li class="break-words" data-kind="${escHtml(e.kind)}" title="${escHtml(when.toLocaleString())}${e.detail ? ' · ' + escHtml(e.detail) : ''}">${parts.join(' · ')}${detail}</li>`;
+  return `<li class="wrap-break-word" data-kind="${escHtml(e.kind)}" title="${escHtml(when.toLocaleString())}${e.detail ? ' · ' + escHtml(e.detail) : ''}">${parts.join(' · ')}${detail}</li>`;
 }
 
 async function toggleLabelHistory(el) {

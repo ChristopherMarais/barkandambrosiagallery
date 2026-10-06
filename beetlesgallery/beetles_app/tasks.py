@@ -59,3 +59,9 @@ def warm_game_batches_task(player_id):
     player = get_user_model().objects.filter(pk=player_id).first()
     if player is not None:
         build(player)
+
+@shared_task(ignore_result=True)
+def grow_game_round_task(round_id):
+    """Grow a batch that was started small to its full size (game_grow.start_round)."""
+    from beetlesgallery.beetles_app.game_grow import grow_now
+    grow_now(round_id)

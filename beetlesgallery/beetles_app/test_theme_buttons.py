@@ -1,7 +1,7 @@
 """
 #499: the three button looks are written into the theme (static/css/input.css) and the pages use them:
 .btn-main is light grey like the old Search, .btn-primary dark grey like the annotation page's Save,
-.btn-secondary white with a grey outline. And the Tailwind config adds its own animations to Tailwind's
+.btn-secondary white with a grey outline. And the theme (in input.css) adds its own animations to Tailwind's
 instead of replacing them, so animate-spin (the loading spinners) is built.
 """
 import re
@@ -14,7 +14,7 @@ TEMPLATES = ROOT / "beetlesgallery" / "templates"
 
 # The agreed look of each class: its colours, and the text weight that goes with them.
 LOOKS = {
-    "btn-main": {"bg-gray-200", "border-gray-300", "text-gray-800", "font-bold", "tracking-wide", "shadow-sm",
+    "btn-main": {"bg-gray-200", "border-gray-300", "text-gray-800", "font-bold", "tracking-wide", "shadow-xs",
                  "hover:bg-gray-300", "hover:text-black"},
     "btn-primary": {"bg-gray-500", "border-gray-500", "text-white", "font-semibold", "hover:bg-gray-600",
                     "disabled:bg-gray-300"},
@@ -36,28 +36,6 @@ def opening_tag(html, marker):
     """The opening tag that holds ``marker``: one of its attributes, or the text right after it (">Search<")."""
     start = html.rfind("<", 0, html.index(marker))
     return html[start:html.index(">", start) + 1]
-
-
-def object_paths(source):
-    """Every key of a JavaScript object written as plain data (tailwind.config.js), as a path such as
-    ("theme", "extend", "animation"). Quoted text and comments are read as one token, so their braces don't count."""
-    tokens = re.findall(r"""//[^\n]*|/\*.*?\*/|"[^"]*"|'[^']*'|[{}\[\]:,]|[^\s{}\[\]:,'"]+""", source, re.S)
-    paths, stack, previous, key = set(), [], None, None
-    for token in tokens:
-        if token.startswith(("//", "/*")):
-            continue
-        if token == ":":
-            key = previous.strip("'\"")
-            paths.add(tuple(k for k in stack if k) + (key,))
-        elif token in ("{", "["):
-            stack.append(key)
-            key = None
-        elif token in ("}", "]"):
-            stack.pop()
-        elif token == ",":
-            key = None
-        previous = token
-    return paths
 
 
 class ThemeButtonTests(SimpleTestCase):
@@ -111,11 +89,11 @@ class ThemeButtonTests(SimpleTestCase):
         self.assertEqual(found, [], "use .btn-primary (or .btn-main / .btn-secondary) instead")
 
     def test_tailwind_keeps_its_own_animations(self):
-        paths = object_paths((ROOT / "tailwind.config.js").read_text(encoding="utf-8"))
-        for key in ("animation", "keyframes"):
-            with self.subTest(key=key):
-                self.assertNotIn(("theme", key), paths)   # would replace animate-spin, animate-pulse ...
-                self.assertIn(("theme", "extend", key), paths)
+        css = (ROOT / "beetlesgallery" / "static" / "css" / "input.css").read_text(encoding="utf-8")
+        theme = re.search(r"@theme\s*\{(.*?)\n\}", css, re.S).group(1)
+        self.assertNotIn("--animate-*: initial", theme)   # would drop animate-spin, animate-pulse ...
         for name in ("blob", "tilt", "linspin", "easespin", "left-spin", "right-spin", "ping-once", "rotating",
-                     "topbottom", "bottomtop", "spin-1.5", "spin-2", "spin-3"):
-            self.assertIn(("theme", "extend", "animation", name), paths)
+                     "topbottom", "bottomtop", r"spin-1\.5", "spin-2", "spin-3"):
+            self.assertIn(f"--animate-{name}:", theme)
+        built = (ROOT / "beetlesgallery" / "static" / "css" / "style.css").read_text(encoding="utf-8")
+        self.assertIn(".animate-spin {", built)   # the loading spinners

@@ -25,9 +25,9 @@ Streak: a day only counts once that day's goal is reached (#423)
 Players kept a streak by answering one beetle a day...
 ```
 
-- New Python or JS dependencies need `docker compose build` or `pixi run install-js`; see Getting Started.
+- New Python or JS dependencies need `docker compose build` or `docker compose run --rm web pixi run install-js`; see Getting Started.
 - New model fields need a migration; see [Migrations](#migrations) below.
-- Template changes with new Tailwind classes need `pixi run build-css`. Commit the rebuilt `style.css`.
+- Template changes with new Tailwind classes need `docker compose run --rm web pixi run build-css`. Commit the rebuilt `style.css`.
 
 ## 3. Push and open a pull request
 
@@ -51,7 +51,8 @@ CI must be green before review.
 - **Catching up with `main`:** merge `main` into your branch (`git fetch origin && git merge origin/main`). Don't rebase
   or force-push a branch someone else may have checked out.
 - **Conflicts in generated files:** resolve conflicts in `pixi.lock` or `package-lock.json` by re-running the tool
-  (`pixi install`, `npm install`), not by hand. For `style.css`, run `pixi run build-css` after the merge.
+  (`docker compose run --rm web pixi lock`, `docker compose run --rm web pixi run install-js`), not by hand. For
+  `style.css`, run `docker compose run --rm web pixi run build-css` after the merge.
 
 ## Migrations
 

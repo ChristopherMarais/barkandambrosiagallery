@@ -29,7 +29,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from . import game, game_board, game_checked, game_discoveries, game_feedback, game_queue, game_levels, game_rewards, game_scoring, game_tips, game_trust
 from . import game_answer_review, game_applied, game_crops
-from . import game_grid_ladder, game_warm
+from . import game_grid_ladder, game_grow, game_warm
 from . import game_taxa as taxa_tree
 from .areas import ANNOTATE, BOXES, VALIDATE, area_required, has_area
 from .models import Beetles, GameAnswer, GameReport, GameRound, ImageLock, LabelReview, PlayerScore, RetroCredit, Taxon
@@ -712,7 +712,7 @@ def _item_payload(rnd, index):
         "index": index,
         "mode": _item_mode(rnd, index),
         "position": rnd.answers.count() + 1,
-        "total": len(rnd.items),
+        "total": game_grow.planned_size(rnd),
         "images": _item_images(rnd, index, extras=True),
         "prefetch": [],
     }
@@ -737,7 +737,9 @@ def _item_payload(rnd, index):
     # large ones, and the small ones of the beetle after it (#542). From the middle of a batch on, the next batch is
     # built on the worker; on its last item, if it isn't there yet, it is built now so the batch can end without a
     # wait, and its first beetle comes next (#494).
-    if rnd.finished_at is None and 2 * index >= len(rnd.items) - 1:
+    # A batch still growing (game_grow) gets its next beetles first; the look-ahead (game_upcoming) waits for them.
+    growing = game_grow.wanted(rnd)
+    if rnd.finished_at is None and not growing and 2 * index >= len(rnd.items) - 1:
         build_ahead_later(rnd)
     coming = []
     following = _next_index(rnd, index + 1)
@@ -746,8 +748,8 @@ def _item_payload(rnd, index):
         after = _next_index(rnd, following + 1)
         if after is not None:
             coming.append((rnd, after))
-    elif rnd.finished_at is None:
-        ahead = _batch_ahead(rnd) or (None if _ahead_on_the_worker(rnd) else _build_ahead(rnd, index))
+    elif rnd.finished_at is None and not growing:
+        ahead = _batch_ahead(rnd) or (None if _ahead_on_the_worker(rnd) else _build_ahead_once(rnd, index))
         first = _next_index(ahead, 0) if ahead else None
         if first is not None:
             coming.append((ahead, first))
@@ -768,13 +770,15 @@ def _batch_ahead(rnd):
             .exclude(id=rnd.id).order_by("started_at").first())
 
 
-def _build_ahead(rnd, index):
+def _build_ahead(rnd, index, whole=False):
     """
     Build the batch that follows ``rnd`` while its last item (``index``) is still being answered, so the feed can
     prefetch its first beetle and the batch can end without a wait. Beetles still to come in ``rnd`` are left out of
-    it. None when there is nothing new to build.
+    it. None when there is nothing new to build. Built in a request, it starts small and grows (game_grow); ``whole``
+    (the worker) builds all of it.
     """
-    fresh = game.start_round(rnd.player, rnd.mode, fresh_only=True)
+    start = game.start_round if whole else game_grow.start_round
+    fresh = start(rnd.player, rnd.mode, fresh_only=True)
     if fresh is None:
         return None
     # built from the middle of a batch (#542): the rest of it, and every other photo of those specimens, will have
@@ -796,6 +800,20 @@ def _build_ahead(rnd, index):
 
 AHEAD_LOCK = "game:ahead-building:{}"   # a batch's next batch is queued for, or being built on, the worker
 AHEAD_LOCK_SECONDS = 120                 # after which the feed builds it itself (a worker that's down or far behind)
+AHEAD_RUNNING = "game:ahead-running:{}"  # a batch's next batch is being built right now, here or on the worker
+
+
+def _build_ahead_once(rnd, index, whole=False):
+    """
+    _build_ahead, unless a batch built ahead is there already or being built elsewhere this moment (the worker, or the
+    feed's look-ahead in another request), so two are never built for one batch. None when it isn't built here.
+    """
+    if not cache.add(AHEAD_RUNNING.format(rnd.id), 1, AHEAD_LOCK_SECONDS):
+        return None
+    try:
+        return _batch_ahead(rnd) or _build_ahead(rnd, index, whole=whole)
+    finally:
+        cache.delete(AHEAD_RUNNING.format(rnd.id))
 
 
 def _ahead_on_the_worker(rnd):
@@ -836,7 +854,7 @@ def build_ahead_now(round_id):
         index = _next_index(rnd)
         if index is None:
             return None
-        return _build_ahead(rnd, index)
+        return _build_ahead_once(rnd, index, whole=True)
     finally:
         cache.delete(AHEAD_LOCK.format(round_id))
 
@@ -865,7 +883,7 @@ def _next_batch(rnd):
             ahead.notice = cache.get(AHEAD_NOTICE.format(ahead.id)) or ""
             return ahead, first
         ahead.delete()   # its beetles have gone since
-    fresh = game.start_round(rnd.player, rnd.mode, fresh_only=True)
+    fresh = game_grow.start_round(rnd.player, rnd.mode, fresh_only=True)   # its first beetles now, the rest later
     return fresh, (_next_index(fresh, 0) if fresh else None)
 
 
@@ -960,7 +978,8 @@ def game_start(request):
             _drop_ahead(rnd)
             game.finish_round_later(rnd)
         # after a switch of game, the batch the worker built for it while they played (game_warm), if there is one
-        rnd = (fresh and game_warm.take(request.user, mode)) or game.start_round(request.user, mode)
+        # else a new one: its first beetles now, the rest on the worker or as the feed goes (game_grow, #575)
+        rnd = (fresh and game_warm.take(request.user, mode)) or game_grow.start_round(request.user, mode)
         index = _next_index(rnd, 0) if rnd else None
     if index is None:   # nothing in any of their games: say why (no beetles yet, all seen, their focus, ...)
         return JsonResponse({"error": game.nothing_to_play(request.user, mode)["text"]}, status=404)
@@ -1052,6 +1071,52 @@ def game_warm_others(request):
     """
     mode = (_json_body(request) or {}).get("mode")
     return JsonResponse({"queued": game_warm.warm_later(request.user, mode)})
+
+
+UPCOMING = 3   # beetles the feed loads ahead of the one on screen
+
+
+@login_required
+@require_GET
+@_timed
+def game_upcoming(request, round_id):
+    """
+    The feed's look-ahead (#575), asked for while the player is busy with the beetle at ``?index=``: the crops of the
+    next UPCOMING beetles, across the end of the batch into the next one, so the browser has them loaded and decoded
+    before Next. Only their photos, never their names: what is shown next still comes with the answer, so a change on
+    the way (a grid built again at a new step, a new level) can't show anything stale. Where the worker hasn't caught
+    up, this is also where the work for those beetles gets done, off the player's path: a batch started small grows a
+    few beetles, and near its end the next batch is built.
+    """
+    rnd = get_object_or_404(GameRound, id=round_id, player=request.user)
+    try:
+        index = int(request.GET.get("index", ""))
+    except ValueError:
+        return JsonResponse({"error": "Which beetle?"}, status=400)
+    if rnd.finished_at is not None or not 0 <= index < len(rnd.items):
+        return JsonResponse({"items": []})
+    if game_grow.wanted(rnd) and len(rnd.items) - index - 1 < UPCOMING:
+        game_grow.grow(rnd, game_grow.STEP)
+    coming, at = [], index
+    while len(coming) < UPCOMING:
+        at = _next_index(rnd, at + 1)
+        if at is None:
+            break
+        coming.append((rnd, at))
+    if len(coming) < UPCOMING and not game_grow.wanted(rnd):
+        ahead = _batch_ahead(rnd) or _build_ahead_once(rnd, index)
+        at = -1
+        while ahead is not None and len(coming) < UPCOMING:
+            at = _next_index(ahead, at + 1)
+            if at is None:
+                break
+            coming.append((ahead, at))
+    items = []
+    for batch, at in coming:
+        images = _item_images(batch, at)
+        items.append({"round": str(batch.id), "index": at, "small": [im["small"] for im in images],
+                      "large": [im["large"] for im in images]})
+    return JsonResponse({"items": items})
 
 
 def _chip(player):
@@ -1230,11 +1295,15 @@ def game_answer(request, round_id):
         if opened - set(game_levels.games(before["perks"])):
             _drop_ahead(rnd)
             game.finish_round_later(rnd)
-            fresh = game.start_round(request.user, rnd.mode, fresh_only=True)
+            fresh = game_grow.start_round(request.user, rnd.mode, fresh_only=True)
             first = _next_index(fresh, 0) if fresh else None
             if first is not None:
                 return JsonResponse(dict(extra, round=str(fresh.id), item=_item_payload(fresh, first), notice=fresh.notice))
     nxt = _next_index(rnd, index + 1)
+    if nxt is None and game_grow.wanted(rnd):
+        # a batch started small (#575) that neither the worker nor the look-ahead has grown yet: its next beetles now
+        game_grow.grow_or_wait(rnd, game_grow.FIRST)
+        nxt = _next_index(rnd, index + 1)
     if nxt is None:
         # The feed carries straight on into a new batch (usually built ahead), and the work of closing this one is
         # done on the worker. It only ends when there is nothing new left to show.
@@ -1400,7 +1469,9 @@ def game_applied_revert(request, roi_id):
     try:
         before = game_applied.revert(roi, request.user)
     except game_applied.RevertError as e:
-        return JsonResponse({"error": str(e)}, status=409)
+        # A fixed text per reason, never the exception itself (CodeQL py/stack-trace-exposure)
+        return JsonResponse({"error": game_applied.REVERT_MESSAGES.get(e.code, "This label cannot be reverted.")},
+                            status=409)
     game_queue.forget()
     return JsonResponse({"depicts_valid_name_id": before["depicts_valid_name_id"]})
 

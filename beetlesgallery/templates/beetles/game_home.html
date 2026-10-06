@@ -57,10 +57,10 @@
 
   <!-- Each opens History for those days (#574) -->
   <div class="grid grid-cols-2 gap-3 mb-5">
-    <a href="{% url 'game_history' %}?day=streak" class="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex items-center gap-2 text-sm hover:border-gray-300 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900" data-testid="streak-card">
+    <a href="{% url 'game_history' %}?day=streak" class="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex items-center gap-2 text-sm hover:border-gray-300 hover:bg-gray-100 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900" data-testid="streak-card">
       {% include "beetles/includes/game_streak.html" with days=rewards.streak alive=rewards.goal_met %}
     </a>
-    <a href="{% url 'game_history' %}?day=today" class="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex items-center gap-2 hover:border-gray-300 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900" title="Your daily goal adapts to how much you play, like a step goal: it rises when you beat it and eases when you don't (never below {{ goal_floor }})." data-testid="daily-goal">
+    <a href="{% url 'game_history' %}?day=today" class="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex items-center gap-2 hover:border-gray-300 hover:bg-gray-100 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900" title="Your daily goal adapts to how much you play, like a step goal: it rises when you beat it and eases when you don't (never below {{ goal_floor }})." data-testid="daily-goal">
       <i class="fi fi-rr-bullseye-arrow {% if rewards.goal_met %}text-green-600{% else %}text-gray-400{% endif %}"></i>
       <span class="text-sm font-semibold text-gray-900">{{ rewards.today }}/{{ rewards.goal }} today</span>
     </a>
@@ -131,7 +131,7 @@
   {% include "beetles/includes/game_discussions.html" %}
 
   {% if discoveries %}
-  <div id="discovery" class="fixed inset-0 z-[96] flex items-center justify-center p-4 bg-black/40" role="dialog" aria-modal="true" aria-labelledby="discovery-title" data-testid="discovery-popup">
+  <div id="discovery" class="fixed inset-0 z-96 flex items-center justify-center p-4 bg-black/40" role="dialog" aria-modal="true" aria-labelledby="discovery-title" data-testid="discovery-popup">
     <div class="w-full max-w-sm p-6 bg-white rounded-2xl shadow-xl text-center">
       <i class="fi fi-rr-sparkles text-4xl text-amber-600"></i>
       <h2 id="discovery-title" class="mt-2 text-xl font-bold text-gray-900">You found a new species!</h2>

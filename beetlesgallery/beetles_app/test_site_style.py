@@ -17,7 +17,8 @@ class HouseStyleTests(SimpleTestCase):
         built = (CSS / "style.css").read_text()
         self.assertIn(".btn-main", built)
         self.assertIn('input[type="checkbox"], input[type="radio"], input[type="range"]', built)
-        self.assertIn("accent-color: #4b5563", built)   # gray-600, not the browser's blue
+        self.assertIn("accent-color: var(--color-gray-600)", built)   # gray-600, not the browser's blue
+        self.assertIn("--color-gray-600: #4b5563", built)
 
     def test_the_main_buttons_share_one_style_and_none_is_black(self):
         for page, marker in (("image_browser.html", ">Search</button>"), ("tool_classify.html", 'data-testid="classify-button"'),

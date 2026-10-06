@@ -21,7 +21,7 @@ Thanks for helping. This page is the checklist; the other pages have the details
 ## 3. Follow the house style
 
 - **Look:** grey, white and black. Use colour only where it carries meaning (an error, a level, a medal). Use the
-  Tailwind classes already used nearby, and rebuild the CSS (`pixi run build-css`) when you add new ones.
+  Tailwind classes already used nearby, and rebuild the CSS (`docker compose run --rm web pixi run build-css`) when you add new ones.
 - **Words:** player-facing and user-facing text is short and plain. One sentence beats a paragraph; a label beats a
   sentence.
 - **Mobile:** every page has to work on a phone. Check at 375 px wide.
