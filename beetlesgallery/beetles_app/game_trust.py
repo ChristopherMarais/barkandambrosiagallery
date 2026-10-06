@@ -2,7 +2,8 @@
 Player expertise and trusted game labels.
 
 Expertise is measured per rank *within a branch* of the taxonomy, from a player's scored
-"Name That Beetle" answers (validated ROIs they didn't know were being scored):
+"Name That Beetle" answers and Find Them All grids, which name a group to find (#543), on validated ROIs they didn't
+know were being scored:
 
     species   within a genus        e.g. species ID in Xyleborus
     genus     within a tribe        e.g. genus ID in Xyleborini
@@ -17,8 +18,8 @@ least GAME_TRUST_MIN_ACCURACY of those answers are right. So a genus with two sp
 one with forty, a rare genus doesn't stop anyone becoming a tribe expert (#381), and nobody is an expert on a taxon
 most of whose members they have never seen.
 
-A *Distinction expert* meets the same rule on telling a taxon's members apart in Similarity, Odd One Out and Select
-all (apart_counts) instead of naming them (#498): someone who can tell the beetles apart without knowing their names.
+A *Distinction expert* meets the same rule on telling a taxon's members apart in Similarity and Odd One Out
+(apart_counts) instead of naming them (#498): someone who can tell the beetles apart without knowing their names.
 It is worked out when shown (the expertise tree, the profile), never stored, and unlocks nothing: trust, judging and
 the labels written without review only ever look at naming.
 
@@ -40,8 +41,8 @@ from django.db.models import Count, Q
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
 
-from .game import COMPLETE_TAXON, RANKS, check_rois, game_setting
-from .models import GameAnswer, PlayerSkill, Taxon
+from .game import COMPLETE_TAXON, RANKS, check_rois, game_setting, score_select
+from .models import Beetles, GameAnswer, PlayerSkill, Taxon
 
 # The rank whose value names the branch a skill is measured in.
 BRANCH_OF = {"subfamily": None, "tribe": "subfamily", "genus": "tribe", "species": "genus"}
@@ -147,20 +148,37 @@ def child_at(rank, genus, species, value):
 
 def skill_counts(player):
     """
-    {(rank, branch_lower): [correct, judged, branch_display, {child: answers}]} from scored classify answers, where
-    a child is the beetle's taxon at that rank (its genus, for genus calls within a tribe). Each validated ROI
-    counts once per rank (the first answer), so replayed items can't pad a record.
+    {(rank, branch_lower): [correct, judged, branch_display, {child: answers}]} from scored Identification answers and
+    Find Them All grids (#543), where a child is the beetle's taxon at that rank (its genus, for genus calls within a
+    tribe). Each validated ROI counts once per rank, in its first answer in either game, so replayed items can't pad a
+    record.
     """
     stats = {}
     seen = set()
+
+    def judge(rank, branch, ok, child):
+        row = stats.setdefault((rank, branch.lower()), [0, 0, branch, defaultdict(int)])
+        row[0] += int(ok)
+        row[1] += 1
+        row[3][child] += 1
+
+    scored = dict(player=player, is_retry=False, skipped=False, score_hold=False)
     answers = (
-        GameAnswer.objects.filter(Q(is_check=True) | Q(validated_later=True), player=player, mode="classify",
-                                  is_retry=False, skipped=False, score_hold=False)
-        .order_by("answered_at")
-        .values("roi_id", "ref_subfamily", "ref_tribe", "ref_genus", "ref_species",
+        GameAnswer.objects.filter(Q(is_check=True) | Q(validated_later=True), mode="classify", **scored)
+        .values("answered_at", "roi_id", "ref_subfamily", "ref_tribe", "ref_genus", "ref_species",
                 *[f"correct_{r}" for r in RANKS])
     )
-    for a in answers:
+    grids = list(GameAnswer.objects.filter(mode="select", grid_rank__in=RANKS, **scored).only(
+        "answered_at", "tiles", "picks", "flagged", "grid_rank", "grid_group"))
+    tiles = grid_beetles(grids)
+    for a in sorted([*answers, *grids], key=lambda a: a["answered_at"] if isinstance(a, dict) else a.answered_at):
+        if isinstance(a, GameAnswer):
+            for rank, branch, ok, child, roi_ids in grid_claims(a, tiles):
+                fresh = [i for i in roi_ids if (rank, i) not in seen]
+                seen.update((rank, i) for i in fresh)
+                if fresh:
+                    judge(rank, branch, all(ok[i] for i in fresh), child)
+            continue
         labels = {"subfamily": a["ref_subfamily"], "tribe": a["ref_tribe"], "genus": a["ref_genus"],
                   "species": a["ref_species"]}
         for r in RANKS:
@@ -171,11 +189,42 @@ def skill_counts(player):
             branch = branch_for(r, labels)
             if BRANCH_OF[r] and not branch:
                 continue
-            row = stats.setdefault((r, branch.lower()), [0, 0, branch, defaultdict(int)])
-            row[0] += int(ok)
-            row[1] += 1
-            row[3][child_at(r, a["ref_genus"], a["ref_species"], labels[r])] += 1
+            judge(r, branch, ok, child_at(r, a["ref_genus"], a["ref_species"], labels[r]))
     return stats
+
+
+def grid_beetles(grids):
+    """{roi_id: Beetles} for every beetle shown in these grid answers, in one query."""
+    ids = {str(t) for g in grids for t in g.tiles or []}
+    return {str(k): v for k, v in Beetles.objects.select_related("taxon").in_bulk(list(ids)).items()} if ids else {}
+
+
+def grid_claims(answer, beetles):
+    """
+    What a Find Them All grid says about naming (#543): tapping a beetle claims it is of the named group, so a member
+    tapped is a right claim at the grid's rank, a non-member tapped a wrong one, and a member left out a wrong one too
+    (it wasn't recognised). Only validated beetles count, and a photo the player flagged counts for nothing.
+    Claims are grouped by the beetle's own taxon, so a grid counts at most once per taxon it showed, whatever its size:
+    [(rank, branch_display, {roi_id: ok}, child, [roi_id, ...])], ``ok`` per beetle so beetles already judged can be
+    left out.
+    """
+    rank = answer.grid_rank
+    shown = [beetles.get(str(t)) for t in answer.tiles or []]
+    states = score_select(shown, answer.picks, rank, answer.grid_group, answer.flagged)["tiles"]
+    claims = {}
+    for roi, state in zip(shown, states):
+        if state not in ("right", "wrong", "missed"):
+            continue
+        t = roi.taxon
+        labels = {r: getattr(t, r) or "" for r in RANKS}
+        branch = branch_for(rank, labels)
+        if BRANCH_OF[rank] and not branch:
+            continue
+        child = child_at(rank, t.genus, t.species, labels[rank])
+        ok, ids = claims.setdefault((branch.lower(), child), (branch, {}, []))[1:]
+        ok[roi.id] = state == "right"
+        ids.append(roi.id)
+    return [(rank, branch, ok, child, ids) for (_, child), (branch, ok, ids) in claims.items()]
 
 
 def children_available():
@@ -425,6 +474,10 @@ def player_report(player):
         claimed["tribe"].add(subfamily.lower())
         claimed["genus"].add(tribe.lower())
         claimed["species"].add(genus.lower())
+    for rank, group in GameAnswer.objects.filter(player=player, mode="select", skipped=False).values_list(
+            "grid_rank", "grid_group"):   # a Find Them All grid names its group's branch to the player (#543)
+        if BRANCH_OF.get(rank) and (group or {}).get(BRANCH_OF[rank]):
+            claimed[rank].add(group[BRANCH_OF[rank]].lower())
     min_shown = game_setting("GAME_REPORT_MIN_JUDGED", 5)
     progressing = sorted(
         (s for s in skills if not s.proven and s.judged >= min_shown and s.branch.lower() in claimed[s.rank]),
@@ -584,13 +637,12 @@ def apart_status(ok, n, cover, min_shown):
 def apart_counts(player):
     """
     {(rank, branch_lower): [correct, judged, branch_display, {child: answers}]}, shaped like skill_counts: how well
-    the player tells a taxon's children apart, from Similarity, Odd One Out and Select all answers judged against
-    validated beetles (#381). ("genus", "xyleborini") is telling Xyleborini's genera apart. A Similarity answer
-    judges each rank whose parent the two beetles share (both in Xyleborini: did they say rightly whether the genus
-    is the same?), and shows both beetles' children. A grid judges its own rank within its group's parent (Odd One
-    Out a pick outside the group, Select all a perfect grid), and shows the group's child, and in Odd One Out the odd
-    one's when it has the same parent. Coverage counts the judged answers that showed each child, as naming counts
-    the images named.
+    the player tells a taxon's children apart, from Similarity and Odd One Out answers judged against validated
+    beetles (#381); Find Them All counts as naming instead (skill_counts, #543). ("genus", "xyleborini") is telling
+    Xyleborini's genera apart. A Similarity answer judges each rank whose parent the two beetles share (both in Xyleborini: did they say rightly whether the genus
+    is the same?), and shows both beetles' children. An Odd One Out grid judges its own rank within its group's parent
+    (a pick outside the group), and shows the group's child, and the odd one's when it has the same parent. Coverage
+    counts the judged answers that showed each child, as naming counts the images named.
     """
     out = {}
 
@@ -616,15 +668,14 @@ def apart_counts(player):
             if a[f"correct_{r}"] is not None:
                 judge(r, branch, a[f"correct_{r}"], [child(a, "roi", r), child(a, "roi_b", r)])
     odd_one = [f"roi_b__taxon__{r}" for r in RANKS]
-    for a in answers.filter(mode__in=["odd", "select"], grid_rank__in=RANKS).values(
-            "mode", "grid_rank", "grid_group", *odd_one, *correct):
+    for a in answers.filter(mode="odd", grid_rank__in=RANKS).values("grid_rank", "grid_group", *odd_one, *correct):
         r, ok = a["grid_rank"], a[f"correct_{a['grid_rank']}"]
         parent, group = BRANCH_OF[r], a["grid_group"] or {}
         branch = (group.get(parent) or "") if parent else ""
         if ok is None or (parent and not branch):
             continue
         shown = [(group.get(r) or "").lower()]   # species groups are "Genus species", as child_at keys them
-        if a["mode"] == "odd" and (not parent or (a[f"roi_b__taxon__{parent}"] or "").lower() == branch.lower()):
+        if not parent or (a[f"roi_b__taxon__{parent}"] or "").lower() == branch.lower():
             shown.append(child(a, "roi_b", r))
         judge(r, branch, ok, shown)
     return out
@@ -654,7 +705,7 @@ def expertise_tree(player):
     """
     The taxonomy as subfamily > tribe > genus, each branch with how well the player identifies what is inside it:
     a subfamily shows their tribe calls within it, a tribe their genus calls, a genus their species calls; and how
-    well they tell those apart in Similarity, Odd One Out and Select all (apart_counts). ``status`` is expert for an
+    well they tell those apart in Similarity and Odd One Out (apart_counts). ``status`` is expert for an
     Identification expert, ``apart_status`` for a Distinction expert. Branches they have not played are counted but
     not listed one by one.
     """

@@ -1,8 +1,8 @@
 """
 Two kinds of expert (#498). An Identification expert names a taxon's beetles: proven on checked beetles across most
 of its members, their names can go into the database without review, and their dot on the expertise tree glows gold.
-A Distinction expert tells the taxon's beetles apart just as reliably (the same rule on Similarity, Odd One Out and
-Select all answers), may not know their names, and unlocks nothing: a plain dark-gold square. Also: a photo must show
+A Distinction expert tells the taxon's beetles apart just as reliably (the same rule on Similarity and Odd One Out
+answers; Select all counts as naming since #543), may not know their names, and unlocks nothing: a plain dark-gold square. Also: a photo must show
 a good part of the beetle, so one of just a leg is reported, not named.
 """
 import html
@@ -86,10 +86,11 @@ class DistinctionExpertTests(ExpertCase):
 
         grid("odd", True, odd_one=self.roi(xylosandrus))   # a near relative: another genus of Xyleborini
         grid("odd", True, odd_one=self.roi(self.t_plat))   # from another subfamily: only the group is in Xyleborini
-        grid("select", False)
+        grid("odd", False, odd_one=self.roi(xylosandrus))   # picked one of the rest
+        grid("select", False)                               # Find Them All counts as naming instead (#543)
         correct, judged, _, shown = apart_counts(self.p)[("genus", "xyleborini")]
         self.assertEqual((correct, judged), (2, 3))
-        self.assertEqual(dict(shown), {"xyleborus": 3, "xylosandrus": 1})
+        self.assertEqual(dict(shown), {"xyleborus": 3, "xylosandrus": 2})
 
     def test_it_is_worked_out_when_shown_and_never_stored(self):
         self.tell_apart(self.p, 12)
@@ -169,8 +170,9 @@ class TreeTests(ExpertCase):
 
     def test_the_legend_explains_both_markers(self):
         text = text_of(self.page)
-        self.assertIn("Identification: naming in Identification. Gold and glowing: Identification expert.", text)
-        self.assertIn("Distinction: telling apart in Similarity, Imposter Picker and Find Them All. Gold: Distinction "
+        self.assertIn("Identification: naming in Identification and Find Them All. Gold and glowing: Identification "
+                      "expert.", text)   # Find Them All counts as naming (#543)
+        self.assertIn("Distinction: telling apart in Similarity and Imposter Picker. Gold: Distinction "
                       "expert; it unlocks nothing.", text)
         self.assertNotIn("Two dots", self.page)
         self.assertIn('data-testid="legend-identification"><span class="tree-dot mark-expert', self.page)

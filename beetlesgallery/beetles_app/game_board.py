@@ -18,19 +18,23 @@ from . import game, game_levels, game_rewards, game_trust
 from .models import AnswerPoints, GameAnswer, PlayerScore, PlayerSkill, SpeciesDiscovery
 
 SORTS = {"score": "Score", "identification": "Identification accuracy", "similarity": "Similarity accuracy",
-         "viewed": "Beetles seen"}
+         "odd": "Imposter Picker accuracy", "select": "Find Them All accuracy", "viewed": "Beetles seen"}
 PERIODS = {"week": "This week", "month": "This month", "year": "This year", "all": "All time"}
 GAMES = ("classify", "pair", "odd", "select")   # Identification, Similarity, Odd One Out, Select all
+# each game's accuracy column on the board, and the sort that ranks by it (#543)
+ACCURACY_COLUMNS = {"classify": ("id_accuracy", "identification"), "pair": ("sim_accuracy", "similarity"),
+                    "odd": ("odd_accuracy", "odd"), "select": ("select_accuracy", "select")}
 # a branch of the tree -> the skill that measures it (see game_trust.BRANCH_OF)
 BRANCH_SKILL = {"subfamily": "tribe", "tribe": "genus", "genus": "species"}
 
 
 def mode_stats(player_ids=None, since=None):
     """
-    Identification and Similarity kept apart: {player_id: {"classify": {...}, "pair": {...}}}, each with
+    Each game kept apart: {player_id: {"classify": {...}, "pair": {...}, "odd": {...}, "select": {...}}}, each with
     ``accuracy`` (None until GAME_MIN_JUDGED_FOR_ACCURACY ranks were judged), ``judged``, ``correct`` and ``points``.
     Accuracy is counted as for the overall rating (game_scoring.ratings): the first time a player saw a validated
-    beetle, rank by rank. With ``since``, only answers given from then on (a leaderboard period).
+    beetle, rank by rank, and a Find Them All grid once, right when perfect. With ``since``, only answers given from
+    then on (a leaderboard period).
     """
     from collections import defaultdict
 
@@ -68,7 +72,7 @@ def mode_stats(player_ids=None, since=None):
 
 
 def _accuracy(score, games, since, min_judged):
-    """All time: the overall rating's accuracy. For a period: both games' judged ranks in that period together."""
+    """All time: the overall rating's accuracy. For a period: every game's judged ranks in that period together."""
     if since is None:
         return score.accuracy if score.judged >= min_judged else None
     correct = sum(g["correct"] for g in games.values())
@@ -139,8 +143,8 @@ def last_week_top(top=3, now=None):
 
 def board(sort="score", period="week", q="", limit=50):
     """
-    Rows: position, player_id, username, level, level_name, score, accuracy, id_accuracy, sim_accuracy, viewed,
-    is_expert, discoveries. Sort by score, identification or similarity accuracy, or beetles seen.
+    Rows: position, player_id, username, level, level_name, score, accuracy, id_accuracy, sim_accuracy, odd_accuracy,
+    select_accuracy, viewed, is_expert, discoveries. Sort by score, one game's accuracy, or beetles seen.
     Everything but the level and the expert mark follows the period: points, beetles seen, accuracy and finds.
     """
     scores = {s.player_id: s for s in PlayerScore.objects.all()}
@@ -173,10 +177,11 @@ def board(sort="score", period="week", q="", limit=50):
             "player_id": pid, "username": names[pid], "level": level["level"], "level_name": level["name"],
             "score": round(score), "accuracy": _accuracy(s, by_game[pid], since, min_judged),
             "viewed": viewed, "is_expert": pid in experts, "discoveries": finds.get(pid, 0),
-            "id_accuracy": by_game[pid]["classify"]["accuracy"], "sim_accuracy": by_game[pid]["pair"]["accuracy"],
+            **{column: by_game[pid].get(mode, {}).get("accuracy") for mode, (column, _) in ACCURACY_COLUMNS.items()},
         })
-    if sort in ("identification", "similarity", "accuracy"):
-        key = "sim_accuracy" if sort == "similarity" else "id_accuracy"
+    by_sort = {sort_key: column for column, sort_key in ACCURACY_COLUMNS.values()}
+    if sort in by_sort or sort == "accuracy":
+        key = by_sort.get(sort, "id_accuracy")
         rows.sort(key=lambda r: (r[key] is None, -(r[key] or 0), -r["score"]))
     elif sort == "viewed":
         rows.sort(key=lambda r: (-r["viewed"], -r["score"]))
