@@ -5,7 +5,7 @@ next to the live site. It has its own database, filled from a scrubbed copy of p
 merged work on real data before a release.
 
 - **Sign in:** with the shared account **stagedtesting** / **gallerystaging**. Every page needs it, and no other
-  account can sign in. Every page has a black **STAGING** bar.
+  account can sign in. Every page has a red **STAGING** bar.
 - **Safe to try anything:** uploads, edits, deletions, game rounds and approvals stay on staging. Images are
   production's, seen through a copy-on-write layer: what staging changes never reaches production's files. No email
   is ever sent; it goes to the log.
