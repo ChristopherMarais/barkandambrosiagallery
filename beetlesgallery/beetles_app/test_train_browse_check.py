@@ -28,3 +28,14 @@ class GamePageTests(GameCase):
         self.assertIn("cell(opinion(r.players, true, r.rank))", page)
         self.assertIn("cell(opinion(r.ai, false, r.rank))", page)
 
+
+
+class AnnotatePageTests(GameCase):
+    """The annotation page's subtitle said "Please select an image to begin annotating" with an image open."""
+
+    def test_the_subtitle_is_cleared_when_an_image_opens(self):
+        self.user.is_superuser = True
+        self.user.save()
+        self.client.force_login(self.user)
+        page = self.client.get(reverse("tool_annotate")).content.decode()
+        self.assertIn("document.getElementById('canvas-subtitle').textContent = '';", page)

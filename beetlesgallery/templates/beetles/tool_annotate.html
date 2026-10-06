@@ -1114,6 +1114,7 @@ async function selectImage(img) {
   if (phoneLayout.matches) mobileTab('center');   // on a phone, choosing an image opens it
 
   document.getElementById('canvas-title').textContent = img.image_asset_id;
+  document.getElementById('canvas-subtitle').textContent = '';   // "Select an image" no longer applies
   document.getElementById('canvas-empty').classList.add('hidden');
   document.getElementById('canvas-wrapper').classList.add('hidden');
   document.getElementById('canvas-loading').classList.remove('hidden');
