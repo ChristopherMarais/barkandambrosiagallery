@@ -286,14 +286,14 @@ class OnboardingTests(GameCase):
         self.assertNotIn("photo-edge", page)                 # past the photo's edge is plain grey: no label needed
 
     def test_the_report_button_is_labelled(self):
-        self.assertIn("<span>Report</span>", self.page())
+        self.assertIn("<span>Flag</span>", self.page())
 
     def test_every_photo_has_a_report_button_and_the_help_says_where(self):
         from pathlib import Path
         from django.conf import settings
         page = self.page()
         self.assertIn('report.className = "report-chip"', page)          # drawn on each photo in play
-        self.assertIn("top right of the photo", page)                    # the report tip card
+        self.assertIn("bottom left of the photo", page)                  # the report tip card
         tour = (Path(settings.BASE_DIR) / "beetlesgallery/static/js/game_tour.js").read_text()
         self.assertIn('el: "report-chip-0"', tour)                        # the tour spotlights the button itself
-        self.assertIn("top right of the photo", tour)
+        self.assertIn("bottom left of the photo", tour)

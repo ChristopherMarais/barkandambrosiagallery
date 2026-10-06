@@ -16,18 +16,22 @@
   #photos button.frame { position: relative; width: 100%; height: 100%; display: block; padding: 0; border: 0; background: none; }
   /* The crop fills its cell and keeps its proportions, whatever the shape of the photo or the screen */
   #photos canvas { display: block; width: 100%; height: 100%; object-fit: contain; transform-origin: 0 0; }
-  /* Zoom into the crop: double-tap or double-click, pinch, or the mouse wheel; drag to look around */
-  #photos .frame.zoomed { cursor: grab; touch-action: none; }
+  /* Zoom into the crop: double-tap or double-click, pinch, or the mouse wheel; drag to look around. The page never
+     scrolls under the photos, so every touch there is the zoom's: no browser pinch, double-tap zoom or text selection. */
+  #photos .frame, #lb-frame { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  #photos .frame.zoomed, #lb-frame.zoomed { cursor: grab; }
+  #photos .frame.dragging, #lb-frame.dragging { cursor: grabbing; }
   #photos.fade canvas { opacity: 0; }
   #photos canvas { transition: opacity 0.15s ease; }
   /* Brighter / more contrast for dark photos: one control for every photo on screen, back to normal for the next beetle */
   #photos canvas, #lightbox-img { filter: var(--photo-filter, none); }
-  #light-btn { position: absolute; left: 0.375rem; bottom: 0.375rem; z-index: 3; display: inline-flex; align-items: center; gap: 0.3rem;
+  /* bottom right of the photo area, as in the whole-photo view: the bottom left of each photo is its Flag */
+  #light-btn { position: absolute; right: 0.375rem; bottom: 0.375rem; z-index: 3; display: inline-flex; align-items: center; gap: 0.3rem;
                height: 1.875rem; padding: 0 0.7rem; border-radius: 9999px; background: #fff; border: 1px solid #d1d5db; box-shadow: 0 1px 3px rgba(0,0,0,.15);
                color: #374151; font-size: 0.75rem; font-weight: 600; }
   #light-btn.on { border-color: #4b5563; color: #111827; }
   #light-btn.hidden { display: none; }
-  #light-panel { position: absolute; left: 0.375rem; bottom: 2.75rem; z-index: 4; width: min(18rem, calc(100% - 1rem)); padding: 0.75rem;
+  #light-panel { position: absolute; right: 0.375rem; bottom: 2.75rem; z-index: 4; width: min(18rem, calc(100% - 1rem)); padding: 0.75rem;
                  background: #fff; border: 1px solid #d1d5db; border-radius: 0.75rem; box-shadow: 0 8px 24px rgba(0,0,0,.15); }
   #light-panel.hidden { display: none; }
   #light-panel label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; font-weight: 600; color: #4b5563; }
@@ -107,18 +111,16 @@
   #exit:hover { border-color: #6b7280; }
   /* Rounder photos */
   #photos .cell { border-radius: 1rem; }
-  /* A and B side by side: the letters at the corners that face each other, Report at the far corners.
-     On a phone they are stacked: A's letter at its bottom, B's at its top, Report at the outer corners. */
+  /* A and B side by side: the letters at the top corners that face each other, Flag at the bottom left of each.
+     On a phone they are stacked: A's letter at its bottom (right, clear of its Flag), B's at its top. */
   .ab-tag { position: absolute; z-index: 3; padding: 0.125rem 0.55rem; font-size: 0.875rem; font-weight: 700; color: #111827;
             background: rgba(255,255,255,.92); border: 1px solid #d1d5db; border-radius: 0.5rem; pointer-events: none; }
   #game[data-mode="pair"] #photos .cell:nth-child(1) .ab-tag { top: 0.375rem; right: 0.375rem; }
   #game[data-mode="pair"] #photos .cell:nth-child(2) .ab-tag { top: 0.375rem; left: 0.375rem; }
-  #game[data-mode="pair"] #photos .cell:nth-child(1) .report-chip { right: auto; left: 0.375rem; }
+  /* A's letter has its top right: its more-photos chip takes the top left */
+  #game[data-mode="pair"] #photos .cell:nth-child(1) .more-chip { right: auto; left: 0.375rem; }
   @media (max-width: 639px) {
-    #game[data-mode="pair"] #photos .cell:nth-child(1) .ab-tag { top: auto; bottom: 0.375rem; right: auto; left: 0.375rem; }
-    #game[data-mode="pair"] #photos .cell:nth-child(1) .report-chip { left: auto; right: 0.375rem; }
-    #game[data-mode="pair"] #photos .cell:nth-child(2) .report-chip { top: auto; bottom: 0.375rem; }
-    #game[data-mode="pair"] #photos .cell:nth-child(2) .more-chip { bottom: auto; top: 0.375rem; }
+    #game[data-mode="pair"] #photos .cell:nth-child(1) .ab-tag { top: auto; bottom: 0.375rem; }
   }
   /* The grid games: 2×2, 3×3 or 4×4 beetles (--grid-cols, set for each grid), growing as the player gets better.
      Odd One Out: tap one to pick it; your pick gets a dark ring, and after answering the odd one a green one. */
@@ -128,8 +130,8 @@
   #game[data-mode="odd"] #photos .cell { height: 100%; outline: 3px solid transparent; outline-offset: -3px; }
   #game[data-mode="odd"] #photos .cell.picked { outline-color: #374151; }
   #game[data-mode="odd"] #photos .cell.odd-one { outline-color: #16a34a; }
-  /* bottom right: the Lighting button has the bottom left of the photo area */
-  .zoom-chip { position: absolute; right: 0.375rem; bottom: 0.375rem; z-index: 3; display: inline-flex; align-items: center; justify-content: center;
+  /* top right: the Flag has the bottom left of each photo, Lighting the bottom right of the photo area */
+  .zoom-chip { position: absolute; right: 0.375rem; top: 0.375rem; z-index: 3; display: inline-flex; align-items: center; justify-content: center;
                width: 1.875rem; height: 1.875rem; border-radius: 9999px; background: #fff; border: 1px solid #d1d5db; box-shadow: 0 1px 3px rgba(0,0,0,.15); color: #374151; font-size: 0.75rem; }
   .odd-name { position: absolute; left: 50%; top: 0.375rem; transform: translateX(-50%); z-index: 3; max-width: calc(100% - 0.75rem); padding: 0.125rem 0.55rem;
               border-radius: 0.5rem; background: rgba(255,255,255,.95); border: 1px solid #d1d5db; font-size: 0.75rem; font-weight: 600; color: #111827;
@@ -148,7 +150,7 @@
   .cell.tapped .tap-mark { display: inline-flex; }
   /* In a grid each photo has the flag alone, and in a grid of 16 smaller buttons, so the beetle stays in view */
   #game[data-mode="odd"] .report-chip span, #game[data-mode="select"] .report-chip span { display: none; }
-  #game[data-mode="odd"] .report-chip, #game[data-mode="select"] .report-chip { padding: 0 0.5rem; }
+  #game[data-mode="odd"] .report-chip, #game[data-mode="select"] .report-chip { width: 1.875rem; padding: 0; justify-content: center; }
   #photos[data-size="16"] .report-chip, #photos[data-size="16"] .zoom-chip { width: 1.5rem; height: 1.5rem; padding: 0; justify-content: center; }
   #photos[data-size="16"] .tap-mark { width: 1.25rem; height: 1.25rem; }
   /* A photo flagged in a grid: greyed out with a "Flagged" badge, and out of play; the rest of the grid carries on */
@@ -164,7 +166,9 @@
   .rank-row.cursor { box-shadow: 0 0 0 2px #9ca3af; }
   /* The whole photo: zoom like the crops, and lighting */
   #lb-zoom { transform-origin: 0 0; }
-  #lb-frame.zoomed { cursor: grab; touch-action: none; }
+  /* The Flag sits at the photo's bottom left, as on the photos in play, and its reasons open above it */
+  #report-cog { left: 0.5rem; bottom: 0.5rem; }
+  #report-menu { left: 0.5rem; bottom: 2.75rem; z-index: 4; }
   #lightbox #light-panel { position: fixed; left: auto; right: 0.75rem; bottom: 4rem; z-index: 101; }
   /* Your last beetle (Back) */
   #previous.hidden { display: none; }
@@ -172,8 +176,8 @@
   #actions button:active:not(:disabled) { transform: scale(0.98); }
   .icon-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 2.75rem; height: 2.75rem; border-radius: 0.75rem; color: #374151; }
   .icon-btn:active { background: #f3f4f6; }
-  /* Report a bad photo: always on the photo itself, top right, so nobody has to hunt for it */
-  .report-chip { position: absolute; top: 0.375rem; right: 0.375rem; z-index: 3; display: inline-flex; align-items: center; gap: 0.3rem;
+  /* Flag a bad photo: always on the photo itself, bottom left, so nobody has to hunt for it */
+  .report-chip { position: absolute; left: 0.375rem; bottom: 0.375rem; z-index: 3; display: inline-flex; align-items: center; gap: 0.3rem;
                  height: 1.875rem; padding: 0 0.7rem; border-radius: 9999px; background: #fff; border: 1px solid #d1d5db;
                  box-shadow: 0 1px 3px rgba(0,0,0,.15); color: #374151; font-size: 0.75rem; font-weight: 600; }
   .report-chip:hover { border-color: #6b7280; color: #111827; }
@@ -258,16 +262,15 @@
   @media (min-width: 700px) { #panel { padding-left: calc((100% - 38rem) / 2); padding-right: calc((100% - 38rem) / 2); } }
   @media (prefers-reduced-motion: reduce) { #photos canvas { transition: none; } #chip.pop { animation: none; } }
   /* More photos of the same beetle (an unlock): a chip on the photo, and arrows in the photo viewer */
-  /* The beetle sits at the edge of the photo: say so, so a cut-off crop isn't mistaken for a bad box */
-               border-radius: 9999px; background: rgba(255,255,255,.92); border: 1px solid #d1d5db; color: #374151; font-size: 0.6875rem; font-weight: 600; pointer-events: none; }
   /* The box on the whole photo: white with a dark edge so it shows on light and dark photos, the rest dimmed */
   /* the photo to name, when a beetle's other photos are open too */
   #lb-primary { position: absolute; top: 0.5rem; left: 0.5rem; z-index: 2; width: 1.75rem; height: 1.75rem; border-radius: 9999px;
                 display: inline-flex; align-items: center; justify-content: center; background: #fff; color: #111827; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
   #lb-primary.hidden { display: none; }
   #lightbox-box { border-radius: 0.5rem; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.7), inset 0 0 0 1px rgba(0,0,0,.7), 0 0 0 9999px rgba(0,0,0,.35); }
-  .more-chip { position: absolute; right: 0.375rem; bottom: 0.375rem; z-index: 2; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem;
+  .more-chip { position: absolute; right: 0.375rem; top: 0.375rem; z-index: 2; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem;
                border-radius: 9999px; background: rgba(17,24,39,.78); color: #fff; font-size: 0.75rem; font-weight: 600; }
+  @media (max-width: 639px) { .more-chip .more-word { display: none; } }
   .more-chip.locked { background: rgba(255,255,255,.92); color: #6b7280; border: 1px solid #d1d5db; }
   .lb-nav { position: absolute; top: 50%; transform: translateY(-50%); padding: 0.75rem; color: #fff; font-size: 1.5rem; }
   #lb-prev { left: 0.25rem; }
@@ -492,25 +495,27 @@
 <!-- Full image viewer -->
 <div id="lightbox" class="hidden fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-3" role="dialog" aria-label="Whole image">
   <button type="button" class="absolute top-3 right-3 p-3 text-white text-xl" aria-label="Close"><i class="fi fi-rr-cross"></i></button>
-  <div id="lb-frame" class="relative inline-block overflow-hidden rounded-lg" title="Scroll, pinch or double-click to zoom">
-    <div id="lb-zoom" class="relative">
-      <img id="lightbox-img" alt="Whole image" class="block max-w-[94vw] max-h-[85vh] object-contain">
-      <span id="lb-primary" class="hidden" title="The photo to name" aria-label="The photo to name" data-testid="primary-photo"><i class="fi fi-rr-bullseye"></i></span>
-      <div id="lightbox-box" class="absolute pointer-events-none"></div>
+  <div id="lb-photo" class="relative">
+    <div id="lb-frame" class="relative block overflow-hidden rounded-lg" title="Scroll, pinch or double-click to zoom">
+      <div id="lb-zoom" class="relative">
+        <img id="lightbox-img" alt="Whole image" draggable="false" class="block max-w-[94vw] max-h-[85vh] object-contain">
+        <span id="lb-primary" class="hidden" title="The photo to name" aria-label="The photo to name" data-testid="primary-photo"><i class="fi fi-rr-bullseye"></i></span>
+        <div id="lightbox-box" class="absolute pointer-events-none"></div>
+      </div>
+    </div>
+    <!-- Flag a photo that looks wrong: bottom left of the photo, the same corner as on the photos in play -->
+    <button type="button" id="report-cog" class="report-chip" aria-label="Flag this photo" title="Flag a bad photo"><i class="fi fi-rr-flag"></i><span>Flag</span></button>
+    <div id="report-menu" class="hidden absolute p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Flag this photo">
+      <div class="px-2 py-1 text-xs font-semibold text-gray-500">Flag this photo</div>
+      {% for value, label, hint in report_reasons %}
+      <button type="button" class="report-reason block w-full text-left px-2 py-2 rounded-lg hover:bg-gray-100" data-reason="{{ value }}" role="menuitem">{{ label }}{% if hint %}<span class="block text-xs text-gray-500">{{ hint }}</span>{% endif %}</button>
+      {% endfor %}
     </div>
   </div>
   <button type="button" id="lb-light" class="hidden absolute bottom-3 right-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white text-gray-900 text-sm font-semibold shadow-lg" aria-label="Lighting" data-testid="lightbox-lighting"><i class="fi fi-rr-brightness"></i><span>Lighting</span></button>
   <button type="button" id="lb-prev" class="lb-nav hidden" aria-label="Previous photo of this beetle"><i class="fi fi-rr-angle-left"></i></button>
   <button type="button" id="lb-next" class="lb-nav hidden" aria-label="Next photo of this beetle"><i class="fi fi-rr-angle-right"></i></button>
   <div id="lb-count" class="hidden" data-testid="gallery-count"></div>
-  <!-- Quiet, but labelled so players can find it: report a photo that looks wrong -->
-  <button type="button" id="report-cog" class="absolute bottom-3 left-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white text-gray-900 text-sm font-semibold shadow-lg" aria-label="Report this image"><i class="fi fi-rr-flag"></i><span>Report</span></button>
-  <div id="report-menu" class="hidden absolute bottom-12 left-3 p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Report this image">
-    <div class="px-2 py-1 text-xs font-semibold text-gray-500">Report this image</div>
-    {% for value, label, hint in report_reasons %}
-    <button type="button" class="report-reason block w-full text-left px-2 py-2 rounded-lg hover:bg-gray-100" data-reason="{{ value }}" role="menuitem">{{ label }}{% if hint %}<span class="block text-xs text-gray-500">{{ hint }}</span>{% endif %}</button>
-    {% endfor %}
-  </div>
 </div>
 
 {% include "beetles/includes/game_tour.html" %}
@@ -613,67 +618,119 @@
   // and a zoomed crop can be dragged around. A single tap (not zoomed) still opens the whole photo; with
   // ``immediate`` (picking beetles in Odd One Out and Select all) every tap acts at once, and a quick second tap is
   // another tap, not a zoom (pinch and the wheel still zoom).
+  // Smooth on any device: the frame is measured once per gesture (not on every move), the transform is written at
+  // most once per frame on the GPU (translate3d), and the browser's own image drag and text selection never take
+  // over a drag. Lifting one finger of a pinch carries on as a drag.
+  const ZOOM_STEP = 2.5, ZOOM_MAX = 5, TAP_MS = 300, DRAG_SLOP = 4;
+  const zoomEase = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   function makeZoomable(frame, canvas, onTap, immediate) {
-    let z = 1, tx = 0, ty = 0, lastTap = 0, tapTimer = null, drag = null, pinch = null;
-    const pointers = new Map();
-    const apply = () => {
-      const w = frame.clientWidth, h = frame.clientHeight;
-      tx = Math.min(0, Math.max(w - w * z, tx));
-      ty = Math.min(0, Math.max(h - h * z, ty));
-      canvas.style.transform = z > 1 ? `translate(${tx}px, ${ty}px) scale(${z})` : "";
+    let z = 1, tx = 0, ty = 0, lastTap = 0, tapTimer = null, drag = null, pinch = null, moved = false;
+    let rect = null, raf = 0, wheelEnd = null;
+    const pointers = new Map();   // pointerId -> [clientX, clientY]
+    const measure = () => { rect = frame.getBoundingClientRect(); return rect; };
+    const local = (x, y) => { const r = rect || measure(); return [x - r.left, y - r.top]; };
+    const render = () => {
+      raf = 0;
+      canvas.style.transform = z > 1 ? `translate3d(${tx}px, ${ty}px, 0) scale(${z})` : "";
       frame.classList.toggle("zoomed", z > 1);
     };
-    const zoomAt = (nz, cx, cy) => {
-      nz = Math.min(5, Math.max(1, nz));
+    // Keep the photo covering the frame, then draw on the next frame. ``animate``: a short ease, for the
+    // double-click steps only (a drag or a pinch follows the finger exactly).
+    const update = (animate) => {
+      const r = rect || measure();
+      tx = Math.min(0, Math.max(r.width - r.width * z, tx));
+      ty = Math.min(0, Math.max(r.height - r.height * z, ty));
+      canvas.style.transition = animate && zoomEase ? "transform 0.18s ease-out" : "";
+      if (!raf) raf = requestAnimationFrame(render);
+    };
+    // a layer of its own while it moves; dropped afterwards so the browser redraws it sharp at the new size
+    const moving = (on) => { canvas.style.willChange = on ? "transform" : ""; };
+    const zoomAt = (nz, cx, cy, animate) => {
+      nz = Math.min(ZOOM_MAX, Math.max(1, nz));
       tx = cx - (cx - tx) * nz / z;
       ty = cy - (cy - ty) * nz / z;
       z = nz;
       if (z === 1) { tx = 0; ty = 0; }
-      apply();
+      update(animate);
     };
-    const local = (e) => { const r = frame.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-    frame.addEventListener("wheel", (e) => { e.preventDefault(); zoomAt(z * (e.deltaY < 0 ? 1.15 : 1 / 1.15), ...local(e)); }, { passive: false });
+    const startDrag = ([x, y]) => { drag = { x: x - tx, y: y - ty, sx: x, sy: y }; };
+    const startPinch = () => {
+      const [a, b] = [...pointers.values()];
+      const [mx, my] = local((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+      pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, z, mx, my, tx, ty };
+      drag = null;
+    };
+    frame.addEventListener("dragstart", (e) => e.preventDefault());   // no native image drag to cancel the pan
+    frame.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      measure();
+      moving(true);
+      clearTimeout(wheelEnd);
+      wheelEnd = setTimeout(() => { if (!pointers.size) moving(false); }, 200);
+      // in proportion to the scroll, so a trackpad's many small steps zoom as smoothly as a wheel's few big ones
+      const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      zoomAt(z * Math.min(1.25, Math.max(0.8, Math.exp(-dy * 0.002))), ...local(e.clientX, e.clientY));
+    }, { passive: false });
     frame.addEventListener("pointerdown", (e) => {
-      pointers.set(e.pointerId, local(e));
-      if (pointers.size === 2) {
-        const [a, b] = [...pointers.values()];
-        pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z };
-      } else if (z > 1) {
-        drag = { x: e.clientX - tx, y: e.clientY - ty, moved: false };
-        frame.setPointerCapture(e.pointerId);
-      }
+      if (e.button > 0) return;   // the main button, a finger or a pen
+      if (!pointers.size) { measure(); moved = false; }
+      pointers.set(e.pointerId, [e.clientX, e.clientY]);
+      try { frame.setPointerCapture(e.pointerId); } catch (err) { /* already gone */ }
+      if (pointers.size === 2) { startPinch(); moved = true; }
+      else if (pointers.size === 1 && z > 1) startDrag([e.clientX, e.clientY]);
+      if (pinch || drag) moving(true);
     });
     frame.addEventListener("pointermove", (e) => {
       if (!pointers.has(e.pointerId)) return;
-      pointers.set(e.pointerId, local(e));
-      if (pinch && pointers.size === 2) {
+      pointers.set(e.pointerId, [e.clientX, e.clientY]);
+      if (pinch && pointers.size >= 2) {
+        // zoom about the fingers and follow them as they move together
         const [a, b] = [...pointers.values()];
-        zoomAt(pinch.z * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+        const nz = Math.min(ZOOM_MAX, Math.max(1, pinch.z * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d));
+        const [mx, my] = local((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+        z = nz;
+        tx = mx - (pinch.mx - pinch.tx) * nz / pinch.z;
+        ty = my - (pinch.my - pinch.ty) * nz / pinch.z;
+        if (z === 1) { tx = 0; ty = 0; }
+        update();
       } else if (drag) {
+        if (!moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > DRAG_SLOP) moved = true;
         tx = e.clientX - drag.x;
         ty = e.clientY - drag.y;
-        drag.moved = true;
-        apply();
+        frame.classList.add("dragging");
+        update();
       }
     });
-    const up = (e) => { pointers.delete(e.pointerId); if (pointers.size < 2) pinch = null; if (!pointers.size) setTimeout(() => { drag = null; }, 0); };
-    ["pointerup", "pointercancel", "pointerleave"].forEach((t) => frame.addEventListener(t, up));
+    const up = (e) => {
+      if (!pointers.delete(e.pointerId)) return;
+      if (pinch && pointers.size === 1) {
+        pinch = null;
+        if (z > 1) startDrag([...pointers.values()][0]);   // the finger left on the photo carries on as a drag
+      }
+      if (!pointers.size) { drag = null; pinch = null; frame.classList.remove("dragging"); moving(false); }
+    };
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach((t) => frame.addEventListener(t, up));
     frame.addEventListener("click", (e) => {
       e.preventDefault();
-      if (drag && drag.moved) return;
+      if (moved) return;   // the end of a drag or a pinch, not a tap
       const now = Date.now();
-      if (!immediate && now - lastTap < 300) {
+      if (!immediate && now - lastTap < TAP_MS) {
         clearTimeout(tapTimer);
         lastTap = 0;
-        const [cx, cy] = local(e);
-        zoomAt(z > 1 ? 1 : 2.5, cx, cy);
+        measure();
+        zoomAt(z > 1 ? 1 : ZOOM_STEP, ...local(e.clientX, e.clientY), true);
         return;
       }
       lastTap = now;
       if (immediate) { if (z === 1) onTap(); return; }
-      tapTimer = setTimeout(() => { if (z === 1) onTap(); }, 300);
+      tapTimer = setTimeout(() => { if (z === 1) onTap(); }, TAP_MS);
     });
-    return { reset: () => { z = 1; tx = 0; ty = 0; apply(); } };
+    return { reset: () => {
+      z = 1; tx = 0; ty = 0;
+      cancelAnimationFrame(raf);
+      canvas.style.transition = "";
+      render();
+    } };
   }
 
   // Brightness and contrast, for dark or flat photos. Applies to the crops and the whole photo alike.
@@ -1124,7 +1181,10 @@
         chip.className = "more-chip" + (im.photos ? "" : " locked");
         chip.dataset.testid = "more-photos";
         chip.innerHTML = '<i class="fi ' + (im.photos ? "fi-rr-images" : "fi-rr-lock") + '"></i>';
-        chip.append(document.createTextNode("+" + im.more + " photo" + (im.more === 1 ? "" : "s")));
+        const word = document.createElement("span");   // a phone shows just "+2": the top corner is narrow there
+        word.className = "more-word";
+        word.textContent = " photo" + (im.more === 1 ? "" : "s");
+        chip.append(document.createTextNode("+" + im.more), word);
         chip.title = im.photos ? "More photos of this same beetle" : "More photos of this beetle unlock at level " + item.more_level;
         chip.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -1148,7 +1208,7 @@
       tag.textContent = "Seen before: have another go";
       holder.appendChild(tag);
     }
-    // A Report button on each photo (top right): opens that photo with the reasons ready to pick
+    // A Flag on each photo (bottom left): opens that photo with the reasons ready to pick, at the same corner
     holder.querySelectorAll(".cell").forEach((cell, i) => {
       const im = item.images[i];
       const report = document.createElement("button");
@@ -1156,8 +1216,9 @@
       report.className = "report-chip";
       report.id = "report-chip-" + i;
       report.dataset.testid = "report-chip";
-      report.setAttribute("aria-label", "Report this photo");
-      report.innerHTML = '<i class="fi fi-rr-flag"></i><span>Report</span>';
+      report.setAttribute("aria-label", "Flag this photo");
+      report.title = "Flag a bad photo";
+      report.innerHTML = '<i class="fi fi-rr-flag"></i><span>Flag</span>';
       report.addEventListener("click", (e) => {
         e.stopPropagation();
         openLightbox(im.url, im.box, i);
