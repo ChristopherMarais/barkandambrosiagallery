@@ -346,7 +346,9 @@
   <div id="caughtup" class="hidden flex-1 overflow-y-auto px-6 py-10 text-center">
     <div class="inline-flex p-4 bg-gray-100 rounded-full mb-4"><i class="fi fi-rr-trophy text-3xl text-gray-700"></i></div>
     <h2 class="text-2xl font-bold text-gray-900">You&rsquo;re all caught up</h2>
-    <p class="mt-1 text-gray-500">You&rsquo;ve seen every beetle we have for now. New ones arrive as the gallery grows.</p>
+    <p id="caughtup-text" class="mt-1 text-gray-500" data-testid="caughtup-text">You&rsquo;ve seen every beetle we have. New photos are added regularly.</p>
+    <!-- When their focus is all that holds more beetles back (game.nothing_to_play): one tap clears it -->
+    <button type="button" id="caughtup-focus" class="hidden btn-secondary mt-4 px-6 h-11 text-base rounded-xl" data-testid="caughtup-focus">Show everything</button>
     <div class="grid grid-cols-3 gap-2 my-6 max-w-sm mx-auto">
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="sum-round">0</div><div class="text-xs text-gray-500">this session</div></div>
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="sum-total">0</div><div class="text-xs text-gray-500">in total</div></div>
@@ -988,6 +990,23 @@
     $("focus-clear").addEventListener("click", () => { openFocus(false); savePrefs({ focus_rank: "" }); });
   }
 
+  // ---------- when the feed changes course ----------
+  // The game they chose has nothing for them right now, so the feed plays their other games: say so, once
+  // (game.start_round). When the feed ends: why there's nothing new, and "Show everything" when their focus is what
+  // holds more beetles back (game.nothing_to_play).
+  const noticesShown = new Set();
+  function feedNotes(data) {
+    if (data.notice && !noticesShown.has(data.notice)) {
+      noticesShown.add(data.notice);
+      toast({ kind: "notice", title: data.notice, text: "" });
+    }
+    if (data.caught_up) {
+      $("caughtup-text").textContent = data.caught_up.text;
+      $("caughtup-focus").classList.toggle("hidden", !data.caught_up.clear_focus);
+    }
+  }
+  $("caughtup-focus").addEventListener("click", () => savePrefs({ focus_rank: "" }));
+
   // ---------- the feed ----------
   async function startFeed(fresh) {
     show("loading");
@@ -1000,6 +1019,7 @@
       $("focus-line").textContent = data.focus ? "Focus: " + data.focus.replace(/^[^:]+: /, "") : "";
       $("focus-line").classList.toggle("hidden", !data.focus || !!$("toolbar"));
       await showItem(data.item);
+      feedNotes(data);
     } catch (e) {
       $("loading").classList.add("hidden");
       showError(e.message);
@@ -1158,6 +1178,7 @@
       rememberPrevious(answeredItem, extra, data.community, data.reveal, data.verified);
       bumpCombo(!extra.skipped && extra.pair_answer !== "unsure");
       if (data.reveal) await (answeredItem.mode === "select" ? revealSelect(data.reveal) : revealOdd(data.reveal, extra));
+      feedNotes(data);   // the next batch had to change game, or the feed ended: say why
       if (data.done) {
         $("review-link").href = data.review_url;
         $("sum-round").textContent = answered;

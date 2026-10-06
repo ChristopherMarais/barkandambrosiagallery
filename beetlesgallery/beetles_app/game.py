@@ -876,15 +876,24 @@ def start_round(player, mode, size=None, fresh_only=False):
 
     ``fresh_only`` leaves out unscored items the player has already answered: used to carry on from one batch
     into the next, where running out of new beetles should end the feed rather than repeat what they've seen.
+
+    When the game a player chose has nothing for them, the feed plays their other games instead (fallback_mix). The
+    round's ``notice`` says so for the page ("" when there is nothing to say); it is not saved, so a reload that picks
+    the batch up again doesn't repeat it.
     """
     size = size or game_setting("GAME_ROUND_SIZE", 10)
+    notice = ""
     if mode == GameRound.Mode.MIXED:
         items = build_mixed_items(player, size, fresh_only=fresh_only)
+        if not items:
+            items, notice = fallback_mix(player, size, fresh_only)
     else:
         items = build(mode, player, size, fresh_only)
     if not items:
         return None
-    return GameRound.objects.create(player=player, mode=mode, items=spread(items))
+    rnd = GameRound.objects.create(player=player, mode=mode, items=spread(items))
+    rnd.notice = notice
+    return rnd
 
 
 BUILDERS = {"pair": "build_pair_items", "odd": "build_odd_items", "select": "build_select_items",
@@ -919,7 +928,7 @@ def build_mixed_items(player, size, fresh_only=False):
     Identification, with Odd One Out beside them (game_levels.game_shares); a player who chose one game sees only that
     one. In the mix, a game that runs out of beetles is filled in by the others. Every item carries its own "mode".
     """
-    from .game_levels import for_player, game_shares, games
+    from .game_levels import for_player, games
 
     info = for_player(player)
     chosen = play_mode(player, info)
@@ -928,7 +937,36 @@ def build_mixed_items(player, size, fresh_only=False):
         for it in items:
             it["mode"] = chosen
         return items
-    shares = game_shares(info["level"], games(info["perks"]))
+    return _mix(player, info["level"], games(info["perks"]), size, fresh_only)
+
+
+def fallback_mix(player, size, fresh_only=False):
+    """
+    (items, notice) for a player whose chosen game has nothing for them right now (too few beetles of the kind it
+    needs): a mix of their other games, and one line for the page that says so. Their choice is kept, so the next batch
+    tries their game again. ([], "") when they play the mix already, or their other games have nothing either.
+    """
+    from .game_levels import GAME_NAMES, for_player, games
+
+    info = for_player(player)
+    chosen = play_mode(player, info)
+    others = [g for g in games(info["perks"]) if g != chosen]
+    if chosen not in BUILDERS or not others:
+        return [], ""
+    items = _mix(player, info["level"], others, size, fresh_only)
+    if not items:
+        return [], ""
+    instead = f"here's {GAME_NAMES[others[0]]} instead" if len(others) == 1 else "here's a mix of your other games"
+    return items, f"Not enough beetles for {GAME_NAMES[chosen]} right now: {instead}."
+
+
+def _mix(player, level, game_keys, size, fresh_only=False):
+    """``size`` items of these games by their shares of the feed; one that runs short is filled in by the rest."""
+    from .game_levels import game_shares
+
+    shares = game_shares(level, game_keys)
+    if not shares:
+        return []
     plan = defaultdict(int)
     for game_key in random.choices(list(shares), weights=list(shares.values()), k=size):
         plan[game_key] += 1
@@ -956,6 +994,33 @@ def build_mixed_items(player, size, fresh_only=False):
 def _item_ids(item):
     """Every beetle an item shows."""
     return set(item.get("tiles") or []) | {item["a"]} | ({item["b"]} if item.get("b") else set())
+
+
+def nothing_to_play(player, mode=GameRound.Mode.MIXED):
+    """
+    Why the feed has nothing (new) for this player, in plain words for the page: there are no beetles at all yet, they
+    have seen every one, they have seen every one in their focus (``clear_focus``: clearing it would give them more),
+    or their games can't use the ones there are (Similarity and the grid games need checked beetles). ``mode`` is the
+    page's game, or the mix. A few EXISTS queries; nothing is built.
+    """
+    from .game_levels import GAME_NAMES, for_player, games
+
+    checks, opens = check_rois(), open_rois()
+    if not (checks.exists() or opens.exists()):
+        return {"text": "No beetles are ready for the game yet. Please check back soon.", "clear_focus": False}
+    answered = GameAnswer.objects.filter(player=player).values("roi_id")
+    revealed = list(revealed_ids(player))
+
+    def new(check_pool, open_pool):   # never answered, or validated and its answer not shown to them yet
+        return open_pool.exclude(id__in=answered).exists() or check_pool.exclude(id__in=revealed).exists()
+
+    if not new(checks, opens):
+        return {"text": "You've seen every beetle we have. New photos are added regularly.", "clear_focus": False}
+    if player_focus(player) and not new(*pools(player)):
+        return {"text": "You've seen every beetle in your focus. Clear it to see more.", "clear_focus": True}
+    mine = [mode] if mode in GAME_NAMES else games(for_player(player)["perks"])
+    which = GAME_NAMES[mine[0]] if len(mine) == 1 else "your games"
+    return {"text": f"Not enough checked beetles for {which} yet. Please check back soon.", "clear_focus": False}
 
 
 def _in_background(player_ids):

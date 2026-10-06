@@ -580,7 +580,8 @@ def _finish(rnd):
     game.finish_round(rnd)
     summary = game.player_summary(rnd.player)
     summary["round_labelled"] = rnd.answers.filter(skipped=False).count()
-    return {"done": True, "summary": summary, "review_url": reverse("game_round_review", args=[rnd.id])}
+    return {"done": True, "summary": summary, "review_url": reverse("game_round_review", args=[rnd.id]),
+            "caught_up": game.nothing_to_play(rnd.player, rnd.mode)}   # why, and whether clearing the focus gives more
 
 
 @login_required
@@ -603,15 +604,15 @@ def game_start(request):
             game.finish_round(rnd)
         rnd = game.start_round(request.user, mode)
         index = _next_index(rnd, 0) if rnd else None
-    if index is None:
-        return JsonResponse({
-            "error": "There are no images ready for this game yet. Please check back later."
-        }, status=404)
+    if index is None:   # nothing in any of their games: say why (no beetles yet, all seen, their focus, ...)
+        return JsonResponse({"error": game.nothing_to_play(request.user, mode)["text"]}, status=404)
     focus = game.player_focus(request.user)
     return JsonResponse({
         "round": str(rnd.id), "item": _item_payload(rnd, index), "chip": _chip(request.user),
         "focus": f"{focus[0].capitalize()}: {focus[1]}" if focus else "",
         "prefs": _prefs(request.user),
+        # the game they chose has nothing for them right now, so the feed plays their other games (game.start_round)
+        "notice": getattr(rnd, "notice", ""),
     })
 
 
@@ -835,7 +836,7 @@ def game_answer(request, round_id):
             fresh = game.start_round(request.user, rnd.mode, fresh_only=True)
             first = _next_index(fresh, 0) if fresh else None
             if first is not None:
-                return JsonResponse(dict(extra, round=str(fresh.id), item=_item_payload(fresh, first)))
+                return JsonResponse(dict(extra, round=str(fresh.id), item=_item_payload(fresh, first), notice=fresh.notice))
     nxt = _next_index(rnd, index + 1)
     if nxt is None:
         # The feed carries straight on into a new batch. It only ends when there is nothing new left to show.
@@ -843,7 +844,7 @@ def game_answer(request, round_id):
         fresh = game.start_round(request.user, rnd.mode, fresh_only=True)
         first = _next_index(fresh, 0) if fresh else None
         if first is not None:
-            return JsonResponse(dict(extra, round=str(fresh.id), item=_item_payload(fresh, first)))
+            return JsonResponse(dict(extra, round=str(fresh.id), item=_item_payload(fresh, first), notice=fresh.notice))
         return JsonResponse(dict(_finish(rnd), **extra))
     return JsonResponse(dict(extra, item=_item_payload(rnd, nxt)))
 
