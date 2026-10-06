@@ -157,7 +157,7 @@ Status: built on branch `claude/funny-tesla-pi0iki` (PR #255). Classifier integr
 | `/game/rounds/<id>/` | The round's owner, or staff | Feedback on that round and reporting |
 | `/game/me/` | Players | Headline stats, challenge level, expert areas, progress toward the next ones, accuracy by rank and by month, recent rounds |
 | `/game/players/<id>/` | Staff | Any player's report |
-| `/game/review/` | Staff | Open reports queue, player table with expert badges, proposals (all or expert-backed), CSV exports: proposals, reliability, expertise |
+| `/game/settings/` | Superuser | Game settings. Review game labels: open reports queue, player table with expert badges, proposals (all or expert-backed), CSV exports: proposals, reliability, expertise. Unlocks: grant players unlocks. (`/game/review/` and `/game/staff/unlocks/` redirect here.) |
 | Django admin | Staff | GameRound, GameAnswer, PlayerSkill, LabelReview, RoiDifficulty, GameReport |
 
 Privacy rules for the player report:
@@ -422,7 +422,7 @@ curators like the round-review reports (`GameReport`, shown per ROI on the Image
 out of the game (`game.reported()` in both pools). The player moves on to the next beetle with no points lost
 (`reported: true` holds that answer).
 
-**Superusers can grant unlocks** (`/game/staff/unlocks/`, `GamePreference.granted_perks`): any unlock, or all of
+**Superusers can grant unlocks** (the Unlocks section of `/game/settings/`, `GamePreference.granted_perks`): any unlock, or all of
 them, for any player, whatever their level. `game_levels.for_player` adds them to the earned ones, and a granted
 "labels go to curators" also counts for `suggestion_voters`. The level itself is unchanged.
 
@@ -448,7 +448,7 @@ Royalty: the top level), with accents by rarity.
 show the screen to a friend; scanning leads to sign-in or sign-up, then the game. The QR library (qrcodejs, MIT) is
 served from `static/js/vendor`.
 
-**Game review page:** a back link to the game, a button to Image Annotation, collapsible sections, and ROI links
+**Game settings page (Review game labels section):** a back link to the game, a button to Image Annotation, collapsible sections, and ROI links
 that open Image Annotation on that image with the ROI selected (`?image=<id>&roi=<id>`).
 
 **Many players at once.** A new answer adds to the player's total with a single UPDATE (`F()` + `Greatest`), so

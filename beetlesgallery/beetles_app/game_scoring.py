@@ -40,9 +40,9 @@ Beetles we know the answer to (validated) are scored against the truth. These ea
                      loses more than a perfect one earns. Taps on beetles nobody has validated are recorded, never
                      scored. Skip earns GAME_POINTS_ODD_SKIP, as in Odd One Out.
                      In the reliability rating a grid counts once, at its rank: correct only when perfect (#381).
-  Grid size          both grid games grow from 4 to 9 to 16 beetles as the player gets better (game_grid_ladder), and
+  Grid size          both grid games grow from 4 to 9, 16 and 25 beetles as the player gets better (game_grid_ladder), and
                      every point of a grid built on that ladder, gained or lost, is times GAME_GRID_SIZE_FACTOR for its
-                     size (1, 1.5, 2). Grids from before the ladder (no grid_step) keep ×1, so a re-score doesn't
+                     size (1, 1.5, 2, 2.5). Grids from before the ladder (no grid_step) keep ×1, so a re-score doesn't
                      inflate them. A photo the player flagged as bad before answering counts for nothing (#489).
   Seen again        a beetle shown again so you can learn it (a retry) earns GAME_POINTS_RETRY_FACTOR (half), in every
                      game (#490).
@@ -111,7 +111,7 @@ RANK_POINTS = _Points("GAME_POINTS_RANK", {"subfamily": 1.0, "tribe": 2.0, "genu
 PAIR_POINTS = _Points("GAME_PAIR_POINTS", {-1: 1.0, 0: 2.0, 1: 4.0, 2: 7.0, 3: 12.0})
 DEPTH_NAME = {-1: "different subfamilies", 0: "same subfamily", 1: "same tribe", 2: "same genus", 3: "same species"}
 # The grid games: every point of a grid, gained or lost, times this for its number of beetles (#489)
-GRID_SIZE_FACTOR = _Points("GAME_GRID_SIZE_FACTOR", {4: 1.0, 9: 1.5, 16: 2.0})
+GRID_SIZE_FACTOR = _Points("GAME_GRID_SIZE_FACTOR", {4: 1.0, 9: 1.5, 16: 2.0, 25: 2.5})
 
 
 def setting(name, default):

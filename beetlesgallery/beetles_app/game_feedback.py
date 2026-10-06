@@ -121,10 +121,10 @@ def _side(roi, player_reports, others):
     }
 
 
-def round_feedback(rnd):
-    """Every answered item of a finished round with the database's view of it."""
+def round_feedback(rnd, mode=""):
+    """Every answered item of a finished round with the database's view of it; with ``mode``, that game's only."""
     answers = list(
-        rnd.answers.select_related("roi__taxon", "roi__image_asset", "roi_b__taxon", "roi_b__image_asset", "points")
+        rnd.answers.filter(**({"mode": mode} if mode else {})).select_related("roi__taxon", "roi__image_asset", "roi_b__taxon", "roi_b__image_asset", "points")
         .order_by("index")
     )
     roi_ids = {a.roi_id for a in answers} | {a.roi_b_id for a in answers if a.roi_b_id}

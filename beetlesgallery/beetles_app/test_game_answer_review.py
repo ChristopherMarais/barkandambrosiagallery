@@ -60,7 +60,7 @@ class IdentificationTests(ReviewCase):
         self.assertEqual([c["points"] for c in ranks], [3.0, 6.0, 12.0, 24.0])   # 1, 2, 4, 8 times the weight, 3
         self.assertEqual(ranks[3]["truth"], "Xyleborus affinis")
         self.assertEqual(review["points"]["earned"], 45.0)
-        self.assertEqual(review["headline"], "Correct to species · +45 points")
+        self.assertEqual(review["headline"], "Correct to species · +45")
 
     def test_a_wrong_species_after_a_correct_genus(self):
         review = self.classify(self.roi(self.t_affinis), FERR)
@@ -68,15 +68,15 @@ class IdentificationTests(ReviewCase):
         species = review["classify"]["ranks"][3]
         self.assertEqual((species["yours"], species["truth"], species["state"], species["points"]),
                          ("Xyleborus ferrugineus", "Xyleborus affinis", "wrong", -56.0))   # 8 × 3 × 2⅓
-        self.assertEqual(review["headline"], "Correct to genus · −35 points")
+        self.assertEqual(review["headline"], "Correct to genus · −35")
         self.assertAlmostEqual(sum(c["points"] for c in review["classify"]["ranks"]), self.earned(), places=1)
 
     def test_stopping_at_the_genus_and_getting_it_all_wrong(self):
         genus_only = self.classify(self.roi(self.t_affinis), dict(AFFINIS, species=""))
-        self.assertEqual(genus_only["headline"], "Correct to genus · +21 points")
+        self.assertEqual(genus_only["headline"], "Correct to genus · +21")
         self.assertEqual(genus_only["classify"]["ranks"][3]["state"], "stopped")
         wrong = self.classify(self.roi(self.t_affinis), PLAT)
-        self.assertEqual((wrong["verdict"], wrong["headline"]), ("wrong", "Not quite · −105 points"))
+        self.assertEqual((wrong["verdict"], wrong["headline"]), ("wrong", "Not quite · −105"))
         self.assertIsNone(wrong["celebrate"])
 
     def test_an_unvalidated_beetle_shows_what_the_other_players_and_ibbi_ai_say(self):
@@ -86,7 +86,7 @@ class IdentificationTests(ReviewCase):
         review = self.classify(roi, AFFINIS)
         self.assertEqual((review["verdict"], review["points"]["basis"], review["classify"]["truth"]),
                          (None, "agreement", None))
-        self.assertEqual(review["headline"], "Not checked yet · no points yet")
+        self.assertEqual(review["headline"], "Not checked yet")
         self.assertEqual(review["classify"]["players"], 1)
         genus, species = review["classify"]["ranks"][2:]
         self.assertEqual(genus["players"], {"name": "Xyleborus", "sure": 100, "agrees": True, "votes": 1, "experts": 0})
@@ -111,7 +111,7 @@ class IdentificationTests(ReviewCase):
         self.assertTrue(review["skipped"])
         self.assertNotIn("classify", review)
         self.assertNotIn("affinis", str(review).lower())
-        self.assertEqual(review["headline"], "Skipped · −0.3 points")
+        self.assertEqual(review["headline"], "Skipped · −0.3")
         self.assertEqual(len(review["images"]), 1)
 
     def test_a_retry_is_marked(self):
@@ -213,14 +213,14 @@ class OddOneOutTests(ReviewCase):
                          ("Xyleborus", 95, True, False))
         self.assertEqual((cells[3]["ai"]["in"], cells[3]["pays"]), (False, True))   # picking that one would pay
         self.assertEqual((cells[1]["validated"], cells[1]["name"]), (False, ""))
-        self.assertEqual(review["headline"], "Not checked yet · no points yet")
+        self.assertEqual(review["headline"], "Not checked yet")
         self.assertIsNone(review["celebrate"])
 
     def test_a_skip_gives_nothing_away(self):
         review = self.grid([self.rest[0], self.odd, self.rest[1], self.rest[2]], {"skipped": True})
         self.assertNotIn("grid", review)
         self.assertNotIn("Platypus", str(review))
-        self.assertEqual(review["headline"], "Skipped · +0.3 points")
+        self.assertEqual(review["headline"], "Skipped · +0.3")
 
 
 class SelectAllTests(ReviewCase):
@@ -251,13 +251,13 @@ class SelectAllTests(ReviewCase):
         self.assertEqual((grid["tiles"][2]["points"], grid["tiles"][6]["points"]), (0.0, None))
         vote = grid["tiles"][6]
         self.assertEqual((vote["validated"], vote["ai"]["in"], vote["pays"]), (False, True, True))
-        self.assertEqual(review["headline"], "Found 2 of 3 · 1 wrong · −1 points")
+        self.assertEqual(review["headline"], "Found 2 of 3 · 1 wrong · −1")
         self.assertIsNone(review["celebrate"])   # the wrong tap cost more than two members earned (#530)
 
     def test_a_perfect_grid(self):
         review = self.grid([*self.members, *self.others], [0, 1, 2])
         self.assertEqual((review["verdict"], review["celebrate"]["kind"]), ("right", "validated"))
-        self.assertEqual(review["headline"], "Found 3 of 3 · +8.8 points")   # 1.25 × 7, a grid from before the ladder
+        self.assertEqual(review["headline"], "Found 3 of 3 · +8.8")   # 1.25 × 7, a grid from before the ladder
 
     def test_names_stop_at_the_grids_rank(self):
         review = self.grid([*self.members, *self.others], [0, 1, 2], rank="genus")
@@ -300,5 +300,5 @@ class ConfettiTests(ReviewCase):
         AnswerPoints.objects.create(answer=answer, points=9.5, basis=AnswerPoints.Basis.CONSENSUS,
                                     detail={"agreement": {"species": 0.8}, "participation": 0.5})
         review = game_answer_review.past(rnd, 0)
-        self.assertEqual(review["headline"], "Not checked yet · +9 points so far")
+        self.assertEqual(review["headline"], "Not checked yet · +9 so far")
         self.assertEqual(review["celebrate"], {"kind": "players", "size": game_answer_review.confetti_size(9)})

@@ -58,28 +58,22 @@ class SeveralOddRelearnTests(SeveralOddCase):
 
 
 class SeveralOddReviewTests(SeveralOddCase):
-    def test_the_card_names_every_odd_one_and_has_a_line_for_every_tile(self):
+    def test_the_card_names_every_odd_one_in_one_line(self):
         self.start()
         grid = self.answer([self.odd_places[0], self.rest[0]])["review"]["grid"]
-        lead = words(grid["lead"])
-        self.assertIn("The odd ones: ", lead)
+        note = words(grid["note"])   # one short line (#569)
+        self.assertTrue(note.startswith("Odd ones: "), note)
         for place in self.odd_places:
-            self.assertIn(f"{place + 1} (", lead)
-        self.assertEqual([line["tile"] for line in grid["lines"]], list(range(1, 10)))
-        by_tile = {line["tile"]: words(line["parts"]) for line in grid["lines"]}
-        self.assertIn("correct", by_tile[self.odd_places[0] + 1])
-        self.assertIn("an odd one. Not picked — missed", by_tile[self.odd_places[1] + 1])
-        self.assertIn("not correct", by_tile[self.rest[0] + 1])
+            self.assertIn(f"{place + 1} · ", note)
+        self.assertNotIn("lines", grid)
         self.assertEqual((grid["found"], grid["wrong"], grid["count"]), (1, 1, 2))
         self.assertEqual({grid["tiles"][p]["state"] for p in self.odd_places}, {"right", "odd"})
 
     def test_one_odd_one_still_says_the_odd_one(self):
         self.start(odds=1)
-        grid = self.answer(self.odd_places)["review"]["grid"]
-        lead = words(grid["lead"])
-        self.assertIn("The odd one: ", lead)
-        self.assertNotIn("The odd ones", lead)
-        self.assertNotIn("an odd one", " ".join(words(line["parts"]) for line in grid["lines"]))
+        note = words(self.answer(self.odd_places)["review"]["grid"]["note"])
+        self.assertTrue(note.startswith("Odd one: "), note)
+        self.assertNotIn("Odd ones", note)
 
     def test_a_grid_whose_second_odd_one_was_shown_before_is_seen_before(self):
         self.start()
@@ -132,8 +126,8 @@ class AheadLeavesOutSpecimenMatesTests(GridCase):
 class HelpTests(GridCase):
     def test_how_it_works_says_bigger_grids_hide_more_odd_ones(self):
         how = " ".join(strip_tags(self.client.get(reverse("game_how")).content.decode()).split()).replace("’", "'")
-        self.assertIn("bigger grids hide two or three odd ones, and you pick that many", how)
-        self.assertIn("(in Odd One Out, then with two and three odd ones)", how)
+        self.assertIn("bigger grids hide two to four odd ones, and you pick that many", how)
+        self.assertIn("(in Odd One Out, then with two, three and four odd ones)", how)
         self.assertIn("in Similarity and Odd One Out, makes you a Distinction expert", how)
         self.assertNotIn("Imposter Picker", how)
         self.assertNotIn("Identification expert", how)
@@ -141,7 +135,7 @@ class HelpTests(GridCase):
     def test_the_play_page_help_and_tour_count_the_odd_ones(self):
         page = Path(settings.BASE_DIR, "beetlesgallery", "templates", "beetles", "game_play.html").read_text(
             encoding="utf-8")
-        self.assertIn("All but one share a name (bigger grids hide two or three). Select the ones that don't", page)
+        self.assertIn("All but one share a name (bigger grids hide up to four). Select the ones that don't", page)
         self.assertIn('"Odd One Out: all but " + (oddWant > 1 ? oddWant : "one")', page)
         self.assertIn("oddPrompt(item.rank, oddWant)", page)
         self.assertNotIn("odd_count", page)

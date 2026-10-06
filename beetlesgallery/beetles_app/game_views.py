@@ -12,7 +12,6 @@ import logging
 import time
 from datetime import datetime, timedelta, timezone as dt_timezone
 from functools import wraps
-from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
@@ -22,7 +21,7 @@ from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Max
-from django.http import FileResponse, Http404, HttpResponse, JsonResponse
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse, QueryDict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -78,13 +77,15 @@ def discussions_url():
 # ---------------------------------------------------------------------------
 @login_required
 def game_home(request):
-    game.close_idle_rounds(request.user)   # anything they left open counts now
+    left_at = game.close_idle_rounds(request.user)   # anything they left open counts now
+    last_session = _pop_last_session(request, left_at)
     game_discoveries.find([request.user.id])
     checked, checked_new, checked_change = game_checked.pop_unseen(request.user)
     # this week's top players (#497); while the week is empty, the home says so and shows last week's top three
     board = game_board.board(limit=5)
     rewards = game_rewards.progress(request.user)
     return render(request, "beetles/game_home.html", {
+        "last_session": last_session,
         "checked": checked, "checked_new": checked_new, "checked_change": checked_change,
         "proposals_notice": rewards["proposals"] and _first_sight_of_proposals(request.user),
         "discoveries": game_discoveries.pop_unseen(request.user),
@@ -101,6 +102,54 @@ def game_home(request):
     })
 
 
+# A sitting the player left without seeing its recap (#578), in the session: {"since", "until"} in seconds since 1970
+# ("until" None: it ran to its end). game_exit stores it when the page sends its goodbye beacon; the game home shows
+# that recap once. RECAP_SEEN is when they last saw one, so a sitting the home pieces together never reaches back
+# past it.
+LAST_SESSION = "game_last_session"
+RECAP_SEEN = "game_recap_seen"
+
+
+def _stamp(value):
+    try:
+        return None if value is None else datetime.fromtimestamp(float(value), tz=dt_timezone.utc)
+    except (TypeError, ValueError, OverflowError, OSError):
+        return None
+
+
+def _sitting_start(player, last, seen):
+    """When the sitting that ended with the answer at ``last`` began: back through answers no more than the idle
+    limit apart, and never before the last recap they saw."""
+    gap = timedelta(minutes=game.IDLE_MINUTES)
+    start = last
+    for at in (GameAnswer.objects.filter(player=player, answered_at__lte=last, answered_at__gte=last - timedelta(hours=12))
+               .order_by("-answered_at").values_list("answered_at", flat=True)[:5000]):
+        if start - at > gap:
+            break
+        start = at
+    return max(start, seen) if seen else start
+
+
+def _pop_last_session(request, left_at=None):
+    """
+    The recap of the sitting the player left without seeing it, once; None if there is none (or nothing in it).
+    The page's beacon names it; without one (a phone that killed the page without a word), a batch the idle rule
+    has just closed (``left_at``, its last answer) does.
+    """
+    stored = request.session.pop(LAST_SESSION, None)
+    seen = _stamp(request.session.get(RECAP_SEEN))
+    since = until = None
+    if isinstance(stored, dict):
+        since, until = _stamp(stored.get("since")), _stamp(stored.get("until"))
+    elif left_at is not None and (seen is None or left_at > seen):
+        since = _sitting_start(request.user, left_at, seen)
+    if since is None:
+        return None
+    request.session[RECAP_SEEN] = timezone.now().timestamp()
+    recap = game_rewards.recap(request.user, since, until)
+    return recap if recap["labelled"] else None
+
+
 def _first_sight_of_proposals(player):
     """True the first time a player whose labels now go to the curators sees the game home (the notice shows once)."""
     from .models import GamePreference
@@ -114,24 +163,47 @@ def _first_sight_of_proposals(player):
 
 @login_required
 def game_staff_unlocks(request):
+    """Old address of the unlocks: they now live on the Game settings page. Saves still work here (old open tabs)."""
+    if request.method == "POST":
+        return game_settings(request)
+    return redirect(_settings_url(request.GET, "unlocks"))
+
+
+def _settings_url(query, anchor):
+    """The Game settings page with ``query`` (a QueryDict) and opened at ``anchor``."""
+    query = query.urlencode()
+    return f"{reverse('game_settings')}{'?' + query if query else ''}#{anchor}"
+
+
+def _save_unlocks(request):
     """
     Superusers only: grant any player any unlock (or all of them), whatever their level, for people who need the
-    features and for testing. Stored in GamePreference.granted_perks.
+    features and for testing. Stored in GamePreference.granted_perks. Back to that player, with the page as it was.
     """
     from .models import GamePreference
 
     if not request.user.is_superuser:
         raise Http404("Not found")
+    player = get_object_or_404(get_user_model().objects.all(), id=request.POST.get("player"))
+    perks = ["all"] if request.POST.get("all") else [p for p in request.POST.getlist("perks") if p in game_levels.PERKS]
+    pref, _ = GamePreference.objects.get_or_create(player=player)
+    pref.granted_perks = perks
+    pref.save(update_fields=["granted_perks", "updated_at"])
+    if "back" in request.POST:   # the page's own query (search, sorting, paging), rebuilt so only a query gets through
+        query = QueryDict(request.POST["back"][:2000])
+    else:
+        query = QueryDict(mutable=True)
+        query["q"] = (request.POST.get("q") or "").strip()[:50]
+    return redirect(_settings_url(query, f"p{player.id}"))
+
+
+def _unlocks_context(request):
+    """The Unlocks section of the Game settings page: the players found (up to 100) and what each has been given."""
+    from .models import GamePreference
+
+    if not request.user.is_superuser:
+        raise Http404("Not found")
     users = get_user_model().objects.all()
-    if request.method == "POST":
-        player = get_object_or_404(users, id=request.POST.get("player"))
-        perks = ["all"] if request.POST.get("all") else [p for p in request.POST.getlist("perks") if p in game_levels.PERKS]
-        pref, _ = GamePreference.objects.get_or_create(player=player)
-        pref.granted_perks = perks
-        pref.save(update_fields=["granted_perks", "updated_at"])
-        q = (request.POST.get("q") or "").strip()[:50]
-        query = urlencode({"q": q})
-        return redirect(f"{reverse('game_staff_unlocks')}?{query}#p{player.id}")
     q = (request.GET.get("q") or "").strip()[:50]
     if q:
         users = users.filter(username__icontains=q)
@@ -147,7 +219,7 @@ def game_staff_unlocks(request):
         rows.append({"user": u, "level": info["level"], "name": info["name"], "all": "all" in mine,
                      "perks": [{"key": k, "title": t, "level": game_levels.perk_level(k), "on": "all" in mine or k in mine,
                                 "earned": k in info["perks"]} for k, (t, _) in game_levels.PERKS.items()]})
-    return render(request, "beetles/game_staff_unlocks.html", {"rows": rows, "q": q})
+    return {"rows": rows, "q": q}
 
 
 @login_required
@@ -163,20 +235,26 @@ HISTORY_PER_PAGE = 20
 def game_history(request):
     """
     A player's history: every session (batch) they played, newest first, with what it earned and a link to its
-    answers; and every beetle a curator checked after they answered it.
+    answers; and every beetle a curator checked after they answered it. Sessions can be narrowed to one game and to
+    today, the streak or one day (#574): the game home's cards open them that way.
     """
     from django.core.paginator import Paginator
     from django.db.models import Count, Q, Sum
 
+    from . import game_history_filters as filters
+
     tab = "checked" if request.GET.get("tab") == "checked" else "sessions"
+    game_key = filters.game(request.GET.get("game"))
+    window = filters.day_window(request.user, request.GET.get("day"))
+    kept = filters.answers_q(game_key, window, prefix="answers__")   # what a session shows of its answers
+    in_window = filters.answers_q("", window, prefix="answers__")
+    scored = filters.answers_q(game_key, window, prefix="answers__", labelled=False)   # skips carry points too
     rounds = (
         GameRound.objects.filter(player=request.user, finished_at__isnull=False)
-        .annotate(labelled=Count("answers", filter=Q(answers__skipped=False), distinct=True),
-                  identified=Count("answers", filter=Q(answers__skipped=False, answers__mode="classify"), distinct=True),
-                  compared=Count("answers", filter=Q(answers__skipped=False, answers__mode="pair"), distinct=True),
-                  spotted=Count("answers", filter=Q(answers__skipped=False, answers__mode="odd"), distinct=True),
-                  selected=Count("answers", filter=Q(answers__skipped=False, answers__mode="select"), distinct=True),
-                  points=Sum("answers__points__points"))
+        .annotate(labelled=Count("answers", filter=kept, distinct=True),
+                  **{f"n_{g}": Count("answers", filter=in_window & Q(answers__mode=g), distinct=True)
+                     for g in game_levels.GAMES},
+                  points=Sum("answers__points__points", filter=scored))
         .filter(labelled__gt=0).order_by("-finished_at")
     )
     checked = game_checked.items(request.user, limit=500)
@@ -186,13 +264,26 @@ def game_history(request):
         RetroCredit.objects.filter(player=request.user, seen_at__isnull=True).update(seen_at=timezone.now())
     sessions = Paginator(rounds, HISTORY_PER_PAGE).get_page(request.GET.get("page") if tab == "sessions" else 1)
     for r in sessions:   # which games a session was: one by name, or how many
-        played = [name for name, n in (("Naming", r.identified), ("Similarity", r.compared),
-                                       ("Odd One Out", r.spotted), ("Find Them All", r.selected)) if n]
-        r.games_label = played[0] if len(played) == 1 else f"{len(played)} games"
+        played = [game_levels.GAME_NAMES[g] for g in ("classify", "pair", "odd", "select") if getattr(r, f"n_{g}")]
+        r.games_label = game_levels.GAME_NAMES[game_key] if game_key else (
+            played[0] if len(played) == 1 else f"{len(played)} games")
     checked_page = Paginator(checked, HISTORY_PER_PAGE).get_page(request.GET.get("page") if tab == "checked" else 1)
+    summary = None
+    if game_key or window:   # the filtered beetles and points, and the game's own accuracy and points
+        summary = GameAnswer.objects.filter(filters.answers_q(game_key, window, labelled=False), player=request.user,
+                                            round__finished_at__isnull=False).aggregate(
+            beetles=Count("id", filter=Q(skipped=False)), points=Sum("points__points"))
+        if game_key:
+            summary["game"] = game_board.mode_stats([request.user.id])[request.user.id][game_key]
+    game_chips, day_chips = filters.choices(game_key, window)
+    heading = " · ".join(x for x in (window["heading"] if window else "",
+                                           game_levels.GAME_NAMES.get(game_key, "")) if x)
     return render(request, "beetles/game_history.html", {
         "tab": tab, "sessions": sessions, "checked": checked_page, "checked_total": len(checked),
         "new_gain": round(new_gain, 1), "new_checked": sum(1 for c in checked if c["new"]),
+        "game_key": game_key, "game_label": game_levels.GAME_NAMES.get(game_key, ""), "window": window,
+        "filters": filters.query(game_key, window["key"] if window else ""),
+        "game_chips": game_chips, "day_chips": day_chips, "heading": heading, "summary": summary,
     })
 
 
@@ -336,6 +427,7 @@ def game_play(request, mode):
         "ranks": [(r, r.capitalize()) for r in game.RANKS],
         "rungs": RUNGS,
         "last_review": _last_review_url(request.user),
+        "idle_minutes": game.IDLE_MINUTES,
         **_onboarding(request),
     })
 
@@ -388,9 +480,11 @@ def game_round_review(request, round_id):
         raise Http404("No such round")
     if rnd.finished_at is None:
         return redirect("game_play", mode=rnd.mode)
-    feedback = game_feedback.round_feedback(rnd)
+    # opened from History filtered to one game (#574): a mixed session shows that game's answers only
+    only = request.GET.get("game") if request.GET.get("game") in game_levels.GAMES else ""
+    feedback = game_feedback.round_feedback(rnd, mode=only)
     return render(request, "beetles/game_round_review.html", {
-        "round": rnd,
+        "round": rnd, "only": only, "only_label": game_levels.GAME_NAMES.get(only, ""),
         "feedback": feedback,
         "feedback_json": feedback["items"],
         "is_self": rnd.player == request.user,
@@ -1163,14 +1257,23 @@ def game_past_review(request, round_id, index):
     card = game_answer_review.past(rnd, index) if rnd else None
     if card is None:
         return JsonResponse({"error": "No such answer."}, status=404)
+    card["where"] = {"round": str(rnd.id), "index": index}   # for a Flag from its photos (#569)
     return JsonResponse({"review": card})
 
 
 @login_required
 @require_POST
 def game_exit(request):
-    """The player leaves the feed: close their current batch so their answers count, then go back to the game home."""
-    body = _json_body(request) or {}
+    """
+    The player leaves the feed: close their current batch so their answers count, and say how the sitting went.
+    A page that is closed before it could show that recap, or comes back after longer than the idle limit, sends a
+    beacon instead (a form post, as navigator.sendBeacon can't set headers; "until" ends a sitting left idle): the
+    batch is closed the same way and the game home shows the recap once.
+    """
+    if request.content_type in ("multipart/form-data", "application/x-www-form-urlencoded"):
+        body = request.POST.dict()
+    else:
+        body = _json_body(request) or {}
     rnd = GameRound.objects.filter(id=body.get("round"), player=request.user).first() if _is_uuid(body.get("round")) else None
     if rnd is not None and rnd.finished_at is None:
         game.finish_round_later(rnd)
@@ -1179,6 +1282,18 @@ def game_exit(request):
         since = datetime.fromtimestamp(int(body["since"]) / 1000, tz=dt_timezone.utc)
     except (KeyError, TypeError, ValueError, OverflowError, OSError):
         since = timezone.now() - timedelta(hours=1)
+    if body.get("beacon"):
+        try:
+            until = int(body["until"]) / 1000
+        except (KeyError, TypeError, ValueError):
+            until = None
+        request.session[LAST_SESSION] = {"since": since.timestamp(), "until": until}
+        return HttpResponse(status=204)
+    # This recap is seen on the page, so the home doesn't repeat it; an earlier sitting's, left idle, it still shows
+    stored = request.session.get(LAST_SESSION)
+    if not isinstance(stored, dict) or (_stamp(stored.get("since")) or since) >= since:
+        request.session.pop(LAST_SESSION, None)
+    request.session[RECAP_SEEN] = timezone.now().timestamp()
     return JsonResponse({"url": reverse("game_home"), "recap": game_rewards.recap(request.user, since)})
 
 
@@ -1406,7 +1521,25 @@ def _cell_accuracy(cell):
 
 
 @login_required
+def game_settings(request):
+    """
+    Superusers only: the game's settings page, in two sections. "Review game labels" (open reports, players, label
+    proposals) and "Unlocks" (grant players unlocks). Each section checks its own permission.
+    """
+    if not request.user.is_superuser:
+        raise Http404("Not found")
+    if request.method == "POST":   # the only form that posts here: one player's unlocks
+        return _save_unlocks(request)
+    return render(request, "beetles/game_settings.html", {**_review_context(request), **_unlocks_context(request)})
+
+
+@login_required
 def game_review(request):
+    """Old address of the label review: it is now a section of the Game settings page (paging and sorting kept)."""
+    return redirect(_settings_url(request.GET, "review"))
+
+
+def _review_context(request):
     """Superusers only: open reports, every player's reliability and the label proposals, each paged and sortable."""
     if not request.user.is_superuser:
         raise Http404("Not found")
@@ -1439,7 +1572,7 @@ def game_review(request):
         label_keys[rank] = lambda e, rank=rank: (e["ranks"].get(rank) or {}).get("value")
     entries, labels_sort = _sort_rows(request, entries, "labels_sort", label_keys)   # default: most answered first
 
-    return render(request, "beetles/game_review.html", {
+    return {
         "open_reports": page(reports, "reports_page"),
         "reports_sort": reports_sort, "players_sort": players_sort, "labels_sort": labels_sort,
         "ranks": game.RANKS,
@@ -1450,7 +1583,7 @@ def game_review(request):
         "rounds": GameRound.objects.count(),
         "answers": GameAnswer.objects.count(),
         "per_species": game_trust.per_species(), "children_share": game_trust.children_share(),
-    })
+    }
 
 
 REVIEW_PER_PAGE = 25

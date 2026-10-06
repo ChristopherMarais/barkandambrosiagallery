@@ -20,16 +20,14 @@ class GamePageTests(GameCase):
         self.assertNotIn("#game.answer-locked #photos:not(.revealing)", page)
 
     def test_the_grid_card_names_the_group_instead_of_vague_phrases(self):
-        page = self.page()   # the lines come from game_answer_review._explain (#541)
-        self.assertIn('node("p", "rv-tile", node("b", "", l.tiles.join(", ") + "."), " ", ...parts(l.parts))', page)
+        page = self.page()   # the one line comes from game_answer_review._explain (#541, #569)
+        self.assertIn("parts(r.grid.note || [])", page)
         for vague in ("one of the rest", '"in it"'):
             self.assertNotIn(vague, page)
 
     def test_names_in_the_identification_card_are_set_like_names(self):
         page = self.page()
-        self.assertIn("return [taxonName(v.name, rank), ", page)
-        self.assertIn("cell(opinion(r.players, true, r.rank))", page)
-        self.assertIn("cell(opinion(r.ai, false, r.rank))", page)
+        self.assertIn('["You said ", ...joinDots(wrong.map((r) => [taxonName(r.yours, r.rank)', page)
 
 
 

@@ -11,8 +11,10 @@ services:
     env_file:
       - .env
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy   # wait until Postgres takes connections (it can take minutes after an unclean stop)
+      redis:
+        condition: service_started
 
   db:
     image: postgres:15
@@ -28,6 +30,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 10m   # crash recovery on a laptop disk can be slow; don't give up on it early
 
   redis:
     image: redis:7-alpine
@@ -45,8 +48,10 @@ services:
     env_file:
       - .env
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy   # wait until Postgres takes connections (it can take minutes after an unclean stop)
+      redis:
+        condition: service_started
 
 volumes:
   postgres_data:

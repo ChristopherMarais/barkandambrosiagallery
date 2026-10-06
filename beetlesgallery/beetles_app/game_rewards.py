@@ -364,12 +364,14 @@ def play_events(player, before):
     return events
 
 
-def recap(player, since):
+def recap(player, since, until=None):
     """
     What to show when they leave: this sitting's numbers, the streak, any badge they earned, and (only now)
-    how many of the beetles we know the answer to they got right.
+    how many of the beetles we know the answer to they got right. ``until`` ends a sitting that a later one followed.
     """
     sitting = GameAnswer.objects.filter(player=player, answered_at__gte=since)
+    if until is not None:
+        sitting = sitting.filter(answered_at__lt=until)
     done = sitting.filter(skipped=False)
     scored = sitting.filter(is_check=True, skipped=False, score_hold=False).exclude(mode="pair", pair_answer="unsure")
     right = scored.exclude(correct_subfamily=False).exclude(correct_tribe=False).exclude(correct_genus=False).exclude(correct_species=False).count()

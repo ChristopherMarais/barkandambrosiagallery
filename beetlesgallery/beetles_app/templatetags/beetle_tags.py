@@ -146,6 +146,13 @@ def percent(value):
 
 
 @register.filter
+def game_label(key):
+    """A game's name as players see it ("pair" -> "Similarity"), from game_levels.GAME_NAMES."""
+    from beetlesgallery.beetles_app.game_levels import GAME_NAMES
+    return GAME_NAMES.get(key, key)
+
+
+@register.filter
 def scale(value):
     """A 0-1 value's step on the site's scale ("none", "fair" ... "excellent"), for .scale-<step> / .scale-fill-<step>."""
     from beetlesgallery.beetles_app.game_scale import value_step
