@@ -22,7 +22,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from django.db.models import Q
 
-from . import game, game_feedback, game_scoring
+from . import game, game_feedback, game_levels, game_scoring
 from .game import RANKS, game_setting
 from .models import AnswerPoints, Beetles, GameAnswer, ModelPrediction
 from .predictions import best_predictions, rank_tips
@@ -528,9 +528,33 @@ def _shown(answer, item):
 
 
 def _images(answer, item):
-    """The photos as they were shown, for Back."""
-    return [None if r is None else {"url": r.display_url, "box": [r.bbox_x, r.bbox_y, r.bbox_width, r.bbox_height]}
-            for r in _shown(answer, item)]
+    """
+    The photos as they were shown, for Back, each with its thumbnail (shown first in the whole-photo view, #601) and,
+    for one photo or a pair, the specimen's other photos once the player has unlocked them, so the whole photo opened
+    from the review goes through them all.
+    """
+    shown = _shown(answer, item)
+    out = [None if r is None else photo(r) for r in shown]
+    if answer.mode in ("odd", "select"):   # a grid shows each beetle on its own
+        return out
+    others = [game.specimen_photos(r) if r is not None else [] for r in shown]
+    if any(others) and game_levels.SPECIMEN_PHOTOS in game_levels.for_player(answer.player)["perks"]:
+        for image, more in zip(out, others):
+            if image is not None and more:
+                image["photos"] = [dict(photo(m), aspect=m.aspect or "") for m in more]
+    return out
+
+
+def thumb_url(roi):
+    """The small thumbnail of a beetle's whole photo, or "" when it has none."""
+    asset = roi.image_asset
+    return asset.thumb_small.url if asset is not None and asset.thumb_small else ""
+
+
+def photo(roi):
+    """A whole photo for the page: where it is, the beetle's box, and its thumbnail (#601)."""
+    return {"url": roi.display_url, "box": [roi.bbox_x, roi.bbox_y, roi.bbox_width, roi.bbox_height],
+            "thumb": thumb_url(roi)}
 
 
 def _truth(roi):

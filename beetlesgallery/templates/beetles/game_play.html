@@ -378,6 +378,9 @@
   #lb-primary { position: absolute; top: 0.5rem; left: 0.5rem; z-index: 2; width: 1.75rem; height: 1.75rem; border-radius: 9999px;
                 display: inline-flex; align-items: center; justify-content: center; background: #fff; color: #111827; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
   #lb-primary.hidden { display: none; }
+  #lightbox-box.hidden { display: none; }
+  /* the photo before stays, faded, until the next one is on screen (#601) */
+  #lb-photo.loading #lightbox-img { opacity: 0.4; }
   #lightbox-box { border-radius: 0.5rem; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.7), inset 0 0 0 1px rgba(0,0,0,.7), 0 0 0 9999px rgba(0,0,0,.35); }
   .more-chip { position: absolute; right: 0.375rem; top: 0.375rem; z-index: 2; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem;
                border-radius: 9999px; background: rgba(17,24,39,.78); color: #fff; font-size: 0.75rem; font-weight: 600; }
@@ -923,37 +926,69 @@
   let lightboxImage = 0;   // which photo of the item is open (A = 0, B = 1), for reporting it
   let gallery = [];         // with the unlock: this photo first, then other photos of the same beetle
   let galleryAt = 0;
+  let photoShown = 0;       // the whole photo asked for last: a slower one that arrives after it is dropped
   // The whole photo zooms like the crops (scroll, pinch, double-click, drag); a single tap closes it
   const lbZoom = makeZoomable($("lb-frame"), $("lb-zoom"), () => { $("lightbox").classList.add("hidden"); toggleLight(false); });
   $("lb-frame").addEventListener("click", (e) => e.stopPropagation());
-  function showPhoto(url, box) {
+  // A beetle's whole photos (#601): this one first, then the specimen's other photos once they are unlocked
+  function galleryOf(im) {
+    return im && im.photos ? [{ url: im.url, box: im.box, thumb: im.thumb }].concat(im.photos) : [];
+  }
+  // One whole photo (#601): its thumbnail at once, the full photo swapped in when it arrives; its box only once a
+  // picture of that photo is on screen, so the next photo's box never shows over the one before. The photo before
+  // stays, faded, until then.
+  function showPhoto(p) {
     lbZoom.reset();
-    $("lightbox-img").src = url;
-    const b = $("lightbox-box");
-    b.style.left = box[0] * 100 + "%";
-    b.style.top = box[1] * 100 + "%";
-    b.style.width = box[2] * 100 + "%";
-    b.style.height = box[3] * 100 + "%";
+    const token = ++photoShown, img = $("lightbox-img"), b = $("lightbox-box");
+    b.classList.add("hidden");
+    b.style.left = p.box[0] * 100 + "%";
+    b.style.top = p.box[1] * 100 + "%";
+    b.style.width = p.box[2] * 100 + "%";
+    b.style.height = p.box[3] * 100 + "%";
+    $("lb-photo").classList.add("loading");
+    let sharp = false;
+    const put = (url, full) => {
+      if (token !== photoShown || sharp) return;   // moved on, or the full photo is already up
+      sharp = full;
+      $("lightbox-img").src = url;
+      (img.decode ? img.decode() : Promise.resolve()).catch(() => {}).then(() => {
+        if (token !== photoShown || img.getAttribute("src") !== url) return;
+        b.classList.remove("hidden");
+        $("lb-photo").classList.remove("loading");
+      });
+    };
+    if (p.thumb) loadImage(p.thumb).then(() => put(p.thumb, false), () => {});
+    loadImage(p.url).then(() => put(p.url, true), () => put(p.url, true));
+  }
+  function showCount() {
+    const p = gallery[galleryAt] || {};
+    $("lb-count").textContent = (galleryAt + 1) + " / " + gallery.length + (p.aspect ? " · " + p.aspect : "");
   }
   function stepGallery(step) {
     if (gallery.length < 2) return;
     galleryAt = (galleryAt + step + gallery.length) % gallery.length;
-    showPhoto(gallery[galleryAt].url, gallery[galleryAt].box);
-    $("lb-count").textContent = (galleryAt + 1) + " / " + gallery.length + (gallery[galleryAt].aspect ? " · " + gallery[galleryAt].aspect : "");
+    showPhoto(gallery[galleryAt]);
+    showCount();
     $("lb-primary").classList.toggle("hidden", galleryAt !== 0);   // the photo to name, among its other photos
     $("report-menu").classList.add("hidden");
   }
   // A photo opened from a review (after the answer, or under Back) is already answered: its Flag only sends the report,
   // it never skips or re-answers (#569). ``lightboxReview``: that answer's {round, index}, else null.
   let lightboxReview = null;
+  // Every photo of the beetle by default (#601): ``photos`` only to give them some other way; else they come from the
+  // beetle on screen, or from the review the photo was opened from.
   function openLightbox(url, box, which, photos, review) {
     lightboxReview = review || (phase === "review" || phase === "next" ? (previous && previous.where) || null : null);
     lightboxImage = which || 0;
-    gallery = photos || [];
+    const from = lightboxReview ? previous && (previous.images || [])[lightboxImage] : item && item.images[lightboxImage];
+    const own = from && from.url === url ? from : null;
+    gallery = photos || galleryOf(own);
     galleryAt = 0;
     $("report-menu").classList.add("hidden");
     $("report-cog").classList.remove("hidden");
-    showPhoto(url, box);
+    $("lightbox-img").removeAttribute("src");   // never the last beetle's photo while this one loads
+    showPhoto(gallery[0] || { url, box, thumb: own ? own.thumb : "" });
+    gallery.forEach((p) => { if (p.thumb) loadImage(p.thumb).catch(() => {}); });   // the others' thumbnails, ready
     $("lb-primary").classList.toggle("hidden", gallery.length < 2);
     // from a review: the beetle's names under the photo, every rank in full (#600); the same specimen in every photo
     const names = lightboxReview && previous && (previous.beetles || [])[lightboxImage];
@@ -961,18 +996,18 @@
     $("lb-names").classList.toggle("hidden", !names);
     $("lightbox").classList.toggle("with-names", !!names);
     ["lb-prev", "lb-next", "lb-count"].forEach((id) => $(id).classList.toggle("hidden", gallery.length < 2));
-    if (gallery.length > 1) $("lb-count").textContent = "1 / " + gallery.length;
+    if (gallery.length > 1) showCount();
+    else if (own && own.more && !own.photos && item && item.more_level) {   // still locked: which level opens them
+      $("lb-count").textContent = "+" + own.more + " photo" + (own.more === 1 ? "" : "s") + " of this beetle at level " + item.more_level;
+      $("lb-count").classList.remove("hidden");
+    }
     $("lightbox").classList.remove("hidden");
   }
   // A grid tile's whole photo: the one place its Flag is, and its beetle's other photos once they are unlocked (else a
   // line saying which level opens them), so the tile itself carries a single small button
   function openTile(i) {
     const im = item.images[i];
-    openLightbox(im.url, im.box, i, im.more && im.photos ? [{ url: im.url, box: im.box }].concat(im.photos) : undefined);
-    if (im.more && !im.photos) {
-      $("lb-count").textContent = "+" + im.more + " photo" + (im.more === 1 ? "" : "s") + " of this beetle at level " + item.more_level;
-      $("lb-count").classList.remove("hidden");
-    }
+    openLightbox(im.url, im.box, i);
   }
   // The tile just tapped shows its whole-photo button clearly for a moment, then it fades back
   let chipsTimer = null;
@@ -1478,7 +1513,7 @@
         chip.addEventListener("click", (e) => {
           e.stopPropagation();
           if (!im.photos) { toast({ kind: "lock", title: "Locked", text: "More photos of each beetle unlock at level " + item.more_level + "." }); return; }
-          openLightbox(im.url, im.box, i, [{ url: im.url, box: im.box }].concat(im.photos));
+          openLightbox(im.url, im.box, i);
         });
         cell.appendChild(chip);
       }
