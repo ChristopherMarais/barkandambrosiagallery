@@ -70,10 +70,26 @@ class AheadOnTheWorkerTests(PreloadCase):
         again.assert_not_called()                                  # once
         self.assertEqual(GameRound.objects.count(), 1)             # nothing built while the player waited
 
+    def coming_first(self, rnd):
+        """
+        The next batch draws the beetles still to come in ``rnd`` first, all but one of them. Left to chance it draws
+        the same four of the eight now and then, and the batch built ahead, which leaves those out, would be
+        empty; this way it always has to leave some out and always has one left.
+        """
+        coming = {it["a"] for it in rnd.items}
+
+        def pick(candidates, n, target):
+            if len(candidates) <= n:
+                return list(candidates)
+            first = [c for c in candidates if str(c) in coming][:n - 1]
+            return (first + [c for c in candidates if str(c) not in coming])[:n]
+        return mock.patch.object(game, "_pick_near", pick)
+
     def test_the_worker_builds_the_next_batch_without_the_beetles_still_to_come(self):
         rnd, item = self.play("classify")
         coming = {it["a"] for it in rnd.items[1:]}
-        ahead = game_views.build_ahead_now(str(rnd.id))
+        with self.coming_first(rnd):
+            ahead = game_views.build_ahead_now(str(rnd.id))
         self.assertIsNotNone(ahead)
         self.assertTrue(coming.isdisjoint(it["a"] for it in ahead.items))
         self.assertEqual(game_views._batch_ahead(rnd), ahead)
@@ -112,7 +128,8 @@ class AheadOnTheWorkerTests(PreloadCase):
 
         rnd, _ = self.play("classify")
         cache.set(game_views.AHEAD_LOCK.format(rnd.id), 1, 60)
-        build_game_batch_ahead_task(str(rnd.id))
+        with self.coming_first(rnd):
+            build_game_batch_ahead_task(str(rnd.id))
         self.assertIsNotNone(game_views._batch_ahead(rnd))
         self.assertIsNone(cache.get(game_views.AHEAD_LOCK.format(rnd.id)))   # and lets go
 

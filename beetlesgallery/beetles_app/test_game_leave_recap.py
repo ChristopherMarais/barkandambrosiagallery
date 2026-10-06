@@ -149,21 +149,28 @@ class LeavePageTests(GameCase):
 
     def test_closing_the_page_sends_a_beacon_to_exit(self):
         page = self.page()
-        self.assertIn("navigator.sendBeacon(root.dataset.exitUrl, form)", page)
+        self.assertIn("navigator.sendBeacon(root.dataset.exitUrl, goodbyeForm())", page)
         self.assertIn('form.append("csrfmiddlewaretoken", csrf)', page)
-        self.assertIn('window.addEventListener("pagehide", () => sendGoodbye());', page)
+        start = page.index('window.addEventListener("pagehide"')
+        self.assertIn("sendGoodbye();", page[start:page.index("});", start)])
         self.assertIn("if (recapSeen || goodbyeSent || answered === answeredAtOpen", page)   # once, and only if needed
 
     def test_a_quick_switch_away_keeps_the_beetle_and_a_long_one_starts_afresh(self):
         page = self.page()
         self.assertIn(f'data-idle-minutes="{game.IDLE_MINUTES}"', page)
-        start = page.index('document.addEventListener("visibilitychange"')
-        handler = page[start:page.index("});", start)]
-        self.assertIn('if (document.visibilityState === "hidden") { hiddenAt = Date.now(); return; }', handler)
-        self.assertIn("if (away < AWAY_MS", handler)   # back soon: nothing happens, the same beetle waits
         self.assertEqual(page.count("const AWAY_MS"), 1)   # one script: a name declared twice stops it all
-        self.assertLess(handler.index("if (away < AWAY_MS"), handler.index("sendGoodbye(left)"))
-        self.assertLess(handler.index("sendGoodbye(left)"), handler.index("startFeed()"))
+        start = page.index('document.addEventListener("visibilitychange"')
+        self.assertIn("cameBack();", page[start:page.index("});", start)])
+        self.assertIn('window.addEventListener("pageshow", (e) => { if (e.persisted) cameBack(); });', page)
+        start = page.index("async function cameBack()")
+        handler = page[start:page.index("\n  }\n", start)]
+        short = handler[handler.index("if (away < AWAY_MS)"):handler.index("return;\n    }")]
+        self.assertNotIn("fetch(", short)   # back soon: the same beetle waits (a new batch only if a beacon closed it)
+        self.assertIn("if (closed) startFeed();", short)
+        # back later: the sitting is closed, and the new batch waits for that, so it can't pick up the batch being closed
+        self.assertIn("fetch(root.dataset.exitUrl", handler)
+        self.assertIn("goodbyeForm(left)", handler)
+        self.assertLess(handler.index("await closing"), handler.rindex("startFeed()"))
 
     def test_links_to_the_game_home_go_through_the_recap(self):
         page = self.page()

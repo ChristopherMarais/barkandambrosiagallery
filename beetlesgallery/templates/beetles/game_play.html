@@ -1740,41 +1740,55 @@
   // Closed before the recap showed (closing the tab, a link away): a beacon, which outlives the page, closes the
   // sitting all the same, and the game home shows its recap once. A phone that kills the page without a word is
   // covered by the home too: it closes batches left idle and recaps their sitting.
-  let goodbyeSent = false;
-  function sendGoodbye(until) {
-    if (recapSeen || goodbyeSent || answered === answeredAtOpen || !navigator.sendBeacon) return false;
+  let goodbyeSent = false;       // a beacon has closed the batch on screen
+  function goodbyeForm(until) {
     const form = new FormData();
     form.append("csrfmiddlewaretoken", csrf);
     form.append("beacon", "1");
     form.append("round", (upcoming && upcoming.round) || roundId || "");
     form.append("since", String(openedAt));
     if (until) form.append("until", String(until));
-    goodbyeSent = navigator.sendBeacon(root.dataset.exitUrl, form);
+    return form;
+  }
+  function sendGoodbye() {
+    if (recapSeen || goodbyeSent || answered === answeredAtOpen || !navigator.sendBeacon) return false;
+    goodbyeSent = navigator.sendBeacon(root.dataset.exitUrl, goodbyeForm());
     return goodbyeSent;
   }
-  window.addEventListener("pagehide", () => sendGoodbye());
-  // Back from the back-forward cache: the beacon closed the batch on screen, so carry on with a new one (the sitting,
-  // and its recap, still count from openedAt)
-  window.addEventListener("pageshow", (e) => {
-    if (!e.persisted || !goodbyeSent) return;
-    goodbyeSent = false;
-    if ($("recap").classList.contains("hidden")) startFeed();
-  });
   // A quick look at another tab or app changes nothing: the same beetle waits. Away longer than the idle limit, the
   // sitting is over (the game home would close its batch and recap it): it is closed now, and a new one starts.
   const AWAY_MS = (Number(root.dataset.idleMinutes) || 10) * 60000;   // the game home's idle limit (game.IDLE_MINUTES)
   let hiddenAt = null;
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") { hiddenAt = Date.now(); return; }
-    const away = hiddenAt === null ? 0 : Date.now() - hiddenAt;
+  window.addEventListener("pagehide", () => {
+    if (hiddenAt === null) hiddenAt = Date.now();
+    sendGoodbye();
+  });
+  // Back on the page: from another tab or app (visibilitychange), or from the back-forward cache (pageshow; either
+  // may come first, and the second finds nothing left to do)
+  async function cameBack() {
     const left = hiddenAt;
+    const away = left === null ? 0 : Date.now() - left;
+    const closed = goodbyeSent;   // the beacon closed the batch on screen as the page went
     hiddenAt = null;
-    if (away < AWAY_MS ||!$("recap").classList.contains("hidden")) return;
-    if (answered !== answeredAtOpen) sendGoodbye(left);   // the home shows that sitting's recap
     goodbyeSent = false;
+    if (!$("recap").classList.contains("hidden")) return;
+    if (away < AWAY_MS) {
+      if (closed) startFeed();   // carry on in a new batch; the sitting, and its recap, still count from openedAt
+      return;
+    }
+    // The page is alive, so a plain request rather than a beacon, and the feed waits for it: a batch it is still
+    // closing would otherwise be picked up again by startFeed. "until" ends the sitting the home recaps.
+    const closing = answered === answeredAtOpen ? null
+      : fetch(root.dataset.exitUrl, { method: "POST", body: goodbyeForm(left), credentials: "same-origin" }).catch(() => null);
     answeredAtOpen = answered;
     openedAt = Date.now();
+    if (closing) { show("loading"); await closing; }
     startFeed();
+  }
+  window.addEventListener("pageshow", (e) => { if (e.persisted) cameBack(); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") { if (hiddenAt === null) hiddenAt = Date.now(); return; }
+    cameBack();
   });
 
   // Links to the game home on the game's screen (the end of the feed's) leave the way Exit does, through the recap
