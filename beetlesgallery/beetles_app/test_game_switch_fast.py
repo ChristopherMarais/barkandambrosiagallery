@@ -148,7 +148,8 @@ class StartSmallTests(FastCase):
     def test_switching_with_nothing_built_ahead_starts_small(self):
         GamePreference.objects.create(player=self.user, granted_perks=["all"], play_mode="classify")
         old, data, _ = self.start("mixed")
-        self.post("game_prefs", {"play_mode": "pair"})
+        # to All modes: Similarity alone has no checked beetles here, and a chosen game never plays another (#604)
+        self.post("game_prefs", {"play_mode": "both"})
         with mock.patch.object(game, "refresh_round") as refresh, mock.patch(FINISH_TASK):
             rnd, data, queued = self.start("mixed", fresh=True)
         refresh.assert_not_called()                                 # the old batch is counted on the worker
