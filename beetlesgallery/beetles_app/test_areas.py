@@ -171,7 +171,7 @@ class StaffOnlySeeTheirOwnAccountTests(AreaCase):
         before = self.user.__class__.objects.count()
         self.client.post(reverse("my_account"), {"action_create_user": "1", "username": "newbie", "password1": "Correct-Horse-9-Staple", "password2": "Correct-Horse-9-Staple"})
         self.assertEqual(self.user.__class__.objects.count(), before)
-        self.assertRedirectsToLogin(self.client.get(reverse("signup")))
+        self.assertRedirectsToLogin(self.client.get(reverse("create_account")))
 
     def test_staff_can_still_change_their_own_password(self):
         self.client.force_login(self.staff)
@@ -182,4 +182,4 @@ class StaffOnlySeeTheirOwnAccountTests(AreaCase):
         page = self.client.get(reverse("my_account"))
         for text in ("Create New User", "User Directory"):
             self.assertContains(page, text)
-        self.assertEqual(self.client.get(reverse("signup")).status_code, 200)
+        self.assertEqual(self.client.get(reverse("create_account")).status_code, 200)
