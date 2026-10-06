@@ -1,8 +1,8 @@
-{% load beetle_tags %}{# Previous / next for the History page. Needs ``page`` and ``tab``. #}
+{% load beetle_tags %}{# Previous / next for the History page. Needs ``page`` and ``tab``; keeps ``filters`` (the game and day, #574). #}
 {% if page.paginator.num_pages > 1 %}
 <nav class="flex items-center justify-between gap-2 mt-3 text-sm" aria-label="Pages">
-  {% if page.has_previous %}<a href="?tab={{ tab }}&amp;page={{ page.previous_page_number }}" class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">&larr; Newer</a>{% else %}<span></span>{% endif %}
+  {% if page.has_previous %}<a href="?tab={{ tab }}{% if filters %}&amp;{{ filters }}{% endif %}&amp;page={{ page.previous_page_number }}" class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">&larr; Newer</a>{% else %}<span></span>{% endif %}
   <span class="text-xs text-gray-500 tabular-nums">Page {{ page.number|digit_groups_text }} of {{ page.paginator.num_pages|digit_groups_text }}</span>
-  {% if page.has_next %}<a href="?tab={{ tab }}&amp;page={{ page.next_page_number }}" class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">Older &rarr;</a>{% else %}<span></span>{% endif %}
+  {% if page.has_next %}<a href="?tab={{ tab }}{% if filters %}&amp;{{ filters }}{% endif %}&amp;page={{ page.next_page_number }}" class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">Older &rarr;</a>{% else %}<span></span>{% endif %}
 </nav>
 {% endif %}
