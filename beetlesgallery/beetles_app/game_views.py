@@ -1284,8 +1284,14 @@ def game_applied_revert(request, roi_id):
         return JsonResponse({"error": f"{lock.locked_by.username} is editing this image."}, status=409)
     try:
         before = game_applied.revert(roi, request.user)
-    except game_applied.RevertError as e:
-        return JsonResponse({"error": str(e)}, status=409)
+    except game_applied.RevertError:
+        logger.warning(
+            "Failed to revert applied game label for roi_id=%s by user_id=%s",
+            roi_id,
+            request.user.id,
+            exc_info=True,
+        )
+        return JsonResponse({"error": "Unable to revert label for this image."}, status=409)
     game_queue.forget()
     return JsonResponse({"depicts_valid_name_id": before["depicts_valid_name_id"]})
 
