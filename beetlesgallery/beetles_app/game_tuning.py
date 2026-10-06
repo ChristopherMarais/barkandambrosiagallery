@@ -441,18 +441,19 @@ def expected_play():
     return {"players": [p[0] for p in PLAYERS], "rows": rows, "band": band}
 
 
-def odd_guess(size):
+def odd_guess(size, odds=1):
     """
-    What a blind Odd One Out pick in a grid of ``size`` is worth on average, as a share of a correct pick: correct 1 time
-    in ``size``, wrong on every validated beetle of the rest, nothing on an AI beetle (scored by agreement, never below
+    What blind picks in an Odd One Out grid of ``size`` hiding ``odds`` odd ones are worth on average, as a share of
+    finding them all (#540): each pick is an odd one ``odds`` times in ``size`` and earns a share, is a validated
+    beetle of the rest otherwise and costs k shares, or an AI beetle and earns nothing (scored by agreement, never below
     zero). The grid with the most AI beetles a player meets, so the fewest wrong picks, is the test.
     """
     from .game import odd_open_count
     from .game_levels import LEVELS
     from .game_scoring import wrong_cost
 
-    ai = min(size - 2, max(2, odd_open_count(len(LEVELS), size)))
-    return (1 - wrong_cost() * (size - 1 - ai)) / size
+    ai = min(size - odds - 1, max(2, odd_open_count(len(LEVELS), size, odds)))
+    return (odds - wrong_cost() * (size - odds - ai)) / size
 
 
 def select_tap_all(size):
@@ -506,7 +507,9 @@ def checks():
     cautious_ok = all(0 <= pair_points(d, truth)[0] < pair_points(truth, truth)[0]
                       for truth in range(len(RANKS)) for d in range(truth))
     sizes = [int(s) for s in GRID_SIZES]
-    guesses, taps = {n: odd_guess(n) for n in sizes}, {n: select_tap_all(n) for n in sizes}
+    from .game_grid_ladder import ODD_SHAPES
+
+    guesses, taps = {shape: odd_guess(*shape) for shape in ODD_SHAPES}, {n: select_tap_all(n) for n in sizes}
     factor = [v["GAME_GRID_SIZE_FACTOR"][s] for s in GRID_SIZES]
     per_size = lambda values: ", ".join(f"{n} beetles {e:+.2f}" for n, e in values.items())   # noqa: E731
     play = expected_play()
@@ -535,8 +538,10 @@ def checks():
          f"The cheapest mistake ({worst_wrong[0]}) scores {worst_wrong[1]:+.2f}, {worst_wrong[1] + part:+.2f} with the "
          f"point for taking part; a skip costs {unsure:g}."),
         ("A blind guess in Imposter Picker loses on average", all(e < 0 for e in guesses.values()),
-         f"Correct 1 time in 4, 9 or 16, and wrong on each validated beetle of the rest: expected {per_size(guesses)} "
-         "× what a correct pick earns."),
+         "At every step of its ladder, each pick right as often as the odd ones are among the beetles and wrong on each "
+         "validated beetle of the rest: expected "
+         + ", ".join(f"{n} beetles, {k} odd {e:+.2f}" for (n, k), e in guesses.items())
+         + " × what finding them all earns."),
         ("Tapping everything in Find Them All loses", all(e < 0 for e in taps.values()),
          f"Non-members are never fewer than members, so a wrong tap must cost more than a member earns: expected "
          f"{per_size(taps)} × a perfect grid."),

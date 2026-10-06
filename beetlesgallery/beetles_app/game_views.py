@@ -508,11 +508,16 @@ def _flagged_places(tiles, player):
 def _grid_over(item, mode, flagged):
     """
     Whether flags end a grid, unscored like a reported photo (#489): once half its photos are flagged, or in Odd One Out
-    the odd one is, since without it there is nothing to find.
+    an odd one is, since without it there are not enough to find.
     """
     tiles = item.get("tiles") or []
-    odd = tiles.index(item["a"]) if mode == GameRound.Mode.ODD and item["a"] in tiles else None
-    return 2 * len(flagged) >= len(tiles) or odd in flagged
+    odds = {tiles.index(t) for t in _odd_ones(item) if t in tiles} if mode == GameRound.Mode.ODD else set()
+    return 2 * len(flagged) >= len(tiles) or bool(odds & set(flagged))
+
+
+def _odd_ones(item):
+    """An Odd One Out item's odd ones (ids): ``odds``, or just ``a`` for a grid built before several (#540)."""
+    return item.get("odds") or [item["a"]]
 
 
 def _item_rois(item):
@@ -604,6 +609,8 @@ def _item_payload(rnd, index):
         grid = rnd.items[index]
         # Odd One Out: all but one share a name at this rank; the grid's size, and the player's step when it was built
         payload.update(rank=grid["rank"], size=len(grid["tiles"]), step=grid.get("step"))
+        if payload["mode"] == GameRound.Mode.ODD:   # how many odd ones to find (#540); which ones stays on the server
+            payload["odds"] = len(_odd_ones(grid))
         if payload["mode"] == GameRound.Mode.SELECT:   # "Tap every <target>"
             payload["target"] = grid["group"][grid["rank"]]
     if payload["mode"] == GameRound.Mode.CLASSIFY:
@@ -958,18 +965,27 @@ def game_answer(request, round_id):
             if record.is_check:
                 scores = game.score_classification(answer, roi_a.taxon)
         elif record.mode == GameRound.Mode.ODD:
-            pick = body.get("pick")
-            if not isinstance(pick, int) or isinstance(pick, bool) or not 0 <= pick < len(tiles):
-                return JsonResponse({"error": "Please pick a beetle."}, status=400)
-            if pick in record.flagged:
+            # As many picks as the grid has odd ones (#540); a lone "pick" is how the feed sent one before
+            want = len(_odd_ones(item))
+            picks = body.get("picks", [body["pick"]] if "pick" in body else None)
+            if (not isinstance(picks, list) or len(picks) != want or len(set(map(str, picks))) != len(picks)
+                    or any(not isinstance(i, int) or isinstance(i, bool) or not 0 <= i < len(tiles) for i in picks)):
+                return JsonResponse({"error": "Please pick a beetle." if want == 1 else f"Please pick {want} beetles."},
+                                    status=400)
+            if set(picks) & set(record.flagged):
                 return JsonResponse({"error": "That photo is flagged: pick another beetle."}, status=400)
-            record.roi = tiles[pick]
-            record.is_check = game_scoring.is_truth(record.roi)
+            record.picks = sorted(picks)
+            record.roi = tiles[record.picks[0]]
+            right = game.odd_verdict(game.score_odd_grid(tiles, record.picks, record.grid_rank, record.grid_group,
+                                                         record.flagged))
+            # scored straight away once the truth tells: any pick on one of the rest, or every pick on a validated beetle
+            record.is_check = right is not None
             if record.is_check:
-                t = record.roi.taxon
-                record.ref_subfamily, record.ref_tribe = t.subfamily or "", t.tribe or ""
-                record.ref_genus, record.ref_species = t.genus or "", t.species or ""
-                scores = game.score_odd(t, record.grid_rank, record.grid_group)
+                t = next((tiles[i].taxon for i in record.picks if game_scoring.is_truth(tiles[i])), None)
+                if t is not None:
+                    record.ref_subfamily, record.ref_tribe = t.subfamily or "", t.tribe or ""
+                    record.ref_genus, record.ref_species = t.genus or "", t.species or ""
+                scores = {record.grid_rank: right}
         elif record.mode == GameRound.Mode.SELECT:
             picks = body.get("picks")
             if (not isinstance(picks, list) or not picks or len(set(map(str, picks))) != len(picks)
