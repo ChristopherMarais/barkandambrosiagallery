@@ -332,6 +332,7 @@
   data-answer-url="{% url 'game_answer' '00000000-0000-0000-0000-000000000000' %}"
   data-break-minutes="{{ break_minutes }}"
   data-exit-url="{% url 'game_exit' %}"
+  data-idle-minutes="{{ idle_minutes }}"
   data-home-url="{% url 'game_home' %}"
   data-taxa-url="{% url 'game_taxa' %}"
   data-prefs-url="{% url 'game_prefs' %}"
@@ -514,12 +515,13 @@
 <div id="toasts" style="position:fixed;top:4rem;left:0;right:0;z-index:96;display:flex;flex-direction:column;align-items:center;gap:0.5rem;pointer-events:none"></div>
 
 <!-- When you leave: how the sitting went -->
-<div id="recap" class="hidden fixed inset-0 z-[97] bg-white overflow-y-auto">
-  <div class="max-w-md mx-auto px-6 py-10 text-center">
-    <div class="inline-flex p-4 bg-gray-100 rounded-full mb-4"><i class="fi fi-rr-trophy text-3xl text-gray-700"></i></div>
-    <h2 class="text-2xl font-bold text-gray-900">Nice session!</h2>
-    <p class="mt-1 text-gray-500" id="recap-line"></p>
-    <div class="grid grid-cols-2 gap-2 my-6">
+{# Fits a small phone and scrolls when it can't (many new badges); its own scroll never moves the page under it #}
+<div id="recap" class="hidden fixed inset-0 z-[97] bg-white overflow-y-auto overscroll-contain" role="dialog" aria-modal="true" aria-labelledby="recap-title">
+  <div class="max-w-md mx-auto px-4 sm:px-6 pt-6 sm:pt-10 text-center" style="padding-bottom: max(1.5rem, env(safe-area-inset-bottom))">
+    <div class="inline-flex p-3 sm:p-4 bg-gray-100 rounded-full mb-3 sm:mb-4"><i class="fi fi-rr-trophy text-3xl text-gray-700"></i></div>
+    <h2 class="text-2xl font-bold text-gray-900" id="recap-title">Nice session!</h2>
+    <p class="mt-1 text-gray-500" id="recap-line" aria-live="polite"></p>
+    <div class="grid grid-cols-2 gap-2 my-5 sm:my-6" id="recap-stats">
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="recap-points">0</div><div class="text-xs text-gray-500">points &middot; <a href="{% url 'game_how' %}#scoring" class="underline hover:text-gray-800" data-testid="recap-why">why?</a></div></div>
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="recap-right">&ndash;</div><div class="text-xs text-gray-500">known beetles correct</div></div>
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="recap-challenge">&ndash;</div><div class="text-xs text-gray-500">challenge</div></div>
@@ -1730,21 +1732,19 @@
     else send(currentAnswer());
   });
 
-  // Leave: close the feed so the answers count, show how the sitting went, then the game home has the score.
-  let leaving = false;
-  $("exit").addEventListener("click", async () => {
-    if (leaving) return;
-    leaving = true;
-    let data = null;
-    try {
-      data = await Promise.race([
-        // on a review that ended a batch, the next batch is the open one
-        api(root.dataset.exitUrl, { round: (upcoming && upcoming.round) || roundId, since: openedAt }),
-        new Promise((resolve) => setTimeout(() => resolve(null), 2500)),
-      ]);
-    } catch (e) { /* the home page closes anything left open */ }
-    if (!data || !data.recap || !data.recap.labelled) { location.href = root.dataset.homeUrl; return; }
-    const r = data.recap;
+  // Leave: close the feed so the answers count and show how the sitting went. The recap opens at once and fills in
+  // when the server answers, so a slow phone connection never sends the player away without it.
+  let leaving = null;            // the exit request while it is on its way
+  let recapSeen = false;         // this sitting's recap is (or was) on screen: nothing to send when the page goes
+  let answeredAtOpen = 0;        // `answered` when this sitting began: whether it labelled anything
+  function recapState(title, line, stats) {
+    $("recap-title").textContent = title;
+    $("recap-line").textContent = line;
+    $("recap-stats").classList.toggle("hidden", !stats);
+    $("recap-badges").innerHTML = "";
+  }
+  function fillRecap(r) {
+    recapState("Nice session!", digitGroupsText(r.labelled) + " beetles labelled. Level " + r.level + ", " + r.level_name + ". " + r.today + " of " + r.goal + " beetles today.", true);
     $("recap-points").textContent = (r.points > 0 ? "+" : "") + digitGroupsText(r.points);
     $("recap-right").textContent = r.scored ? digitGroupsText(r.right) + "/" + digitGroupsText(r.scored) : "–";
     $("recap-streak").textContent = r.streak;
@@ -1752,9 +1752,7 @@
     $("recap-right").className = "text-2xl font-bold rarity-" + r.accuracy_tier;
     $("recap-challenge").textContent = r.challenge + "/100";
     $("recap-challenge").className = "text-2xl font-bold rarity-" + r.challenge_tier;
-    $("recap-line").textContent = digitGroupsText(r.labelled) + " beetles labelled. Level " + r.level + ", " + r.level_name + ". " + r.today + " of " + r.goal + " beetles today.";
     const holder = $("recap-badges");
-    holder.innerHTML = "";
     r.badges.forEach((b) => {
       const row = document.createElement("div");
       row.className = "flex items-center gap-3 p-3 border border-gray-300 rounded-2xl text-left";
@@ -1764,14 +1762,93 @@
       row.querySelector(".text-xs").textContent = b.how;
       holder.appendChild(row);
     });
-    $("recap").classList.remove("hidden");
     if (r.badges.length) confetti();
-    leaving = false;
+  }
+  $("exit").addEventListener("click", async () => {
+    if (leaving || !$("recap").classList.contains("hidden")) return;
+    recapSeen = true;
+    recapState("Nice session!", "Saving your answers…", false);
+    $("recap").scrollTop = 0;
+    $("recap").classList.remove("hidden");
+    // on a review that ended a batch, the next batch is the open one
+    leaving = api(root.dataset.exitUrl, { round: (upcoming && upcoming.round) || roundId, since: openedAt }).catch(() => null);
+    const data = await leaving;
+    leaving = null;
+    if ($("recap").classList.contains("hidden")) return;   // they went back to playing meanwhile
+    if (data && data.recap && data.recap.labelled) fillRecap(data.recap);
+    else if (data) recapState("See you soon!", "No beetles labelled this time.", false);
+    else recapState("See you soon!", "Your answers are saved. Your score is on the game home.", false);
   });
-  $("recap-more").addEventListener("click", () => {
+  $("recap-more").addEventListener("click", async () => {
     $("recap").classList.add("hidden");
+    if (leaving) await leaving;   // the batch is closed before the next one starts
+    recapSeen = false;
+    answeredAtOpen = answered;
     openedAt = Date.now();   // the next sitting is counted from here
     startFeed();
+  });
+
+  // Closed before the recap showed (closing the tab, a link away): a beacon, which outlives the page, closes the
+  // sitting all the same, and the game home shows its recap once. A phone that kills the page without a word is
+  // covered by the home too: it closes batches left idle and recaps their sitting.
+  let goodbyeSent = false;       // a beacon has closed the batch on screen
+  function goodbyeForm(until) {
+    const form = new FormData();
+    form.append("csrfmiddlewaretoken", csrf);
+    form.append("beacon", "1");
+    form.append("round", (upcoming && upcoming.round) || roundId || "");
+    form.append("since", String(openedAt));
+    if (until) form.append("until", String(until));
+    return form;
+  }
+  function sendGoodbye() {
+    if (recapSeen || goodbyeSent || answered === answeredAtOpen || !navigator.sendBeacon) return false;
+    goodbyeSent = navigator.sendBeacon(root.dataset.exitUrl, goodbyeForm());
+    return goodbyeSent;
+  }
+  // A quick look at another tab or app changes nothing: the same beetle waits. Away longer than the idle limit, the
+  // sitting is over (the game home would close its batch and recap it): it is closed now, and a new one starts.
+  const AWAY_MS = (Number(root.dataset.idleMinutes) || 10) * 60000;   // the game home's idle limit (game.IDLE_MINUTES)
+  let hiddenAt = null;
+  window.addEventListener("pagehide", () => {
+    if (hiddenAt === null) hiddenAt = Date.now();
+    sendGoodbye();
+  });
+  // Back on the page: from another tab or app (visibilitychange), or from the back-forward cache (pageshow; either
+  // may come first, and the second finds nothing left to do)
+  async function cameBack() {
+    const left = hiddenAt;
+    const away = left === null ? 0 : Date.now() - left;
+    const closed = goodbyeSent;   // the beacon closed the batch on screen as the page went
+    hiddenAt = null;
+    goodbyeSent = false;
+    if (!$("recap").classList.contains("hidden")) return;
+    if (away < AWAY_MS) {
+      if (closed) startFeed();   // carry on in a new batch; the sitting, and its recap, still count from openedAt
+      return;
+    }
+    // The page is alive, so a plain request rather than a beacon, and the feed waits for it: a batch it is still
+    // closing would otherwise be picked up again by startFeed. "until" ends the sitting the home recaps.
+    const closing = answered === answeredAtOpen ? null
+      : fetch(root.dataset.exitUrl, { method: "POST", body: goodbyeForm(left), credentials: "same-origin" }).catch(() => null);
+    answeredAtOpen = answered;
+    openedAt = Date.now();
+    if (closing) { show("loading"); await closing; }
+    startFeed();
+  }
+  window.addEventListener("pageshow", (e) => { if (e.persisted) cameBack(); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") { if (hiddenAt === null) hiddenAt = Date.now(); return; }
+    cameBack();
+  });
+
+  // Links to the game home on the game's screen (the end of the feed's) leave the way Exit does, through the recap
+  document.addEventListener("click", (e) => {
+    const link = e.target.closest && e.target.closest("a[href]");
+    if (!link || link.closest("#recap") || e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if (new URL(link.href, location.href).pathname !== new URL(root.dataset.homeUrl, location.href).pathname) return;
+    e.preventDefault();
+    $("exit").click();
   });
 
   // ---------- Family Ties: the relatedness ladder ----------
@@ -2124,18 +2201,24 @@
     return open.length > 0;
   }
 
-  // The phone's back button does what Exit does (or closes what is open), instead of leaving without the recap
+  // The phone's back gesture (and the browser's Back) closes what is open, or else shows the recap, as Exit does;
+  // Back on the recap leaves. Back is caught by an extra history entry. Chrome skips entries a page adds before the
+  // player has touched it, so that entry is added on their first tap or key, not on load.
   const BACK_STATE = { beetleGame: true };
-  history.pushState(BACK_STATE, "");
-  window.addEventListener("popstate", () => {
-    if (!$("recap").classList.contains("hidden")) { location.href = root.dataset.homeUrl; return; }
+  let backCaught = !!(history.state && history.state.beetleGame);   // a reload keeps it
+  function catchBack() {
+    if (backCaught) return;
+    backCaught = true;
     history.pushState(BACK_STATE, "");
+  }
+  ["click", "keydown"].forEach((type) => document.addEventListener(type, catchBack, true));
+  window.addEventListener("popstate", (e) => {
+    if (e.state && e.state.beetleGame) return;   // Forward, back onto that entry
+    backCaught = false;
+    if (!$("recap").classList.contains("hidden")) { location.href = root.dataset.homeUrl; return; }
+    catchBack();
     if (!$("light-panel").classList.contains("hidden")) { toggleLight(false); return; }
-    // Back once shows your last beetle; back again (from there) leaves
-    if (!$("previous").classList.contains("hidden")) { hidePrevious(); $("exit").click(); return; }
-    if (closeOverlays()) return;
-    if (busy) { $("exit").click(); return; }   // the review on screen is already your last beetle
-    if (previous || previousUrl) { showPrevious(); return; }
+    if (closeOverlays()) return;   // your last beetle's review, the whole photo, a sheet
     $("exit").click();
   });
 

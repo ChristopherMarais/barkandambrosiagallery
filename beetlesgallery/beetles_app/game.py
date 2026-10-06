@@ -1273,20 +1273,29 @@ def _in_background(player_ids):
     transaction.on_commit(queue)
 
 
-def close_idle_rounds(player, idle_minutes=10):
+# A feed batch untouched this long was left (the tab closed, the phone asleep, the app killed): the game home
+# closes it, and the game page, back after a hide this long, starts afresh rather than carry on (#578)
+IDLE_MINUTES = 10
+
+
+def close_idle_rounds(player, idle_minutes=IDLE_MINUTES):
     """
     Finish the player's feed batches that were left open (they closed the tab, or their phone went to sleep),
     so their answers reach their skills and the difficulty of the images without waiting for them to come back.
     The work is done on the worker (finish_round_later). A batch with nothing answered (one built ahead and never
     reached) has nothing to count, so it is dropped rather than counted as played.
+    Returns when the last answer in the batches it closed was given (None if it closed none), for the home's recap.
     """
     cutoff = timezone.now() - timedelta(minutes=idle_minutes)
+    latest = None
     for rnd in GameRound.objects.filter(player=player, finished_at__isnull=True, started_at__lt=cutoff):
         last = rnd.answers.order_by("-answered_at").values_list("answered_at", flat=True).first()
         if last is None:
             rnd.delete()
         elif last < cutoff:
             finish_round_later(rnd)
+            latest = max(latest or last, last)
+    return latest
 
 
 def finish_round(rnd):

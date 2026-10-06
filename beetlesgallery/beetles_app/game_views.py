@@ -77,13 +77,15 @@ def discussions_url():
 # ---------------------------------------------------------------------------
 @login_required
 def game_home(request):
-    game.close_idle_rounds(request.user)   # anything they left open counts now
+    left_at = game.close_idle_rounds(request.user)   # anything they left open counts now
+    last_session = _pop_last_session(request, left_at)
     game_discoveries.find([request.user.id])
     checked, checked_new, checked_change = game_checked.pop_unseen(request.user)
     # this week's top players (#497); while the week is empty, the home says so and shows last week's top three
     board = game_board.board(limit=5)
     rewards = game_rewards.progress(request.user)
     return render(request, "beetles/game_home.html", {
+        "last_session": last_session,
         "checked": checked, "checked_new": checked_new, "checked_change": checked_change,
         "proposals_notice": rewards["proposals"] and _first_sight_of_proposals(request.user),
         "discoveries": game_discoveries.pop_unseen(request.user),
@@ -98,6 +100,54 @@ def game_home(request):
                       else settings.SITE_URL.rstrip("/") + reverse("game_home")),
         "discussions": discussions_url(),
     })
+
+
+# A sitting the player left without seeing its recap (#578), in the session: {"since", "until"} in seconds since 1970
+# ("until" None: it ran to its end). game_exit stores it when the page sends its goodbye beacon; the game home shows
+# that recap once. RECAP_SEEN is when they last saw one, so a sitting the home pieces together never reaches back
+# past it.
+LAST_SESSION = "game_last_session"
+RECAP_SEEN = "game_recap_seen"
+
+
+def _stamp(value):
+    try:
+        return None if value is None else datetime.fromtimestamp(float(value), tz=dt_timezone.utc)
+    except (TypeError, ValueError, OverflowError, OSError):
+        return None
+
+
+def _sitting_start(player, last, seen):
+    """When the sitting that ended with the answer at ``last`` began: back through answers no more than the idle
+    limit apart, and never before the last recap they saw."""
+    gap = timedelta(minutes=game.IDLE_MINUTES)
+    start = last
+    for at in (GameAnswer.objects.filter(player=player, answered_at__lte=last, answered_at__gte=last - timedelta(hours=12))
+               .order_by("-answered_at").values_list("answered_at", flat=True)[:5000]):
+        if start - at > gap:
+            break
+        start = at
+    return max(start, seen) if seen else start
+
+
+def _pop_last_session(request, left_at=None):
+    """
+    The recap of the sitting the player left without seeing it, once; None if there is none (or nothing in it).
+    The page's beacon names it; without one (a phone that killed the page without a word), a batch the idle rule
+    has just closed (``left_at``, its last answer) does.
+    """
+    stored = request.session.pop(LAST_SESSION, None)
+    seen = _stamp(request.session.get(RECAP_SEEN))
+    since = until = None
+    if isinstance(stored, dict):
+        since, until = _stamp(stored.get("since")), _stamp(stored.get("until"))
+    elif left_at is not None and (seen is None or left_at > seen):
+        since = _sitting_start(request.user, left_at, seen)
+    if since is None:
+        return None
+    request.session[RECAP_SEEN] = timezone.now().timestamp()
+    recap = game_rewards.recap(request.user, since, until)
+    return recap if recap["labelled"] else None
 
 
 def _first_sight_of_proposals(player):
@@ -377,6 +427,7 @@ def game_play(request, mode):
         "ranks": [(r, r.capitalize()) for r in game.RANKS],
         "rungs": RUNGS,
         "last_review": _last_review_url(request.user),
+        "idle_minutes": game.IDLE_MINUTES,
         **_onboarding(request),
     })
 
@@ -1212,8 +1263,16 @@ def game_past_review(request, round_id, index):
 @login_required
 @require_POST
 def game_exit(request):
-    """The player leaves the feed: close their current batch so their answers count, then go back to the game home."""
-    body = _json_body(request) or {}
+    """
+    The player leaves the feed: close their current batch so their answers count, and say how the sitting went.
+    A page that is closed before it could show that recap, or comes back after longer than the idle limit, sends a
+    beacon instead (a form post, as navigator.sendBeacon can't set headers; "until" ends a sitting left idle): the
+    batch is closed the same way and the game home shows the recap once.
+    """
+    if request.content_type in ("multipart/form-data", "application/x-www-form-urlencoded"):
+        body = request.POST.dict()
+    else:
+        body = _json_body(request) or {}
     rnd = GameRound.objects.filter(id=body.get("round"), player=request.user).first() if _is_uuid(body.get("round")) else None
     if rnd is not None and rnd.finished_at is None:
         game.finish_round_later(rnd)
@@ -1222,6 +1281,18 @@ def game_exit(request):
         since = datetime.fromtimestamp(int(body["since"]) / 1000, tz=dt_timezone.utc)
     except (KeyError, TypeError, ValueError, OverflowError, OSError):
         since = timezone.now() - timedelta(hours=1)
+    if body.get("beacon"):
+        try:
+            until = int(body["until"]) / 1000
+        except (KeyError, TypeError, ValueError):
+            until = None
+        request.session[LAST_SESSION] = {"since": since.timestamp(), "until": until}
+        return HttpResponse(status=204)
+    # This recap is seen on the page, so the home doesn't repeat it; an earlier sitting's, left idle, it still shows
+    stored = request.session.get(LAST_SESSION)
+    if not isinstance(stored, dict) or (_stamp(stored.get("since")) or since) >= since:
+        request.session.pop(LAST_SESSION, None)
+    request.session[RECAP_SEEN] = timezone.now().timestamp()
     return JsonResponse({"url": reverse("game_home"), "recap": game_rewards.recap(request.user, since)})
 
 
