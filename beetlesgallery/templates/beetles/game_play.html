@@ -700,6 +700,7 @@
     if (!res.ok) {
       const err = new Error(data.error || "Something went wrong. Please try again.");
       err.status = res.status;
+      err.data = data;   // e.g. the game choices with a "nothing to play" (#604)
       throw err;
     }
     return data;
@@ -1209,13 +1210,13 @@
     popping = !!show;
     if (show) { show(); setTimeout(nextPop, POP_MS + 450); }
   }
-  function showPop(event, badgeClass, badgeText, testid, badgeColour) {
+  function showPop(event, badgeClass, badgeText, testid, badgeColour, cardClass) {
     const pop = document.createElement("div");
     pop.className = "level-pop";
     pop.setAttribute("role", "status");
     pop.dataset.testid = testid;
     const card = document.createElement("div");
-    card.className = "level-pop-card";
+    card.className = "level-pop-card" + (cardClass ? " " + cardClass : "");
     card.style.setProperty("--level-colour", event.colour || "#6b7280");
     const badge = document.createElement("div");
     badge.className = "level-pop-badge " + badgeClass;
@@ -1238,14 +1239,16 @@
     if (!reduceMotion && window.beetleConfetti) window.beetleConfetti($("confetti"), "level", 1, event.colour);
   }
   function levelPop(event) {
-    queuePop(() => showPop(event, event.badge || "scale-chip-none", event.level || "", "level-pop"));
+    queuePop(() => showPop(event, event.badge || "level-1", event.level || "", "level-pop"));
   }
-  // A badge earned with this answer (#608): its icon on its colour, its name and how it was earned. "tier" is a step
-  // of the site's scale (its .scale-chip-* colours) or a colour of its own ("blue", "purple": event.colour)
+  // A badge earned with this answer (#608): its icon on its colour, its name and how it was earned, on a card in the
+  // badge's colours as on the profile (.scale-card-<tier>). "tier" is a step of the site's scale or a colour of its
+  // own ("blue", "purple"); a tier the stylesheet has no colour for gets event.colour, so the pop-up never goes blank.
   const SCALE_STEPS = ["none", "fair", "decent", "good", "great", "excellent"];
   function badgePop(event) {
     const onScale = SCALE_STEPS.includes(event.tier);
-    queuePop(() => showPop(event, onScale ? "scale-chip-" + event.tier : "", "", "badge-pop", onScale ? "" : event.colour || "#6b7280"));
+    queuePop(() => showPop(event, "scale-chip-" + event.tier, "", "badge-pop", onScale ? "" : event.colour || "#6b7280",
+                           "scale-card-" + event.tier));
   }
 
   function toast(event) {
@@ -1532,6 +1535,7 @@
     } catch (e) {
       if (keep) setPhase(before);
       else $("loading").classList.add("hidden");
+      if (e.data && e.data.prefs) renderPrefs(e.data.prefs);   // nothing in this game: the player can pick another (#604)
       showError(e.message);
     }
   }
