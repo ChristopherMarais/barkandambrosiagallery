@@ -213,7 +213,7 @@ class DetailHeadingTests(PageBehaviourCase):
 class GallerySortTests(PageBehaviourCase):
     def setUp(self):
         super().setUp()
-        from beetlesgallery.beetles_app.testing import make_beetle, make_taxon, make_image
+        from beetlesgallery.beetles_app.testing import make_beetle, make_taxon
         self.client.force_login(self.user)
         self.a = make_beetle(taxon=make_taxon(valid_species_id="1", genus="Zeta", species="a", scientific_name="Zeta a"))
         self.b = make_beetle(taxon=make_taxon(valid_species_id="2", genus="Alpha", species="b", scientific_name="Alpha b"))

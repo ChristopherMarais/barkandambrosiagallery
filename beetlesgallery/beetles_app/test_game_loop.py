@@ -4,7 +4,7 @@ import json
 from django.test import override_settings
 
 from beetlesgallery.beetles_app import game, game_scoring as scoring
-from beetlesgallery.beetles_app.models import AnswerPoints, GameAnswer, PlayerScore
+from beetlesgallery.beetles_app.models import AnswerPoints, PlayerScore
 from beetlesgallery.beetles_app.test_game import AFFINIS, FERR
 from beetlesgallery.beetles_app.test_game_scoring import PLAT, ScoringCase
 

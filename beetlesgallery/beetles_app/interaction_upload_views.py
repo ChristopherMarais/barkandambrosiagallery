@@ -2,14 +2,13 @@
 import os
 
 from django.conf import settings
-from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import render
 from django.utils import timezone
 
 from . import interaction_upload as upload
-from .areas import ANNOTATE, UPLOAD, INTERACTIONS, area_required, has_area
+from .areas import INTERACTIONS, area_required
 from .models import PathogenInteraction
 from .views import _format_size
 

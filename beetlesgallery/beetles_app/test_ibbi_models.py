@@ -8,7 +8,6 @@ from django.urls import reverse
 
 from beetlesgallery.beetles_app.models import Beetles, ModelPrediction
 from beetlesgallery.beetles_app.test_classify_assist import ClassifyCase, fake_response
-from beetlesgallery.beetles_app.testing import make_taxon
 from beetlesgallery.tools import ibbi_models
 
 

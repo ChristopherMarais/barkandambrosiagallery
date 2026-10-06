@@ -168,8 +168,8 @@ class EliteTests(ScoringCase):
         from django.core.cache import cache
         from beetlesgallery.beetles_app.game_trust import elite_players
         best = self.strong("best", right=40)
-        ok = self.strong("ok", right=30, wrong=10)
-        meh = self.strong("meh", right=20, wrong=20)
+        self.strong("ok", right=30, wrong=10)
+        self.strong("meh", right=20, wrong=20)
         cache.clear()
         self.assertEqual(elite_players(), {best.id})
 

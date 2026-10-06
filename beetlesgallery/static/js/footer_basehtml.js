@@ -1,8 +1,6 @@
 // open and close mobile menu
 function menuToggle() {
     const mobileMenu = document.getElementById('mobile-menu')
-
-    // Note: The element #mobile-menu is currently missing from base.html
     if (!mobileMenu) return;
 
     if (mobileMenu.getAttribute('data-open') == 'false') {
@@ -27,7 +25,7 @@ function menuToggle() {
 // close mobile menu when clicking outside
 document.addEventListener('click', function (event) {
     const mobileMenu = document.getElementById('mobile-menu')
-    const menu = document.getElementById('mobileMenuWrap') // This ID also seems missing in base.html
+    const menu = document.getElementById('mobileMenuWrap')
 
     if (!mobileMenu || !menu) return;
 

@@ -11,7 +11,6 @@ areas they think right, one by one (or none). Their Basic account works meanwhil
 ask for more the same way; the approvers are told straight away. Superuser is never granted through a request.
 """
 import logging
-import re
 from datetime import timedelta
 from dataclasses import dataclass
 
@@ -21,7 +20,6 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
 from django.core.mail import EmailMultiAlternatives
 from django.db import IntegrityError, transaction
-from django.db.models.functions import Lower
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone

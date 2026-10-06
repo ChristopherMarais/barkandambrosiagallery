@@ -1,6 +1,5 @@
 """Views for reviewing proposed interactions and for showing accepted ones on the interactions page."""
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
@@ -10,7 +9,7 @@ from django.views.decorators.http import require_GET
 
 from . import interaction_data as data
 from . import interaction_review as review
-from .areas import ANNOTATE, UPLOAD, INTERACTIONS, area_required, has_area
+from .areas import INTERACTIONS, area_required
 from .models import InteractionProposal
 
 PAGE_SIZE = 20

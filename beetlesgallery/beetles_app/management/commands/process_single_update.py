@@ -1,16 +1,11 @@
-import os
-import sys
-import json
 import uuid
 import math
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP
 from datetime import date, datetime
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
-from django.conf import settings
-from django.core.files.base import ContentFile
 
 from beetlesgallery.beetles_app.models import UpdateBatch, Beetles, ImageAsset, Taxon
 from beetlesgallery.beetles_app.areas import BULK_VALIDATE, has_area
@@ -75,7 +70,7 @@ def _to_float(v):
     v = _none(v)
     if v is None: return None
     try: return float(v)
-    except: return None
+    except Exception: return None
 
 def _to_bool(v):
     v = _none(v)
@@ -97,14 +92,14 @@ def _to_date(v):
         except ValueError: return None
     # Pandas timestamp fallback
     try: return v.date() 
-    except: return None
+    except Exception: return None
 
 def _to_decimal(v):
     v = _none(v)
     if v is None: return None
     try:
         return Decimal(str(v)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
-    except:
+    except Exception:
         return None
 
 class Command(BaseCommand):

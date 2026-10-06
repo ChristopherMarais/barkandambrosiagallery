@@ -1,23 +1,17 @@
 from rest_framework import viewsets, status, filters
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.exceptions import PermissionDenied
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated
 from ..areas import AI_RECOMMEND, ANNOTATE, BOXES, VALIDATE, has_area
 from django.http import FileResponse
 from django.db import transaction
 from django.utils import timezone
-from django.conf import settings
 from beetlesgallery.beetles_app.models import ImageAsset, Beetles, ImageLock
 from .. import roi_defaults
 from .serializers import ImageAssetSerializer, BeetlesSerializer, SpeciesSerializer
-import json
-import zipfile
 import os
 import logging
-from io import BytesIO
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 

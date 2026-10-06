@@ -6,7 +6,7 @@ import unicodedata
 import time
 import math
 
-from beetlesgallery.beetles_app.models import Beetles, UploadBatch, ImageAsset
+from beetlesgallery.beetles_app.models import UploadBatch, ImageAsset
 from django.core.management.base import BaseCommand
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage

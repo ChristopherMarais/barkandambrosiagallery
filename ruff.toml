@@ -1,0 +1,24 @@
+# Lint settings for `ruff check` (run in CI by .github/workflows/tests.yml).
+# A conservative set that catches real mistakes, not style: pyflakes (unused or undefined names, redefinitions)
+# and pycodestyle's error-level rules. Formatting is not enforced.
+line-length = 120
+extend-exclude = ["**/migrations/**", ".pixi"]
+
+[lint]
+select = [
+    "E4",  # imports: several on one line, ...
+    "E7",  # statements: comparisons to None/True, bare except, lambda assignments, ...
+    "E9",  # syntax and IO errors
+    "F",   # pyflakes
+]
+ignore = [
+    "E402",  # imports below module code: Django settings and models rely on this in places
+    "E701",  # `if x: return` on one line is the house style for short guards
+    "E741",  # `l` as a loop variable in short comprehensions
+]
+
+[lint.per-file-ignores]
+# AppConfig.ready() imports modules for their side effects (signal receivers).
+"**/apps.py" = ["F401"]
+# views.py is being split into smaller modules by PRs still in flight; its imports are tidied once that settles.
+"beetlesgallery/beetles_app/views.py" = ["F401"]

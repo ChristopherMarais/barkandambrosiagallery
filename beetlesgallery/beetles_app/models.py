@@ -5,7 +5,8 @@ from django.db.models.functions import Lower, Upper
 from django.contrib.postgres.indexes import GinIndex
 
 import uuid
-import json, os
+import json
+import os
 from simple_history.models import HistoricalRecords
 from .schema import LEGACY_MANIFEST_NAME, archive_name, manifest_name
 from treebeard.mp_tree import MP_Node
@@ -35,7 +36,6 @@ class ImageAsset(models.Model):
     
     # --- Technical Metadata ---
     image_has_multiple_individuals = models.BooleanField(null=True, blank=True)
-    # aspect = models.CharField(max_length=100, null=True, blank=True)
     resolution_in_ppmm = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True)
     image_size_bytes = models.BigIntegerField(null=True, blank=True, db_index=True)
 
@@ -388,18 +388,6 @@ class Beetles(models.Model):
         self.bbox_validated_at = timezone.now()
         self.save(update_fields=['bbox_is_validated', 'bbox_validated_by', 'bbox_validated_at', 'last_updated_by', 'last_updated_at'])
 
-    # ---------
-    # Helpers: content-addressed relative paths based on sha256
-    # ---------
-    @staticmethod
-    def path_for_display(sha256: str) -> str:
-        """
-        Path for a web-friendly JPEG version of the original image.
-        Used primarily for displaying TIFFs.
-        """
-        a, b = Beetles.shard_from_sha(sha256)
-        return f"display/{a}/{b}/{sha256}.jpg"
-
     @property
     def display_url(self):
         """Delegates display URL generation to the linked ImageAsset."""
@@ -414,12 +402,16 @@ class Beetles(models.Model):
             return self.image_asset.image_file
         return None
 
+    # ---------
+    # Helpers: content-addressed relative paths based on sha256
+    # ---------
     @staticmethod
     def shard_from_sha(sha256: str) -> tuple[str, str]:
         return ImageAsset.shard_from_sha(sha256)
 
     @staticmethod
     def path_for_display(sha256: str) -> str:
+        """Path for a web-friendly JPEG version of the original image, used to display TIFFs."""
         return ImageAsset.path_for_display(sha256)
 
     @staticmethod
@@ -439,12 +431,9 @@ class Beetles(models.Model):
 # UploadBatch
 # -----------------------------
 
-import uuid
 import hashlib
-import os
 from django.db import transaction
 from django.contrib.auth import get_user_model
-from django.utils import timezone
 
 User = get_user_model()
 
@@ -458,10 +447,6 @@ staging_upload_path_xlsx = staging_upload_path_csv
 def staging_upload_path_zip(instance, filename):
     # uploads/staging/YYYY/MM/<batch-id>.zip
     return f"uploads/staging/{timezone.now():%Y/%m}/{instance.id}.zip"
-
-# # Back-compat: old migrations import this by name
-# def staging_upload_path(instance, filename):
-#     return staging_upload_path_csv(instance, filename)
 
 
 class UploadBatch(models.Model):
@@ -636,7 +621,6 @@ class UploadBatch(models.Model):
         """
         Mark the batch as import_failed and record the reason.
         """
-        from django.utils import timezone
         self.error_message = (f"IMPORT ERROR: {reason or ''}")[:2000]
         if move_to_failed_folder:
             self._relocate_files("uploads/failed_import")
