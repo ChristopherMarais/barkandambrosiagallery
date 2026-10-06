@@ -9,7 +9,9 @@ from datetime import date, timedelta
 
 from django.db.models import Q, F
 from django.utils import timezone
+from django.utils.http import urlencode
 from django.urls import reverse
+from django.views.decorators.cache import never_cache
 from django.db import transaction
 from django.conf import settings
 from django.contrib import messages
@@ -52,6 +54,7 @@ def superuser_required(view_func):
     return decorated_view
 
 @login_required
+@never_cache  # Back after creating a user or changing a password fetches the page afresh, with the windows empty
 def my_account(request):
     user = request.user
 
@@ -842,8 +845,14 @@ def beetle_detail(request, beetle_id):
     )
 
 
+@never_cache
 def create_account(request):
-    """A superuser makes an account for someone (people make their own on the Sign up page)."""
+    """A superuser makes an account for someone (people make their own on the Sign up page).
+
+    An account that is made redirects to ?created=<username> (post, redirect, get), which shows the confirmation
+    only: the form comes back through "Create another account", and refreshing never sends it again. never_cache:
+    going Back fetches a blank form instead of the browser's copy with what was typed.
+    """
     # --- Security Check: only superusers make accounts for others ---
     if not request.user.is_superuser:
         messages.info(request, "Use \"Sign up\" to make an account.")
@@ -859,11 +868,11 @@ def create_account(request):
             if email:
                 user.email = email
                 user.save(update_fields=["email"])
-            
-            # Do not log them in automatically; send them to login page with a message
-            messages.success(request, "Username created successfully.")
-            return redirect("create_account")
+            return redirect(f"{reverse('create_account')}?{urlencode({'created': user.username})}")
     else:
+        created = request.GET.get("created", "")
+        if created and get_user_model().objects.filter(username=created).exists():
+            return render(request, "accounts/signup.html", {"created_username": created})
         form = TailwindUserCreationForm()
     return render(request, "accounts/signup.html", {"form": form})
 
