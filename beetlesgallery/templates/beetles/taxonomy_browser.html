@@ -329,7 +329,7 @@
     <div class="rounded-lg border border-gray-200 bg-gray-50 p-6 text-gray-600">
       The taxonomy has not been loaded yet. A superuser can upload the species list on the
       Data Management page, or run
-      <code class="bg-gray-200 px-1.5 py-0.5 rounded text-sm">python manage.py migrate_taxonomy_to_db</code>
+      <code class="bg-gray-200 px-1.5 py-0.5 rounded-sm text-sm">python manage.py migrate_taxonomy_to_db</code>
       inside the container.
     </div>
   {% else %}
@@ -340,23 +340,23 @@
     {# LEFT: scrollable collapsible tree                                  #}
     {# ----------------------------------------------------------------- #}
     <div class="taxonomy-tree-section">
-      <div class="border border-gray-200 rounded-lg bg-white shadow-sm h-full flex flex-col overflow-hidden">
-        <div class="border-b border-gray-200 bg-gray-50 px-4 py-2.5 flex items-center justify-between flex-shrink-0">
+      <div class="border border-gray-200 rounded-lg bg-white shadow-xs h-full flex flex-col overflow-hidden">
+        <div class="border-b border-gray-200 bg-gray-50 px-4 py-2.5 flex items-center justify-between shrink-0">
           <span class="text-sm font-semibold text-gray-700">Taxonomy Tree</span>
           <div class="flex gap-2">
             <button type="button" id="expand-all-btn"
-              class="text-xs px-2.5 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 text-gray-600 transition">
+              class="text-xs px-2.5 py-1 rounded-sm border border-gray-300 bg-white hover:bg-gray-100 text-gray-600 transition">
               Expand All
             </button>
             <button type="button" id="collapse-all-btn"
-              class="text-xs px-2.5 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 text-gray-600 transition">
+              class="text-xs px-2.5 py-1 rounded-sm border border-gray-300 bg-white hover:bg-gray-100 text-gray-600 transition">
               Collapse All
             </button>
           </div>
         </div>
 
         {# Search bar #}
-        <div class="px-3 pt-4 pb-3 flex-shrink-0">
+        <div class="px-3 pt-4 pb-3 shrink-0">
           <div class="taxonomy-filter-row">
             <select id="taxonomy-filter-field" class="taxonomy-filter-select">
               <option value="tribe">Tribe</option>
@@ -384,7 +384,7 @@
     {# RIGHT: species detail panel                                        #}
     {# ----------------------------------------------------------------- #}
     <div class="taxonomy-detail-section">
-      <div class="border border-gray-200 rounded-lg bg-white shadow-sm h-full flex flex-col overflow-hidden">
+      <div class="border border-gray-200 rounded-lg bg-white shadow-xs h-full flex flex-col overflow-hidden">
 
         {# placeholder shown until a species is clicked #}
         <div id="species-detail-placeholder" class="flex flex-col items-center justify-center text-gray-400 p-12 flex-1">

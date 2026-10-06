@@ -47,21 +47,21 @@
 
   <div class="mb-6 flex flex-wrap gap-3">
     <a href="{% url 'interactions_export' %}"
-      class="inline-flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-3 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+      class="inline-flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-3 text-base font-bold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
       <i class="fi fi-rr-download"></i><span>Download current interactions (CSV)</span>
     </a>
     <a href="{% static 'downloads/interactions_upload_template.csv' %}" download
-      class="inline-flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-3 text-base font-semibold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+      class="inline-flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-3 text-base font-semibold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
       <i class="fi fi-rr-document"></i><span>Blank template</span>
     </a>
     <a href="{% url 'interactions_initial_file' %}"
-      class="inline-flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-3 text-base font-semibold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition"
+      class="inline-flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-3 text-base font-semibold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition"
       title="The published v1.0 dataset as an upload file, to start an empty database by hand">
       <i class="fi fi-rr-database"></i><span>Initial file (published v1.0)</span>
     </a>
   </div>
 
-  <form method="post" enctype="multipart/form-data" class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm space-y-5">
+  <form method="post" enctype="multipart/form-data" class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-xs space-y-5">
     {% csrf_token %}
     <div>
       <label for="csv_file" class="block text-sm font-semibold text-gray-700 mb-2">Interactions file (.csv, up to {{ max_mb }} MB)</label>
@@ -69,10 +69,10 @@
         class="block w-full text-sm text-gray-700 file:mr-4 file:rounded-lg file:border file:border-gray-300 file:bg-white file:px-4 file:py-2 file:font-semibold hover:file:bg-gray-50">
     </div>
     <label class="flex items-center gap-2 text-sm text-gray-700">
-      <input type="checkbox" name="dry_run" class="rounded border-gray-300"> Check the file only, don't save anything
+      <input type="checkbox" name="dry_run" class="rounded-sm border-gray-300"> Check the file only, don't save anything
     </label>
     <button type="submit"
-      class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-3 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+      class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-3 text-base font-bold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
       <i class="fi fi-rr-upload"></i><span>Upload</span>
     </button>
   </form>

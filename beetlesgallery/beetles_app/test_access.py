@@ -261,9 +261,9 @@ class ReviewPageTests(AccessCase):
         self.client.force_login(self.superuser)
         page = self.client.get(reverse("access_requests"))
         for text in ("Ada Lovelace", "<strong>ada</strong>", "Specimen pages", "(asked)", "I study ambrosia beetles.",
-                     'value="details" class="mt-0.5 rounded border-gray-300" checked', "working as Basic"):
+                     'value="details" class="mt-0.5 rounded-sm border-gray-300" checked', "working as Basic"):
             self.assertContains(page, text)
-        self.assertContains(page, 'value="upload" class="mt-0.5 rounded border-gray-300" >')   # not asked for: not ticked
+        self.assertContains(page, 'value="upload" class="mt-0.5 rounded-sm border-gray-300" >')   # not asked for: not ticked
         self.assertNotContains(page, "already has an account")   # their own new account is not a duplicate
         self.assertContains(self.client.get(reverse("my_account")), "1 waiting")
         self.assertNotContains(self.client.get(reverse("data_management")), "Review Access Requests")

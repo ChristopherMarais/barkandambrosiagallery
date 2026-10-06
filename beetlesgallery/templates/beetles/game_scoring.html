@@ -349,13 +349,13 @@ gain × m,   loss (skips too) × (2 − m)                       the point for t
               {% if t.parts %}
                 {% for k, label, value, default in t.parts %}
                 <label class="text-[11px] text-gray-500 text-center">{{ label }}
-                  <input type="number" name="{{ t.key }}.{{ k }}" value="{{ value }}" min="{{ t.min }}" max="{{ t.max }}" step="{{ t.step }}" class="block w-20 rounded border border-gray-300 px-2 py-1 text-sm text-gray-900" title="Default {{ default }}"></label>
+                  <input type="number" name="{{ t.key }}.{{ k }}" value="{{ value }}" min="{{ t.min }}" max="{{ t.max }}" step="{{ t.step }}" class="block w-20 rounded-sm border border-gray-300 px-2 py-1 text-sm text-gray-900" title="Default {{ default }}"></label>
                 {% endfor %}
               {% else %}
-                <input type="number" name="{{ t.key }}" value="{{ t.value }}" min="{{ t.min }}" max="{{ t.max }}" step="{{ t.step }}" class="w-24 rounded border border-gray-300 px-2 py-1 text-sm text-gray-900" title="Default {{ t.default }}">
+                <input type="number" name="{{ t.key }}" value="{{ t.value }}" min="{{ t.min }}" max="{{ t.max }}" step="{{ t.step }}" class="w-24 rounded-sm border border-gray-300 px-2 py-1 text-sm text-gray-900" title="Default {{ t.default }}">
                 <span class="text-xs text-gray-400">default {{ t.default }}</span>
               {% endif %}
-              {% if t.changed %}<label class="flex items-center gap-1 text-xs text-gray-600"><input type="checkbox" name="reset-{{ t.key }}" value="1" class="h-4 w-4 rounded border-gray-300"> Default</label>{% endif %}
+              {% if t.changed %}<label class="flex items-center gap-1 text-xs text-gray-600"><input type="checkbox" name="reset-{{ t.key }}" value="1" class="h-4 w-4 rounded-sm border-gray-300"> Default</label>{% endif %}
             </div>
           </div>
           {% endfor %}

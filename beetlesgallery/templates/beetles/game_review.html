@@ -102,8 +102,8 @@
             {% if cell.n %}{% widthratio cell.accuracy 1 100 %}% <span class="text-gray-400 text-xs">{{ cell.ok }}/{{ cell.n }}</span>{% endif %}
           </td>
           {% endfor %}
-          <td class="px-3 py-2 border-l border-gray-100 text-xs text-gray-600 whitespace-normal min-w-[12rem]">
-            {% for s in p.proven %}<span class="inline-block mr-1 mb-1 px-1.5 py-0.5 rounded bg-green-50 text-green-800 border border-green-200"><i class="fi fi-rr-shield-check"></i> {{ s.rank|digit_groups }}{% if s.branch %}: {{ s.branch }}{% endif %}</span>{% empty %}<span class="text-gray-300">—</span>{% endfor %}
+          <td class="px-3 py-2 border-l border-gray-100 text-xs text-gray-600 whitespace-normal min-w-48">
+            {% for s in p.proven %}<span class="inline-block mr-1 mb-1 px-1.5 py-0.5 rounded-sm bg-green-50 text-green-800 border border-green-200"><i class="fi fi-rr-shield-check"></i> {{ s.rank|digit_groups }}{% if s.branch %}: {{ s.branch }}{% endif %}</span>{% empty %}<span class="text-gray-300">—</span>{% endfor %}
           </td>
         </tr>
         {% empty %}
@@ -120,8 +120,8 @@
   <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-2">
     <span></span>
     <div class="flex text-sm bg-gray-100 rounded-lg p-1 self-start">
-      <a href="?#labels" class="px-3 py-1.5 rounded-md {% if not only_trusted %}bg-white shadow-sm font-semibold text-gray-900{% else %}text-gray-500{% endif %}">All</a>
-      <a href="?trusted=1#labels" class="px-3 py-1.5 rounded-md {% if only_trusted %}bg-white shadow-sm font-semibold text-gray-900{% else %}text-gray-500{% endif %}">Expert-backed</a>
+      <a href="?#labels" class="px-3 py-1.5 rounded-md {% if not only_trusted %}bg-white shadow-xs font-semibold text-gray-900{% else %}text-gray-500{% endif %}">All</a>
+      <a href="?trusted=1#labels" class="px-3 py-1.5 rounded-md {% if only_trusted %}bg-white shadow-xs font-semibold text-gray-900{% else %}text-gray-500{% endif %}">Expert-backed</a>
     </div>
   </div>
   <p class="text-xs text-gray-500 mb-3">
