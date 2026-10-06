@@ -243,13 +243,13 @@
   .rv-line { margin-top: 0.25rem; font-size: 0.8125rem; color: #374151; }
   .rv-line .fi { vertical-align: -0.125em; }
   /* Where a name comes from (#569): green validated, blue IBBI-AI, purple the players, glowing purple when a proven
-     expert backs them. A thin white rim keeps each dot clear on the grey name panels. */
-  .rv-dot { display: inline-block; flex: none; width: 0.5rem; height: 0.5rem; margin-right: 0.25rem; border-radius: 9999px; vertical-align: 0.05em; box-shadow: 0 0 0 1px rgba(255,255,255,.85); }
+     expert backs them. One dot per photo, no rim (#600). */
+  .rv-dot { display: inline-block; flex: none; width: 0.5rem; height: 0.5rem; margin-right: 0.25rem; border-radius: 9999px; vertical-align: 0.05em; }
   .rv-dot.truth { background: #16a34a; }
   .rv-dot.ai { background: #2563eb; }
   .rv-dot.players, .rv-dot.expert { background: #9333ea; }
-  .rv-dot.expert { box-shadow: 0 0 0 1px rgba(255,255,255,.85), 0 0 5px 1px rgba(192,132,252,.9); animation: rv-glow 2.4s ease-in-out infinite; }
-  @keyframes rv-glow { 50% { box-shadow: 0 0 0 1px rgba(255,255,255,.85), 0 0 9px 3px rgba(192,132,252,1); } }
+  .rv-dot.expert { box-shadow: 0 0 5px 1px rgba(192,132,252,.9); animation: rv-glow 2.4s ease-in-out infinite; }
+  @keyframes rv-glow { 50% { box-shadow: 0 0 9px 3px rgba(192,132,252,1); } }
   @media (prefers-reduced-motion: reduce) { .rv-dot.expert { animation: none; } }
   /* the marks on the grid tiles (#569): the number to the top left, its points next to it; the whole-photo button
      keeps the top right */
@@ -280,6 +280,24 @@
   .rv-names .src { flex: none; display: inline-flex; align-items: center; color: #f3f4f6; font-size: 0.8em; }
   .rv-names .src .fi { font-size: 0.85em; margin-right: 0.125rem; }
   .rv-names .none { color: #e5e7eb; font-weight: 400; }
+  /* the photo's one dot sits in a slot of its own before the first name, so the names stay in line (#600) */
+  :is(.rv-names, .lb-names) .lead { flex: none; display: inline-flex; width: 0.5rem; margin-right: -0.25rem; }
+  :is(.rv-names, .lb-names) .lead .rv-dot { margin-right: 0; }
+  /* Similarity: the rank the two share (the answer, or probably), underlined on both photos (#600) */
+  :is(.rv-names, .lb-names) .nm.shared { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+  /* the whole photo opens from its own button on a reviewed photo, bottom left; a tap on the photo turns its names off (#600) */
+  .cell > .rv-whole { top: auto; right: auto; left: 0.375rem; bottom: 0.375rem; z-index: 5; }
+  @media (hover: hover) and (pointer: fine) { .cell > .rv-whole { display: none; } }
+  /* the whole photo opened from a review: its names under it, every rank in full (#600) */
+  #lb-names.hidden { display: none; }
+  .lb-names { display: flex; flex-direction: column; gap: 0.125rem; width: min(94vw, 26rem); margin: 0.5rem auto 0; color: #fff; font-size: 0.9375rem; line-height: 1.3; }
+  .lb-names > span { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+  .lb-names .rk { flex: 0 0 5rem; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #9ca3af; }
+  .lb-names .nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+  .lb-names .src { flex: none; display: inline-flex; align-items: center; color: #d1d5db; font-size: 0.8em; }
+  .lb-names .src .fi { font-size: 0.85em; margin-right: 0.125rem; }
+  .lb-names .none { color: #9ca3af; font-weight: 400; }
+  #lightbox.with-names #lightbox-img { max-height: calc(85vh - 7rem); }
   /* grids: smaller tiles, smaller text and corners; the text keeps clear of the rounded corners and the marks above */
   #game:is([data-mode="odd"], [data-mode="select"]) #photos .rv-names, #previous-photos:is([data-size="4"], [data-size="9"], [data-size="16"]) .rv-names {
       padding: 1.875rem 0.625rem 0.625rem; gap: 0.125rem; font-size: 0.9375rem; }
@@ -294,6 +312,8 @@
     /* the small grid tiles of a phone keep the names: the dot alone says who (its words on the dot) */
     :is(#photos, #previous-photos):is([data-size="4"], [data-size="9"], [data-size="16"]) .rv-names :is(.tier, .fi) { display: none; }
     :is(#photos, #previous-photos):is([data-size="9"], [data-size="16"]) .rv-names .who { display: none; }
+    /* small tiles: one confidence only, the photo's own source's */
+    :is(#photos, #previous-photos):is([data-size="9"], [data-size="16"]) .rv-names .also { display: none; }
   }
   .cell.names-off .rv-names { opacity: 0; }
   @media (hover: hover) { .cell:hover .rv-names { opacity: 0; } }
@@ -306,7 +326,7 @@
     #photos > .peers-tag { transition: opacity .15s; }
     #photos:has(.cell:hover) > .peers-tag { opacity: 0; }
   }
-  /* on the review a tap opens the whole photo and a long press peeks under the names: no text selection or menu */
+  /* on the review a tap turns the names off and on (a click with a mouse opens the whole photo): no text selection or menu */
   .cell.has-names { -webkit-touch-callout: none; user-select: none; cursor: zoom-in; }
   /* In a grid of 25 four lines of names would hide most of a tile: they show on a tap (or while the pointer is on
      it), the other way round; the card above lists every tile's name at the grid's rank. Only the names and dots. */
@@ -315,7 +335,16 @@
   :is(#photos, #previous-photos)[data-size="25"] .rv-names :is(.who, .tier, .fi) { display: none; }
   :is(#photos, #previous-photos)[data-size="25"] .rv-names .rv-dot { width: 0.3125rem; height: 0.3125rem; margin-right: 0.125rem; }
   :is(#photos, #previous-photos)[data-size="25"] .cell.names-off .rv-names { opacity: 1; }
+  :is(#photos, #previous-photos)[data-size="25"] .rv-names .also { display: none; }
   @media (hover: hover) { :is(#photos, #previous-photos)[data-size="25"] .cell:hover .rv-names { opacity: 1; } }
+  /* a grid tile seen before (#600): bottom right, the eye alone on the small tiles of 16 and 25 */
+  .rv-seen { position: absolute; right: 0.375rem; bottom: 0.375rem; z-index: 5; display: inline-flex; align-items: center; gap: 0.25rem; height: 1.375rem;
+             padding: 0 0.45rem; border-radius: 9999px; background: rgba(255,255,255,.92); border: 1px solid #d1d5db; color: #374151;
+             font-size: 0.6875rem; font-weight: 600; white-space: nowrap; pointer-events: none; }
+  :is(#photos, #previous-photos):is([data-size="9"], [data-size="16"], [data-size="25"]) .rv-seen .word { display: none; }
+  :is(#photos, #previous-photos)[data-size="16"] .rv-seen { right: 0.25rem; bottom: 0.25rem; height: 1.125rem; padding: 0 0.25rem; font-size: 0.625rem; }
+  :is(#photos, #previous-photos)[data-size="25"] .rv-seen { right: 0.125rem; bottom: 0.125rem; height: 1rem; padding: 0 0.2rem; font-size: 0.5625rem; }
+  @media (hover: hover) { .cell > .rv-seen { transition: opacity .15s; } .cell:hover > .rv-seen { opacity: 0; } }
   .rv-badge.up { background: #16a34a; color: #fff; }
   .rv-badge.down { background: #dc2626; color: #fff; }
   .rv-badge.flat { background: rgba(255,255,255,.95); border: 1px solid #d1d5db; color: #374151; }
@@ -596,6 +625,7 @@
       <button type="button" class="report-reason block w-full text-left px-2 py-2 rounded-lg hover:bg-gray-100" data-reason="{{ value }}" role="menuitem">{{ label }}{% if hint %}<span class="block text-xs text-gray-500">{{ hint }}</span>{% endif %}</button>
       {% endfor %}
     </div>
+    <div id="lb-names" class="hidden"></div>
   </div>
   <button type="button" id="lb-light" class="hidden absolute bottom-3 right-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white text-gray-900 text-sm font-semibold shadow-lg" aria-label="Lighting" data-testid="lightbox-lighting"><i class="fi fi-rr-brightness"></i><span>Lighting</span></button>
   <button type="button" id="lb-prev" class="lb-nav hidden" aria-label="Previous photo of this beetle"><i class="fi fi-rr-angle-left"></i></button>
@@ -925,6 +955,11 @@
     $("report-cog").classList.remove("hidden");
     showPhoto(url, box);
     $("lb-primary").classList.toggle("hidden", gallery.length < 2);
+    // from a review: the beetle's names under the photo, every rank in full (#600); the same specimen in every photo
+    const names = lightboxReview && previous && (previous.beetles || [])[lightboxImage];
+    $("lb-names").replaceChildren(...(names ? [namesLabel(names, previous, true)] : []));
+    $("lb-names").classList.toggle("hidden", !names);
+    $("lightbox").classList.toggle("with-names", !!names);
     ["lb-prev", "lb-next", "lb-count"].forEach((id) => $(id).classList.toggle("hidden", gallery.length < 2));
     if (gallery.length > 1) $("lb-count").textContent = "1 / " + gallery.length;
     $("lightbox").classList.remove("hidden");
@@ -1735,36 +1770,63 @@
       const badge = t.points ? [pts(t.points), t.points > 0 ? "up" : "down"] : t.state === "missed" ? ["missed", "flat"]
                   : t.state === "vote" || t.state === "pick" ? ["vote", "flat"] : null;
       if (badge) cellEl.appendChild(node("span", "rv-badge " + badge[1], badge[0]));
+      if ((g.seen || []).includes(i)) {   // this very tile was seen before (#600): the headline pill is for one photo
+        const seen = node("span", "rv-seen", node("i", "fi fi-rr-eye"), node("span", "word", "Seen before"));
+        seen.title = "Seen before";
+        seen.setAttribute("aria-label", "Seen before");
+        seen.dataset.testid = "tile-seen";
+        cellEl.appendChild(seen);
+      }
     });
   }
 
   // Every beetle's names on its photo, in every game (#541): four short lines, subfamily to species (the genus cut to
-  // its letter in the species), true names with how reliable they are, or the likeliest with who says so and how sure,
-  // each source marked with its dot (#569)
-  const NAME_SOURCE = { ai: (r) => [[sourceDot("ai"), node("span", "who", "AI "), r.sure + "%"], "IBBI-AI: " + r.sure + "%"],
-                        players: (r) => [[playersDot(r.expert), node("i", "fi fi-rr-users"), node("span", "who", r.votes + " · "), r.sure + "%"],
+  // its letter in the species), true names with how reliable they are, or the likeliest with who says so and how sure.
+  // One dot per photo says where its names come from (#600): the source of its deepest name. Where IBBI-AI and the
+  // players say the same name, both confidences show ("AI 82% · 67%").
+  const NAME_SOURCE = { ai: (r) => [[node("span", "who", "AI "), r.sure + "%"], "IBBI-AI: " + r.sure + "%"],
+                        players: (r) => [[node("i", "fi fi-rr-users"), node("span", "who", r.votes + " · "), r.sure + "%"],
                                          r.votes + (r.votes === 1 ? " player: " : " players: ") + r.sure + "%" +
                                          (r.expert ? ", backed by an expert" : "")] };
-  function namesLabel(b) {
-    const box = node("div", "rv-names");
+  // the photo's one dot: validated, IBBI-AI, or the players (glowing with an expert: playersDot(r.expert))
+  function photoDot(b) {
+    const kind = b.source || (b.validated ? "truth" : "");
+    return kind === "players" ? playersDot(b.expert) : SOURCE_DOT[kind] ? sourceDot(kind) : null;
+  }
+  // The rank a Similarity pair shares, when it is the answer or probably is (#600): underlined on both photos, only
+  // where the two photos show the same name there
+  function sharedRank(review) {
+    const rank = review && review.pair && review.pair.shared, [a, b] = (review && review.beetles) || [];
+    if (!rank || !a || !b) return null;
+    const at = (x) => ((x.ranks.find((r) => r.rank === rank) || {}).name || "").trim().toLowerCase();
+    return at(a) && at(a) === at(b) ? rank : null;
+  }
+  // ``full``: for the whole photo opened from a review, under the photo: every rank by name, nothing cut short
+  function namesLabel(b, review, full) {
+    const box = node("div", full ? "lb-names" : "rv-names");
     box.dataset.testid = "beetle-names";
+    if (full) box.dataset.testid = "photo-names";
     if (!b.validated && b.ranks.every((r) => !r.name)) {
       box.append(node("span", "", node("span", "nm none", "Not named yet")));
       return box;
     }
-    let genus = "";
+    const shared = sharedRank(review);
+    let genus = "", dot = photoDot(b);
     b.ranks.forEach((r, i) => {
       let name = r.name;
       if (r.rank === "genus") genus = name;
-      if (r.rank === "species" && genus && name.startsWith(genus + " ")) name = genus[0] + ". " + name.slice(genus.length + 1);
-      const nm = name ? node("span", "nm", taxonName(name, r.rank)) : node("span", "nm none", "—");
+      if (!full && r.rank === "species" && genus && name.startsWith(genus + " ")) name = genus[0] + ". " + name.slice(genus.length + 1);
+      const nm = name ? node("span", "nm" + (r.rank === shared ? " shared" : ""), taxonName(name, r.rank)) : node("span", "nm none", "—");
       nm.title = r.rank + ": " + (r.name || "not known");
-      // who says so and how sure, on every line (#569); a validated name its dot on every line, and how reliable it
-      // is on the first
-      const how = r.source === "truth" ? [[sourceDot("truth"), i === 0 ? node("span", "tier", b.tier) : ""], b.tier]
+      // who says so and how sure, on every line (#569); how reliable a validated name is, on the first
+      const how = r.source === "truth" ? [[i === 0 ? node("span", "tier", b.tier) : ""], b.tier]
                 : NAME_SOURCE[r.source] && NAME_SOURCE[r.source](r);
-      nm.title += how ? " (" + how[1] + ")" : "";
-      box.append(node("span", "", nm, how ? node("span", "src", ...[].concat(how[0])) : null));
+      const also = r.also && NAME_SOURCE[r.also.source] && NAME_SOURCE[r.also.source](r.also);
+      nm.title += how ? " (" + how[1] + (also ? "; " + also[1] : "") + ")" : "";
+      const lead = node("span", "lead", name && dot ? dot : null);
+      if (name) dot = null;   // the one dot, on the first line with a name
+      box.append(node("span", "", lead, full ? node("span", "rk", r.rank) : null, nm,
+                      how ? node("span", "src", ...[].concat(how[0]), also ? node("span", "also", " · ", ...also[0]) : null) : null));
     });
     return box;
   }
@@ -1772,41 +1834,41 @@
     (review.beetles || []).forEach((b, i) => {
       const c = cells[i];
       if (b && c && !c.classList.contains("flagged")) {
-        c.appendChild(namesLabel(b));
+        c.appendChild(namesLabel(b, review));
         c.classList.add("has-names");
+        if (!c.querySelector(".zoom-chip")) {   // the whole photo on its own button: a finger's tap turns the names off (#600)
+          const whole = node("button", "zoom-chip rv-whole", node("i", "fi fi-rr-expand"));
+          whole.type = "button";
+          whole.dataset.testid = "review-whole-photo";
+          whole.setAttribute("aria-label", "See the whole photo");
+          whole.addEventListener("click", (e) => { e.stopPropagation(); openReviewPhoto(c); });
+          c.appendChild(whole);
+        }
       }
     });
   }
-  // On a review (after the answer, and under Back) a photo with its names never picks, taps or re-answers (#569):
-  // a tap opens the whole photo, as in play (zoom, Lighting, Flag), and pressing and holding hides the names while
-  // the finger (or button) stays down, to see the beetle under them; with a mouse, pointing at the photo does that.
-  const PEEK_MS = 300;
+  // On a review (after the answer, and under Back) a photo with its names never picks, taps or re-answers (#569).
+  // A finger's tap turns its names off, and on again: they stay that way until the next tap (#600; holding to peek
+  // was not discoverable, and the finger covered the photo). The whole photo opens from its own button on the photo.
+  // With a mouse, pointing at the photo clears the names and a click opens the whole photo, as before.
+  function openReviewPhoto(c) {
+    const i = [...c.parentElement.querySelectorAll(".cell")].indexOf(c), im = previous && (previous.images || [])[i];
+    if (im) openLightbox(im.url, im.box, i, null, previous.where);
+  }
   function reviewPhotos(box) {
-    let peek = null;   // {cell, timer, shown}: a press that may become a peek
-    const endPeek = () => {
-      if (!peek) return;
-      clearTimeout(peek.timer);
-      peek.cell.classList.remove("names-off");
-    };
+    let byMouse = false;   // the press was a mouse's, not a finger's or a pen's
     box.addEventListener("pointerdown", (e) => {
-      const c = e.target.closest(".cell.has-names");
-      if (!c || e.button > 0 || e.target.closest("button:not(.frame)")) return;
-      endPeek();
-      peek = { cell: c, shown: false };
-      peek.timer = setTimeout(() => { peek.shown = true; c.classList.add("names-off"); }, PEEK_MS);
+      if (e.target.closest(".cell.has-names")) byMouse = e.pointerType === "mouse";
     }, true);
-    ["pointerup", "pointercancel", "pointerleave"].forEach((t) => box.addEventListener(t, endPeek, true));
     box.addEventListener("contextmenu", (e) => { if (e.target.closest(".cell.has-names")) e.preventDefault(); });
     box.addEventListener("click", (e) => {
       const c = e.target.closest(".cell.has-names");
       if (!c || e.target.closest("button:not(.frame)")) return;
       e.stopPropagation();
       e.preventDefault();
-      const peeked = peek && peek.cell === c && peek.shown;
-      peek = null;
-      if (peeked || !previous) return;   // the end of a peek, not a tap
-      const i = [...box.querySelectorAll(".cell")].indexOf(c), im = (previous.images || [])[i];
-      if (im) openLightbox(im.url, im.box, i, null, previous.where);
+      if (!previous) return;
+      if (byMouse) openReviewPhoto(c);
+      else c.classList.toggle("names-off");
     }, true);
   }
   reviewPhotos($("photos"));
