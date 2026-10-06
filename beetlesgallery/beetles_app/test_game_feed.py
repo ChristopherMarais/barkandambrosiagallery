@@ -1,7 +1,5 @@
 """The Beetle ID game as one continuous feed: no rounds to the player, checks dropped in now and then, confetti, exit."""
-import json
 from datetime import timedelta
-from unittest import mock
 
 from django.test import override_settings
 from django.urls import reverse

@@ -15,7 +15,6 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 import zipfile
-import io
 from PIL import Image, ImageOps
 from beetlesgallery.beetles_app.image_pipeline import write_original_and_thumb96
 from .validate_uploads import _normalize_valid_id
@@ -96,7 +95,7 @@ def _to_float(v):
     v = _none(v)
     if v is None: return None
     try: return float(v)
-    except: return None
+    except Exception: return None
 
 def _normalize_sex(v, row_num):
     v = _none(v)
@@ -573,8 +572,11 @@ class Command(BaseCommand):
                                 "depicts_name_verbatim": ln(values.get("depicts_name_verbatim")),
                                 "alias_id": ln(values.get("alias_id")),
                             }
+                            lengths = ", ".join(f"{name}={n}" for name, n in lens.items() if n)
 
-                            raise CommandError(f"{batch.id}: Row {row_num} failed DB insert: {e}") from e
+                            raise CommandError(
+                                f"{batch.id}: Row {row_num} failed DB insert: {e} (text lengths: {lengths or 'none'})"
+                            ) from e
 
                         except IntegrityError as e:
                             error_str = str(e).lower()

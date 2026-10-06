@@ -3,9 +3,8 @@ from django.db import transaction
 from django.utils import timezone
 from django.core.files.base import ContentFile
 
-from beetlesgallery.beetles_app.models import Beetles, UpdateBatch, ImageAsset
+from beetlesgallery.beetles_app.models import UpdateBatch
 
-import uuid as _uuid
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import date, datetime
 import math
@@ -54,7 +53,7 @@ def _to_float(v):
     v = _none(v)
     if v is None: return None
     try: return float(v)
-    except: return None
+    except Exception: return None
 
 def _to_decimal_12_4(v):
     v = _none(v)
@@ -254,7 +253,6 @@ class Command(BaseCommand):
             iid = row.get("image_id", "")
             
             b = None
-            is_new = False
             
             # 1. Update Existing ROI
             if rid and rid.lower() != "new":
@@ -271,7 +269,6 @@ class Command(BaseCommand):
                     rows_failed += 1
                     per_row.append({"record_id": rid, "status": "failed", "error_message": f"Row {excel_row}: image_id '{iid}' not found"})
                     continue
-                is_new = True
                 b = Beetles(image_asset=img) # Temp object for diffing
             
             # 3. Invalid State

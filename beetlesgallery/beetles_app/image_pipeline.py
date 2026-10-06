@@ -1,17 +1,18 @@
 from __future__ import annotations
-from pathlib import Path
-import io, os
+import io
+import logging
+import os
 import imghdr
 import tempfile
-from typing import BinaryIO, Tuple, Optional
-
-from django.conf import settings
+from typing import BinaryIO
 
 from django.core.files.base import File, ContentFile
 from django.core.files.storage import default_storage
 
 from PIL import Image, ImageOps
 from .models import Beetles
+
+logger = logging.getLogger(__name__)
 
 # --- Utilities ---
 
@@ -106,8 +107,8 @@ def ensure_display_jpeg(beetle) -> str:
             default_storage.save(rel_path, ContentFile(buf.getvalue()))
             return rel_path
 
-    except Exception as e:
-        print(f"Error converting Beetle {beetle.id}: {e}")
+    except Exception:
+        logger.exception("Could not make a display JPEG for beetle %s", beetle.id)
         return ""
 
 def _guess_ext_from_path_or_hdr(tmp_path: str) -> str:
@@ -182,13 +183,11 @@ def write_original_and_thumb96(sha256: str, fileobj: BinaryIO) -> dict:
             thumb = img
 
             # Prefer WEBP; fallback to JPEG if WEBP not available
-            thumb_is_webp = True
             thumb_rel = Beetles.path_for_thumb96(sha256, webp=True)
             buf = io.BytesIO()
             try:
                 thumb.save(buf, format="WEBP", quality=80, method=4)
             except Exception:
-                thumb_is_webp = False
                 thumb_rel = Beetles.path_for_thumb96(sha256, webp=False)
                 thumb_rgb = thumb.convert("RGB") if thumb.mode != "RGB" else thumb
                 buf = io.BytesIO()

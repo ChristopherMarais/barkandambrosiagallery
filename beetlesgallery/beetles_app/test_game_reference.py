@@ -5,7 +5,7 @@ said, or the model's name where the model is sure and has been right about that 
 from django.core.cache import cache
 from django.test import override_settings
 
-from beetlesgallery.beetles_app import game_reference, game_scoring, game_trust
+from beetlesgallery.beetles_app import game_reference, game_scoring
 from beetlesgallery.beetles_app.models import AnswerPoints, ModelPrediction
 from beetlesgallery.beetles_app.test_game import TrustCase
 

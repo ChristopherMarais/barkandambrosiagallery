@@ -1,5 +1,4 @@
 from django.core.management.base import BaseCommand
-from django.core.files.storage import default_storage
 from beetlesgallery.beetles_app.models import Beetles
 from beetlesgallery.beetles_app.image_pipeline import ensure_thumbnail
 
@@ -17,6 +16,8 @@ class Command(BaseCommand):
         qs = (Beetles.objects
               .only("id", "image_file", "image_sha256", "thumb_small")
               .order_by("id"))
+        if limit > 0:
+            qs = qs[:limit]
 
         ok = 0
         miss = 0

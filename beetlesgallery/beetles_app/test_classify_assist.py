@@ -178,7 +178,7 @@ class ProposedRoiMetadataTests(ClassifyCase):
         self.assertEqual(ModelPrediction.objects.get(roi=template).valid_species_id, "2210")  # still kept as a suggestion
 
     def test_the_second_box_after_a_template_copies_its_details(self):
-        template = make_beetle(image=self.asset, **SPECIMEN)
+        make_beetle(image=self.asset, **SPECIMEN)
         self.classify([DETECTION, self.other_box()])
         boxes = Beetles.objects.filter(image_asset=self.asset)
         self.assertEqual(boxes.count(), 2)
@@ -213,7 +213,7 @@ class ClassifierPageSavesImagesTests(PageBehaviourCase):
     def submit(self, detections=(DETECTION,), data=None, content=None):
         from django.core.files.uploadedfile import SimpleUploadedFile
         upload = SimpleUploadedFile("beetle.jpg", content or self.jpeg, content_type="image/jpeg")
-        with mock.patch("requests.post", return_value=fake_response(list(detections))) as post:
+        with mock.patch("requests.post", return_value=fake_response(list(detections))):
             response = self.client.post("/tools/classify/", {"image": upload, "architecture": "rtdetr"})
         return response
 
@@ -232,7 +232,7 @@ class ClassifierPageSavesImagesTests(PageBehaviourCase):
     def test_the_same_image_again_is_not_saved_twice_and_the_platform_copy_is_kept(self):
         from beetlesgallery.beetles_app.models import ImageAsset
         self.submit()
-        asset = ImageAsset.objects.get()
+        ImageAsset.objects.get()  # exactly one
         roi_count = Beetles.objects.count()
         again = self.submit().json()
         self.assertEqual(again["saved"], "already_on_platform")
@@ -265,7 +265,6 @@ class ClassifierPageSavesImagesTests(PageBehaviourCase):
         self.assertFalse(ImageAsset.objects.exists())
 
     def test_a_logged_in_user_is_recorded_and_a_failure_never_breaks_the_classification(self):
-        from beetlesgallery.beetles_app.models import ImageAsset
         self.client.force_login(self.user)
         self.submit()
         self.assertEqual(Beetles.objects.get().bbox_created_by, self.user)

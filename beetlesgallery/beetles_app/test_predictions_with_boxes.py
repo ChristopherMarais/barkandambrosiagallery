@@ -79,7 +79,7 @@ class BoxesInThePredictionsFileTests(PredictionCase):
     def test_any_problem_saves_nothing_not_even_the_boxes(self):
         result = self.load(rows(f",{self.image.id},0.6,0.6,0.3,0.3,2210,0.8,m,v1",
                                 f",{self.image.id},0.9,0.9,0.3,0.3,2210,0.8,m,v1",       # past the edge
-                                f",not-an-id,0.1,0.1,0.1,0.1,2210,0.8,m,v1",
+                                ",not-an-id,0.1,0.1,0.1,0.1,2210,0.8,m,v1",
                                 ",,,,,,2210,0.8,m,v1",
                                 f",{self.image.id},,,,,2210,0.8,m,v1"))
         self.assertFalse(result.ok)

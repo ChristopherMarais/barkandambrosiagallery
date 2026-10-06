@@ -1,6 +1,5 @@
 import os
 import csv
-import uuid
 import shutil
 import zipfile
 import contextlib
@@ -8,7 +7,7 @@ import json
 from pathlib import Path
 from datetime import timedelta
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 from django.conf import settings

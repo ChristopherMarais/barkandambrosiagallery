@@ -9,7 +9,6 @@ would be.
 import itertools
 import os
 import random
-import re
 
 from locust import HttpUser, between, events, task
 
