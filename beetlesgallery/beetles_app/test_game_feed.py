@@ -225,8 +225,8 @@ class PlayPageTests(GameCase):
         self.assertIn('$("skip-text").textContent = "Skip";', page)   # "Skip" in every game now (it still sends "unsure" here)
 
     def test_the_game_keeps_its_colours_to_a_small_palette(self):
-        # The game may be more colourful than the rest of the site, but from one palette: RPG rarity colours
-        # (grey, green, blue, purple, orange, gold) for levels and streaks, plus badge accents and beta.
+        # The game may be more colourful than the rest of the site, but from one palette: the scale (grey, red,
+        # orange, yellow, green) for levels and streaks, blue for IBBI-AI and purple for the players (#572).
         from django.conf import settings
         root = settings.BASE_DIR / "beetlesgallery" / "templates" / "beetles"
         source = "".join((root / n).read_text() for n in ("game_play.html", "game_home.html"))

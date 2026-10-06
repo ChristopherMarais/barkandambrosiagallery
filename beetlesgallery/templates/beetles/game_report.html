@@ -24,7 +24,7 @@
     </div>
     <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">
       <div class="text-xs uppercase tracking-wider text-gray-500 font-semibold">Accuracy</div>
-      <div class="mt-1 text-2xl font-semibold tabular-nums rarity-{{ report.summary.accuracy|rarity }}" data-testid="report-accuracy">
+      <div class="mt-1 text-2xl font-semibold tabular-nums scale-{{ report.summary.accuracy|scale }}" data-testid="report-accuracy">
         {% if report.summary.accuracy is not None %}{% widthratio report.summary.accuracy 1 100 %}%{% else %}<span class="text-gray-400">&ndash;</span>{% endif %}
       </div>
     </div>
@@ -42,10 +42,10 @@
   <div class="mb-8">
     <div class="flex items-baseline justify-between mb-1">
       <h2 class="text-lg font-semibold text-gray-900">Challenge level</h2>
-      <span class="text-sm font-semibold tabular-nums rarity-{{ report.challenge|rarity }}">{% widthratio report.challenge 1 100 %} / 100</span>
+      <span class="text-sm font-semibold tabular-nums scale-{{ report.challenge|scale }}">{% widthratio report.challenge 1 100 %} / 100</span>
     </div>
     <div class="h-2 bg-gray-100 rounded-full overflow-hidden" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{% widthratio report.challenge 1 100 %}" aria-label="Challenge level">
-      <div class="h-full rounded-full rarity-fill-{{ report.challenge|rarity }}" data-testid="challenge-bar" style="width: {% widthratio report.challenge 1 100 %}%"></div>
+      <div class="h-full rounded-full scale-fill-{{ report.challenge|scale }}" data-testid="challenge-bar" style="width: {% widthratio report.challenge 1 100 %}%"></div>
     </div>
     <p class="mt-2 text-xs text-gray-500">Images get harder as you play and as your accuracy grows.</p>
   </div>

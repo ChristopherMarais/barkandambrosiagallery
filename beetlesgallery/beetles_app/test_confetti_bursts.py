@@ -18,7 +18,8 @@ def body(name):
 
 class ConcurrentBurstTests(SimpleTestCase):
     def test_the_public_call_is_unchanged(self):
-        self.assertIn("window.beetleConfetti = function (canvas, kind, size)", JS)
+        # (canvas, kind, size) as before; a level-up adds its colour on the scale (#572)
+        self.assertIn("window.beetleConfetti = function (canvas, kind, size, accent)", JS)
 
     def test_a_new_burst_never_resets_the_canvas(self):
         # setting canvas.width clears what other bursts drew: only fit() does it, and only when the window changed
@@ -46,21 +47,24 @@ class ConcurrentBurstTests(SimpleTestCase):
 
 class IntensityTests(SimpleTestCase):
     def test_every_kind_has_a_palette(self):
-        for kind in ("partial", "validated", "level", "plain"):
+        for kind in ("level", "plain"):
             self.assertRegex(JS, kind + r": \[\"#")
+        for kind in ("pop", "partial", "validated", "validated_agreed", "ai", "players", "ai_players", "expert"):
+            self.assertRegex(JS, r"\n    " + kind + r": ")
         self.assertIn('kind === "beetles" ? "validated"', JS)   # the history page's old name still works
 
     def test_size_scales_count_piece_size_and_spread(self):
         waves = body("waves")
-        for kind in ("partial", "validated", "plain"):
+        for kind in ("pop", "partial", "plain"):
             self.assertRegex(waves, r'\["' + kind + r'", \d+ \+ Math\.round\(\d+ \* size\)')
+        self.assertRegex(waves, r"\[kind, \d+ \+ Math\.round\(\d+ \* size\)")   # validated, the agreeing kinds
         piece = body("piece")
         self.assertIn("* (0.65 + 0.35 * size)", piece)   # piece size
         self.assertIn("7 * size", piece)                 # how far they fly
         self.assertIn("Math.max(0.2, Math.min(1, Number(size) || 1))", JS)
 
     def test_a_species_gets_a_second_wave_at_full_size(self):
-        self.assertIn('if (size >= 0.95) list.push(["validated"', body("waves"))
+        self.assertIn('if (size >= 0.95) list.push([kind, 36', body("waves"))
 
     def test_the_level_up_is_the_biggest_from_both_sides_and_the_centre(self):
         waves = body("waves")
@@ -83,5 +87,5 @@ class ReducedMotionAndWrapperTests(SimpleTestCase):
 
     def test_the_page_wrapper_keeps_its_signature(self):
         self.assertIn("function confetti(kind, size) {", PLAY)
-        self.assertIn('window.beetleConfetti($("confetti"), kind === "strong" ? "plain" : (kind || "validated"), size);', PLAY)
+        self.assertIn('window.beetleConfetti($("confetti"), kind || "validated", size);', PLAY)
         self.assertIn("if (reduceMotion || !window.beetleConfetti) return;", PLAY)

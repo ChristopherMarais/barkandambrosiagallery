@@ -15,7 +15,7 @@ class StandingTests(ScoringCase):
         s = game_board.accuracy_standing(self.user)
         self.assertEqual(s["players"], 6)
         self.assertEqual(s["me"]["percentile"], 100)
-        self.assertEqual(s["me"]["tier"], "mythic")
+        self.assertEqual((s["me"]["tier"], s["me"]["tier_name"]), ("excellent", "Excellent"))
         self.assertEqual(sum(b["count"] for b in s["bins"]), 6)
         self.assertAlmostEqual(s["average"], (0.3 + 0.5 + 0.6 + 0.7 + 0.9 + 0.95) / 6)
 
@@ -59,11 +59,11 @@ class LevelTests(ScoringCase):
     def test_level_four_has_a_proper_name(self):
         self.assertEqual(game_levels.LEVELS[3][2], "Teneral")
 
-    def test_rarity_colours(self):
+    def test_scale_colours(self):
         from django.template.loader import render_to_string
         colours = {lvl: render_to_string("beetles/includes/game_level_badge.html", {"level": lvl}) for lvl in (1, 3, 5, 7, 9, 10)}
-        for lvl, colour in ((1, "bg-gray-300"), (3, "bg-green-600"), (5, "bg-blue-600"), (7, "bg-purple-600"),
-                            (9, "bg-orange-500"), (10, "bg-yellow-400")):
+        for lvl, colour in ((1, "scale-chip-none"), (3, "scale-chip-fair"), (5, "scale-chip-decent"), (7, "scale-chip-good"),
+                            (9, "scale-chip-great"), (10, "scale-chip-excellent")):
             self.assertIn(colour, colours[lvl])
 
 

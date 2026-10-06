@@ -157,7 +157,7 @@ class TreeTests(ExpertCase):
     def test_each_taxon_has_its_own_two_markers_whatever_its_parent_is(self):
         self.assertEqual(self.marks("Subfamilies"), ("expert", "expert"))
         self.assertEqual(self.marks("Scolytinae"), ("expert", "expert"))
-        self.assertEqual(self.marks("Xyleborini"), ("common", "expert"))   # inside an expert subfamily, still grey
+        self.assertEqual(self.marks("Xyleborini"), ("fair", "expert"))   # inside an expert subfamily, still its own colour
         self.assertEqual(self.marks("Xyleborus"), ("unknown", "expert"))
         self.assertNotIn('class="st-', self.page)   # no status classes on the rows around the markers
         # a Naming expert's name is bold
@@ -175,8 +175,8 @@ class TreeTests(ExpertCase):
         self.assertIn('data-testid="legend-naming"><span class="tree-dot', self.page)
         self.assertIn('data-testid="legend-apart"><span class="tree-tri', self.page)
         # every colour band shows both shapes
-        self.assertIn('data-testid="legend-rare"><span class="tree-dot mark-rare"></span>'
-                      '<span class="tree-tri mark-rare"></span>', self.page)
+        self.assertIn('data-testid="legend-good"><span class="tree-dot mark-good"></span>'
+                      '<span class="tree-tri mark-good"></span>', self.page)
         # and the page above it says how to become each
         self.assertIn("Distinction expert", text_of(self.page[:self.page.index('data-testid="expertise-legend"')]))
 
@@ -227,7 +227,7 @@ class MarkerStyleTests(SimpleTestCase):
         self.assertEqual(animated, [".tree-dot.mark-expert"])
         self.assertIn("box-shadow", self.rule(".tree-dot.mark-expert"))
         square = self.rule(".tree-tri.mark-expert")
-        self.assertIn("#ca8a04", square)   # dark gold
+        self.assertIn("#15803d", square)   # deep green, the top of the scale (#572)
         self.assertNotIn("box-shadow", square)
         self.assertNotIn("animation", square)
 

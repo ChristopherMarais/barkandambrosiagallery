@@ -1,4 +1,4 @@
-{% load beetle_tags %}{# The day streak with a flame in rarity colours: grey under 3 days, green 3+, blue 7+, purple 14+, orange 30+, gold 100+. Needs ``days``; ``alive`` dims it until today's goal is reached. #}
-<span class="inline-flex items-center gap-1.5 font-semibold {% if days >= 100 %}text-yellow-600{% elif days >= 30 %}text-orange-600{% elif days >= 14 %}text-purple-600{% elif days >= 7 %}text-blue-600{% elif days >= 3 %}text-green-600{% else %}text-gray-500{% endif %}{% if not alive %} opacity-60{% endif %}" data-testid="streak">
+{% load beetle_tags %}{# The day streak with a flame on the site's one scale (game_scale.streak_step): grey under 3 days, red 3+, orange 7+, yellow 14+, green 30+, deep green 100+. Needs ``days``; ``alive`` dims it until today's goal is reached. #}
+<span class="inline-flex items-center gap-1.5 font-semibold scale-{{ days|streak_scale }}{% if not alive %} opacity-60{% endif %}" data-testid="streak">
   <i class="fi fi-rr-flame"></i><span class="text-gray-900">{{ days|digit_groups }} day streak</span>
 </span>

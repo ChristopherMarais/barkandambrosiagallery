@@ -482,3 +482,21 @@ changed (migration 0053); stored modes, URLs and perk keys stay.
 - While the feed loads, "Finding beetles…" and "Building your gallery…" take turns every 2.5 s; after 10 s it
   says "This is taking a while: probably making frass…". With reduced motion the lines don't alternate.
 - The game is out of beta: the Beta pills (sidebar, game home, how-to page, loading screen, landing page) are gone.
+
+## Update: one colour scale instead of rarity colours (#572)
+
+Everything rated from worst to best uses one scale (`game_scale.py`, the `.scale-*` classes in `input.css`):
+grey "Not yet", then red "Fair", orange "Decent", yellow "Good", green "Great" and deep green "Excellent". Blue is
+kept for IBBI-AI and purple for the players' consensus; neither is ever on the scale.
+
+- **Levels:** grey 1, light and full red 2-3, orange 4-5, yellow 6-7, green 8-9, glowing deep green 10.
+- **Streak flame:** grey under 3 days, red 3+, orange 7+, yellow 14+, green 30+, deep green 100+.
+- **Accuracy and challenge** (recap, report): under 30% red, 30-49% orange, 50-69% yellow, 70-84% green, 85%+ deep green.
+- **Accuracy standing** by percentile: Fair, Decent (25+), Good (50+), Great (75+), Excellent (90+).
+- **Badges:** the easiest red, then orange, yellow, green, and the two hardest (Royalty, Year of the beetle) glowing.
+- **Expertise tree:** an empty grey marker for too few answers, red under 50%, orange, yellow and green in three steps
+  up to what an expert needs, deep green for an expert (glowing for a Naming expert).
+- **Confetti** says who agreed: green for correct on a checked beetle (with blue and purple when IBBI-AI and the
+  players said the same), grey with blue or purple on an unchecked beetle IBBI-AI or the players agree on, glowing
+  purple when a Naming expert did, a small grey pop for very few points. A new level is a pop-up in the middle of the
+  screen in the level's colour, with gold and brown beetles and a sprinkle of that colour.

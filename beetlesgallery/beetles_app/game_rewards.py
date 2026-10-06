@@ -13,6 +13,7 @@ from django.db.models import Count
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 
+from .game_scale import HEX, level_classes, level_step, value_step
 from .models import GameAnswer
 
 def daily_goal():
@@ -296,40 +297,25 @@ def _best_streak(days):
     return best
 
 
-# How hard each badge is, in the same rarity colours as the levels (includes/game_level_badge.html):
-# common grey (levels 1-2), uncommon green (3-4), rare blue (5-6), epic purple (7-8), legendary orange (9),
-# mythic gold (10). Easy badges look like early levels, the hardest like the top one.
+# How hard each badge is, on the site's one scale (game_scale.py), like the levels: the easiest red, then orange,
+# yellow, green, and the two hardest deep green and glowing like the top level.
 BADGE_TIERS = {
-    "common": ("first", "ten", "goal", "both", "streak3"),
-    "uncommon": ("hundred", "streak7", "species1", "comeback", "nightowl", "earlybird"),
-    "rare": ("thousand", "streak30", "goal7", "species25", "fivehundred", "genera10", "similar50"),
-    "epic": ("expert", "species100", "platypod", "twins", "ahead", "curator", "marathon", "discovery"),
-    "legendary": ("tenthousand", "streak100", "flawless", "discovery3", "expert5", "genera50"),
-    "mythic": ("king", "streak365"),
+    "fair": ("first", "ten", "goal", "both", "streak3"),
+    "decent": ("hundred", "streak7", "species1", "comeback", "nightowl", "earlybird"),
+    "good": ("thousand", "streak30", "goal7", "species25", "fivehundred", "genera10", "similar50"),
+    "great": ("expert", "species100", "platypod", "twins", "ahead", "curator", "marathon", "discovery",
+              "tenthousand", "streak100", "flawless", "discovery3", "expert5", "genera50"),
+    "excellent": ("king", "streak365"),
 }
 BADGE_TIER = {key: tier for tier, keys in BADGE_TIERS.items() for key in keys}
 
 
 def badge_tier(key):
-    return BADGE_TIER.get(key, "common")
-
-
-# A 0-1 value (accuracy, challenge) in the same rarity colours: the upper bound of each tier
-RARITY_STEPS = [(0.3, "common"), (0.5, "uncommon"), (0.7, "rare"), (0.85, "epic"), (0.95, "legendary")]
-
-
-def rarity_tier(value):
-    """The rarity tier for a 0-1 value, e.g. 0.92 accuracy -> "legendary"; None -> "common"."""
-    if value is None:
-        return "common"
-    for top, tier in RARITY_STEPS:
-        if value < top:
-            return tier
-    return "mythic"
+    return BADGE_TIER.get(key, "fair")
 
 
 def badge_cards(player):
-    """All badges for display: earned or not, with their rarity tier."""
+    """All badges for display: earned or not, with their step on the scale."""
     have = earned_badges(player)
     return [
         {"key": key, "name": name, "how": how, "icon": icon, "earned": key in have, "tier": badge_tier(key)}
@@ -351,11 +337,15 @@ def play_events(player, before):
     now = progress(player)
     events = []
     if now["level"] > before["level"]:
-        from .game_levels import GAME_PERK, PERKS, PROPOSALS
+        from .game_levels import GAME_PERK, PERKS, PROPOSALS, level_icon
         gained = [p for p in now["perks"] if p not in before["perks"]]
         games = set(GAME_PERK.values())   # a game's name keeps its capitals ("Odd One Out")
         unlocked = " Unlocked: " + ", ".join(PERKS[p][0] if p in games else PERKS[p][0].lower() for p in gained) + "." if gained else ""
-        events.append({"kind": "level", "title": f"Level {now['level']}", "text": f"You are now a {now['level_name']}.{unlocked}"})
+        # the pop-up and its confetti take the new level's colour on the scale
+        step = level_step(now["level"])[0]
+        events.append({"kind": "level", "title": f"Level {now['level']}", "text": f"You are now a {now['level_name']}.{unlocked}",
+                       "level": now["level"], "icon": level_icon(now["level"]), "step": step, "badge": level_classes(now["level"]),
+                       "colour": HEX[step]})
         if PROPOSALS in gained:
             events.append({"kind": "proposals", "title": "Your labels now count", "text": PERKS[PROPOSALS][1]})
     if before.get("rank") and now["rank"] != before["rank"]:
@@ -395,8 +385,8 @@ def recap(player, since):
     accuracy = right / scored.count() if scored.exists() else None
     challenge = game.target_difficulty(player)
     return {
-        "accuracy": accuracy, "accuracy_tier": rarity_tier(accuracy),
-        "challenge": round(challenge * 100), "challenge_tier": rarity_tier(challenge),
+        "accuracy": accuracy, "accuracy_tier": value_step(accuracy),
+        "challenge": round(challenge * 100), "challenge_tier": value_step(challenge),
         "points": round(points, 1),
         "labelled": done.count(), "skipped": sitting.filter(skipped=True).count(),
         "scored": scored.count(), "right": right,

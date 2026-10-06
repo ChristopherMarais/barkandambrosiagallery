@@ -42,6 +42,7 @@ from django.db.models.functions import TruncMonth
 from django.utils import timezone
 
 from .game import COMPLETE_TAXON, RANKS, check_rois, game_setting, score_select
+from .game_scale import WORDS
 from .models import Beetles, GameAnswer, PlayerSkill, Taxon
 
 # The rank whose value names the branch a skill is measured in.
@@ -596,31 +597,32 @@ def direct_experts(entry, trust):
 # The expertise tree a player sees
 # ---------------------------------------------------------------------------
 EXPERTISE_FLOOR = 0.5
-# Accuracy bands in the levels' rarity colours: under 50% grey, then four equal steps from 50% up to what an expert
-# needs (green, blue, purple, orange). A Naming expert's dot glows gold like the top level; a Distinction expert's
-# triangle is plain dark gold, since it unlocks nothing (#498, #539).
-EXPERTISE_TIERS = ("uncommon", "rare", "epic", "legendary")
+# Accuracy bands on the site's one scale (game_scale.py, #572): an empty grey marker for too few answers yet, red
+# under 50%, then three equal steps from 50% up to what an expert needs (orange, yellow, green). An expert is deep
+# green: a Naming expert's dot glows like the top level; a Distinction expert's triangle doesn't, since it unlocks
+# nothing (#498, #539).
+EXPERTISE_TIERS = ("decent", "good", "great")
 
 
 def expertise_bands():
-    """[(status, lowest accuracy)] from the top band down, e.g. legendary 0.8, epic 0.7, rare 0.6, uncommon 0.5."""
+    """[(status, lowest accuracy)] from the top band down, e.g. great 0.7, good 0.6, decent 0.5 (expert at 80%)."""
     top = max(min_accuracy(), EXPERTISE_FLOOR + 0.04)
     step = (top - EXPERTISE_FLOOR) / len(EXPERTISE_TIERS)
     return [(tier, round(EXPERTISE_FLOOR + i * step, 4)) for i, tier in reversed(list(enumerate(EXPERTISE_TIERS)))]
 
 
 def accuracy_status(ok, n, min_shown):
-    """unknown (fewer than ``min_shown`` judged), or common .. legendary by accuracy."""
+    """unknown (fewer than ``min_shown`` judged), or fair .. great by accuracy."""
     if n < min_shown:
         return "unknown"
     for tier, lowest in expertise_bands():
         if ok / n >= lowest:
             return tier
-    return "common"
+    return "fair"
 
 
 def node_status(skill, min_shown):
-    """How naming in a branch is shown: unknown (too few answers yet), common .. legendary by accuracy, or expert."""
+    """How naming in a branch is shown: unknown (too few answers yet), fair .. great by accuracy, or expert."""
     if skill is None or skill.judged < min_shown:
         return "unknown"
     if skill.proven:
@@ -693,13 +695,16 @@ def distinction_experts(player):
 
 
 def expertise_legend():
-    """The tree's colour bands: (status, label) from lowest to highest; the key adds the experts' gold itself."""
+    """
+    The tree's colour bands: (status, word, accuracy range) from lowest to highest, e.g. ("good", "Good", "60\u201370%");
+    the key adds the experts itself.
+    """
     bands = list(reversed(expertise_bands()))
     pct = lambda x: f"{round(x * 100)}%"   # noqa: E731
-    legend = [("common", f"under {pct(EXPERTISE_FLOOR)}")]
+    legend = [("fair", WORDS["fair"], f"under {pct(EXPERTISE_FLOOR)}")]
     for i, (tier, lowest) in enumerate(bands):
         upper = bands[i + 1][1] if i + 1 < len(bands) else None
-        legend.append((tier, f"{round(lowest * 100)}\u2013{pct(upper)}" if upper else f"{pct(lowest)}+"))
+        legend.append((tier, WORDS[tier], f"{round(lowest * 100)}\u2013{pct(upper)}" if upper else f"{pct(lowest)}+"))
     return legend
 
 

@@ -3,28 +3,31 @@
 
 {% block extra_css %}
 <style>
-  /* Two markers per taxon (#498), in the levels' rarity colours (game_trust.expertise_bands): empty for too few answers
-     yet, grey under 50%, then green, blue, purple and orange up to what an expert needs. The round dot is naming
-     (Naming): gold and glowing for a Naming expert, like the top level. The triangle is telling apart
-     (Distinction, #539): plain dark gold for a Distinction expert, never glowing, since it unlocks nothing. Each marker
-     carries its own status class (includes/expertise_marks.html): never style one by a class on an ancestor, or every
-     taxon inside an expert one would look expert too. */
+  /* Two markers per taxon (#498), on the site's one scale (game_scale.py, game_trust.expertise_bands, #572): an empty
+     grey marker for too few answers yet, red under 50%, then orange, yellow and green up to what an expert needs, and
+     deep green for an expert. The round dot is naming (Naming): it glows for a Naming expert, like the top level. The
+     triangle is telling apart (Distinction, #539): plain deep green for a Distinction expert, never glowing, since it
+     unlocks nothing. The colours are the .scale-fill-* shades of input.css. Each marker carries its own status class
+     (includes/expertise_marks.html): never style one by a class on an ancestor, or every taxon inside an expert one
+     would look expert too. */
   .tree-dot, .tree-tri { display: inline-block; flex-shrink: 0; }
   .tree-dot { width: 0.75rem; height: 0.75rem; border-radius: 9999px; }
   /* A triangle cut from the box; clip-path also cuts an outline, so the empty one is a white triangle on a grey one. */
   .tree-tri { position: relative; width: 0.8125rem; height: 0.75rem; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-  .tree-tri.mark-unknown { background: #d1d5db; box-shadow: none; }
+  .tree-tri.mark-unknown { background: #9ca3af; box-shadow: none; }
   .tree-tri.mark-unknown::after { content: ""; position: absolute; inset: 0; background: #fff; clip-path: polygon(50% 26%, 81% 88%, 19% 88%); }
-  .mark-unknown { background: #fff; box-shadow: inset 0 0 0 2px #d1d5db; }
-  .mark-common { background: #d1d5db; }
-  .mark-uncommon { background: #16a34a; }
-  .mark-rare { background: #2563eb; }
-  .mark-epic { background: #9333ea; }
-  .mark-legendary { background: #f97316; }
-  .tree-dot.mark-expert { background: #facc15; box-shadow: 0 0 0 1px #ca8a04, 0 0 10px rgba(250,204,21,.9); animation: expert-glow 2.4s ease-in-out infinite; }
-  @keyframes expert-glow { 50% { box-shadow: 0 0 0 1px #ca8a04, 0 0 18px rgba(250,204,21,1); } }
+  .mark-unknown { background: #fff; box-shadow: inset 0 0 0 2px #9ca3af; }
+  .mark-fair { background: #ef4444; }
+  .mark-decent { background: #f97316; }
+  .mark-good { background: #facc15; }
+  .mark-great { background: #22c55e; }
+  .mark-expert { background: #15803d; }
+  .tree-dot.mark-expert { box-shadow: 0 0 0 1px #166534, 0 0 10px rgba(34,197,94,.9); animation: expert-glow 2.4s ease-in-out infinite; }
+  @keyframes expert-glow { 50% { box-shadow: 0 0 0 1px #166534, 0 0 18px rgba(34,197,94,1); } }
   @media (prefers-reduced-motion: reduce) { .tree-dot.mark-expert { animation: none; } }
-  .tree-tri.mark-expert { background: #ca8a04; }
+  .tree-tri.mark-expert { background: #15803d; }
+  /* the shapes in the key: neutral grey, no rating */
+  .mark-shape { background: #6b7280; }
   details > summary { list-style: none; cursor: pointer; }
   details > summary::-webkit-details-marker { display: none; }
 </style>
@@ -46,16 +49,16 @@
     <p>Either one, in a taxon: at least {% widthratio tree.min_accuracy 1 100 %}% correct over {{ tree.min_judged|digit_groups }} or more checked answers, covering {% widthratio tree.children_share 1 100 %}% of its members (a tribe&rsquo;s genera, a genus&rsquo;s species) with at least {{ tree.per_species|digit_groups }} answers each.</p>
   </section>
 
-  {# A compact colour key, no sentences: the shapes, then the bands (game_trust.expertise_legend), then gold. #}
+  {# A compact colour key, no sentences: the shapes, then the bands worst to best (game_trust.expertise_legend), then expert. #}
   <div class="mb-6 space-y-1 text-xs text-gray-600" data-testid="expertise-legend">
     <div class="flex flex-wrap gap-x-4 gap-y-1">
-      <span class="flex items-center gap-1" data-testid="legend-naming"><span class="tree-dot mark-common"></span>naming</span>
-      <span class="flex items-center gap-1" data-testid="legend-apart"><span class="tree-tri mark-common"></span>telling apart</span>
+      <span class="flex items-center gap-1" data-testid="legend-naming"><span class="tree-dot mark-shape"></span>naming</span>
+      <span class="flex items-center gap-1" data-testid="legend-apart"><span class="tree-tri mark-shape"></span>telling apart</span>
     </div>
     <div class="flex flex-wrap gap-x-4 gap-y-1">
-      <span class="flex items-center gap-1"><span class="tree-dot mark-unknown"></span><span class="tree-tri mark-unknown"></span>fewer than {{ tree.min_shown }} answers</span>
-      {% for status, label in tree.legend %}<span class="flex items-center gap-1" data-testid="legend-{{ status }}"><span class="tree-dot mark-{{ status }}"></span><span class="tree-tri mark-{{ status }}"></span>{{ label }}</span>{% endfor %}
-      <span class="flex items-center gap-1" data-testid="legend-expert"><span class="tree-dot mark-expert"></span><span class="tree-tri mark-expert"></span>expert</span>
+      <span class="flex items-center gap-1"><span class="tree-dot mark-unknown"></span><span class="tree-tri mark-unknown"></span>Not yet: fewer than {{ tree.min_shown }} answers</span>
+      {% for status, word, range in tree.legend %}<span class="flex items-center gap-1" data-testid="legend-{{ status }}"><span class="tree-dot mark-{{ status }}"></span><span class="tree-tri mark-{{ status }}"></span>{{ word }} <span class="text-gray-400">{{ range }}</span></span>{% endfor %}
+      <span class="flex items-center gap-1" data-testid="legend-expert"><span class="tree-dot mark-expert"></span><span class="tree-tri mark-expert"></span>Expert</span>
     </div>
   </div>
 

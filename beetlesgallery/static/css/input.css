@@ -42,7 +42,9 @@
 
 /* The site's house style (keep to it on every page; CLAUDE.md points here):
    - Mostly white and grey. Colour is only for meaning: green = done or correct, red = a problem or a danger,
-     amber = waiting or needs attention, and the game's rarity colours for levels, challenge and accuracy.
+     amber = waiting or needs attention. Anything rated from worst to best (levels, streaks, badges, accuracy,
+     challenge, expertise) uses the one scale below: grey for not yet, then red, orange, yellow, green (.scale-*,
+     game_scale.py). Blue is IBBI-AI and purple the players' consensus; never use them for a rating.
    - Buttons come in three looks, the classes below. Use them rather than grey utilities of your own, and set
      only size, spacing and rounding per page (e.g. "btn-main w-full text-2xl py-6"):
        .btn-main       light grey, dark bold text (the image browser's Search): what the page is for, such as
@@ -106,18 +108,38 @@
   text-overflow: ellipsis;
 }
 
-/* Rarity colours (as the levels and badges: grey, green, blue, purple, orange, gold) for a 0-1 value such as accuracy
-   or challenge; game_rewards.rarity_tier picks the tier. Text: .rarity-<tier>, bars: .rarity-fill-<tier>. Outside the
-   layers so they are kept although templates build the class names. */
-.rarity-common { color: theme("colors.gray.600"); }
-.rarity-uncommon { color: theme("colors.green.600"); }
-.rarity-rare { color: theme("colors.blue.600"); }
-.rarity-epic { color: theme("colors.purple.600"); }
-.rarity-legendary { color: theme("colors.orange.600"); }
-.rarity-mythic { color: theme("colors.yellow.600"); }
-.rarity-fill-common { background-color: theme("colors.gray.500"); }
-.rarity-fill-uncommon { background-color: theme("colors.green.500"); }
-.rarity-fill-rare { background-color: theme("colors.blue.500"); }
-.rarity-fill-epic { background-color: theme("colors.purple.500"); }
-.rarity-fill-legendary { background-color: theme("colors.orange.500"); }
-.rarity-fill-mythic { background-color: theme("colors.yellow.500"); }
+/* The one colour scale (game_scale.py), worst to best: none (grey, "Not yet"), fair (red), decent (orange), good
+   (yellow), great (green), excellent (deep green). Levels, the day streak, badges, accuracy, challenge and the
+   expertise tree all use it. Text: .scale-<step> (dark enough to read on white); bars and dots: .scale-fill-<step>;
+   a solid label: .scale-chip-<step>; a light one: .scale-soft-<step>; a badge card: .scale-card-<step>; the top level
+   and the hardest badges also glow (.scale-glow). Outside the layers so they are kept although templates and scripts
+   build the class names. */
+.scale-none { color: theme("colors.gray.500"); }
+.scale-fair { color: theme("colors.red.600"); }
+.scale-decent { color: theme("colors.orange.700"); }
+.scale-good { color: theme("colors.yellow.700"); }
+.scale-great { color: theme("colors.green.700"); }
+.scale-excellent { color: theme("colors.green.800"); }
+.scale-fill-none { background-color: theme("colors.gray.300"); }
+.scale-fill-fair { background-color: theme("colors.red.500"); }
+.scale-fill-decent { background-color: theme("colors.orange.500"); }
+.scale-fill-good { background-color: theme("colors.yellow.400"); }
+.scale-fill-great { background-color: theme("colors.green.500"); }
+.scale-fill-excellent { background-color: theme("colors.green.700"); }
+.scale-chip-none { background-color: theme("colors.gray.300"); color: theme("colors.gray.800"); }
+.scale-chip-fair { background-color: theme("colors.red.600"); color: #fff; }
+.scale-chip-decent { background-color: theme("colors.orange.400"); color: theme("colors.orange.950"); }
+.scale-chip-good { background-color: theme("colors.yellow.300"); color: theme("colors.yellow.950"); }
+.scale-chip-great { background-color: theme("colors.green.500"); color: theme("colors.green.950"); }
+.scale-chip-excellent { background-color: theme("colors.green.700"); color: #fff; }
+.scale-soft-fair { background-color: theme("colors.red.100"); color: theme("colors.red.800"); box-shadow: inset 0 0 0 1px theme("colors.red.300"); }
+.scale-soft-decent { background-color: theme("colors.orange.100"); color: theme("colors.orange.800"); box-shadow: inset 0 0 0 1px theme("colors.orange.300"); }
+.scale-soft-good { background-color: theme("colors.yellow.100"); color: theme("colors.yellow.800"); box-shadow: inset 0 0 0 1px theme("colors.yellow.400"); }
+.scale-soft-great { background-color: theme("colors.green.100"); color: theme("colors.green.800"); box-shadow: inset 0 0 0 1px theme("colors.green.300"); }
+.scale-card-none { border-color: theme("colors.gray.300"); background-color: #fff; }
+.scale-card-fair { border-color: theme("colors.red.300"); background-color: theme("colors.red.50"); }
+.scale-card-decent { border-color: theme("colors.orange.300"); background-color: theme("colors.orange.50"); }
+.scale-card-good { border-color: theme("colors.yellow.400"); background-color: theme("colors.yellow.50"); }
+.scale-card-great { border-color: theme("colors.green.300"); background-color: theme("colors.green.50"); }
+.scale-card-excellent { border-color: theme("colors.green.600"); background-color: theme("colors.green.50"); }
+.scale-glow { box-shadow: 0 0 0 1px theme("colors.green.800"), 0 0 10px rgba(34, 197, 94, 0.85); }

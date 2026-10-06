@@ -146,10 +146,24 @@ def percent(value):
 
 
 @register.filter
-def rarity(value):
-    """A 0-1 value's rarity tier ("common" ... "mythic"), for the .rarity-<tier> / .rarity-fill-<tier> classes."""
-    from beetlesgallery.beetles_app.game_rewards import rarity_tier
+def scale(value):
+    """A 0-1 value's step on the site's scale ("none", "fair" ... "excellent"), for .scale-<step> / .scale-fill-<step>."""
+    from beetlesgallery.beetles_app.game_scale import value_step
     try:
-        return rarity_tier(None if value is None else float(value))
+        return value_step(None if value is None else float(value))
     except (TypeError, ValueError):
-        return "common"
+        return "none"
+
+
+@register.filter
+def level_scale(level):
+    """The classes of a level's badge on the scale: {{ 10|level_scale }} -> "scale-chip-excellent scale-glow"."""
+    from beetlesgallery.beetles_app.game_scale import level_classes
+    return level_classes(level)
+
+
+@register.filter
+def streak_scale(days):
+    """A day streak's step on the scale: {{ 10|streak_scale }} -> "decent"."""
+    from beetlesgallery.beetles_app.game_scale import streak_step
+    return streak_step(days)

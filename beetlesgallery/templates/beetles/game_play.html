@@ -184,25 +184,22 @@
          font-size: 0.625rem; font-weight: 600; line-height: 1; opacity: 0.55; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   #game.has-kbd .kbd { display: inline-flex; }
   .rung .kbd { margin-left: 0.5rem; }
-  /* The beetles-in-a-row chip: grey at 2, warmer as it grows, gold and glowing at 20 */
+  /* The beetles-in-a-row chip: grey at 2, then up the site's one scale (.scale-chip-*, game_scale.py) as it grows:
+     red, orange, yellow, green, and deep green and glowing at 20 */
   #combo { transition: background-color .3s, color .3s, box-shadow .3s; }
-  /* the level colours (includes/game_level_badge.html): grey, green, blue, purple, orange, glowing gold */
-  #combo.c1 { background: #d1d5db; color: #1f2937; }
-  #combo.c2 { background: #16a34a; color: #fff; }
-  #combo.c3 { background: #2563eb; color: #fff; }
-  #combo.c4 { background: #9333ea; color: #fff; }
-  #combo.c5 { background: #f97316; color: #fff; }
-  #combo.c6 { background: #facc15; color: #422006; box-shadow: 0 0 0 1px #ca8a04, 0 0 10px rgba(250,204,21,.9); }
-  /* Today's goal reached: the streak chip lights up */
-  /* ...in the colour of the day streak's level: the same scale as the levels */
-  #chip.lit { color: #fff; }
+  /* Today's goal reached: the streak chip lights up in the day streak's colour on the same scale (.scale-chip-*) */
   #chip.lit #chip-flame { color: inherit !important; filter: drop-shadow(0 0 3px rgba(255,255,255,.8)); }
-  #chip.lit.s1 { background: #6b7280; box-shadow: 0 0 10px rgba(107,114,128,.6); }
-  #chip.lit.s2 { background: #16a34a; box-shadow: 0 0 10px rgba(22,163,74,.6); }
-  #chip.lit.s3 { background: #2563eb; box-shadow: 0 0 10px rgba(37,99,235,.6); }
-  #chip.lit.s4 { background: #9333ea; box-shadow: 0 0 10px rgba(147,51,234,.6); }
-  #chip.lit.s5 { background: #f97316; box-shadow: 0 0 10px rgba(249,115,22,.6); }
-  #chip.lit.s6 { background: #facc15; color: #422006; box-shadow: 0 0 0 1px #ca8a04, 0 0 12px rgba(250,204,21,.9); }
+  #chip.lit { box-shadow: 0 0 10px rgba(107,114,128,.5); }
+  #chip.lit.scale-glow { box-shadow: 0 0 0 1px #166534, 0 0 12px rgba(34,197,94,.9); }
+  /* A new level: a pop-up in the middle of the screen, in the level's colour on the scale */
+  .level-pop { position: fixed; inset: 0; z-index: 97; display: flex; align-items: center; justify-content: center; padding: 1rem; pointer-events: none; }
+  .level-pop-card { max-width: min(22rem, 92vw); padding: 1.25rem 1.5rem; border-radius: 1.25rem; background: #fff; text-align: center;
+                    box-shadow: 0 12px 40px rgba(0,0,0,.25); border-top: 6px solid var(--level-colour, #6b7280);
+                    transition: opacity .35s, transform .35s; opacity: 0; transform: scale(.9); }
+  .level-pop.shown .level-pop-card { opacity: 1; transform: none; }
+  .level-pop-badge { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-width: 4rem; height: 2.75rem; padding: 0 1rem;
+                     border-radius: .9rem; font-size: 1.375rem; font-weight: 800; }
+  @media (prefers-reduced-motion: reduce) { .level-pop-card { transition: none; transform: none; } }
   #chip.pop { animation: chip-pop .6s ease; }
   @keyframes chip-pop { 40% { transform: scale(1.18); } }
   /* The review after an answer (#488): it takes the answer's place in the panel until Next; the photos get marks */
@@ -545,10 +542,10 @@
   const PAGE_MODE = root.dataset.mode;          // "mixed" (both games in one feed) or one game
   let MODE = PAGE_MODE === "mixed" ? "classify" : PAGE_MODE;   // the game of the beetle on screen
   const GAME_NAMES = { classify: "Naming", pair: "Similarity", odd: "Odd One Out", select: "Find Them All" };
-  // badge accents, the same as on the profile (includes/game_badge.html)
-  // badge colours by rarity, the same as the levels and the profile (includes/game_badge.html)
-  const TIER_INK = { common: "text-gray-600", uncommon: "text-green-600", rare: "text-blue-600", epic: "text-purple-600",
-                     legendary: "text-orange-600", mythic: "text-yellow-600" };
+  // The site's one scale (game_scale.py, the .scale-* classes of input.css): badges take "scale-" + their step, as on
+  // the profile (includes/game_badge.html). The day streak's steps, the same as game_scale.STREAK_STEPS:
+  const STREAK_STEPS = [[100, "excellent"], [30, "great"], [14, "good"], [7, "decent"], [3, "fair"]];
+  const streakStep = (days) => (STREAK_STEPS.find(([least]) => days >= least) || [0, "none"])[1];
   const RANKS = ["subfamily", "tribe", "genus", "species"];
   const csrf = document.querySelector('meta[name="csrf-token"]').content;
   const $ = (id) => document.getElementById(id);
@@ -889,13 +886,12 @@
 
   // ---------- confetti (only ever for a correct answer, or a level) ----------
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  // Logo beetles: "validated" (brown) for a fully correct answer on a checked beetle, "partial" (grey) for points from
-  // a partly correct one; "strong": paper confetti for points by agreement on a beetle nobody has checked yet;
-  // "level": the gold level-up burst. The size (0.2 to 1) comes from the answer's points (game_answer_review.
-  // confetti_size). See static/js/beetle_confetti.js.
+  // The kind says who agreed and so the colours (game_answer_review._celebrate, static/js/beetle_confetti.js): green
+  // for correct on a checked beetle, blue where IBBI-AI agreed, purple where the players did, grey for a little.
+  // The size (0.2 to 1) comes from the answer's points (game_answer_review.confetti_size).
   function confetti(kind, size) {
     if (reduceMotion || !window.beetleConfetti) return;
-    window.beetleConfetti($("confetti"), kind === "strong" ? "plain" : (kind || "validated"), size);
+    window.beetleConfetti($("confetti"), kind || "validated", size);
   }
 
   // ---------- the chip and the toasts: counts and celebrations, never the score ----------
@@ -911,13 +907,11 @@
     if (lit && !el.classList.contains("lit") && el.dataset.seen) { el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); }
     el.classList.toggle("lit", lit);
     el.dataset.seen = "1";
-    // the flame takes the streak's rarity colour (the same as on the game home)
-    const s = chip.streak || 0;
-    $("chip-flame").className = "fi fi-rr-flame " + (s >= 100 ? "text-yellow-600" : s >= 30 ? "text-orange-600" : s >= 14 ? "text-purple-600"
-      : s >= 7 ? "text-blue-600" : s >= 3 ? "text-green-600" : "text-gray-400");
-    const streakTier = s >= 100 ? 6 : s >= 30 ? 5 : s >= 14 ? 4 : s >= 7 ? 3 : s >= 3 ? 2 : 1;
-    el.classList.remove("s1", "s2", "s3", "s4", "s5", "s6");
-    el.classList.add("s" + streakTier);
+    // the flame takes the streak's colour on the scale (the same as on the game home); lit, the whole chip does
+    const step = streakStep(chip.streak || 0);
+    $("chip-flame").className = "fi fi-rr-flame scale-" + step;
+    [...el.classList].filter((c) => c.startsWith("scale-")).forEach((c) => el.classList.remove(c));
+    if (lit) el.classList.add("scale-chip-" + step, ...(step === "excellent" ? ["scale-glow"] : []));
     el.title = chip.streak + "-day streak. " + chip.today + " of " + chip.goal + " beetles today." + (lit ? " Today's goal done!" : "");
     if (chip.level) {
       const lc = $("level-chip");
@@ -932,7 +926,38 @@
     }
   }
 
+  // A new level: a card in the middle of the screen with the level's badge in its colour on the scale
+  // (game_rewards.play_events), over gold and brown beetles with a sprinkle of that colour.
+  function levelPop(event) {
+    const pop = document.createElement("div");
+    pop.className = "level-pop";
+    pop.setAttribute("role", "status");
+    pop.dataset.testid = "level-pop";
+    const card = document.createElement("div");
+    card.className = "level-pop-card";
+    card.style.setProperty("--level-colour", event.colour || "#6b7280");
+    const badge = document.createElement("div");
+    badge.className = "level-pop-badge " + (event.badge || "scale-chip-none");
+    const icon = document.createElement("i");
+    icon.className = "fi " + (event.icon || "fi-rr-egg");
+    icon.setAttribute("aria-hidden", "true");
+    badge.append(icon, document.createTextNode(event.level || ""));
+    const title = document.createElement("div");
+    title.className = "mt-3 text-lg font-bold text-gray-900";
+    title.textContent = event.title;
+    const text = document.createElement("div");
+    text.className = "mt-1 text-sm text-gray-600";
+    text.textContent = event.text;
+    card.append(badge, title, text);
+    pop.appendChild(card);
+    document.body.appendChild(pop);
+    requestAnimationFrame(() => pop.classList.add("shown"));
+    setTimeout(() => { pop.classList.remove("shown"); setTimeout(() => pop.remove(), 400); }, 4200);
+    if (!reduceMotion && window.beetleConfetti) window.beetleConfetti($("confetti"), "level", 1, event.colour);
+  }
+
   function toast(event) {
+    if (event.kind === "level") { levelPop(event); return; }
     const box = document.createElement("div");
     box.style.cssText = "background:#374151;color:#fff;padding:0.625rem 1rem;border-radius:0.75rem;box-shadow:0 4px 12px rgba(0,0,0,.2);max-width:90vw;text-align:center;transition:opacity .4s,transform .4s;opacity:0;transform:translateY(-8px)";
     const title = document.createElement("div");
@@ -945,8 +970,7 @@
     $("toasts").appendChild(box);
     requestAnimationFrame(() => { box.style.opacity = "1"; box.style.transform = "none"; });
     setTimeout(() => { box.style.opacity = "0"; setTimeout(() => box.remove(), 450); }, 3200);
-    if (event.kind === "level") confetti("level");
-    else if (event.kind === "goal") confetti("validated");
+    if (event.kind === "goal") confetti("validated");
   }
 
   // ---------- after a long session: suggest a break (never blocks, never nags twice in an hour) ----------
@@ -978,9 +1002,10 @@
     const el = $("combo");
     el.classList.toggle("hidden", combo < 2);
     el.classList.toggle("inline-flex", combo >= 2);
-    const tier = combo >= COMBO_PERFECT ? 6 : combo >= 17 ? 5 : combo >= 14 ? 4 : combo >= 10 ? 3 : combo >= 5 ? 2 : 1;
-    el.classList.remove("c1", "c2", "c3", "c4", "c5", "c6");
-    el.classList.add("c" + tier);
+    const step = combo >= COMBO_PERFECT ? "excellent" : combo >= 17 ? "great" : combo >= 14 ? "good" : combo >= 10 ? "decent"
+      : combo >= 5 ? "fair" : "none";
+    [...el.classList].filter((c) => c.startsWith("scale-")).forEach((c) => el.classList.remove(c));
+    el.classList.add("scale-chip-" + step, ...(step === "excellent" ? ["scale-glow"] : []));
     $("combo-text").textContent = "\u00d7" + combo;   // e.g. x6: answered six in a row
     el.title = combo >= COMBO_PERFECT ? combo + " in a row: perfect!" : combo + " in a row without skipping. " + COMBO_PERFECT + " is perfect.";
     if (combo === COMBO_PERFECT) toast({ kind: "combo", title: "Perfect streak!", text: COMBO_PERFECT + " in a row. Keep it going." });
@@ -1697,17 +1722,17 @@
     $("recap-points").textContent = (r.points > 0 ? "+" : "") + digitGroupsText(r.points);
     $("recap-right").textContent = r.scored ? digitGroupsText(r.right) + "/" + digitGroupsText(r.scored) : "–";
     $("recap-streak").textContent = r.streak;
-    // accuracy and challenge in rarity colours (grey, green, blue, purple, orange, gold), as levels and badges
-    $("recap-right").className = "text-2xl font-bold rarity-" + r.accuracy_tier;
+    // accuracy and challenge on the site's one scale (game_scale.value_step): grey, red, orange, yellow, green
+    $("recap-right").className = "text-2xl font-bold scale-" + r.accuracy_tier;
     $("recap-challenge").textContent = r.challenge + "/100";
-    $("recap-challenge").className = "text-2xl font-bold rarity-" + r.challenge_tier;
+    $("recap-challenge").className = "text-2xl font-bold scale-" + r.challenge_tier;
     $("recap-line").textContent = digitGroupsText(r.labelled) + " beetles labelled. Level " + r.level + ", " + r.level_name + ". " + r.today + " of " + r.goal + " beetles today.";
     const holder = $("recap-badges");
     holder.innerHTML = "";
     r.badges.forEach((b) => {
       const row = document.createElement("div");
       row.className = "flex items-center gap-3 p-3 border border-gray-300 rounded-2xl text-left";
-      const ink = TIER_INK[b.tier] || "text-gray-600";
+      const ink = "scale-" + (b.tier || "none");
       row.innerHTML = '<i class="fi ' + b.icon + ' text-2xl ' + ink + '"></i><div><div class="text-sm font-semibold text-gray-900"></div><div class="text-xs text-gray-500"></div></div>';
       row.querySelector(".text-sm").textContent = "New badge: " + b.name;
       row.querySelector(".text-xs").textContent = b.how;
