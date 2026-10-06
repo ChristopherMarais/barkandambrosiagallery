@@ -112,6 +112,23 @@ class CropFileTests(CropFileCase):
         cut.assert_not_called()
         self.assertEqual([p.name for p in path.parent.iterdir()], [path.name])   # no half-written file left behind
 
+    def test_only_known_sizes_ever_name_a_file(self):
+        roi = self.roi(self.t_affinis)
+        for size in ("huge", "../small", "small/../../x", ""):
+            self.assertIsNone(game_crops.size_name(size))
+            self.assertIsNone(game_crops.crop_path(roi, size))
+            self.assertIsNone(game_crops.ensure(roi, size))
+        self.assertEqual(game_crops.size_name("small"), "small")
+        self.assertFalse((Path(self.media) / "crops").exists())
+
+    def test_a_name_that_would_leave_the_crops_folder_is_refused(self):
+        roi = self.roi(self.t_affinis)
+        path = game_crops.crop_path(roi, "large")
+        self.assertTrue(str(path).startswith(str(Path(self.media) / "crops")))
+        with mock.patch.object(game_crops, "crop_name", return_value="crops/../originals/x.webp"):
+            self.assertIsNone(game_crops.crop_path(roi, "large"))
+            self.assertIsNone(game_crops.ensure(roi, "large"))
+
     def test_a_moved_box_gets_a_new_file(self):
         roi = self.roi(self.t_affinis)
         before = game_crops.ensure(roi, "large")

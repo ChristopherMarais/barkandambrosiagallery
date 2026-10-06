@@ -17,6 +17,7 @@ import logging
 import math
 import os
 import tempfile
+import uuid
 from pathlib import Path
 
 from django.conf import settings
@@ -64,10 +65,34 @@ def crop_key(roi):
     return hashlib.sha256(f"{photo}|{box}|{VERSION}".encode()).hexdigest()[:20]
 
 
+def size_name(size):
+    """The size as SIZES spells it (its own key, never the caller's string), or None for a size it doesn't have."""
+    return next((name for name in SIZES if name == size), None)
+
+
 def crop_name(roi, size):
-    """The crop's path under MEDIA_ROOT."""
+    """The crop's path under MEDIA_ROOT. None for an unknown size."""
+    size = size_name(size)
+    if size is None:
+        return None
     key = crop_key(roi)
-    return f"crops/{key[:2]}/{key[2:4]}/{roi.id}_{key}_{size}.{file_format()[1]}"
+    return f"crops/{key[:2]}/{key[2:4]}/{uuid.UUID(str(roi.id))}_{key}_{size}.{file_format()[1]}"
+
+
+def crop_path(roi, size):
+    """
+    Where the crop is kept (an absolute Path), or None for an unknown size or a name that would leave the crops
+    folder. The name is made only from the beetle's id, a hash and SIZES' own key, so it never can; the check says
+    so to the code scanner too.
+    """
+    name = crop_name(roi, size)
+    if name is None:
+        return None
+    folder = os.path.normpath(os.path.join(settings.MEDIA_ROOT, "crops"))
+    path = os.path.normpath(os.path.join(settings.MEDIA_ROOT, name))
+    if not path.startswith(folder + os.sep):
+        return None
+    return Path(path)
 
 
 def cut(fileobj, box, max_side):
@@ -119,7 +144,9 @@ def ensure(roi, size):
     The crop's file (an absolute Path), cut now if it isn't there yet. None if the photo can't be read: the feed then
     falls back to cutting the whole photo itself.
     """
-    path = Path(settings.MEDIA_ROOT) / crop_name(roi, size)
+    path = crop_path(roi, size)
+    if path is None:
+        return None
     if path.exists():
         return path
     asset = roi.image_asset
@@ -127,7 +154,7 @@ def ensure(roi, size):
         return None
     try:
         with _source(asset) as fh:
-            image = cut(fh, _box(roi), SIZES[size])
+            image = cut(fh, _box(roi), SIZES[size_name(size)])
     except Exception:   # a missing or unreadable photo: not worth failing the feed over
         logger.warning("Could not cut the %s crop of %s", size, roi.id, exc_info=True)
         return None
