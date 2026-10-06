@@ -41,6 +41,7 @@
         {% for name, pts in pair_points %}<tr><td class="pr-6 py-0.5 text-gray-700">{{ name|capfirst }}</td><td class="font-semibold text-gray-900 tabular-nums">{{ pts|digit_groups }}</td></tr>{% endfor %}
       </tbody></table>
       <p class="text-sm text-gray-600 mb-4">Two photos that look alike (same photographer, place or magnification) earn up to a quarter more. Partial credit here too: &ldquo;same tribe&rdquo; for two beetles of one genus is true, so it earns the tribe&rsquo;s points; &ldquo;same species&rdquo; earns the genus&rsquo;s points minus a little. Calling relatives strangers (or strangers relatives) loses 1 point per step.</p>
+      {% if difficulty_spread %}<p class="text-sm text-gray-600 mb-4" data-testid="how-difficulty">In both games, harder beetles are worth more: up to {{ difficulty_spread }}% more on the hardest, where a miss also costs up to {{ difficulty_spread }}% less. Easy beetles work the other way round.</p>{% endif %}
       <h3 class="text-sm font-semibold text-gray-900 mb-1" data-testid="how-odd">Odd One Out</h3>
       <p class="text-sm text-gray-600">All but one beetle share a name at one rank. Picking the odd one earns {{ odd_weight }}&times; what Similarity pays for telling those two apart. Picking one of the rest costs a little more than a correct pick earns, so pick only when you&rsquo;re fairly sure: <strong>Skip</strong> here earns {{ odd_skip }}.</p>
       <h3 class="text-sm font-semibold text-gray-900 mb-1 mt-4" data-testid="how-select">Select all</h3>

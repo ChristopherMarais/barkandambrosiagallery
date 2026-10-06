@@ -49,6 +49,11 @@ of what the same answer would earn on a validated beetle, and never less than ze
 Not sure / skip costs a little (GAME_POINTS_UNSURE, 0.25). Every real answer earns a small participation point
 (GAME_POINTS_PARTICIPATION, 0.5), so the score grows with play.
 
+Harder beetles are worth more (#492). An Identification or Similarity answer keeps the beetle's difficulty percentile p
+from when it was given (game_difficulty; the anchor of a pair), and its points, gain or loss, skip included, are
+scaled by m = 1 + GAME_POINTS_DIFFICULTY_SPREAD × (2p − 1): a gain × m, a loss × (2 − m). So a hard beetle pays more
+and costs less when missed, an easy one the reverse. The participation point is not scaled; older answers keep ×1.
+
 When a beetle is validated later, or its label is corrected, every answer on it is re-scored against the truth,
 up or down (recompute, run for a player when they leave the game and for everyone every night).
 """
@@ -406,12 +411,62 @@ def score(answer, votes_for, judges, model_refs=None):
     more you play; accuracy still decides most of it.
     """
     points, basis, detail = _score(answer, votes_for, judges, model_refs or {})
+    points, detail = _by_difficulty(answer, points, detail)
     if basis in (AnswerPoints.Basis.TRUTH, AnswerPoints.Basis.CONSENSUS, AnswerPoints.Basis.NONE) and not answer.skipped \
             and not answer.score_hold:
         bonus = setting("GAME_POINTS_PARTICIPATION", 0.5)
         points += bonus
         detail = dict(detail, participation=bonus)
     return points, basis, detail
+
+
+# ---------------------------------------------------------------------------
+# How hard the beetle was (#492)
+# ---------------------------------------------------------------------------
+# Identification and Similarity only: the grid games are priced by their own size and rank, so scaling them by one
+# beetle's difficulty as well would count it twice.
+SCALED_MODES = ("classify", "pair")
+
+
+def difficulty_spread():
+    return float(setting("GAME_POINTS_DIFFICULTY_SPREAD", 0.25))
+
+
+def difficulty_multiplier(percentile):
+    """m = 1 + spread × (2p − 1): from 1 − spread on the easiest beetle (p = 0) to 1 + spread on the hardest (p = 1)."""
+    return 1 + difficulty_spread() * (2 * percentile - 1)
+
+
+def by_difficulty(points, m):
+    """
+    Points scaled for how hard the beetle is: a gain × m, a loss × (2 − m), so a hard beetle pays more and costs less
+    when missed. One factor for the whole answer, so a wrong answer never turns into a gain (nor a right one into a
+    loss) and every comparison between answers on one beetle (stopping beats overreaching, a skip costs less than a
+    mistake) holds at every difficulty.
+    """
+    return points * m if points >= 0 else points * (2 - m)
+
+
+def difficulty_factor(detail, earned):
+    """What an answer's points were multiplied by for its beetle's difficulty (1 when not), from its detail."""
+    m = float((detail or {}).get("multiplier", 1.0))
+    return m if earned >= 0 else 2 - m
+
+
+def note_difficulty(answer):
+    """Store how hard the beetle is now on an Identification or Similarity answer about to be saved (the anchor of a pair)."""
+    from .game_difficulty import percentile
+
+    if answer.mode in SCALED_MODES:
+        answer.difficulty = percentile(answer.roi_id)
+
+
+def _by_difficulty(answer, points, detail):
+    """The one place points follow difficulty, for recompute and score_new_answer alike. Older answers have none: ×1."""
+    if answer.mode not in SCALED_MODES or answer.difficulty is None or answer.score_hold:
+        return points, detail
+    m = difficulty_multiplier(answer.difficulty)
+    return by_difficulty(points, m), dict(detail, difficulty=answer.difficulty, multiplier=round(m, 3))
 
 
 def _score(answer, votes_for, judges, model_refs):

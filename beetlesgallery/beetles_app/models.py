@@ -1423,6 +1423,11 @@ class GameAnswer(models.Model):
         help_text="The species the player named had no validated images when they named it. If the beetle is later "
                   "validated as that species, the player is credited with a new species (SpeciesDiscovery).",
     )
+    difficulty = models.FloatField(
+        null=True, blank=True,
+        help_text="Identification and Similarity: how hard the beetle was when answered, as its percentile among all "
+                  "playable beetles (0 easiest, 1 hardest). Its points follow it (game_scoring). Empty on older answers.",
+    )
     answered_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

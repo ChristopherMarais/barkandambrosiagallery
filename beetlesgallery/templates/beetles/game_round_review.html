@@ -121,7 +121,11 @@
     const l = item.losses;
     if (!l) return "";
     const lost = l.lost > 0 ? ` <span class="text-red-700">(${fmt(-l.lost)} missed)</span>` : "";
-    return `<span class="text-xs font-semibold tabular-nums text-gray-700" data-testid="item-points">${fmt(l.earned)} pts${lost}</span>`;
+    // how hard the beetle was (#492): a gain × m, a loss × (2 − m)
+    const m = l.multiplier ? (l.earned < 0 ? 2 - l.multiplier : l.multiplier) : 1;
+    const hard = Math.abs(m - 1) >= 0.01
+      ? ` <span class="font-normal text-gray-500" data-testid="item-multiplier" title="Harder beetles are worth more, and a miss on one costs less">×${m.toFixed(2)} ${l.multiplier > 1 ? "harder" : "easier"} beetle</span>` : "";
+    return `<span class="text-xs font-semibold tabular-nums text-gray-700" data-testid="item-points">${fmt(l.earned)} pts${lost}${hard}</span>`;
   }
   const STATE_NOTE = { wrong: "wrong", after: "wrong above", stopped: "left blank" };
   function rankPoints(item, r) {

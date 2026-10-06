@@ -20,6 +20,8 @@
     <a href="#unknown" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Unvalidated beetles</a>
     <a href="#naming" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Naming confidence</a>
     <a href="#rating" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Reliability and experts</a>
+    <a href="#difficulty" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Difficulty</a>
+    <a href="#distributions" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Distributions</a>
     <a href="#examples" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Examples</a>
     <a href="#checks" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Balance checks</a>
     <a href="#tune" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Tune</a>
@@ -169,6 +171,87 @@ if proven experts (or a trusted model) name that rank and you match them:
       <li><b>Levels</b> need points <em>and</em> a rating (none at levels 1–2, 35% at 3, rising to 92% at the top), so the top levels are kept only while answers stay good.</li>
       <li><b>Experts</b> in a taxon have answered {{ v.GAME_TRUST_IMAGES_PER_SPECIES }} validated images each of at least {{ v.GAME_TRUST_CHILDREN_SHARE|floatformat:"-2" }} of its members (a genus's species, a tribe's genera, a subfamily's tribes; at least {{ v.GAME_TRUST_MIN_JUDGED }} answers in all) and been correct at least {{ v.GAME_TRUST_MIN_ACCURACY|floatformat:"-2" }} of the time, and are among the top {{ v.GAME_EXPERT_PERCENTILE|floatformat:"-2" }} of players by rating. Their agreeing labels go to curators as trusted suggestions; when two such experts agree on a beetle with no name, it is written in as an Expert ID, still unvalidated for a curator to confirm.</li>
     </ul>
+  </section>
+
+  <section id="difficulty" class="mb-10 space-y-4 text-gray-700" data-testid="scoring-difficulty">
+    <h2 class="text-xl font-semibold text-gray-900">Difficulty: which beetles a player sees, and what they are worth</h2>
+    <div class="p-4 rounded-xl border border-gray-200">
+      <h3 class="font-semibold text-gray-900 mb-1">Which beetles</h3>
+      <p class="text-sm mb-2">Each beetle has a difficulty from 0 (easy) to 1 (hard): 1 − IBBI-AI's confidence, or else how often players get it wrong. Beetles are picked near the player's target:</p>
+      <pre class="text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">target = start + per_batch × finished batches + skill_weight × rating     (at most max)
+in Identification and Similarity, over the player's last {{ v.GAME_DIFFICULTY_RECENT }} answers on validated beetles in that game:
+  share correct &lt; {{ v.GAME_DIFFICULTY_EASE_BELOW|floatformat:"-2" }}   target − {{ v.GAME_DIFFICULTY_EASE|floatformat:"-2" }}   (never below 0.05)
+  share correct &gt; {{ v.GAME_DIFFICULTY_PUSH_ABOVE|floatformat:"-2" }}   target + {{ v.GAME_DIFFICULTY_PUSH|floatformat:"-2" }}   (never above max)
+start = {{ v.GAME_DIFFICULTY_START|floatformat:"-3" }}   per_batch = {{ v.GAME_DIFFICULTY_PER_ROUND|floatformat:"-3" }}   skill_weight = {{ v.GAME_DIFFICULTY_SKILL_WEIGHT|floatformat:"-2" }}   max = {{ v.GAME_DIFFICULTY_MAX|floatformat:"-2" }}</pre>
+      <p class="text-sm mt-2">The rating moves slowly; the recent answers react within a few batches, so a player who struggles gets a breather and one who is doing well keeps being stretched.</p>
+    </div>
+    <div class="p-4 rounded-xl border border-gray-200">
+      <h3 class="font-semibold text-gray-900 mb-1">What they are worth (Identification and Similarity)</h3>
+      <pre class="text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">p    = how hard the beetle is among all playable beetles when answered (0 easiest, 1 hardest; 0.5 if unknown)
+m    = 1 + spread × (2p − 1)                                spread = {{ v.GAME_POINTS_DIFFICULTY_SPREAD|floatformat:"-2" }}
+gain × m,   loss (skips too) × (2 − m)                       the point for taking part is not scaled</pre>
+      <p class="text-sm mt-2">One factor for the whole answer, so a wrong answer never turns into a gain and every comparison between answers on one beetle stays as above. Odd One Out and Select all are priced by their own grid instead. Answers from before this have no p and keep ×1.</p>
+      <div class="overflow-x-auto rounded-xl border border-gray-200 mt-3">
+        <table class="w-full text-sm" data-testid="difficulty-examples">
+          <thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr><th class="text-left px-3 py-2">Game</th><th class="text-left px-3 py-2">Answer</th>
+            {% for name, p, gain, loss in difficulty_examples.columns %}<th class="text-right px-3 py-2">{{ name }}<div class="normal-case font-normal">harder than {% widthratio p 1 100 %}%: gain ×{{ gain|floatformat:2 }}, loss ×{{ loss|floatformat:2 }}</div></th>{% endfor %}</tr></thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for game, what, cells in difficulty_examples.rows %}
+            <tr><td class="px-3 py-2 text-gray-500 whitespace-nowrap">{{ game }}</td><td class="px-3 py-2">{{ what }}</td>
+              {% for points in cells %}<td class="px-3 py-2 text-right tabular-nums font-semibold {% if points < 0 %}text-red-700{% elif points > 0 %}text-green-700{% endif %}">{% if points > 0 %}+{% endif %}{{ points|floatformat:"-2" }}</td>{% endfor %}</tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="distributions" class="mb-10 space-y-4 text-gray-700" data-testid="scoring-distributions">
+    <h2 class="text-xl font-semibold text-gray-900">Distributions</h2>
+    <p class="text-sm text-gray-500">How things are spread right now, to see what a change would touch. Beetle difficulty refreshes every few minutes.</p>
+    <div class="grid gap-4 md:grid-cols-2">
+      <div class="p-4 rounded-xl border border-gray-200" data-testid="dist-beetles">
+        <h3 class="font-semibold text-gray-900 mb-2">How hard beetles are</h3>
+        {% for group in distributions.beetles %}
+        <div class="mb-3">
+          <div class="flex justify-between text-xs text-gray-500 mb-1"><span>{{ group.label }}: {{ group.total|digit_groups }}</span>{% if group.unknown %}<span>no difficulty yet: {{ group.unknown|digit_groups }}</span>{% endif %}</div>
+          {% if group.total %}
+          <div class="h-14 flex items-end gap-0.5" aria-hidden="true">{% for b in group.bars %}<div class="flex-1 rounded-t {% if forloop.parentloop.first %}bg-gray-500{% else %}bg-gray-300{% endif %}" style="height: {{ b.height }}%; min-height: 1px" title="{{ b.count|digit_groups_text }}"></div>{% endfor %}</div>
+          <div class="flex justify-between text-[10px] text-gray-400 mt-1"><span>0 easy</span><span>0.5</span><span>1 hard</span></div>
+          {% else %}<p class="text-xs text-gray-400">None yet.</p>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      <div class="p-4 rounded-xl border border-gray-200" data-testid="dist-ratings">
+        <h3 class="font-semibold text-gray-900 mb-2">Players' reliability (rating)</h3>
+        {% if distributions.ratings.total %}
+        <p class="text-xs text-gray-500 mb-1">{{ distributions.ratings.total|digit_groups }} players with answers on validated beetles</p>
+        <div class="h-14 flex items-end gap-0.5" aria-hidden="true">{% for b in distributions.ratings.bars %}<div class="flex-1 rounded-t bg-gray-400" style="height: {{ b.height }}%; min-height: 1px" title="{{ b.count|digit_groups_text }}"></div>{% endfor %}</div>
+        <div class="flex justify-between text-[10px] text-gray-400 mt-1"><span>0</span><span>0.5</span><span>1</span></div>
+        {% else %}<p class="text-xs text-gray-400">No rated players yet.</p>{% endif %}
+      </div>
+      <div class="p-4 rounded-xl border border-gray-200" data-testid="dist-points">
+        <h3 class="font-semibold text-gray-900 mb-2">Points per answer by game, last 30 days</h3>
+        {% for g in distributions.points %}
+        <div class="mb-3">
+          <div class="flex flex-wrap justify-between gap-x-3 text-xs text-gray-500 mb-1"><span class="font-semibold text-gray-800">{{ g.game }}</span>
+            <span>{{ g.answers|digit_groups }} answers · average {{ g.average|floatformat:2 }} · {% widthratio g.lost_share 1 100 %}% lost points</span></div>
+          <div class="h-10 flex items-end gap-0.5" aria-hidden="true">{% for b in g.bars %}<div class="flex-1 rounded-t bg-gray-400" style="height: {{ b.height }}%; min-height: 1px" title="{{ b.label }}: {{ b.count|digit_groups_text }}"></div>{% endfor %}</div>
+        </div>
+        {% empty %}<p class="text-xs text-gray-400">No answers in the last 30 days.</p>
+        {% endfor %}
+        {% if distributions.points %}<div class="flex justify-between text-[10px] text-gray-400"><span>below −10</span><span>−2 to 2</span><span>30 and up</span></div>{% endif %}
+      </div>
+      <div class="p-4 rounded-xl border border-gray-200" data-testid="dist-right">
+        <h3 class="font-semibold text-gray-900 mb-2">Share correct by how hard the beetle is</h3>
+        {% if distributions.right.answers %}
+        <p class="text-xs text-gray-500 mb-1">{{ distributions.right.answers|digit_groups }} Identification and Similarity answers on validated beetles, by tenth of beetles from easiest to hardest. Falling bars: the difficulty predicts mistakes.</p>
+        <div class="h-14 flex items-end gap-0.5" aria-hidden="true">{% for d in distributions.right.deciles %}<div class="flex-1 rounded-t bg-gray-400" style="height: {{ d.height }}%; min-height: 1px" title="{% if d.share is not None %}{% widthratio d.share 1 100 %}% correct of {{ d.answers|digit_groups_text }}{% else %}no answers{% endif %}"></div>{% endfor %}</div>
+        <div class="flex gap-0.5 text-[10px] text-gray-400 mt-1 tabular-nums">{% for d in distributions.right.deciles %}<span class="flex-1 text-center">×{{ d.multiplier|floatformat:2 }}</span>{% endfor %}</div>
+        <p class="text-[11px] text-gray-400 mt-1">Under each bar: the points multiplier on a gain there.</p>
+        {% else %}<p class="text-xs text-gray-400">No answers on validated beetles with a known difficulty yet.</p>{% endif %}
+      </div>
+    </div>
   </section>
 
   <section id="examples" class="mb-10">
