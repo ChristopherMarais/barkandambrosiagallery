@@ -1,8 +1,9 @@
 """
-Two kinds of expert (#498). An Identification expert names a taxon's beetles: proven on checked beetles across most
+Two kinds of expert (#498). A Naming expert names a taxon's beetles: proven on checked beetles across most
 of its members, their names can go into the database without review, and their dot on the expertise tree glows gold.
-A Distinction expert tells the taxon's beetles apart just as reliably (the same rule on Similarity, Odd One Out and
-Select all answers), may not know their names, and unlocks nothing: a plain dark-gold square. Also: a photo must show
+A Distinction expert tells the taxon's beetles apart just as reliably (the same rule on Similarity and Odd One Out
+answers; Select all counts as naming since #543), may not know their names, and unlocks nothing: a plain dark-gold
+triangle. Also: a photo must show
 a good part of the beetle, so one of just a leg is reported, not named.
 """
 import html
@@ -86,10 +87,11 @@ class DistinctionExpertTests(ExpertCase):
 
         grid("odd", True, odd_one=self.roi(xylosandrus))   # a near relative: another genus of Xyleborini
         grid("odd", True, odd_one=self.roi(self.t_plat))   # from another subfamily: only the group is in Xyleborini
-        grid("select", False)
+        grid("odd", False, odd_one=self.roi(xylosandrus))   # picked one of the rest
+        grid("select", False)                               # Find Them All counts as naming instead (#543)
         correct, judged, _, shown = apart_counts(self.p)[("genus", "xyleborini")]
         self.assertEqual((correct, judged), (2, 3))
-        self.assertEqual(dict(shown), {"xyleborus": 3, "xylosandrus": 1})
+        self.assertEqual(dict(shown), {"xyleborus": 3, "xylosandrus": 2})
 
     def test_it_is_worked_out_when_shown_and_never_stored(self):
         self.tell_apart(self.p, 12)
@@ -119,7 +121,7 @@ class DistinctionUnlocksNothingTests(ExpertCase):
         entry = consensus(roi_ids=[target.id])[0]
         self.assertEqual((entry["ranks"]["species"]["value"], entry["trusted_rank"]), ("Xyleborus affinis", ""))
         self.assertEqual(auto_apply_expert_labels(), [])
-        # the same two, once they also name checked beetles of both species well, are Identification experts
+        # the same two, once they also name checked beetles of both species well, are Naming experts
         for p in (d1, d2):
             for fields, taxon in ((AFFINIS, self.t_affinis), (FERR, self.t_ferr)):
                 for _ in range(6):
@@ -130,7 +132,7 @@ class DistinctionUnlocksNothingTests(ExpertCase):
 
 class TreeTests(ExpertCase):
     """
-    The player names Xyleborini's beetles to the right tribe but the wrong genus: an Identification expert on the
+    The player names Xyleborini's beetles to the right tribe but the wrong genus: a Naming expert on the
     subfamilies and on the tribes of Scolytinae, not on the genera of Xyleborini. And they tell Xyleborus's two
     species apart: a Distinction expert all the way down.
     """
@@ -147,7 +149,7 @@ class TreeTests(ExpertCase):
 
     def marks(self, name):
         """The Identification and Distinction markers just before a taxon's name on the tree."""
-        found = re.search(r'<span class="tree-dot mark-(\w+)"[^>]*></span><span class="tree-square mark-(\w+)"[^>]*>'
+        found = re.search(r'<span class="tree-dot mark-(\w+)"[^>]*></span><span class="tree-tri mark-(\w+)"[^>]*>'
                           r'</span>\s*<span class="tree-name[^"]*">' + re.escape(name) + "<", self.page)
         self.assertIsNotNone(found, name)
         return found.groups()
@@ -158,27 +160,24 @@ class TreeTests(ExpertCase):
         self.assertEqual(self.marks("Xyleborini"), ("common", "expert"))   # inside an expert subfamily, still grey
         self.assertEqual(self.marks("Xyleborus"), ("unknown", "expert"))
         self.assertNotIn('class="st-', self.page)   # no status classes on the rows around the markers
-        # an Identification expert's name is bold
+        # a Naming expert's name is bold
         self.assertIn('<span class="tree-name font-bold text-gray-900">Scolytinae<', self.page)
         self.assertIn('<span class="tree-name text-gray-800">Xyleborini<', self.page)
 
-    def test_the_count_lines_say_names_and_apart(self):
+    def test_the_count_lines_say_naming_and_telling_apart(self):
         text = text_of(self.page)
-        self.assertIn("Xyleborini tribe names 0/10 · 1/1 genera apart 12/12 · 1/1 genera", text)
-        self.assertIn("Xyleborus genus apart 12/12 · 2/2 species", text)
+        self.assertIn("Xyleborini tribe Naming: 0 of 10 correct · covered 1 of 1 genera "
+                      "Telling apart: 12 of 12 correct · covered 1 of 1 genera", text)
+        self.assertIn("Xyleborus genus Telling apart: 12 of 12 correct · covered 2 of 2 species", text)
 
-    def test_the_legend_explains_both_markers(self):
-        text = text_of(self.page)
-        self.assertIn("Identification: naming in Identification. Gold and glowing: Identification expert.", text)
-        self.assertIn("Distinction: telling apart in Similarity, Imposter Picker and Find Them All. Gold: Distinction "
-                      "expert; it unlocks nothing.", text)
+    def test_the_legend_keys_both_markers(self):
         self.assertNotIn("Two dots", self.page)
-        self.assertIn('data-testid="legend-identification"><span class="tree-dot mark-expert', self.page)
-        self.assertIn('data-testid="legend-distinction"><span class="tree-square mark-expert', self.page)
+        self.assertIn('data-testid="legend-naming"><span class="tree-dot', self.page)
+        self.assertIn('data-testid="legend-apart"><span class="tree-tri', self.page)
         # every colour band shows both shapes
         self.assertIn('data-testid="legend-rare"><span class="tree-dot mark-rare"></span>'
-                      '<span class="tree-square mark-rare"></span>', self.page)
-        # and the intro says how to become each
+                      '<span class="tree-tri mark-rare"></span>', self.page)
+        # and the page above it says how to become each
         self.assertIn("Distinction expert", text_of(self.page[:self.page.index('data-testid="expertise-legend"')]))
 
     def test_the_profile_lists_both_kinds(self):
@@ -187,7 +186,7 @@ class TreeTests(ExpertCase):
         def chips(testid):
             return text_of(re.search(rf'data-testid="{testid}">(.*?)</ul>', page, re.S).group(1))
 
-        self.assertIn("Identification expert in", page)
+        self.assertIn("Naming expert in", page)
         self.assertEqual(chips("identification-expert-in"), "subfamilies tribes of Scolytinae")
         self.assertIn("Distinction expert in", page)
         self.assertEqual(chips("distinction-expert-in"),
@@ -200,7 +199,7 @@ class TreeTests(ExpertCase):
 
 
 class MarkerStyleTests(SimpleTestCase):
-    """The tree's CSS: a dot and a square, styled by classes on themselves; only the Identification expert glows."""
+    """The tree's CSS: a dot and a triangle, styled by classes on themselves; only the Naming expert glows."""
 
     @classmethod
     def setUpClass(cls):
@@ -214,9 +213,9 @@ class MarkerStyleTests(SimpleTestCase):
     def rule(self, selector):
         return next(body for s, body in self.rules if s == selector)
 
-    def test_a_round_dot_and_a_square(self):
+    def test_a_round_dot_and_a_triangle(self):
         self.assertIn("border-radius: 9999px", self.rule(".tree-dot"))
-        self.assertIn("border-radius: 2px", self.rule(".tree-square"))
+        self.assertIn("clip-path: polygon(50% 0, 100% 100%, 0 100%)", self.rule(".tree-tri"))
 
     def test_no_marker_is_styled_by_an_ancestors_class(self):
         self.assertNotIn(".st-", self.style)
@@ -227,7 +226,7 @@ class MarkerStyleTests(SimpleTestCase):
         animated = [s for s, body in self.rules if re.search(r"animation\s*:(?!\s*none)", body)]
         self.assertEqual(animated, [".tree-dot.mark-expert"])
         self.assertIn("box-shadow", self.rule(".tree-dot.mark-expert"))
-        square = self.rule(".tree-square.mark-expert")
+        square = self.rule(".tree-tri.mark-expert")
         self.assertIn("#ca8a04", square)   # dark gold
         self.assertNotIn("box-shadow", square)
         self.assertNotIn("animation", square)
@@ -240,15 +239,15 @@ class WordingTests(ExpertCase):
 
     def test_how_it_works_defines_both_kinds(self):
         faq = text_of(self.page("game_how").split('id="faq"')[1])
-        self.assertIn("What is an expert? There are two kinds, each for one taxon. An Identification expert names "
+        self.assertIn("What is an expert? There are two kinds, each for one taxon. A Naming expert names "
                       "its beetles reliably, proven on checked beetles across most of its members", faq)
         self.assertIn("A Distinction expert tells its beetles apart just as reliably but may not know their names; "
                       "it doesn’t unlock anything.", faq)
 
     def test_only_identification_experts_skip_review(self):
-        self.assertIn("Only Identification experts skip review.", self.page("game_unlocks"))
+        self.assertIn("Only Naming experts skip review.", self.page("game_unlocks"))
         how = text_of(self.page("game_how"))
-        self.assertIn("Only Identification experts have their labels written to the database without review.", how)
+        self.assertIn("Only Naming experts have their labels written to the database without review.", how)
         for name in ("game_how", "game_unlocks"):
             self.assertNotIn("proven expert", self.page(name))
 
@@ -268,19 +267,18 @@ class PhotoGuidanceTests(ExpertCase):
         for text in (how, play, tour):
             self.assertNotIn("an underside, a leg", text)
             self.assertNotIn("just shows too little isn't bad", text)
-        self.assertIn("A photo must show a good part of the beetle. Flag one that shows too little of it (a leg, a "
-                      "fragment)", how)
-        self.assertIn("When it shows too little to name it (just a leg or a fragment of the beetle)", how)
-        self.assertIn("Flag a photo that shows too little of the beetle (a leg, a fragment).", play)   # the rules
-        self.assertIn("Too little of the beetle (a leg, a fragment) is a bad photo too.", play)           # the tip
-        self.assertIn("Bad photo (too little of the beetle, blurry", tour)
+        # since #538 the help says just this, and no longer mentions legs
+        for text in (how, play, tour):
+            self.assertIn("A photo must show a good part of the beetle.", text)
+        self.assertIn("When it doesn’t show a good part of the beetle, is blurry or dark", how)
+        self.assertNotIn("a leg", how)
+        self.assertNotIn("a leg", play)
+        self.assertNotIn("leg", tour)
 
     def test_an_unusual_side_of_a_good_part_is_still_named(self):
         how = text_of(self.page("game_how"))
         self.assertIn("A clear photo of a good part of the beetle from an unusual side (from below, say) isn’t "
                       "bad: name it as far as you can", how)
-        self.assertIn("A clear photo of a good part of it from an unusual side (from below, say) isn't bad: name it "
-                      "as far as you can.", self.page("game_play", "mixed"))
 
     def test_the_report_menu_counts_too_little_of_the_beetle_as_a_bad_photo(self):
         self.assertEqual(game_views.FEED_REPORT_HINTS["bad_image"],

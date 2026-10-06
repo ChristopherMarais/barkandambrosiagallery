@@ -4,10 +4,10 @@ Reference names for beetles nobody has validated yet (#395), so answers on them 
 For each rank of an unvalidated beetle, the reference is:
   * expert   what proven experts for that part of the tree said (game_trust), when every expert who named that
              rank agrees; or else
-  * model    the classifier's name for that rank (ModelPrediction), but only when it is sure of this beetle
-             (GAME_REF_MODEL_MIN_CONFIDENCE, 0.9) *and* it has been right about that very taxon at that rank on
-             validated beetles (GAME_REF_MODEL_MIN_PRECISION, 95%, over at least GAME_REF_MODEL_MIN_CHECKED, 20,
-             of its sure calls). A model that is good at Xyleborus but poor at Xylosandrus is only used for the
+  * model    the classifier's name for that rank (the best model's ModelPrediction, the one people see), but only
+             when it is sure of this beetle (GAME_REF_MODEL_MIN_CONFIDENCE, 0.9) *and* it has been right about that
+             very taxon at that rank on validated beetles (GAME_REF_MODEL_MIN_PRECISION, 95%, over at least
+             GAME_REF_MODEL_MIN_CHECKED, 20, of its sure calls). A model that is good at Xyleborus but poor at Xylosandrus is only used for the
              first.
 
 A reference is not the truth: an answer that matches it earns that rank's points up to GAME_POINTS_REFERENCE_CAP
@@ -67,13 +67,16 @@ def model_precision():
 
 
 def _model_reference(roi_ids):
-    """{roi_id: {rank: name}} where the newest prediction is sure and that model has earned trust for that name."""
+    """
+    {roi_id: {rank: name}} where the prediction people see (the best model's, predictions.best_predictions) is sure
+    and that model has earned trust for that name.
+    """
+    from .predictions import best_predictions
+
     sure = game_setting("GAME_REF_MODEL_MIN_CONFIDENCE", 0.9)
     min_precision = game_setting("GAME_REF_MODEL_MIN_PRECISION", 0.95)
     min_checked = game_setting("GAME_REF_MODEL_MIN_CHECKED", 20)
-    latest = {}
-    for p in ModelPrediction.objects.filter(roi_id__in=list(roi_ids)).select_related("taxon").order_by("created_at"):
-        latest[p.roi_id] = p
+    latest = best_predictions(ModelPrediction.objects.filter(roi_id__in=list(roi_ids)).select_related("taxon"))
     if not latest:
         return {}
     table = model_precision()

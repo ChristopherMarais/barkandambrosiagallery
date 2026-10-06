@@ -40,8 +40,8 @@
                 <div>
                     <label for="modelSelect" class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Model</label>
                     <p class="text-[10px] text-gray-500 mb-2 leading-tight" data-testid="model-help">
-                        All models find and name beetles; {% ibbi_recommended_name %} is recommended.
-                        <a href="{{ ibbi_docs_url }}" target="_blank" rel="noopener" class="underline hover:text-gray-800" data-testid="ibbi-link">How well each model does</a>
+                        All models find and name bark beetles.
+                        <a href="{{ ibbi_docs_url }}" target="_blank" rel="noopener" class="underline hover:text-gray-800" data-testid="ibbi-link">Find out more about the performance of each model.</a>
                     </p>
                     <div class="relative">
                         <select name="architecture" id="modelSelect" class="block w-full pl-3 pr-8 py-2.5 text-sm border-gray-300 focus:outline-none focus:ring-gray-500 focus:border-gray-500 rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer appearance-none" data-testid="model-select">
@@ -88,13 +88,13 @@
                 <div class="grid grid-cols-2 gap-2">
                     {% for ex in examples %}
                     <button type="button" class="example-btn group text-left rounded-lg border border-gray-200 overflow-hidden hover:border-gray-500 transition"
-                        data-src="{% static 'img/classifier_examples/' %}{{ ex.file }}" data-name="{{ ex.file }}" title="{{ ex.title }} &middot; {{ ex.credit }} &middot; {{ ex.licence }}">
-                        <img src="{% static 'img/classifier_examples/' %}{{ ex.file }}" alt="{{ ex.title }}" class="w-full h-16 object-cover" loading="lazy">
+                        data-src="{{ ex.src }}" data-name="{{ ex.file }}" title="{{ ex.title }}{% if ex.credit %} &middot; {{ ex.credit }}{% endif %}{% if ex.licence %} &middot; {{ ex.licence }}{% endif %}">
+                        <img src="{{ ex.src }}" alt="{{ ex.title }}" class="w-full h-16 object-cover" loading="lazy">
                         <div class="px-1.5 py-1 text-[10px] text-gray-600 italic truncate">{{ ex.title }}</div>
                     </button>
                     {% endfor %}
                 </div>
-                <p class="text-[10px] text-gray-400 mt-2">Photos: {% for ex in examples %}{{ ex.credit }} ({{ ex.licence }}){% if not forloop.last %}; {% endif %}{% endfor %}.</p>
+                <p class="text-[10px] text-gray-400 mt-2">Photos: {% for ex in examples %}{% if ex.credit %}{% if not forloop.first %}; {% endif %}{{ ex.credit }}{% if ex.licence %} ({{ ex.licence }}){% endif %}{% endif %}{% endfor %}.</p>
             </div>
             {% endif %}
 
@@ -272,6 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
+                    title: { display: true, text: 'Most likely species', color: '#374151', font: { size: 13, weight: '600' } },
                     tooltip: {
                         callbacks: {
                             label: (ctx) => `${ctx.raw.toFixed(4)}%`
@@ -283,10 +284,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         beginAtZero: true,
                         max: 100,
                         grid: { color: '#f3f4f6' },
-                        ticks: { font: { size: 10 } }
+                        ticks: { font: { size: 10 } },
+                        title: { display: true, text: "Model's confidence (%)", color: '#6b7280', font: { size: 11 } }
                     },
                     y: {
                         grid: { display: false },
+                        title: { display: true, text: 'Species', color: '#6b7280', font: { size: 11 } },
                         ticks: { autoSkip: false, font: { size: 11, weight: '600' } }
                     }
                 },

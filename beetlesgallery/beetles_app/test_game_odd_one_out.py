@@ -81,7 +81,7 @@ class LadderTests(OddCase):
         self.assertEqual([(g["key"], g["unlocked"], g["level"]) for g in prefs["games"]],
                          [("pair", True, 1), ("odd", False, 2), ("select", False, 3), ("classify", False, 4)])
         res = self.post("game_prefs", {"play_mode": "odd"})
-        self.assertEqual((res.status_code, res.json()["error"]), (403, "Imposter Picker unlocks at level 2."))
+        self.assertEqual((res.status_code, res.json()["error"]), (403, "Odd One Out unlocks at level 2."))
 
     def test_from_level_two_the_mix_is_similarity_and_odd_one_out(self):
         self.level(60)
@@ -215,11 +215,12 @@ class AnswerTests(OddCase):
         tiles = set(rnd.items[item["index"]]["tiles"])
         self.assertTrue(tiles <= {str(i) for i in game.revealed_ids(self.user)})
 
-    def test_other_ranks_keep_the_rest_scorable_and_the_review_names_them_only_that_far(self):
+    def test_other_ranks_give_the_rest_away_after_the_answer_and_the_round_review_names_them_only_that_far(self):
         rnd, item = self.odd_round("genus")
         self.answer(rnd, item, pick=self.pick(rnd, item, odd=False))
         tiles = set(rnd.items[item["index"]]["tiles"])
-        self.assertEqual(len(tiles & {str(i) for i in game.revealed_ids(self.user)}), 2)   # the pick and the odd one
+        # the review after the answer names every beetle at every rank (#541)
+        self.assertTrue(tiles <= {str(i) for i in game.revealed_ids(self.user)})
         game.finish_round(rnd)
         rest = [s for s in game_feedback.round_feedback(rnd)["items"][0]["sides"] if not (s["picked"] or s["odd"])]
         self.assertEqual(len(rest), 2)
@@ -292,4 +293,4 @@ class PageTests(OddCase):
         self.client.force_login(self.user)
         page = self.client.get(reverse("game_how")).content.decode()
         self.assertIn('data-testid="how-odd"', page)
-        self.assertIn("Imposter Picker, and choosing your game, unlock at level 2", page)
+        self.assertIn("Odd One Out, and choosing your game, unlock at level 2", page)

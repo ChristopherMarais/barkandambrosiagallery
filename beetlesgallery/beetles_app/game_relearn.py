@@ -5,9 +5,9 @@ Mistakes come back. A validated beetle the player got wrong, in any game, comes 
 they missed it in) until they get it right, at most GAME_RETRY_MAX times and GAME_RETRY_PER_BATCH per batch. It comes
 back first in an easier game than the one it was missed in (Similarity < Odd One Out < Select all < Identification,
 among the games the player has), and once they get it right there, in the game it was missed in. A mistake in the
-easiest game they have comes back in that game. Retries are the one deliberate exception to "a beetle whose answer you
-have seen is never scored again" (game.revealed_ids): they earn GAME_POINTS_RETRY_FACTOR of the points and stay out
-of ratings, skills and badges (GameAnswer.is_retry).
+easiest game they have comes back in that game. Retries earn GAME_POINTS_RETRY_FACTOR of the points and stay out
+of ratings, skills and badges (GameAnswer.is_retry). Any other beetle whose names a player has seen comes back too,
+after a while (game.held_back_ids), at full points but likewise out of ratings and skills (GameAnswer.seen_before).
 
 Hard beetles go through the easy games first. An unvalidated beetle is hard when players disagree on it, nobody could
 take it to species, IBBI-AI is unsure of it, or nobody has answered it and IBBI-AI has no confident call (hard_q).
@@ -85,14 +85,18 @@ def _pair_relation(row):
     return RELATION_AT_DEPTH[depth]
 
 
-def _select_misses(rows):
-    """{answer id: [beetle ids tapped wrongly or left out]} for imperfect Select all grids."""
-    grids = [r for r in rows if r["mode"] == "select" and _verdict(r) is False]
+def _grid_misses(rows):
+    """
+    {answer id: [beetle ids picked or tapped wrongly, or left out]} for imperfect Select all grids and for Odd One Out
+    grids answered with ``picks`` (#540: several odd ones, so every odd one missed and every wrong pick comes back).
+    """
+    grids = [r for r in rows if _verdict(r) is False and (r["mode"] == "select" or (r["mode"] == "odd" and r["picks"]))]
     found = Beetles.objects.select_related("taxon").in_bulk({uuid.UUID(str(t)) for r in grids for t in r["tiles"] or []})
+    score = {"select": game.score_select, "odd": game.score_odd_grid}
     out = {}
     for r in grids:
         tiles = [found.get(uuid.UUID(str(t))) for t in r["tiles"] or []]
-        states = game.score_select(tiles, r["picks"], r["grid_rank"], r["grid_group"], r["flagged"])["tiles"]
+        states = score[r["mode"]](tiles, r["picks"], r["grid_rank"], r["grid_group"], r["flagged"])["tiles"]
         out[r["id"]] = [t.id for t, s in zip(tiles, states) if t is not None and s in ("wrong", "missed")]
     return out
 
@@ -104,8 +108,8 @@ def _events(player):
     came out right; ``rank`` where a wrong one went wrong; ``relation`` the Similarity partner that tests it there;
     ``retry`` whether it was a retry of that very beetle.
     The beetle an answer is about: Identification and Similarity its beetle (in Similarity the one that isn't the
-    partner); Odd One Out the odd one, and when the pick was wrong the beetle wrongly picked too; Select all its
-    member, and when the grid was not perfect every beetle tapped wrongly or left out.
+    partner); Odd One Out the odd one, and when a pick was wrong every beetle wrongly picked and every odd one left
+    out too; Select all its member, and when the grid was not perfect every beetle tapped wrongly or left out.
     """
     rows = list(
         GameAnswer.objects.filter(player=player, is_check=True, skipped=False, score_hold=False, mode__in=LADDER)
@@ -113,7 +117,7 @@ def _events(player):
         .values("id", "roi_id", "roi_b_id", "mode", "is_retry", "answered_at", "pair_answer", "tiles", "picks",
                 "grid_rank", "grid_group", "flagged", *[f"correct_{r}" for r in RANKS])
     )
-    misses = _select_misses(rows)
+    misses = _grid_misses(rows)
     events = defaultdict(list)
     for row in rows:
         ok = _verdict(row)
@@ -130,10 +134,12 @@ def _events(player):
             continue
         relation = _pair_relation(row) if mode == "pair" else NEAR_RELATION[rank]
         wrong = dict(base, ok=False, rank=rank, relation=relation or NEAR_RELATION[rank])
-        # in an imperfect grid its member may have been tapped right; a retry grid, though, was all about it
-        if mode != "select" or row["is_retry"] or subject in misses.get(row["id"], []):
+        # in an imperfect grid its member (or an odd one) may have been chosen right; a retry grid, though, was all
+        # about it
+        if row["id"] not in misses or row["is_retry"] or subject in misses[row["id"]]:
             events[subject].append(dict(wrong, retry=row["is_retry"]))
-        others = [row["roi_id"]] if mode == "odd" else misses.get(row["id"], []) if mode == "select" else []
+        # an Odd One Out pick from before several odd ones (#540) is just the one beetle, ``roi``
+        others = misses[row["id"]] if row["id"] in misses else [row["roi_id"]] if mode == "odd" else []
         for beetle in others:
             if beetle != subject:
                 events[beetle].append(dict(wrong, retry=False))
@@ -302,7 +308,8 @@ def retry_items(player, mode, room, avoid=()):
     ready = due(player)
     if not ready:
         return []
-    ctx = {"target": game.target_difficulty(player), "revealed": set(game.revealed_ids(player)),
+    # the partners and the rest of a grid: never a beetle whose names were shown a moment ago (game.held_back_ids)
+    ctx = {"target": game.target_difficulty(player), "revealed": game.held_back_ids(player),
            "avoid": {uuid.UUID(str(a)) for a in avoid}, "deepest": rank_for(player)["rank"]}
     beetles = Beetles.objects.select_related("taxon").in_bulk(list(ready))
     items = []

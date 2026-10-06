@@ -1443,10 +1443,10 @@ async function resolveGameReports(idx, outcome) {
 function gameTipText(t) {
   const name = t.rank === 'species' || t.rank === 'genus' ? `<i>${escHtml(t.value)}</i>` : escHtml(t.value);
   if (t.kind === 'not') {
-    const who = t.experts ? 'Identification experts and players are' : 'Players are';
+    const who = t.experts ? 'Naming experts and players are' : 'Players are';
     return `${who} confident it is <b>not</b> in ${t.rank} ${name} <span class="text-gray-400">(${digitGroupsText(t.count)} said so${t.against ? `, ${digitGroupsText(t.against)} disagreed` : ''})</span>`;
   }
-  const who = t.kind === 'expert' ? (t.count > 1 ? 'Identification experts say' : 'An Identification expert says')
+  const who = t.kind === 'expert' ? (t.count > 1 ? 'Naming experts say' : 'A Naming expert says')
     : `${digitGroupsText(t.count)} reliable players say`;
   const clash = t.conflicts ? ` <span class="text-amber-800">· the current label says ${escHtml(t.current)}</span>` : '';
   return `${who} ${t.rank} <b>${name}</b> <span class="text-gray-400">(${Math.round(t.support * 100)}%)</span>${clash}`;
@@ -1538,7 +1538,7 @@ async function acceptAiSuggestion(idx, n) {
 function gameAppliedHtml(b, i) {
   const a = (state.gameApplied || {})[b.id];
   if (!a) return '';
-  const who = a.automatic ? 'automatically (Identification experts agreed)' : `by ${escHtml(a.by)}`;
+  const who = a.automatic ? 'automatically (Naming experts agreed)' : `by ${escHtml(a.by)}`;
   const when = new Date(a.at).toLocaleDateString();
   const locked = state.isLockedByOther ? 'disabled' : '';
   const action = a.current
@@ -1579,7 +1579,7 @@ function gameProposalHtml(b, i) {
   const cells = ranks.map(r => {
     const v = p.ranks[r];
     if (!v) return `<span class="text-gray-300">—</span>`;
-    const tick = v.trusted ? `<i class="fi fi-rr-shield-check text-green-600" title="Backed by ${v.trusted_votes} Identification expert(s)"></i>` : '';
+    const tick = v.trusted ? `<i class="fi fi-rr-shield-check text-green-600" title="Backed by ${v.trusted_votes} Naming expert(s)"></i>` : '';
     return `<span class="${r === 'species' ? 'italic' : ''} ${v.trusted ? 'font-semibold text-gray-900' : 'text-gray-700'}">${escHtml(v.value)}</span>
             <span class="text-[10px] text-gray-400">${Math.round(v.support * 100)}%·${v.votes}</span> ${tick}`;
   }).join('<span class="text-gray-300 mx-1">›</span>');
@@ -1761,7 +1761,7 @@ function renderRoiAccordions() {
                     <input type="text" name="depicts_specimen" value="${b.depicts_specimen || ''}" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
                   </div>
                   <div>
-                    <label class="block text-xs text-gray-600 mb-1" title="Your own ID for this record, e.g. a catalogue number or file name from your database. Optional; we keep it unchanged and include it in every download so you can link our records back to yours.">Alias ID <span class="text-gray-400">(your own ID for it)</span></label>
+                    <label class="block text-xs text-gray-600 mb-1" title="Your own ID for this record, e.g. a catalogue number or file name from your database. Optional; we keep it unchanged and include it in every download so you can link our records back to yours.">Alias ID</label>
                     <input type="text" name="alias_id" value="${b.alias_id || ''}" class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-gray-500" ${disabledAttr}>
                   </div>
                 </div>
@@ -1892,7 +1892,8 @@ function setLabelHistoryCount(el, n) {
   if (span && n != null) span.textContent = `(${digitGroupsText(n)})`;
 }
 
-// One line per event: "5 Oct 2026 · Xyleborus affinis · Expert ID · by jdoe"
+// One line per event: "5 Oct 2026 · Xyleborus affinis · Expert ID · by jdoe". It wraps rather than truncates, so the
+// whole event stays readable on a phone (#537); break-words also splits a long user name or species epithet.
 function labelHistoryLine(e) {
   const when = new Date(e.at);
   const parts = [escHtml(when.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))];
@@ -1901,7 +1902,7 @@ function labelHistoryLine(e) {
   if (e.tier) parts.push(escHtml(e.tier));
   if (e.by) parts.push(`by ${escHtml(e.by)}`);
   const detail = e.detail ? ` <span class="text-gray-400">· ${escHtml(e.detail)}</span>` : '';
-  return `<li class="truncate" data-kind="${escHtml(e.kind)}" title="${escHtml(when.toLocaleString())}${e.detail ? ' · ' + escHtml(e.detail) : ''}">${parts.join(' · ')}${detail}</li>`;
+  return `<li class="break-words" data-kind="${escHtml(e.kind)}" title="${escHtml(when.toLocaleString())}${e.detail ? ' · ' + escHtml(e.detail) : ''}">${parts.join(' · ')}${detail}</li>`;
 }
 
 async function toggleLabelHistory(el) {

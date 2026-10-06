@@ -27,20 +27,20 @@ PART_LABELS = dict(RUNG_LABELS, **{size: f"{size} beetles" for size in GRID_SIZE
 GROUPS = [
     ("Beetles we know (validated): what an answer earns", [
         _t("GAME_POINTS_RANK", "Points per rank named correctly", {"subfamily": 1.0, "tribe": 2.0, "genus": 4.0, "species": 8.0},
-           "Identification: each rank named correctly earns its points (then times the Identification weight). Deeper "
+           "Naming: each rank named correctly earns its points (then times the Naming weight). Deeper "
            "ranks are worth more because they are harder and more useful.", 0, 50, 0.5, keys=RANKS),
-        _t("GAME_POINTS_CLASSIFY_WEIGHT", "Identification weight", 3.0,
-           "Every Identification answer counts this many times the points above, gains and losses alike: naming a "
+        _t("GAME_POINTS_CLASSIFY_WEIGHT", "Naming weight", 3.0,
+           "Every Naming answer counts this many times the points above, gains and losses alike: naming a "
            "beetle is the harder and more useful game.", 0.5, 10, 0.5),
         _t("GAME_PAIR_POINTS", "Similarity points by true relationship",
            {"-1": 1.0, "0": 2.0, "1": 4.0, "2": 7.0, "3": 12.0},
            "Similarity: the correct answer earns more the finer the line the player had to draw, each rung clearly "
-           "more than the one above, and more so toward species. Imposter Picker and Find Them All are priced from "
+           "more than the one above, and more so toward species. Odd One Out and Find Them All are priced from "
            "these too.", 0, 50, 0.5, keys=RUNGS),
         _t("GAME_POINTS_SIMILARITY_BONUS", "Bonus when the two photos look alike", 0.25,
            "Up to this share more when the two photos share photographer, place, magnification... (harder to tell "
            "apart), on an answer that is correct or cautious; never on a wrong one.", 0, 2),
-        _t("GAME_POINTS_ODD_WEIGHT", "Imposter Picker: correct pick", 1.5,
+        _t("GAME_POINTS_ODD_WEIGHT", "Odd One Out: correct pick", 1.5,
            "A correct pick earns this many times the Similarity points for how related the odd one is to the rest.", 0, 10),
         _t("GAME_POINTS_SELECT_WEIGHT", "Find Them All: a perfect grid", 1.25,
            "A perfect grid earns this many times the Similarity points for its rank, shared between the members.", 0, 10),
@@ -49,20 +49,20 @@ GROUPS = [
     ]),
     ("Beetles we know (validated): what a mistake costs", [
         _t("GAME_POINTS_CONFIDENCE", "How sure a claim must be to pay", 0.7,
-           "Every claim (a rank named, a Similarity rung, an Imposter Picker pick, a Find Them All tap) costs "
+           "Every claim (a rank named, a Similarity rung, an Odd One Out pick, a Find Them All tap) costs "
            "k = t ÷ (1 − t) times what it earns when correct: 2⅓ at 0.7. So it pays on average only when the player is "
            "at least this sure, and below it stopping (or leaving a beetle untapped) earns more. Higher asks for more "
            "confidence and makes mistakes cost more.", 0.5, 0.95, 0.01),
     ]),
     ("Skipping and taking part", [
-        _t("GAME_POINTS_UNSURE", "Skip in Identification and Similarity (cost)", 0.25,
+        _t("GAME_POINTS_UNSURE", "Skip in Naming and Similarity (cost)", 0.25,
            "A skip costs this little: less than any wrong answer, so not knowing is always better than guessing.", 0, 5),
-        _t("GAME_POINTS_ODD_SKIP", "Skip in Imposter Picker and Find Them All (earns)", 0.25,
+        _t("GAME_POINTS_ODD_SKIP", "Skip in Odd One Out and Find Them All (earns)", 0.25,
            "In the grid games a skip earns this, to reward knowing when you don't know.", 0, 5),
         _t("GAME_POINTS_PARTICIPATION", "Taking part", 0.5,
            "Every real answer earns this on top, so the score grows with play; accuracy still decides most of it.", 0, 5),
     ]),
-    ("Grid games: Imposter Picker and Find Them All", [
+    ("Grid games: Odd One Out and Find Them All", [
         _t("GAME_GRID_SIZE_FACTOR", "Points by grid size", {"4": 1.0, "9": 1.5, "16": 2.0},
            "Every point of a grid, gained or lost, is times this for its number of beetles, on top of what its rank is "
            "worth: a bigger grid takes longer and is harder. Only grids from the ladder: older ones keep ×1.",
@@ -72,15 +72,15 @@ GROUPS = [
            "player goes up a step after this many good grids in a row and down one after a poor grid.", 1, 10, 1),
         _t("GAME_GRID_GOOD_SHARE", "Find Them All: share of the group to find", 0.75,
            "A Find Them All grid is good with no wrong tap and at least this share of the validated members found, poor "
-           "when it lost points or found none. In Imposter Picker the odd one found is good, a wrong pick poor. Skips "
+           "when it lost points or found none. In Odd One Out the odd one found is good, a wrong pick poor. Skips "
            "are neither.", 0.25, 1, 0.05),
         _t("GAME_GRID_START_STEP", "Step a new player starts on", 1,
            "1 is 4 beetles at subfamily, 12 is 16 beetles at species. Every player has a step in each grid game.",
            1, 12, 1),
-        _t("GAME_ODD_OPEN_SHARE_START", "Imposter Picker: AI beetles among the rest at level 1", 0.25,
+        _t("GAME_ODD_OPEN_SHARE_START", "Odd One Out: AI beetles among the rest at level 1", 0.25,
            "This share of the beetles that share the group are ones nobody has validated that IBBI-AI puts in it...",
            0, 1, 0.05),
-        _t("GAME_ODD_OPEN_SHARE_END", "Imposter Picker: AI beetles among the rest at the top level", 0.5,
+        _t("GAME_ODD_OPEN_SHARE_END", "Odd One Out: AI beetles among the rest at the top level", 0.5,
            "...rising to this share at the top level. A pick on one is scored by agreement, never below zero.", 0, 1, 0.05),
         _t("GAME_AI_SURE_FROM", "IBBI-AI is sure from", 0.9,
            "When its predictions allow, every grid holds an AI beetle IBBI-AI is at least this sure of...", 0.5, 1, 0.01),
@@ -92,8 +92,8 @@ GROUPS = [
            "An answer on an unvalidated beetle earns at most this share of what it would on a validated one, when "
            "strong players agree with it. A rank they disagree with costs k times as much, off the rest; never less "
            "than zero in all. Below 1, known beetles always pay more.", 0, 1),
-        _t("GAME_POINTS_REFERENCE_CAP", "Matching Identification experts or a trusted model", 0.6,
-           "An answer that matches what Identification experts (or a trusted model) say earns up to this share; a rank "
+        _t("GAME_POINTS_REFERENCE_CAP", "Matching Naming experts or a trusted model", 0.6,
+           "An answer that matches what Naming experts (or a trusted model) say earns up to this share; a rank "
            "they name otherwise costs k times it, off the rest.", 0, 1),
         _t("GAME_RATER_MIN_JUDGED", "Answers on known beetles before a player can judge", 10,
            "Only players with at least this many answers on validated beetles, and a rating at or above the median, "
@@ -111,7 +111,7 @@ GROUPS = [
     ("Naming confidence: what a beetle is, and is not", [
         _t("GAME_SELECT_TAP_WEIGHT", "A Find Them All tap, against a name", 0.8,
            "Tapping an unvalidated beetle in Find Them All counts as this share of a direct identification towards its "
-           "name (down to the grid's rank). Taps never make an Identification expert's verdict on their own.",
+           "name (down to the grid's rank). Taps never make a Naming expert's verdict on their own.",
            0, 1, 0.05),
         _t("GAME_TIP_MIN_VOTES", "Players needed for a name tip", 3,
            "Curators see 'N reliable players say genus X' once at least this many players agree...", 1, 50, 1),
@@ -120,8 +120,8 @@ GROUPS = [
            "applies to 'not in' tips.", 0.5, 1, 0.05),
         _t("GAME_TIP_MIN_NOT_VOTES", "Players needed for a 'not in' tip", 2,
            "Curators see 'Players are confident it is not in genus X' once at least this many say so.", 1, 50, 1),
-        _t("GAME_AUTO_APPLY_MIN_EXPERTS", "Identification experts who must agree to write a name in", 2,
-           "Identification experts who must give the same species before it is written onto an unnamed beetle as "
+        _t("GAME_AUTO_APPLY_MIN_EXPERTS", "Naming experts who must agree to write a name in", 2,
+           "Naming experts who must give the same species before it is written onto an unnamed beetle as "
            "an Expert ID (still unvalidated, for a curator to confirm).", 1, 10, 1),
     ]),
     ("Feeds: mistakes come back, hard beetles go to the easier games first", [
@@ -133,30 +133,34 @@ GROUPS = [
         _t("GAME_SESSION_GAP_MINUTES", "Break that ends a sitting (minutes)", 30,
            "A mistake comes back only in a later sitting: one that starts after at least this long without an "
            "answer.", 1, 1440, 1),
+        _t("GAME_REVEAL_COOLDOWN_HOURS", "Wait before a beetle whose names were shown comes back (hours)", 2,
+           "After each answer the review shows every beetle's names. Such a beetle is scored for that player again "
+           "only in a later sitting and after at least this many hours, in another game first when it can be. It "
+           "earns full points but doesn't count towards accuracy or expertise.", 0, 720, 0.5),
         _t("GAME_HARD_FROM", "A beetle nobody has validated is hard from", 0.5,
            "Hard when players disagree on its genus this much, or IBBI-AI is this unsure (0 to 1); also when nobody "
            "could take it to species, or nobody has answered it and IBBI-AI has no confident call. Similarity shows "
            "hard beetles more.", 0, 1, 0.05),
-        _t("GAME_ID_PLACED_SHARE", "Identification: share already placed", 0.5,
-           "At least this share of the new beetles in Identification (when there are enough) are ones Similarity or "
+        _t("GAME_ID_PLACED_SHARE", "Naming: share already placed", 0.5,
+           "At least this share of the new beetles in Naming (when there are enough) are ones Similarity or "
            "a confident IBBI-AI has already put in a subfamily or tribe. Hard ones not placed yet wait for the "
            "easier games while there are others.", 0, 1, 0.05),
     ]),
-    ("Identification experts (whose answers become trusted labels)", [
-        _t("GAME_TRUST_MIN_ACCURACY", "Accuracy an Identification expert needs", 0.9,
+    ("Naming experts (whose answers become trusted labels)", [
+        _t("GAME_TRUST_MIN_ACCURACY", "Accuracy a Naming expert needs", 0.9,
            "In a taxon, a player must be correct at least this often on validated beetles. The same rules on "
            "telling its beetles apart make a Distinction expert, which unlocks nothing.", 0.5, 1, 0.01),
         _t("GAME_TRUST_IMAGES_PER_SPECIES", "Images that cover a species, genus or tribe", 5,
-           "An Identification expert must have answered this many validated images of each child they cover (all of "
+           "A Naming expert must have answered this many validated images of each child they cover (all of "
            "them for one with fewer): the species of a genus, the genera of a tribe, the tribes of a subfamily.",
            1, 100, 1),
-        _t("GAME_TRUST_CHILDREN_SHARE", "Share of a taxon's children an Identification expert must cover", 0.75,
+        _t("GAME_TRUST_CHILDREN_SHARE", "Share of a taxon's children a Naming expert must cover", 0.75,
            "Rounded up, so a taxon with three or fewer children (at 75%) needs all of them. A rare genus no "
-           "longer stops anyone becoming an Identification expert in a tribe.", 0.1, 1, 0.05),
-        _t("GAME_TRUST_MIN_JUDGED", "Fewest answers in a taxon for an Identification expert", 10,
+           "longer stops anyone becoming a Naming expert in a tribe.", 0.1, 1, 0.05),
+        _t("GAME_TRUST_MIN_JUDGED", "Fewest answers in a taxon for a Naming expert", 10,
            "Also the fewest validated images a taxon needs before anyone can be proven in it.", 1, 500, 1),
-        _t("GAME_EXPERT_PERCENTILE", "Identification experts come from the top share of players", 0.25,
-           "Only the most reliable players overall (this share, by rating) are trusted as Identification experts.",
+        _t("GAME_EXPERT_PERCENTILE", "Naming experts come from the top share of players", 0.25,
+           "Only the most reliable players overall (this share, by rating) are trusted as Naming experts.",
            0.01, 1, 0.01),
     ]),
     ("Difficulty: which beetles a player sees, and what they are worth", [
@@ -181,7 +185,7 @@ GROUPS = [
         _t("GAME_DIFFICULTY_PUSH", "...by this much", 0.05,
            "...this much higher (never above the hardest).", 0, 1, 0.01),
         _t("GAME_POINTS_DIFFICULTY_SPREAD", "Points by how hard the beetle is", 0.25,
-           "Identification and Similarity: a gain is multiplied by 1 + spread × (2p − 1), where p is how hard the "
+           "Naming and Similarity: a gain is multiplied by 1 + spread × (2p − 1), where p is how hard the "
            "beetle is among all beetles (0 easiest, 1 hardest), and a loss by 1 − spread × (2p − 1). So the hardest "
            "pay up to this share more and cost this share less when missed. 0 turns it off.", 0, 0.95, 0.05),
     ]),
@@ -268,14 +272,14 @@ def numbers():
 
 
 def _classify(w, named, right):
-    """Identification points for naming the first ``named`` ranks, the first ``right`` of them correctly."""
+    """Naming points for naming the first ``named`` ranks, the first ``right`` of them correctly."""
     from .game_scoring import classify_points
 
     return sum(classify_points({r: i < right for i, r in enumerate(RANKS[:named])}).values()) * w
 
 
 def _grid_worth(weight, pair, rank, size, ladder=True):
-    """A correct Imposter Picker pick, or a perfect Find Them All grid, of ``size`` beetles at ``rank``."""
+    """A correct Odd One Out pick, or a perfect Find Them All grid, of ``size`` beetles at ``rank``."""
     factor = float(current("GAME_GRID_SIZE_FACTOR")[str(size)]) if ladder else 1.0
     return weight * pair[RANKS.index(rank) - 1] * factor
 
@@ -289,14 +293,14 @@ def examples():
     odd_w, sel_w = v["GAME_POINTS_ODD_WEIGHT"], v["GAME_POINTS_SELECT_WEIGHT"]
     sel9 = _grid_worth(sel_w, pair, "species", 9)
     rows = [
-        ("Identification", "Species correct (every rank)", _classify(w, 4, 4)),
-        ("Identification", "Stopped at a correct genus", _classify(w, 3, 3)),
-        ("Identification", "Correct genus, wrong species", _classify(w, 4, 3)),
-        ("Identification", "Correct subfamily only", _classify(w, 1, 1)),
-        ("Identification", "Correct subfamily, wrong tribe", _classify(w, 2, 1)),
-        ("Identification", "Wrong subfamily, nothing more named", _classify(w, 1, 0)),
-        ("Identification", "Wrong subfamily, claimed down to species", _classify(w, 4, 0)),
-        ("Identification", "Species agreed by strong players (unvalidated beetle, most)", _classify(w, 4, 4) * cap),
+        ("Naming", "Species correct (every rank)", _classify(w, 4, 4)),
+        ("Naming", "Stopped at a correct genus", _classify(w, 3, 3)),
+        ("Naming", "Correct genus, wrong species", _classify(w, 4, 3)),
+        ("Naming", "Correct subfamily only", _classify(w, 1, 1)),
+        ("Naming", "Correct subfamily, wrong tribe", _classify(w, 2, 1)),
+        ("Naming", "Wrong subfamily, nothing more named", _classify(w, 1, 0)),
+        ("Naming", "Wrong subfamily, claimed down to species", _classify(w, 4, 0)),
+        ("Naming", "Species agreed by strong players (unvalidated beetle, most)", _classify(w, 4, 4) * cap),
         ("Similarity", "Correct: same species", pair_points(3, 3)[0]),
         ("Similarity", "Correct: same genus", pair_points(2, 2)[0]),
         ("Similarity", "Correct: different subfamilies", pair_points(-1, -1)[0]),
@@ -304,10 +308,10 @@ def examples():
         ("Similarity", "'Same genus' for two of one tribe (one rung too close: wrong)", pair_points(2, 1)[0]),
         ("Similarity", "'Same genus' for two of different subfamilies (wrong)", pair_points(2, -1)[0]),
         ("Similarity", "'Different subfamilies' for two of one genus (wrong)", pair_points(-1, 2)[0]),
-        ("Imposter Picker", "Correct pick, species round, 4 beetles", _grid_worth(odd_w, pair, "species", 4)),
-        ("Imposter Picker", "Correct pick, species round, 16 beetles", _grid_worth(odd_w, pair, "species", 16)),
-        ("Imposter Picker", "Wrong pick, subfamily round, 4 beetles", -k * _grid_worth(odd_w, pair, "subfamily", 4)),
-        ("Imposter Picker", "Wrong pick, species round, 4 beetles", -k * _grid_worth(odd_w, pair, "species", 4)),
+        ("Odd One Out", "Correct pick, species round, 4 beetles", _grid_worth(odd_w, pair, "species", 4)),
+        ("Odd One Out", "Correct pick, species round, 16 beetles", _grid_worth(odd_w, pair, "species", 16)),
+        ("Odd One Out", "Wrong pick, subfamily round, 4 beetles", -k * _grid_worth(odd_w, pair, "subfamily", 4)),
+        ("Odd One Out", "Wrong pick, species round, 4 beetles", -k * _grid_worth(odd_w, pair, "species", 4)),
         ("Find Them All", "Perfect grid, species, 9 beetles", sel9),
         ("Find Them All", "Perfect grid, species, 16 beetles", _grid_worth(sel_w, pair, "species", 16)),
         ("Find Them All", "3 of 3 found plus one wrong tap, species, 9 beetles", select_points(sel9, 3, 3, 1)),
@@ -315,8 +319,8 @@ def examples():
         ("Find Them All", "The most a grid can lose, species, 9 beetles", -sel9),
         ("Find Them All", "Perfect grid, species, 9 beetles, from before the ladder (×1)",
          _grid_worth(sel_w, pair, "species", 9, ladder=False)),
-        ("Any game", "Skip (Identification, Similarity)", -v["GAME_POINTS_UNSURE"]),
-        ("Any game", "Skip (Imposter Picker, Find Them All)", v["GAME_POINTS_ODD_SKIP"]),
+        ("Any game", "Skip (Naming, Similarity)", -v["GAME_POINTS_UNSURE"]),
+        ("Any game", "Skip (Odd One Out, Find Them All)", v["GAME_POINTS_ODD_SKIP"]),
         ("Any game", "Taking part (added to every real answer)", v["GAME_POINTS_PARTICIPATION"]),
     ]
     return [(game, what, round(p, 2)) for game, what, p in rows]
@@ -356,9 +360,9 @@ def thresholds():
             cells.append(round(_break_even(c, [by_difficulty(x, m) for x in stop]), 3))
         rows.append((game, decision, not answering, cells))
 
-    row("Identification", "Name the subfamily, or skip", (_classify(w, 1, 1), _classify(w, 1, 0)), (skip, skip), True)
+    row("Naming", "Name the subfamily, or skip", (_classify(w, 1, 1), _classify(w, 1, 0)), (skip, skip), True)
     for i in range(1, len(RANKS)):
-        row("Identification", f"Name the {RANKS[i]} too", (_classify(w, i + 1, i + 1), _classify(w, i + 1, i)),
+        row("Naming", f"Name the {RANKS[i]} too", (_classify(w, i + 1, i + 1), _classify(w, i + 1, i)),
             (_classify(w, i, i),) * 2)
     row("Similarity", "Say 'same subfamily', or skip", (pair_points(0, 0)[0], pair_points(0, -1)[0]), (skip, skip), True)
     for d in range(1, len(RANKS)):
@@ -366,16 +370,16 @@ def thresholds():
             (pair_points(d, d)[0], pair_points(d, d - 1)[0]), (pair_points(d - 1, d)[0], pair_points(d - 1, d - 1)[0]))
     for rank_name, size in (("subfamily", 4), ("species", 16)):
         worth = _grid_worth(v["GAME_POINTS_ODD_WEIGHT"], pair, rank_name, size)
-        row("Imposter Picker", f"Pick, or skip ({rank_name}, {size} beetles)", (worth, -k * worth),
+        row("Odd One Out", f"Pick, or skip ({rank_name}, {size} beetles)", (worth, -k * worth),
             (grid_skip, grid_skip), True, scaled=False)
     row("Find Them All", "Tap one more beetle", (1.0, -k), (0.0, 0.0), scaled=False)
     return rows
 
 
 # How careful players of three skills fare, to check that no game is the way to farm points (#530). The chances are
-# how often each is right naming a rank (Identification) or telling two beetles apart at it (the other games, a little
+# how often each is right naming a rank (Naming) or telling two beetles apart at it (the other games, a little
 # easier); a careful player claims only what they are at least GAME_POINTS_CONFIDENCE sure of. Their grids are at the
-# step the ladder settles them on. Seconds per answer are estimates, not measurements: Identification 6 plus 6 per rank
+# step the ladder settles them on. Seconds per answer are estimates, not measurements: Naming 6 plus 6 per rank
 # named; Similarity 10, 8 and 7; a grid by its size.
 PLAYERS = [
     ("Novice", (0.80, 0.55, 0.35, 0.20), (0.88, 0.73, 0.61, 0.52), ("subfamily", 9), 10),
@@ -385,7 +389,7 @@ PLAYERS = [
 GRID_SECONDS = {"odd": {4: 8, 9: 12, 16: 18}, "select": {4: 10, 9: 18, 16: 28}}
 CAREFUL_SLIP = 0.4    # a careful player taps a non-member this share as often as a blind tapper would
 FARM_BAND = 2.0       # per player, no game earns more than this many times another per minute
-GAMES = [("classify", "Identification"), ("pair", "Similarity"), ("odd", "Imposter Picker"), ("select", "Find Them All")]
+GAMES = [("classify", "Naming"), ("pair", "Similarity"), ("odd", "Odd One Out"), ("select", "Find Them All")]
 
 
 def _pair_walk(telling, t, truth, value, r=0, said=None, chance=1.0):
@@ -441,18 +445,19 @@ def expected_play():
     return {"players": [p[0] for p in PLAYERS], "rows": rows, "band": band}
 
 
-def odd_guess(size):
+def odd_guess(size, odds=1):
     """
-    What a blind Odd One Out pick in a grid of ``size`` is worth on average, as a share of a correct pick: correct 1 time
-    in ``size``, wrong on every validated beetle of the rest, nothing on an AI beetle (scored by agreement, never below
+    What blind picks in an Odd One Out grid of ``size`` hiding ``odds`` odd ones are worth on average, as a share of
+    finding them all (#540): each pick is an odd one ``odds`` times in ``size`` and earns a share, is a validated
+    beetle of the rest otherwise and costs k shares, or an AI beetle and earns nothing (scored by agreement, never below
     zero). The grid with the most AI beetles a player meets, so the fewest wrong picks, is the test.
     """
     from .game import odd_open_count
     from .game_levels import LEVELS
     from .game_scoring import wrong_cost
 
-    ai = min(size - 2, max(2, odd_open_count(len(LEVELS), size)))
-    return (1 - wrong_cost() * (size - 1 - ai)) / size
+    ai = min(size - odds - 1, max(2, odd_open_count(len(LEVELS), size, odds)))
+    return (odds - wrong_cost() * (size - odds - ai)) / size
 
 
 def select_tap_all(size):
@@ -474,12 +479,12 @@ def _wrong_answers(v, pair, w):
     """[(what, points)]: the cheapest wrong answer of each kind, before the point for taking part."""
     from .game_scoring import pair_points, wrong_cost
 
-    out = [(f"Identification: wrong {RANKS[i]}" + (" after correct ranks" if i else ""), _classify(w, i + 1, i))
+    out = [(f"Naming: wrong {RANKS[i]}" + (" after correct ranks" if i else ""), _classify(w, i + 1, i))
            for i in range(len(RANKS))]
     out += [(f"Similarity: '{RUNG_LABELS[str(d + 1)].lower()}' for {RUNG_LABELS[str(d)].lower()}",
              pair_points(d + 1, d)[0]) for d in range(-1, len(RANKS) - 1)]
     out.append(("Similarity: 'different subfamilies' for one subfamily", pair_points(-1, 0)[0]))
-    out.append(("Imposter Picker: wrong pick, subfamily round, 4 beetles",
+    out.append(("Odd One Out: wrong pick, subfamily round, 4 beetles",
                 -wrong_cost() * _grid_worth(v["GAME_POINTS_ODD_WEIGHT"], pair, "subfamily", 4)))
     return out
 
@@ -506,7 +511,9 @@ def checks():
     cautious_ok = all(0 <= pair_points(d, truth)[0] < pair_points(truth, truth)[0]
                       for truth in range(len(RANKS)) for d in range(truth))
     sizes = [int(s) for s in GRID_SIZES]
-    guesses, taps = {n: odd_guess(n) for n in sizes}, {n: select_tap_all(n) for n in sizes}
+    from .game_grid_ladder import ODD_SHAPES
+
+    guesses, taps = {shape: odd_guess(*shape) for shape in ODD_SHAPES}, {n: select_tap_all(n) for n in sizes}
     factor = [v["GAME_GRID_SIZE_FACTOR"][s] for s in GRID_SIZES]
     per_size = lambda values: ", ".join(f"{n} beetles {e:+.2f}" for n, e in values.items())   # noqa: E731
     play = expected_play()
@@ -534,9 +541,11 @@ def checks():
         ("A mistake costs more than a skip", worst_wrong[1] + part < -unsure,
          f"The cheapest mistake ({worst_wrong[0]}) scores {worst_wrong[1]:+.2f}, {worst_wrong[1] + part:+.2f} with the "
          f"point for taking part; a skip costs {unsure:g}."),
-        ("A blind guess in Imposter Picker loses on average", all(e < 0 for e in guesses.values()),
-         f"Correct 1 time in 4, 9 or 16, and wrong on each validated beetle of the rest: expected {per_size(guesses)} "
-         "× what a correct pick earns."),
+        ("A blind guess in Odd One Out loses on average", all(e < 0 for e in guesses.values()),
+         "At every step of its ladder, each pick right as often as the odd ones are among the beetles and wrong on each "
+         "validated beetle of the rest: expected "
+         + ", ".join(f"{n} beetles, {k} odd {e:+.2f}" for (n, k), e in guesses.items())
+         + " × what finding them all earns."),
         ("Tapping everything in Find Them All loses", all(e < 0 for e in taps.values()),
          f"Non-members are never fewer than members, so a wrong tap must cost more than a member earns: expected "
          f"{per_size(taps)} × a perfect grid."),
@@ -565,8 +574,8 @@ def checks():
          "So the score follows accuracy, not just the number of answers."),
         ("A tap counts less than a name", v["GAME_SELECT_TAP_WEIGHT"] < 1,
          "Tapping a beetle among nine is a quicker, weaker judgement than naming it."),
-        ("Identification experts must be very accurate", v["GAME_TRUST_MIN_ACCURACY"] >= 0.85,
-         "Identification experts' labels reach curators as trusted: below 85% that trust is not earned."),
+        ("Naming experts must be very accurate", v["GAME_TRUST_MIN_ACCURACY"] >= 0.85,
+         "Naming experts' labels reach curators as trusted: below 85% that trust is not earned."),
         *difficulty_checks(v, rank, pair, w),
     ]
 
@@ -601,9 +610,9 @@ def difficulty_examples():
     s = v["GAME_POINTS_DIFFICULTY_SPREAD"]
     columns = [(name, p, 1 + s * (2 * p - 1)) for name, p in DIFFICULTY_EXAMPLES]
     base = [
-        ("Identification", "Species correct (every rank)", _classify(w, 4, 4)),
-        ("Identification", "Correct genus, wrong species", _classify(w, 4, 3)),
-        ("Identification", "Wrong subfamily, claimed down to species", _classify(w, 4, 0)),
+        ("Naming", "Species correct (every rank)", _classify(w, 4, 4)),
+        ("Naming", "Correct genus, wrong species", _classify(w, 4, 3)),
+        ("Naming", "Wrong subfamily, claimed down to species", _classify(w, 4, 0)),
         ("Similarity", "Correct: same genus", pair_points(2, 2)[0]),
         ("Similarity", "'Different subfamilies' for two of one genus", pair_points(-1, 2)[0]),
         ("Both", "Skip", -v["GAME_POINTS_UNSURE"]),

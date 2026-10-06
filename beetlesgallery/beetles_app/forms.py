@@ -95,7 +95,7 @@ class UpdateBatchUploadForm(forms.Form):
         return f
 
 class AccessRequestForm(forms.Form):
-    """The public "request access" form (see beetles_app/access.py)."""
+    """The Sign up form; signed in, it asks for more access (see beetles_app/access.py)."""
 
     name = forms.CharField(label="Your name", max_length=200)
     email = forms.EmailField(label="Email", max_length=254)

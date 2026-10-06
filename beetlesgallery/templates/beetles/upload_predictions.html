@@ -28,6 +28,7 @@
         {{ result.rows|digit_groups_text }} row{{ result.rows|pluralize }}:
         {{ result.created|digit_groups_text }} new, {{ result.updated|digit_groups_text }} replacing an earlier upload.
         {% if result.boxes_created or result.boxes_matched %}Boxes: {{ result.boxes_created|digit_groups_text }} new, {{ result.boxes_matched|digit_groups_text }} already on the site.{% endif %}
+        {% if result.skipped %}{{ result.skipped|digit_groups_text }} left out: a better model already named those beetles.{% endif %}
         {% if result.dry_run %}This was a check only, so nothing was saved.{% endif %}
       </p>
     {% else %}

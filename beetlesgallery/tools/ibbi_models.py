@@ -52,6 +52,19 @@ LEGACY = {"rtdetr": "rtdetrx", "yolov12": "yolo12x", "yolov11": "yolo11x", "yolo
           "yolov9": "yolov9e", "yolov8": "yolov8x"}
 
 
+# Which model's suggestion the site shows and keeps when several named the same beetle, best first: the hierarchical
+# DINOv3 pipeline, other hierarchical pipelines, then the one-step detectors. A model name, an IBBI-AI run
+# ("annotator:ibbi_dinov3") or an uploaded model ("ibbi-detect-M2-yolo11x+cls-dinov3L-hier"), ranks by the first
+# pattern it contains, case ignored; a name that contains none comes last. Reorder or add patterns to tune it.
+MODEL_PREFERENCE = ("dinov3", "bioclip", "hier", "rtdetr", "yolo")
+
+
+def preference(model_name):
+    """Where a model stands in MODEL_PREFERENCE: 0 is the best; a name matching no pattern comes after them all."""
+    name = str(model_name or "").lower()
+    return next((i for i, pattern in enumerate(MODEL_PREFERENCE) if pattern in name), len(MODEL_PREFERENCE))
+
+
 def resolve(key):
     """The model key for a key or an old name, or None."""
     key = (key or "").strip()

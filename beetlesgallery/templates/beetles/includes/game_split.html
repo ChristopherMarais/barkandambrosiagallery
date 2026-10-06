@@ -1,7 +1,7 @@
 {% load beetle_tags %}{# Each game side by side: accuracy and points. Needs ``games`` from game_board.mode_stats. #}
 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" data-testid="game-split">
   <div class="p-3 bg-gray-50 border border-gray-100 rounded-2xl">
-    <div class="flex items-center gap-1.5 text-xs uppercase tracking-wider text-gray-500 font-semibold"><i class="fi fi-rr-search-alt"></i>Identification</div>
+    <div class="flex items-center gap-1.5 text-xs uppercase tracking-wider text-gray-500 font-semibold"><i class="fi fi-rr-search-alt"></i>Naming</div>
     <div class="mt-1 text-lg font-bold text-gray-900 tabular-nums">{% if games.classify.accuracy is not None %}{% widthratio games.classify.accuracy 1 100 %}%{% else %}&ndash;{% endif %}</div>
     <div class="text-xs text-gray-500 tabular-nums">{{ games.classify.points|digit_groups }} pts</div>
   </div>
@@ -11,7 +11,7 @@
     <div class="text-xs text-gray-500 tabular-nums">{{ games.pair.points|digit_groups }} pts</div>
   </div>
   <div class="p-3 bg-gray-50 border border-gray-100 rounded-2xl">
-    <div class="flex items-center gap-1.5 text-xs uppercase tracking-wider text-gray-500 font-semibold"><i class="fi fi-rr-apps"></i>Imposter Picker</div>
+    <div class="flex items-center gap-1.5 text-xs uppercase tracking-wider text-gray-500 font-semibold"><i class="fi fi-rr-apps"></i>Odd One Out</div>
     <div class="mt-1 text-lg font-bold text-gray-900 tabular-nums">{% if games.odd.accuracy is not None %}{% widthratio games.odd.accuracy 1 100 %}%{% else %}&ndash;{% endif %}</div>
     <div class="text-xs text-gray-500 tabular-nums">{{ games.odd.points|digit_groups }} pts</div>
   </div>

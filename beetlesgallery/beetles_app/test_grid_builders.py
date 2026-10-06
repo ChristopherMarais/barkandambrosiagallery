@@ -2,6 +2,9 @@
 The grid games' builders (#489): every grid is built at the player's step on the ladder (4, 9 or 16 beetles, from
 subfamily to species), and when the beetles for that are short they fall back to an easier grid instead of giving up.
 """
+import random
+from unittest import mock
+
 from django.test import override_settings
 
 from beetlesgallery.beetles_app import game, game_grid_ladder
@@ -89,13 +92,26 @@ class StagingBugTests(GridCase):
 
     def test_at_the_top_step_too(self):
         for key in ("odd", "select"):
-            at(self.user, key, 12)
+            at(self.user, key, len(game_grid_ladder.steps(key)))
             item = (game.build_odd_items if key == "odd" else game.build_select_items)(self.user, 1)[0]
             self.assertEqual((item["size"], item["rank"]), (16, "species"))
 
 
 def at(player, game_key, step):
     GridStep.objects.update_or_create(player=player, game=game_key, defaults={"step": step})
+
+
+def every_anchor(case):
+    """
+    Try every beetle as a grid's heart instead of GRID_ANCHORS of them at random, and seed the builders' random picks,
+    so a test that needs one particular group never depends on the sample (these were flaky, about 1 run in 70).
+    """
+    patcher = mock.patch.object(game, "GRID_ANCHORS", 10_000)
+    patcher.start()
+    case.addCleanup(patcher.stop)
+    state = random.getstate()
+    random.seed(489)
+    case.addCleanup(random.setstate, state)
 
 
 class LadderStepTests(GridCase):
@@ -112,16 +128,17 @@ class LadderStepTests(GridCase):
         self.assertEqual(len(set(photos)), size)   # no two from one photo
 
     def test_odd_one_out_at_every_step(self):
-        for step, (size, rank) in enumerate(game_grid_ladder.LADDER, start=1):
+        for step, (size, rank, odds) in enumerate(game_grid_ladder.ODD_LADDER, start=1):
             with self.subTest(step=step):
                 at(self.user, "odd", step)
                 item = game.build_odd_items(self.user, 1)[0]
                 self.check_common(item, size, rank, step)
                 group = item["group"][rank].lower()
                 outside = [t for t in item["tiles"] if self.name_at(t, rank) != group]
-                self.assertEqual(outside, [item["a"]])   # exactly one odd one, and it is validated
-                self.assertTrue(game.Beetles.objects.get(id=item["a"]).bbox_is_validated)
-                rest = game.Beetles.objects.filter(id__in=item["tiles"], bbox_is_validated=True).exclude(id=item["a"])
+                self.assertEqual(sorted(outside), sorted(item["odds"]))   # exactly the odd ones (#540), all validated
+                self.assertEqual((len(item["odds"]), item["a"]), (odds, item["odds"][0]))
+                self.assertEqual(game.Beetles.objects.filter(id__in=item["odds"], bbox_is_validated=True).count(), odds)
+                rest = game.Beetles.objects.filter(id__in=item["tiles"], bbox_is_validated=True).exclude(id__in=item["odds"])
                 self.assertGreaterEqual(rest.count(), 1)
 
     def test_select_all_at_every_step(self):
@@ -143,15 +160,17 @@ class LadderStepTests(GridCase):
         sure, unsure = self.unknown["affinis"]
         self.predict(sure, 0.95)
         self.predict(unsure, 0.3)
-        for _ in range(30):   # a grid of affinis, the only group with both, holds them
-            item = game.build_odd_items(self.user, 1)[0]
-            if item["group"]["species"] == "Xyleborus affinis":
-                break
+        every_anchor(self)   # so the one group with both is always found
+        item = game.build_odd_items(self.user, 1)[0]   # a grid of affinis, the only group with both, holds them
         self.assertEqual(item["group"]["species"], "Xyleborus affinis")
         self.assertTrue({str(sure.id), str(unsure.id)} <= set(item["tiles"]))
 
 
 class FallbackTests(GridCase):
+    def setUp(self):
+        super().setUp()
+        every_anchor(self)   # which rank a grid falls back to must not depend on the beetles sampled
+
     def test_a_rank_with_too_few_beetles_gives_a_smaller_grid(self):
         for beetles in self.known.values():   # three of each species left: not enough for 16 or 9 at species
             for roi in beetles[3:]:

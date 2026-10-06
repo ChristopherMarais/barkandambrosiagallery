@@ -5,13 +5,16 @@
 <style>
   /* Two markers per taxon (#498), in the levels' rarity colours (game_trust.expertise_bands): empty for too few answers
      yet, grey under 50%, then green, blue, purple and orange up to what an expert needs. The round dot is naming
-     (Identification): gold and glowing for an Identification expert, like the top level. The square is telling apart
-     (Distinction): plain dark gold for a Distinction expert, never glowing, since it unlocks nothing. Each marker
+     (Naming): gold and glowing for a Naming expert, like the top level. The triangle is telling apart
+     (Distinction, #539): plain dark gold for a Distinction expert, never glowing, since it unlocks nothing. Each marker
      carries its own status class (includes/expertise_marks.html): never style one by a class on an ancestor, or every
      taxon inside an expert one would look expert too. */
-  .tree-dot, .tree-square { display: inline-block; flex-shrink: 0; }
+  .tree-dot, .tree-tri { display: inline-block; flex-shrink: 0; }
   .tree-dot { width: 0.75rem; height: 0.75rem; border-radius: 9999px; }
-  .tree-square { width: 0.6875rem; height: 0.6875rem; border-radius: 2px; }
+  /* A triangle cut from the box; clip-path also cuts an outline, so the empty one is a white triangle on a grey one. */
+  .tree-tri { position: relative; width: 0.8125rem; height: 0.75rem; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+  .tree-tri.mark-unknown { background: #d1d5db; box-shadow: none; }
+  .tree-tri.mark-unknown::after { content: ""; position: absolute; inset: 0; background: #fff; clip-path: polygon(50% 26%, 81% 88%, 19% 88%); }
   .mark-unknown { background: #fff; box-shadow: inset 0 0 0 2px #d1d5db; }
   .mark-common { background: #d1d5db; }
   .mark-uncommon { background: #16a34a; }
@@ -21,7 +24,7 @@
   .tree-dot.mark-expert { background: #facc15; box-shadow: 0 0 0 1px #ca8a04, 0 0 10px rgba(250,204,21,.9); animation: expert-glow 2.4s ease-in-out infinite; }
   @keyframes expert-glow { 50% { box-shadow: 0 0 0 1px #ca8a04, 0 0 18px rgba(250,204,21,1); } }
   @media (prefers-reduced-motion: reduce) { .tree-dot.mark-expert { animation: none; } }
-  .tree-square.mark-expert { background: #ca8a04; }
+  .tree-tri.mark-expert { background: #ca8a04; }
   details > summary { list-style: none; cursor: pointer; }
   details > summary::-webkit-details-marker { display: none; }
 </style>
@@ -31,15 +34,29 @@
 <div class="max-w-3xl mx-auto">
   <a href="{% if is_self %}{% url 'game_home' %}{% else %}{% url 'game_home' %}{% endif %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; {{ game_name }}</a>
   <h1 class="page-title">{% if is_self %}Your expertise{% else %}{{ player.username }}&rsquo;s expertise{% endif %}</h1>
-  <p class="text-gray-600 mb-4">Expertise is earned taxon by taxon, from images whose names curators have validated. Each taxon shows how well {% if is_self %}you name{% else %}they name{% endif %} what is inside it (a subfamily&rsquo;s tribes, a tribe&rsquo;s genera, a genus&rsquo;s species), and how well {% if is_self %}you tell{% else %}they tell{% endif %} them apart in Similarity, Imposter Picker and Find Them All. To become an <strong>Identification expert</strong> in a taxon, name {{ tree.per_species }} validated images each of at least {% widthratio tree.children_share 1 100 %}% of its members and get at least {% widthratio tree.min_accuracy 1 100 %}% correct, so small taxa need few answers and large ones many. Telling them apart just as well makes {% if is_self %}you{% else %}them{% endif %} a <strong>Distinction expert</strong>. Play beetles from a taxon to light it up{% if is_self %}; a <a href="{% url 'game_unlocks' %}" class="underline hover:text-gray-900">focus</a> helps{% endif %}.</p>
+  <p class="text-gray-600 mb-4" data-testid="expertise-intro">{% if is_self %}Your{% else %}Their{% endif %} answers on beetles whose names curators have checked count toward every taxon the beetle belongs to. Play beetles from a taxon to light it up{% if is_self %}; a <a href="{% url 'game_unlocks' %}" class="underline hover:text-gray-900">focus</a> helps{% endif %}.</p>
 
-  <div class="mb-6 space-y-1.5 text-xs text-gray-600" data-testid="expertise-legend">
+  {# The expert rule with the live settings (#539): the same for both kinds, on naming or on telling apart. #}
+  <section class="mb-4 p-3 border border-gray-200 rounded-xl text-sm text-gray-700" data-testid="expertise-rule">
+    <h2 class="font-semibold text-gray-900 mb-1.5">What it takes</h2>
+    <ul class="space-y-1 mb-1.5">
+      <li class="flex items-center gap-2"><span class="tree-dot mark-expert" aria-hidden="true"></span><span><strong>Naming expert</strong>: names a taxon&rsquo;s beetles in Naming and Find Them All.</span></li>
+      <li class="flex items-center gap-2"><span class="tree-tri mark-expert" aria-hidden="true"></span><span><strong>Distinction expert</strong>: tells them apart in Similarity and Odd One Out.</span></li>
+    </ul>
+    <p>Either one, in a taxon: at least {% widthratio tree.min_accuracy 1 100 %}% correct over {{ tree.min_judged|digit_groups }} or more checked answers, covering {% widthratio tree.children_share 1 100 %}% of its members (a tribe&rsquo;s genera, a genus&rsquo;s species) with at least {{ tree.per_species|digit_groups }} answers each.</p>
+  </section>
+
+  {# A compact colour key, no sentences: the shapes, then the bands (game_trust.expertise_legend), then gold. #}
+  <div class="mb-6 space-y-1 text-xs text-gray-600" data-testid="expertise-legend">
     <div class="flex flex-wrap gap-x-4 gap-y-1">
-      <span class="flex items-center gap-1"><span class="tree-dot mark-unknown"></span><span class="tree-square mark-unknown"></span>fewer than {{ tree.min_shown }} answers</span>
-      {% for status, label in tree.legend %}<span class="flex items-center gap-1" data-testid="legend-{{ status }}"><span class="tree-dot mark-{{ status }}"></span><span class="tree-square mark-{{ status }}"></span>{{ label }}</span>{% endfor %}
+      <span class="flex items-center gap-1" data-testid="legend-naming"><span class="tree-dot mark-common"></span>naming</span>
+      <span class="flex items-center gap-1" data-testid="legend-apart"><span class="tree-tri mark-common"></span>telling apart</span>
     </div>
-    <p class="flex items-start gap-1.5" data-testid="legend-identification"><span class="tree-dot mark-expert mt-0.5"></span><span><strong>Identification</strong>: naming in Identification. Gold and glowing: <strong>Identification expert</strong>.</span></p>
-    <p class="flex items-start gap-1.5" data-testid="legend-distinction"><span class="tree-square mark-expert mt-0.5"></span><span><strong>Distinction</strong>: telling apart in Similarity, Imposter Picker and Find Them All. Gold: <strong>Distinction expert</strong>; it unlocks nothing.</span></p>
+    <div class="flex flex-wrap gap-x-4 gap-y-1">
+      <span class="flex items-center gap-1"><span class="tree-dot mark-unknown"></span><span class="tree-tri mark-unknown"></span>fewer than {{ tree.min_shown }} answers</span>
+      {% for status, label in tree.legend %}<span class="flex items-center gap-1" data-testid="legend-{{ status }}"><span class="tree-dot mark-{{ status }}"></span><span class="tree-tri mark-{{ status }}"></span>{{ label }}</span>{% endfor %}
+      <span class="flex items-center gap-1" data-testid="legend-expert"><span class="tree-dot mark-expert"></span><span class="tree-tri mark-expert"></span>expert</span>
+    </div>
   </div>
 
   <div class="flex items-center gap-2 p-3 mb-3 bg-gray-50 border border-gray-200 rounded-xl">
@@ -82,6 +99,6 @@
     <p class="text-sm text-gray-500 p-4 bg-gray-50 rounded-2xl">The species list has not been loaded yet.</p>
     {% endfor %}
   </div>
-  <p class="mt-6 text-sm text-gray-600"><a href="{% url 'game_how' %}#labels" class="underline hover:text-gray-900" data-testid="expertise-why">What being an Identification expert means</a></p>
+  <p class="mt-6 text-sm text-gray-600"><a href="{% url 'game_how' %}#labels" class="underline hover:text-gray-900" data-testid="expertise-why">What being a Naming expert means</a></p>
 </div>
 {% endblock %}

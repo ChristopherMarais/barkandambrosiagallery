@@ -1,10 +1,18 @@
 """
 The grid games' ladder (#489): Odd One Out and Select all get harder as a player gets better, and easier again when
-they struggle, each game on its own. Twelve steps, the grid's size first and then its rank (the owner's choice):
+they struggle, each game on its own. Select all has twelve steps, the grid's size first and then its rank (the owner's
+choice):
 
     step   1    2    3    4    5    6    7    8    9    10   11   12
     size   4    9    16   4    9    16   4    9    16   4    9    16
     rank   subfamily      tribe          genus          species
+
+Odd One Out has 24 (#540): at each rank the grid grows first, then hides more odd ones, then the next rank comes:
+
+    step   1    2    3    4    5    6      7 ... 12    13 ... 18    19 ... 24
+    size   4    9    16   9    16   16     as 1-6      as 1-6       as 1-6
+    odd    1    1    1    2    2    3
+    rank   subfamily                       tribe       genus        species
 
 A player starts on GAME_GRID_START_STEP, goes up a step after GAME_GRID_UP_AFTER good grids in a row and down one
 after a poor grid (outcome says which is which; skips and grids ended by flags are neither). No step goes deeper than
@@ -17,17 +25,30 @@ from django.db import IntegrityError, transaction
 from .game import GRID_SIZES, RANKS, game_setting
 
 GRID_GAMES = ("odd", "select")
-LADDER = [(size, rank) for rank in RANKS for size in GRID_SIZES]
+LADDER = [(size, rank) for rank in RANKS for size in GRID_SIZES]   # Select all
+# Odd One Out (#540): (beetles, odd ones) at each rank, in turn
+ODD_SHAPES = ((4, 1), (9, 1), (16, 1), (9, 2), (16, 2), (16, 3))
+ODD_LADDER = [(size, rank, odds) for rank in RANKS for size, odds in ODD_SHAPES]
 GOOD, POOR = "good", "poor"
 
 
-def step_for(size, rank):
-    """The ladder step (1 to 12) of a grid of ``size`` beetles at ``rank``."""
-    return LADDER.index((size, rank)) + 1
+def steps(game_key):
+    """One game's ladder, [(size, rank, odd ones)]: Select all's steps all have one (where it means nothing)."""
+    return ODD_LADDER if game_key == "odd" else [(size, rank, 1) for size, rank in LADDER]
 
 
-def start_step():
-    return max(1, min(len(LADDER), int(game_setting("GAME_GRID_START_STEP", 1))))
+def most_odds(size):
+    """The most odd ones an Odd One Out grid of ``size`` beetles hides (ODD_SHAPES): one in 4, two in 9, three in 16."""
+    return max([odds for s, odds in ODD_SHAPES if s <= size] or [1])
+
+
+def step_for(size, rank, odds=1, game_key="odd"):
+    """The ladder step (from 1) of a grid of ``size`` beetles at ``rank`` with ``odds`` odd ones, in one game."""
+    return steps(game_key).index((size, rank, odds if game_key == "odd" else 1)) + 1
+
+
+def start_step(game_key="odd"):
+    return max(1, min(len(steps(game_key)), int(game_setting("GAME_GRID_START_STEP", 1))))
 
 
 def up_after():
@@ -38,9 +59,10 @@ def good_share():
     return float(game_setting("GAME_GRID_GOOD_SHARE", 0.75))
 
 
-def top_step(open_rank):
+def top_step(open_rank, game_key="odd"):
     """The highest step whose rank the player has open: a grid never asks for a rank they can't name yet."""
-    return max(i for i, (_, rank) in enumerate(LADDER, start=1) if RANKS.index(rank) <= RANKS.index(open_rank))
+    return max(i for i, (_, rank, _) in enumerate(steps(game_key), start=1)
+               if RANKS.index(rank) <= RANKS.index(open_rank))
 
 
 def current(player, game_key):
@@ -48,30 +70,32 @@ def current(player, game_key):
     from .models import GridStep
 
     found = GridStep.objects.filter(player=player, game=game_key).values_list("step", flat=True).first()
-    return found or start_step()
+    return min(found, len(steps(game_key))) if found else start_step(game_key)
 
 
 def plan(player, game_key, open_rank, focus=None):
     """
-    What the player's next grid should be: {"step", "size", "rank", "ranks"}. ``ranks`` are the ranks to build at, in
-    turn while the beetles for one are short: the step's rank, then the nearest others (the shallower first). Only
-    ranks the player has open and, with a focus (a chosen subfamily, tribe or genus), only ranks below it: every beetle
-    shown is in it, so nothing at or above it can tell them apart.
+    What the player's next grid should be: {"step", "size", "rank", "odds", "ranks"}. ``odds`` is how many odd ones an
+    Odd One Out grid hides (1 in Select all). ``ranks`` are the ranks to build at, in turn while the beetles for one
+    are short: the step's rank, then the nearest others (the shallower first). Only ranks the player has open and,
+    with a focus (a chosen subfamily, tribe or genus), only ranks below it: every beetle shown is in it, so nothing at
+    or above it can tell them apart.
     """
     step = current(player, game_key)
-    size, rank = LADDER[min(step, top_step(open_rank)) - 1]
+    size, rank, odds = steps(game_key)[min(step, top_step(open_rank, game_key)) - 1]
     deepest = RANKS.index(open_rank)
     above = RANKS.index(focus[0]) if focus and focus[0] in RANKS else -1
     allowed = [r for r in RANKS if above < RANKS.index(r) <= deepest] or list(RANKS[: deepest + 1])
     at = RANKS.index(rank)
-    return {"step": step, "size": size, "rank": rank,
+    return {"step": step, "size": size, "rank": rank, "odds": odds,
             "ranks": sorted(allowed, key=lambda r: (abs(RANKS.index(r) - at), RANKS.index(r)))}
 
 
 def outcome(answer):
     """
-    GOOD, POOR or None (neither) for one grid answer. Odd One Out: the odd one picked is good, a validated beetle of the
-    rest poor; a pick on a beetle nobody has validated says nothing yet. Select all: good with no wrong tap and at least
+    GOOD, POOR or None (neither) for one grid answer. Odd One Out: the odd ones picked are good, and like Select all it
+    is poor when its wrong picks (validated beetles of the rest) cost more than its right ones earned (#530, #540); a
+    pick on a beetle nobody has validated says nothing yet. Select all: good with no wrong tap and at least
     GAME_GRID_GOOD_SHARE of the validated members found; poor when it lost points (its wrong taps cost more than its
     right ones earned, #530), or none right. So a good grid always scores and a poor one never does.
     Skips, held answers, grids ended by flags and retries (a small grid at the rank of a mistake, #490) are neither.
@@ -82,9 +106,16 @@ def outcome(answer):
     if (answer.mode not in GRID_GAMES or answer.skipped or answer.score_hold or answer.is_retry
             or answer.grid_rank not in RANKS):
         return None
-    if answer.mode == "odd":
+    if answer.mode == "odd" and not answer.picks:   # one pick, saved before grids hid several odd ones (#540)
         right = getattr(answer, f"correct_{answer.grid_rank}")
         return None if right is None else GOOD if right else POOR
+    if answer.mode == "odd":
+        grid = game.score_odd_grid(grid_tiles(answer), answer.picks, answer.grid_rank, answer.grid_group, answer.flagged)
+        if grid["wrong"] and grid["right"] < wrong_cost() * grid["wrong"]:
+            return POOR
+        if not grid["wrong"] and grid["odds"] and grid["right"] >= good_share() * grid["odds"]:
+            return GOOD
+        return None
     grid = game.score_select(grid_tiles(answer), answer.picks, answer.grid_rank, answer.grid_group, answer.flagged)
     if not grid["members"]:
         return None
@@ -111,16 +142,17 @@ def update(answer):
         try:
             with transaction.atomic():
                 row, _ = GridStep.objects.select_for_update().get_or_create(
-                    player_id=answer.player_id, game=answer.mode, defaults={"step": start_step()})
+                    player_id=answer.player_id, game=answer.mode, defaults={"step": start_step(answer.mode)})
                 if row.last_answer_id == answer.id:
                     return row.step
+                row.step = min(row.step, len(steps(answer.mode)))
                 if result == POOR:
                     row.step, row.good_run = max(1, row.step - 1), 0
                 else:
                     row.good_run += 1
                     if row.good_run >= up_after():
                         row.good_run = 0
-                        if row.step < top_step(rank_for(answer.player)["rank"]):
+                        if row.step < top_step(rank_for(answer.player)["rank"], answer.mode):
                             row.step += 1
                 row.last_answer = answer
                 row.save()

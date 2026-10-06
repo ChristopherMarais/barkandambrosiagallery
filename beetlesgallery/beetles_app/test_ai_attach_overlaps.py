@@ -59,12 +59,12 @@ class OverlappingBoxTests(ClassifyCase):
                          [("1733", 0.4)])
 
     def test_another_models_suggestion_does_not_stop_this_one(self):
-        roi = self.existing_roi()
-        ModelPrediction.objects.create(roi=roi, valid_species_id="1733", confidence=0.8, model_name="M2e20__dinov3L336")
+        roi = self.existing_roi()   # a model that ranks no better than this one (a better one does stop it, #534)
+        ModelPrediction.objects.create(roi=roi, valid_species_id="1733", confidence=0.8, model_name="M2e20__other")
         response, _ = self.classify()
         self.assertEqual(response.json()["attached"], 1)
         self.assertEqual(sorted(ModelPrediction.objects.filter(roi=roi).values_list("model_name", flat=True)),
-                         ["M2e20__dinov3L336", "annotator:ibbi-test"])
+                         ["M2e20__other", "annotator:ibbi-test"])
 
     def test_a_name_that_is_not_in_the_species_list_adds_nothing(self):
         roi = self.existing_roi()

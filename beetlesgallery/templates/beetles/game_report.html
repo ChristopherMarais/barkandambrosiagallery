@@ -54,9 +54,9 @@
   <div class="mb-8">
     <h2 class="text-lg font-semibold text-gray-900 mb-1">Expertise</h2>
     <p class="text-xs text-gray-500 mb-3">
-      You become an Identification expert in a taxon once you have named {{ report.per_species }} validated images each of at least
+      You become a Naming expert in a taxon once you have named {{ report.per_species }} validated images each of at least
       {% widthratio report.children_share 1 100 %}% of its members (a genus's species, a tribe's genera, a subfamily's tribes) and got at least {% widthratio report.min_accuracy 1 100 %}% correct.
-      A genus with two species needs far fewer answers than one with forty. Identification experts' labels are flagged to our curators as trusted.
+      A genus with two species needs far fewer answers than one with forty. Naming experts' labels are flagged to our curators as trusted.
       Telling the members apart just as well makes you a Distinction expert, which unlocks nothing: the <a href="{% url 'game_player_expertise' player.id %}" class="underline hover:text-gray-900">expertise tree</a> shows both.
     </p>
 
@@ -71,7 +71,7 @@
           </div>
           <div class="text-xs text-gray-500">{{ s.correct|digit_groups }} of {{ s.judged|digit_groups }} correct{% if s.proven_at %} · expert since {{ s.proven_at|date:"M j, Y" }}{% endif %}</div>
         </div>
-        <span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-green-100 text-green-800 border border-green-200">Identification expert</span>
+        <span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-green-100 text-green-800 border border-green-200">Naming expert</span>
       </li>
       {% endfor %}
     </ul>
@@ -105,7 +105,7 @@
       {% for r in report.recent_rounds %}
       <li>
         <a href="{% url 'game_round_review' r.id %}" class="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
-          <span class="text-sm text-gray-900">{% if r.mode == "classify" %}Identification{% elif r.mode == "pair" %}Similarity{% elif r.mode == "odd" %}Imposter Picker{% elif r.mode == "select" %}Find Them All{% else %}All modes{% endif %}
+          <span class="text-sm text-gray-900">{% if r.mode == "classify" %}Naming{% elif r.mode == "pair" %}Similarity{% elif r.mode == "odd" %}Odd One Out{% elif r.mode == "select" %}Find Them All{% else %}All modes{% endif %}
             <span class="text-gray-400">· {{ r.labelled }} labelled</span></span>
           <span class="text-xs text-gray-500">{{ r.finished_at|date:"M j" }} <i class="fi fi-rr-angle-right ml-1"></i></span>
         </a>
@@ -125,7 +125,7 @@
         <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
           <tr>
             <th class="py-2 pl-4 pr-2 text-left">Rank</th>
-            <th class="py-2 px-2 text-right">Identification</th>
+            <th class="py-2 px-2 text-right">Naming</th>
             <th class="py-2 pl-2 pr-4 text-right">Similarity</th>
           </tr>
         </thead>

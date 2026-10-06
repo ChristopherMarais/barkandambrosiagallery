@@ -13,7 +13,7 @@ class LoginNoticeTests(PageTestCase):
     def test_the_notice_shows_until_the_date(self):
         res = self.client.get(reverse("login"))
         self.assertContains(res, 'data-testid="reset-notice"')
-        self.assertContains(res, "Had an account before? Please request access again.")
+        self.assertContains(res, "Had an account before? Please sign up again.")
 
     @override_settings(ACCOUNT_RESET_NOTICE_UNTIL="2000-01-01")
     def test_it_goes_after_the_date(self):
@@ -30,7 +30,7 @@ class LoginNoticeTests(PageTestCase):
     def test_request_access_is_a_button_on_sign_in(self):
         res = self.client.get(reverse("login"))
         self.assertContains(res, 'data-testid="request-access"')
-        self.assertContains(res, reverse("request_access"))
+        self.assertContains(res, reverse("signup"))
 
     def test_the_home_page_leaves_it_to_the_sign_in_page(self):
         # #418: sign-in appears whenever someone opens a members-only page, so the home page doesn't repeat it

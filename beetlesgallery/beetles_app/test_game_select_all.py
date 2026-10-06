@@ -30,7 +30,7 @@ class SelectCase(GameCase):
         """Level 3, and the player on the grid ladder's step for ``size`` beetles at ``rank``."""
         self.level(200, 0.4)
         GridStep.objects.update_or_create(player=self.user, game="select",
-                                          defaults={"step": game_grid_ladder.step_for(size, rank)})
+                                          defaults={"step": game_grid_ladder.step_for(size, rank, game_key="select")})
 
     def grid(self, rank="species"):
         self.at(rank)

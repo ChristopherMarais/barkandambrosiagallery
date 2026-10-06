@@ -1320,7 +1320,7 @@ class GameRound(models.Model):
     class Mode(models.TextChoices):
         CLASSIFY = "classify", "Classify"
         PAIR = "pair", "Compare pairs"
-        ODD = "odd", "Imposter Picker"
+        ODD = "odd", "Odd One Out"
         SELECT = "select", "Find Them All"
         MIXED = "mixed", "All modes"   # one feed of several games; each item carries its own mode
 
@@ -1391,7 +1391,7 @@ class GameAnswer(models.Model):
     species = models.CharField(max_length=100, blank=True)
     pair_answer = models.CharField(max_length=10, choices=PairAnswer.choices, blank=True)
     tiles = models.JSONField(default=list, blank=True, help_text="Grid games (Odd One Out, Select all): the regions shown, in order.")
-    picks = models.JSONField(default=list, blank=True, help_text="Select all: the places in tiles the player tapped.")
+    picks = models.JSONField(default=list, blank=True, help_text="Grid games: the places in tiles the player tapped (Select all) or picked (Odd One Out, since #540).")
     grid_rank = models.CharField(max_length=10, blank=True, help_text="Grid games: the rank of the group (in Odd One Out, where one region differs).")
     grid_group = models.JSONField(
         default=dict, blank=True,
@@ -1429,6 +1429,12 @@ class GameAnswer(models.Model):
         default=False,
         help_text="A validated beetle shown again so the player can learn it. Earns points, but is left out of "
                   "accuracy and expertise, which only count the first time a beetle is seen.",
+    )
+    seen_before = models.BooleanField(
+        default=False,
+        help_text="The player had been shown this beetle's names before (the review after an answer names every "
+                  "beetle, #541), so it came back after a wait. Earns full points, but is left out of accuracy and "
+                  "expertise, which count only beetles named unseen.",
     )
     validated_later = models.BooleanField(
         default=False, db_index=True,
@@ -1513,9 +1519,9 @@ class GamePreference(models.Model):
 
     class PlayMode(models.TextChoices):
         BOTH = "both", "All modes"   # every game the player has unlocked, mixed
-        CLASSIFY = "classify", "Identification"
+        CLASSIFY = "classify", "Naming"
         PAIR = "pair", "Similarity"
-        ODD = "odd", "Imposter Picker"
+        ODD = "odd", "Odd One Out"
         SELECT = "select", "Find Them All"
 
     class FocusRank(models.TextChoices):
@@ -1549,9 +1555,9 @@ class GamePreference(models.Model):
 
 class GridStep(models.Model):
     """
-    Where a player is on the ladder of one grid game, Odd One Out or Select all (#489): twelve steps, the grids growing
-    from 4 to 9 to 16 beetles and then going a rank deeper, from subfamily to species (game_grid_ladder.LADDER). Up a
-    step after a run of good grids, down one after a poor grid.
+    Where a player is on the ladder of one grid game, Odd One Out or Select all (#489): the grids growing from 4 to 9
+    to 16 beetles (and in Odd One Out then hiding more odd ones, #540) before going a rank deeper, from subfamily to
+    species (game_grid_ladder.steps). Up a step after a run of good grids, down one after a poor grid.
     """
 
     GAMES = [(GameRound.Mode.ODD.value, GameRound.Mode.ODD.label), (GameRound.Mode.SELECT.value, GameRound.Mode.SELECT.label)]

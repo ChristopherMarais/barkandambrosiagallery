@@ -16,7 +16,7 @@
     </a>
     <div class="flex-1">
       <h1 class="page-title">Your answers</h1>
-      <p class="text-sm text-gray-500">{% if round.mode == 'classify' %}Identification{% elif round.mode == 'pair' %}Similarity{% elif round.mode == 'odd' %}Imposter Picker{% elif round.mode == 'select' %}Find Them All{% else %}{{ game_name }}{% endif %} · {{ round.finished_at|date:"M j, Y H:i" }}</p>
+      <p class="text-sm text-gray-500">{% if round.mode == 'classify' %}Naming{% elif round.mode == 'pair' %}Similarity{% elif round.mode == 'odd' %}Odd One Out{% elif round.mode == 'select' %}Find Them All{% else %}{{ game_name }}{% endif %} · {{ round.finished_at|date:"M j, Y H:i" }}</p>
     </div>
   </div>
 
@@ -239,9 +239,9 @@
     const t = item.truth_odd || {};
     const em = (v) => (t.rank === "genus" || t.rank === "species" ? `<em>${esc(v)}</em>` : esc(v));
     const line = t.odd_name && t.group
-      ? `<p class="text-sm">Odd one (green): <span class="font-semibold">${em(t.odd_name)}</span> · the rest: <span class="font-semibold">${em(t.group)}</span></p>` : "";
+      ? `<p class="text-sm">Odd one${t.count > 1 ? "s" : ""} (green): <span class="font-semibold">${em(t.odd_name)}</span> · the rest: <span class="font-semibold">${em(t.group)}</span></p>` : "";
     const note = item.losses && item.losses.kind === "odd" && item.losses.state === "wrong"
-      ? `<p class="text-xs text-red-700">That one shares the ${esc(t.rank)} with the rest. ${fmt(-item.losses.lost)} pts missed.</p>` : "";
+      ? `<p class="text-xs text-red-700">${t.count > 1 ? "A pick" : "That one"} shares the ${esc(t.rank)} with the rest. ${fmt(-item.losses.lost)} pts missed.</p>` : "";
     const names = item.sides.map((side, i) => `
       <div class="flex items-center justify-between gap-2 text-sm">
         <span><span class="font-semibold">${i + 1}:</span> ${dbName(side)} ${sideStatus(side)}</span>
@@ -268,7 +268,7 @@
       </div>`).join("");
     return `
       <div class="mt-3 space-y-1">
-        <p class="text-sm">Tap every <span class="font-semibold">${em(t.target || "")}</span>${item.skipped ? ": skipped" : ""}</p>
+        <p class="text-sm">Select every <span class="font-semibold">${em(t.target || "")}</span>${item.skipped ? ": skipped" : ""}</p>
         ${found ? `<p class="text-sm">${found}</p>` : ""}
         <p class="text-xs text-gray-500">Green: tapped and in it. Red: tapped, not in it. Dashed: in it, left out.</p>
       </div>

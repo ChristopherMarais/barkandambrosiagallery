@@ -1,6 +1,7 @@
 """
-The expertise tree shows "tells apart" next to naming (#381): Similarity, Odd One Out and Select all answers on
-validated beetles, counted in the taxon whose children they tell apart. Only naming makes an Identification expert.
+The expertise tree shows "tells apart" next to naming (#381): Similarity and Odd One Out answers on validated beetles
+(Select all counts as naming since #543), counted in the taxon whose children they tell apart. Only naming makes a
+Naming expert.
 """
 from django.urls import reverse
 from django.utils.html import strip_tags
@@ -35,7 +36,8 @@ class TellsApartTests(ScoringCase):
 
     def test_grids_judge_their_own_rank_within_their_group(self):
         self.grid("odd", "genus", XYLEBORUS, True)                                   # picked a beetle outside Xyleborus
-        self.grid("select", "species", dict(XYLEBORUS, species="Xyleborus affinis"), False)   # not a perfect grid
+        self.grid("odd", "species", dict(XYLEBORUS, species="Xyleborus affinis"), False)   # picked one of the rest
+        self.grid("select", "species", dict(XYLEBORUS, species="Xyleborus affinis"), False)   # naming now (#543)
         counts = apart_counts(self.p)
         self.assertEqual(counts[("genus", "xyleborini")][:2], [1, 1])
         self.assertEqual(counts[("species", "xyleborus")][:2], [0, 1])
@@ -54,4 +56,4 @@ class TellsApartTests(ScoringCase):
         self.client.force_login(self.p)
         page = self.client.get(reverse("game_expertise")).content.decode()
         self.assertIn('data-testid="expertise-legend"', page)
-        self.assertIn("apart 12/12", strip_tags(page))
+        self.assertIn("Telling apart: 12 of 12 correct", strip_tags(page))

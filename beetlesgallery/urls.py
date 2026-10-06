@@ -29,9 +29,12 @@ urlpatterns = [
     # --- Auth ---
     path("accounts/login/", LoginViewWithRedirectMessage.as_view(template_name="accounts/signin.html"), name="login"),
     path("accounts/logout/", PostOnlyLogoutView.as_view(), name="logout"),
-    path("accounts/signup/", beetles_views.signup, name="signup"),
+    # Sign up (#535). Signed in, the same page asks for more access; the old request-access links still work.
+    path("accounts/signup/", access_views.request_access, name="signup"),
+    path("accounts/signup/sent/", access_views.request_access_sent, name="request_access_sent"),
     path("accounts/request-access/", access_views.request_access, name="request_access"),
-    path("accounts/request-access/sent/", access_views.request_access_sent, name="request_access_sent"),
+    path("accounts/request-access/sent/", access_views.request_access_sent),
+    path("accounts/create-account/", beetles_views.create_account, name="create_account"),
     path("accounts/set-password/<uidb64>/<token>/", access_views.SetPasswordView.as_view(), name="password_set"),
     path("accounts/verify-email/<uidb64>/<token>/", access_views.verify_email, name="verify_email"),
     path("accounts/password-reset/", access_views.ResetRequestView.as_view(), name="password_reset"),
@@ -94,6 +97,7 @@ urlpatterns = [
     path('game/how-it-works/', game_views.game_how, name='game_how'),
     path('game/unlocks/', game_views.game_unlocks, name='game_unlocks'),
     path('game/api/prefs/', game_views.game_prefs, name='game_prefs'),
+    path('game/api/warm/', game_views.game_warm_others, name='game_warm'),
     path('game/checked/', game_views.game_checked_page, name='game_checked'),
     path('game/history/', game_views.game_history, name='game_history'),
     path('game/api/report-item/', game_views.game_report_item, name='game_report_item'),

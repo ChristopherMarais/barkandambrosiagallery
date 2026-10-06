@@ -5,6 +5,7 @@ expertise / trusted labels in game_trust.py.
 Item payloads carry only an image URL and a bounding box: never the ROI id, its
 label, or whether the item is a check, so the player cannot tell which answers are scored.
 """
+import contextvars
 import csv
 import json
 import logging
@@ -17,6 +18,7 @@ from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Max
@@ -28,7 +30,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from . import game, game_board, game_checked, game_discoveries, game_feedback, game_queue, game_levels, game_rewards, game_scoring, game_tips, game_trust
 from . import game_answer_review, game_applied, game_crops
-from . import game_grid_ladder
+from . import game_grid_ladder, game_warm
 from . import game_taxa as taxa_tree
 from .areas import ANNOTATE, BOXES, VALIDATE, area_required, has_area
 from .models import Beetles, GameAnswer, GameReport, GameRound, ImageLock, LabelReview, PlayerScore, RetroCredit, Taxon
@@ -38,13 +40,13 @@ logger = logging.getLogger(__name__)
 
 MODES = {m.value: m.label for m in GameRound.Mode}
 # What players see. (The model keeps its own plain labels; changing those would need a migration.)
-GAME_NAMES = {"classify": "Identification", "pair": "Similarity", "odd": "Imposter Picker", "select": "Find Them All",
+GAME_NAMES = {"classify": "Naming", "pair": "Similarity", "odd": "Odd One Out", "select": "Find Them All",
               "mixed": settings.GAME_DISPLAY_NAME}
 GAME_TAGLINES = {
     "classify": "One beetle, four guesses: subfamily, tribe, genus, species. Go as deep as you dare.",
     "pair": "Two beetles. How close is the family? From total strangers to the very same species.",
     "odd": "Four beetles, one doesn't belong. Spot it.",
-    "select": "Nine beetles. Tap every one of a group.",
+    "select": "Nine beetles. Select every one of a group.",
     "mixed": "Name beetles and spot family ties.",
 }
 PAIR_CHOICES = [(c.value, c.label) for c in GameAnswer.PairAnswer]
@@ -184,8 +186,8 @@ def game_history(request):
         RetroCredit.objects.filter(player=request.user, seen_at__isnull=True).update(seen_at=timezone.now())
     sessions = Paginator(rounds, HISTORY_PER_PAGE).get_page(request.GET.get("page") if tab == "sessions" else 1)
     for r in sessions:   # which games a session was: one by name, or how many
-        played = [name for name, n in (("Identification", r.identified), ("Similarity", r.compared),
-                                       ("Imposter Picker", r.spotted), ("Find Them All", r.selected)) if n]
+        played = [name for name, n in (("Naming", r.identified), ("Similarity", r.compared),
+                                       ("Odd One Out", r.spotted), ("Find Them All", r.selected)) if n]
         r.games_label = played[0] if len(played) == 1 else f"{len(played)} games"
     checked_page = Paginator(checked, HISTORY_PER_PAGE).get_page(request.GET.get("page") if tab == "checked" else 1)
     return render(request, "beetles/game_history.html", {
@@ -314,6 +316,7 @@ def game_how(request):
         "odd_weight": _weight_label(game.game_setting("GAME_POINTS_ODD_WEIGHT", 1.5)),
         "odd_skip": game.game_setting("GAME_POINTS_ODD_SKIP", 0.25),
         "difficulty_spread": round(game_scoring.difficulty_spread() * 100),
+        "reveal_hours": _weight_label(game.game_setting("GAME_REVEAL_COOLDOWN_HOURS", 2)),
     })
 
 
@@ -489,10 +492,27 @@ def _box(roi):
     return [roi.bbox_x, roi.bbox_y, roi.bbox_width, roi.bbox_height]
 
 
+# The Beetles rows a feed request has looked up, by id (None: not found). Several steps of one request look up the
+# same item's beetles (its place in the batch, its photos, the next ones to prefetch), so each is fetched once (#542).
+_rows = contextvars.ContextVar("game_rows", default=None)
+
+
+def _beetles(ids):
+    """{id: Beetles row} for these ids (strings) that exist, with their photo and taxon; remembered in a timed request."""
+    memo = _rows.get()
+    if memo is None:
+        return {str(k): v for k, v in Beetles.objects.select_related("image_asset", "taxon").in_bulk(ids).items()}
+    wanted = [str(i) for i in ids if str(i) not in memo]
+    if wanted:
+        found = {str(k): v for k, v in Beetles.objects.select_related("image_asset", "taxon").in_bulk(wanted).items()}
+        memo.update({i: found.get(i) for i in wanted})
+    return {str(i): memo[str(i)] for i in ids if memo[str(i)] is not None}
+
+
 def _item_tiles(item):
     """The Beetles rows of a grid item (Odd One Out, Select all), in the order shown. None if any is gone."""
     ids = item.get("tiles") or []
-    found = {str(k): v for k, v in Beetles.objects.select_related("image_asset", "taxon").in_bulk(ids).items()}
+    found = _beetles(ids)
     if not ids or any(i not in found or not found[i].has_bbox() for i in ids):
         return None
     return [found[i] for i in ids]
@@ -508,11 +528,16 @@ def _flagged_places(tiles, player):
 def _grid_over(item, mode, flagged):
     """
     Whether flags end a grid, unscored like a reported photo (#489): once half its photos are flagged, or in Odd One Out
-    the odd one is, since without it there is nothing to find.
+    an odd one is, since without it there are not enough to find.
     """
     tiles = item.get("tiles") or []
-    odd = tiles.index(item["a"]) if mode == GameRound.Mode.ODD and item["a"] in tiles else None
-    return 2 * len(flagged) >= len(tiles) or odd in flagged
+    odds = {tiles.index(t) for t in _odd_ones(item) if t in tiles} if mode == GameRound.Mode.ODD else set()
+    return 2 * len(flagged) >= len(tiles) or bool(odds & set(flagged))
+
+
+def _odd_ones(item):
+    """An Odd One Out item's odd ones (ids): ``odds``, or just ``a`` for a grid built before several (#540)."""
+    return item.get("odds") or [item["a"]]
 
 
 def _item_rois(item):
@@ -524,7 +549,7 @@ def _item_rois(item):
         tiles = _item_tiles(item)
         return None if tiles is None else (next(t for t in tiles if str(t.id) == item["a"]), None)
     ids = [item["a"]] + ([item["b"]] if item.get("b") else [])
-    found = {str(k): v for k, v in Beetles.objects.select_related("image_asset", "taxon").in_bulk(ids).items()}
+    found = _beetles(ids)
     if any(i not in found or not found[i].has_bbox() for i in ids):
         return None
     return found[item["a"]], found.get(item.get("b"))
@@ -604,6 +629,8 @@ def _item_payload(rnd, index):
         grid = rnd.items[index]
         # Odd One Out: all but one share a name at this rank; the grid's size, and the player's step when it was built
         payload.update(rank=grid["rank"], size=len(grid["tiles"]), step=grid.get("step"))
+        if payload["mode"] == GameRound.Mode.ODD:   # how many odd ones to find (#540); which ones stays on the server
+            payload["odds"] = len(_odd_ones(grid))
         if payload["mode"] == GameRound.Mode.SELECT:   # "Tap every <target>"
             payload["target"] = grid["group"][grid["rank"]]
     if payload["mode"] == GameRound.Mode.CLASSIFY:
@@ -611,16 +638,27 @@ def _item_payload(rnd, index):
                   .exclude(player=rnd.player).values("player").distinct().count())
         if others:
             payload["others"] = others   # how many other players named it (not what they said, until you answer)
-    # Let the browser start downloading the next crops while this item is answered: small ones first. On the last
-    # item of a batch, those of the next batch, built now so the batch can end without a wait (#494).
+    # Let the browser start downloading the next crops while this item is answered: the next beetle's small then
+    # large ones, and the small ones of the beetle after it (#542). From the middle of a batch on, the next batch is
+    # built on the worker; on its last item, if it isn't there yet, it is built now so the batch can end without a
+    # wait, and its first beetle comes next (#494).
+    if rnd.finished_at is None and 2 * index >= len(rnd.items) - 1:
+        build_ahead_later(rnd)
+    coming = []
     following = _next_index(rnd, index + 1)
-    ahead = None
-    if following is None and rnd.finished_at is None:
-        ahead = _batch_ahead(rnd) or _build_ahead(rnd, index)
-        following = _next_index(ahead, 0) if ahead else None
     if following is not None:
-        upcoming = _item_images(ahead or rnd, following)
-        payload["prefetch"] = [im["small"] for im in upcoming] + [im["large"] for im in upcoming]
+        coming.append((rnd, following))
+        after = _next_index(rnd, following + 1)
+        if after is not None:
+            coming.append((rnd, after))
+    elif rnd.finished_at is None:
+        ahead = _batch_ahead(rnd) or (None if _ahead_on_the_worker(rnd) else _build_ahead(rnd, index))
+        first = _next_index(ahead, 0) if ahead else None
+        if first is not None:
+            coming.append((ahead, first))
+    for n, (batch, at) in enumerate(coming):
+        upcoming = _item_images(batch, at)
+        payload["prefetch"] += [im["small"] for im in upcoming] + ([im["large"] for im in upcoming] if n == 0 else [])
     return payload
 
 
@@ -644,7 +682,9 @@ def _build_ahead(rnd, index):
     fresh = game.start_round(rnd.player, rnd.mode, fresh_only=True)
     if fresh is None:
         return None
-    coming = set().union(*(game._item_ids(item) for item in rnd.items[index:]))
+    # built from the middle of a batch (#542): the rest of it, and every other photo of those specimens, will have
+    # been named in its reviews by then (#541)
+    coming = {str(i) for i in game.same_specimen(set().union(*(game._item_ids(item) for item in rnd.items[index:])))}
     items = [item for item in fresh.items if coming.isdisjoint(game._item_ids(item))]
     if not items:
         fresh.delete()
@@ -657,6 +697,53 @@ def _build_ahead(rnd, index):
 
         cache.set(AHEAD_NOTICE.format(fresh.id), fresh.notice, 60 * 60 * 24)
     return fresh
+
+
+AHEAD_LOCK = "game:ahead-building:{}"   # a batch's next batch is queued for, or being built on, the worker
+AHEAD_LOCK_SECONDS = 120                 # after which the feed builds it itself (a worker that's down or far behind)
+
+
+def _ahead_on_the_worker(rnd):
+    return bool(cache.get(AHEAD_LOCK.format(rnd.id)))
+
+
+def build_ahead_later(rnd):
+    """
+    From the middle of a batch on: have the worker build the batch that follows it (build_ahead_now), once, so it is
+    ready well before the last item instead of being built while the player waits on it (#542). Where game work stays
+    in the request, or the queue can't be reached, the last item builds it as before.
+    """
+    if not game.game_setting("GAME_RECOMPUTE_IN_BACKGROUND", False) or _ahead_on_the_worker(rnd):
+        return
+    from .tasks import build_game_batch_ahead_task
+
+    def queue():
+        if not cache.add(AHEAD_LOCK.format(rnd.id), 1, AHEAD_LOCK_SECONDS):
+            return
+        if _batch_ahead(rnd) is not None:
+            cache.delete(AHEAD_LOCK.format(rnd.id))
+            return
+        try:
+            build_game_batch_ahead_task.apply_async(args=[str(rnd.id)], retry=False)
+        except Exception:
+            cache.delete(AHEAD_LOCK.format(rnd.id))
+            logger.info("Batch after %s not queued: it is built on its last item", rnd.id)
+
+    transaction.on_commit(queue)
+
+
+def build_ahead_now(round_id):
+    """The worker's part of build_ahead_later: the next batch, unless the feed has moved on or has one already."""
+    try:
+        rnd = GameRound.objects.filter(id=round_id).first()
+        if rnd is None or rnd.finished_at is not None or _batch_ahead(rnd) is not None:
+            return None
+        index = _next_index(rnd)
+        if index is None:
+            return None
+        return _build_ahead(rnd, index)
+    finally:
+        cache.delete(AHEAD_LOCK.format(round_id))
 
 
 def _drop_ahead(rnd):
@@ -715,11 +802,12 @@ def _timed(view):
     @wraps(view)
     def timed(request, *args, **kwargs):
         stats = {"batches": 0, "items": 0, "crops": 0}
-        token = game_crops.built.set(stats)
+        token, rows = game_crops.built.set(stats), _rows.set({})
         started = time.perf_counter()
         try:
             return view(request, *args, **kwargs)
         finally:
+            _rows.reset(rows)
             game_crops.built.reset(token)
             logger.info("%s took %d ms: %d new batch(es), %d item(s), %d crop(s) queued", view.__name__,
                         (time.perf_counter() - started) * 1000, stats["batches"], stats["items"], stats["crops"])
@@ -767,16 +855,17 @@ def game_start(request):
         return JsonResponse({"error": "Unknown game mode."}, status=400)
 
     # Pick up where the player left off (e.g. after a reload) before starting afresh. "fresh" (after changing the
-    # game or focus) closes what is left of the current batch so the new choice applies straight away.
+    # game or focus) closes what is left of the current batch, and any built ahead of it under the old choice, so the
+    # new choice applies straight away; the closing is done on the worker (#542).
     rnd = game.resumable_round(request.user, mode)
-    if rnd is not None and (body or {}).get("fresh"):
-        game.finish_round(rnd)
-        rnd = None
-    index = _next_index(rnd) if rnd else None
+    fresh = bool((body or {}).get("fresh"))
+    index = _next_index(rnd) if rnd and not fresh else None
     if index is None:
         if rnd is not None:
-            game.finish_round(rnd)
-        rnd = game.start_round(request.user, mode)
+            _drop_ahead(rnd)
+            game.finish_round_later(rnd)
+        # after a switch of game, the batch the worker built for it while they played (game_warm), if there is one
+        rnd = (fresh and game_warm.take(request.user, mode)) or game.start_round(request.user, mode)
         index = _next_index(rnd, 0) if rnd else None
     if index is None:   # nothing in any of their games: say why (no beetles yet, all seen, their focus, ...)
         return JsonResponse({"error": game.nothing_to_play(request.user, mode)["text"]}, status=404)
@@ -817,9 +906,10 @@ def _prefs(player):
 
 @login_required
 @require_POST
+@_timed
 def game_prefs(request):
     """
-    Change the game (All modes / Similarity / Imposter Picker / Find Them All / Identification) or the focus from the feed. Each only if
+    Change the game (All modes / Similarity / Odd One Out / Find Them All / Naming) or the focus from the feed. Each only if
     unlocked. Body: {"play_mode": ...} and/or {"focus_rank": ..., "focus_value": ...} (focus_rank "" clears the focus).
     """
     from .models import GamePreference
@@ -856,6 +946,17 @@ def game_prefs(request):
             pref.focus_rank, pref.focus_value = rank, canonical
     pref.save()
     return JsonResponse({"prefs": _prefs(request.user)})
+
+
+@login_required
+@require_POST
+def game_warm_others(request):
+    """
+    The feed is up: have the worker build a batch for each game the player could switch to (game_warm), so switching
+    rarely waits. Body: {"mode": the page's game}. Cheap when they are built already.
+    """
+    mode = (_json_body(request) or {}).get("mode")
+    return JsonResponse({"queued": game_warm.warm_later(request.user, mode)})
 
 
 def _chip(player):
@@ -958,18 +1059,27 @@ def game_answer(request, round_id):
             if record.is_check:
                 scores = game.score_classification(answer, roi_a.taxon)
         elif record.mode == GameRound.Mode.ODD:
-            pick = body.get("pick")
-            if not isinstance(pick, int) or isinstance(pick, bool) or not 0 <= pick < len(tiles):
-                return JsonResponse({"error": "Please pick a beetle."}, status=400)
-            if pick in record.flagged:
+            # As many picks as the grid has odd ones (#540); a lone "pick" is how the feed sent one before
+            want = len(_odd_ones(item))
+            picks = body.get("picks", [body["pick"]] if "pick" in body else None)
+            if (not isinstance(picks, list) or len(picks) != want or len(set(map(str, picks))) != len(picks)
+                    or any(not isinstance(i, int) or isinstance(i, bool) or not 0 <= i < len(tiles) for i in picks)):
+                return JsonResponse({"error": "Please pick a beetle." if want == 1 else f"Please pick {want} beetles."},
+                                    status=400)
+            if set(picks) & set(record.flagged):
                 return JsonResponse({"error": "That photo is flagged: pick another beetle."}, status=400)
-            record.roi = tiles[pick]
-            record.is_check = game_scoring.is_truth(record.roi)
+            record.picks = sorted(picks)
+            record.roi = tiles[record.picks[0]]
+            right = game.odd_verdict(game.score_odd_grid(tiles, record.picks, record.grid_rank, record.grid_group,
+                                                         record.flagged))
+            # scored straight away once the truth tells: any pick on one of the rest, or every pick on a validated beetle
+            record.is_check = right is not None
             if record.is_check:
-                t = record.roi.taxon
-                record.ref_subfamily, record.ref_tribe = t.subfamily or "", t.tribe or ""
-                record.ref_genus, record.ref_species = t.genus or "", t.species or ""
-                scores = game.score_odd(t, record.grid_rank, record.grid_group)
+                t = next((tiles[i].taxon for i in record.picks if game_scoring.is_truth(tiles[i])), None)
+                if t is not None:
+                    record.ref_subfamily, record.ref_tribe = t.subfamily or "", t.tribe or ""
+                    record.ref_genus, record.ref_species = t.genus or "", t.species or ""
+                scores = {record.grid_rank: right}
         elif record.mode == GameRound.Mode.SELECT:
             picks = body.get("picks")
             if (not isinstance(picks, list) or not picks or len(set(map(str, picks))) != len(picks)
@@ -992,6 +1102,14 @@ def game_answer(request, round_id):
                 scores = game.score_pair(choice, roi_a.taxon, roi_b.taxon)
     for r, ok in scores.items():
         setattr(record, f"correct_{r}", ok)
+    if not (record.skipped or record.is_retry):
+        # a beetle whose names the player has been shown before (#541): full points, but it doesn't show expertise
+        shown = [b.id for b in (record.roi, record.roi_b) if b is not None]
+        if record.mode == GameRound.Mode.SELECT:
+            shown += [b.id for b in tiles]
+        elif record.mode == GameRound.Mode.ODD:   # every odd one and every pick of a grid with several (#540)
+            shown += [*_odd_ones(item), *(tiles[i].id for i in record.picks)]
+        record.seen_before = game.was_shown(request.user, shown)
     game_scoring.note_difficulty(record)   # how hard the beetle is now: its points follow it (#492)
     try:
         with transaction.atomic():

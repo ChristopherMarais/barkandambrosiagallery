@@ -2,13 +2,12 @@
 {% block content %}
 <p style="margin:0 0 16px;">Hello {{ name }},</p>
 <p style="margin:0 0 16px;">Thank you for your interest in the Bark &amp; Ambrosia Beetle Gallery. We are glad you found us!</p>
-<p style="margin:0 0 4px;">To finish your request, please confirm your email address:</p>
+<p style="margin:0 0 4px;">To finish signing up, please confirm your email address:</p>
 {% include "emails/_button.html" with url=url label="Confirm my email" %}
 <p style="margin:0 0 8px;font-weight:bold;">What happens next</p>
 <ol style="margin:0 0 16px;padding-left:20px;">
   <li>You confirm your email with the button above (the link works for {{ days }} days).</li>
-  <li>Our team reviews your request, usually within a day or two.</li>
-  <li>We email you as soon as it is decided. Then you can sign in with the username and password you chose.</li>
+  <li>Your account works straight away: sign in with the username and password you chose.</li>
 </ol>
 <p style="margin:0 0 16px;">Warm regards,<br>The Bark &amp; Ambrosia Beetle Gallery team</p>
 {% endblock %}

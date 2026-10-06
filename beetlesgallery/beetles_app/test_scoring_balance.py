@@ -117,7 +117,7 @@ class DefaultsTests(SimpleTestCase):
         self.assertGreater(game_scoring.select_points(17.5, 6, 5, 1), 0)             # 16 beetles, 5 of 6 and one slip
         for size in (4, 9, 16):
             self.assertLess(game_tuning.select_tap_all(size), 0)   # tapping everything loses
-            self.assertLess(game_tuning.odd_guess(size), 0)        # so does a blind Imposter Picker pick
+            self.assertLess(game_tuning.odd_guess(size), 0)        # so does a blind Odd One Out pick
 
     def test_harder_tasks_pay_more_per_answer_but_no_game_farms_points(self):
         self.assertGreater(classify(4, 4, 3.0), 1.5 * 7 * 2)   # a species named beats the best grid

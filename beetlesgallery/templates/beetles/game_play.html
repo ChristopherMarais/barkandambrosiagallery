@@ -127,24 +127,22 @@
   #game[data-mode="odd"] #photos, #game[data-mode="select"] #photos { display: grid; grid-template-columns: repeat(var(--grid-cols, 2), minmax(0, 1fr));
       grid-auto-rows: minmax(0, 1fr); gap: 0.375rem; }
   #photos[data-size="16"] { gap: 0.25rem; padding: 0.25rem; }
-  #game[data-mode="odd"] #photos .cell { height: 100%; outline: 3px solid transparent; outline-offset: -3px; }
-  #game[data-mode="odd"] #photos .cell.picked { outline-color: #374151; }
-  #game[data-mode="odd"] #photos .cell.odd-one { outline-color: #16a34a; }
+  #game[data-mode="odd"] #photos .cell, #game[data-mode="select"] #photos .cell { height: 100%; }
+  /* The rings round the grid photos are drawn on top of the photo, so they show on a grid of 16 too (#541):
+     dark for your pick or tap; after answering green (correct), red (not correct), dashed green (missed), grey (yours,
+     not checked yet) */
+  #photos .cell::after, #previous-photos .cell::after { content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none;
+      border-radius: inherit; border: 3px solid var(--ring, transparent); box-shadow: var(--cursor, none); }
+  #photos .cell.picked, #photos .cell.tapped { --ring: #374151; }
+  .cell.odd-one, .cell.sel-right, .cell.sel-missed { --ring: #16a34a; }
+  :is(#photos, #previous-photos) .cell.sel-missed::after { border-style: dashed; }
+  .cell.odd-wrong, .cell.sel-wrong { --ring: #dc2626; }
+  .cell.odd-pick, .cell.sel-vote { --ring: #9ca3af; }
+  #photos .cell.key-cursor { --cursor: inset 0 0 0 2px #9ca3af; }
   /* top right: the Flag has the bottom left of each photo, Lighting the bottom right of the photo area */
   .zoom-chip { position: absolute; right: 0.375rem; top: 0.375rem; z-index: 3; display: inline-flex; align-items: center; justify-content: center;
                width: 1.875rem; height: 1.875rem; border-radius: 9999px; background: #fff; border: 1px solid #d1d5db; box-shadow: 0 1px 3px rgba(0,0,0,.15); color: #374151; font-size: 0.75rem; }
-  .odd-name { position: absolute; left: 50%; top: 0.375rem; transform: translateX(-50%); z-index: 3; max-width: calc(100% - 0.75rem); padding: 0.125rem 0.55rem;
-              border-radius: 0.5rem; background: rgba(255,255,255,.95); border: 1px solid #d1d5db; font-size: 0.75rem; font-weight: 600; color: #111827;
-              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
   #odd.hidden, #select.hidden { display: none; }
-  /* Select all: a tap toggles one. After Next: green for a member you tapped, red for one you shouldn't have, a dashed
-     green line round a member you left out. */
-  #game[data-mode="select"] #photos .cell { height: 100%; outline: 3px solid transparent; outline-offset: -3px; }
-  #game[data-mode="select"] #photos .cell.tapped { outline-color: #374151; }
-  #game[data-mode="select"] #photos .cell.sel-right { outline-color: #16a34a; }
-  #game[data-mode="select"] #photos .cell.sel-wrong { outline-color: #dc2626; }
-  #game[data-mode="select"] #photos .cell.sel-missed { outline: 3px dashed #16a34a; }
-  #game[data-mode="select"] #photos .cell.key-cursor, #game[data-mode="odd"] #photos .cell.key-cursor { box-shadow: inset 0 0 0 2px #9ca3af; }
   .tap-mark { position: absolute; left: 0.375rem; top: 0.375rem; z-index: 3; display: none; align-items: center; justify-content: center;
               width: 1.5rem; height: 1.5rem; border-radius: 9999px; background: #374151; color: #fff; font-size: 0.75rem; pointer-events: none; }
   .cell.tapped .tap-mark { display: inline-flex; }
@@ -225,17 +223,33 @@
   .rv-table small, .rv-note { display: block; font-size: 0.6875rem; color: #6b7280; }
   .rv-lines { margin-top: 0.375rem; font-size: 0.8125rem; color: #374151; }
   .rv-lines > * + * { margin-top: 0.25rem; }
-  /* the marks on the grid tiles: points, a number to find each one in the card, a name to the grid's rank */
-  #game[data-mode="select"] #photos .cell.sel-vote, #game[data-mode="odd"] #photos .cell.odd-pick { outline-color: #9ca3af; }
-  #game[data-mode="odd"] #photos .cell.odd-wrong { outline-color: #dc2626; }
-  #previous-photos .cell.sel-right, #previous-photos .cell.odd-one { outline: 3px solid #16a34a; outline-offset: -3px; }
-  #previous-photos .cell.sel-wrong, #previous-photos .cell.odd-wrong { outline: 3px solid #dc2626; outline-offset: -3px; }
-  #previous-photos .cell.sel-missed { outline: 3px dashed #16a34a; outline-offset: -3px; }
-  #previous-photos .cell.sel-vote, #previous-photos .cell.odd-pick { outline: 3px solid #9ca3af; outline-offset: -3px; }
+  .rv-tile { margin-top: 0.25rem; }
+  .rv-tile b { display: inline-block; min-width: 1.25rem; color: #374151; }
+  /* the marks on the grid tiles: a number to find each one in the card at the top left, the points at the top right */
   .rv-num, .rv-badge { position: absolute; z-index: 3; display: inline-flex; align-items: center; justify-content: center; pointer-events: none; font-weight: 700; white-space: nowrap; }
   .rv-num { left: 0.375rem; top: 0.375rem; min-width: 1.375rem; height: 1.375rem; padding: 0 0.3rem; border-radius: 9999px; background: rgba(255,255,255,.92); border: 1px solid #d1d5db; color: #374151; font-size: 0.6875rem; }
-  .rv-badge { left: 50%; bottom: 0.375rem; transform: translateX(-50%); padding: 0.0625rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; }
-  #photos[data-size="16"] :is(.rv-num, .rv-badge) { font-size: 0.625rem; }
+  .rv-badge { right: 0.375rem; top: 0.375rem; padding: 0.0625rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; }
+  :is(#photos, #previous-photos)[data-size="16"] :is(.rv-num, .rv-badge) { font-size: 0.625rem; top: 0.25rem; }
+  :is(#photos, #previous-photos)[data-size="16"] .rv-num { left: 0.25rem; min-width: 1.125rem; height: 1.125rem; }
+  :is(#photos, #previous-photos)[data-size="16"] .rv-badge { right: 0.25rem; padding: 0 0.3rem; }
+  /* Every beetle's names after an answer (#541), subfamily to species, on its photo: true names, or the likeliest with
+     who says so. Out of the way while the pointer is on the photo, or after a tap (tap again to bring them back). */
+  .rv-names { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; padding: 0.25rem 0.5rem 0.3rem; pointer-events: none;
+              background: rgba(17,24,39,.8); color: #fff; font-size: 0.75rem; line-height: 1.25; transition: opacity .15s; }
+  .rv-names > span { display: flex; gap: 0.375rem; min-width: 0; }
+  .rv-names .nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rv-names .src { flex: none; color: #d1d5db; font-size: 0.85em; }
+  .rv-names .src .fi { font-size: 0.85em; margin-right: 0.125rem; }
+  .rv-names .none { color: #9ca3af; }
+  .rv-names .tier { color: #d1d5db; font-size: 0.85em; }
+  :is(#photos, #previous-photos)[data-size="9"] .rv-names { font-size: 0.6875rem; padding: 0.1875rem 0.375rem; }
+  :is(#photos, #previous-photos)[data-size="16"] .rv-names { font-size: 0.5625rem; line-height: 1.15; padding: 0.125rem 0.25rem; }
+  :is(#photos, #previous-photos)[data-size="16"] .rv-names > span { gap: 0.2rem; }
+  /* one or two big photos: a box at the bottom middle, clear of the Flag and the Lighting buttons */
+  #game:not([data-mode="odd"]):not([data-mode="select"]) #photos .rv-names { left: 50%; right: auto; bottom: 0.375rem; transform: translateX(-50%);
+      width: max-content; min-width: 9rem; max-width: calc(100% - 6rem); border-radius: 0.5rem; padding: 0.375rem 0.625rem; font-size: 0.8125rem; }
+  .cell.names-off .rv-names { opacity: 0; }
+  @media (hover: hover) { .cell:hover .rv-names { opacity: 0; } }
   .rv-badge.up { background: #16a34a; color: #fff; }
   .rv-badge.down { background: #dc2626; color: #fff; }
   .rv-badge.flat { background: rgba(255,255,255,.95); border: 1px solid #d1d5db; color: #374151; }
@@ -291,6 +305,7 @@
   data-home-url="{% url 'game_home' %}"
   data-taxa-url="{% url 'game_taxa' %}"
   data-prefs-url="{% url 'game_prefs' %}"
+  data-warm-url="{% url 'game_warm' %}"
   data-report-url="{% url 'game_report_item' %}"
   data-last-review-url="{{ last_review }}">
 
@@ -321,9 +336,9 @@
       <button type="button" role="radio" data-play="both" data-short="All" data-long="All modes" class="play-opt play-all shrink-0 h-8 px-2 rounded-lg border border-dashed border-gray-400">All modes</button>
       <div class="flex flex-1 min-w-0 p-0.5 bg-gray-100 rounded-lg">
         <button type="button" role="radio" data-play="pair" data-short="Similar" data-long="Similarity" class="play-opt flex-1 h-8 rounded-md">Similarity</button>
-        <button type="button" role="radio" data-play="odd" data-short="Imposter" data-long="Imposter Picker" class="play-opt flex-1 h-8 rounded-md">Imposter Picker</button>
+        <button type="button" role="radio" data-play="odd" data-short="Odd one" data-long="Odd One Out" class="play-opt flex-1 h-8 rounded-md">Odd One Out</button>
         <button type="button" role="radio" data-play="select" data-short="Find all" data-long="Find Them All" class="play-opt flex-1 h-8 rounded-md">Find Them All</button>
-        <button type="button" role="radio" data-play="classify" data-short="ID" data-long="Identification" class="play-opt flex-1 h-8 rounded-md">Identification</button>
+        <button type="button" role="radio" data-play="classify" data-short="Name" data-long="Naming" class="play-opt flex-1 h-8 rounded-md">Naming</button>
       </div>
     </div>
     <button type="button" id="focus-btn" class="inline-flex items-center gap-1 h-9 px-3 max-w-[45%] rounded-lg border border-gray-300 text-xs font-semibold text-gray-700">
@@ -337,8 +352,7 @@
   <!-- Loading -->
   <div id="loading" class="flex-1 flex flex-col items-center justify-center text-gray-400">
     <i class="fi fi-rr-spinner animate-spin inline-block text-3xl"></i>
-    <p class="mt-2 text-sm">Finding a beetle&hellip;</p>
-    <p class="mt-3">{% include "beetles/includes/game_beta.html" %}</p>
+    <p id="loading-line" class="mt-2 text-sm" data-testid="loading-line">Finding beetles&hellip;</p>
   </div>
 
   <!-- The feed -->
@@ -423,12 +437,12 @@
     <div class="p-5 text-gray-700 space-y-4 overflow-y-auto">
       <p class="hidden" data-help-mode="classify">Name it as far as you're sure: subfamily, tribe, genus, species.</p>
       <p class="hidden" data-help-mode="pair">How related are <strong>A</strong> and <strong>B</strong>? Pick the lowest line you're sure of.</p>
-      <p class="hidden" data-help-mode="odd">All but one share a name. Tap the one that doesn't, then <strong>Submit</strong>. The grid grows as you get better.</p>
-      <p class="hidden" data-help-mode="select">Tap every beetle of the group named below the photos, then <strong>Submit</strong>. A wrong tap costs, a missed one doesn't. The grid grows as you get better.</p>
+      <p class="hidden" data-help-mode="odd">All but one share a name (bigger grids hide two or three). Select the ones that don't, then <strong>Submit</strong>. The grid grows as you get better.</p>
+      <p class="hidden" data-help-mode="select">Select every beetle of the group named below the photos, then <strong>Submit</strong>. A wrong tap costs, a missed one doesn't. The grid grows as you get better.</p>
       <ul class="list-disc pl-5 space-y-2 text-sm" data-testid="help-rules">
         <li>Answer only as far as you're sure: a wrong guess costs more than stopping early.</li>
         <li>Unsure? <strong>Skip</strong> <span data-help-mode="classify pair">costs very little</span><span class="hidden" data-help-mode="odd select">earns a little</span>. Flagging a bad photo costs nothing.</li>
-        <li>Flag a photo that shows too little of the beetle (a leg, a fragment). A clear photo of a good part of it from an unusual side (from below, say) isn't bad: name it as far as you can.</li>
+        <li>A photo must show a good part of the beetle.</li>
         <li>No timer: keys and references are welcome.</li>
         <li>On beetles nobody has checked yet, you earn points when strong players agree with you. Once a curator checks one, it is scored again.</li>
       </ul>
@@ -485,7 +499,7 @@
     <div class="flex flex-col gap-3">
       <button type="button" id="recap-more" class="btn-main px-6 py-3.5 text-base">Keep playing</button>
       <a href="{% url 'game_report' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl" data-testid="recap-learn"><i class="fi fi-rr-bulb"></i> Where I lost points</a>
-      <a href="{% url 'game_home' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl">See my stats and the leaderboard</a>
+      <a href="{% url 'game_home' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl" data-testid="recap-home">{{ game_name }} home</a>
     </div>
     <a href="{{ discussions }}" target="_blank" rel="noopener" class="mt-6 inline-block text-sm text-gray-500 underline hover:text-gray-800" data-testid="discussions-link">Bug or idea? Tell us on GitHub Discussions</a>
   </div>
@@ -530,7 +544,7 @@
   const root = document.getElementById("game");
   const PAGE_MODE = root.dataset.mode;          // "mixed" (both games in one feed) or one game
   let MODE = PAGE_MODE === "mixed" ? "classify" : PAGE_MODE;   // the game of the beetle on screen
-  const GAME_NAMES = { classify: "Identification", pair: "Similarity", odd: "Imposter Picker", select: "Find Them All" };
+  const GAME_NAMES = { classify: "Naming", pair: "Similarity", odd: "Odd One Out", select: "Find Them All" };
   // badge accents, the same as on the profile (includes/game_badge.html)
   // badge colours by rarity, the same as the levels and the profile (includes/game_badge.html)
   const TIER_INK = { common: "text-gray-600", uncommon: "text-green-600", rare: "text-blue-600", epic: "text-purple-600",
@@ -859,8 +873,9 @@
     }
   }));
 
-  // Warm the browser cache with the next beetle's crops while this one is answered (small ones first; on the last
-  // beetle of a batch, the next batch's first), decoded off the main thread.
+  // Warm the browser cache with the coming crops while this beetle is answered: the next beetle's (small ones first),
+  // and the small ones of the beetle after it; on the last beetle of a batch, the next batch's first (#542). Decoded
+  // off the main thread.
   function prefetch(urls) {
     prefetched.length = 0;
     (urls || []).forEach((url) => {
@@ -996,9 +1011,9 @@
       const opened = (q, key) => !!(gameInfo(q, key) || {}).unlocked;
       const tips = [];
       if (!prefs.light && p.light) tips.push({ key: "light", el: "light-btn", text: "New: Lighting. Make a dark or flat photo brighter or sharper. Key: E (or L)." });
-      if (!opened(prefs, "odd") && opened(p, "odd")) tips.push({ key: "game-odd", el: "toolbar", text: "New game: Imposter Picker. All but one beetle share a name; tap the one that doesn't." });
-      if (!opened(prefs, "select") && opened(p, "select")) tips.push({ key: "game-select", el: "toolbar", text: "New game: Find Them All. Tap every beetle of the group named below the photos." });
-      if (!opened(prefs, "classify") && opened(p, "classify")) tips.push({ key: "game-classify", el: "toolbar", text: "New game: Identification. Name the beetle, rank by rank, as far as you're sure." });
+      if (!opened(prefs, "odd") && opened(p, "odd")) tips.push({ key: "game-odd", el: "toolbar", text: "New game: Odd One Out. All but one beetle share a name; select the one that doesn't." });
+      if (!opened(prefs, "select") && opened(p, "select")) tips.push({ key: "game-select", el: "toolbar", text: "New game: Find Them All. Select every beetle of the group named below the photos." });
+      if (!opened(prefs, "classify") && opened(p, "classify")) tips.push({ key: "game-classify", el: "toolbar", text: "New game: Naming. Name the beetle, rank by rank, as far as you're sure." });
       if (!prefs.choose_game && p.choose_game) tips.push({ key: "choose-game", el: "toolbar", text: "New: pick one game here, or All modes to mix them." });
       if (!anyFocus(prefs) && anyFocus(p)) tips.push({ key: "focus", el: "focus-btn", text: "New: Focus. Play only beetles from one group you want to learn." });
       if (tips.length) window.gameTour.unlocked(tips);
@@ -1135,9 +1150,49 @@
   }
   $("caughtup-focus").addEventListener("click", () => savePrefs({ focus_rank: "" }));
 
+  // Odd One Out's question: "Find the one that doesn't share the same genus", or "the 2 that don't" when there are more
+  function oddPrompt(rank, n) {
+    return n > 1 ? "Find the " + n + " that don't share the same " + rank : "Find the one that doesn't share the same " + rank;
+  }
+
+  // While the feed loads: two short lines in turn, and after a long wait a word that it's slow. They stop once the
+  // loading screen is gone; with reduced motion the line doesn't alternate, it only changes once the wait is long.
+  const LOADING_LINES = ["Finding beetles…", "Building your gallery…"];
+  const LOADING_SLOW = "This is taking a while: probably making frass…";
+  const LOADING_LINE_MS = 2500, LOADING_SLOW_MS = 10000;
+  let loadingTimer = null;
+  function loadingLines() {
+    clearInterval(loadingTimer);
+    const line = $("loading-line"), started = Date.now();
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let turn = 0;
+    line.textContent = LOADING_LINES[0];
+    loadingTimer = setInterval(() => {
+      const slow = Date.now() - started >= LOADING_SLOW_MS;
+      if ($("loading").classList.contains("hidden") || slow) {
+        clearInterval(loadingTimer);
+        loadingTimer = null;
+        if (slow && !$("loading").classList.contains("hidden")) line.textContent = LOADING_SLOW;
+        return;
+      }
+      if (!still) line.textContent = LOADING_LINES[++turn % LOADING_LINES.length];
+    }, LOADING_LINE_MS);
+  }
+
   // ---------- the feed ----------
+  // While they play, the worker builds a batch for each game they could switch to, so a switch rarely waits (#542)
+  function warmOthers() {
+    if (PAGE_MODE === "mixed" && $("toolbar") && prefs && prefs.choose_game) api(root.dataset.warmUrl, { mode: PAGE_MODE }).catch(() => {});
+  }
   async function startFeed(fresh) {
-    show("loading");
+    // Switching game or focus: the beetle on screen stays, locked, with the slim bar, until the new one is in (#542)
+    const keep = !!fresh && !$("stage").classList.contains("hidden");
+    const before = phase;
+    if (keep) setPhase("next");
+    else {
+      show("loading");
+      loadingLines();
+    }
     showError("");
     try {
       const data = await api(root.dataset.startUrl, { mode: PAGE_MODE, fresh: !!fresh });
@@ -1149,8 +1204,10 @@
       upcoming = null;
       await present(data.item);
       feedNotes(data);   // the feed had to change game: say why
+      warmOthers();
     } catch (e) {
-      $("loading").classList.add("hidden");
+      if (keep) setPhase(before);
+      else $("loading").classList.add("hidden");
       showError(e.message);
     }
   }
@@ -1239,13 +1296,6 @@
       peers.textContent = "Named by " + item.others + (item.others === 1 ? " other" : " others");
       holder.appendChild(peers);
     }
-    if (item.again) {
-      // a beetle they got wrong before, back so they can learn it
-      const tag = document.createElement("div");
-      tag.style.cssText = "position:absolute;top:0.5rem;left:50%;transform:translateX(-50%);z-index:2;background:rgba(255,255,255,.95);border:1px solid #d1d5db;border-radius:9999px;padding:0.2rem 0.75rem;font-size:0.75rem;font-weight:600;color:#374151;white-space:nowrap";
-      tag.textContent = "Seen before: have another go";
-      holder.appendChild(tag);
-    }
     // A Flag on each photo (bottom left): opens that photo with the reasons ready to pick, at the same corner
     holder.querySelectorAll(".cell").forEach((cell, i) => {
       const im = item.images[i];
@@ -1265,8 +1315,9 @@
       cell.appendChild(report);
     });
     showError(images ? "" : "An image failed to load. You can skip this one.");
+    oddWant = MODE === "odd" ? item.odds || 1 : 1;
     if (MODE === "odd") {
-      $("odd-prompt").textContent = (item.images.length - 1) + " share a " + item.rank + ". Which one doesn't?";
+      $("odd-prompt").textContent = oddPrompt(item.rank, oddWant);
     }
     if (MODE === "select") {
       const name = document.createElement(item.rank === "genus" || item.rank === "species" ? "em" : "span");
@@ -1274,7 +1325,7 @@
       const size = document.createElement("span");   // the grid's size, quietly: it grows as the player gets better
       size.className = "font-normal text-gray-500";
       size.textContent = " · " + item.images.length + " beetles";
-      $("select-prompt").replaceChildren("Tap every ", name, size);
+      $("select-prompt").replaceChildren("Select every ", name, size);
     }
 
     resetAnswer();
@@ -1285,11 +1336,12 @@
     if (MODE === "odd" && window.gameTour && window.gameTour.unlocked) {
       // the first time: how to play it (once on this device)
       setTimeout(() => window.gameTour.unlocked([{ key: "odd-intro", el: "photos", text:
-        "Imposter Picker: all but one of these share a " + item.rank + ". Tap the one that doesn't, then Submit. Not sure? Skip earns a little, a wrong pick costs." }]), 400);
+        "Odd One Out: all but " + (oddWant > 1 ? oddWant : "one") + " of these share a " + item.rank + ". Select "
+        + (oddWant > 1 ? "the " + oddWant + " that don't" : "the one that doesn't") + ", then Submit. Not sure? Skip earns a little, a wrong pick costs." }]), 400);
     }
     if (MODE === "select" && window.gameTour && window.gameTour.unlocked) {
       setTimeout(() => window.gameTour.unlocked([{ key: "select-intro", el: "photos", text:
-        "Find Them All: tap every beetle of the group named below, then Submit. Leave out any you're unsure of: a wrong tap costs, a missed one doesn't." }]), 400);
+        "Find Them All: select every beetle of the group named below, then Submit. Leave out any you're unsure of: a wrong tap costs, a missed one doesn't." }]), 400);
     }
     shownAt = Date.now();
     readyAt = performance.now() + MASH_GUARD_MS;
@@ -1337,7 +1389,7 @@
     if (data.chip) goalMet = !!data.chip.goal_met;
     noteAnswerForBreak();
     updateChip(data.chip);
-    if (data.prefs) renderPrefs(data.prefs);   // a new level: its unlocks show (and work) straight away
+    if (data.prefs) { renderPrefs(data.prefs); warmOthers(); }   // a new level: its unlocks show (and work) straight away
     bumpCombo(!skipping);
     upcoming = data;
     if (data.review) rememberPrevious(data.review);
@@ -1385,6 +1437,7 @@
       $("photos").classList.add("revealing");
       markTiles($("photos").querySelectorAll(".cell"), review);
     }
+    nameTiles($("photos").querySelectorAll(".cell"), review);
     if (review.celebrate) confetti(review.celebrate.kind, review.celebrate.size);
     // the next photos start loading now (usually they are in already; at the end of a batch they are not)
     if (upcoming && upcoming.item) {   // the crops the next beetle shows: small ones first (#494)
@@ -1456,8 +1509,10 @@
   // Similarity: your rung, and the true one with both names, or what players and IBBI-AI make of the open one
   const PAIR_NOTE = { cautious: "True, but they are closer relatives than that.", too_close: "They are not that closely related.",
                       wrong: "Related beetles called strangers, or the other way round." };
+  const PAIR_SAY = { right: { say: "correct", tone: "good" }, cautious: { say: "partly correct", tone: "flat" },
+                     too_close: { say: "not correct", tone: "bad" }, wrong: { say: "not correct", tone: "bad" } };
   function pairCard(p) {
-    const lines = [node("p", "", "You said: ", node("strong", "", p.said))];
+    const lines = [node("p", "", "You said: ", node("strong", "", p.said), ...(PAIR_SAY[p.state] ? [" — ", ...parts([PAIR_SAY[p.state]])] : []))];
     if (p.truth) lines.push(node("p", "", "Answer: ", node("strong", "", p.truth)), p.state !== "right" && PAIR_NOTE[p.state] ? node("p", "rv-note", PAIR_NOTE[p.state]) : null);
     p.sides.forEach((s) => {
       if (s.validated) { lines.push(node("p", "", node("strong", "", s.letter + ": "), taxonName(s.name, s.rank), " · " + s.tier)); return; }
@@ -1472,28 +1527,31 @@
     return [node("div", "rv-lines", ...lines.filter(Boolean))];
   }
 
-  // Odd One Out and Select all: the marks are on the photos; the card says what they mean, and what players and
-  // IBBI-AI say about the beetles nobody has checked yet (numbered as on the photos)
+  // Odd One Out and Find Them All: a line for every beetle, numbered as on the photos (game_answer_review._explain):
+  // its name next to the grid's group, what you did with it, and whether that was correct, or agrees with IBBI-AI and
+  // the players while nobody knows yet. A line is text, names ({name, rank}) and verdicts ({say, tone}).
+  const TONE = { good: "rv-yes", bad: "rv-no", flat: "rv-flat" };
+  function parts(list) {
+    return list.map((p) => typeof p === "string" ? p : p.say ? node("strong", TONE[p.tone] || "", p.say) : taxonName(p.name, p.rank));
+  }
   function gridCard(r) {
-    const g = r.grid, odd = r.mode === "odd";
-    const lines = [];
-    if (odd && g.odd_name) lines.push(node("p", "", "The odd one: ", taxonName(g.odd_name, g.rank), " · the rest: ", taxonName(g.target, g.rank)));
-    if (!odd) lines.push(node("p", "", "Tap every ", taxonName(g.target, g.rank)));
-    lines.push(node("p", "rv-note", odd ? "Green: the odd one. Red: your pick, one of the rest. Grey: your pick, not checked yet."
-                                        : "Green: in it, tapped. Red: tapped, not in it. Dashed: in it, left out. Grey: your tap on one not checked yet."));
-    g.tiles.forEach((t, i) => {
-      if (!t || t.validated || !(t.ai || t.players)) return;
-      const chosen = odd ? i === g.pick : t.state === "vote";
-      const views = [["IBBI-AI", t.ai], ["players", t.players]].filter(([, v]) => v)
-        .map(([who, v]) => who + " " + (v.in ? (odd ? "says it's one of the rest" : "in it") : "says " + v.name) + " (" + v.sure + "%" + (v.votes ? ", " + v.votes + (v.votes === 1 ? " vote" : " votes") : "") + ")");
-      const outlook = t.pays === true ? (chosen ? "earns points once confirmed" : odd ? "picking it would earn points once confirmed" : "a tap would earn points once confirmed")
-                    : t.pays === false && chosen ? "may cost points once confirmed" : "";
-      lines.push(node("p", "rv-note", node("strong", "", (i + 1) + (chosen ? " (yours)" : "") + ": "), views.join(" · ") + (outlook ? ". " + outlook[0].toUpperCase() + outlook.slice(1) + "." : "")));
+    const g = r.grid;
+    const lines = [node("p", "", ...parts(g.lead || []))];
+    // beetles that read the same share one line ("1, 3, 4. Scolytinae. Not picked — correct"), so 16 stay short
+    const same = new Map();
+    (g.lines || []).forEach((l) => {
+      const key = JSON.stringify(l.parts);
+      if (!same.has(key)) same.set(key, { tiles: [], parts: l.parts });
+      same.get(key).tiles.push(l.tile);
     });
+    same.forEach((l) => lines.push(node("p", "rv-tile", node("b", "", l.tiles.join(", ") + "."), " ", ...parts(l.parts))));
+    const several = (g.odds || []).length > 1;   // a grid hiding several odd ones (#540)
+    lines.push(node("p", "rv-note", r.mode === "odd" ? "Rings: green, " + (several ? "the odd ones" : "the odd one") + "; red, your pick, not correct; grey, your pick, not checked yet."
+                                                     : "Rings: green, correct; red, not correct; dashed, missed; grey, your choice, not checked yet."));
     return [node("div", "rv-lines", ...lines)];
   }
 
-  // The marks on the grid tiles (live, or under Back): the colours, each tile's number and points, names to the grid's rank
+  // The marks on the grid tiles (live, or under Back): the colours, each tile's number and points
   const MARK = { select: { right: "sel-right", wrong: "sel-wrong", missed: "sel-missed", vote: "sel-vote" },
                  odd: { right: "odd-one", odd: "odd-one", wrong: "odd-wrong", pick: "odd-pick" } };
   function markTiles(cells, review) {
@@ -1514,10 +1572,58 @@
       const badge = t.points ? [pts(t.points), t.points > 0 ? "up" : "down"] : t.state === "missed" ? ["missed", "flat"]
                   : t.state === "vote" || t.state === "pick" ? ["vote", "flat"] : null;
       if (badge) cellEl.appendChild(node("span", "rv-badge " + badge[1], badge[0]));
-      if (t.name && (t.state === "odd" || t.state === "right" && review.mode === "odd" || t.state === "wrong"))
-        cellEl.appendChild(node("span", "odd-name", t.name));
     });
   }
+
+  // Every beetle's names on its photo, in every game (#541): four short lines, subfamily to species (the genus cut to
+  // its letter in the species), true names with how reliable they are, or the likeliest with who says so and how sure
+  const NAME_SOURCE = { ai: (r) => ["AI " + r.sure + "%", "IBBI-AI: " + r.sure + "%"],
+                        players: (r) => [[node("i", "fi fi-rr-users"), r.votes + " · " + r.sure + "%"],
+                                         r.votes + (r.votes === 1 ? " player: " : " players: ") + r.sure + "%"] };
+  function namesLabel(b) {
+    const box = node("div", "rv-names");
+    box.dataset.testid = "beetle-names";
+    if (!b.validated && b.ranks.every((r) => !r.name)) {
+      box.append(node("span", "", node("span", "nm none", "Not named yet")));
+      return box;
+    }
+    let genus = "", said = "";
+    b.ranks.forEach((r, i) => {
+      let name = r.name;
+      if (r.rank === "genus") genus = name;
+      if (r.rank === "species" && genus && name.startsWith(genus + " ")) name = genus[0] + ". " + name.slice(genus.length + 1);
+      const nm = name ? node("span", "nm", taxonName(name, r.rank)) : node("span", "nm none", "—");
+      nm.title = r.rank + ": " + (r.name || "not known");
+      // who says so, once for the lines in a row with the same source and confidence
+      const how = NAME_SOURCE[r.source] && NAME_SOURCE[r.source](r);
+      const repeat = how && how[1] === said;
+      said = how ? how[1] : "";
+      const src = how && !repeat ? node("span", "src", ...[].concat(how[0]))
+                : b.validated && i === 0 ? node("span", "tier", b.tier) : null;
+      nm.title += how ? " (" + how[1] + ")" : "";
+      box.append(node("span", "", nm, src));
+    });
+    return box;
+  }
+  function nameTiles(cells, review) {
+    (review.beetles || []).forEach((b, i) => {
+      const c = cells[i];
+      if (b && c && !c.classList.contains("flagged")) c.appendChild(namesLabel(b));
+    });
+  }
+  // A tap on a photo with its names hides them, so the beetle can be seen; another brings them back. Caught on the
+  // way down, so on the review it never picks, taps or opens the photo.
+  function tapForNames(box) {
+    box.addEventListener("click", (e) => {
+      const c = e.target.closest(".cell");
+      if (!c || !c.querySelector(".rv-names") || e.target.closest("button:not(.frame)")) return;
+      e.stopPropagation();
+      e.preventDefault();
+      c.classList.toggle("names-off");
+    }, true);
+  }
+  tapForNames($("photos"));
+  tapForNames($("previous-photos"));
 
   // ---------- Back: your last beetle's review ----------
   let previous = null;                                  // the last answer's review, from memory...
@@ -1539,6 +1645,7 @@
     if (!previous) return false;
     const box = $("previous-photos"), n = previous.images.length;
     box.style.setProperty("--cols", n > 2 ? Math.ceil(Math.sqrt(n)) : n);
+    box.dataset.size = String(n);
     const cells = previous.images.map((im, i) => {
       const c = node("div", "cell");
       const canvas = document.createElement("canvas");
@@ -1549,6 +1656,7 @@
     });
     box.replaceChildren(...cells);
     markTiles(cells, previous);
+    nameTiles(cells, previous);
     renderReview(previous, $("previous-review"));
     $("previous").classList.remove("hidden");
     return true;
@@ -1872,14 +1980,19 @@
     $("rank-lock-text").textContent = name + " opens after " + rankNext.needed + " more beetle" + (rankNext.needed === 1 ? "" : "s");
   }
 
-  // ---------- Odd One Out: picking a beetle ----------
-  let oddPick = null;
+  // ---------- Odd One Out: picking the odd ones (#540) ----------
+  const oddPicks = new Set();
+  let oddWant = 1;   // how many odd ones this grid hides: one moves with each tap, several toggle like Find Them All
   function pickTile(i) {
     if (MODE !== "odd" || busy || flagged.has(i)) return;
-    oddPick = i;
-    $("photos").querySelectorAll(".cell").forEach((c, j) => c.classList.toggle("picked", j === i));
+    if (oddWant === 1) { oddPicks.clear(); oddPicks.add(i); }
+    else if (oddPicks.has(i)) oddPicks.delete(i);
+    else if (oddPicks.size < oddWant) oddPicks.add(i);
+    else return;   // capped at the number to find: untap one first
+    $("photos").querySelectorAll(".cell").forEach((c, j) => c.classList.toggle("picked", oddPicks.has(j)));
     updateSubmit();
   }
+  const multiPick = () => MODE === "select" || (MODE === "odd" && oddWant > 1);   // the arrows point, Space taps
 
   // ---------- Select all: tapping beetles ----------
   const tapped = new Set();
@@ -1889,10 +2002,10 @@
     $("photos").querySelectorAll(".cell").forEach((c, j) => c.classList.toggle("tapped", tapped.has(j)));
     updateSubmit();
   }
-  let keyCursor = null;   // the beetle the arrow keys are on (Odd One Out picks it; Select all just points at it)
+  let keyCursor = null;   // the beetle the arrow keys are on (one odd one: picks it; several, or Select all: points at it)
   function moveCursor(i) {
     keyCursor = i;
-    $("photos").querySelectorAll(".cell").forEach((c, j) => c.classList.toggle("key-cursor", j === i && MODE === "select"));
+    $("photos").querySelectorAll(".cell").forEach((c, j) => c.classList.toggle("key-cursor", j === i && multiPick()));
   }
 
   // ---------- the grid games: a flagged photo drops out and the grid carries on (#489) ----------
@@ -1901,7 +2014,7 @@
     const cell = $("photos").querySelectorAll(".cell")[i];
     if (!cell || flagged.has(i)) return;
     flagged.add(i);
-    if (oddPick === i) oddPick = null;
+    oddPicks.delete(i);
     tapped.delete(i);
     cell.classList.remove("picked", "tapped");
     cell.classList.add("flagged");
@@ -1921,7 +2034,7 @@
   // ---------- shared ----------
   function currentAnswer() {
     const flags = Array.from(flagged).sort((a, b) => a - b);   // photos flagged in this grid, left out of its score
-    if (MODE === "odd") return { pick: oddPick, flagged: flags };
+    if (MODE === "odd") return { picks: Array.from(oddPicks).sort((a, b) => a - b), flagged: flags };
     if (MODE === "select") return { picks: Array.from(tapped).sort((a, b) => a - b), flagged: flags };
     return MODE === "classify" ? Object.assign({}, pick) : { pair_answer: pairChoice };
   }
@@ -1931,14 +2044,14 @@
     const onReview = phase === "review" || phase === "next";
     $("submit-text").textContent = onReview ? "Next" : "Submit";
     if (onReview) { $("submit").disabled = phase === "next"; return; }
-    const ready = MODE === "classify" ? RANKS.some((r) => pick[r]) : MODE === "odd" ? oddPick !== null
+    const ready = MODE === "classify" ? RANKS.some((r) => pick[r]) : MODE === "odd" ? oddPicks.size === oddWant
       : MODE === "select" ? tapped.size > 0 : !!pairChoice;
     $("submit").disabled = busy || !ready;
   }
 
   function resetAnswer() {
     pairChoice = null;
-    oddPick = null;
+    oddPicks.clear();
     tapped.clear();
     flagged.clear();
     keyCursor = null;
@@ -2042,14 +2155,19 @@
     if (!pressed) return;
     e.preventDefault();   // also keeps a focused list from opening, and Space from scrolling
     if ((pressed === "next" || pressed === "skip") && e.repeat) return;   // a held key is not a burst of answers
-    // Select all: Space taps the beetle the arrows are on (Enter is Submit); on the review it is Next, as everywhere
-    if (MODE === "select" && key === " " && !busy) { if (keyCursor !== null) toggleTile(keyCursor); return; }
+    // Select all, and Odd One Out with several odd ones: Space taps the beetle the arrows are on (Enter is Submit); on
+    // the review it is Next, as everywhere
+    if (multiPick() && key === " " && !busy) {
+      if (keyCursor !== null) (MODE === "odd" ? pickTile : toggleTile)(keyCursor);
+      return;
+    }
     if (pressed === "next") { if (!$("submit").disabled) $("submit").click(); }
     else if (pressed === "skip") { if (!$("skip").disabled) $("skip").click(); }
     else if (pressed === "back") { if (!$("back").disabled) showPrevious(); }
     else if (pressed === "photo" || pressed === "report") {
-      // the photo on screen; in Odd One Out the one you picked (or the first)
-      const at = MODE === "odd" && oddPick !== null ? oddPick : MODE === "select" && keyCursor !== null ? keyCursor : 0;
+      // the photo on screen; in Odd One Out with one odd one the one you picked (or the first)
+      const lone = MODE === "odd" && !multiPick() && oddPicks.size ? Array.from(oddPicks)[0] : null;
+      const at = lone !== null ? lone : multiPick() && keyCursor !== null ? keyCursor : 0;
       if (item && item.images[at]) {
         openLightbox(item.images[at].url, item.images[at].box, at);
         if (pressed === "report") $("report-menu").classList.remove("hidden");
@@ -2058,13 +2176,13 @@
     else if (pressed === "light") { if (!$("light-btn").classList.contains("hidden")) toggleLight(); }
     else if (busy) { /* locked in after Submit: no more changes */ }
     else if (MODE === "odd" || MODE === "select") {
-      // move around the grid, over flagged photos; in Odd One Out the first press picks the first beetle
+      // move around the grid, over flagged photos; with one odd one the first press picks the first beetle
       const count = item ? item.images.length : 0;
       const cols = getComputedStyle($("photos")).gridTemplateColumns.split(" ").length || 2;
       const step = { left: -1, right: 1, up: -cols, down: cols }[pressed];
-      const from = MODE === "odd" ? oddPick : keyCursor;
+      const from = multiPick() ? keyCursor : oddPicks.size ? Array.from(oddPicks)[0] : null;
       const at = from === null ? nextTile(-1, 1, count) : nextTile(from, step, count);
-      if (count && step !== undefined && at >= 0) (MODE === "odd" ? pickTile : moveCursor)(at);
+      if (count && step !== undefined && at >= 0) (multiPick() ? moveCursor : pickTile)(at);
     } else if (MODE === "pair" && (pressed === "up" || pressed === "down")) {
       const now = rungs.findIndex((r) => r.classList.contains("selected"));
       const open = rungs.filter((r) => !r.classList.contains("locked")).length;
