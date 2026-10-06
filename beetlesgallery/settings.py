@@ -155,13 +155,9 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Check if we are in production (Debug is False)
-IS_PRODUCTION = os.environ.get('DJANGO_DEBUG', 'False') == 'False'
-
 STORAGES = {
     "default": {
-        # In PROD, use standard storage. LOCALLY, use the Windows fix.
-        "BACKEND": "django.core.files.storage.FileSystemStorage" if IS_PRODUCTION else "beetlesgallery.custom_storage.WindowsDockerStorage",
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
@@ -288,7 +284,7 @@ VALID_SPECIES_VERSION_CACHE_KEY = "valid_species:version"
 VALID_SPECIES_VERSION_LABEL_CACHE_KEY = "valid_species:label"
 VALID_SPECIES_UPDATING_CACHE_KEY = "valid_species:updating"
 
-# Force explicit permissions to stabilize Docker on Windows file syncing
+# Django doesn't chmod uploaded files or the folders it creates: they get the container's default modes (umask).
 FILE_UPLOAD_PERMISSIONS = None
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = None
 

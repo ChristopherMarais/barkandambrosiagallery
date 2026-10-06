@@ -1,7 +1,6 @@
 from __future__ import annotations
 import io
 import logging
-import os
 import tempfile
 from typing import BinaryIO
 
@@ -145,16 +144,13 @@ def write_original_and_thumb96(sha256: str, fileobj: BinaryIO) -> dict:
       - Save original to content-addressed path (streaming, no RAM copy)
       - Generate 96x96 thumb
     """
-    # 1) Stream to temp file (no large RAM usage)
-    # On Windows, use delete=False so we can reopen it; we'll unlink at the end.
-    tmp = tempfile.NamedTemporaryFile(delete=False)
-    tmp_path = tmp.name
-    try:
+    # 1) Stream to temp file (no large RAM usage); it is deleted when the block ends
+    with tempfile.NamedTemporaryFile() as tmp:
+        tmp_path = tmp.name
         # Copy in chunks
         for chunk in iter(lambda: fileobj.read(1024 * 1024), b""):
             tmp.write(chunk)
         tmp.flush()
-        tmp.close()
 
         # 2) Guess extension and build original path
         orig_ext = _guess_ext_from_path_or_hdr(tmp_path)
@@ -206,9 +202,3 @@ def write_original_and_thumb96(sha256: str, fileobj: BinaryIO) -> dict:
             "image_size": (w, h),
             "thumb_size": (96, 96),
         }
-    finally:
-        # 4) Clean up temp file
-        try:
-            os.unlink(tmp_path)
-        except Exception:
-            pass

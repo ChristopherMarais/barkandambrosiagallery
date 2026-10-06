@@ -13,6 +13,9 @@ Developer setup, the daily dev workflow, git/PR conventions, and the production 
 
 ## Quick Start
 
+The site runs only in Docker. You need Git and Docker with Docker Compose (on Windows or Mac, Docker Desktop must be
+running); `docker compose` also loads `docker-compose.override.yml`, which adds a local mail inbox.
+
 ```bash
 git clone https://github.com/ChristopherMarais/barkandambrosiagallery.git
 cd barkandambrosiagallery
