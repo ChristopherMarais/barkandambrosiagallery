@@ -173,7 +173,9 @@ def restep(rnd, index):
     """
     from . import game
 
-    steps, changed = {}, False
+    from .models import GameRound
+
+    steps, changed = {}, {}
     for i in (index, index + 1):
         item = rnd.items[i] if 0 <= i < len(rnd.items) else None
         key = (item or {}).get("mode") or rnd.mode
@@ -186,8 +188,14 @@ def restep(rnd, index):
         others = {t for j, it in enumerate(rnd.items) if j != i for t in game._item_ids(it)}
         fresh = game.build_grid_items(key, rnd.player, 1, avoid=others)
         if fresh:
-            rnd.items[i] = dict(fresh[0], mode=key)
-            changed = True
+            rnd.items[i] = changed[i] = dict(fresh[0], mode=key)
     if changed:
-        rnd.save(update_fields=["items"])
-    return changed
+        # only these places, on the batch as it is now: a batch that grows (game_grow, #575) may have new items since
+        with transaction.atomic():
+            items = list(GameRound.objects.select_for_update().filter(id=rnd.id).values_list("items", flat=True)
+                         .first() or rnd.items)
+            for i, item in changed.items():
+                items[i] = item
+            GameRound.objects.filter(id=rnd.id).update(items=items)
+        rnd.items = items
+    return bool(changed)

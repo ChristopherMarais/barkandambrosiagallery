@@ -178,10 +178,15 @@ def ensure(roi, size):
 
 def round_rois(rnd):
     """Every beetle a batch shows, in the order of its items."""
+    return item_rois(rnd.items)
+
+
+def item_rois(items):
+    """Every beetle these batch items show, in their order."""
     from .models import Beetles
 
     ids = []
-    for item in rnd.items:
+    for item in items:
         for i in (item.get("tiles") or [item.get("a"), item.get("b")]):
             if i and i not in ids:
                 ids.append(i)

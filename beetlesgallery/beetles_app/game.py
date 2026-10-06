@@ -22,6 +22,7 @@ there (see game_trust.py for how expertise and trusted labels work).
 
 The views live in game_views.py; this module has no request handling.
 """
+import contextvars
 import math
 import random
 import uuid
@@ -105,6 +106,11 @@ def open_rois():
     return playable_rois().filter(bbox_is_validated=False).filter(~reported())
 
 
+# Beetles the batch being built must leave out, besides those each builder leaves out itself: the ones already in a
+# batch that grows (game_grow, #575). Read where the builders draw their beetles (_random_ids).
+avoiding = contextvars.ContextVar("game_avoiding", default=frozenset())
+
+
 def _random_ids(qs, n):
     """
     Up to n ids from qs in random order.
@@ -115,6 +121,8 @@ def _random_ids(qs, n):
     """
     if n <= 0:
         return []
+    if avoiding.get():
+        qs = qs.exclude(id__in=list(avoiding.get()))
     pivot = uuid.uuid4()
     ids = list(qs.filter(id__gte=pivot).order_by("id").values_list("id", flat=True)[:n])
     if len(ids) < n:

@@ -39,7 +39,7 @@ class PreloadCase(GameCase):
         return self.post("game_answer", dict(AFFINIS, index=item["index"]), rnd.id).json()
 
 
-@override_settings(GAME_ROUND_SIZE=4)
+@override_settings(GAME_ROUND_SIZE=4, GAME_FIRST_ITEMS=0)   # whole batches: a batch started small has its own tests
 class PrefetchTests(PreloadCase):
     def test_the_next_beetle_and_the_small_crops_of_the_one_after_it_are_prefetched(self):
         rnd, item = self.play("classify")

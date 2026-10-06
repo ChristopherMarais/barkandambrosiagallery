@@ -186,8 +186,8 @@ class TemplateTests(GameCase):
 
     def test_images_are_decoded_off_the_main_thread(self):
         self.assertIn("img.decode().catch(() => {})", js_function("loadImage"))
-        self.assertIn('img.decoding = "async"', js_function("prefetch"))
-        self.assertIn("img.decode", js_function("prefetch"))
+        self.assertIn('img.decoding = "async"', js_function("loadImage"))
+        self.assertIn("loadImage(url)", js_function("prefetch"))   # prefetched crops are decoded the same way (#575)
 
     def test_the_whole_photo_loads_only_when_its_view_opens(self):
         self.assertIn('$("lightbox-img").src = url;', js_function("showPhoto"))

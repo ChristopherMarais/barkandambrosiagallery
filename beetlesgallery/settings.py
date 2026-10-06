@@ -223,6 +223,7 @@ MODAL_API_URL = os.environ.get("MODAL_API_URL", "https://christophermarais--ibbi
 
 # Beetle ID game (beetles_app/game.py)
 GAME_ROUND_SIZE = 10                  # items per round
+GAME_FIRST_ITEMS = 2                  # a batch built while the player waits starts with these, the rest later (0: whole)
 # Re-score other players on the Celery worker when someone finishes playing (on in production)
 GAME_RECOMPUTE_IN_BACKGROUND = os.environ.get("GAME_RECOMPUTE_IN_BACKGROUND", "0" if DEBUG else "1") == "1"
 # what the game is called on the site (one place to rename it)
