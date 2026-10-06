@@ -152,16 +152,17 @@ class GamePageTests(ReviewCase):
 
     def test_names_go_on_every_photo_live_and_under_back(self):
         page = self.page()
-        self.assertIn('nameTiles($("photos").querySelectorAll(".cell"), review);', page)
+        self.assertIn("nameTiles(cells, review);", page)   # a grid tile by tile since #602 (nameTile)
         self.assertIn("nameTiles(cells, previous);", page)
         self.assertIn('box.dataset.testid = "beetle-names";', page)
         self.assertIn('name = genus[0] + ". " + name.slice(genus.length + 1);', page)   # X. affinis
 
-    def test_a_hover_or_a_long_press_clears_them_off_the_photo(self):
+    def test_a_hover_or_a_tap_clears_them_off_the_photo(self):
         page = self.page()
         self.assertIn("@media (hover: hover) { .cell:hover .rv-names { opacity: 0; } }", page)
         self.assertIn(".cell.names-off .rv-names { opacity: 0; }", page)
-        self.assertIn('c.classList.add("names-off"); }, PEEK_MS);', page)   # press and hold (#569)
+        self.assertIn('else c.classList.toggle("names-off");', page)   # a tap, until the next tap (#600)
+        self.assertNotIn("PEEK_MS", page)   # no more press and hold
         self.assertIn('reviewPhotos($("photos"));', page)
 
     def test_the_rings_are_drawn_on_top_of_the_photos(self):

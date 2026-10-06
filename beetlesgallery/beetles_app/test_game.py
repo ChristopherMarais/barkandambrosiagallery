@@ -173,7 +173,7 @@ class ClassifyApiTests(GameCase):
 
         # The payload must not say which ROI this is or whether it is scored.
         self.assertEqual(set(item), {"index", "mode", "position", "total", "images", "prefetch"})
-        self.assertEqual(set(item["images"][0]), {"url", "box", "small", "large"})   # the crops: #494
+        self.assertEqual(set(item["images"][0]), {"url", "box", "thumb", "small", "large"})   # the crops: #494; thumb #601
         self.assertNotIn(str(check.id), json.dumps(item))
         self.assertEqual(len(item["prefetch"]), 2)  # the other item's crops, small and large
 

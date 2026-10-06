@@ -686,8 +686,9 @@ def _item_images(rnd, index, extras=False):
     (game_levels.SPECIMEN_PHOTOS). Odd One Out shows its beetles in a grid, each on its own (no other photos of them).
     """
     rois = _shown_rois(rnd.items[index])
-    images = [{"url": r.display_url, "box": _box(r), "small": _crop_url(rnd, index, i, r, "small"),
-               "large": _crop_url(rnd, index, i, r, "large")} for i, r in enumerate(rois)]
+    images = [{"url": r.display_url, "box": _box(r), "thumb": game_answer_review.thumb_url(r),
+               "small": _crop_url(rnd, index, i, r, "small"), "large": _crop_url(rnd, index, i, r, "large")}
+              for i, r in enumerate(rois)]
     if rnd.items[index].get("tiles"):
         return images
     if extras:
@@ -697,7 +698,7 @@ def _item_images(rnd, index, extras=False):
             if more:
                 image["more"] = len(more)
                 if unlocked:
-                    image["photos"] = [{"url": m.display_url, "box": _box(m), "aspect": m.aspect or ""} for m in more]
+                    image["photos"] = [dict(game_answer_review.photo(m), aspect=m.aspect or "") for m in more]
     return images
 
 
@@ -907,7 +908,7 @@ def _late_level_events(player, before, events, level):
     # what the player had at the level last shown, plus any unlocks granted or kept outside the levels
     extra = set(before["perks"]) - game_levels.unlocked_perks(before["level"] - 1)
     then = dict(before, level=shown, perks=sorted(game_levels.unlocked_perks(shown - 1) | extra))
-    return [e for e in game_rewards.play_events(player, then) if e["kind"] in ("level", "proposals")]
+    return [e for e in game_rewards.play_events(player, then, badges=False) if e["kind"] in ("level", "proposals")]
 
 
 def _timed(view):
@@ -981,14 +982,16 @@ def game_start(request):
         # else a new one: its first beetles now, the rest on the worker or as the feed goes (game_grow, #575)
         rnd = (fresh and game_warm.take(request.user, mode)) or game_grow.start_round(request.user, mode)
         index = _next_index(rnd, 0) if rnd else None
-    if index is None:   # nothing in any of their games: say why (no beetles yet, all seen, their focus, ...)
-        return JsonResponse({"error": game.nothing_to_play(request.user, mode)["text"]}, status=404)
+    if index is None:   # nothing in their game: say why (no beetles yet, all seen, their focus, ...)
+        # with the toolbar's choices, so the page can offer another game (#604)
+        return JsonResponse({"error": game.nothing_to_play(request.user, mode)["text"], "prefs": _prefs(request.user)},
+                            status=404)
     focus = game.player_focus(request.user)
     return JsonResponse({
         "round": str(rnd.id), "item": _item_payload(rnd, index), "chip": _chip(request.user),
         "focus": f"{focus[0].capitalize()}: {focus[1]}" if focus else "",
         "prefs": _prefs(request.user),
-        # the game they chose has nothing for them right now, so the feed plays their other games (game.start_round)
+        # a line for the page about this batch, "" when there is nothing to say (game.start_round)
         "notice": getattr(rnd, "notice", ""),
     })
 
@@ -1300,6 +1303,7 @@ def game_answer(request, round_id):
             if first is not None:
                 return JsonResponse(dict(extra, round=str(fresh.id), item=_item_payload(fresh, first), notice=fresh.notice))
     nxt = _next_index(rnd, index + 1)
+    later = bool(body.get("item_later"))
     if nxt is None and game_grow.wanted(rnd):
         # a batch started small (#575) that neither the worker nor the look-ahead has grown yet: its next beetles now
         game_grow.grow_or_wait(rnd, game_grow.FIRST)
@@ -1312,7 +1316,44 @@ def game_answer(request, round_id):
             game.finish_round_later(rnd)
             return JsonResponse(dict(extra, round=str(fresh.id), item=_item_payload(fresh, first), notice=fresh.notice))
         return JsonResponse(dict(_finish(rnd), **extra))
+    if later:
+        # The review first (#602): the next beetle of this batch (a grid built again at a new step can take a while)
+        # comes from game_item, which the page asks for while the player reads the review
+        return JsonResponse(dict(extra, next=nxt))
     return JsonResponse(dict(extra, item=_item_payload(rnd, nxt)))
+
+
+@login_required
+@require_GET
+@_timed
+def game_item(request, round_id, index):
+    """
+    The next beetle of the player's batch, after an answer sent with "item_later" (#602): the same as the answer would
+    have carried, asked for while its review is up. Only the next one to answer; anything else is out of step.
+    """
+    rnd = get_object_or_404(GameRound, id=round_id, player=request.user)
+    if rnd.finished_at is not None or _next_index(rnd) != index:
+        return JsonResponse({"error": "Out of step with the round; please reload."}, status=409)
+    return JsonResponse({"item": _item_payload(rnd, index)})
+
+
+@login_required
+@require_GET
+def game_prepare(request, round_id):
+    """
+    While the player chooses (#602): work out what is known about the beetles on screen (?index=), what the other
+    players and IBBI-AI say about the ones nobody has validated, so the review after Submit only reads it. Kept on the
+    server (game_answer_review.prepare); the reply says nothing about them, so it gives nothing away before the answer.
+    """
+    rnd = get_object_or_404(GameRound, id=round_id, player=request.user)
+    try:
+        index = int(request.GET.get("index", ""))
+    except ValueError:
+        return JsonResponse({"error": "Which beetle?"}, status=400)
+    if rnd.finished_at is None and 0 <= index < len(rnd.items):
+        rois = _shown_rois(rnd.items[index]) or []
+        game_answer_review.prepare(request.user.pk, [r.id for r in rois if not game_scoring.is_truth(r)])
+    return JsonResponse({})
 
 
 @login_required

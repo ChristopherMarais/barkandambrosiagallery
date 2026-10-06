@@ -72,15 +72,31 @@
           <div id="roi-photo" class="relative max-w-full"{% if photo_boxes %} data-box="shown"{% endif %}>
             {# IMAGE WRAPPER (Hooks absolute positioning to the actual image bounds). A click outside every box hides the boxes, the next one shows them again. #}
             <div id="roi-frame" class="relative block max-h-[70vh] max-w-full overflow-hidden rounded-lg{% if photo_boxes %} cursor-pointer{% endif %}">
+              {% with asset=beetle.image_asset %}
+              {% if asset.thumb_small and asset.image_width and asset.image_height %}
+              {# The thumbnail first, at the photo's own size, then the full photo once it has loaded (#607, progressive_image.js) #}
+              <img
+                src="{{ asset.thumb_small.url }}"
+                data-full-src="{{ beetle.display_url }}" data-thumb
+                alt="Specimen Image"
+                style="aspect-ratio: {{ asset.image_width }} / {{ asset.image_height }}; width: min({{ asset.image_width }}px, calc(70vh * {{ asset.image_width }} / {{ asset.image_height }}));"
+                class="block max-h-[70vh] max-w-full h-auto rounded-lg object-contain"
+                decoding="async"
+                data-testid="roi-photo-img"
+              />
+              {% else %}
               <img
                 src="{{ beetle.display_url }}"
                 alt="Specimen Image"
-                {% if beetle.image_asset.image_width %}
-                  style="aspect-ratio: {{ beetle.image_asset.image_width }}/{{ beetle.image_asset.image_height }};"
+                {% if asset.image_width %}
+                  style="aspect-ratio: {{ asset.image_width }}/{{ asset.image_height }};"
                 {% endif %}
                 class="block max-h-[70vh] w-auto rounded-lg object-contain"
                 decoding="async"
+                data-testid="roi-photo-img"
               />
+              {% endif %}
+              {% endwith %}
 
               {# EVERY BEETLE'S BOX, with a haze over everything outside them. The other boxes link to their beetles' pages. #}
               {% if photo_boxes %}

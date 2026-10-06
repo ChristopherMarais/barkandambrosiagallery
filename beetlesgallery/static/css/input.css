@@ -235,7 +235,8 @@
    - Mostly white and grey. Colour is only for meaning: green = done or correct, red = a problem or a danger,
      amber = waiting or needs attention. Anything rated from worst to best (levels, streaks, badges, accuracy,
      challenge, expertise) uses the one scale below: grey for not yet, then red, orange, yellow, green (.scale-*,
-     game_scale.py). Blue is IBBI-AI and purple the players' consensus; never use them for a rating.
+     game_scale.py). Blue is IBBI-AI and purple the players' consensus; never use them for a rating
+     (one exception: badges, where the hardest are blue and the strangest purple).
    - Buttons come in three looks, the classes below. Use them rather than grey utilities of your own, and set
      only size, spacing and rounding per page (e.g. "btn-main w-full text-2xl py-6"):
        .btn-main       light grey, dark bold text (the image browser's Search): what the page is for, such as
@@ -326,6 +327,20 @@
   text-overflow: ellipsis;
 }
 
+/* Badges only (#608): the hardest are blue and the strange or secret ones purple, the one exception to "blue is
+   IBBI-AI, purple the players". The same kinds of class as the scale below (text, fill, chip, soft, card), so a badge
+   takes its tier's colour the same way (game_rewards.BADGE_TIERS). Never use them for anything else. */
+.scale-blue { color: var(--color-blue-700); }
+.scale-fill-blue { background-color: var(--color-blue-500); }
+.scale-chip-blue { background-color: var(--color-blue-600); color: #fff; }
+.scale-soft-blue { background-color: var(--color-blue-100); color: var(--color-blue-800); box-shadow: inset 0 0 0 1px var(--color-blue-300); }
+.scale-card-blue { border-color: var(--color-blue-300); background-color: var(--color-blue-50); }
+.scale-purple { color: var(--color-purple-700); }
+.scale-fill-purple { background-color: var(--color-purple-500); }
+.scale-chip-purple { background-color: var(--color-purple-600); color: #fff; }
+.scale-soft-purple { background-color: var(--color-purple-100); color: var(--color-purple-800); box-shadow: inset 0 0 0 1px var(--color-purple-300); }
+.scale-card-purple { border-color: var(--color-purple-300); background-color: var(--color-purple-50); }
+
 /* The one colour scale (game_scale.py), worst to best: none (grey, "Not yet"), fair (red), decent (orange), good
    (yellow), great (green), excellent (deep green). Levels, the day streak, badges, accuracy, challenge and the
    expertise tree all use it. Text: .scale-<step> (dark enough to read on white); bars and dots: .scale-fill-<step>;
@@ -361,3 +376,16 @@
 .scale-card-great { border-color: var(--color-green-300); background-color: var(--color-green-50); }
 .scale-card-excellent { border-color: var(--color-green-600); background-color: var(--color-green-50); }
 .scale-glow { box-shadow: 0 0 0 1px var(--color-green-800), 0 0 10px rgba(34, 197, 94, 0.85); }
+/* Levels (game_scale.LEVELS, #606): each a light, hazy colour of its own, from grey through red, orange, yellow and
+   green; only the top level is filled (solid green, white text) and it glows (.scale-glow). Text is the 800 shade
+   (900 on the deeper greens), dark enough to read on its tint. */
+.level-1 { background-color: var(--color-gray-100); color: var(--color-gray-700); box-shadow: inset 0 0 0 1px var(--color-gray-300); }
+.level-2 { background-color: var(--color-red-100); color: var(--color-red-800); box-shadow: inset 0 0 0 1px var(--color-red-300); }
+.level-3 { background-color: color-mix(in oklab, var(--color-red-100), var(--color-orange-100)); color: color-mix(in oklab, var(--color-red-800), var(--color-orange-800)); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-red-300), var(--color-orange-300)); }
+.level-4 { background-color: var(--color-orange-100); color: var(--color-orange-800); box-shadow: inset 0 0 0 1px var(--color-orange-300); }
+.level-5 { background-color: var(--color-amber-100); color: var(--color-amber-800); box-shadow: inset 0 0 0 1px var(--color-amber-300); }
+.level-6 { background-color: var(--color-yellow-100); color: var(--color-yellow-800); box-shadow: inset 0 0 0 1px var(--color-yellow-400); }
+.level-7 { background-color: var(--color-lime-100); color: var(--color-lime-800); box-shadow: inset 0 0 0 1px var(--color-lime-400); }
+.level-8 { background-color: var(--color-green-100); color: var(--color-green-800); box-shadow: inset 0 0 0 1px var(--color-green-300); }
+.level-9 { background-color: var(--color-green-200); color: var(--color-green-900); box-shadow: inset 0 0 0 1px var(--color-green-500); }
+.level-10 { background-color: var(--color-green-700); color: #fff; }

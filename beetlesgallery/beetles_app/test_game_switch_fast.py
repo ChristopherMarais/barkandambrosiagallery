@@ -148,7 +148,8 @@ class StartSmallTests(FastCase):
     def test_switching_with_nothing_built_ahead_starts_small(self):
         GamePreference.objects.create(player=self.user, granted_perks=["all"], play_mode="classify")
         old, data, _ = self.start("mixed")
-        self.post("game_prefs", {"play_mode": "pair"})
+        # to All modes: Similarity alone has no checked beetles here, and a chosen game never plays another (#604)
+        self.post("game_prefs", {"play_mode": "both"})
         with mock.patch.object(game, "refresh_round") as refresh, mock.patch(FINISH_TASK):
             rnd, data, queued = self.start("mixed", fresh=True)
         refresh.assert_not_called()                                 # the old batch is counted on the worker
@@ -292,8 +293,9 @@ class PageTests(GameCase):
 
     def test_the_new_beetle_fades_in_only_where_motion_is_welcome(self):
         self.assertIn("@media (prefers-reduced-motion: no-preference)", PAGE)
-        self.assertIn("#photos.item-in canvas", PAGE)
-        self.assertIn('classList.add("item-in")', js_function("showItem"))
+        # since #602 the tiles are laid one after another and each photo lands in its own (test_grid_lay_and_reveal)
+        self.assertIn("#photos .cell.slot { animation: tile-lay", PAGE)
+        self.assertIn('cell.className = "cell slot";', js_function("showItem"))
 
     def test_next_to_photo_is_measured(self):
         self.assertIn('performance.mark("game:next")', js_function("next"))
