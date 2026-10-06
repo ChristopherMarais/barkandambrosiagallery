@@ -597,17 +597,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    let previewUrl = null;
+    function readAsUrl(file) {
+        return new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => resolve('');
+            reader.readAsDataURL(file);
+        });
+    }
+
     async function handleFile(original, options) {
         clearMessage();
-        // A gallery photo is classified from the server's copy, so its preview stays as it is
+        // A gallery photo is classified from the server's copy, so its preview stays as it is. Any other photo is
+        // shrunk first, which also keeps its preview small enough for a phone.
         const file = options && options.asset ? original : await shrink(original);
         state.currentFile = file;
         state.isExample = !!(options && options.example);
         state.assetId = (options && options.asset) || null;
 
-        if (previewUrl) URL.revokeObjectURL(previewUrl);
-        previewUrl = URL.createObjectURL(file);   // lighter than a data: URL, which large photos can break on phones
         ui.previewImage.onerror = () => {
             state.currentFile = null;
             ui.imageWrapper.classList.add('hidden');
@@ -615,7 +622,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.submitBtn.classList.add('hidden');
             showMessage(MESSAGES.unreadable);
         };
-        ui.previewImage.src = previewUrl;
+        ui.previewImage.src = await readAsUrl(file);
 
         // Reset state
         state.detections = [];

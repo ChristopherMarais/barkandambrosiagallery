@@ -87,10 +87,11 @@ class PageTests(SimpleTestCase):
             self.assertIn(status, self.page)
         self.assertIn("WAKE_TRIES", self.page)   # asks again by itself while IBBI-AI wakes up
 
-    def test_phone_photos_are_shrunk_and_previewed_from_an_object_url(self):
+    def test_phone_photos_are_shrunk_before_they_are_shown_and_sent(self):
         self.assertIn("MAX_SIDE = 2048", self.page)
-        self.assertIn("URL.createObjectURL(file)", self.page)
-        self.assertNotIn("readAsDataURL", self.page)
+        self.assertIn("await shrink(original)", self.page)
+        self.assertIn("ui.previewImage.src = await readAsUrl(file)", self.page)   # the shrunk photo, as sent
+        self.assertIn("MESSAGES.unreadable", self.page)
 
     def test_the_page_wakes_ibbi_ai_as_it_opens(self):
         self.assertIn("{% url 'tool_classify_warm' %}", self.page)
