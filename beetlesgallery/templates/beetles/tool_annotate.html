@@ -1709,6 +1709,7 @@ function renderRoiAccordions() {
                 </div>
               </div>
             </div>
+            ${labelHistoryHtml(b)}
 
             <div>
               <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase tracking-wide">Identity & Details</label>
@@ -1813,6 +1814,72 @@ function renderRoiAccordions() {
   if (state.selectedBoxIndex >= 0) {
     const activeAcc = document.getElementById(`roi-accordion-${state.selectedBoxIndex}`);
     if (activeAcc) activeAcc.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+// Label history (#504): what each ROI has been called over time and who named it, plus validations, game decisions
+// and closed player reports, newest first. The counts load with the image; a list loads when its section is opened.
+// A re-render rebuilds the panel, so which sections are open is kept in state and an open one loads again.
+function labelHistoryHtml(b) {
+  if (!b.id || b.is_syncing || String(b.id).startsWith('temp_')) return '';
+  loadLabelHistoryCounts();
+  const n = (state.labelHistoryCounts || {})[b.id];
+  const open = state.labelHistoryOpen && state.labelHistoryOpen.has(b.id);
+  return `
+    <details class="rounded-lg border border-gray-200 bg-white p-3" data-testid="label-history" data-roi="${escHtml(b.id)}" ${open ? 'open' : ''} ontoggle="toggleLabelHistory(this)">
+      <summary class="cursor-pointer text-[11px] font-bold text-gray-500 uppercase tracking-wide"><i class="fi fi-rr-time-past"></i> Label history <span data-role="count">${n == null ? '' : `(${digitGroupsText(n)})`}</span></summary>
+      <ul data-role="list" class="mt-2 space-y-1 text-xs text-gray-700"></ul>
+    </details>`;
+}
+
+// One request per image (and again after its ROIs change), for the "(N)" of every closed section.
+async function loadLabelHistoryCounts() {
+  const imageId = state.selectedImageId;
+  const key = imageId + '|' + state.bboxes.map(b => `${b.id}:${b.last_updated_at}:${b.bbox_is_validated}`).join(',');
+  if (!imageId || state.labelHistoryKey === key) return;
+  state.labelHistoryKey = key;
+  try {
+    const res = await fetch(`/api/v1/beetles/label-history-counts/?image_asset=${encodeURIComponent(imageId)}`, { headers: { 'X-CSRFToken': csrftoken } });
+    if (!res.ok || state.labelHistoryKey !== key) return;
+    state.labelHistoryCounts = (await res.json()).counts || {};
+    document.querySelectorAll('[data-testid="label-history"]').forEach(el => setLabelHistoryCount(el, state.labelHistoryCounts[el.dataset.roi]));
+  } catch (e) { /* the history is optional */ }
+}
+
+function setLabelHistoryCount(el, n) {
+  const span = el.querySelector('[data-role="count"]');
+  if (span && n != null) span.textContent = `(${digitGroupsText(n)})`;
+}
+
+// One line per event: "5 Oct 2026 · Xyleborus affinis · Expert ID · by jdoe"
+function labelHistoryLine(e) {
+  const when = new Date(e.at);
+  const parts = [escHtml(when.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))];
+  if (e.what) parts.push(escHtml(e.what));
+  if (e.name) parts.push(`<i>${escHtml(e.name)}</i>`);
+  if (e.tier) parts.push(escHtml(e.tier));
+  if (e.by) parts.push(`by ${escHtml(e.by)}`);
+  const detail = e.detail ? ` <span class="text-gray-400">· ${escHtml(e.detail)}</span>` : '';
+  return `<li class="truncate" data-kind="${escHtml(e.kind)}" title="${escHtml(when.toLocaleString())}${e.detail ? ' · ' + escHtml(e.detail) : ''}">${parts.join(' · ')}${detail}</li>`;
+}
+
+async function toggleLabelHistory(el) {
+  const roiId = el.dataset.roi;
+  state.labelHistoryOpen = state.labelHistoryOpen || new Set();
+  if (!el.open) { state.labelHistoryOpen.delete(roiId); return; }
+  state.labelHistoryOpen.add(roiId);
+  const list = el.querySelector('[data-role="list"]');
+  list.innerHTML = '<li class="text-gray-400">Loading…</li>';
+  try {
+    const res = await fetch(`/api/v1/beetles/${encodeURIComponent(roiId)}/label-history/`, { headers: { 'X-CSRFToken': csrftoken } });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    setLabelHistoryCount(el, data.total);
+    const more = data.total > data.events.length
+      ? `<li class="text-gray-400">Showing the newest ${digitGroupsText(data.events.length)} of ${digitGroupsText(data.total)}.</li>` : '';
+    list.innerHTML = data.events.length ? data.events.map(labelHistoryLine).join('') + more : '<li class="text-gray-400">No history yet.</li>';
+  } catch (e) {
+    list.innerHTML = '<li class="text-red-700">Could not load the history.</li>';
   }
 }
 
