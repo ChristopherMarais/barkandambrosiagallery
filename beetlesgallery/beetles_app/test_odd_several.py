@@ -123,7 +123,7 @@ class FeedTests(GridCase):
         self.assertEqual((answer.picks, answer.is_check, answer.correct_species), (sorted(self.odd_places), True, True))
         points = AnswerPoints.objects.get(answer=answer)
         self.assertEqual(points.basis, AnswerPoints.Basis.TRUTH)
-        self.assertAlmostEqual(points.points, points.detail["worth"], places=2)
+        self.assertAlmostEqual(points.points, points.detail["worth"], delta=0.006)   # worth is shown to two places
         review = data["review"]
         self.assertEqual((review["verdict"], review["grid"]["found"], review["grid"]["count"]), ("right", 2, 2))
         self.assertTrue(review["headline"].startswith("Found 2 of 2 · +"))
