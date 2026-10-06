@@ -54,4 +54,4 @@ class TellsApartTests(ScoringCase):
         self.client.force_login(self.p)
         page = self.client.get(reverse("game_expertise")).content.decode()
         self.assertIn('data-testid="expertise-legend"', page)
-        self.assertIn("apart 12/12", strip_tags(page))
+        self.assertIn("Telling apart: 12 of 12 correct", strip_tags(page))
