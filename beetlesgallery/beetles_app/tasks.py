@@ -44,3 +44,18 @@ def prepare_game_crops_task(round_id):
     """Cut a new batch's crops before the feed asks for them (game_crops.prepare)."""
     from beetlesgallery.beetles_app.game_crops import prepare
     prepare(round_id)
+
+@shared_task(ignore_result=True)
+def build_game_batch_ahead_task(round_id):
+    """Build the batch that follows one in play, from its middle on (game_views.build_ahead_later)."""
+    from beetlesgallery.beetles_app.game_views import build_ahead_now
+    build_ahead_now(round_id)
+
+@shared_task(ignore_result=True)
+def warm_game_batches_task(player_id):
+    """Build a batch for each game the player might switch to (game_warm.warm_later)."""
+    from django.contrib.auth import get_user_model
+    from beetlesgallery.beetles_app.game_warm import build
+    player = get_user_model().objects.filter(pk=player_id).first()
+    if player is not None:
+        build(player)
