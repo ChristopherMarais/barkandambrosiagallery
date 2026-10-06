@@ -82,5 +82,5 @@ class TribeExpertTests(ScoringCase):
         recompute_skills(self.p)
         self.client.force_login(self.p)
         page = strip_tags(self.client.get(reverse("game_expertise")).content.decode())   # numbers are wrapped
-        self.assertIn("1/3 genera", page)
+        self.assertIn("covered 1 of 4 genera (3 needed)", page)
         self.assertIn("75% of its members", page)

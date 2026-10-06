@@ -2,7 +2,7 @@
 Two kinds of expert (#498). An Identification expert names a taxon's beetles: proven on checked beetles across most
 of its members, their names can go into the database without review, and their dot on the expertise tree glows gold.
 A Distinction expert tells the taxon's beetles apart just as reliably (the same rule on Similarity, Odd One Out and
-Select all answers), may not know their names, and unlocks nothing: a plain dark-gold square. Also: a photo must show
+Select all answers), may not know their names, and unlocks nothing: a plain dark-gold triangle. Also: a photo must show
 a good part of the beetle, so one of just a leg is reported, not named.
 """
 import html
@@ -147,7 +147,7 @@ class TreeTests(ExpertCase):
 
     def marks(self, name):
         """The Identification and Distinction markers just before a taxon's name on the tree."""
-        found = re.search(r'<span class="tree-dot mark-(\w+)"[^>]*></span><span class="tree-square mark-(\w+)"[^>]*>'
+        found = re.search(r'<span class="tree-dot mark-(\w+)"[^>]*></span><span class="tree-tri mark-(\w+)"[^>]*>'
                           r'</span>\s*<span class="tree-name[^"]*">' + re.escape(name) + "<", self.page)
         self.assertIsNotNone(found, name)
         return found.groups()
@@ -162,23 +162,20 @@ class TreeTests(ExpertCase):
         self.assertIn('<span class="tree-name font-bold text-gray-900">Scolytinae<', self.page)
         self.assertIn('<span class="tree-name text-gray-800">Xyleborini<', self.page)
 
-    def test_the_count_lines_say_names_and_apart(self):
+    def test_the_count_lines_say_naming_and_telling_apart(self):
         text = text_of(self.page)
-        self.assertIn("Xyleborini tribe names 0/10 · 1/1 genera apart 12/12 · 1/1 genera", text)
-        self.assertIn("Xyleborus genus apart 12/12 · 2/2 species", text)
+        self.assertIn("Xyleborini tribe Naming: 0 of 10 correct · covered 1 of 1 genera "
+                      "Telling apart: 12 of 12 correct · covered 1 of 1 genera", text)
+        self.assertIn("Xyleborus genus Telling apart: 12 of 12 correct · covered 2 of 2 species", text)
 
-    def test_the_legend_explains_both_markers(self):
-        text = text_of(self.page)
-        self.assertIn("Identification: naming in Identification. Gold and glowing: Identification expert.", text)
-        self.assertIn("Distinction: telling apart in Similarity, Imposter Picker and Find Them All. Gold: Distinction "
-                      "expert; it unlocks nothing.", text)
+    def test_the_legend_keys_both_markers(self):
         self.assertNotIn("Two dots", self.page)
-        self.assertIn('data-testid="legend-identification"><span class="tree-dot mark-expert', self.page)
-        self.assertIn('data-testid="legend-distinction"><span class="tree-square mark-expert', self.page)
+        self.assertIn('data-testid="legend-naming"><span class="tree-dot', self.page)
+        self.assertIn('data-testid="legend-apart"><span class="tree-tri', self.page)
         # every colour band shows both shapes
         self.assertIn('data-testid="legend-rare"><span class="tree-dot mark-rare"></span>'
-                      '<span class="tree-square mark-rare"></span>', self.page)
-        # and the intro says how to become each
+                      '<span class="tree-tri mark-rare"></span>', self.page)
+        # and the page above it says how to become each
         self.assertIn("Distinction expert", text_of(self.page[:self.page.index('data-testid="expertise-legend"')]))
 
     def test_the_profile_lists_both_kinds(self):
@@ -200,7 +197,7 @@ class TreeTests(ExpertCase):
 
 
 class MarkerStyleTests(SimpleTestCase):
-    """The tree's CSS: a dot and a square, styled by classes on themselves; only the Identification expert glows."""
+    """The tree's CSS: a dot and a triangle, styled by classes on themselves; only the Identification expert glows."""
 
     @classmethod
     def setUpClass(cls):
@@ -214,9 +211,9 @@ class MarkerStyleTests(SimpleTestCase):
     def rule(self, selector):
         return next(body for s, body in self.rules if s == selector)
 
-    def test_a_round_dot_and_a_square(self):
+    def test_a_round_dot_and_a_triangle(self):
         self.assertIn("border-radius: 9999px", self.rule(".tree-dot"))
-        self.assertIn("border-radius: 2px", self.rule(".tree-square"))
+        self.assertIn("clip-path: polygon(50% 0, 100% 100%, 0 100%)", self.rule(".tree-tri"))
 
     def test_no_marker_is_styled_by_an_ancestors_class(self):
         self.assertNotIn(".st-", self.style)
@@ -227,7 +224,7 @@ class MarkerStyleTests(SimpleTestCase):
         animated = [s for s, body in self.rules if re.search(r"animation\s*:(?!\s*none)", body)]
         self.assertEqual(animated, [".tree-dot.mark-expert"])
         self.assertIn("box-shadow", self.rule(".tree-dot.mark-expert"))
-        square = self.rule(".tree-square.mark-expert")
+        square = self.rule(".tree-tri.mark-expert")
         self.assertIn("#ca8a04", square)   # dark gold
         self.assertNotIn("box-shadow", square)
         self.assertNotIn("animation", square)

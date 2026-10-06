@@ -543,8 +543,8 @@ def direct_experts(entry, trust):
 # ---------------------------------------------------------------------------
 EXPERTISE_FLOOR = 0.5
 # Accuracy bands in the levels' rarity colours: under 50% grey, then four equal steps from 50% up to what an expert
-# needs (green, blue, purple, orange). An Identification expert glows gold like the top level; a Distinction expert is
-# plain dark gold, since it unlocks nothing (#498).
+# needs (green, blue, purple, orange). An Identification expert's dot glows gold like the top level; a Distinction
+# expert's triangle is plain dark gold, since it unlocks nothing (#498, #539).
 EXPERTISE_TIERS = ("uncommon", "rare", "epic", "legendary")
 
 
@@ -640,7 +640,7 @@ def distinction_experts(player):
 
 
 def expertise_legend():
-    """The tree's colour bands: (status, label) from lowest to highest. Each kind of expert has its own legend line."""
+    """The tree's colour bands: (status, label) from lowest to highest; the key adds the experts' gold itself."""
     bands = list(reversed(expertise_bands()))
     pct = lambda x: f"{round(x * 100)}%"   # noqa: E731
     legend = [("common", f"under {pct(EXPERTISE_FLOOR)}")]
@@ -702,4 +702,5 @@ def expertise_tree(player):
     root = node("subfamily", "")
     return {"root": root, "subfamilies": tree, "min_shown": min_shown, "per_species": per_species(),
             "children_share": children_share(), "min_accuracy": min_accuracy(), "legend": expertise_legend(),
+            "min_judged": game_setting("GAME_TRUST_MIN_JUDGED", 10),
             "experts": sum(1 for s in skills.values() if s.proven)}
