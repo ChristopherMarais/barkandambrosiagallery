@@ -43,4 +43,5 @@ class Command(BaseCommand):
             f"{verb} {result.rows} predictions: {result.created} new, {result.updated} replacing an earlier upload."
             + (f" Boxes: {result.boxes_created} new, {result.boxes_matched} already on the site."
                if result.boxes_created or result.boxes_matched else "")
+            + (f" {result.skipped} left out: a better model already named those beetles." if result.skipped else "")
         ))

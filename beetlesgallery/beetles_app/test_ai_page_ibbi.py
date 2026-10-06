@@ -52,7 +52,7 @@ class AiPageTests(PageBehaviourCase):
         page = self.page()
         help_text = page[page.index('data-testid="model-help"'):]
         help_text = help_text[:help_text.index("</p>")]
-        self.assertIn("All models find and name beetles; DINOv3 is recommended.", help_text)
+        self.assertIn("All models find and name bark beetles.", help_text)   # the picker marks the recommended one (#534)
         self.assertIn('data-testid="ibbi-link"', help_text)
         self.assertNotIn("Species classifier", page)
         self.assertNotIn("Species detector", page)
@@ -148,7 +148,8 @@ class SavedPhotoTests(ClassifyCase):
             self.assertEqual(post.call_args.kwargs["data"]["box_threshold"], expected, sent)
 
     def test_service_problems_come_back_as_a_short_message(self):
-        # one generic message whatever went wrong: the service's details stay in the server log (CodeQL, ca7a6c1)
+        # one generic message whatever went wrong: the service's details stay in the server log (CodeQL, ca7a6c1);
+        # only a timeout gets its own fixed hint (#534)
         message = "Classification service is temporarily unavailable. Please try again later."
         for kwargs in ({"status": 500}, {"body_status": "error"}):
             upload = SimpleUploadedFile("a.jpg", b"x", content_type="image/jpeg")
@@ -160,7 +161,7 @@ class SavedPhotoTests(ClassifyCase):
             upload = SimpleUploadedFile("a.jpg", b"x", content_type="image/jpeg")
             response = self.client.post(reverse("tool_classify"), {"image": upload})
         self.assertEqual(response.status_code, 502)
-        self.assertEqual(response.json()["message"], message)
+        self.assertEqual(response.json()["message"], "The AI model is waking up. Please try again in a minute.")
         self.assertFalse(ImageAsset.objects.filter(full_path_at_import__startswith="classifier/").exists())
 
 

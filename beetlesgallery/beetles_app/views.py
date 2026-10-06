@@ -1402,7 +1402,7 @@ def _keep_classifier_image(request, image_file, data):
 
 def _keep_ai_suggestions(request, asset, data):
     """
-    A gallery photo run from its specimen page: keep the AI's names on its ROIs that have no AI suggestion yet.
+    A gallery photo run from its specimen page: keep the AI's names on its ROIs that have none as good yet.
     Limited like kept images (not for accounts that may generate AI recommendations on the annotation page anyway),
     and never fails the classification. Returns (outcome, how many ROIs got one).
     """
@@ -1446,6 +1446,25 @@ CLASSIFIER_EXAMPLES = [
     {"file": "xyleborinus_saginatus.jpg", "title": "Xyleborinus saginatus", "credit": "TH Atkinson, University of Texas at Austin", "licence": "CC-BY-NC 4.0"},
     {"file": "xyleborinus_saxesenii.jpg", "title": "Xyleborinus saxesenii", "credit": "Christina Boser, Centre for Biodiversity Genomics", "licence": "CC-BY-SA"},
 ]
+# Gallery photos that are examples too (ImageAsset ids), shown while they are in the gallery. Never kept again either.
+CLASSIFIER_GALLERY_EXAMPLES = [
+    {"asset": "0050ca5a-e88d-4d09-8ff6-9644f2a10775", "title": "Several beetles"},
+]
+
+
+def _classifier_examples():
+    """The examples with the address of their photo: the built-in files, then the gallery photos that are there."""
+    from django.templatetags.static import static
+
+    examples = [{**ex, "src": static(f"img/classifier_examples/{ex['file']}")} for ex in CLASSIFIER_EXAMPLES]
+    for ex in CLASSIFIER_GALLERY_EXAMPLES:
+        asset = _gallery_photo(ex["asset"])
+        if asset is None:
+            continue
+        src = asset.display_url
+        examples.append({**ex, "src": src, "file": os.path.basename(src.split("?")[0]) or "example.jpg",
+                         "credit": asset.photographer or asset.image_institution or "", "licence": ""})
+    return examples
 
 
 # Open to everyone on purpose (no sign-in); a signed-in visitor is recorded with what the page keeps.
@@ -1479,6 +1498,10 @@ def tool_classify(request):
                 data = classify_assist.call_classifier(image_file.read(), image_file.name, image_file.content_type,
                                                        architecture, threshold)
                 data["saved"] = _keep_classifier_image(request, image_file, data)
+        except classify_assist.ClassifyTimeout:
+            # The one hint worth giving: the model is starting up. A fixed text, so nothing of the error leaks.
+            logger.warning("AI classification service timed out")
+            return JsonResponse({"status": "error", "message": classify_assist.TIMEOUT_MESSAGE}, status=502)
         except classify_assist.ClassifyError as exc:
             logger.warning("AI classification service error: %s", exc, exc_info=True)
             return JsonResponse({
@@ -1499,7 +1522,7 @@ def tool_classify(request):
     # GET request: Render the page
     gallery_photo = {"id": str(asset.id), "url": asset.display_url} if asset is not None else None
     return render(request, 'beetles/tool_classify.html', {
-        'examples': CLASSIFIER_EXAMPLES, 'ibbi_docs_url': ibbi_models.IBBI_DOCS_URL, 'gallery_photo': gallery_photo,
+        'examples': _classifier_examples(), 'ibbi_docs_url': ibbi_models.IBBI_DOCS_URL, 'gallery_photo': gallery_photo,
     })
 
 @login_required

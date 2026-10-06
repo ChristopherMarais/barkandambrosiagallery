@@ -29,6 +29,9 @@ with the same box (e.g. two models) share it. With a record_id, the box columns 
 The whole file is checked before anything is written; if any row is wrong nothing is saved and
 every problem is reported with its row number. Uploading the same model version again replaces
 its predictions. Predictions never change an ROI's label.
+
+Only the best model's suggestion for an ROI is shown (ibbi_models.MODEL_PREFERENCE), so a row from a worse model than
+one that already named that ROI, on the site or in the same file, is left out (counted as skipped).
 """
 import csv
 import io
@@ -43,6 +46,8 @@ from . import roi_defaults
 from .bbox_rules import BOX_COLUMNS, is_blank, parse_box
 from .classify_assist import SAME_BOX_IOU, iou, readable_model_name
 from .models import Beetles, ImageAsset, ModelPrediction, PredictionUpload, RoiDifficulty, Taxon
+
+from beetlesgallery.tools import ibbi_models
 
 COLUMN_ALIASES = {
     "predicted_valid_species_id": "valid_species_id",
@@ -69,6 +74,7 @@ class ImportResult:
     dry_run: bool = False
     boxes_matched: int = 0     # rows without a record_id whose box was already on the image
     boxes_created: int = 0     # new boxes (a box-less ROI filled in, or a new ROI)
+    skipped: int = 0           # rows left out: a better model already named that ROI
 
     @property
     def ok(self):
@@ -263,7 +269,7 @@ def import_predictions(source, user=None, default_model="", default_version="", 
     boxes = BoxPlanner([row for row in rows if not row.get("record_id")])
 
     now = timezone.now()
-    keys, pending, best = {}, [], {}
+    keys, pending = {}, []
     for i, row in enumerate(rows):
         row_num = i + 2
         before = result.error_count
@@ -321,17 +327,21 @@ def import_predictions(source, user=None, default_model="", default_version="", 
             roi_id=roi_id, valid_species_id=species, taxon_id=species_ids[species], confidence=confidence,
             top_k=top_k, rank_confidence=ranks, model_name=model_name, model_version=model_version, uploaded_by=user,
         )
-        pending.append((prediction, plan))
-        if target not in best or confidence > best[target][0]:
-            best[target] = (confidence, model_name)
+        pending.append((prediction, plan, target))
 
     if not result.ok:
         return result
 
+    pending, result.skipped = _without_outranked(pending)
+    best = {}
+    for prediction, _, target in pending:
+        if target not in best or prediction.confidence > best[target][0]:
+            best[target] = (prediction.confidence, prediction.model_name)
+
     result.boxes_matched = boxes.matched_rows
     result.boxes_created = len(boxes.new)
     existing = 0
-    on_known = [p for p, plan in pending if plan is None]
+    on_known = [p for p, plan, _ in pending if plan is None]
     for chunk in _chunks({p.roi_id for p in on_known}):
         stored = set(ModelPrediction.objects.filter(roi_id__in=chunk).values_list("roi_id", "model_name", "model_version"))
         existing += sum(1 for p in on_known if (p.roi_id, p.model_name, p.model_version) in stored)
@@ -343,11 +353,11 @@ def import_predictions(source, user=None, default_model="", default_version="", 
     report("Saving", 0.7)
     with transaction.atomic():
         boxes.create(user, now)
-        for prediction, plan in pending:
+        for prediction, plan, _ in pending:
             if plan is not None:
                 prediction.roi_id = plan.roi_id
         best = {(t.roi_id if isinstance(t, NewBox) else t): v for t, v in best.items()}
-        pending = [prediction for prediction, _ in pending]
+        pending = [prediction for prediction, _, _ in pending]
         for n, chunk in enumerate(_chunks(pending)):
             report("Saving", 0.7 + 0.25 * n * CHUNK / len(pending))
             ModelPrediction.objects.bulk_create(
@@ -368,6 +378,23 @@ def import_predictions(source, user=None, default_model="", default_version="", 
             )
     return result
 
+
+
+def _without_outranked(pending):
+    """
+    The rows to save, and how many were left out: a row whose model is worse than another model for the same ROI, in
+    this file or already on the site, is not kept, since only the best model's suggestion is shown.
+    """
+    top = {}
+    for prediction, _, target in pending:
+        rank = ibbi_models.preference(prediction.model_name)
+        top[target] = min(rank, top.get(target, rank))
+    on_site = [t for t in top if not isinstance(t, NewBox)]
+    for chunk in _chunks(on_site):
+        for roi_id, name in ModelPrediction.objects.filter(roi_id__in=chunk).values_list("roi_id", "model_name"):
+            top[roi_id] = min(top[roi_id], ibbi_models.preference(name))
+    kept = [row for row in pending if ibbi_models.preference(row[0].model_name) <= top[row[2]]]
+    return kept, len(pending) - len(kept)
 
 
 def run_upload(job_id):
@@ -475,19 +502,30 @@ class BoxPlanner:
                 planned.roi_id = roi.id
 
 
-MAX_MODELS_SHOWN = 3
+def best_predictions(predictions):
+    """
+    {roi_id: prediction}: the one prediction per ROI that people see and the game uses, from the best model
+    (ibbi_models.MODEL_PREFERENCE), its newest when that model ran more than once or two models rank the same.
+    """
+    best = {}
+    for p in predictions:
+        key = (ibbi_models.preference(p.model_name), -p.created_at.timestamp())
+        if p.roi_id not in best or key < best[p.roi_id][0]:
+            best[p.roi_id] = (key, p)
+    return {roi_id: p for roi_id, (_, p) in best.items()}
 
 
 def suggestions_for(rois):
     """
-    What the models said about these ROIs, for curators and viewers: {roi_id: [suggestion, ...]}, newest model
-    first. Each suggestion has the model as people read it ("IBBI-AI · DINOv3"; model_key is the stored name) and
-    version, one line per rank (subfamily, tribe, genus, species) with the model's name and confidence and whether the
-    ROI's current label agrees, and the species runners-up. Its ``top_species`` is the species the model ranks first,
+    What the best model said about these ROIs, for curators and viewers: {roi_id: [suggestion]} (best_predictions;
+    a worse model's suggestion is not shown, so people are not swamped). The suggestion has the model as people read
+    it ("IBBI-AI · DINOv3"; model_key is the stored name) and version, one line per rank (subfamily, tribe, genus,
+    species) with the model's name and confidence and whether the ROI's current label agrees, and the species
+    runners-up. Its ``top_species`` is the species the model ranks first,
     if that is in the species list: what a curator can accept on the annotation page (None otherwise).
     """
     rois = list(rois)
-    preds = list(ModelPrediction.objects.filter(roi_id__in=[r.id for r in rois]).order_by("-created_at"))
+    preds = list(best_predictions(ModelPrediction.objects.filter(roi_id__in=[r.id for r in rois])).values())
     if not preds:
         return {}
     ids = {p.valid_species_id for p in preds} | {c["valid_species_id"] for p in preds for c in p.top_k or []}
@@ -500,9 +538,6 @@ def suggestions_for(rois):
 
     out = {}
     for p in preds:
-        shown = out.setdefault(p.roi_id, [])
-        if len(shown) >= MAX_MODELS_SHOWN:
-            continue
         label = labels.get(p.roi_id)
         given = p.rank_confidence or {}
         levels = []
@@ -521,7 +556,7 @@ def suggestions_for(rois):
         levels.append({"rank": "species", "value": species_name(p.valid_species_id), "confidence": p.confidence,
                        "source": "model",
                        "agrees": (label.valid_species_id == p.valid_species_id) if label else None})
-        shown.append({
+        out[p.roi_id] = [{
             "model_name": readable_model_name(p.model_name),
             "model_key": p.model_name,
             "model_version": p.model_version,
@@ -531,5 +566,5 @@ def suggestions_for(rois):
                            for c in (p.top_k or [])[:3]],
             "top_species": {"valid_species_id": p.valid_species_id, "name": species_name(p.valid_species_id),
                             "confidence": p.confidence} if p.valid_species_id in taxa else None,
-        })
+        }]
     return out

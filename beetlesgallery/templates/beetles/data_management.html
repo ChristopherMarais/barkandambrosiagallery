@@ -806,6 +806,7 @@
         let html = '<strong>' + esc(job.filename) + (job.dry_run ? ' is valid' : ' is saved') + '.</strong> ' +
           num(r.rows) + ' rows: ' + num(r.created) + ' new, ' + num(r.updated) + ' replacing an earlier upload.';
         if (r.boxes_created || r.boxes_matched) html += ' Boxes: ' + num(r.boxes_created) + ' new, ' + num(r.boxes_matched) + ' already on the site.';
+        if (r.skipped) html += ' ' + num(r.skipped) + ' left out: a better model already named those beetles.';
         if (job.dry_run) html += ' Nothing was saved (check only).';
         resultBox.innerHTML = html;
         setBar(100, 'Done.');
