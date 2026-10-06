@@ -103,7 +103,7 @@
 
 {% block extra_js %}
 <script>
-  // Coming Back from "Check your email", browsers refill what was typed: start blank, as a fresh visit would.
+  // Coming Back here after signing up, browsers refill what was typed: start blank, as a fresh visit would.
   window.addEventListener('pageshow', function (event) {
     var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
     if (event.persisted || (nav && nav.type === 'back_forward')) {
