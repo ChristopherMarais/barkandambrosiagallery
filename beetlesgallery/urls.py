@@ -81,6 +81,7 @@ urlpatterns = [
     path("reference/download-described-names/", beetles_views.download_described_names_ref, name="download_described_names_ref"),
     path("reference/archive/<str:ref_type>/<str:filename>/", beetles_views.download_taxonomy_archive, name="download_taxonomy_archive"),
     path('tools/classify/', beetles_views.tool_classify, name='tool_classify'),
+    path('tools/classify/warm/', beetles_views.tool_classify_warm, name='tool_classify_warm'),
     path('tools/annotate/', beetles_views.tool_annotate, name='tool_annotate'),
     path('tools/predictions/', beetles_views.upload_predictions, name='upload_predictions'),
     path('tools/predictions/<uuid:job_id>/', beetles_views.upload_predictions_status, name='upload_predictions_status'),

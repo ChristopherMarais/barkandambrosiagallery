@@ -190,7 +190,7 @@ class PageTextTests(ClassifyCase):
         self.assertIn("A. Photographer", page)
 
     def test_a_timeout_says_the_model_is_waking_up_and_other_errors_stay_generic(self):
-        self.assertEqual(TIMEOUT_MESSAGE, "The AI model is waking up. Please try again in a minute.")
+        self.assertEqual(TIMEOUT_MESSAGE, "IBBI-AI is waking up. Please try again in a minute.")
         upload = SimpleUploadedFile("a.jpg", b"x", content_type="image/jpeg")
         with mock.patch("requests.post", side_effect=requests.exceptions.Timeout("secret detail")):
             response = self.client.post(reverse("tool_classify"), {"image": upload})

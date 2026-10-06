@@ -161,7 +161,7 @@ class SavedPhotoTests(ClassifyCase):
             upload = SimpleUploadedFile("a.jpg", b"x", content_type="image/jpeg")
             response = self.client.post(reverse("tool_classify"), {"image": upload})
         self.assertEqual(response.status_code, 502)
-        self.assertEqual(response.json()["message"], "The AI model is waking up. Please try again in a minute.")
+        self.assertEqual(response.json()["message"], "IBBI-AI is waking up. Please try again in a minute.")
         self.assertFalse(ImageAsset.objects.filter(full_path_at_import__startswith="classifier/").exists())
 
 

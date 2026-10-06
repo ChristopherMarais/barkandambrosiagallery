@@ -45,7 +45,12 @@ class ClassifyTimeout(ClassifyError):
     """The service took too long: usually the model is starting up, so trying again in a minute helps."""
 
 
-TIMEOUT_MESSAGE = "The AI model is waking up. Please try again in a minute."
+TIMEOUT_MESSAGE = "IBBI-AI is waking up. Please try again in a minute."
+# How long to wait for IBBI-AI's answer. Cloudflare gives up on a request after 100 s and shows the browser an HTML
+# error page instead of our JSON, so the site stops waiting first and says the model is waking up. The service keeps
+# starting meanwhile, so the next try finds it ready.
+CONNECT_SECONDS, ANSWER_SECONDS = 10, 85
+WARM_SECONDS = 240   # at most one warm-up per model in this long (the service sleeps after 5 idle minutes)
 
 
 def outranked(model_name, other_names):
@@ -87,7 +92,7 @@ def call_classifier(image_bytes, filename, content_type, architecture, box_thres
     try:
         response = requests.post(
             settings.MODAL_API_URL, data={"architecture": architecture, "box_threshold": box_threshold},
-            files={"image": (filename, image_bytes, content_type)}, timeout=300,
+            files={"image": (filename, image_bytes, content_type)}, timeout=(CONNECT_SECONDS, ANSWER_SECONDS),
         )
     except requests.exceptions.Timeout:
         raise ClassifyTimeout(TIMEOUT_MESSAGE)
@@ -95,10 +100,48 @@ def call_classifier(image_bytes, filename, content_type, architecture, box_thres
         raise ClassifyError("The AI service could not be reached. Please try again later.")
     if response.status_code != 200:
         raise ClassifyError(f"The AI service returned an error ({response.status_code}).")
-    data = response.json()
-    if data.get("status") != "success":
+    try:
+        data = response.json()
+    except ValueError:
+        raise ClassifyError("The AI service sent an answer that could not be read.")
+    if not isinstance(data, dict) or data.get("status") != "success":
         raise ClassifyError("The AI service could not process this image.")
     return data
+
+
+def _tiny_photo():
+    """A small blank JPEG: enough for the service to start and load a model, and quick to send."""
+    import io
+
+    from PIL import Image
+
+    buffer = io.BytesIO()
+    Image.new("RGB", (64, 64), "white").save(buffer, "JPEG")
+    return buffer.getvalue()
+
+
+def _warm(architecture):
+    try:
+        requests.post(settings.MODAL_API_URL, data={"architecture": architecture, "box_threshold": 0.25},
+                      files={"image": ("warm-up.jpg", _tiny_photo(), "image/jpeg")}, timeout=(CONNECT_SECONDS, 300))
+    except requests.exceptions.RequestException:
+        pass   # only a head start: the visitor's own request reports any problem
+
+
+def warm_up(architecture):
+    """
+    Wake IBBI-AI and load ``architecture`` in the background when the AI page opens, so the visitor's photo usually
+    finds it ready. At most once per model every WARM_SECONDS for the whole site. True when one was started.
+    """
+    import threading
+
+    from django.core.cache import cache
+
+    architecture = ibbi_models.resolve(architecture) or ibbi_models.DEFAULT
+    if not cache.add(f"ibbi-warm:{architecture}", 1, WARM_SECONDS):
+        return False
+    threading.Thread(target=_warm, args=(architecture,), daemon=True, name="ibbi-warm").start()
+    return True
 
 
 def known_rank_names():
