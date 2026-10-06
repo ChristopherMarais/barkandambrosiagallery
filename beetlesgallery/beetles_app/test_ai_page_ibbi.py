@@ -91,7 +91,8 @@ class AiPageTests(PageBehaviourCase):
         self.assertIn("showSaved(data);", page)
 
     def test_the_confidence_slider_starts_where_the_service_does(self):
-        self.assertIn('id="confRange" name="box_threshold" min="0.05"', self.page())
+        # the slider filters in the browser now, so it is not sent (#577, test_ai_live_slider.py)
+        self.assertIn('id="confRange" min="0.05" max="0.99" step="0.01" value="0.25"', self.page())
 
 
 class SavedPhotoTests(ClassifyCase):
@@ -142,10 +143,11 @@ class SavedPhotoTests(ClassifyCase):
         photo.refresh_from_db()
         self.assertEqual(photo.added_by, self.user)
 
-    def test_the_threshold_is_kept_between_5_and_100_percent(self):
-        for sent, expected in (("0.01", 0.05), ("0.4", 0.4), ("7", 1.0), ("abc", 0.25)):
+    def test_ibbi_ai_is_always_asked_for_every_box(self):
+        # whatever an old page sends: the slider filters the boxes in the browser
+        for sent in ("0.01", "0.4", "7", "abc"):
             _, post = self.submit(detections=(), box_threshold=sent)
-            self.assertEqual(post.call_args.kwargs["data"]["box_threshold"], expected, sent)
+            self.assertEqual(post.call_args.kwargs["data"]["box_threshold"], 0.05, sent)
 
     def test_service_problems_come_back_as_a_short_message(self):
         # one generic message whatever went wrong: the service's details stay in the server log (CodeQL, ca7a6c1);
