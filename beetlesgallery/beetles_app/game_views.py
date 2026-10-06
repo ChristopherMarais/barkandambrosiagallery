@@ -682,7 +682,9 @@ def _build_ahead(rnd, index):
     fresh = game.start_round(rnd.player, rnd.mode, fresh_only=True)
     if fresh is None:
         return None
-    coming = set().union(*(game._item_ids(item) for item in rnd.items[index:]))
+    # built from the middle of a batch (#542): the rest of it, and every other photo of those specimens, will have
+    # been named in its reviews by then (#541)
+    coming = {str(i) for i in game.same_specimen(set().union(*(game._item_ids(item) for item in rnd.items[index:])))}
     items = [item for item in fresh.items if coming.isdisjoint(game._item_ids(item))]
     if not items:
         fresh.delete()

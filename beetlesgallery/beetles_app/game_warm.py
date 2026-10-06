@@ -135,6 +135,8 @@ def take(player, mode):
     answered = set()
     for roi, roi_b, tiles in since.values_list("roi_id", "roi_b_id", "tiles"):
         answered |= {str(roi), str(roi_b)} | {str(t) for t in tiles or []}
+    # the reviews since named those beetles, and so every other photo of the same specimens (#541)
+    answered = {str(i) for i in game.same_specimen(answered - {"None"})}
     items = [it for it in entry["items"] if answered.isdisjoint(game._item_ids(it))]
     if not items:
         return None

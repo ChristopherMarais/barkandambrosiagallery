@@ -176,15 +176,9 @@ def was_shown(player, roi_ids):
     Whether this player has been shown the names of any of these ROIs, or of another photo of the same specimen
     (reveals, asked about a few beetles: a handful of EXISTS queries instead of all the player's answers).
     """
-    from django.db.models.functions import Lower, Trim
-
-    ids = {uuid.UUID(str(i)) for i in roi_ids}
+    ids = same_specimen(roi_ids)
     if not ids:
         return False
-    by_specimen = Beetles.objects.annotate(specimen=Lower(Trim("depicts_specimen"))).exclude(specimen="")
-    specimens = set(by_specimen.filter(id__in=list(ids)).values_list("specimen", flat=True)) - {None}
-    if specimens:
-        ids |= set(by_specimen.filter(specimen__in=specimens).values_list("id", flat=True))
     answers = GameAnswer.objects.filter(player=player)
     in_grid = Q()
     for i in ids:
@@ -193,6 +187,20 @@ def was_shown(player, roi_ids):
             or answers.filter(mode__in=["pair", "odd"], roi_b_id__in=ids).exists()
             or answers.filter(mode__in=["odd", "select"]).filter(Q(skipped=False) | Q(grid_rank="species"))
             .filter(in_grid).exists())
+
+
+def same_specimen(roi_ids):
+    """These ROIs (UUIDs) and every other photo of the same specimens (#386): showing one names them all."""
+    from django.db.models.functions import Lower, Trim
+
+    ids = {uuid.UUID(str(i)) for i in roi_ids}
+    if not ids:
+        return ids
+    by_specimen = Beetles.objects.annotate(specimen=Lower(Trim("depicts_specimen"))).exclude(specimen="")
+    specimens = set(by_specimen.filter(id__in=list(ids)).values_list("specimen", flat=True)) - {None}
+    if specimens:
+        ids |= set(by_specimen.filter(specimen__in=specimens).values_list("id", flat=True))
+    return ids
 
 
 def revealed_ids(player):
