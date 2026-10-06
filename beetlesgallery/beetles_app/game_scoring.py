@@ -31,7 +31,9 @@ Beetles we know the answer to (validated) are scored against the truth. These ea
                      subfamily 2, another genus of the same tribe 4, another species of the same genus 7). Picking one
                      of the rest costs k times that, and Skip earns a little instead of costing (GAME_POINTS_ODD_SKIP,
                      0.25). A pick on a beetle nobody has validated yet is scored like a name on it: by agreement that
-                     it doesn't belong.
+                     it doesn't belong. A grid hiding several odd ones (#540) is worth what one with one odd one is
+                     (the average for its odd ones), split over them: each pick is a claim that earns its share when
+                     right and costs k shares when wrong, so picking blindly loses at every step of the ladder.
   Select all         every validated member tapped earns a share of GAME_POINTS_SELECT_WEIGHT (1.25) times the Family
                      Ties points for the grid's rank (another subfamily 1 ... another species of one genus 7); every
                      validated non-member tapped costs k shares, and a member left out costs nothing. A grid never
@@ -72,6 +74,7 @@ import math
 import uuid
 from collections import defaultdict
 from collections.abc import Mapping
+from types import SimpleNamespace
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, connection, transaction
@@ -269,10 +272,68 @@ def odd_base(answer):
     round's odd one (``roi_b``) is to the rest, times the grid's size factor. The closer they are, and the more beetles
     to choose from, the harder it was to tell.
     """
-    odd = answer.roi_b.taxon if answer.roi_b_id and answer.roi_b else None
+    return _odd_points(answer, answer.roi_b.taxon if answer.roi_b_id and answer.roi_b else None)
+
+
+def _odd_points(answer, odd):
+    """What telling the odd one with taxon ``odd`` apart from the grid's group is worth (odd_base)."""
     depth = true_depth(odd, game.group_taxon(answer.grid_group)) if odd is not None and answer.grid_group else None
     weight = setting("GAME_POINTS_ODD_WEIGHT", 1.5) * grid_size_factor(answer)
     return PAIR_POINTS[depth if depth is not None and depth < 3 else -1] * weight
+
+
+def odd_worth(answer, grid):
+    """
+    What finding every odd one of a grid is worth (#540): odd_base for each of its odd ones (score_odd_grid's "right"
+    and "missed" tiles), on average, so a grid hiding three is worth what one hiding one is, its points split three
+    ways. Its first odd one (``roi_b``) when the truth shows none.
+    """
+    tiles = grid_tiles(answer)
+    odd = [tiles[i].taxon for i, state in enumerate(grid["tiles"]) if state in ("right", "missed")]
+    return sum(_odd_points(answer, t) for t in odd) / len(odd) if odd else odd_base(answer)
+
+
+def odd_grid(answer, votes_for, judges, model_refs):
+    """
+    (points, basis, detail) for an Odd One Out grid answered with picks (#540). Each pick is a claim that the beetle is
+    not one of the group, worth a share of the grid (odd_worth over the odd ones asked for): a validated odd one picked
+    earns its share, a validated beetle of the rest picked costs k shares (#530), and a pick on a beetle nobody has
+    validated is scored like a name on it, by agreement (never below zero). Blind picking loses on average at every
+    step of the ladder (game_tuning.odd_guess). Against the truth (basis TRUTH) once any pick is wrong or every pick
+    is on a validated beetle, else by agreement. ``share`` and the tiles' states are in the detail for the review.
+    """
+    grid = game.score_odd_grid(grid_tiles(answer), answer.picks, answer.grid_rank, answer.grid_group, answer.flagged)
+    worth = odd_worth(answer, grid)
+    share = worth / max(1, len(answer.picks))
+    right = game.odd_verdict(grid)
+    points = share * (grid["right"] - wrong_cost() * grid["wrong"])
+    agreement = {}
+    for i, state in enumerate(grid["tiles"]):
+        if state == "vote":
+            tile = grid_tiles(answer)[i]
+            got, said = _odd_agreement(answer, tile.id if tile else None, votes_for, judges, model_refs, share)
+            points += got
+            agreement[str(i)] = dict(said, points=round(got, 3))
+    detail = {"right": right, "rank": answer.grid_rank, "worth": round(worth, 2), "share": round(share, 3),
+              "odds": len(answer.picks), "found": grid["right"], "wrong": grid["wrong"], "tiles": grid["tiles"],
+              **_grid_detail(answer)}
+    if agreement:
+        detail["votes"] = agreement
+    return points, AnswerPoints.Basis.TRUTH if right is not None else AnswerPoints.Basis.CONSENSUS, detail
+
+
+def open_picks(answer):
+    """The beetles nobody has validated that an Odd One Out answer picked (#540): scored by what others say of them."""
+    if answer.mode != "odd" or not answer.picks or answer.skipped:
+        return set()
+    tiles = grid_tiles(answer)
+    return {tiles[i].id for i in answer.picks if 0 <= i < len(tiles) and tiles[i] is not None and not is_truth(tiles[i])}
+
+
+def odd_tile_points(detail):
+    """What one picked tile of a scored Odd One Out grid earned, from its detail (odd_grid): (an odd one, one of the rest)."""
+    share = float(detail.get("share", 0.0))
+    return share, -share * wrong_cost()
 
 
 def odd_truth(answer):
@@ -339,9 +400,19 @@ def odd_consensus(answer, votes, judges, model_refs):
     judges' names for it, and what proven experts or a trusted model say, agree that it is not one of the group at
     the round's rank. Never negative.
     """
+    return _odd_agreement(answer, answer.roi_id, lambda rid: votes, judges, model_refs, odd_base(answer))
+
+
+def _odd_agreement(answer, roi_id, votes_for, judges, model_refs, base):
+    """
+    (points, detail) for picking the unvalidated beetle ``roi_id`` out of an Odd One Out grid: up to
+    GAME_POINTS_CONSENSUS_CAP of ``base`` as the judges agree it is not one of the group, at least
+    GAME_POINTS_REFERENCE_CAP of it when proven experts or a trusted model say so. Never negative.
+    """
     rank, group = answer.grid_rank, (answer.grid_group or {}).get(answer.grid_rank, "")
-    if not rank or not group:
+    if not rank or not group or roi_id is None:
         return 0.0, {"agreement": {}}
+    votes = votes_for(roi_id)
     agree = disagree = 0.0
     for judge_id, labels in votes:
         if rank not in labels:
@@ -352,10 +423,10 @@ def odd_consensus(answer, votes, judges, model_refs):
         else:
             disagree += w
     c = (agree - disagree) / (agree + disagree + 1.0)
-    base = odd_base(answer)
     points = setting("GAME_POINTS_CONSENSUS_CAP", 0.6) * base * max(0.0, c)
     detail = {"agreement": {rank: round(c, 3)}}
-    reference = game_reference.reference_for(answer, votes, judges, model_refs).get(rank)
+    about = SimpleNamespace(roi_id=roi_id, player_id=answer.player_id)   # the beetle picked, not the answer's own roi
+    reference = game_reference.reference_for(about, votes, judges, model_refs).get(rank)
     if reference:
         match = reference[0].strip().lower() != group.strip().lower()
         if match:
@@ -578,6 +649,11 @@ def _score(answer, votes_for, judges, model_refs):
         if scored:
             return scored[0] * retry, AnswerPoints.Basis.TRUTH, _retried(scored[1], answer, retry)
         return 0.0, AnswerPoints.Basis.NONE, {}
+    if answer.mode == "odd" and answer.picks:   # picks: every answer since grids hid several odd ones (#540)
+        points, basis, detail = odd_grid(answer, votes_for, judges, model_refs)
+        if basis == AnswerPoints.Basis.TRUTH:
+            return points * retry, basis, _retried(detail, answer, retry)
+        return points, basis, detail
     if answer.mode == "odd":
         if is_truth(answer.roi):
             scored = odd_truth(answer)
@@ -682,17 +758,34 @@ def sync_late_truth(player_ids=None):
     """
     answers = (
         GameAnswer.objects.filter(is_check=False, skipped=False)
-        .filter(Q(roi__bbox_is_validated=True) | Q(validated_later=True))
+        # an Odd One Out answer with picks (#540) may have any of them validated since, not just its roi
+        .filter(Q(roi__bbox_is_validated=True) | Q(validated_later=True) | (Q(mode="odd") & ~Q(picks=[])))
         .select_related("roi__taxon", "roi_b__taxon")
     )
     if player_ids is not None:
         answers = answers.filter(player_id__in=list(player_ids))
     fields = ["validated_later", "ref_subfamily", "ref_tribe", "ref_genus", "ref_species", *[f"correct_{r}" for r in RANKS]]
+    answers = list(answers)
+    picked = [a for a in answers if a.mode == "odd" and a.picks]
+    if picked:   # their grids' beetles in one query
+        found = Beetles.objects.select_related("taxon").in_bulk({uuid.UUID(str(t)) for a in picked for t in a.tiles or []})
+        for a in picked:
+            a._grid_tiles = [found.get(uuid.UUID(str(t))) for t in a.tiles or []]
     changed = []
     for ans in answers:
         before = [getattr(ans, f) for f in fields]
         results = None
-        if is_truth(ans.roi):
+        if ans.mode == "odd" and ans.picks:
+            tiles = grid_tiles(ans)
+            right = game.odd_verdict(game.score_odd_grid(tiles, ans.picks, ans.grid_rank, ans.grid_group, ans.flagged))
+            if right is not None:
+                results = {ans.grid_rank: right}
+                # the name of a validated beetle picked, as on an answer checked straight away
+                taxon = next((tiles[i].taxon for i in ans.picks if 0 <= i < len(tiles) and is_truth(tiles[i])), None)
+                ans.ref_subfamily, ans.ref_tribe, ans.ref_genus, ans.ref_species = (
+                    (taxon.subfamily or "", taxon.tribe or "", taxon.genus or "", taxon.species or "") if taxon
+                    else ("", "", "", ""))
+        elif is_truth(ans.roi):
             if ans.mode == "classify":
                 results = game.score_classification({r: getattr(ans, r) for r in RANKS}, ans.roi.taxon)
             elif ans.mode == "odd":
@@ -700,9 +793,10 @@ def sync_late_truth(player_ids=None):
             elif ans.roi_b is not None and is_truth(ans.roi_b) and ans.pair_answer in PAIR_DEPTH:
                 results = game.score_pair(ans.pair_answer, ans.roi.taxon, ans.roi_b.taxon)
         if results is not None:
-            t = ans.roi.taxon
             ans.validated_later = True
-            ans.ref_subfamily, ans.ref_tribe, ans.ref_genus, ans.ref_species = t.subfamily or "", t.tribe or "", t.genus or "", t.species or ""
+            if not (ans.mode == "odd" and ans.picks):
+                t = ans.roi.taxon
+                ans.ref_subfamily, ans.ref_tribe, ans.ref_genus, ans.ref_species = t.subfamily or "", t.tribe or "", t.genus or "", t.species or ""
             for r in RANKS:
                 setattr(ans, f"correct_{r}", results.get(r))
         elif ans.validated_later:
@@ -757,12 +851,14 @@ def recompute(player_ids=None):
     if player_ids is not None:
         answers = answers.filter(player_id__in=list(player_ids))
     answers = list(answers)
-    grids = [a for a in answers if a.mode == "select"]
-    if grids:   # every Select all beetle in one query
+    grids = [a for a in answers if a.mode == "select" or a.mode == "odd" and a.picks]
+    if grids:   # every Select all beetle, and every Odd One Out one picked since #540, in one query
         found = Beetles.objects.select_related("taxon").in_bulk({uuid.UUID(str(t)) for a in grids for t in a.tiles or []})
         for a in grids:
             a._grid_tiles = [found.get(uuid.UUID(str(t))) for t in a.tiles or []]
     open_rois = {a.roi_id for a in answers if not is_truth(a.roi)}
+    for a in grids:
+        open_rois |= open_picks(a)
     votes = votes_on(open_rois)
     model_refs = game_reference.model_references(open_rois)
 
@@ -811,10 +907,11 @@ def score_new_answer(answer):
     Points for an answer just given, straight away, and the player's total moved with it. The full recompute
     (when they leave, and every night) tidies this up with everything that has changed since.
     """
-    roi_ids = {answer.roi_id}
-    votes = votes_on(roi_ids) if not is_truth(answer.roi) else {}
+    roi_ids = set() if is_truth(answer.roi) else {answer.roi_id}
+    roi_ids |= open_picks(answer)
+    votes = votes_on(roi_ids) if roi_ids else {}
     judges = Judges(cached_ratings()) if votes else _NoJudges()
-    model_refs = game_reference.model_references(roi_ids) if not is_truth(answer.roi) else {}
+    model_refs = game_reference.model_references(roi_ids) if roi_ids else {}
     points, basis, detail = score(answer, lambda rid: votes.get(rid, []), judges, model_refs)
     for attempt in range(2):   # a recompute may have re-created the row in between: try once more
         try:

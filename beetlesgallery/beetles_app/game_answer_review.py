@@ -141,13 +141,27 @@ def _pair(answer, item, basis, row, losses):
 
 def _odd(answer, item, basis, row, losses):
     """
-    Odd One Out: every beetle in the order shown, which one was odd, the pick and what it earned; names only to the
-    grid's rank, and for the beetles nobody has validated what the other players and IBBI-AI say about them.
+    Odd One Out: every beetle in the order shown, which ones were odd, the picks and what each earned; names only to
+    the grid's rank, and for the beetles nobody has validated what the other players and IBBI-AI say about them.
+    Each tile carries its own state ("odd" for an odd one not picked, "right", "wrong", or "pick" on a beetle nobody
+    has validated) and points, so a grid hiding several odd ones (#540) reads tile by tile like Select all; "odd" and
+    "pick" are the first of "odds" and "picks".
     """
     tiles = game_scoring.grid_tiles(answer)
     rank, target = answer.grid_rank, (answer.grid_group or {}).get(answer.grid_rank, "")
-    pick, odd = _place(tiles, answer.roi_id), _place(tiles, answer.roi_b_id)
-    right = (row.detail or {}).get("right") if basis == "truth" else None
+    detail = (row.detail or {}) if row else {}
+    picks = game.odd_picks(answer)
+    right = detail.get("right") if basis == "truth" else None
+    if answer.picks:   # every pick judged on its own beetle, each worth a share of the grid (game_scoring.odd_grid)
+        grid = game.score_odd_grid(tiles, answer.picks, rank, answer.grid_group, answer.flagged)
+        odds = [i for i, state in enumerate(grid["tiles"]) if state in ("right", "missed")]
+        gain, cost = game_scoring.odd_tile_points(detail) if row else (None, None)
+        votes = detail.get("votes") or {}
+        states = {i: {"right": ("right", gain), "wrong": ("wrong", cost)}.get(
+            grid["tiles"][i], ("pick", (votes.get(str(i)) or {}).get("points") if row else None)) for i in picks}
+    else:   # one pick, from before (#540): the answer's points are all the pick's
+        odds = [o for o in [_place(tiles, answer.roi_b_id)] if o is not None]
+        states = {i: ("pick" if right is None else "right" if right else "wrong", _earned(row)) for i in picks}
     flagged = set(answer.flagged or [])
     views = _grid_views(tiles, answer.player_id, rank, target)
     cells = []
@@ -160,19 +174,26 @@ def _odd(answer, item, basis, row, losses):
             continue
         validated = game_scoring.is_truth(tile)
         cell = {"validated": validated, "name": _name_at(tile, rank) if validated else "", "state": "", "points": None}
-        if i == odd:
+        if i in odds:
             cell["state"] = "odd"
-        if i == pick:   # the answer's points are all the pick's
-            cell.update(state="pick" if right is None else "right" if right else "wrong", points=_earned(row))
+        if i in states:
+            state, points = states[i]
+            cell.update(state=state, points=None if points is None else round(points, 2))
         if i in views:   # picking a beetle says it isn't one of the group: that pays once it is confirmed it isn't
             cell.update(views[i], pays=None if views[i]["in"] is None else not views[i]["in"])
         cells.append(cell)
-    data = {"rank": rank, "target": target, "odd": odd, "pick": pick, "tiles": cells,
-            "odd_name": _name_at(tiles[odd], rank) if odd is not None else ""}
+    found = sum(1 for i in picks if i in odds)
+    wrong = sum(1 for state, _ in states.values() if state == "wrong")
+    first_odd = next((o for o in [_place(tiles, answer.roi_b_id)] if o in odds), odds[0] if odds else None)
+    data = {"rank": rank, "target": target, "odd": first_odd, "pick": picks[0] if picks else None, "tiles": cells,
+            "odd_name": _name_at(tiles[first_odd], rank) if first_odd is not None else "",
+            "odds": odds, "picks": picks, "odd_names": [_name_at(tiles[o], rank) for o in odds],
+            "found": found, "wrong": wrong, "count": len(picks)}
     least = game_setting("GAME_FEEDBACK_AI_MIN", 0.5)
-    ai = (views.get(pick) or {}).get("ai")
+    ais = [(views.get(i) or {}).get("ai") for i in picks if states[i][0] == "pick"]
     return ({"verdict": None if right is None else "right" if right else "wrong", "grid": data},
-            {"complete": bool(right), "ai_agrees": bool(ai and ai["in"] is False and ai["sure"] >= least * 100)})
+            {"complete": bool(right),
+             "ai_agrees": bool(ais) and all(ai and ai["in"] is False and ai["sure"] >= least * 100 for ai in ais)})
 
 
 def _select(answer, item, basis, row, losses):
@@ -403,7 +424,8 @@ def _signed(value):
 
 def _headline(out):
     """
-    One line for the top of the card: "Correct to species · +45 points", "Found 2 of 3 · 1 wrong · +1.7 points",
+    One line for the top of the card: "Correct to species · +45 points", "Found 2 of 3 · 1 wrong · +1.7 points" (Select
+    all, or Odd One Out with several odd ones),
     "Not checked yet · +3 points so far", "Skipped · −0.3 points".
     """
     points = out["points"]
@@ -425,6 +447,9 @@ def _headline(out):
     elif out["mode"] == "select":
         grid = out["grid"]
         lead = f"Found {grid['right']} of {grid['members']}" + (f" · {grid['wrong']} wrong" if grid["wrong"] else "")
+    elif out["mode"] == "odd" and out["grid"]["count"] > 1:   # several odd ones (#540)
+        grid = out["grid"]
+        lead = f"Found {grid['found']} of {grid['count']}" + (f" · {grid['wrong']} wrong" if grid["wrong"] else "")
     else:
         lead = VERDICT_LEAD.get(out["verdict"], "Checked")
     return f"{lead} · {amount}"

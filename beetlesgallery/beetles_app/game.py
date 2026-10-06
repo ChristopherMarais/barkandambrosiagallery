@@ -5,8 +5,8 @@ Four modes:
   classify  one region of interest (ROI) is shown; the player names its subfamily,
             tribe, genus and species, stopping at any rank.
   pair      two ROIs are shown; the player says the deepest rank they share.
-  odd       4, 9 or 16 ROIs are shown; all but one share a name at some rank, and the
-            player picks the one that doesn't belong (Odd One Out).
+  odd       4, 9 or 16 ROIs are shown; all but one, two or three share a name at some rank,
+            and the player picks the ones that don't belong (Odd One Out).
   select    4, 9 or 16 ROIs are shown; the player taps every one of a named group (Select all).
             Both grid games grow with the player, from 4 to 16 and from subfamily to species
             (game_grid_ladder).
@@ -140,6 +140,13 @@ def revealed_ids(player):
         GameAnswer.objects.filter(player=player, mode__in=["pair", "odd"], roi_b__isnull=False)
         .values_list("roi_b_id", flat=True)
     )
+    # every validated beetle picked in an Odd One Out grid (#540): the review names each one
+    picked = set()
+    for tiles, picks in (GameAnswer.objects.filter(player=player, mode="odd").exclude(picks=[])
+                         .values_list("tiles", "picks")):
+        picked |= {uuid.UUID(str(tiles[i])) for i in picks or [] if isinstance(i, int) and 0 <= i < len(tiles or [])}
+    if picked:
+        ids |= set(Beetles.objects.filter(id__in=picked, bbox_is_validated=True).values_list("id", flat=True))
     # a grid at species names the rest's species too ("the rest: Xyleborus affinis", "tap every Xyleborus affinis")
     for tiles in (GameAnswer.objects.filter(player=player, mode__in=["odd", "select"], grid_rank="species")
                   .values_list("tiles", flat=True)):
@@ -567,17 +574,18 @@ GRID_SIZES = (4, 9, 16)
 GRID_ANCHORS = 8   # beetles tried per rank as the heart of a grid: enough for a sparse tree, few enough to stay quick
 
 
-def odd_open_count(level, tiles):
+def odd_open_count(level, tiles, odds=1):
     """
     How many of an item's beetles are not validated: a share that grows from GAME_ODD_OPEN_SHARE_START at level 1 to
-    GAME_ODD_OPEN_SHARE_END at the top, of all but the odd one, always leaving the odd one and one other validated.
+    GAME_ODD_OPEN_SHARE_END at the top, of all but the ``odds`` odd ones, always leaving the odd ones and one other
+    validated.
     """
     from .game_levels import LEVELS
 
     start = game_setting("GAME_ODD_OPEN_SHARE_START", 0.25)
     end = game_setting("GAME_ODD_OPEN_SHARE_END", 0.5)
     share = start + (end - start) * (level - 1) / (len(LEVELS) - 1)
-    return max(0, min(tiles - 2, round((tiles - 1) * share)))
+    return max(0, min(tiles - odds - 1, round((tiles - odds) * share)))
 
 
 # Select all by the grid's size: the fewest and most validated members (about a quarter to under half of the grid),
@@ -765,7 +773,7 @@ class _Grids:
         One grid at the player's step. When the beetles for it are short, in turn: the same grid without the pair of AI
         beetles, a smaller one at that rank, the nearest other ranks (the shallower first). None when there is nothing.
         """
-        size = self.plan["size"]
+        size, odds = self.plan["size"], self.plan.get("odds", 1)
         for rank in self.plan["ranks"]:
             pair = self.pair_wanted(rank)
             best = None
@@ -775,9 +783,10 @@ class _Grids:
                 grid = (self.odd if self.game == "odd" else self.select)(anchor, rank, pair)
                 if grid is None:
                     continue
-                if grid["size"] == size and grid["paired"]:
+                shape = (grid["size"], len(grid.get("odds", [])), grid["paired"])
+                if shape[:2] == (size, odds if self.game == "odd" else 0) and grid["paired"]:
                     return self.finish(grid, rank)
-                if best is None or (grid["size"], grid["paired"]) > (best["size"], best["paired"]):
+                if best is None or shape > (best["size"], len(best.get("odds", [])), best["paired"]):
                     best = grid
             if best is not None:
                 if pair and not best["paired"]:
@@ -797,8 +806,11 @@ class _Grids:
     def finish(self, grid, rank):
         tiles = [str(i) for i in grid["tiles"]]
         random.shuffle(tiles)
-        return {"a": str(grid["a"]), "b": None, "check": True, "mode": self.game, "tiles": tiles, "rank": rank,
+        item = {"a": str(grid["a"]), "b": None, "check": True, "mode": self.game, "tiles": tiles, "rank": rank,
                 "group": grid["group"], "size": len(tiles), "step": self.plan["step"]}
+        if "odds" in grid:   # Odd One Out: every odd one ("a" is the first), never sent to the browser (#540)
+            item["odds"] = [str(i) for i in grid["odds"]]
+        return item
 
     def sizes(self):
         """The grid sizes this batch may use, biggest first: the step's size and the smaller ones."""
@@ -811,10 +823,10 @@ class _Grids:
             return rank_q(parent, group[parent])
         return None
 
-    def odd_ai(self, size, pair):
+    def odd_ai(self, size, pair, odds=1):
         """AI beetles among the rest of an Odd One Out grid: more as the player rises, two when looking for a pair."""
-        n = odd_open_count(self.level, size)
-        return min(size - 2, max(n, 2) if pair else n)
+        n = odd_open_count(self.level, size, odds)
+        return min(size - odds - 1, max(n, 2) if pair else n)
 
     def select_ai(self, size, pair):
         """AI beetles in a Select all grid: more as the player rises, two when looking for a pair and there is room."""
@@ -822,33 +834,43 @@ class _Grids:
         return max(n, 2) if pair and size > 4 else n
 
     def odd(self, anchor, rank, pair):
-        """The biggest Odd One Out grid up to the step's size around ``anchor``'s group at ``rank``, or None."""
+        """
+        The biggest Odd One Out grid up to the step's size and number of odd ones around ``anchor``'s group at
+        ``rank``, or None. Short of beetles it hides fewer odd ones first, then shrinks: the ladder's order (#540).
+        """
+        from .game_grid_ladder import most_odds
+
         group = lineage(anchor.taxon, rank) if anchor.taxon else None
         if group is None:
             return None
         same = rank_q(rank, group[rank])
         photos = {anchor.image_asset_id}
-        # The odd one: validated, so there is always a known answer; a near relative (the same parent) on harder rounds
+        most, wanted = self.plan["size"], self.plan.get("odds", 1)
+        # The odd ones: validated, so there is always a known answer, each outside the group (they may share another);
+        # near relatives (the same parent) on harder rounds
         odd_pool = self.check_pool.filter(_named_at(rank)).exclude(same).exclude(id__in=self.avoid)
         near = self.near(rank, group)
-        odd = _distinct_photos(_sample(odd_pool.filter(near), 3, self.target, allow_seen=False), photos, 1) if near else []
-        odd = odd or _distinct_photos(_sample(odd_pool, 3, self.target, allow_seen=False), photos, 1)
-        if not odd:
+        odds = _distinct_photos(_sample(odd_pool.filter(near), 3 * wanted, self.target, allow_seen=False), photos,
+                                wanted) if near else []
+        if len(odds) < wanted:
+            odds += _distinct_photos(_sample(odd_pool.exclude(id__in=odds), 3 * (wanted - len(odds)), self.target,
+                                             allow_seen=False), photos, wanted - len(odds))
+        if not odds:
             return None
         # The rest share the group: AI beetles (a sure and an unsure one when there are predictions), then validated
         # ones, at least the anchor
-        most = self.plan["size"]
         opens, kinds = _ai_beetles(self.open_pool, rank, group[rank], self.odd_ai(most, pair), self.target, self.avoid,
                                    photos, pair)
         rest = _distinct_photos(
             _sample(self.check_pool.filter(same).exclude(id__in=self.avoid).exclude(id=anchor.id), (most - 2) * 3,
                     self.target, allow_seen=True), photos, most - 2)
         for size in self.sizes():
-            n = min(len(opens), self.odd_ai(size, pair))
-            need = size - 2 - n
-            if len(rest) >= need:
-                return {"a": odd[0], "tiles": [anchor.id, *rest[:need], *opens[:n], odd[0]], "group": group,
-                        "size": size, "paired": not pair or _has_pair(kinds, n)}
+            for k in range(min(wanted, most_odds(size), len(odds)), 0, -1):
+                n = min(len(opens), self.odd_ai(size, pair, k))
+                need = size - 1 - k - n
+                if len(rest) >= need:
+                    return {"a": odds[0], "odds": odds[:k], "tiles": [anchor.id, *rest[:need], *opens[:n], *odds[:k]],
+                            "group": group, "size": size, "paired": not pair or _has_pair(kinds, n)}
         return None
 
     def select(self, anchor, rank, pair):
@@ -890,12 +912,13 @@ def build_grid_items(game_key, player, n, avoid=()):
 
 def build_odd_items(player, size, fresh_only=False, avoid=()):
     """
-    Odd One Out: each item shows 4, 9 or 16 beetles of which all but one share a name at one rank, and the player picks
-    the one that doesn't belong. The size and the rank follow the player's step on the grid ladder (game_grid_ladder):
-    the grids grow first, then go a rank deeper, from subfamily to species; on harder rounds the odd one is a near
-    relative (the same tribe, say, but another genus).
+    Odd One Out: each item shows 4, 9 or 16 beetles of which all but one, two or three share a name at one rank, and
+    the player picks the ones that don't belong. The size, the number of odd ones and the rank follow the player's step
+    on the grid ladder (game_grid_ladder): at each rank the grids grow first, then hide more odd ones (#540), then go a
+    rank deeper, from subfamily to species; on harder rounds the odd ones are near relatives (the same tribe, say, but
+    another genus). The item's "a" is the first odd one and "odds" all of them.
 
-    The odd one and at least one of the rest are always validated, so every item has a known answer. Of the rest, when
+    The odd ones and at least one of the rest are always validated, so every item has a known answer. Of the rest, when
     IBBI-AI's predictions allow, one is a beetle it is sure belongs and one it is unsure about (ai_bands), more as the
     player rises (GAME_ODD_OPEN_SHARE_*): a player who picks one of those says it does not belong, which is scored later
     by agreement, like a name. Beetles whose answer the player has been shown are never used again for them.
@@ -1337,6 +1360,51 @@ def score_select(tiles, picks, rank, group, flagged=()):
     return dict(count, tiles=states, perfect=count["wrong"] == 0 and count["missed"] == 0 and count["members"] > 0)
 
 
+def score_odd_grid(tiles, picks, rank, group, flagged=()):
+    """
+    How an Odd One Out grid went, tile by tile like score_select (#540). ``tiles`` are the Beetles shown (None for one
+    that is gone), ``picks`` the places picked. A validated beetle outside the group is an odd one: "right" when
+    picked, "missed" when not; a validated beetle of the group is "wrong" when picked and "clear" when not; one nobody
+    has validated is "vote" when picked and "" otherwise; a photo the player flagged is "flagged".
+    Returns {"tiles": [state, ...], "right", "wrong", "missed", "votes", "odds"}: ``odds`` the odd ones it held.
+    """
+    theirs, picked, flagged = _norm((group or {}).get(rank)), set(picks or []), set(flagged or [])
+    states, count = [], {"right": 0, "wrong": 0, "missed": 0, "votes": 0}
+    for i, roi in enumerate(tiles):
+        if i in flagged:
+            states.append("flagged")
+            continue
+        mine = rank_values(roi.taxon).get(rank, "") if roi is not None and roi.taxon else ""
+        if roi is None or not roi.bbox_is_validated or roi.is_deleted or not mine or not theirs:
+            count["votes"] += i in picked
+            states.append("vote" if i in picked else "")
+            continue
+        odd = mine != theirs
+        state = ("right" if odd else "wrong") if i in picked else ("missed" if odd else "")
+        if state:
+            count[state] += 1
+        states.append(state or "clear")
+    return dict(count, tiles=states, odds=count["right"] + count["missed"])
+
+
+def odd_verdict(grid):
+    """
+    Whether an Odd One Out grid's picks were right (score_odd_grid): False once any is a beetle of the group, True when
+    every one is a validated odd one, None while picks on beetles nobody has validated are what is left to tell.
+    """
+    if grid["wrong"]:
+        return False
+    return True if grid["right"] and not grid["votes"] else None
+
+
+def odd_picks(answer):
+    """The places an Odd One Out answer picked: ``picks``, or the one beetle (``roi``) of an answer from before (#540)."""
+    if answer.picks:
+        return list(answer.picks)
+    tiles = [str(t) for t in answer.tiles or []]
+    return [tiles.index(str(answer.roi_id))] if not answer.skipped and str(answer.roi_id) in tiles else []
+
+
 # ---------------------------------------------------------------------------
 # Player statistics
 # ---------------------------------------------------------------------------
@@ -1474,26 +1542,34 @@ def showing(roi_ids):
 def tap_votes(roi_ids=None, voters=None):
     """
     [(roi_id, player_id, Vote)] from the grid games, for beetles nobody has validated: a Select all tap says the beetle
-    is in the grid's group, and so does being left with the rest in an Odd One Out grid whose odd one the player found
-    (#489), down to the grid's rank (e.g. tribe Xyleborini and genus Xyleborus). Each counts tap_weight() of a name.
-    A photo the player flagged says nothing.
+    is in the grid's group, and so does being left with the rest in an Odd One Out grid whose odd ones the player all
+    found (#489, #540), down to the grid's rank (e.g. tribe Xyleborini and genus Xyleborus). Each counts tap_weight()
+    of a name. A photo the player flagged says nothing.
     """
+    # every odd one found: the one pick was the odd one (answers from before #540), or every pick was right
+    all_found = Q()
+    for r in RANKS:
+        all_found |= Q(grid_rank=r, **{f"correct_{r}": True})
     answers = GameAnswer.objects.filter(mode__in=["odd", "select"], skipped=False).filter(
-        (Q(mode="select") & ~Q(picks=[])) | (Q(mode="odd") & Q(roi_id=F("roi_b_id"))))
+        (Q(mode="select") & ~Q(picks=[]))
+        | (Q(mode="odd") & Q(picks=[]) & Q(roi_id=F("roi_b_id")))
+        | (Q(mode="odd") & ~Q(picks=[]) & all_found))
     if roi_ids is not None:
         answers = answers.filter(showing(roi_ids))
     if voters is not None:
         answers = answers.filter(player_id__in=list(voters))
     rows, wanted = [], {str(r) for r in roi_ids} if roi_ids is not None else None
-    for ans in answers.only("player_id", "mode", "roi_id", "tiles", "picks", "flagged", "grid_rank", "grid_group"):
+    for ans in answers.only("player_id", "mode", "roi_id", "skipped", "tiles", "picks", "flagged", "grid_rank",
+                             "grid_group"):
         if ans.grid_rank not in RANKS or not ans.grid_group:
             continue
         labels = {r: ans.grid_group[r] for r in RANKS[: RANKS.index(ans.grid_rank) + 1] if ans.grid_group.get(r)}
         tiles, flagged = ans.tiles or [], set(ans.flagged or [])
         if ans.mode == "select":
             places = [i for i in ans.picks or [] if isinstance(i, int) and 0 <= i < len(tiles)]
-        else:   # the odd one found: every other beetle was judged one of the group
-            places = [i for i, t in enumerate(tiles) if str(t) != str(ans.roi_id)]
+        else:   # the odd ones found: every other beetle was judged one of the group
+            picked = set(odd_picks(ans))
+            places = [i for i in range(len(tiles)) if i not in picked]
         for i in places:
             if i not in flagged and (wanted is None or tiles[i] in wanted):
                 rows.append((tiles[i], ans.player_id, labels))
@@ -1508,17 +1584,22 @@ def tap_votes(roi_ids=None, voters=None):
 def grid_exclusions(answer):
     """
     [(roi_id, rank, value)] a grid answer says beetles nobody has validated are *not* in: in Odd One Out the picked
-    beetle is not of the rest's group; in Select all the beetles left untapped are not of the grid's group (a photo the
-    player flagged says nothing).
+    beetles are not of the rest's group; in Select all the beetles left untapped are not of the grid's group (a photo
+    the player flagged says nothing).
     """
     if answer.skipped or answer.mode not in ("odd", "select") or answer.grid_rank not in RANKS or not answer.grid_group:
         return []
     value = answer.grid_group.get(answer.grid_rank)
     if not value:
         return []
-    if answer.mode == "odd":
+    if answer.mode == "odd" and not answer.picks:   # one pick, from before several odd ones (#540)
         roi = answer.roi
         return [(roi.id, answer.grid_rank, value)] if roi is not None and not roi.bbox_is_validated else []
+    if answer.mode == "odd":
+        tiles = answer.tiles or []
+        picked = [tiles[i] for i in answer.picks if isinstance(i, int) and 0 <= i < len(tiles)]
+        open_ids = Beetles.objects.filter(id__in=picked, bbox_is_validated=False, is_deleted=False).values_list("id", flat=True)
+        return [(rid, answer.grid_rank, value) for rid in open_ids]
     picked = set(answer.picks or [])
     if not picked:   # tapped nothing: says too little about each beetle
         return []

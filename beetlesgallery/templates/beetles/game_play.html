@@ -1265,8 +1265,10 @@
       cell.appendChild(report);
     });
     showError(images ? "" : "An image failed to load. You can skip this one.");
+    oddWant = MODE === "odd" ? item.odds || 1 : 1;
     if (MODE === "odd") {
-      $("odd-prompt").textContent = (item.images.length - 1) + " share a " + item.rank + ". Which one doesn't?";
+      $("odd-prompt").textContent = oddWant > 1 ? "Find the " + oddWant + " that don't share the same " + item.rank
+        : (item.images.length - 1) + " share a " + item.rank + ". Which one doesn't?";
     }
     if (MODE === "select") {
       const name = document.createElement(item.rank === "genus" || item.rank === "species" ? "em" : "span");
@@ -1476,14 +1478,18 @@
   // IBBI-AI say about the beetles nobody has checked yet (numbered as on the photos)
   function gridCard(r) {
     const g = r.grid, odd = r.mode === "odd";
+    const several = odd && (g.odds || []).length > 1;   // a grid hiding several odd ones (#540)
     const lines = [];
-    if (odd && g.odd_name) lines.push(node("p", "", "The odd one: ", taxonName(g.odd_name, g.rank), " · the rest: ", taxonName(g.target, g.rank)));
+    if (several) {
+      const names = [...new Set(g.odd_names)].flatMap((n, j) => (j ? [", ", taxonName(n, g.rank)] : [taxonName(n, g.rank)]));
+      lines.push(node("p", "", "The odd ones: ", ...names, " · the rest: ", taxonName(g.target, g.rank)));
+    } else if (odd && g.odd_name) lines.push(node("p", "", "The odd one: ", taxonName(g.odd_name, g.rank), " · the rest: ", taxonName(g.target, g.rank)));
     if (!odd) lines.push(node("p", "", "Tap every ", taxonName(g.target, g.rank)));
-    lines.push(node("p", "rv-note", odd ? "Green: the odd one. Red: your pick, one of the rest. Grey: your pick, not checked yet."
+    lines.push(node("p", "rv-note", odd ? "Green: " + (several ? "the odd ones" : "the odd one") + ". Red: your pick, one of the rest. Grey: your pick, not checked yet."
                                         : "Green: in it, tapped. Red: tapped, not in it. Dashed: in it, left out. Grey: your tap on one not checked yet."));
     g.tiles.forEach((t, i) => {
       if (!t || t.validated || !(t.ai || t.players)) return;
-      const chosen = odd ? i === g.pick : t.state === "vote";
+      const chosen = odd ? (g.picks || [g.pick]).includes(i) : t.state === "vote";
       const views = [["IBBI-AI", t.ai], ["players", t.players]].filter(([, v]) => v)
         .map(([who, v]) => who + " " + (v.in ? (odd ? "says it's one of the rest" : "in it") : "says " + v.name) + " (" + v.sure + "%" + (v.votes ? ", " + v.votes + (v.votes === 1 ? " vote" : " votes") : "") + ")");
       const outlook = t.pays === true ? (chosen ? "earns points once confirmed" : odd ? "picking it would earn points once confirmed" : "a tap would earn points once confirmed")
@@ -1872,14 +1878,19 @@
     $("rank-lock-text").textContent = name + " opens after " + rankNext.needed + " more beetle" + (rankNext.needed === 1 ? "" : "s");
   }
 
-  // ---------- Odd One Out: picking a beetle ----------
-  let oddPick = null;
+  // ---------- Odd One Out: picking the odd ones (#540) ----------
+  const oddPicks = new Set();
+  let oddWant = 1;   // how many odd ones this grid hides: one moves with each tap, several toggle like Find Them All
   function pickTile(i) {
     if (MODE !== "odd" || busy || flagged.has(i)) return;
-    oddPick = i;
-    $("photos").querySelectorAll(".cell").forEach((c, j) => c.classList.toggle("picked", j === i));
+    if (oddWant === 1) { oddPicks.clear(); oddPicks.add(i); }
+    else if (oddPicks.has(i)) oddPicks.delete(i);
+    else if (oddPicks.size < oddWant) oddPicks.add(i);
+    else return;   // capped at the number to find: untap one first
+    $("photos").querySelectorAll(".cell").forEach((c, j) => c.classList.toggle("picked", oddPicks.has(j)));
     updateSubmit();
   }
+  const multiPick = () => MODE === "select" || (MODE === "odd" && oddWant > 1);   // the arrows point, Space taps
 
   // ---------- Select all: tapping beetles ----------
   const tapped = new Set();
@@ -1889,10 +1900,10 @@
     $("photos").querySelectorAll(".cell").forEach((c, j) => c.classList.toggle("tapped", tapped.has(j)));
     updateSubmit();
   }
-  let keyCursor = null;   // the beetle the arrow keys are on (Odd One Out picks it; Select all just points at it)
+  let keyCursor = null;   // the beetle the arrow keys are on (one odd one: picks it; several, or Select all: points at it)
   function moveCursor(i) {
     keyCursor = i;
-    $("photos").querySelectorAll(".cell").forEach((c, j) => c.classList.toggle("key-cursor", j === i && MODE === "select"));
+    $("photos").querySelectorAll(".cell").forEach((c, j) => c.classList.toggle("key-cursor", j === i && multiPick()));
   }
 
   // ---------- the grid games: a flagged photo drops out and the grid carries on (#489) ----------
@@ -1901,7 +1912,7 @@
     const cell = $("photos").querySelectorAll(".cell")[i];
     if (!cell || flagged.has(i)) return;
     flagged.add(i);
-    if (oddPick === i) oddPick = null;
+    oddPicks.delete(i);
     tapped.delete(i);
     cell.classList.remove("picked", "tapped");
     cell.classList.add("flagged");
@@ -1921,7 +1932,7 @@
   // ---------- shared ----------
   function currentAnswer() {
     const flags = Array.from(flagged).sort((a, b) => a - b);   // photos flagged in this grid, left out of its score
-    if (MODE === "odd") return { pick: oddPick, flagged: flags };
+    if (MODE === "odd") return { picks: Array.from(oddPicks).sort((a, b) => a - b), flagged: flags };
     if (MODE === "select") return { picks: Array.from(tapped).sort((a, b) => a - b), flagged: flags };
     return MODE === "classify" ? Object.assign({}, pick) : { pair_answer: pairChoice };
   }
@@ -1931,14 +1942,14 @@
     const onReview = phase === "review" || phase === "next";
     $("submit-text").textContent = onReview ? "Next" : "Submit";
     if (onReview) { $("submit").disabled = phase === "next"; return; }
-    const ready = MODE === "classify" ? RANKS.some((r) => pick[r]) : MODE === "odd" ? oddPick !== null
+    const ready = MODE === "classify" ? RANKS.some((r) => pick[r]) : MODE === "odd" ? oddPicks.size === oddWant
       : MODE === "select" ? tapped.size > 0 : !!pairChoice;
     $("submit").disabled = busy || !ready;
   }
 
   function resetAnswer() {
     pairChoice = null;
-    oddPick = null;
+    oddPicks.clear();
     tapped.clear();
     flagged.clear();
     keyCursor = null;
@@ -2042,14 +2053,19 @@
     if (!pressed) return;
     e.preventDefault();   // also keeps a focused list from opening, and Space from scrolling
     if ((pressed === "next" || pressed === "skip") && e.repeat) return;   // a held key is not a burst of answers
-    // Select all: Space taps the beetle the arrows are on (Enter is Submit); on the review it is Next, as everywhere
-    if (MODE === "select" && key === " " && !busy) { if (keyCursor !== null) toggleTile(keyCursor); return; }
+    // Select all, and Odd One Out with several odd ones: Space taps the beetle the arrows are on (Enter is Submit); on
+    // the review it is Next, as everywhere
+    if (multiPick() && key === " " && !busy) {
+      if (keyCursor !== null) (MODE === "odd" ? pickTile : toggleTile)(keyCursor);
+      return;
+    }
     if (pressed === "next") { if (!$("submit").disabled) $("submit").click(); }
     else if (pressed === "skip") { if (!$("skip").disabled) $("skip").click(); }
     else if (pressed === "back") { if (!$("back").disabled) showPrevious(); }
     else if (pressed === "photo" || pressed === "report") {
-      // the photo on screen; in Odd One Out the one you picked (or the first)
-      const at = MODE === "odd" && oddPick !== null ? oddPick : MODE === "select" && keyCursor !== null ? keyCursor : 0;
+      // the photo on screen; in Odd One Out with one odd one the one you picked (or the first)
+      const lone = MODE === "odd" && !multiPick() && oddPicks.size ? Array.from(oddPicks)[0] : null;
+      const at = lone !== null ? lone : multiPick() && keyCursor !== null ? keyCursor : 0;
       if (item && item.images[at]) {
         openLightbox(item.images[at].url, item.images[at].box, at);
         if (pressed === "report") $("report-menu").classList.remove("hidden");
@@ -2058,13 +2074,13 @@
     else if (pressed === "light") { if (!$("light-btn").classList.contains("hidden")) toggleLight(); }
     else if (busy) { /* locked in after Submit: no more changes */ }
     else if (MODE === "odd" || MODE === "select") {
-      // move around the grid, over flagged photos; in Odd One Out the first press picks the first beetle
+      // move around the grid, over flagged photos; with one odd one the first press picks the first beetle
       const count = item ? item.images.length : 0;
       const cols = getComputedStyle($("photos")).gridTemplateColumns.split(" ").length || 2;
       const step = { left: -1, right: 1, up: -cols, down: cols }[pressed];
-      const from = MODE === "odd" ? oddPick : keyCursor;
+      const from = multiPick() ? keyCursor : oddPicks.size ? Array.from(oddPicks)[0] : null;
       const at = from === null ? nextTile(-1, 1, count) : nextTile(from, step, count);
-      if (count && step !== undefined && at >= 0) (MODE === "odd" ? pickTile : moveCursor)(at);
+      if (count && step !== undefined && at >= 0) (multiPick() ? moveCursor : pickTile)(at);
     } else if (MODE === "pair" && (pressed === "up" || pressed === "down")) {
       const now = rungs.findIndex((r) => r.classList.contains("selected"));
       const open = rungs.filter((r) => !r.classList.contains("locked")).length;

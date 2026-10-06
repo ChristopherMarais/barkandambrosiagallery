@@ -1,6 +1,7 @@
 """
 The grid games' ladder (#489): up a step after two good grids in a row, down one after a poor grid, never below 1 or
-above 12, never past the ranks the player has open; skips and flagged grids count for neither.
+above the top (24 in Odd One Out, #540), never past the ranks the player has open; skips and flagged grids count for
+neither.
 """
 from django.test import override_settings
 
@@ -76,22 +77,22 @@ class StepTests(LadderCase):
         ladder.update(self.odd())
         self.assertEqual(self.step(), 5)   # one good since the poor one
 
-    def test_never_above_twelve(self):
-        at(self.user, "odd", 12)
+    def test_never_above_the_top(self):
+        at(self.user, "odd", 24)
         for _ in range(4):
             ladder.update(self.odd())
-        self.assertEqual(self.step(), 12)
+        self.assertEqual(self.step(), 24)
 
     @override_settings(GAME_RANK_UNLOCK_ANSWERS={"tribe": 50, "genus": 50, "species": 50})
     def test_never_past_the_open_ranks(self):
         self.level(60)   # level 2, nothing answered: only the subfamily is open
-        at(self.user, "odd", 3)
+        at(self.user, "odd", 6)
         for _ in range(4):
             ladder.update(self.odd())
-        self.assertEqual(self.step(), 3)   # 16 beetles at subfamily
+        self.assertEqual(self.step(), 6)   # 16 beetles at subfamily, three of them odd
         plan = ladder.plan(self.user, "odd", "subfamily")
-        self.assertEqual((plan["size"], plan["rank"]), (16, "subfamily"))
-        at(self.user, "odd", 12)
+        self.assertEqual((plan["size"], plan["rank"], plan["odds"]), (16, "subfamily", 3))
+        at(self.user, "odd", 24)
         self.assertEqual(ladder.plan(self.user, "odd", "tribe")["rank"], "tribe")   # capped at the open rank
 
     def test_each_answer_moves_it_once(self):
@@ -127,11 +128,11 @@ class FeedTests(GridCase):
         with override_settings(GAME_ROUND_SIZE=3):   # a short batch, leaving beetles for a fresh grid of nine
             res = self.post("game_start", {"mode": "odd"})
         rnd, item = GameRound.objects.get(id=res.json()["round"]), res.json()["item"]
-        self.assertEqual((item["size"], item["rank"], item["step"]), (16, "genus", 9))
+        self.assertEqual((item["size"], item["rank"], item["step"]), (16, "genus", 15))
         grid = rnd.items[item["index"]]
         wrong = next(i for i, t in enumerate(grid["tiles"]) if t != grid["a"]
                      and game.Beetles.objects.get(id=t).bbox_is_validated)
         data = self.post("game_answer", {"index": item["index"], "pick": wrong}, rnd.id).json()
-        self.assertEqual(ladder.current(self.user, "odd"), 8)
-        self.assertEqual((data["item"]["size"], data["item"]["rank"], data["item"]["step"]), (9, "genus", 8))
-        self.assertEqual(GameAnswer.objects.get().grid_step, 9)
+        self.assertEqual(ladder.current(self.user, "odd"), 14)
+        self.assertEqual((data["item"]["size"], data["item"]["rank"], data["item"]["step"]), (9, "genus", 14))
+        self.assertEqual(GameAnswer.objects.get().grid_step, 15)

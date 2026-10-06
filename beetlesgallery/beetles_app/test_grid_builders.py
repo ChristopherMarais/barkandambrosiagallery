@@ -89,7 +89,7 @@ class StagingBugTests(GridCase):
 
     def test_at_the_top_step_too(self):
         for key in ("odd", "select"):
-            at(self.user, key, 12)
+            at(self.user, key, len(game_grid_ladder.steps(key)))
             item = (game.build_odd_items if key == "odd" else game.build_select_items)(self.user, 1)[0]
             self.assertEqual((item["size"], item["rank"]), (16, "species"))
 
@@ -112,16 +112,17 @@ class LadderStepTests(GridCase):
         self.assertEqual(len(set(photos)), size)   # no two from one photo
 
     def test_odd_one_out_at_every_step(self):
-        for step, (size, rank) in enumerate(game_grid_ladder.LADDER, start=1):
+        for step, (size, rank, odds) in enumerate(game_grid_ladder.ODD_LADDER, start=1):
             with self.subTest(step=step):
                 at(self.user, "odd", step)
                 item = game.build_odd_items(self.user, 1)[0]
                 self.check_common(item, size, rank, step)
                 group = item["group"][rank].lower()
                 outside = [t for t in item["tiles"] if self.name_at(t, rank) != group]
-                self.assertEqual(outside, [item["a"]])   # exactly one odd one, and it is validated
-                self.assertTrue(game.Beetles.objects.get(id=item["a"]).bbox_is_validated)
-                rest = game.Beetles.objects.filter(id__in=item["tiles"], bbox_is_validated=True).exclude(id=item["a"])
+                self.assertEqual(sorted(outside), sorted(item["odds"]))   # exactly the odd ones (#540), all validated
+                self.assertEqual((len(item["odds"]), item["a"]), (odds, item["odds"][0]))
+                self.assertEqual(game.Beetles.objects.filter(id__in=item["odds"], bbox_is_validated=True).count(), odds)
+                rest = game.Beetles.objects.filter(id__in=item["tiles"], bbox_is_validated=True).exclude(id__in=item["odds"])
                 self.assertGreaterEqual(rest.count(), 1)
 
     def test_select_all_at_every_step(self):

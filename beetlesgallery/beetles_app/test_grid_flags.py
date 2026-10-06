@@ -16,7 +16,7 @@ from beetlesgallery.beetles_app.test_grid_builders import GridCase, at
 @override_settings(GAME_POINTS_PARTICIPATION=0.0)
 class FlagCase(GridCase):
     def start(self, mode, size=9, rank="species"):
-        at(self.user, mode, ladder.step_for(size, rank))
+        at(self.user, mode, ladder.step_for(size, rank, game_key=mode))
         res = self.post("game_start", {"mode": mode})
         self.assertEqual(res.status_code, 200, res.content)
         self.rnd = GameRound.objects.get(id=res.json()["round"])

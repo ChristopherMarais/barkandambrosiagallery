@@ -54,6 +54,13 @@ def _answer_label(answer):
     }
 
 
+def _odd_label(answer):
+    """What an Odd One Out answer said, for the round review: which one it picked, or how many (#540)."""
+    if len(answer.picks or []) > 1:
+        return f"{len(answer.picks)} beetles"
+    return "The odd one" if answer.roi_id == answer.roi_b_id else "Another one"
+
+
 def _results(answer):
     """Per rank: True/False when judged, None otherwise."""
     return {r: getattr(answer, f"correct_{r}") for r in game.RANKS}
@@ -158,18 +165,29 @@ def round_feedback(rnd):
                 select_verdict = grid_verdict(grid)
         elif a.mode == "odd":
             sides = []
+            picked = set(game.odd_picks(a))
+            odd_places = {i for i, t in enumerate(a.tiles or []) if str(t) == str(a.roi_b_id)}
+            if a.picks:   # several odd ones (#540): each one outside the group, by the truth
+                shown = [tiles.get(str(t)) for t in a.tiles or []]
+                states = game.score_odd_grid(shown, a.picks, a.grid_rank, a.grid_group, a.flagged)["tiles"]
+                odd_places |= {i for i, state in enumerate(states) if state in ("right", "missed")}
             for i, tile_id in enumerate(a.tiles or []):
                 if str(tile_id) in tiles:
                     side = _side(tiles[str(tile_id)], player_reports, others)
-                    side["picked"] = not a.skipped and str(tile_id) == str(a.roi_id)
-                    side["odd"] = str(tile_id) == str(a.roi_b_id)
+                    side["picked"] = not a.skipped and i in picked
+                    side["odd"] = i in odd_places
                     side["flagged"] = i in set(a.flagged or [])
                     if not (side["picked"] or side["odd"]):
                         side["label"] = _rank_label(tiles[str(tile_id)].taxon, a.grid_rank)
                     sides.append(side)
-            odd_names = game.lineage(a.roi_b.taxon, a.grid_rank) if a.roi_b and a.roi_b.taxon and a.grid_rank else None
+            names = []
+            for i in sorted(odd_places):
+                tile = tiles.get(str(a.tiles[i]))
+                name = (game.lineage(tile.taxon, a.grid_rank) or {}).get(a.grid_rank, "") if tile and tile.taxon and a.grid_rank in game.RANKS else ""
+                if name and name not in names:
+                    names.append(name)
             truth_odd = {"rank": a.grid_rank, "group": (a.grid_group or {}).get(a.grid_rank, ""),
-                         "odd_name": (odd_names or {}).get(a.grid_rank, "")}
+                         "odd_name": ", ".join(names), "count": len(odd_places)}
         else:
             sides = [_side(a.roi, player_reports, others)]
         if a.mode not in ("odd", "select") and a.roi_b_id:
@@ -194,7 +212,7 @@ def round_feedback(rnd):
             "verdict": verdict,
             "results": _results(a),
             "answer": _answer_label(a) if a.mode == "classify" else (
-                ("The odd one" if a.roi_id == a.roi_b_id else "Another one") if a.mode == "odd"
+                _odd_label(a) if a.mode == "odd"
                 else f"{len(a.picks or [])} tapped" if a.mode == "select"
                 else a.get_pair_answer_display()),
             "truth_pair": truth_pair,
@@ -411,6 +429,12 @@ def rescore_roi(roi):
             scores = {r: None for r in game.RANKS}
             if not ans.skipped and grid["members"]:
                 scores[ans.grid_rank] = grid["perfect"]
+        elif ans.mode == "odd" and ans.picks:   # several picks (#540): judged on every beetle picked
+            from .game_scoring import grid_tiles
+            grid = game.score_odd_grid(grid_tiles(ans), ans.picks, ans.grid_rank, ans.grid_group, ans.flagged)
+            scores = {r: None for r in game.RANKS}
+            if not ans.skipped and ans.grid_rank in scores:
+                scores[ans.grid_rank] = game.odd_verdict(grid)
         elif ans.mode == "odd":
             # judged on the beetle picked; the odd one the round was built around only sets what a pick is worth
             picked = roi.taxon if ans.roi_id == roi.id else (ans.roi.taxon if ans.roi else None)
