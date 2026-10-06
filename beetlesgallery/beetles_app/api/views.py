@@ -135,7 +135,8 @@ class ImageAssetViewSet(viewsets.ModelViewSet):
                                      request.data.get('architecture') or ibbi_models.DEFAULT, threshold)
             counts = add_rois(asset, result, request.user)
         except ClassifyError as exc:
-            return Response({'error': str(exc)}, status=502)
+            logger.exception("Classification failed for asset %s", asset.pk)
+            return Response({'error': 'Classification failed. Please try again later.'}, status=502)
         return Response({**counts, 'model': result.get('model_used', '')})
 
     @action(detail=True, methods=['post'], url_path='heartbeat')
