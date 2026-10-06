@@ -2,7 +2,6 @@
 The AI service on Modal deploys by itself: with a release when its code changed (before the website), and for
 staging as its own app on pushes to main, so staging never calls the live service with code it does not know.
 """
-import re
 
 from django.conf import settings
 from django.test import SimpleTestCase

@@ -16,7 +16,7 @@
     </a>
     <div class="flex-1">
       <h1 class="page-title">Your answers</h1>
-      <p class="text-sm text-gray-500">{% if round.mode == 'classify' %}Identification{% elif round.mode == 'pair' %}Similarity{% elif round.mode == 'odd' %}Odd One Out{% elif round.mode == 'select' %}Select all{% else %}{{ game_name }}{% endif %} · {{ round.finished_at|date:"M j, Y H:i" }}</p>
+      <p class="text-sm text-gray-500">{% if round.mode == 'classify' %}Identification{% elif round.mode == 'pair' %}Similarity{% elif round.mode == 'odd' %}Imposter Picker{% elif round.mode == 'select' %}Find Them All{% else %}{{ game_name }}{% endif %} · {{ round.finished_at|date:"M j, Y H:i" }}</p>
     </div>
   </div>
 
@@ -121,7 +121,11 @@
     const l = item.losses;
     if (!l) return "";
     const lost = l.lost > 0 ? ` <span class="text-red-700">(${fmt(-l.lost)} missed)</span>` : "";
-    return `<span class="text-xs font-semibold tabular-nums text-gray-700" data-testid="item-points">${fmt(l.earned)} pts${lost}</span>`;
+    // how hard the beetle was (#492): a gain × m, a loss × (2 − m)
+    const m = l.multiplier ? (l.earned < 0 ? 2 - l.multiplier : l.multiplier) : 1;
+    const hard = Math.abs(m - 1) >= 0.01
+      ? ` <span class="font-normal text-gray-500" data-testid="item-multiplier" title="Harder beetles are worth more, and a miss on one costs less">×${m.toFixed(2)} ${l.multiplier > 1 ? "harder" : "easier"} beetle</span>` : "";
+    return `<span class="text-xs font-semibold tabular-nums text-gray-700" data-testid="item-points">${fmt(l.earned)} pts${lost}${hard}</span>`;
   }
   const STATE_NOTE = { wrong: "wrong", after: "wrong above", stopped: "left blank" };
   function rankPoints(item, r) {
@@ -295,7 +299,7 @@
           <span class="text-xs font-semibold text-gray-400">#${n + 1}</span>
           <span class="flex items-center gap-2">${pointsChip(item)}${chip(item)}</span>
         </div>
-        <div class="${item.mode === "select" ? "grid grid-cols-3 gap-2 items-center" : item.mode === "odd" ? "grid grid-cols-2 sm:grid-cols-3 gap-2 items-center" : item.sides.length > 1 ? "grid grid-cols-2 gap-2 items-center" : ""}" data-images></div>
+        <div class="${item.mode === "select" || item.mode === "odd" ? (item.sides.length > 9 ? "grid grid-cols-4 gap-2 items-center" : item.sides.length > 4 ? "grid grid-cols-3 gap-2 items-center" : "grid grid-cols-2 gap-2 items-center") : item.sides.length > 1 ? "grid grid-cols-2 gap-2 items-center" : ""}" data-images></div>
         ${item.mode === "classify" ? classifyBody(item) : item.mode === "odd" ? oddBody(item) : item.mode === "select" ? selectBody(item) : pairBody(item)}`;
       const holder = li.querySelector("[data-images]");
       item.sides.forEach((side, i) => {
@@ -304,7 +308,7 @@
         btn.className = "relative block mx-auto rounded-lg" + (item.mode === "select"
           ? ({ right: " ring-4 ring-green-600", wrong: " ring-4 ring-red-600", missed: " outline-dashed outline-4 outline-green-600 -outline-offset-4",
                vote: " ring-4 ring-gray-700" }[side.state] || "")
-          : side.odd ? " ring-4 ring-green-600" : side.picked ? " ring-4 ring-gray-700" : "");
+          : side.odd ? " ring-4 ring-green-600" : side.picked ? " ring-4 ring-gray-700" : "") + (side.flagged ? " opacity-40" : "");
         btn.setAttribute("aria-label", "See the whole image");
         const canvas = document.createElement("canvas");
         canvas.className = "game-crop";

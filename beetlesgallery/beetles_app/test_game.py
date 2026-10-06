@@ -173,9 +173,9 @@ class ClassifyApiTests(GameCase):
 
         # The payload must not say which ROI this is or whether it is scored.
         self.assertEqual(set(item), {"index", "mode", "position", "total", "images", "prefetch"})
-        self.assertEqual(set(item["images"][0]), {"url", "box"})
+        self.assertEqual(set(item["images"][0]), {"url", "box", "small", "large"})   # the crops: #494
         self.assertNotIn(str(check.id), json.dumps(item))
-        self.assertEqual(len(item["prefetch"]), 1)  # the other item's photo
+        self.assertEqual(len(item["prefetch"]), 2)  # the other item's crops, small and large
 
         answer = {"subfamily": "Scolytinae", "tribe": "Xyleborini", "genus": "Xyleborus", "species": "affinis"}
         res = self.post("game_answer", dict(answer, index=item["index"]), rnd.id)

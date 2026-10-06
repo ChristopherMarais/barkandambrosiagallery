@@ -216,16 +216,16 @@
                 <label for="game-filter" class="block text-xs font-bold text-gray-500 uppercase">Game label proposals</label>
                 <select id="game-filter" class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs focus:ring-1 focus:ring-gray-500 outline-none">
                   <option value="">All images</option>
-                  <option value="any">With game proposals waiting</option>
-                  <option value="expert">Expert-backed proposals only</option>
+                  <option value="any">Proposals waiting</option>
+                  <option value="expert">Expert-backed proposals</option>
                   <option value="reported">Reported by players</option>
-                  <option value="disputed">Validated labels players dispute</option>
-                  <option value="applied">Labels applied from the game</option>
+                  <option value="disputed">Disputed validated labels</option>
+                  <option value="applied">Applied from the game</option>
                 </select>
-                <p class="text-[10px] text-gray-400">Proposals a curator already accepted or dismissed drop out until new answers arrive.</p>
+                <p class="text-[10px] text-gray-400">Accepted or rejected proposals come back when new answers arrive; disputed labels come from the automatic label check.</p>
               </div>
               {% if filter_groups %}
-                <button type="button" onclick="closeAndApplyFilters()" class="w-full mb-2 bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 rounded-lg transition-colors text-sm shadow-sm flex items-center justify-center gap-2">
+                <button type="button" onclick="closeAndApplyFilters()" class="btn-primary flex w-full mb-2">
                   <i class="text-xs"></i> Apply Filters
                 </button>
                 {% for category_name, filters_list in filter_groups %}
@@ -266,7 +266,7 @@
                       {% endfor %}
                   </div>
                 {% endfor %}
-                <button type="button" onclick="closeAndApplyFilters()" class="w-full mt-4 bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 rounded-lg transition-colors text-sm shadow-sm flex items-center justify-center gap-2">
+                <button type="button" onclick="closeAndApplyFilters()" class="btn-primary flex w-full mt-4">
                   <i class="text-xs"></i> Apply Filters
                 </button>
               {% else %}
@@ -368,7 +368,7 @@
 
         <div class="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
           <div class="text-xs font-bold text-gray-500 uppercase mb-1">Generate AI recommendation</div>
-          <p class="text-[11px] text-gray-500 mb-2">Finds the beetles in this image, adds a box for each new one and suggests its name. Nothing is validated; boxes over an existing ROI are skipped.</p>
+          <p class="text-[11px] text-gray-500 mb-2">Finds the beetles in this image, adds a box for each new one and suggests its name. Nothing is validated; an existing ROI keeps its box and gets the AI's suggestion.</p>
           <div class="space-y-2" data-testid="ai-recommendation">
             <select id="classify-model" aria-label="AI model" class="block w-full min-w-0 rounded border border-gray-300 bg-white px-2 py-1.5 text-xs">
               {% ibbi_model_options %}
@@ -439,10 +439,10 @@
 
           <div id="image-form-actions" class="pt-4 border-t border-gray-200 mt-auto flex flex-col gap-2">
             <div class="flex gap-2">
-              <button type="button" onclick="cancelImageChanges()" class="flex-1 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 font-medium py-2 rounded-lg transition-colors text-sm">
+              <button type="button" onclick="cancelImageChanges()" class="btn-secondary flex-1">
                 Undo
               </button>
-              <button type="submit" id="btn-save-image" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2">
+              <button type="submit" id="btn-save-image" class="btn-primary flex-1">
                 <i class="fi fi-rr-disk"></i> Save
               </button>
             </div>
@@ -1114,6 +1114,7 @@ async function selectImage(img) {
   if (phoneLayout.matches) mobileTab('center');   // on a phone, choosing an image opens it
 
   document.getElementById('canvas-title').textContent = img.image_asset_id;
+  document.getElementById('canvas-subtitle').textContent = '';   // "Select an image" no longer applies
   document.getElementById('canvas-empty').classList.add('hidden');
   document.getElementById('canvas-wrapper').classList.add('hidden');
   document.getElementById('canvas-loading').classList.remove('hidden');
@@ -1184,7 +1185,12 @@ async function classifyCurrentImage() {
     if (!res.ok) throw new Error(data.error || 'The AI recommendation failed.');
     const img = state.images.find(i => i.image_asset_id === state.selectedImageId) || { image_asset_id: state.selectedImageId };
     await selectImage(img);
-    show(`${data.added} ROI${data.added === 1 ? '' : 's'} added (not validated)` + (data.already_boxed ? `, ${data.already_boxed} overlapped an existing ROI` : '') + '.');
+    // e.g. "2 ROIs added, 1 existing ROI got an AI suggestion (nothing validated)."
+    const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+    const parts = [`${plural(data.added, 'ROI')} added`];
+    if (data.attached) parts.push(`${plural(data.attached, 'existing ROI')} got an AI suggestion`);
+    if (data.already_boxed) parts.push(`${data.already_boxed} already there`);
+    show(`${parts.join(', ')} (nothing validated).`);
   } catch (e) {
     show(e.message);
   } finally {
@@ -1220,13 +1226,11 @@ function setLockState(isLockedByOther, msg = '') {
         warningEl.classList.remove('hidden');
         imageFormFields.forEach(el => el.disabled = true);
         globalValidateBtn.disabled = true;
-        globalValidateBtn.classList.replace('bg-gray-500', 'bg-gray-300');
         document.getElementById('image-form-actions').classList.add('hidden');
     } else {
         warningEl.classList.add('hidden');
         imageFormFields.forEach(el => el.disabled = !CAN_EDIT_RECORDS);   // boxes-only accounts: read-only
         globalValidateBtn.disabled = false;
-        globalValidateBtn.classList.replace('bg-gray-300', 'bg-gray-500');
         document.getElementById('image-form-actions').classList.remove('hidden');
     }
     if (state.bboxes.length > 0) renderRoiAccordions();
@@ -1406,9 +1410,9 @@ function gameReportsHtml(b) {
       <p class="text-[10px] text-gray-500 mt-2">Fix the ROI first if needed, then resolve. "Corrected" re-scores every game answer on this ROI against its current label (voided if unvalidated).</p>
       <div class="flex flex-wrap gap-2 mt-2">
         <button type="button" onclick="resolveGameReports(${state.bboxes.indexOf(b)}, 'corrected')" ${locked}
-          class="px-3 py-1.5 text-xs font-semibold text-white bg-gray-800 rounded hover:bg-gray-900 disabled:opacity-50">Label was wrong · fixed</button>
+          class="btn-primary px-3 py-1.5 text-xs">Label was wrong · fixed</button>
         <button type="button" onclick="resolveGameReports(${state.bboxes.indexOf(b)}, 'confirmed')" ${locked}
-          class="px-3 py-1.5 text-xs text-gray-700 border border-gray-300 rounded bg-white hover:bg-gray-100 disabled:opacity-50">Label is correct</button>
+          class="btn-secondary px-3 py-1.5 text-xs">Label is correct</button>
       </div>
     </div>`;
 }
@@ -1439,10 +1443,11 @@ async function resolveGameReports(idx, outcome) {
 function gameTipText(t) {
   const name = t.rank === 'species' || t.rank === 'genus' ? `<i>${escHtml(t.value)}</i>` : escHtml(t.value);
   if (t.kind === 'not') {
-    const who = t.experts ? 'Experts and players are' : 'Players are';
+    const who = t.experts ? 'Identification experts and players are' : 'Players are';
     return `${who} confident it is <b>not</b> in ${t.rank} ${name} <span class="text-gray-400">(${digitGroupsText(t.count)} said so${t.against ? `, ${digitGroupsText(t.against)} disagreed` : ''})</span>`;
   }
-  const who = t.kind === 'expert' ? `Expert${t.count > 1 ? 's' : ''} say` : `${digitGroupsText(t.count)} reliable players say`;
+  const who = t.kind === 'expert' ? (t.count > 1 ? 'Identification experts say' : 'An Identification expert says')
+    : `${digitGroupsText(t.count)} reliable players say`;
   const clash = t.conflicts ? ` <span class="text-amber-800">· the current label says ${escHtml(t.current)}</span>` : '';
   return `${who} ${t.rank} <b>${name}</b> <span class="text-gray-400">(${Math.round(t.support * 100)}%)</span>${clash}`;
 }
@@ -1463,12 +1468,16 @@ function gameTipsHtml(b) {
 }
 
 // What classifier models said about this ROI: each rank with the model's confidence, and whether the
-// current label agrees (green tick) or not (amber). A suggestion only; it never sets the label.
+// current label agrees (green tick) or not (amber). It sets the label only when a curator uses it: "Use <species>"
+// for a model's top species, when that is in the species list and isn't the label already (once per species).
 function aiSuggestionHtml(b) {
   const list = (state.aiSuggestions || {})[b.id];
   if (!list || !list.length) return '';
   const pct = c => `${Math.round(c * 100)}%`;
-  const blocks = list.map(s => {
+  const idx = state.bboxes.indexOf(b);
+  const current = String(b.depicts_valid_name_id || '');
+  const offered = new Set();
+  const blocks = list.map((s, n) => {
     const rows = s.levels.map(l => `
       <tr data-rank="${l.rank}">
         <td class="py-0.5 pr-2 text-gray-500 capitalize" style="width:4.75rem">${l.rank}</td>
@@ -1484,8 +1493,16 @@ function aiSuggestionHtml(b) {
       </tr>`).join('');
     const runners = s.runners_up && s.runners_up.length
       ? `<div class="text-[10px] text-gray-500 mt-1">Also possible: ${s.runners_up.map(r => `<i>${escHtml(r.value)}</i> ${pct(r.confidence)}`).join(', ')}</div>` : '';
+    const top = s.top_species;
+    let use = '';
+    if (CAN_EDIT_RECORDS && top && String(top.valid_species_id) !== current && !offered.has(top.valid_species_id)) {
+      offered.add(top.valid_species_id);
+      use = `<button type="button" id="btn-ai-accept-${idx}-${n}" onclick="acceptAiSuggestion(${idx}, ${n})" ${state.isLockedByOther ? 'disabled' : ''}
+          class="btn-main mt-2 px-3 py-1.5 text-xs gap-1.5 rounded-lg" title="Accept the IBBI-AI suggestion: it becomes your Expert ID (not validated)" data-testid="accept-ai-suggestion">
+          <i class="fi fi-rr-check"></i> Use <i>${escHtml(top.name)}</i> (${pct(top.confidence)})</button>`;
+    }
     return `<table class="w-full text-xs">${rows}</table>${runners}
-      <div class="text-[10px] text-gray-400 mt-1 break-all">${escHtml(s.model_name)}${s.model_version ? ' · ' + escHtml(s.model_version) : ''}</div>`;
+      <div class="text-[10px] text-gray-400 mt-1 break-all">${escHtml(s.model_name)}${s.model_version ? ' · ' + escHtml(s.model_version) : ''}</div>${use}`;
   }).join('<hr class="my-2 border-gray-200">');
   return `
     <div class="rounded-lg border border-gray-200 bg-white p-3" data-testid="ai-suggestion">
@@ -1494,11 +1511,34 @@ function aiSuggestionHtml(b) {
     </div>`;
 }
 
+// "Use <species>" under the AI suggestion: the ROI takes that model's top species as the curator's Expert ID.
+async function acceptAiSuggestion(idx, n) {
+  if (state.isLockedByOther) return;
+  const b = state.bboxes[idx];
+  const top = (((state.aiSuggestions || {})[b.id] || [])[n] || {}).top_species;
+  if (!top) return;
+  if (!confirm(`Set this ROI's species to ${top.name}, the IBBI-AI suggestion?` + (b.bbox_is_validated ? '' : ' (It stays unvalidated until you validate it.)'))) return;
+  try {
+    const res = await fetch(`/api/v1/beetles/${b.id}/accept-ai-suggestion/`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+      body: JSON.stringify({ valid_species_id: top.valid_species_id })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || data.detail || 'Could not use the AI suggestion.');
+    state.bboxes[idx] = data;   // the ROI as saved
+    await loadGameProposals(state.selectedImageId);   // the ticks and buttons follow the new label
+    renderRoiAccordions();
+    drawCanvas();
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
 // A label the game wrote into the database (#427): who or what applied it, and a way to take it back.
 function gameAppliedHtml(b, i) {
   const a = (state.gameApplied || {})[b.id];
   if (!a) return '';
-  const who = a.automatic ? 'automatically (proven experts agreed)' : `by ${escHtml(a.by)}`;
+  const who = a.automatic ? 'automatically (Identification experts agreed)' : `by ${escHtml(a.by)}`;
   const when = new Date(a.at).toLocaleDateString();
   const locked = state.isLockedByOther ? 'disabled' : '';
   const action = a.current
@@ -1539,7 +1579,7 @@ function gameProposalHtml(b, i) {
   const cells = ranks.map(r => {
     const v = p.ranks[r];
     if (!v) return `<span class="text-gray-300">—</span>`;
-    const tick = v.trusted ? `<i class="fi fi-rr-shield-check text-green-600" title="Backed by ${v.trusted_votes} proven expert(s)"></i>` : '';
+    const tick = v.trusted ? `<i class="fi fi-rr-shield-check text-green-600" title="Backed by ${v.trusted_votes} Identification expert(s)"></i>` : '';
     return `<span class="${r === 'species' ? 'italic' : ''} ${v.trusted ? 'font-semibold text-gray-900' : 'text-gray-700'}">${escHtml(v.value)}</span>
             <span class="text-[10px] text-gray-400">${Math.round(v.support * 100)}%·${v.votes}</span> ${tick}`;
   }).join('<span class="text-gray-300 mx-1">›</span>');
@@ -1550,14 +1590,14 @@ function gameProposalHtml(b, i) {
   let reviewed = '';
   if (p.review) {
     const newer = p.answers > p.review.answers ? ` · ${p.answers - p.review.answers} new answer(s) since` : '';
-    reviewed = `<div class="text-[10px] text-gray-500 mt-2">${p.review.decision === 'accepted' ? 'Accepted' : 'Dismissed'} by ${escHtml(p.review.reviewed_by)}${newer}</div>`;
+    reviewed = `<div class="text-[10px] text-gray-500 mt-2">${p.review.decision === 'accepted' ? 'Accepted' : 'Rejected'} by ${escHtml(p.review.reviewed_by)}${newer}</div>`;
   }
   const locked = state.isLockedByOther ? 'disabled' : '';
   const current = String(b.depicts_valid_name_id || '');
   const canAccept = p.taxon && String(p.taxon.valid_species_id) !== current;
   const acceptBtn = canAccept
     ? `<button type="button" id="btn-game-accept-${i}" onclick="reviewGameProposal(${i}, 'accept')" ${locked}
-         class="px-3 py-1.5 text-xs font-semibold text-white bg-gray-800 rounded hover:bg-gray-900 disabled:opacity-50">
+         class="btn-main px-3 py-1.5 text-xs gap-1.5 rounded-lg">
          <i class="fi fi-rr-check"></i> Use ${escHtml(p.taxon.scientific_name)}</button>`
     : (p.taxon ? `<span class="text-[10px] text-gray-500">Matches the current label.</span>` : `<span class="text-[10px] text-gray-500">No species-level proposal yet.</span>`);
 
@@ -1573,8 +1613,9 @@ function gameProposalHtml(b, i) {
       <div class="flex items-center gap-2 mt-3">
         ${acceptBtn}
         ${p.review && p.review.decision === 'dismissed' && p.answers === p.review.answers ? '' :
-          `<button type="button" onclick="reviewGameProposal(${i}, 'dismiss')" ${locked}
-             class="px-3 py-1.5 text-xs text-gray-600 border border-gray-300 rounded bg-white hover:bg-gray-100 disabled:opacity-50">Dismiss</button>`}
+          `<button type="button" id="btn-game-reject-${i}" onclick="reviewGameProposal(${i}, 'dismiss')" ${locked}
+             title="Hide until new answers arrive; the game won't apply this label on its own."
+             class="btn-secondary px-3 py-1.5 text-xs rounded-lg disabled:opacity-50">Reject</button>`}
       </div>
     </div>`;
 }
@@ -1709,6 +1750,7 @@ function renderRoiAccordions() {
                 </div>
               </div>
             </div>
+            ${labelHistoryHtml(b)}
 
             <div>
               <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase tracking-wide">Identity & Details</label>
@@ -1782,10 +1824,10 @@ function renderRoiAccordions() {
 
             <div class="pt-4 border-t border-gray-200 mt-4 flex flex-col gap-2">
               <div class="flex gap-2">
-                <button type="button" onclick="renderRoiAccordions()" class="flex-1 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 font-medium py-2 rounded-lg transition-colors text-sm" ${disabledAttr}>
+                <button type="button" onclick="renderRoiAccordions()" class="btn-secondary flex-1" ${disabledAttr}>
                   Undo
                 </button>
-                <button type="submit" id="btn-save-roi-${i}" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2" ${disabledAttr}>
+                <button type="submit" id="btn-save-roi-${i}" class="btn-primary flex-1" ${disabledAttr}>
                   <i class="fi fi-rr-disk"></i> Save
                 </button>
               </div>
@@ -1813,6 +1855,72 @@ function renderRoiAccordions() {
   if (state.selectedBoxIndex >= 0) {
     const activeAcc = document.getElementById(`roi-accordion-${state.selectedBoxIndex}`);
     if (activeAcc) activeAcc.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+// Label history (#504): what each ROI has been called over time and who named it, plus validations, game decisions
+// and closed player reports, newest first. The counts load with the image; a list loads when its section is opened.
+// A re-render rebuilds the panel, so which sections are open is kept in state and an open one loads again.
+function labelHistoryHtml(b) {
+  if (!b.id || b.is_syncing || String(b.id).startsWith('temp_')) return '';
+  loadLabelHistoryCounts();
+  const n = (state.labelHistoryCounts || {})[b.id];
+  const open = state.labelHistoryOpen && state.labelHistoryOpen.has(b.id);
+  return `
+    <details class="rounded-lg border border-gray-200 bg-white p-3" data-testid="label-history" data-roi="${escHtml(b.id)}" ${open ? 'open' : ''} ontoggle="toggleLabelHistory(this)">
+      <summary class="cursor-pointer text-[11px] font-bold text-gray-500 uppercase tracking-wide"><i class="fi fi-rr-time-past"></i> Label history <span data-role="count">${n == null ? '' : `(${digitGroupsText(n)})`}</span></summary>
+      <ul data-role="list" class="mt-2 space-y-1 text-xs text-gray-700"></ul>
+    </details>`;
+}
+
+// One request per image (and again after its ROIs change), for the "(N)" of every closed section.
+async function loadLabelHistoryCounts() {
+  const imageId = state.selectedImageId;
+  const key = imageId + '|' + state.bboxes.map(b => `${b.id}:${b.last_updated_at}:${b.bbox_is_validated}`).join(',');
+  if (!imageId || state.labelHistoryKey === key) return;
+  state.labelHistoryKey = key;
+  try {
+    const res = await fetch(`/api/v1/beetles/label-history-counts/?image_asset=${encodeURIComponent(imageId)}`, { headers: { 'X-CSRFToken': csrftoken } });
+    if (!res.ok || state.labelHistoryKey !== key) return;
+    state.labelHistoryCounts = (await res.json()).counts || {};
+    document.querySelectorAll('[data-testid="label-history"]').forEach(el => setLabelHistoryCount(el, state.labelHistoryCounts[el.dataset.roi]));
+  } catch (e) { /* the history is optional */ }
+}
+
+function setLabelHistoryCount(el, n) {
+  const span = el.querySelector('[data-role="count"]');
+  if (span && n != null) span.textContent = `(${digitGroupsText(n)})`;
+}
+
+// One line per event: "5 Oct 2026 · Xyleborus affinis · Expert ID · by jdoe"
+function labelHistoryLine(e) {
+  const when = new Date(e.at);
+  const parts = [escHtml(when.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))];
+  if (e.what) parts.push(escHtml(e.what));
+  if (e.name) parts.push(`<i>${escHtml(e.name)}</i>`);
+  if (e.tier) parts.push(escHtml(e.tier));
+  if (e.by) parts.push(`by ${escHtml(e.by)}`);
+  const detail = e.detail ? ` <span class="text-gray-400">· ${escHtml(e.detail)}</span>` : '';
+  return `<li class="truncate" data-kind="${escHtml(e.kind)}" title="${escHtml(when.toLocaleString())}${e.detail ? ' · ' + escHtml(e.detail) : ''}">${parts.join(' · ')}${detail}</li>`;
+}
+
+async function toggleLabelHistory(el) {
+  const roiId = el.dataset.roi;
+  state.labelHistoryOpen = state.labelHistoryOpen || new Set();
+  if (!el.open) { state.labelHistoryOpen.delete(roiId); return; }
+  state.labelHistoryOpen.add(roiId);
+  const list = el.querySelector('[data-role="list"]');
+  list.innerHTML = '<li class="text-gray-400">Loading…</li>';
+  try {
+    const res = await fetch(`/api/v1/beetles/${encodeURIComponent(roiId)}/label-history/`, { headers: { 'X-CSRFToken': csrftoken } });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    setLabelHistoryCount(el, data.total);
+    const more = data.total > data.events.length
+      ? `<li class="text-gray-400">Showing the newest ${digitGroupsText(data.events.length)} of ${digitGroupsText(data.total)}.</li>` : '';
+    list.innerHTML = data.events.length ? data.events.map(labelHistoryLine).join('') + more : '<li class="text-gray-400">No history yet.</li>';
+  } catch (e) {
+    list.innerHTML = '<li class="text-red-700">Could not load the history.</li>';
   }
 }
 

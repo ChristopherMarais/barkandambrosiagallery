@@ -27,24 +27,24 @@ IBBI_VERSION = "0.3.2"
 LEVELS = ("subfamily", "tribe", "genus", "species")
 
 # key -> what the site shows and which ibbi models it runs. Order = the order of the options; the first is the default.
-# "Species classifier": the detector finds each beetle, then the species classifier names it rank by rank.
-# "Species detector": finds and names the 65 trained species in one step.
+# Every model finds and names the beetles, so the site shows just the model's name (the default one marked
+# "recommended", see templatetags/ibbi_tags.py).
 IBBI_DOCS_URL = "https://gcmarais.com/IBBI/"   # model descriptions and benchmark scores
 MODELS = {
     "ibbi_dinov3": {
-        "label": "Species classifier: DINOv3", "kind": "pipeline",
+        "label": "DINOv3", "kind": "pipeline",
         "detector": "yolo11x_arthropod_detector", "classifier": "dinov3_hierarchical_classifier",
     },
     "ibbi_bioclip2": {
-        "label": "Species classifier: BioCLIP 2", "kind": "pipeline",
+        "label": "BioCLIP 2", "kind": "pipeline",
         "detector": "yolo11x_arthropod_detector", "classifier": "bioclip2_hierarchical_classifier",
     },
-    "rtdetrx": {"label": "Species detector: RT-DETR", "kind": "detector", "detector": "rtdetrx_species_detector"},
-    "yolo12x": {"label": "Species detector: YOLO12", "kind": "detector", "detector": "yolo12x_species_detector"},
-    "yolo11x": {"label": "Species detector: YOLO11", "kind": "detector", "detector": "yolo11x_species_detector"},
-    "yolov10x": {"label": "Species detector: YOLOv10", "kind": "detector", "detector": "yolov10x_species_detector"},
-    "yolov9e": {"label": "Species detector: YOLOv9", "kind": "detector", "detector": "yolov9e_species_detector"},
-    "yolov8x": {"label": "Species detector: YOLOv8", "kind": "detector", "detector": "yolov8x_species_detector"},
+    "rtdetrx": {"label": "RT-DETR", "kind": "detector", "detector": "rtdetrx_species_detector"},
+    "yolo12x": {"label": "YOLO12", "kind": "detector", "detector": "yolo12x_species_detector"},
+    "yolo11x": {"label": "YOLO11", "kind": "detector", "detector": "yolo11x_species_detector"},
+    "yolov10x": {"label": "YOLOv10", "kind": "detector", "detector": "yolov10x_species_detector"},
+    "yolov9e": {"label": "YOLOv9", "kind": "detector", "detector": "yolov9e_species_detector"},
+    "yolov8x": {"label": "YOLOv8", "kind": "detector", "detector": "yolov8x_species_detector"},
 }
 DEFAULT = "ibbi_dinov3"
 # The names used before ibbi 0.3, still accepted (saved links, API clients)

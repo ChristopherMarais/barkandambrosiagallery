@@ -7,7 +7,7 @@
       <span id="tour-count"></span>
       <button type="button" id="tour-skip">Skip tour</button>
       <button type="button" id="tour-back">Back</button>
-      <button type="button" id="tour-next">Next</button>
+      <button type="button" id="tour-next" class="btn-primary">Next</button>
     </div>
   </div>
 </div>
@@ -16,14 +16,14 @@
   <div class="report-tip-card">
     <h2 id="report-tip-title">Spotted a bad photo?</h2>
     <ol>
-      <li><span>1</span><span class="tip-text">Tap <strong class="tip-report"><i class="fi fi-rr-flag"></i> Report</strong> at the <strong>top right of the photo</strong>.</span></li>
+      <li><span>1</span><span class="tip-text">Tap <strong class="tip-report"><i class="fi fi-rr-flag"></i> Flag</strong> at the <strong>bottom left of the photo</strong>.</span></li>
       <li><span>2</span>Pick what's wrong: the box doesn't fit, or it's a bad photo.</li>
       <li><span>3</span>That's it. You lose no points.</li>
     </ol>
-    <p class="tip-note" data-testid="report-tip-note">A clear photo that just shows too little isn't bad: name it as far as you can.</p>
+    <p class="tip-note" data-testid="report-tip-note">Too little of the beetle (a leg, a fragment) is a bad photo too. A clear photo of a good part of it from an unusual side isn't bad: name it as far as you can.</p>
     <div class="tour-row">
       <button type="button" id="report-tip-show">Show me</button>
-      <button type="button" id="report-tip-ok">Got it</button>
+      <button type="button" id="report-tip-ok" class="btn-primary">Got it</button>
     </div>
   </div>
 </div>
@@ -42,7 +42,6 @@
   #tour-skip { font-weight: 500; color: #6b7280; }
   #tour-back { color: #374151; border: 1px solid #d1d5db; }
   #tour-back:disabled { visibility: hidden; }
-  #tour-next, #report-tip-ok { color: #fff; background: #374151; }
   #report-tip { position: fixed; inset: 0; z-index: 110; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(17,24,39,.55); }
   .report-tip-card { width: min(22rem, 100%); padding: 1.25rem; background: #fff; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
   .report-tip-card h2 { margin: 0 0 0.75rem; font-size: 1.125rem; font-weight: 700; color: #111827; }
@@ -53,7 +52,7 @@
   .report-tip-card .tip-note { margin: -0.25rem 0 1rem; font-size: 0.875rem; line-height: 1.4; color: #4b5563; }
   .report-tip-card .tour-row { justify-content: flex-end; }
   #report-tip-show { color: #374151; border: 1px solid #d1d5db; }
-  /* "Show me": the report button pulses so it is easy to find */
+  /* "Show me": the Flag on the photo pulses so it is easy to find */
   .tour-pulse { animation: tour-pulse 1.2s ease-in-out 4; }
   @keyframes tour-pulse { 50% { box-shadow: 0 0 0 6px rgba(55,65,81,.35); transform: scale(1.08); } }
   @media (prefers-reduced-motion: reduce) { #tour-spot, #tour-bubble { transition: none; } .tour-pulse { animation: none; } }

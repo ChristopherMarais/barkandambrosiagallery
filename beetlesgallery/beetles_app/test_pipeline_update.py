@@ -5,11 +5,9 @@ import os
 import uuid
 from datetime import date
 from decimal import Decimal
-from unittest import mock
 
 from django.core.files.base import ContentFile
 from django.core.management import call_command
-from django.urls import reverse
 
 from beetlesgallery.beetles_app.models import AreaGrant, Beetles, UpdateBatch
 from beetlesgallery.beetles_app.testing import PageBehaviourCase, make_beetle, make_image, make_taxon
@@ -168,19 +166,13 @@ class ProcessSingleUpdateTests(PageBehaviourCase):
         self.assertEqual(unchanged.history.count(), 1)
         self.assertEqual(unchanged.image_asset.history.count(), 1)
 
-    def test_edit_saved_from_the_detail_page_is_applied(self):
+    def test_csv_with_a_byte_order_mark_is_applied(self):
+        # Excel writes CSVs as utf-8-sig, so the record_id header starts with a byte-order mark. (This was tested
+        # through the specimen page's own edit form, which wrote one too; editing is on the annotation page now, #505.)
         beetle = make_beetle(collection_country="USA", specimen_notes="keep", image=make_image(photographer="A. Old"))
-        self.client.force_login(self.staff)
 
-        with mock.patch("beetlesgallery.beetles_app.views.process_update_task") as task:
-            self.client.post(
-                reverse("update_single_beetle", args=[beetle.id]),
-                download_row(beetle, collection_country="Peru", image_has_multiple_individuals="unknown"),
-            )
-        batch = UpdateBatch.objects.get()
-        task.delay.assert_called_once_with(batch.id)
-        # The view writes its CSV as utf-8-sig, so the record_id header starts with a byte-order mark.
-        batch = self.process(batch)
+        content = to_csv([download_row(beetle, collection_country="Peru")]).decode().encode("utf-8-sig")
+        batch = self.process(self.make_batch(content))
 
         self.assertEqual(batch.status, UpdateBatch.Status.APPLIED, batch.error_message)
         beetle = fresh(beetle)

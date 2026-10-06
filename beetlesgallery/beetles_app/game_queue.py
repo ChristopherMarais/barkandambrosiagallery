@@ -79,6 +79,35 @@ def ranked_ids(queue, expert_only=False):
     return [k for k, _ in items]
 
 
+class RankedFirst:
+    """
+    The images of a queryset for a Paginator, with the ones in ``ranked`` (image ids) first, in that order, and the
+    rest after them in the queryset's own order. Only the ranked ids are held in memory, so the "most confident first"
+    sort can page through every image, not just the ones with a proposal.
+    """
+
+    def __init__(self, qs, ranked):
+        present = {str(i) for i in qs.filter(id__in=ranked).values_list("id", flat=True)}
+        self.qs = qs
+        self.ranked = [i for i in ranked if i in present]
+        self.rest = qs.exclude(id__in=self.ranked)
+
+    def count(self):
+        return len(self.ranked) + self.rest.count()
+
+    def __len__(self):
+        return self.count()
+
+    def __getitem__(self, page):
+        start, stop, n = page.start or 0, page.stop, len(self.ranked)
+        head = self.ranked[start:stop]
+        found = {str(img.id): img for img in self.qs.filter(id__in=head)}
+        images = [found[i] for i in head if i in found]
+        if stop > n:
+            images += list(self.rest[max(start - n, 0):stop - n])
+        return images
+
+
 def forget():
     cache.delete(CACHE_KEY)
 

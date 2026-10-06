@@ -3,7 +3,7 @@ from django.db.utils import DataError
 from django.db import transaction
 from django.utils import timezone
 
-from beetlesgallery.beetles_app.models import Beetles, UpdateBatch, ImageAsset
+from beetlesgallery.beetles_app.models import Beetles, UpdateBatch
 from beetlesgallery.beetles_app.utils import get_system_user
 
 import math
@@ -69,7 +69,7 @@ def _to_float(v):
     v = _none(v)
     if v is None: return None
     try: return float(v)
-    except: return None
+    except Exception: return None
 
 def _to_decimal_12_4(v):
     v = _none(v)

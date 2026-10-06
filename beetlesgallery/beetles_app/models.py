@@ -5,7 +5,8 @@ from django.db.models.functions import Lower, Upper
 from django.contrib.postgres.indexes import GinIndex
 
 import uuid
-import json, os
+import json
+import os
 from simple_history.models import HistoricalRecords
 from .schema import LEGACY_MANIFEST_NAME, archive_name, manifest_name
 from treebeard.mp_tree import MP_Node
@@ -13,6 +14,18 @@ from treebeard.mp_tree import MP_Node
 # -----------------------------
 # Unified Beetle record
 # -----------------------------
+# Change reasons on the ROI history records written when a whole image is (un)validated (label_history.py)
+IMAGE_VALIDATED = "Validated with the whole image"
+IMAGE_UNVALIDATED = "Unvalidated with the whole image"
+
+
+def record_roi_history(roi_ids, user, reason):
+    """Bulk updates skip save() and so leave no history: write one record per changed ROI, so its history shows it."""
+    if roi_ids:
+        Beetles.history.bulk_history_create(list(Beetles.objects.filter(id__in=roi_ids)), update=True,
+                                            default_user=user, default_change_reason=reason)
+
+
 class ImageAsset(models.Model):
     """
     Represents the physical image file and its technical/provenance metadata.
@@ -35,7 +48,6 @@ class ImageAsset(models.Model):
     
     # --- Technical Metadata ---
     image_has_multiple_individuals = models.BooleanField(null=True, blank=True)
-    # aspect = models.CharField(max_length=100, null=True, blank=True)
     resolution_in_ppmm = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True)
     image_size_bytes = models.BigIntegerField(null=True, blank=True, db_index=True)
 
@@ -60,6 +72,14 @@ class ImageAsset(models.Model):
         blank=True,
         related_name='updated_image_assets',
         help_text="User who last updated this image or its metadata"
+    )
+    added_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="added_images",
+        help_text="Who added this photo to the gallery, when known (the AI page sets it for a signed-in visitor).",
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -96,7 +116,9 @@ class ImageAsset(models.Model):
         if user:
             roi_updates["last_updated_by"] = user
             self.last_updated_by = user
+        changed = list(self.specimens.filter(is_deleted=False, bbox_is_validated=True).values_list("id", flat=True))
         self.specimens.filter(is_deleted=False).update(**roi_updates)
+        record_roi_history(changed, user, IMAGE_UNVALIDATED)
         self.is_validated = False
         self.save(update_fields=['is_validated', 'last_updated_by', 'updated_at'])
 
@@ -112,9 +134,11 @@ class ImageAsset(models.Model):
             roi_updates["bbox_validated_by"] = user
             roi_updates["last_updated_by"] = user
             self.last_updated_by = user
+        changed = list(boxed_rois.filter(bbox_is_validated=False).values_list("id", flat=True))
         boxed_rois.filter(bbox_is_validated=False).update(**roi_updates)
         from beetlesgallery.beetles_app import identification
         identification.vouch(list(boxed_rois), user)   # validated names are Expert IDs at least
+        record_roi_history(changed, user, IMAGE_VALIDATED)
         self.is_validated = boxed_rois.exists()
         self.save(update_fields=['is_validated', 'last_updated_by', 'updated_at'])
         return self.is_validated
@@ -388,18 +412,6 @@ class Beetles(models.Model):
         self.bbox_validated_at = timezone.now()
         self.save(update_fields=['bbox_is_validated', 'bbox_validated_by', 'bbox_validated_at', 'last_updated_by', 'last_updated_at'])
 
-    # ---------
-    # Helpers: content-addressed relative paths based on sha256
-    # ---------
-    @staticmethod
-    def path_for_display(sha256: str) -> str:
-        """
-        Path for a web-friendly JPEG version of the original image.
-        Used primarily for displaying TIFFs.
-        """
-        a, b = Beetles.shard_from_sha(sha256)
-        return f"display/{a}/{b}/{sha256}.jpg"
-
     @property
     def display_url(self):
         """Delegates display URL generation to the linked ImageAsset."""
@@ -414,12 +426,16 @@ class Beetles(models.Model):
             return self.image_asset.image_file
         return None
 
+    # ---------
+    # Helpers: content-addressed relative paths based on sha256
+    # ---------
     @staticmethod
     def shard_from_sha(sha256: str) -> tuple[str, str]:
         return ImageAsset.shard_from_sha(sha256)
 
     @staticmethod
     def path_for_display(sha256: str) -> str:
+        """Path for a web-friendly JPEG version of the original image, used to display TIFFs."""
         return ImageAsset.path_for_display(sha256)
 
     @staticmethod
@@ -439,12 +455,9 @@ class Beetles(models.Model):
 # UploadBatch
 # -----------------------------
 
-import uuid
 import hashlib
-import os
 from django.db import transaction
 from django.contrib.auth import get_user_model
-from django.utils import timezone
 
 User = get_user_model()
 
@@ -458,10 +471,6 @@ staging_upload_path_xlsx = staging_upload_path_csv
 def staging_upload_path_zip(instance, filename):
     # uploads/staging/YYYY/MM/<batch-id>.zip
     return f"uploads/staging/{timezone.now():%Y/%m}/{instance.id}.zip"
-
-# # Back-compat: old migrations import this by name
-# def staging_upload_path(instance, filename):
-#     return staging_upload_path_csv(instance, filename)
 
 
 class UploadBatch(models.Model):
@@ -636,7 +645,6 @@ class UploadBatch(models.Model):
         """
         Mark the batch as import_failed and record the reason.
         """
-        from django.utils import timezone
         self.error_message = (f"IMPORT ERROR: {reason or ''}")[:2000]
         if move_to_failed_folder:
             self._relocate_files("uploads/failed_import")
@@ -1312,9 +1320,9 @@ class GameRound(models.Model):
     class Mode(models.TextChoices):
         CLASSIFY = "classify", "Classify"
         PAIR = "pair", "Compare pairs"
-        ODD = "odd", "Odd One Out"
-        SELECT = "select", "Select all"
-        MIXED = "mixed", "Mixed"   # one feed of several games; each item carries its own mode
+        ODD = "odd", "Imposter Picker"
+        SELECT = "select", "Find Them All"
+        MIXED = "mixed", "All modes"   # one feed of several games; each item carries its own mode
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     player = models.ForeignKey(
@@ -1347,6 +1355,8 @@ class GameAnswer(models.Model):
     Select all: ``tiles`` are the regions shown, ``picks`` the places of those the player tapped as ``grid_group`` at
     ``grid_rank``, and ``roi`` one validated member of the group; ``correct_<grid_rank>`` says whether the grid was
     perfect (every validated member tapped, nothing else), the taps themselves are scored in game_scoring.
+    In both grid games ``flagged`` are the places the player flagged as a bad photo before answering: they are left
+    out of scoring and of what the grid says about each beetle (#489).
 
     ``correct_<rank>`` is only filled for check items: True/False when that rank was
     judged, None when it was not answered or has no reference value.
@@ -1387,6 +1397,13 @@ class GameAnswer(models.Model):
         default=dict, blank=True,
         help_text='Grid games: the names of the group, down to grid_rank, e.g. {"subfamily": "Scolytinae", "tribe": "Xyleborini"}.',
     )
+    flagged = models.JSONField(
+        default=list, blank=True,
+        help_text="Grid games: the places in tiles the player flagged as a bad photo; left out of scoring and votes.",
+    )
+    grid_step = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="Grid games: the player's step on the grid ladder (1-12) when the grid was built.",
+    )
 
     correct_subfamily = models.BooleanField(null=True, blank=True)
     correct_tribe = models.BooleanField(null=True, blank=True)
@@ -1422,6 +1439,11 @@ class GameAnswer(models.Model):
         null=True, blank=True,
         help_text="The species the player named had no validated images when they named it. If the beetle is later "
                   "validated as that species, the player is credited with a new species (SpeciesDiscovery).",
+    )
+    difficulty = models.FloatField(
+        null=True, blank=True,
+        help_text="Identification and Similarity: how hard the beetle was when answered, as its percentile among all "
+                  "playable beetles (0 easiest, 1 hardest). Its points follow it (game_scoring). Empty on older answers.",
     )
     answered_at = models.DateTimeField(auto_now_add=True)
 
@@ -1490,11 +1512,11 @@ class GamePreference(models.Model):
     """
 
     class PlayMode(models.TextChoices):
-        BOTH = "both", "Both"   # every game the player has unlocked, mixed
-        CLASSIFY = "classify", "Name That Beetle"
-        PAIR = "pair", "Family Ties"
-        ODD = "odd", "Odd One Out"
-        SELECT = "select", "Select all"
+        BOTH = "both", "All modes"   # every game the player has unlocked, mixed
+        CLASSIFY = "classify", "Identification"
+        PAIR = "pair", "Similarity"
+        ODD = "odd", "Imposter Picker"
+        SELECT = "select", "Find Them All"
 
     class FocusRank(models.TextChoices):
         NONE = "", "Everything"
@@ -1516,9 +1538,6 @@ class GamePreference(models.Model):
         help_text="Unlocks the player keeps from before the levels changed (game_levels.PERKS keys), e.g. "
                   "Identification for players who had it when it moved from level 2 to level 4.",
     )
-    # Leaderboards (#394): appear as "A player" to others; or don't see the boards at all (personal progress only)
-    hide_name = models.BooleanField(default=False)
-    hide_boards = models.BooleanField(default=False)
     proposals_notice_seen_at = models.DateTimeField(
         null=True, blank=True, help_text="When the player saw 'Your labels now go to the curators' (shown once)."
     )
@@ -1526,6 +1545,33 @@ class GamePreference(models.Model):
 
     class Meta:
         db_table = "game_preference"
+
+
+class GridStep(models.Model):
+    """
+    Where a player is on the ladder of one grid game, Odd One Out or Select all (#489): twelve steps, the grids growing
+    from 4 to 9 to 16 beetles and then going a rank deeper, from subfamily to species (game_grid_ladder.LADDER). Up a
+    step after a run of good grids, down one after a poor grid.
+    """
+
+    GAMES = [(GameRound.Mode.ODD.value, GameRound.Mode.ODD.label), (GameRound.Mode.SELECT.value, GameRound.Mode.SELECT.label)]
+
+    player = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="grid_steps")
+    game = models.CharField(max_length=10, choices=GAMES)
+    step = models.PositiveSmallIntegerField(default=1)
+    good_run = models.PositiveSmallIntegerField(default=0, help_text="Good grids in a row since the step last moved.")
+    last_answer = models.ForeignKey(
+        GameAnswer, on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+        help_text="The last answer that moved the ladder, so no answer ever counts twice.",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "game_grid_step"
+        constraints = [models.UniqueConstraint(fields=["player", "game"], name="game_grid_step_player_game_uniq")]
+
+    def __str__(self):
+        return f"{self.player} {self.game} step {self.step}"
 
 
 class RetroCredit(models.Model):

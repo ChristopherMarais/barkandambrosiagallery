@@ -8,8 +8,8 @@ levels are kept only while the answers stay good.
 
     level  name                         points  reliability  unlocks
     1      Egg                               0       -       Similarity
-    2      Larva                            50       -       Odd One Out, and choosing your game
-    3      Pupa                            150      35%      Select all; focus on one subfamily; more photos of each beetle
+    2      Larva                            50       -       Imposter Picker, and choosing your game
+    3      Pupa                            150      35%      Find Them All; focus on one subfamily; more photos of each beetle
     4      Teneral                     400      50%      the identification game; focus on one tribe; lighting
     5      Tunnel master                   800      60%      focus on one genus
     6      Gallery engineer               1500      70%      your labels go to curators as suggestions
@@ -18,12 +18,13 @@ levels are kept only while the answers stay good.
     9      Colony founder                10000      85%
     10     King of Bark and Ambrosia     25000      92%
 
-Separately from levels, a player who proves themselves on one part of the tree is an *expert* there (game_trust.py:
-at least GAME_TRUST_MIN_JUDGED answers on validated beetles in that branch, with a Wilson lower bound on their
-accuracy of at least GAME_TRUST_MIN_LOWER_BOUND, 90% by default, and among the most reliable players overall). When
-at least two experts, each proven directly in every branch of the label, agree on a beetle that has no name yet,
-their name is written straight into the database (game_trust.auto_apply_expert_labels), still marked unvalidated so
-a curator can confirm it. Nobody else's labels skip review.
+Separately from levels, a player who proves themselves on one part of the tree is an *Identification expert* there
+(game_trust.py: GAME_TRUST_IMAGES_PER_SPECIES validated images named in each of at least GAME_TRUST_CHILDREN_SHARE of
+its members, at least GAME_TRUST_MIN_JUDGED answers in all, and at least GAME_TRUST_MIN_ACCURACY of them right, 90%
+by default). When at least GAME_AUTO_APPLY_MIN_EXPERTS (two) of them, each proven directly in the label's genus and
+among the most reliable players overall, agree on a beetle that has no name yet, their name is written straight into
+the database (game_trust.auto_apply_expert_labels), still marked unvalidated so a curator can confirm it. Nobody
+else's labels skip review: a *Distinction expert*, who tells a taxon's beetles apart as reliably, unlocks nothing.
 """
 from .game import game_setting
 
@@ -35,9 +36,9 @@ IDENTIFY = "identification"
 SPECIMEN_PHOTOS = "specimen_photos"
 LIGHT = "light"
 PERKS = {
-    ODD_ONE_OUT: ("Odd One Out", "A new game: tap the beetle that doesn't belong with the rest."),
-    CHOOSE_GAME: ("Choose your game", "Play one game, or a mix of every game you have."),
-    SELECT_ALL: ("Select all", "A new game: tap every beetle of one group in a grid of nine."),
+    ODD_ONE_OUT: ("Imposter Picker", "A new game: tap the beetle that doesn't belong with the rest."),
+    CHOOSE_GAME: ("Choose your game", "Play one game, or All modes: every game you have, mixed."),
+    SELECT_ALL: ("Find Them All", "A new game: tap every beetle of one group in a grid."),
     IDENTIFY: ("Identification game", "Name beetles: subfamily, tribe, genus and species."),
     "focus_subfamily": ("Focus on a subfamily", "Choose one subfamily and the game shows you only its beetles."),
     "focus_tribe": ("Focus on a tribe", "Narrow your focus to a single tribe."),
@@ -113,7 +114,7 @@ def pair_share(level):
 # The games, in the order they open, and the unlock each needs (Similarity needs none)
 GAMES = ("pair", "odd", "select", "classify")
 GAME_PERK = {"odd": ODD_ONE_OUT, "select": SELECT_ALL, "classify": IDENTIFY}
-GAME_NAMES = {"pair": "Similarity", "odd": "Odd One Out", "select": "Select all", "classify": "Identification"}
+GAME_NAMES = {"pair": "Similarity", "odd": "Imposter Picker", "select": "Find Them All", "classify": "Identification"}
 
 
 def games(perks):
@@ -277,8 +278,8 @@ def proposals_enabled():
 
 def suggestion_voters():
     """
-    Whose game labels reach the curators as suggestions: players at the suggestions level, and anyone who is a
-    proven expert somewhere. None (everyone) when GAME_PROPOSALS_NEED_LEVEL is off.
+    Whose game labels reach the curators as suggestions: players at the suggestions level, and anyone who is an
+    Identification expert somewhere. None (everyone) when GAME_PROPOSALS_NEED_LEVEL is off.
     """
     if not proposals_enabled():
         return None

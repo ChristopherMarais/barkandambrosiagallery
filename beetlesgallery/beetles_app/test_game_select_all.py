@@ -1,14 +1,13 @@
 """
-Select all (#370): nine beetles and a group ("Tap every Platypodinae"). Opens at level 3; a perfect grid earns about
-twice a Similarity answer, a wrong tap costs 1.5 times a right one, and taps on unchecked beetles are only recorded.
+Select all (#370): 4, 9 or 16 beetles (the grid ladder, #489) and a group ("Tap every Platypodinae"). Opens at level 3;
+a perfect grid earns twice a Similarity answer times its size factor, a wrong tap costs 1.5 times a right one, and taps
+on unchecked beetles are only recorded.
 """
-from unittest import mock
-
 from django.test import override_settings
 from django.urls import reverse
 
-from beetlesgallery.beetles_app import game, game_feedback, game_levels, game_scoring
-from beetlesgallery.beetles_app.models import AnswerPoints, GameAnswer, GameRound, ModelPrediction, PlayerScore
+from beetlesgallery.beetles_app import game, game_feedback, game_grid_ladder, game_levels, game_scoring
+from beetlesgallery.beetles_app.models import AnswerPoints, GameAnswer, GameRound, GridStep, ModelPrediction, PlayerScore
 from beetlesgallery.beetles_app.test_game import GameCase
 from beetlesgallery.beetles_app.testing import make_taxon
 
@@ -27,9 +26,15 @@ class SelectCase(GameCase):
     def name_at(self, roi_id, rank):
         return game.lineage(game.Beetles.objects.select_related("taxon").get(id=roi_id).taxon, rank)[rank]
 
+    def at(self, rank, size=9):
+        """Level 3, and the player on the grid ladder's step for ``size`` beetles at ``rank``."""
+        self.level(200, 0.4)
+        GridStep.objects.update_or_create(player=self.user, game="select",
+                                          defaults={"step": game_grid_ladder.step_for(size, rank)})
+
     def grid(self, rank="species"):
-        self.level(200, 0.4)   # level 3
-        with mock.patch.object(game, "_relation_order", return_value=[rank]):
+        self.at(rank)
+        with override_settings(GAME_ROUND_SIZE=2):   # beetles for two grids of nine; later ones would be smaller
             return self.play("select")
 
     def answer(self, rnd, item, **body):
@@ -47,14 +52,14 @@ class LadderTests(SelectCase):
         self.assertEqual(game_levels.game_level("select"), 3)
         self.level(60)
         res = self.post("game_prefs", {"play_mode": "select"})
-        self.assertEqual((res.status_code, res.json()["error"]), (403, "Select all unlocks at level 3."))
+        self.assertEqual((res.status_code, res.json()["error"]), (403, "Find Them All unlocks at level 3."))
 
 
 class BuildTests(SelectCase):
     def test_every_grid_has_three_or_four_members_and_at_least_as_many_others(self):
-        self.level(200, 0.4)
         for rank in game.RANKS:
-            with self.subTest(rank=rank), mock.patch.object(game, "_relation_order", return_value=[rank]):
+            with self.subTest(rank=rank):
+                self.at(rank)
                 item = game.build_select_items(self.user, 1)[0]
                 self.assertEqual((item["mode"], item["rank"], len(item["tiles"]), len(set(item["tiles"]))), ("select", rank, 9, 9))
                 named = [self.name_at(t, rank).lower() == item["group"][rank].lower() for t in item["tiles"]]
@@ -64,8 +69,8 @@ class BuildTests(SelectCase):
                 self.assertEqual(len(set(photos)), 9)
 
     def test_every_grid_has_a_sure_and_an_unsure_ai_beetle_besides_validated_ones(self):
-        self.level(200, 0.4)
-        # only Xyleborus affinis has three validated beetles, so it is always the group; two each of the others to fill
+        self.at("species")
+        # only Xyleborus affinis has three validated beetles, so only it can be the group of nine; two each of the others
         for roi in self.rois["affinis"][3:] + self.rois["ferrugineus"][2:] + self.rois["cylindrus"][2:] + self.rois["crassiusculus"][2:]:
             roi.delete()
         guesses = {}
@@ -73,24 +78,19 @@ class BuildTests(SelectCase):
             guesses[conf] = self.roi(self.t_affinis, validated=False)
             ModelPrediction.objects.create(roi=guesses[conf], valid_species_id=self.t_affinis.valid_species_id,
                                            taxon=self.t_affinis, confidence=conf, model_name="m", model_version="1")
-        with mock.patch.object(game, "_relation_order", return_value=["species"]):
-            for _ in range(30):   # an anchor of another species can't make a grid; keep going until one does
-                items = game.build_select_items(self.user, 1)
-                if items:
-                    break
+        items = game.build_select_items(self.user, 1)
         tiles = items[0]["tiles"]
-        self.assertEqual(items[0]["group"]["species"], "Xyleborus affinis")
+        self.assertEqual((items[0]["group"]["species"], len(tiles)), ("Xyleborus affinis", 9))
         self.assertIn(str(guesses[0.95].id), tiles)
         self.assertIn(str(guesses[0.3].id), tiles)
         self.assertGreaterEqual(game.Beetles.objects.filter(id__in=tiles, bbox_is_validated=True).count(), 6)
 
-    def test_without_an_unsure_ai_beetle_there_is_no_grid(self):
-        self.level(200, 0.4)
+    def test_without_an_unsure_ai_beetle_there_is_still_a_grid(self):   # the staging bug (#489)
+        self.at("species")
         sure = self.roi(self.t_affinis, validated=False)
         ModelPrediction.objects.create(roi=sure, valid_species_id=self.t_affinis.valid_species_id, taxon=self.t_affinis,
                                        confidence=0.95, model_name="m", model_version="1")
-        with mock.patch.object(game, "_relation_order", return_value=["species"]):
-            self.assertEqual(game.build_select_items(self.user, 1), [])
+        self.assertTrue(game.build_select_items(self.user, 1))
 
 
 @override_settings(GAME_POINTS_PARTICIPATION=0.0)
@@ -107,11 +107,12 @@ class ScoringTests(SelectCase):
     def points(self, ans):
         return game_scoring.score(ans, lambda rid: [], game_scoring._NoJudges())[0]
 
-    def test_a_perfect_grid_earns_twice_a_similarity_answer_at_that_rank(self):
-        self.assertAlmostEqual(self.points(self.grid_answer([0, 1, 2])), 2 * game_scoring.PAIR_POINTS[2])
+    def test_a_perfect_grid_earns_twice_a_similarity_answer_at_that_rank_times_its_size_factor(self):
+        self.assertAlmostEqual(self.points(self.grid_answer([0, 1, 2])),
+                               2 * game_scoring.PAIR_POINTS[2] * game_scoring.size_factor(9))
 
     def test_a_wrong_tap_costs_one_and_a_half_right_ones_and_a_missed_one_nothing(self):
-        share = 2 * game_scoring.PAIR_POINTS[2] / 3
+        share = 2 * game_scoring.PAIR_POINTS[2] * game_scoring.size_factor(9) / 3
         self.assertAlmostEqual(self.points(self.grid_answer([0, 1, 3])), share * (2 - 1.5))
         self.assertAlmostEqual(self.points(self.grid_answer([0, 1])), share * 2)
         self.assertLess(self.points(self.grid_answer(list(range(9)))), 0)   # tapping everything loses
@@ -143,16 +144,16 @@ class AnswerTests(SelectCase):
         data = self.answer(rnd, item, picks=members).json()
         ans = GameAnswer.objects.get()
         self.assertEqual((ans.mode, ans.picks, ans.correct_species, ans.is_check), ("select", members, True, True))
-        self.assertEqual(data["celebrate"], "validated")
-        self.assertEqual([i for i, s in enumerate(data["reveal"]["tiles"]) if s == "right"], members)
+        self.assertEqual(data["review"]["celebrate"]["kind"], "validated")
+        self.assertEqual([i for i, t in enumerate(data["review"]["grid"]["tiles"]) if t["state"] == "right"], members)
 
     def test_missing_one_is_partly_correct_and_a_wrong_tap_shows(self):
         rnd, item = self.grid("species")
         members = self.members(rnd, item)
         other = next(i for i in range(9) if i not in members)
         data = self.answer(rnd, item, picks=members[1:] + [other]).json()
-        self.assertEqual(data["reveal"]["tiles"][members[0]], "missed")
-        self.assertEqual(data["reveal"]["tiles"][other], "wrong")
+        self.assertEqual(data["review"]["grid"]["tiles"][members[0]]["state"], "missed")
+        self.assertEqual(data["review"]["grid"]["tiles"][other]["state"], "wrong")
         self.assertFalse(GameAnswer.objects.get().correct_species)
 
     def test_taps_must_be_places_in_the_grid(self):
@@ -183,4 +184,4 @@ class PageTests(SelectCase):
             self.assertIn(marker, page)
         how = self.client.get(reverse("game_how")).content.decode()
         self.assertIn('data-testid="how-select"', how)
-        self.assertIn("Select all at level 3", how)
+        self.assertIn("Find Them All at level 3", how)

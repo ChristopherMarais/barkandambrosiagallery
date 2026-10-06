@@ -1,10 +1,12 @@
 /*
  * Confetti for Ambrosia Archive, made of the site's beetle logo (its silhouette, tinted). One call per celebration:
- *   beetleConfetti(canvas, "partial", size)    a few small grey beetles: a checked beetle named correctly to some rank
- *   beetleConfetti(canvas, "validated", size)  brown beetles: a checked beetle named correctly to the species
- *   beetleConfetti(canvas, "plain")            ordinary paper confetti: a strong answer on a beetle nobody checked yet
- *   beetleConfetti(canvas, "level")            gold beetles from both sides, with paper: a new level (only then)
- * ``size`` (0.25 to 1, the share of ranks named correctly) scales how many there are and how big.
+ *   beetleConfetti(canvas, "partial", size)    a few grey beetles: a beetle named correctly to some rank
+ *   beetleConfetti(canvas, "validated", size)  brown beetles: a right species or a perfect grid; at full size a second wave
+ *   beetleConfetti(canvas, "plain", size)      ordinary paper confetti: a strong answer on a beetle nobody checked yet
+ *   beetleConfetti(canvas, "level")            the biggest: gold beetles from both sides and a centre burst with paper
+ * ``size`` (0.2 to 1, from the answer's points) scales how many pieces there are, how big and how far they fly.
+ * Bursts run side by side in one shared animation loop, so a daily-goal burst never wipes out a level-up. The total
+ * is capped (lower on phones): the oldest pieces fade out early to make room. Nothing moves under reduced motion.
  * The logo URL comes from window.BEETLE_LOGO_URL; until it has loaded, a drawn beetle stands in.
  */
 (function () {
@@ -15,6 +17,8 @@
     plain: ["#111827", "#374151", "#9ca3af", "#d1d5db", "#ffffff", "#16a34a"],
   };
   const MASK_HEIGHT = 96;
+  const GRAVITY = 0.35;     // px per frame², at 60 frames a second
+  const FADE = 0.35;        // the last share of a piece's life is spent fading out
   let mask = null;          // the logo as a solid silhouette (alpha only), once loaded
   const tinted = {};        // colour -> canvas of the silhouette in that colour
 
@@ -68,7 +72,13 @@
 
   if (window.BEETLE_LOGO_URL) {
     const img = new Image();
-    img.onload = () => { try { mask = buildMask(img); } catch (e) { mask = null; } };
+    img.onload = () => {
+      try {
+        mask = buildMask(img);
+        // tint every colour now, while nothing is celebrating, so the first big burst has no work to do
+        ["partial", "validated", "level"].forEach((kind) => PALETTES[kind].forEach(silhouette));
+      } catch (e) { mask = null; }
+    };
     img.src = window.BEETLE_LOGO_URL;
   }
 
@@ -79,73 +89,163 @@
     ctx.beginPath(); ctx.ellipse(0, -size * 0.24, size * 0.16, size * 0.15, 0, 0, Math.PI * 2); ctx.fill();
   }
 
-  function piece(kind, size, origin) {
+  const rand = (lo, hi) => lo + Math.random() * (hi - lo);
+
+  // Phones get fewer pieces in the air at once.
+  function maxPieces() {
+    const small = innerWidth < 640 || window.matchMedia("(pointer: coarse)").matches;
+    return small ? 320 : 520;
+  }
+
+  /*
+   * One piece. ``from`` is "left", "right" or "centre"; ``size`` scales piece size and speed; ``born`` and ``life``
+   * (ms) say when it appears and how long it lasts. Speeds grow with the square root of the screen height, so a burst
+   * fills a tall screen as well as a short one.
+   */
+  function piece(kind, size, from, born, life) {
     const beetle = kind !== "plain";
-    const palette = PALETTES[kind] || PALETTES.validated;
-    const base = { partial: 12, validated: 18, level: 26, plain: 5 }[kind] || 16;
-    const spread = { partial: 6, validated: 12, level: 18, plain: 6 }[kind] || 10;
-    const fromSide = origin !== 0;
-    return {
+    const palette = PALETTES[kind];
+    const base = { partial: 13, validated: 18, level: 26, plain: 6 }[kind];
+    const vary = { partial: 7, validated: 12, level: 16, plain: 6 }[kind];
+    const reach = Math.sqrt(Math.max(0.6, Math.min(1.6, innerHeight / 800)));
+    const p = {
       beetle,
-      x: fromSide ? (origin < 0 ? -10 : innerWidth + 10) : innerWidth / 2 + (Math.random() - 0.5) * 80,
-      y: fromSide ? innerHeight * (0.55 + Math.random() * 0.2) : innerHeight * 0.55,
-      vx: fromSide ? -origin * (5 + Math.random() * 9) : (Math.random() - 0.5) * 9,
-      vy: -Math.random() * (fromSide ? 13 : 11) - 4,
-      size: (base + Math.random() * spread) * (beetle ? 0.6 + 0.4 * size : 1),
+      size: (base + Math.random() * vary) * (0.65 + 0.35 * size),
       spin: Math.random() * Math.PI * 2,
-      vs: (Math.random() - 0.5) * (beetle ? 0.2 : 0.4),
+      vs: rand(-0.5, 0.5) * (beetle ? 0.2 : 0.4),
+      flip: Math.random() * Math.PI * 2,   // paper turns over as it falls
       colour: palette[(Math.random() * palette.length) | 0],
+      born,
+      end: born + life * rand(0.8, 1),
     };
+    p.fade = (p.end - born) * FADE;
+    if (from === "centre") {
+      const angle = rand(-Math.PI * 0.85, -Math.PI * 0.15);   // a fan, mostly upwards
+      const speed = rand(5, 9 + 7 * size) * reach;
+      p.x = innerWidth / 2 + rand(-40, 40);
+      p.y = innerHeight * 0.55;
+      p.vx = Math.cos(angle) * speed * 1.1;
+      p.vy = Math.sin(angle) * speed - 3;
+    } else {
+      const side = from === "left" ? -1 : 1;
+      p.x = side < 0 ? -10 : innerWidth + 10;
+      p.y = innerHeight * rand(0.55, 0.8);
+      p.vx = -side * rand(5, 15) * reach * Math.min(1.4, Math.max(0.8, innerWidth / 900));
+      p.vy = -rand(7, 18) * reach;
+    }
+    return p;
+  }
+
+  // What each kind of celebration throws: lists of [kind, count, from, delay ms, life ms].
+  function waves(kind, size) {
+    if (kind === "level") {
+      return [
+        ["level", 46, "left", 0, 3500], ["level", 46, "right", 0, 3500],
+        ["level", 30, "centre", 120, 3300], ["plain", 70, "centre", 120, 3300],
+        ["level", 18, "left", 650, 2800], ["level", 18, "right", 650, 2800],
+      ];
+    }
+    if (kind === "partial") return [["partial", 6 + Math.round(14 * size), "centre", 0, 1500]];
+    if (kind === "plain") return [["plain", 40 + Math.round(60 * size), "centre", 0, 2000]];
+    const list = [["validated", 28 + Math.round(52 * size), "centre", 0, 2200]];
+    if (size >= 0.95) list.push(["validated", 36, "centre", 380, 2000], ["plain", 30, "centre", 380, 2000]);
+    return list;
+  }
+
+  const scenes = new WeakMap();   // canvas -> { ctx, pieces, running }
+
+  // Match the canvas to the window; only when it differs (setting the width clears it, so never per burst).
+  function fit(scene) {
+    const canvas = scene.canvas;
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+    scene.dpr = dpr;
+  }
+
+  function draw(scene, p, alpha) {
+    const ctx = scene.ctx, dpr = scene.dpr;
+    const cos = Math.cos(p.spin) * dpr, sin = Math.sin(p.spin) * dpr;
+    ctx.setTransform(cos, sin, -sin, cos, p.x * dpr, p.y * dpr);
+    ctx.globalAlpha = alpha;
+    if (p.beetle) {
+      const shape = silhouette(p.colour);
+      if (shape) {
+        const w = p.size * shape.width / shape.height;
+        ctx.drawImage(shape, -w / 2, -p.size / 2, w, p.size);
+      } else {
+        drawBeetle(ctx, p.size, p.colour);
+      }
+    } else {
+      const h = (p.size / 2) * Math.max(0.15, Math.abs(Math.cos(p.flip)));
+      ctx.fillStyle = p.colour;
+      ctx.fillRect(-p.size / 2, -h / 2, p.size, h);
+      if (p.colour === "#ffffff") { ctx.strokeStyle = "#9ca3af"; ctx.lineWidth = 0.5; ctx.strokeRect(-p.size / 2, -h / 2, p.size, h); }
+    }
+  }
+
+  // The one loop per canvas: moves and draws every live piece of every burst, and stops when none are left.
+  function run(scene) {
+    if (scene.running) return;
+    scene.running = true;
+    let last = performance.now();
+    function frame(now) {
+      const step = Math.min(3, Math.max(0, (now - last) / (1000 / 60)));   // frames at 60 a second; steady on 120 Hz
+      last = now;
+      fit(scene);
+      const ctx = scene.ctx;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalAlpha = 1;
+      ctx.clearRect(0, 0, scene.canvas.width, scene.canvas.height);
+      const bottom = innerHeight + 60;
+      scene.pieces = scene.pieces.filter((p) => now < p.end && p.y < bottom);
+      scene.pieces.forEach((p) => {
+        if (now < p.born) return;
+        const drag = p.beetle ? 0.995 : 0.985;
+        p.vx *= Math.pow(drag, step);
+        p.vy = Math.min(p.beetle ? 7 : 3.5, p.vy + GRAVITY * step);   // they float down, paper slowest
+        p.x += p.vx * step + (p.beetle ? 0 : Math.sin(p.flip) * 0.6 * step);
+        p.y += p.vy * step;
+        p.spin += p.vs * step;
+        p.flip += 0.12 * step;
+        draw(scene, p, Math.max(0, Math.min(1, (p.end - now) / p.fade)));
+      });
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalAlpha = 1;
+      if (scene.pieces.length) {
+        requestAnimationFrame(frame);
+      } else {
+        ctx.clearRect(0, 0, scene.canvas.width, scene.canvas.height);
+        scene.running = false;
+      }
+    }
+    requestAnimationFrame(frame);
   }
 
   window.beetleConfetti = function (canvas, kind, size) {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!canvas || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     kind = PALETTES[kind] ? kind : (kind === "beetles" ? "validated" : "plain");
-    size = Math.max(0.25, Math.min(1, Number(size) || 1));
-    const ctx = canvas.getContext("2d");
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = innerWidth * dpr;
-    canvas.height = innerHeight * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    let pieces;
-    if (kind === "level") {
-      // the level-up burst: gold beetles from both sides, with paper confetti in the middle
-      pieces = [].concat(
-        Array.from({ length: 28 }, () => piece("level", 1, -1)),
-        Array.from({ length: 28 }, () => piece("level", 1, 1)),
-        Array.from({ length: 50 }, () => piece("plain", 1, 0)),
-      );
-    } else {
-      const count = { partial: 4 + Math.round(10 * size), validated: 14 + Math.round(26 * size), plain: 70 }[kind];
-      pieces = Array.from({ length: count }, () => piece(kind, size, 0));
+    size = Math.max(0.2, Math.min(1, Number(size) || 1));
+    let scene = scenes.get(canvas);
+    if (!scene) {
+      scene = { canvas, ctx: canvas.getContext("2d"), pieces: [], running: false, dpr: 1 };
+      scenes.set(canvas, scene);
     }
-    const duration = kind === "level" ? 2600 : kind === "partial" ? 1300 : 1800;
-    const start = performance.now();
-    (function frame(now) {
-      const t = now - start;
-      ctx.clearRect(0, 0, innerWidth, innerHeight);
-      pieces.forEach((p) => {
-        p.vy += 0.35; p.x += p.vx; p.y += p.vy; p.spin += p.vs;
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.spin);
-        ctx.globalAlpha = Math.max(0, 1 - t / duration);
-        if (p.beetle) {
-          const shape = silhouette(p.colour);
-          if (shape) {
-            const w = p.size * shape.width / shape.height;
-            ctx.drawImage(shape, -w / 2, -p.size / 2, w, p.size);
-          } else {
-            drawBeetle(ctx, p.size, p.colour);
-          }
-        } else {
-          ctx.fillStyle = p.colour;
-          ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
-          if (p.colour === "#ffffff") { ctx.strokeStyle = "#9ca3af"; ctx.lineWidth = 0.5; ctx.strokeRect(-p.size / 2, -p.size / 4, p.size, p.size / 2); }
-        }
-        ctx.restore();
-      });
-      if (t < duration) requestAnimationFrame(frame); else ctx.clearRect(0, 0, innerWidth, innerHeight);
-    })(start);
+    fit(scene);
+    const now = performance.now();
+    waves(kind, size).forEach(([k, count, from, delay, life]) => {
+      for (let i = 0; i < count; i++) scene.pieces.push(piece(k, size, from, now + delay, life));
+    });
+    // Over the cap: the oldest pieces (the front of the list) fade out within a quarter second.
+    const extra = scene.pieces.length - maxPieces();
+    for (let i = 0; i < extra; i++) {
+      const p = scene.pieces[i];
+      p.end = Math.min(p.end, now + 250);
+      p.fade = Math.min(p.fade, 250);
+    }
+    run(scene);
   };
 })();

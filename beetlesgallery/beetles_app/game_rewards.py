@@ -151,7 +151,7 @@ BADGES = OrderedDict([
     ("both", ("All-rounder", "Play more than one game", "fi-rr-apps", True)),
     ("species1", ("Species spotter", "Name a species we know the answer to", "fi-rr-search", False)),
     ("species25", ("Sharp eyes", "Name 25 species we know the answer to", "fi-rr-star", False)),
-    ("expert", ("Trusted expert", "Prove yourself on a taxon", "fi-rr-shield-check", False)),
+    ("expert", ("Trusted expert", "Become an Identification expert in a taxon", "fi-rr-shield-check", False)),
     # harder, and some very specific
     ("fivehundred", ("Field season", "Label 500 beetles", "fi-rr-leaf", True)),
     ("tenthousand", ("Ten thousand eyes", "Label 10,000 beetles", "fi-rr-binoculars", True)),
@@ -172,7 +172,7 @@ BADGES = OrderedDict([
     ("ahead", ("Ahead of the curators", "10 answers proven correct after curators reviewed them", "fi-rr-time-forward", False)),
     ("curator", ("Sharp-eyed", "3 of your reports led to a fix", "fi-rr-flag-alt", False)),
     ("discovery3", ("Explorer", "Find 3 new species", "fi-rr-compass", False)),
-    ("expert5", ("Polymath", "Be a proven expert in 5 taxa", "fi-rr-graduation-cap", False)),
+    ("expert5", ("Polymath", "Be an Identification expert in 5 taxa", "fi-rr-graduation-cap", False)),
     ("king", ("Royalty", "Reach the top level", "fi-rr-crown", False)),
     ("discovery", ("New species finder", "Name a species the gallery had never validated, confirmed later by a curator", "fi-rr-sparkles", False)),
 ])
@@ -351,9 +351,10 @@ def play_events(player, before):
     now = progress(player)
     events = []
     if now["level"] > before["level"]:
-        from .game_levels import PERKS, PROPOSALS
+        from .game_levels import GAME_PERK, PERKS, PROPOSALS
         gained = [p for p in now["perks"] if p not in before["perks"]]
-        unlocked = " Unlocked: " + ", ".join(PERKS[p][0].lower() for p in gained) + "." if gained else ""
+        games = set(GAME_PERK.values())   # a game's name keeps its capitals ("Imposter Picker")
+        unlocked = " Unlocked: " + ", ".join(PERKS[p][0] if p in games else PERKS[p][0].lower() for p in gained) + "." if gained else ""
         events.append({"kind": "level", "title": f"Level {now['level']}", "text": f"You are now a {now['level_name']}.{unlocked}"})
         if PROPOSALS in gained:
             events.append({"kind": "proposals", "title": "Your labels now count", "text": PERKS[PROPOSALS][1]})

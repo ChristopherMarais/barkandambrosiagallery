@@ -4,7 +4,7 @@
 {% block content %}
 <div class="max-w-3xl mx-auto">
   <a href="{% url 'game_home' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; {{ game_name }}</a>
-  <h1 class="page-title"><span class="inline-flex items-center gap-2">{% include "beetles/includes/game_level_badge.html" with level=p.level.level name=p.level.name %}{{ name }}{% if p.discoveries %}<i class="fi fi-rr-sparkles text-amber-600 text-xl" title="New species finder"></i>{% endif %}</span>{% if is_self %} <span class="text-base font-normal text-gray-400">(you)</span>{% endif %}</h1>
+  <h1 class="page-title"><span class="inline-flex items-center gap-2">{% include "beetles/includes/game_level_badge.html" with level=p.level.level name=p.level.name %}{{ player.username }}{% if p.discoveries %}<i class="fi fi-rr-sparkles text-amber-600 text-xl" title="New species finder"></i>{% endif %}</span>{% if is_self %} <span class="text-base font-normal text-gray-400">(you)</span>{% endif %}</h1>
 
   <div class="grid grid-cols-3 gap-3 mb-6">
     <div class="p-4 bg-gray-50 border border-gray-100 rounded-2xl">
@@ -22,17 +22,25 @@
   </div>
 
   <div class="mb-6 text-sm text-gray-600">
-    {{ p.streak|digit_groups }} day streak &middot; {{ p.modes.classify|default:0|digit_groups }} identified &middot; {{ p.modes.pair|default:0|digit_groups }} compared for similarity &middot; {{ p.modes.odd|default:0|digit_groups }} odd ones out &middot; {{ p.modes.select|default:0|digit_groups }} grids
+    {{ p.streak|digit_groups }} day streak &middot; {{ p.modes.classify|default:0|digit_groups }} identified &middot; {{ p.modes.pair|default:0|digit_groups }} compared for similarity &middot; {{ p.modes.odd|default:0|digit_groups }} imposters spotted &middot; {{ p.modes.select|default:0|digit_groups }} grids
   </div>
   <div class="mb-6">{% include "beetles/includes/game_split.html" with games=p.games %}</div>
 
-  <h2 class="text-lg font-semibold text-gray-900 mb-2">Expert in</h2>
+  <h2 class="text-lg font-semibold text-gray-900 mb-2">Identification expert in</h2>
   {% if p.expert_in %}
-  <ul class="mb-2 flex flex-wrap gap-2">
+  <ul class="mb-2 flex flex-wrap gap-2" data-testid="identification-expert-in">
     {% for e in p.expert_in %}<li class="px-3 py-1 rounded-full border border-green-200 bg-green-50 text-sm text-green-800"><i class="fi fi-rr-shield-check"></i> {{ e.what }}{% if e.branch %} <em>{{ e.branch }}</em>{% endif %}</li>{% endfor %}
   </ul>
   {% else %}
-  <p class="text-sm text-gray-500 mb-2">Not a proven expert anywhere yet.</p>
+  <p class="text-sm text-gray-500 mb-2">None yet.</p>
+  {% endif %}
+  <h2 class="text-lg font-semibold text-gray-900 mt-4 mb-2">Distinction expert in</h2>
+  {% if p.distinction_in %}
+  <ul class="mb-2 flex flex-wrap gap-2" data-testid="distinction-expert-in">
+    {% for e in p.distinction_in %}<li class="px-3 py-1 rounded-full border border-gray-300 bg-white text-sm text-gray-800"><span class="inline-block w-2.5 h-2.5 rounded-sm bg-yellow-600" aria-hidden="true"></span> {{ e.what }}{% if e.branch %} <em>{{ e.branch }}</em>{% endif %}</li>{% endfor %}
+  </ul>
+  {% else %}
+  <p class="text-sm text-gray-500 mb-2">None yet.</p>
   {% endif %}
   <a href="{% url 'game_player_expertise' player.id %}" class="inline-block mb-8 text-sm underline text-gray-600 hover:text-gray-900">See the whole expertise tree</a>
 

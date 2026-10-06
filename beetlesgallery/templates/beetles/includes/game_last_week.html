@@ -1,0 +1,4 @@
+{% load beetle_tags %}{# Last week's top players on one line (game_board.last_week_top), on the leaderboard and the game home. Needs ``last_week``. #}
+<p class="mt-2 text-sm text-gray-600" data-testid="last-week">Last week:
+  {% for w in last_week %}<span class="whitespace-nowrap">{% if w.position == 1 %}<i class="fi fi-rr-trophy text-gray-700"></i>{% else %}{{ w.position }}.{% endif %} <a href="{% url 'game_profile' w.player_id %}" class="underline decoration-gray-300 hover:decoration-gray-900">{{ w.username }}</a> ({{ w.points|digit_groups }})</span>{% if not forloop.last %} &middot; {% endif %}{% endfor %}
+</p>

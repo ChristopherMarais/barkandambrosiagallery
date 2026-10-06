@@ -10,6 +10,7 @@ class ImageAssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = ImageAsset
         fields = '__all__'
+        read_only_fields = ['added_by']   # who added the photo is provenance, not something to edit
 
 
 class SpeciesSerializer(serializers.Serializer):

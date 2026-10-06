@@ -4,14 +4,13 @@ Accounts and requests for more access.
 Someone fills in /accounts/request-access/ with who they are, the username and password they want and, optionally,
 what more than a Basic account they would like (and why). They get an inactive account and an email with a link to
 confirm their address. Confirming it **activates the account straight away as Basic** (areas.py): the image
-browser, taxonomy browser, interactions page, AI classifier and Beetle ID game.
+browser, taxonomy browser, interactions page, IBBI-AI and the game (Ambrosia Archive).
 
 If they asked for more, the request stays open for a superuser on My Account -> Access Requests, who grants the
 areas they think right, one by one (or none). Their Basic account works meanwhile. Someone already signed in can
 ask for more the same way; the approvers are told straight away. Superuser is never granted through a request.
 """
 import logging
-import re
 from datetime import timedelta
 from dataclasses import dataclass
 
@@ -21,7 +20,6 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
 from django.core.mail import EmailMultiAlternatives
 from django.db import IntegrityError, transaction
-from django.db.models.functions import Lower
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
@@ -35,12 +33,12 @@ logger = logging.getLogger(__name__)
 from . import areas as site_areas
 
 BASIC, DENY = "basic", "deny"
-BASIC_SUMMARY = f"the image browser, the taxonomy browser, the interactions page, the AI classifier and the game ({settings.GAME_DISPLAY_NAME})"
+BASIC_SUMMARY = f"the image browser, the taxonomy browser, the interactions page, IBBI-AI and the game ({settings.GAME_DISPLAY_NAME})"
 # What can be asked for beyond Basic: the areas (key, label, description)
 AREAS = site_areas.AREAS
 AREA_LABELS = dict(site_areas.LABELS)
 # keys used on the form before Basic accounts (old requests still show readable labels)
-AREA_LABELS.update({"browse": "Browse and download images", "classify": "AI species classifier", "game": settings.GAME_DISPLAY_NAME})
+AREA_LABELS.update({"browse": "Browse and download images", "classify": "IBBI-AI", "game": settings.GAME_DISPLAY_NAME})
 
 
 THROTTLE_PER_IP = 5      # requests per hour from one address

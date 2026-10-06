@@ -16,18 +16,22 @@
   #photos button.frame { position: relative; width: 100%; height: 100%; display: block; padding: 0; border: 0; background: none; }
   /* The crop fills its cell and keeps its proportions, whatever the shape of the photo or the screen */
   #photos canvas { display: block; width: 100%; height: 100%; object-fit: contain; transform-origin: 0 0; }
-  /* Zoom into the crop: double-tap or double-click, pinch, or the mouse wheel; drag to look around */
-  #photos .frame.zoomed { cursor: grab; touch-action: none; }
+  /* Zoom into the crop: double-tap or double-click, pinch, or the mouse wheel; drag to look around. The page never
+     scrolls under the photos, so every touch there is the zoom's: no browser pinch, double-tap zoom or text selection. */
+  #photos .frame, #lb-frame { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  #photos .frame.zoomed, #lb-frame.zoomed { cursor: grab; }
+  #photos .frame.dragging, #lb-frame.dragging { cursor: grabbing; }
   #photos.fade canvas { opacity: 0; }
   #photos canvas { transition: opacity 0.15s ease; }
   /* Brighter / more contrast for dark photos: one control for every photo on screen, back to normal for the next beetle */
   #photos canvas, #lightbox-img { filter: var(--photo-filter, none); }
-  #light-btn { position: absolute; left: 0.375rem; bottom: 0.375rem; z-index: 3; display: inline-flex; align-items: center; gap: 0.3rem;
+  /* bottom right of the photo area, as in the whole-photo view: the bottom left of each photo is its Flag */
+  #light-btn { position: absolute; right: 0.375rem; bottom: 0.375rem; z-index: 3; display: inline-flex; align-items: center; gap: 0.3rem;
                height: 1.875rem; padding: 0 0.7rem; border-radius: 9999px; background: #fff; border: 1px solid #d1d5db; box-shadow: 0 1px 3px rgba(0,0,0,.15);
                color: #374151; font-size: 0.75rem; font-weight: 600; }
   #light-btn.on { border-color: #4b5563; color: #111827; }
   #light-btn.hidden { display: none; }
-  #light-panel { position: absolute; left: 0.375rem; bottom: 2.75rem; z-index: 4; width: min(18rem, calc(100% - 1rem)); padding: 0.75rem;
+  #light-panel { position: absolute; right: 0.375rem; bottom: 2.75rem; z-index: 4; width: min(18rem, calc(100% - 1rem)); padding: 0.75rem;
                  background: #fff; border: 1px solid #d1d5db; border-radius: 0.75rem; box-shadow: 0 8px 24px rgba(0,0,0,.15); }
   #light-panel.hidden { display: none; }
   #light-panel label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; font-weight: 600; color: #4b5563; }
@@ -107,36 +111,34 @@
   #exit:hover { border-color: #6b7280; }
   /* Rounder photos */
   #photos .cell { border-radius: 1rem; }
-  /* A and B side by side: the letters at the corners that face each other, Report at the far corners.
-     On a phone they are stacked: A's letter at its bottom, B's at its top, Report at the outer corners. */
+  /* A and B side by side: the letters at the top corners that face each other, Flag at the bottom left of each.
+     On a phone they are stacked: A's letter at its bottom (right, clear of its Flag), B's at its top. */
   .ab-tag { position: absolute; z-index: 3; padding: 0.125rem 0.55rem; font-size: 0.875rem; font-weight: 700; color: #111827;
             background: rgba(255,255,255,.92); border: 1px solid #d1d5db; border-radius: 0.5rem; pointer-events: none; }
   #game[data-mode="pair"] #photos .cell:nth-child(1) .ab-tag { top: 0.375rem; right: 0.375rem; }
   #game[data-mode="pair"] #photos .cell:nth-child(2) .ab-tag { top: 0.375rem; left: 0.375rem; }
-  #game[data-mode="pair"] #photos .cell:nth-child(1) .report-chip { right: auto; left: 0.375rem; }
+  /* A's letter has its top right: its more-photos chip takes the top left */
+  #game[data-mode="pair"] #photos .cell:nth-child(1) .more-chip { right: auto; left: 0.375rem; }
   @media (max-width: 639px) {
-    #game[data-mode="pair"] #photos .cell:nth-child(1) .ab-tag { top: auto; bottom: 0.375rem; right: auto; left: 0.375rem; }
-    #game[data-mode="pair"] #photos .cell:nth-child(1) .report-chip { left: auto; right: 0.375rem; }
-    #game[data-mode="pair"] #photos .cell:nth-child(2) .report-chip { top: auto; bottom: 0.375rem; }
-    #game[data-mode="pair"] #photos .cell:nth-child(2) .more-chip { bottom: auto; top: 0.375rem; }
+    #game[data-mode="pair"] #photos .cell:nth-child(1) .ab-tag { top: auto; bottom: 0.375rem; }
   }
-  /* Odd One Out: the beetles in a grid, two across (three across for six on a wider screen); tap one to pick it.
-     Your pick gets a dark ring; after answering the odd one gets a green one. */
-  #game[data-mode="odd"] #photos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); }
-  @media (min-width: 640px) { #game[data-mode="odd"] #photos.six { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  /* The grid games: 2×2, 3×3 or 4×4 beetles (--grid-cols, set for each grid), growing as the player gets better.
+     Odd One Out: tap one to pick it; your pick gets a dark ring, and after answering the odd one a green one. */
+  #game[data-mode="odd"] #photos, #game[data-mode="select"] #photos { display: grid; grid-template-columns: repeat(var(--grid-cols, 2), minmax(0, 1fr));
+      grid-auto-rows: minmax(0, 1fr); gap: 0.375rem; }
+  #photos[data-size="16"] { gap: 0.25rem; padding: 0.25rem; }
   #game[data-mode="odd"] #photos .cell { height: 100%; outline: 3px solid transparent; outline-offset: -3px; }
   #game[data-mode="odd"] #photos .cell.picked { outline-color: #374151; }
   #game[data-mode="odd"] #photos .cell.odd-one { outline-color: #16a34a; }
-  /* bottom right: the Lighting button has the bottom left of the photo area */
-  .zoom-chip { position: absolute; right: 0.375rem; bottom: 0.375rem; z-index: 3; display: inline-flex; align-items: center; justify-content: center;
+  /* top right: the Flag has the bottom left of each photo, Lighting the bottom right of the photo area */
+  .zoom-chip { position: absolute; right: 0.375rem; top: 0.375rem; z-index: 3; display: inline-flex; align-items: center; justify-content: center;
                width: 1.875rem; height: 1.875rem; border-radius: 9999px; background: #fff; border: 1px solid #d1d5db; box-shadow: 0 1px 3px rgba(0,0,0,.15); color: #374151; font-size: 0.75rem; }
   .odd-name { position: absolute; left: 50%; top: 0.375rem; transform: translateX(-50%); z-index: 3; max-width: calc(100% - 0.75rem); padding: 0.125rem 0.55rem;
               border-radius: 0.5rem; background: rgba(255,255,255,.95); border: 1px solid #d1d5db; font-size: 0.75rem; font-weight: 600; color: #111827;
               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
   #odd.hidden, #select.hidden { display: none; }
-  /* Select all: nine beetles, three across; a tap toggles one. After Next: green for a member you tapped, red for one
-     you shouldn't have, a dashed green line round a member you left out. */
-  #game[data-mode="select"] #photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: 0.375rem; }
+  /* Select all: a tap toggles one. After Next: green for a member you tapped, red for one you shouldn't have, a dashed
+     green line round a member you left out. */
   #game[data-mode="select"] #photos .cell { height: 100%; outline: 3px solid transparent; outline-offset: -3px; }
   #game[data-mode="select"] #photos .cell.tapped { outline-color: #374151; }
   #game[data-mode="select"] #photos .cell.sel-right { outline-color: #16a34a; }
@@ -146,15 +148,27 @@
   .tap-mark { position: absolute; left: 0.375rem; top: 0.375rem; z-index: 3; display: none; align-items: center; justify-content: center;
               width: 1.5rem; height: 1.5rem; border-radius: 9999px; background: #374151; color: #fff; font-size: 0.75rem; pointer-events: none; }
   .cell.tapped .tap-mark { display: inline-flex; }
-  #game[data-mode="select"] .report-chip span { display: none; }   /* nine photos: the flag alone */
-  #game[data-mode="select"] .report-chip { padding: 0 0.5rem; }
+  /* In a grid each photo has the flag alone, and in a grid of 16 smaller buttons, so the beetle stays in view */
+  #game[data-mode="odd"] .report-chip span, #game[data-mode="select"] .report-chip span { display: none; }
+  #game[data-mode="odd"] .report-chip, #game[data-mode="select"] .report-chip { width: 1.875rem; padding: 0; justify-content: center; }
+  #photos[data-size="16"] .report-chip, #photos[data-size="16"] .zoom-chip { width: 1.5rem; height: 1.5rem; padding: 0; justify-content: center; }
+  #photos[data-size="16"] .tap-mark { width: 1.25rem; height: 1.25rem; }
+  /* A photo flagged in a grid: greyed out with a "Flagged" badge, and out of play; the rest of the grid carries on */
+  #photos .cell.flagged canvas, #previous-photos .cell.flagged canvas { opacity: 0.35; filter: grayscale(1); }
+  #photos .cell.flagged .frame { pointer-events: none; }
+  #photos .cell.flagged .report-chip, #photos .cell.flagged .tap-mark { display: none; }
+  .flag-badge { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 3; display: inline-flex; align-items: center; gap: 0.25rem;
+                padding: 0.125rem 0.5rem; border-radius: 9999px; background: rgba(255,255,255,.95); border: 1px solid #d1d5db;
+                font-size: 0.6875rem; font-weight: 600; color: #374151; white-space: nowrap; pointer-events: none; }
   /* while the answer shows, only the names: the photo buttons step aside so nothing covers them */
   #photos.revealing .report-chip, #photos.revealing .zoom-chip { visibility: hidden; }
   /* The rank row the arrow keys (or WASD) are on */
   .rank-row.cursor { box-shadow: 0 0 0 2px #9ca3af; }
   /* The whole photo: zoom like the crops, and lighting */
   #lb-zoom { transform-origin: 0 0; }
-  #lb-frame.zoomed { cursor: grab; touch-action: none; }
+  /* The Flag sits at the photo's bottom left, as on the photos in play, and its reasons open above it */
+  #report-cog { left: 0.5rem; bottom: 0.5rem; }
+  #report-menu { left: 0.5rem; bottom: 2.75rem; z-index: 4; }
   #lightbox #light-panel { position: fixed; left: auto; right: 0.75rem; bottom: 4rem; z-index: 101; }
   /* Your last beetle (Back) */
   #previous.hidden { display: none; }
@@ -162,8 +176,8 @@
   #actions button:active:not(:disabled) { transform: scale(0.98); }
   .icon-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 2.75rem; height: 2.75rem; border-radius: 0.75rem; color: #374151; }
   .icon-btn:active { background: #f3f4f6; }
-  /* Report a bad photo: always on the photo itself, top right, so nobody has to hunt for it */
-  .report-chip { position: absolute; top: 0.375rem; right: 0.375rem; z-index: 3; display: inline-flex; align-items: center; gap: 0.3rem;
+  /* Flag a bad photo: always on the photo itself, bottom left, so nobody has to hunt for it */
+  .report-chip { position: absolute; left: 0.375rem; bottom: 0.375rem; z-index: 3; display: inline-flex; align-items: center; gap: 0.3rem;
                  height: 1.875rem; padding: 0 0.7rem; border-radius: 9999px; background: #fff; border: 1px solid #d1d5db;
                  box-shadow: 0 1px 3px rgba(0,0,0,.15); color: #374151; font-size: 0.75rem; font-weight: 600; }
   .report-chip:hover { border-color: #6b7280; color: #111827; }
@@ -193,33 +207,71 @@
   #chip.lit.s6 { background: #facc15; color: #422006; box-shadow: 0 0 0 1px #ca8a04, 0 0 12px rgba(250,204,21,.9); }
   #chip.pop { animation: chip-pop .6s ease; }
   @keyframes chip-pop { 40% { transform: scale(1.18); } }
-  /* What the other players called the last beetle: stays until closed or the next one replaces it */
-  #community { display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.5rem; padding: 0.4rem 0.4rem 0.4rem 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.75rem;
-               background: #fff; color: #374151; font-size: 0.8125rem; line-height: 1.35; }
-  #community.agree { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
-  #community.hidden { display: none; }
+  /* The review after an answer (#488): it takes the answer's place in the panel until Next; the photos get marks */
+  #review.hidden { display: none; }
+  #panel.reviewing :is(#ranks, #ladder, #odd, #select, #rank-lock) { display: none; }
+  .rv-head { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9375rem; font-weight: 600; color: #111827; }
+  .rv-head .fi { font-size: 1.125rem; line-height: 1; }
+  .rv-good, .rv-yes { color: #16a34a; }
+  .rv-part { color: #d97706; }
+  .rv-bad, .rv-no { color: #dc2626; }
+  .rv-flat { color: #6b7280; }
+  .rv-pill { margin-left: auto; padding: 0.0625rem 0.5rem; border-radius: 9999px; background: #f3f4f6; color: #374151; font-size: 0.6875rem; font-weight: 600; white-space: nowrap; }
+  .rv-table { width: 100%; margin-top: 0.375rem; border-collapse: collapse; font-size: 0.8125rem; color: #111827; }
+  .rv-table th { padding-bottom: 0.125rem; text-align: left; font-size: 0.625rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #9ca3af; }
+  .rv-table td { padding: 0.25rem 0.375rem 0.25rem 0; border-top: 1px solid #f3f4f6; vertical-align: top; }
+  .rv-table td:first-child { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280; }
+  .rv-table .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .rv-table small, .rv-note { display: block; font-size: 0.6875rem; color: #6b7280; }
+  .rv-lines { margin-top: 0.375rem; font-size: 0.8125rem; color: #374151; }
+  .rv-lines > * + * { margin-top: 0.25rem; }
+  /* the marks on the grid tiles: points, a number to find each one in the card, a name to the grid's rank */
+  #game[data-mode="select"] #photos .cell.sel-vote, #game[data-mode="odd"] #photos .cell.odd-pick { outline-color: #9ca3af; }
+  #game[data-mode="odd"] #photos .cell.odd-wrong { outline-color: #dc2626; }
+  #previous-photos .cell.sel-right, #previous-photos .cell.odd-one { outline: 3px solid #16a34a; outline-offset: -3px; }
+  #previous-photos .cell.sel-wrong, #previous-photos .cell.odd-wrong { outline: 3px solid #dc2626; outline-offset: -3px; }
+  #previous-photos .cell.sel-missed { outline: 3px dashed #16a34a; outline-offset: -3px; }
+  #previous-photos .cell.sel-vote, #previous-photos .cell.odd-pick { outline: 3px solid #9ca3af; outline-offset: -3px; }
+  .rv-num, .rv-badge { position: absolute; z-index: 3; display: inline-flex; align-items: center; justify-content: center; pointer-events: none; font-weight: 700; white-space: nowrap; }
+  .rv-num { left: 0.375rem; top: 0.375rem; min-width: 1.375rem; height: 1.375rem; padding: 0 0.3rem; border-radius: 9999px; background: rgba(255,255,255,.92); border: 1px solid #d1d5db; color: #374151; font-size: 0.6875rem; }
+  .rv-badge { left: 50%; bottom: 0.375rem; transform: translateX(-50%); padding: 0.0625rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; }
+  #photos[data-size="16"] :is(.rv-num, .rv-badge) { font-size: 0.625rem; }
+  .rv-badge.up { background: #16a34a; color: #fff; }
+  .rv-badge.down { background: #dc2626; color: #fff; }
+  .rv-badge.flat { background: rgba(255,255,255,.95); border: 1px solid #d1d5db; color: #374151; }
+  /* After Submit the answer is locked in; a slim bar shows while the game waits (sending, or the next photos) */
+  #game.answer-locked #panel:not(.reviewing) :is(#ranks, #ladder) { opacity: 0.55; pointer-events: none; }
+  /* Faded only while waiting: on the review the photos are what the player studies next to the names */
+  #game.answer-locked:not([data-phase="review"]) #photos:not(.revealing) .cell:not(.picked):not(.tapped) canvas { opacity: 0.6; }
+  #wait-bar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; height: 3px; overflow: hidden; background: #e5e7eb; }
+  #wait-bar.hidden { display: none; }
+  #wait-bar span { position: absolute; top: 0; bottom: 0; left: -35%; width: 35%; background: #4b5563; animation: wait-slide 1.1s ease-in-out infinite; }
+  @keyframes wait-slide { to { left: 100%; } }
+  @media (prefers-reduced-motion: reduce) { #wait-bar span { animation: none; left: 0; width: 100%; opacity: 0.5; } }
+  /* Back: the same card, with its photos */
+  #previous-photos { flex: 1 1 0; min-height: 0; display: grid; gap: 0.375rem; padding: 0.5rem; background: #f3f4f6;
+                     grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); }
+  #previous-photos .cell { position: relative; min-width: 0; min-height: 0; overflow: hidden; border-radius: 1rem; display: flex; align-items: center; justify-content: center; }
+  #previous-photos canvas { display: block; width: 100%; height: 100%; object-fit: contain; }
   /* After a long session: a gentle, dismissible suggestion to take a break */
   #break-nudge { margin-bottom: 0.5rem; padding: 0.625rem 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.75rem; background: #f9fafb; color: #374151; font-size: 0.8125rem; }
   #break-nudge.hidden { display: none; }
   #break-nudge button { margin-top: 0.5rem; margin-right: 0.5rem; padding: 0.3rem 0.75rem; border-radius: 0.5rem; border: 1px solid #d1d5db; background: #fff; font-weight: 600; font-size: 0.8125rem; }
-  #community button { flex: 0 0 auto; width: 1.75rem; height: 1.75rem; margin-top: -0.125rem; border-radius: 0.5rem; color: inherit; opacity: 0.6; }
-  #community button:hover { opacity: 1; background: rgba(0,0,0,.05); }
   /* On a phone the two photos of Family Ties sit one above the other so each gets the full width */
   @media (max-width: 639px) { #game[data-mode="pair"] #photos { flex-direction: column; } #game[data-mode="pair"] #photos .cell { height: auto; width: 100%; } }
   /* On a wide screen keep the answer buttons a comfortable width in the middle */
   @media (min-width: 700px) { #panel { padding-left: calc((100% - 38rem) / 2); padding-right: calc((100% - 38rem) / 2); } }
   @media (prefers-reduced-motion: reduce) { #photos canvas { transition: none; } #chip.pop { animation: none; } }
   /* More photos of the same beetle (an unlock): a chip on the photo, and arrows in the photo viewer */
-  /* The beetle sits at the edge of the photo: say so, so a cut-off crop isn't mistaken for a bad box */
-               border-radius: 9999px; background: rgba(255,255,255,.92); border: 1px solid #d1d5db; color: #374151; font-size: 0.6875rem; font-weight: 600; pointer-events: none; }
   /* The box on the whole photo: white with a dark edge so it shows on light and dark photos, the rest dimmed */
   /* the photo to name, when a beetle's other photos are open too */
   #lb-primary { position: absolute; top: 0.5rem; left: 0.5rem; z-index: 2; width: 1.75rem; height: 1.75rem; border-radius: 9999px;
                 display: inline-flex; align-items: center; justify-content: center; background: #fff; color: #111827; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
   #lb-primary.hidden { display: none; }
   #lightbox-box { border-radius: 0.5rem; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.7), inset 0 0 0 1px rgba(0,0,0,.7), 0 0 0 9999px rgba(0,0,0,.35); }
-  .more-chip { position: absolute; right: 0.375rem; bottom: 0.375rem; z-index: 2; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem;
+  .more-chip { position: absolute; right: 0.375rem; top: 0.375rem; z-index: 2; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem;
                border-radius: 9999px; background: rgba(17,24,39,.78); color: #fff; font-size: 0.75rem; font-weight: 600; }
+  @media (max-width: 639px) { .more-chip .more-word { display: none; } }
   .more-chip.locked { background: rgba(255,255,255,.92); color: #6b7280; border: 1px solid #d1d5db; }
   .lb-nav { position: absolute; top: 50%; transform: translateY(-50%); padding: 0.75rem; color: #fff; font-size: 1.5rem; }
   #lb-prev { left: 0.25rem; }
@@ -239,7 +291,8 @@
   data-home-url="{% url 'game_home' %}"
   data-taxa-url="{% url 'game_taxa' %}"
   data-prefs-url="{% url 'game_prefs' %}"
-  data-report-url="{% url 'game_report_item' %}">
+  data-report-url="{% url 'game_report_item' %}"
+  data-last-review-url="{{ last_review }}">
 
   <!-- Header: leave any time; your score is on the game home, not here -->
   <header class="flex items-center gap-1 px-2 h-14 border-b border-gray-200 bg-white">
@@ -263,13 +316,15 @@
   {% if mode == 'mixed' %}
   <!-- Your unlocks, right where you play: which game, and a focus. Locked ones say the level that opens them. -->
   <div id="toolbar" class="hidden items-center gap-2 px-2 py-1.5 border-b border-gray-200 bg-white">
-    <div class="flex flex-1 min-w-0 p-0.5 bg-gray-100 rounded-lg text-[11px] sm:text-xs font-semibold" role="radiogroup" aria-label="Which game">
-      {# Short names on a phone, so all five fit #}
-      <button type="button" data-play="both" data-short="Mix" data-long="Mix" class="play-opt flex-1 h-8 rounded-md">Mix</button>
-      <button type="button" data-play="pair" data-short="Similar" data-long="Similarity" class="play-opt flex-1 h-8 rounded-md">Similarity</button>
-      <button type="button" data-play="odd" data-short="Odd one" data-long="Odd One Out" class="play-opt flex-1 h-8 rounded-md">Odd One Out</button>
-      <button type="button" data-play="select" data-short="Select" data-long="Select all" class="play-opt flex-1 h-8 rounded-md">Select all</button>
-      <button type="button" data-play="classify" data-short="ID" data-long="Identification" class="play-opt flex-1 h-8 rounded-md">Identification</button>
+    <div class="flex flex-1 min-w-0 items-center gap-1.5 text-[11px] sm:text-xs font-semibold" role="radiogroup" aria-label="Which game">
+      {# Short names on a phone, so all five fit. All modes mixes the others, so it sits apart: its own dashed pill. #}
+      <button type="button" role="radio" data-play="both" data-short="All" data-long="All modes" class="play-opt play-all shrink-0 h-8 px-2 rounded-lg border border-dashed border-gray-400">All modes</button>
+      <div class="flex flex-1 min-w-0 p-0.5 bg-gray-100 rounded-lg">
+        <button type="button" role="radio" data-play="pair" data-short="Similar" data-long="Similarity" class="play-opt flex-1 h-8 rounded-md">Similarity</button>
+        <button type="button" role="radio" data-play="odd" data-short="Imposter" data-long="Imposter Picker" class="play-opt flex-1 h-8 rounded-md">Imposter Picker</button>
+        <button type="button" role="radio" data-play="select" data-short="Find all" data-long="Find Them All" class="play-opt flex-1 h-8 rounded-md">Find Them All</button>
+        <button type="button" role="radio" data-play="classify" data-short="ID" data-long="Identification" class="play-opt flex-1 h-8 rounded-md">Identification</button>
+      </div>
     </div>
     <button type="button" id="focus-btn" class="inline-flex items-center gap-1 h-9 px-3 max-w-[45%] rounded-lg border border-gray-300 text-xs font-semibold text-gray-700">
       <i class="fi fi-rr-bullseye" id="focus-icon"></i><span id="focus-label" class="truncate">Focus</span>
@@ -296,6 +351,7 @@
         <label><span>Contrast</span><input type="range" id="light-contrast" min="50" max="200" step="5" value="100" aria-label="Contrast"></label>
         <button type="button" id="light-reset" class="mt-2 text-xs font-semibold text-gray-600 underline">Reset</button>
       </div>
+      <div id="wait-bar" class="hidden" role="progressbar" aria-label="Loading" data-testid="wait-bar"><span></span></div>
     </div>
 
     <div id="panel">
@@ -303,8 +359,7 @@
         <div><span class="font-semibold" id="break-title">Nice session.</span> <span id="break-text"></span></div>
         <button type="button" id="break-done">Done for today</button><button type="button" id="break-more">Keep going</button>
       </div>
-      <div id="community" class="hidden" role="status" data-testid="community"><span id="community-text" class="flex-1 min-w-0 pt-0.5"></span>
-        <button type="button" id="community-close" aria-label="Close"><i class="fi fi-rr-cross-small"></i></button></div>
+      <div id="review" class="hidden" role="status" aria-live="polite" data-testid="review"></div>
       <div class="space-y-2 hidden" id="ranks">
         {% for rank, label in ranks %}
         <div class="rank-row relative" data-row="{{ rank }}">
@@ -325,11 +380,9 @@
       </div>
       <div id="odd" class="hidden text-center" data-testid="odd-panel">
         <p id="odd-prompt" class="text-base font-semibold text-gray-900"></p>
-        <p id="odd-result" class="text-sm text-gray-700 min-h-[1.25rem]" role="status" aria-live="polite"></p>
       </div>
       <div id="select" class="hidden text-center" data-testid="select-panel">
         <p id="select-prompt" class="text-base font-semibold text-gray-900"></p>
-        <p id="select-result" class="text-sm text-gray-700 min-h-[1.25rem]" role="status" aria-live="polite"></p>
       </div>
       <p id="rank-lock" class="rank-lock hidden" data-testid="rank-lock"><i class="fi fi-rr-lock"></i><span id="rank-lock-text"></span></p>
 
@@ -337,7 +390,7 @@
         <button type="button" id="skip"><span id="skip-text">Skip</span><kbd class="kbd">Del</kbd></button>
         <span class="gap"></span>
         <button type="button" id="back" disabled title="Your last beetle">Back<kbd class="kbd">&#9003;</kbd></button>
-        <button type="button" id="submit" disabled>Next<kbd class="kbd">Enter</kbd></button>
+        <button type="button" id="submit" disabled><span id="submit-text">Submit</span><kbd class="kbd">Enter</kbd></button>
       </div>
     </div>
   </div>
@@ -346,14 +399,16 @@
   <div id="caughtup" class="hidden flex-1 overflow-y-auto px-6 py-10 text-center">
     <div class="inline-flex p-4 bg-gray-100 rounded-full mb-4"><i class="fi fi-rr-trophy text-3xl text-gray-700"></i></div>
     <h2 class="text-2xl font-bold text-gray-900">You&rsquo;re all caught up</h2>
-    <p class="mt-1 text-gray-500">You&rsquo;ve seen every beetle we have for now. New ones arrive as the gallery grows.</p>
+    <p id="caughtup-text" class="mt-1 text-gray-500" data-testid="caughtup-text">You&rsquo;ve seen every beetle we have. New photos are added regularly.</p>
+    <!-- When their focus is all that holds more beetles back (game.nothing_to_play): one tap clears it -->
+    <button type="button" id="caughtup-focus" class="hidden btn-secondary mt-4 px-6 h-11 text-base rounded-xl" data-testid="caughtup-focus">Show everything</button>
     <div class="grid grid-cols-3 gap-2 my-6 max-w-sm mx-auto">
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="sum-round">0</div><div class="text-xs text-gray-500">this session</div></div>
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="sum-total">0</div><div class="text-xs text-gray-500">in total</div></div>
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="sum-accuracy">&ndash;</div><div class="text-xs text-gray-500">accuracy</div></div>
     </div>
     <div class="flex flex-col gap-3 max-w-sm mx-auto">
-      <a id="review-link" href="#" class="px-6 py-3.5 text-base font-semibold text-white bg-gray-500 hover:bg-gray-500 rounded-xl"><i class="fi fi-rr-list-check"></i> See the answers</a>
+      <a id="review-link" href="#" class="btn-primary px-6 py-3.5 text-base rounded-xl"><i class="fi fi-rr-list-check"></i> See the answers</a>
       <a href="{% url 'game_home' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl">Back to the game home</a>
     </div>
   </div>
@@ -368,12 +423,12 @@
     <div class="p-5 text-gray-700 space-y-4 overflow-y-auto">
       <p class="hidden" data-help-mode="classify">Name it as far as you're sure: subfamily, tribe, genus, species.</p>
       <p class="hidden" data-help-mode="pair">How related are <strong>A</strong> and <strong>B</strong>? Pick the lowest line you're sure of.</p>
-      <p class="hidden" data-help-mode="odd">All but one share a name. Tap the one that doesn't, then <strong>Next</strong>.</p>
-      <p class="hidden" data-help-mode="select">Tap every beetle of the group named below the photos, then <strong>Next</strong>. A wrong tap costs, a missed one doesn't.</p>
+      <p class="hidden" data-help-mode="odd">All but one share a name. Tap the one that doesn't, then <strong>Submit</strong>. The grid grows as you get better.</p>
+      <p class="hidden" data-help-mode="select">Tap every beetle of the group named below the photos, then <strong>Submit</strong>. A wrong tap costs, a missed one doesn't. The grid grows as you get better.</p>
       <ul class="list-disc pl-5 space-y-2 text-sm" data-testid="help-rules">
         <li>Answer only as far as you're sure: a wrong guess costs more than stopping early.</li>
-        <li>Unsure? <strong>Skip</strong> <span data-help-mode="classify pair">costs very little</span><span class="hidden" data-help-mode="odd select">earns a little</span>. Reporting a bad photo costs nothing.</li>
-        <li>A clear photo that shows too little (an underside, a leg) isn't bad: name it as far as you can.</li>
+        <li>Unsure? <strong>Skip</strong> <span data-help-mode="classify pair">costs very little</span><span class="hidden" data-help-mode="odd select">earns a little</span>. Flagging a bad photo costs nothing.</li>
+        <li>Flag a photo that shows too little of the beetle (a leg, a fragment). A clear photo of a good part of it from an unusual side (from below, say) isn't bad: name it as far as you can.</li>
         <li>No timer: keys and references are welcome.</li>
         <li>On beetles nobody has checked yet, you earn points when strong players agree with you. Once a curator checks one, it is scored again.</li>
       </ul>
@@ -381,18 +436,16 @@
     </div>
   </div>
 
-  <!-- Back: your last beetle and what you answered (it is saved; this is to look, not to change it) -->
+  <!-- Back: your last beetle's review, the same card as after the answer (it is saved; this is to look, not to change it) -->
   <div id="previous" class="hidden absolute inset-0 z-10 bg-white flex flex-col" data-testid="previous">
     <div class="flex items-center gap-2 px-2 h-14 border-b border-gray-200">
       <button type="button" id="close-previous" class="icon-btn" aria-label="Current beetle"><i class="fi fi-rr-cross text-lg"></i></button>
       <h2 class="font-semibold text-gray-900">Your last beetle</h2>
     </div>
-    <div id="previous-photos" class="flex-1 min-h-0 flex items-center justify-center gap-2 p-2 bg-gray-100"></div>
-    <div class="p-4 space-y-2">
-      <p class="text-gray-900"><span class="text-gray-500">You said:</span> <strong id="previous-answer"></strong></p>
-      <p id="previous-truth" class="text-sm text-gray-900" data-testid="previous-truth"></p>
-      <p id="previous-community" class="text-sm text-gray-600"></p>
-      <button type="button" id="previous-done" class="w-full h-12 rounded-xl font-semibold text-white bg-gray-600">Current beetle</button>
+    <div id="previous-photos"></div>
+    <div class="p-4 space-y-3 overflow-y-auto max-h-[60%]">
+      <div id="previous-review" data-testid="previous-review"></div>
+      <button type="button" id="previous-done" class="btn-primary w-full h-12 text-base rounded-xl">Current beetle</button>
     </div>
   </div>
 
@@ -406,8 +459,8 @@
       <div id="focus-ranks" class="grid grid-cols-3 gap-2"></div>
       <select id="focus-value" class="select-chevron w-full h-11 px-3 text-base border border-gray-300 rounded-xl bg-white" aria-label="Which one"></select>
       <div class="flex gap-2">
-        <button type="button" id="focus-clear" class="flex-1 h-11 rounded-xl border border-gray-300 text-gray-700 font-medium">Show everything</button>
-        <button type="button" id="focus-save" class="flex-1 h-11 rounded-xl bg-gray-500 text-white font-semibold disabled:bg-gray-300" disabled>Focus</button>
+        <button type="button" id="focus-clear" class="btn-secondary flex-1 h-11 text-base rounded-xl">Show everything</button>
+        <button type="button" id="focus-save" class="btn-primary flex-1 h-11 text-base rounded-xl" disabled>Focus</button>
       </div>
     </div>
   </div>
@@ -430,7 +483,7 @@
     </div>
     <div id="recap-badges" class="mb-6 space-y-2"></div>
     <div class="flex flex-col gap-3">
-      <button type="button" id="recap-more" class="px-6 py-3.5 text-base font-semibold text-white bg-gray-500 hover:bg-gray-500 rounded-xl">Keep playing</button>
+      <button type="button" id="recap-more" class="btn-main px-6 py-3.5 text-base">Keep playing</button>
       <a href="{% url 'game_report' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl" data-testid="recap-learn"><i class="fi fi-rr-bulb"></i> Where I lost points</a>
       <a href="{% url 'game_home' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl">See my stats and the leaderboard</a>
     </div>
@@ -443,25 +496,27 @@
 <!-- Full image viewer -->
 <div id="lightbox" class="hidden fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-3" role="dialog" aria-label="Whole image">
   <button type="button" class="absolute top-3 right-3 p-3 text-white text-xl" aria-label="Close"><i class="fi fi-rr-cross"></i></button>
-  <div id="lb-frame" class="relative inline-block overflow-hidden rounded-lg" title="Scroll, pinch or double-click to zoom">
-    <div id="lb-zoom" class="relative">
-      <img id="lightbox-img" alt="Whole image" class="block max-w-[94vw] max-h-[85vh] object-contain">
-      <span id="lb-primary" class="hidden" title="The photo to name" aria-label="The photo to name" data-testid="primary-photo"><i class="fi fi-rr-bullseye"></i></span>
-      <div id="lightbox-box" class="absolute pointer-events-none"></div>
+  <div id="lb-photo" class="relative">
+    <div id="lb-frame" class="relative block overflow-hidden rounded-lg" title="Scroll, pinch or double-click to zoom">
+      <div id="lb-zoom" class="relative">
+        <img id="lightbox-img" alt="Whole image" draggable="false" class="block max-w-[94vw] max-h-[85vh] object-contain">
+        <span id="lb-primary" class="hidden" title="The photo to name" aria-label="The photo to name" data-testid="primary-photo"><i class="fi fi-rr-bullseye"></i></span>
+        <div id="lightbox-box" class="absolute pointer-events-none"></div>
+      </div>
+    </div>
+    <!-- Flag a photo that looks wrong: bottom left of the photo, the same corner as on the photos in play -->
+    <button type="button" id="report-cog" class="report-chip" aria-label="Flag this photo" title="Flag a bad photo"><i class="fi fi-rr-flag"></i><span>Flag</span></button>
+    <div id="report-menu" class="hidden absolute p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Flag this photo">
+      <div class="px-2 py-1 text-xs font-semibold text-gray-500">Flag this photo</div>
+      {% for value, label, hint in report_reasons %}
+      <button type="button" class="report-reason block w-full text-left px-2 py-2 rounded-lg hover:bg-gray-100" data-reason="{{ value }}" role="menuitem">{{ label }}{% if hint %}<span class="block text-xs text-gray-500">{{ hint }}</span>{% endif %}</button>
+      {% endfor %}
     </div>
   </div>
   <button type="button" id="lb-light" class="hidden absolute bottom-3 right-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white text-gray-900 text-sm font-semibold shadow-lg" aria-label="Lighting" data-testid="lightbox-lighting"><i class="fi fi-rr-brightness"></i><span>Lighting</span></button>
   <button type="button" id="lb-prev" class="lb-nav hidden" aria-label="Previous photo of this beetle"><i class="fi fi-rr-angle-left"></i></button>
   <button type="button" id="lb-next" class="lb-nav hidden" aria-label="Next photo of this beetle"><i class="fi fi-rr-angle-right"></i></button>
   <div id="lb-count" class="hidden" data-testid="gallery-count"></div>
-  <!-- Quiet, but labelled so players can find it: report a photo that looks wrong -->
-  <button type="button" id="report-cog" class="absolute bottom-3 left-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white text-gray-900 text-sm font-semibold shadow-lg" aria-label="Report this image"><i class="fi fi-rr-flag"></i><span>Report</span></button>
-  <div id="report-menu" class="hidden absolute bottom-12 left-3 p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Report this image">
-    <div class="px-2 py-1 text-xs font-semibold text-gray-500">Report this image</div>
-    {% for value, label, hint in report_reasons %}
-    <button type="button" class="report-reason block w-full text-left px-2 py-2 rounded-lg hover:bg-gray-100" data-reason="{{ value }}" role="menuitem">{{ label }}{% if hint %}<span class="block text-xs text-gray-500">{{ hint }}</span>{% endif %}</button>
-    {% endfor %}
-  </div>
 </div>
 
 {% include "beetles/includes/game_tour.html" %}
@@ -475,7 +530,7 @@
   const root = document.getElementById("game");
   const PAGE_MODE = root.dataset.mode;          // "mixed" (both games in one feed) or one game
   let MODE = PAGE_MODE === "mixed" ? "classify" : PAGE_MODE;   // the game of the beetle on screen
-  const GAME_NAMES = { classify: "Name That Beetle", pair: "Similarity", odd: "Odd One Out", select: "Select all" };
+  const GAME_NAMES = { classify: "Identification", pair: "Similarity", odd: "Imposter Picker", select: "Find Them All" };
   // badge accents, the same as on the profile (includes/game_badge.html)
   // badge colours by rarity, the same as the levels and the profile (includes/game_badge.html)
   const TIER_INK = { common: "text-gray-600", uncommon: "text-green-600", rare: "text-blue-600", epic: "text-purple-600",
@@ -489,7 +544,11 @@
 
   let roundId = null;
   let item = null;
-  let busy = false;
+  // After Submit the answer is locked in until the next beetle shows: "send" (on its way), "review" (the card is up,
+  // the main button says Next), "next" (the next photos are loading). "answer": open for answering.
+  let phase = "answer";
+  let busy = false;              // phase !== "answer": the beetle on screen can't be changed or answered again
+  let upcoming = null;           // what comes after the review: the next beetle, or the end of the feed
   let shownAt = 0;
   let readyAt = 0;               // performance.now() before which answers are ignored (button mashing)
   const MASH_GUARD_MS = 400;
@@ -528,8 +587,18 @@
 
   // Draw the beetle with some of the photo around it and its box outlined, so the player sees how the crop sits
   // in the photo. Where the window runs past the photo's edge it is plain grey, which shows the edge without a label.
+  // ``cut``: the server already cut that window (game_crops.py), so the box sits at 1/6..5/6 of it; otherwise ``img``
+  // is the whole photo, cut here.
   const CROP_PAD = 0.25;   // context around the box, as a share of the box on each side
-  function drawCrop(canvas, img, box) {
+  function drawCrop(canvas, img, box, cut) {
+    if (cut) {
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      canvas.getContext("2d").drawImage(img, 0, 0);
+      const at = CROP_PAD / (1 + 2 * CROP_PAD);
+      outlineBox(canvas, [at * canvas.width, at * canvas.height, (1 - 2 * at) * canvas.width, (1 - 2 * at) * canvas.height]);
+      return;
+    }
     const W = img.naturalWidth, H = img.naturalHeight;
     const [bx, by, bw, bh] = box;
     const x0 = bx - bw * CROP_PAD, y0 = by - bh * CROP_PAD;                 // the window, in photo fractions
@@ -543,8 +612,12 @@
     const px = (fx) => (fx - x0) / ww * canvas.width, py = (fy) => (fy - y0) / wh * canvas.height;
     const sx0 = Math.max(0, x0), sy0 = Math.max(0, y0), sx1 = Math.min(1, x0 + ww), sy1 = Math.min(1, y0 + wh);
     ctx.drawImage(img, sx0 * W, sy0 * H, (sx1 - sx0) * W, (sy1 - sy0) * H, px(sx0), py(sy0), px(sx1) - px(sx0), py(sy1) - py(sy0));
+    outlineBox(canvas, [px(bx), py(by), px(bx + bw) - px(bx), py(by + bh) - py(by)]);
+  }
+  // The box's outline: a dark line with a white one inside, at r = [x, y, width, height] in canvas pixels
+  function outlineBox(canvas, r) {
+    const ctx = canvas.getContext("2d");
     const lw = Math.max(2, Math.round(Math.max(canvas.width, canvas.height) * 0.004));
-    const r = [px(bx), py(by), px(bx + bw) - px(bx), py(by + bh) - py(by)];
     // a box with round corners (square where the browser cannot round them)
     const radius = Math.min(lw * 4, Math.abs(r[2]) / 4, Math.abs(r[3]) / 4);
     const outline = () => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(...r, radius); else ctx.rect(...r); ctx.stroke(); };
@@ -560,67 +633,119 @@
   // and a zoomed crop can be dragged around. A single tap (not zoomed) still opens the whole photo; with
   // ``immediate`` (picking beetles in Odd One Out and Select all) every tap acts at once, and a quick second tap is
   // another tap, not a zoom (pinch and the wheel still zoom).
+  // Smooth on any device: the frame is measured once per gesture (not on every move), the transform is written at
+  // most once per frame on the GPU (translate3d), and the browser's own image drag and text selection never take
+  // over a drag. Lifting one finger of a pinch carries on as a drag.
+  const ZOOM_STEP = 2.5, ZOOM_MAX = 5, TAP_MS = 300, DRAG_SLOP = 4;
+  const zoomEase = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   function makeZoomable(frame, canvas, onTap, immediate) {
-    let z = 1, tx = 0, ty = 0, lastTap = 0, tapTimer = null, drag = null, pinch = null;
-    const pointers = new Map();
-    const apply = () => {
-      const w = frame.clientWidth, h = frame.clientHeight;
-      tx = Math.min(0, Math.max(w - w * z, tx));
-      ty = Math.min(0, Math.max(h - h * z, ty));
-      canvas.style.transform = z > 1 ? `translate(${tx}px, ${ty}px) scale(${z})` : "";
+    let z = 1, tx = 0, ty = 0, lastTap = 0, tapTimer = null, drag = null, pinch = null, moved = false;
+    let rect = null, raf = 0, wheelEnd = null;
+    const pointers = new Map();   // pointerId -> [clientX, clientY]
+    const measure = () => { rect = frame.getBoundingClientRect(); return rect; };
+    const local = (x, y) => { const r = rect || measure(); return [x - r.left, y - r.top]; };
+    const render = () => {
+      raf = 0;
+      canvas.style.transform = z > 1 ? `translate3d(${tx}px, ${ty}px, 0) scale(${z})` : "";
       frame.classList.toggle("zoomed", z > 1);
     };
-    const zoomAt = (nz, cx, cy) => {
-      nz = Math.min(5, Math.max(1, nz));
+    // Keep the photo covering the frame, then draw on the next frame. ``animate``: a short ease, for the
+    // double-click steps only (a drag or a pinch follows the finger exactly).
+    const update = (animate) => {
+      const r = rect || measure();
+      tx = Math.min(0, Math.max(r.width - r.width * z, tx));
+      ty = Math.min(0, Math.max(r.height - r.height * z, ty));
+      canvas.style.transition = animate && zoomEase ? "transform 0.18s ease-out" : "";
+      if (!raf) raf = requestAnimationFrame(render);
+    };
+    // a layer of its own while it moves; dropped afterwards so the browser redraws it sharp at the new size
+    const moving = (on) => { canvas.style.willChange = on ? "transform" : ""; };
+    const zoomAt = (nz, cx, cy, animate) => {
+      nz = Math.min(ZOOM_MAX, Math.max(1, nz));
       tx = cx - (cx - tx) * nz / z;
       ty = cy - (cy - ty) * nz / z;
       z = nz;
       if (z === 1) { tx = 0; ty = 0; }
-      apply();
+      update(animate);
     };
-    const local = (e) => { const r = frame.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-    frame.addEventListener("wheel", (e) => { e.preventDefault(); zoomAt(z * (e.deltaY < 0 ? 1.15 : 1 / 1.15), ...local(e)); }, { passive: false });
+    const startDrag = ([x, y]) => { drag = { x: x - tx, y: y - ty, sx: x, sy: y }; };
+    const startPinch = () => {
+      const [a, b] = [...pointers.values()];
+      const [mx, my] = local((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+      pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, z, mx, my, tx, ty };
+      drag = null;
+    };
+    frame.addEventListener("dragstart", (e) => e.preventDefault());   // no native image drag to cancel the pan
+    frame.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      measure();
+      moving(true);
+      clearTimeout(wheelEnd);
+      wheelEnd = setTimeout(() => { if (!pointers.size) moving(false); }, 200);
+      // in proportion to the scroll, so a trackpad's many small steps zoom as smoothly as a wheel's few big ones
+      const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      zoomAt(z * Math.min(1.25, Math.max(0.8, Math.exp(-dy * 0.002))), ...local(e.clientX, e.clientY));
+    }, { passive: false });
     frame.addEventListener("pointerdown", (e) => {
-      pointers.set(e.pointerId, local(e));
-      if (pointers.size === 2) {
-        const [a, b] = [...pointers.values()];
-        pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z };
-      } else if (z > 1) {
-        drag = { x: e.clientX - tx, y: e.clientY - ty, moved: false };
-        frame.setPointerCapture(e.pointerId);
-      }
+      if (e.button > 0) return;   // the main button, a finger or a pen
+      if (!pointers.size) { measure(); moved = false; }
+      pointers.set(e.pointerId, [e.clientX, e.clientY]);
+      try { frame.setPointerCapture(e.pointerId); } catch (err) { /* already gone */ }
+      if (pointers.size === 2) { startPinch(); moved = true; }
+      else if (pointers.size === 1 && z > 1) startDrag([e.clientX, e.clientY]);
+      if (pinch || drag) moving(true);
     });
     frame.addEventListener("pointermove", (e) => {
       if (!pointers.has(e.pointerId)) return;
-      pointers.set(e.pointerId, local(e));
-      if (pinch && pointers.size === 2) {
+      pointers.set(e.pointerId, [e.clientX, e.clientY]);
+      if (pinch && pointers.size >= 2) {
+        // zoom about the fingers and follow them as they move together
         const [a, b] = [...pointers.values()];
-        zoomAt(pinch.z * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+        const nz = Math.min(ZOOM_MAX, Math.max(1, pinch.z * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d));
+        const [mx, my] = local((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+        z = nz;
+        tx = mx - (pinch.mx - pinch.tx) * nz / pinch.z;
+        ty = my - (pinch.my - pinch.ty) * nz / pinch.z;
+        if (z === 1) { tx = 0; ty = 0; }
+        update();
       } else if (drag) {
+        if (!moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > DRAG_SLOP) moved = true;
         tx = e.clientX - drag.x;
         ty = e.clientY - drag.y;
-        drag.moved = true;
-        apply();
+        frame.classList.add("dragging");
+        update();
       }
     });
-    const up = (e) => { pointers.delete(e.pointerId); if (pointers.size < 2) pinch = null; if (!pointers.size) setTimeout(() => { drag = null; }, 0); };
-    ["pointerup", "pointercancel", "pointerleave"].forEach((t) => frame.addEventListener(t, up));
+    const up = (e) => {
+      if (!pointers.delete(e.pointerId)) return;
+      if (pinch && pointers.size === 1) {
+        pinch = null;
+        if (z > 1) startDrag([...pointers.values()][0]);   // the finger left on the photo carries on as a drag
+      }
+      if (!pointers.size) { drag = null; pinch = null; frame.classList.remove("dragging"); moving(false); }
+    };
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach((t) => frame.addEventListener(t, up));
     frame.addEventListener("click", (e) => {
       e.preventDefault();
-      if (drag && drag.moved) return;
+      if (moved) return;   // the end of a drag or a pinch, not a tap
       const now = Date.now();
-      if (!immediate && now - lastTap < 300) {
+      if (!immediate && now - lastTap < TAP_MS) {
         clearTimeout(tapTimer);
         lastTap = 0;
-        const [cx, cy] = local(e);
-        zoomAt(z > 1 ? 1 : 2.5, cx, cy);
+        measure();
+        zoomAt(z > 1 ? 1 : ZOOM_STEP, ...local(e.clientX, e.clientY), true);
         return;
       }
       lastTap = now;
       if (immediate) { if (z === 1) onTap(); return; }
-      tapTimer = setTimeout(() => { if (z === 1) onTap(); }, 300);
+      tapTimer = setTimeout(() => { if (z === 1) onTap(); }, TAP_MS);
     });
-    return { reset: () => { z = 1; tx = 0; ty = 0; apply(); } };
+    return { reset: () => {
+      z = 1; tx = 0; ty = 0;
+      cancelAnimationFrame(raf);
+      canvas.style.transition = "";
+      render();
+    } };
   }
 
   // Brightness and contrast, for dark or flat photos. Applies to the crops and the whole photo alike.
@@ -653,13 +778,21 @@
   $("light-reset").addEventListener("click", resetLight);
   document.addEventListener("game:close-overlays", () => toggleLight(false));   // Esc
 
+  // Load an image and decode it off the main thread (decode()), so drawing it doesn't stall the page
   function loadImage(url) {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      img.onload = () => resolve(img);
+      img.decoding = "async";
+      img.onload = () => (img.decode ? img.decode().catch(() => {}) : Promise.resolve()).then(() => resolve(img));
       img.onerror = () => reject(new Error("An image failed to load."));
       img.src = url;
     });
+  }
+  // A beetle's crop for the feed: the small one cut on the server (shown at once), or, if that fails, the whole
+  // photo to cut here. The large crop is swapped in by showItem when it arrives.
+  function loadCrop(im) {
+    const whole = () => loadImage(im.url).then((img) => ({ img, cut: false }));
+    return im.small ? loadImage(im.small).then((img) => ({ img, cut: true }), whole) : whole();
   }
 
   let lightboxImage = 0;   // which photo of the item is open (A = 0, B = 1), for reporting it
@@ -710,27 +843,41 @@
   document.querySelectorAll(".report-reason").forEach((btn) => btn.addEventListener("click", async () => {
     try {
       // galleryAt > 0: one of the beetle's other photos (the server finds it the same way it listed them)
-      await api(root.dataset.reportUrl, { round: roundId, index: item.index, image: lightboxImage, photo: galleryAt, reason: btn.dataset.reason });
+      const data = await api(root.dataset.reportUrl, { round: roundId, index: item.index, image: lightboxImage, photo: galleryAt, reason: btn.dataset.reason });
       $("lightbox").classList.add("hidden");
+      if (data.flagged && !data.end) {
+        // a grid carries on without that photo, until half of them are flagged (#489)
+        flagTile(lightboxImage);
+        toast({ kind: "report", title: "Thanks!", text: "Sent to the curators. Carry on with the rest." });
+        return;
+      }
       toast({ kind: "report", title: "Thanks!", text: "Sent to the curators to check." });
-      send({ skipped: true, reported: true });   // on to the next beetle, no points lost
+      send(Object.assign({ skipped: true, reported: true }, data.flagged ? { flagged: data.flagged } : {}));   // on to the next beetle, no points lost
     } catch (err) {
       $("report-menu").classList.add("hidden");
       toast({ kind: "report", title: "Couldn't send", text: err.message });
     }
   }));
 
-  // Warm the browser cache with the next beetle's photos while this one is answered.
+  // Warm the browser cache with the next beetle's crops while this one is answered (small ones first; on the last
+  // beetle of a batch, the next batch's first), decoded off the main thread.
   function prefetch(urls) {
     prefetched.length = 0;
-    (urls || []).forEach((url) => { const img = new Image(); img.src = url; prefetched.push(img); });
+    (urls || []).forEach((url) => {
+      const img = new Image();
+      img.decoding = "async";
+      img.src = url;
+      if (img.decode) img.decode().catch(() => {});
+      prefetched.push(img);
+    });
   }
 
   // ---------- confetti (only ever for a correct answer, or a level) ----------
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  // Logo beetles: "validated" (brown) for a checked beetle named correctly, "partial" (a few grey) for one named
-  // correctly to some rank, both scaled by the share of ranks correct; "strong": paper confetti for a strong answer
-  // on a beetle nobody has checked yet; "level": the gold level-up burst. See static/js/beetle_confetti.js.
+  // Logo beetles: "validated" (brown) for a fully correct answer on a checked beetle, "partial" (grey) for points from
+  // a partly correct one; "strong": paper confetti for points by agreement on a beetle nobody has checked yet;
+  // "level": the gold level-up burst. The size (0.2 to 1) comes from the answer's points (game_answer_review.
+  // confetti_size). See static/js/beetle_confetti.js.
   function confetti(kind, size) {
     if (reduceMotion || !window.beetleConfetti) return;
     window.beetleConfetti($("confetti"), kind === "strong" ? "plain" : (kind || "validated"), size);
@@ -807,29 +954,8 @@
   $("break-more").addEventListener("click", () => $("break-nudge").classList.add("hidden"));
   $("break-done").addEventListener("click", () => { $("break-nudge").classList.add("hidden"); $("exit").click(); });
 
-  // ---------- after each answer: what others said, and the combo ----------
+  // ---------- the combo ----------
   let combo = 0;
-  // c.text says how far players ranked above you agree with you; c.experts what proven experts said, c.model what the
-  // species classifier leans to (game_views._community). One line each.
-  function communityLines(c) {
-    return [c.players ? c.text : "you're the first to name it.", c.experts, c.model].filter(Boolean);
-  }
-  function linesOf(lines) {
-    const out = [];
-    lines.forEach((line, i) => { if (i) out.push(document.createElement("br")); out.push(line); });
-    return out;
-  }
-  function showCommunity(c) {
-    if (!c) return;
-    const lines = communityLines(c);
-    lines[0] = "Last beetle: " + lines[0];
-    // green only when it means something: everyone ahead of you who went that far agrees
-    $("community").classList.toggle("agree", c.agree === true);
-    $("community-text").replaceChildren(...linesOf(lines));
-    $("community").classList.remove("hidden");
-  }
-  $("community-close").addEventListener("click", () => $("community").classList.add("hidden"));
-
   // Beetles answered in a row: 2 is a start, 20 is perfect
   const COMBO_PERFECT = 20;
   function bumpCombo(answered) {
@@ -870,10 +996,10 @@
       const opened = (q, key) => !!(gameInfo(q, key) || {}).unlocked;
       const tips = [];
       if (!prefs.light && p.light) tips.push({ key: "light", el: "light-btn", text: "New: Lighting. Make a dark or flat photo brighter or sharper. Key: E (or L)." });
-      if (!opened(prefs, "odd") && opened(p, "odd")) tips.push({ key: "game-odd", el: "toolbar", text: "New game: Odd One Out. All but one beetle share a name; tap the one that doesn't." });
-      if (!opened(prefs, "select") && opened(p, "select")) tips.push({ key: "game-select", el: "toolbar", text: "New game: Select all. Tap every beetle of the group named below the photos." });
+      if (!opened(prefs, "odd") && opened(p, "odd")) tips.push({ key: "game-odd", el: "toolbar", text: "New game: Imposter Picker. All but one beetle share a name; tap the one that doesn't." });
+      if (!opened(prefs, "select") && opened(p, "select")) tips.push({ key: "game-select", el: "toolbar", text: "New game: Find Them All. Tap every beetle of the group named below the photos." });
       if (!opened(prefs, "classify") && opened(p, "classify")) tips.push({ key: "game-classify", el: "toolbar", text: "New game: Identification. Name the beetle, rank by rank, as far as you're sure." });
-      if (!prefs.choose_game && p.choose_game) tips.push({ key: "choose-game", el: "toolbar", text: "New: pick one game here, or play a mix of them all." });
+      if (!prefs.choose_game && p.choose_game) tips.push({ key: "choose-game", el: "toolbar", text: "New: pick one game here, or All modes to mix them." });
       if (!anyFocus(prefs) && anyFocus(p)) tips.push({ key: "focus", el: "focus-btn", text: "New: Focus. Play only beetles from one group you want to learn." });
       if (tips.length) window.gameTour.unlocked(tips);
     }
@@ -884,7 +1010,10 @@
     document.querySelectorAll(".play-opt").forEach((b) => {
       const on = b.dataset.play === p.play_mode;
       const why = lockReason(p, b.dataset.play);
-      b.className = "play-opt flex-1 min-w-0 h-8 px-1 rounded-md truncate " + (on ? "bg-white text-gray-900 shadow-sm" : why ? "text-gray-400" : "text-gray-600");
+      const all = b.dataset.play === "both";   // All modes: its own pill, dashed until chosen
+      b.className = all
+        ? "play-opt play-all shrink-0 inline-flex items-center gap-1 h-8 px-2 rounded-lg border " + (on ? "border-gray-600 bg-white text-gray-900 shadow-sm" : why ? "border-dashed border-gray-300 text-gray-400" : "border-dashed border-gray-400 text-gray-600")
+        : "play-opt flex-1 min-w-0 h-8 px-1 rounded-md truncate " + (on ? "bg-white text-gray-900 shadow-sm" : why ? "text-gray-400" : "text-gray-600");
       const short = document.createElement("span"), long = document.createElement("span");
       short.className = "sm:hidden";
       long.className = "hidden sm:inline";
@@ -892,6 +1021,7 @@
       long.textContent = b.dataset.long;
       b.replaceChildren();
       if (why) { const lock = document.createElement("i"); lock.className = "fi fi-rr-lock text-[10px] mr-0.5"; b.append(lock); }
+      else if (all) { const mixIcon = document.createElement("i"); mixIcon.className = "fi fi-rr-shuffle text-[11px]"; mixIcon.setAttribute("aria-hidden", "true"); b.append(mixIcon); }
       b.append(short, long);
       b.title = why;
       b.setAttribute("aria-checked", on ? "true" : "false");
@@ -988,6 +1118,23 @@
     $("focus-clear").addEventListener("click", () => { openFocus(false); savePrefs({ focus_rank: "" }); });
   }
 
+  // ---------- when the feed changes course ----------
+  // The game they chose has nothing for them right now, so the feed plays their other games: say so, once
+  // (game.start_round). When the feed ends: why there's nothing new, and "Show everything" when their focus is what
+  // holds more beetles back (game.nothing_to_play).
+  const noticesShown = new Set();
+  function feedNotes(data) {
+    if (data.notice && !noticesShown.has(data.notice)) {
+      noticesShown.add(data.notice);
+      toast({ kind: "notice", title: data.notice, text: "" });
+    }
+    if (data.caught_up) {
+      $("caughtup-text").textContent = data.caught_up.text;
+      $("caughtup-focus").classList.toggle("hidden", !data.caught_up.clear_focus);
+    }
+  }
+  $("caughtup-focus").addEventListener("click", () => savePrefs({ focus_rank: "" }));
+
   // ---------- the feed ----------
   async function startFeed(fresh) {
     show("loading");
@@ -999,7 +1146,9 @@
       renderPrefs(data.prefs);
       $("focus-line").textContent = data.focus ? "Focus: " + data.focus.replace(/^[^:]+: /, "") : "";
       $("focus-line").classList.toggle("hidden", !data.focus || !!$("toolbar"));
-      await showItem(data.item);
+      upcoming = null;
+      await present(data.item);
+      feedNotes(data);   // the feed had to change game: say why
     } catch (e) {
       $("loading").classList.add("hidden");
       showError(e.message);
@@ -1008,26 +1157,32 @@
 
   async function showItem(next) {
     item = next;
-    setMode(item.mode || PAGE_MODE);
     let images;
     try {
-      images = await Promise.all(item.images.map((im) => loadImage(im.url)));
+      images = await Promise.all(item.images.map(loadCrop));   // small crops: the whole photo loads only when opened
     } catch (e) {
       images = null;
     }
+    setMode(item.mode || PAGE_MODE);   // once the photos are in: the last beetle (and its review) keeps its layout till then
     const holder = $("photos");
     holder.innerHTML = "";
     holder.classList.remove("revealing");
-    holder.classList.toggle("six", MODE === "odd" && item.images.length > 4);
+    // the grid games: 2×2, 3×3 or 4×4 by the grid's size, which grows as the player gets better (#489)
+    holder.style.setProperty("--grid-cols", String(Math.ceil(Math.sqrt(item.images.length))));
+    if (MODE === "odd" || MODE === "select") holder.dataset.size = String(item.images.length);
+    else delete holder.dataset.size;
     item.images.forEach((im, i) => {
       const cell = document.createElement("div");
       cell.className = "cell";
       const frame = document.createElement("button");
       frame.type = "button";
       frame.className = "frame";
-      frame.setAttribute("aria-label", MODE === "odd" ? "Pick this beetle" : "See the whole image");
+      frame.setAttribute("aria-label", MODE === "odd" ? "Pick this beetle" : MODE === "select" ? "Tap this beetle" : "See the whole image");
       const canvas = document.createElement("canvas");
-      if (images) drawCrop(canvas, images[i], im.box);
+      if (images) drawCrop(canvas, images[i].img, im.box, images[i].cut);
+      if (images && images[i].cut && im.large) {   // then the sharp one, if this beetle is still on screen
+        loadImage(im.large).then((big) => { if (canvas.isConnected) drawCrop(canvas, big, im.box, true); }).catch(() => {});
+      }
       frame.appendChild(canvas);
       if (MODE === "pair") {
         const tag = document.createElement("span");
@@ -1064,7 +1219,10 @@
         chip.className = "more-chip" + (im.photos ? "" : " locked");
         chip.dataset.testid = "more-photos";
         chip.innerHTML = '<i class="fi ' + (im.photos ? "fi-rr-images" : "fi-rr-lock") + '"></i>';
-        chip.append(document.createTextNode("+" + im.more + " photo" + (im.more === 1 ? "" : "s")));
+        const word = document.createElement("span");   // a phone shows just "+2": the top corner is narrow there
+        word.className = "more-word";
+        word.textContent = " photo" + (im.more === 1 ? "" : "s");
+        chip.append(document.createTextNode("+" + im.more), word);
         chip.title = im.photos ? "More photos of this same beetle" : "More photos of this beetle unlock at level " + item.more_level;
         chip.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -1088,7 +1246,7 @@
       tag.textContent = "Seen before: have another go";
       holder.appendChild(tag);
     }
-    // A Report button on each photo (top right): opens that photo with the reasons ready to pick
+    // A Flag on each photo (bottom left): opens that photo with the reasons ready to pick, at the same corner
     holder.querySelectorAll(".cell").forEach((cell, i) => {
       const im = item.images[i];
       const report = document.createElement("button");
@@ -1096,8 +1254,9 @@
       report.className = "report-chip";
       report.id = "report-chip-" + i;
       report.dataset.testid = "report-chip";
-      report.setAttribute("aria-label", "Report this photo");
-      report.innerHTML = '<i class="fi fi-rr-flag"></i><span>Report</span>';
+      report.setAttribute("aria-label", "Flag this photo");
+      report.title = "Flag a bad photo";
+      report.innerHTML = '<i class="fi fi-rr-flag"></i><span>Flag</span>';
       report.addEventListener("click", (e) => {
         e.stopPropagation();
         openLightbox(im.url, im.box, i);
@@ -1112,7 +1271,10 @@
     if (MODE === "select") {
       const name = document.createElement(item.rank === "genus" || item.rank === "species" ? "em" : "span");
       name.textContent = item.target;
-      $("select-prompt").replaceChildren("Tap every ", name);
+      const size = document.createElement("span");   // the grid's size, quietly: it grows as the player gets better
+      size.className = "font-normal text-gray-500";
+      size.textContent = " · " + item.images.length + " beetles";
+      $("select-prompt").replaceChildren("Tap every ", name, size);
     }
 
     resetAnswer();
@@ -1123,165 +1285,271 @@
     if (MODE === "odd" && window.gameTour && window.gameTour.unlocked) {
       // the first time: how to play it (once on this device)
       setTimeout(() => window.gameTour.unlocked([{ key: "odd-intro", el: "photos", text:
-        "Odd One Out: all but one of these share a " + item.rank + ". Tap the one that doesn't, then Next. Not sure? Skip earns a little, a wrong pick costs." }]), 400);
+        "Imposter Picker: all but one of these share a " + item.rank + ". Tap the one that doesn't, then Submit. Not sure? Skip earns a little, a wrong pick costs." }]), 400);
     }
     if (MODE === "select" && window.gameTour && window.gameTour.unlocked) {
       setTimeout(() => window.gameTour.unlocked([{ key: "select-intro", el: "photos", text:
-        "Select all: tap every beetle of the group named below, then Next. Leave out any you're unsure of: a wrong tap costs, a missed one doesn't." }]), 400);
+        "Find Them All: tap every beetle of the group named below, then Submit. Leave out any you're unsure of: a wrong tap costs, a missed one doesn't." }]), 400);
     }
     shownAt = Date.now();
     readyAt = performance.now() + MASH_GUARD_MS;
     prefetch(item.prefetch);
   }
 
+  // ---------- answering: Submit locks the answer in, the review shows what it earned, Next brings the next beetle ----------
+  let waitTimer = null;
+  function waiting(on) {   // the slim bar, for dead time; not for a blink (a fast answer shows nothing)
+    clearTimeout(waitTimer);
+    if (on) waitTimer = setTimeout(() => $("wait-bar").classList.remove("hidden"), 150);
+    else $("wait-bar").classList.add("hidden");
+  }
+  function setPhase(p) {
+    phase = p;
+    busy = p !== "answer";
+    root.classList.toggle("answer-locked", busy);
+    root.dataset.phase = p;
+    if (busy && document.activeElement && $("panel").contains(document.activeElement)) document.activeElement.blur();
+    waiting(p === "send" || p === "next");
+    $("skip").disabled = busy;
+    updateBack();
+    updateSubmit();
+  }
+
   async function send(extra) {
     // Button mashing: nothing counts until the new beetle has been on screen for a moment
     if (busy || performance.now() < readyAt) return;
-    busy = true;
-    const answeredItem = item;
-    $("submit").disabled = true;
-    $("skip").disabled = true;
+    const skipping = !!extra.skipped || extra.pair_answer === "unsure";
+    setPhase("send");
     showError("");
+    let data;
     try {
-      const data = await api(
+      data = await api(
         root.dataset.answerUrl.replace("00000000-0000-0000-0000-000000000000", roundId),
         Object.assign({ index: item.index, elapsed_ms: Date.now() - shownAt }, extra)
       );
-      answered += 1;
-      if (data.chip) goalMet = !!data.chip.goal_met;
-      noteAnswerForBreak();
-      if (data.celebrate) confetti(data.celebrate, data.celebrate_size);
-      updateChip(data.chip);
-      if (data.prefs) renderPrefs(data.prefs);   // a new level: its unlocks show (and work) straight away
-      (data.events || []).forEach(toast);
-      showCommunity(data.community);
-      rememberPrevious(answeredItem, extra, data.community, data.reveal, data.verified);
-      bumpCombo(!extra.skipped && extra.pair_answer !== "unsure");
-      if (data.reveal) await (answeredItem.mode === "select" ? revealSelect(data.reveal) : revealOdd(data.reveal, extra));
-      if (data.done) {
-        $("review-link").href = data.review_url;
-        $("sum-round").textContent = answered;
-        $("sum-total").textContent = data.summary.labelled;
-        $("sum-accuracy").textContent = data.summary.accuracy === null ? "–" : Math.round(data.summary.accuracy * 100) + "%";
-        show("caughtup");
-      } else {
-        if (data.round) roundId = data.round;   // the feed moved on to its next batch; the player never notices
-        await showItem(data.item);
-      }
     } catch (e) {
-      if (e.status === 409) {
-        // Out of step (another tab, double tap): pick the feed up where the server has it.
-        busy = false;
-        await startFeed();
+      setPhase("answer");   // unlocked again: change the answer, or try again
+      if (e.status === 409) { await startFeed(); return; }   // out of step (another tab, a double tap): pick up where the server is
+      showError(e.message);
+      return;
+    }
+    answered += 1;
+    if (data.chip) goalMet = !!data.chip.goal_met;
+    noteAnswerForBreak();
+    updateChip(data.chip);
+    if (data.prefs) renderPrefs(data.prefs);   // a new level: its unlocks show (and work) straight away
+    bumpCombo(!skipping);
+    upcoming = data;
+    if (data.review) rememberPrevious(data.review);
+    // A skip goes straight on; anything else stops on its review. Its confetti first, so a level-up's burst (a toast) wins.
+    if (!skipping && data.review) showReview(data.review);
+    (data.events || []).forEach(toast);
+    if (skipping || !data.review) await next();
+  }
+
+  // Next, on the review: the next beetle. Its photos have been loading meanwhile; if they aren't in yet the bar shows
+  // and the review stays up (never a blank screen).
+  async function next() {
+    const data = upcoming;
+    if (!data) return;
+    upcoming = null;
+    setPhase("next");
+    feedNotes(data);   // the next batch had to change game, or the feed ended: say why
+    if (data.done) {
+      $("review-link").href = data.review_url;
+      $("sum-round").textContent = answered;
+      $("sum-total").textContent = data.summary.labelled;
+      $("sum-accuracy").textContent = data.summary.accuracy === null ? "–" : Math.round(data.summary.accuracy * 100) + "%";
+      endReview();
+      setPhase("answer");
+      show("caughtup");
+      return;
+    }
+    if (data.round) roundId = data.round;   // the feed moved on to its next batch; the player never notices
+    await present(data.item);
+  }
+
+  // Show a beetle and open it for answering
+  async function present(next) {
+    await showItem(next);
+    endReview();
+    setPhase("answer");
+  }
+
+  function showReview(review) {
+    renderReview(review, $("review"));
+    $("review").classList.remove("hidden");
+    $("panel").classList.add("reviewing");
+    $("panel").scrollTop = 0;
+    if (review.grid) {
+      $("photos").classList.add("revealing");
+      markTiles($("photos").querySelectorAll(".cell"), review);
+    }
+    if (review.celebrate) confetti(review.celebrate.kind, review.celebrate.size);
+    // the next photos start loading now (usually they are in already; at the end of a batch they are not)
+    if (upcoming && upcoming.item) {   // the crops the next beetle shows: small ones first (#494)
+      const ims = upcoming.item.images;
+      prefetch(ims.map((im) => im.small || im.url).concat(ims.map((im) => im.large).filter(Boolean)));
+    }
+    setPhase("review");
+    readyAt = performance.now() + MASH_GUARD_MS;   // Enter pressed three times fast never skips the review
+  }
+  function endReview() {
+    $("review").classList.add("hidden");
+    $("review").replaceChildren();
+    $("panel").classList.remove("reviewing");
+  }
+
+  // ---------- the review card (game_answer_review.py builds it): after an answer, and again under Back ----------
+  function node(tag, cls, ...kids) {
+    const el = document.createElement(tag);
+    if (cls) el.className = cls;
+    el.append(...kids.filter((k) => k !== null && k !== undefined && k !== ""));
+    return el;
+  }
+  const taxonName = (name, rank) => node(rank === "genus" || rank === "species" ? "em" : "span", "", name);
+  const pts = (n) => (n > 0 ? "+" : n < 0 ? "−" : "") + digitGroupsText(Math.abs(n), Number.isInteger(n) ? 0 : 1);
+  function tick(ok, yes, no) {   // green tick, red cross, or nothing when it can't be said
+    if (ok !== true && ok !== false) return null;
+    const i = node("i", ok ? "fi fi-rr-check rv-yes" : "fi fi-rr-cross-small rv-no");
+    i.setAttribute("aria-label", ok ? yes : no);
+    return i;
+  }
+  const VERDICT_ICON = { right: "fi-rr-check rv-good", partly: "fi-rr-minus rv-part", wrong: "fi-rr-cross-small rv-bad" };
+
+  function renderReview(r, holder) {
+    const icon = r.skipped ? "fi-rr-forward rv-flat" : VERDICT_ICON[r.verdict] || "fi-rr-hourglass rv-flat";
+    const head = node("p", "rv-head", node("i", "fi " + icon), node("span", "", r.headline),
+                      r.again ? node("span", "rv-pill", "Seen before") : null);
+    const body = r.classify ? classifyCard(r.classify) : r.pair ? pairCard(r.pair) : r.grid ? gridCard(r) : [];
+    holder.replaceChildren(head, ...body);
+  }
+
+  // Identification: rank by rank, yours next to the truth and its points, or next to the players and IBBI-AI
+  function opinion(v, withVotes, rank) {
+    if (!v) return "—";
+    const how = v.sure + "%" + (withVotes ? " · " + v.votes + (v.votes === 1 ? " vote" : " votes") : "") +
+                (v.experts ? " · " + v.experts + (v.experts === 1 ? " expert" : " experts") : "");
+    return [taxonName(v.name, rank), " ", tick(v.agrees, "agrees with you", "differs from you"), node("small", "", how)];
+  }
+  function cell(content, cls) {
+    const td = node("td", cls || "");
+    td.append(...[].concat(content).filter((k) => k !== null && k !== undefined));
+    return td;
+  }
+  function classifyCard(c) {
+    const truth = !!c.truth;
+    const head = node("tr", "", node("th", ""), node("th", "", "You said"),
+                      node("th", "", truth ? "Answer" : "Players"), node("th", truth ? "num" : "", truth ? "Pts" : "IBBI-AI"));
+    const rows = c.ranks.map((r) => node("tr", "", cell(r.rank),
+      cell(r.yours ? taxonName(r.yours, r.rank) : "—"),
+      truth ? cell([r.truth ? taxonName(r.truth, r.rank) : "—", " ", tick(r.state === "right" ? true : r.state ? false : null, "correct", "wrong")])
+            : cell(opinion(r.players, true, r.rank)),
+      truth ? cell(r.state === "right" || r.state === "wrong" ? pts(r.points) : r.state ? "0" : "", "num")
+            : cell(opinion(r.ai, false, r.rank))));
+    const out = [node("table", "rv-table", node("thead", "", head), node("tbody", "", ...rows))];
+    if (truth) out.push(node("p", "rv-note", "Name: ", taxonName(c.truth.name, c.truth.rank), " · " + c.truth.tier));
+    else if (!c.players) out.push(node("p", "rv-note", "No other players have named it yet."));
+    return out;
+  }
+
+  // Similarity: your rung, and the true one with both names, or what players and IBBI-AI make of the open one
+  const PAIR_NOTE = { cautious: "True, but they are closer relatives than that.", too_close: "They are not that closely related.",
+                      wrong: "Related beetles called strangers, or the other way round." };
+  function pairCard(p) {
+    const lines = [node("p", "", "You said: ", node("strong", "", p.said))];
+    if (p.truth) lines.push(node("p", "", "Answer: ", node("strong", "", p.truth)), p.state !== "right" && PAIR_NOTE[p.state] ? node("p", "rv-note", PAIR_NOTE[p.state]) : null);
+    p.sides.forEach((s) => {
+      if (s.validated) { lines.push(node("p", "", node("strong", "", s.letter + ": "), taxonName(s.name, s.rank), " · " + s.tier)); return; }
+      lines.push(node("p", "", node("strong", "", s.letter + ": "), "not checked yet"));
+      [["Players", s.players], ["IBBI-AI", s.ai]].forEach(([who, v]) => {
+        if (!v) return;
+        const how = v.sure + "%" + (v.votes ? ", " + v.votes + (v.votes === 1 ? " vote" : " votes") : "");
+        lines.push(node("p", "rv-note", who + ": ", taxonName(v.name, v.rank), " (" + how + ")",
+                        v.rung ? " → " + v.rung + " " : "", tick(v.agrees, "agrees with you", "differs from you")));
+      });
+    });
+    return [node("div", "rv-lines", ...lines.filter(Boolean))];
+  }
+
+  // Odd One Out and Select all: the marks are on the photos; the card says what they mean, and what players and
+  // IBBI-AI say about the beetles nobody has checked yet (numbered as on the photos)
+  function gridCard(r) {
+    const g = r.grid, odd = r.mode === "odd";
+    const lines = [];
+    if (odd && g.odd_name) lines.push(node("p", "", "The odd one: ", taxonName(g.odd_name, g.rank), " · the rest: ", taxonName(g.target, g.rank)));
+    if (!odd) lines.push(node("p", "", "Tap every ", taxonName(g.target, g.rank)));
+    lines.push(node("p", "rv-note", odd ? "Green: the odd one. Red: your pick, one of the rest. Grey: your pick, not checked yet."
+                                        : "Green: in it, tapped. Red: tapped, not in it. Dashed: in it, left out. Grey: your tap on one not checked yet."));
+    g.tiles.forEach((t, i) => {
+      if (!t || t.validated || !(t.ai || t.players)) return;
+      const chosen = odd ? i === g.pick : t.state === "vote";
+      const views = [["IBBI-AI", t.ai], ["players", t.players]].filter(([, v]) => v)
+        .map(([who, v]) => who + " " + (v.in ? (odd ? "says it's one of the rest" : "in it") : "says " + v.name) + " (" + v.sure + "%" + (v.votes ? ", " + v.votes + (v.votes === 1 ? " vote" : " votes") : "") + ")");
+      const outlook = t.pays === true ? (chosen ? "earns points once confirmed" : odd ? "picking it would earn points once confirmed" : "a tap would earn points once confirmed")
+                    : t.pays === false && chosen ? "may cost points once confirmed" : "";
+      lines.push(node("p", "rv-note", node("strong", "", (i + 1) + (chosen ? " (yours)" : "") + ": "), views.join(" · ") + (outlook ? ". " + outlook[0].toUpperCase() + outlook.slice(1) + "." : "")));
+    });
+    return [node("div", "rv-lines", ...lines)];
+  }
+
+  // The marks on the grid tiles (live, or under Back): the colours, each tile's number and points, names to the grid's rank
+  const MARK = { select: { right: "sel-right", wrong: "sel-wrong", missed: "sel-missed", vote: "sel-vote" },
+                 odd: { right: "odd-one", odd: "odd-one", wrong: "odd-wrong", pick: "odd-pick" } };
+  function markTiles(cells, review) {
+    const g = review.grid;
+    if (!g) return;
+    cells.forEach((cellEl, i) => {
+      const t = g.tiles[i];
+      cellEl.classList.remove("picked", "tapped", "key-cursor");
+      if (!t) return;
+      if (t.state === "flagged") {   // a photo flagged in the grid: out of play, as it was while answering
+        cellEl.classList.add("flagged");
+        if (!cellEl.querySelector(".flag-badge")) cellEl.appendChild(node("span", "flag-badge", node("i", "fi fi-rr-flag"), "Flagged"));
         return;
       }
-      showError(e.message);
-    } finally {
-      busy = false;
-      $("skip").disabled = false;
-      updateSubmit();
-    }
-  }
-
-  // ---------- Odd One Out: after answering, which one was odd ----------
-  const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-  // "Odd one: Ipini · the rest: Xyleborini", genus and species names in italics
-  function oddLine(r) {
-    if (!r.odd_name || !r.group) return [];
-    const name = (text) => { const el = document.createElement(r.rank === "genus" || r.rank === "species" ? "em" : "span"); el.textContent = text; return el; };
-    return ["Odd one: ", name(r.odd_name), " · the rest: ", name(r.group)];
-  }
-  async function revealOdd(r, extra) {
-    $("photos").classList.add("revealing");
-    const cell = $("photos").querySelectorAll(".cell")[r.odd];
-    if (cell) {
-      cell.classList.add("odd-one");
-      const tag = document.createElement("span");
-      tag.className = "odd-name";
-      tag.textContent = r.odd_name || "Odd one";
-      cell.appendChild(tag);
-    }
-    $("odd-result").replaceChildren(...oddLine(r));
-    // long enough to see it, a little longer when the pick was another one
-    await pause(reduceMotion ? 900 : extra.pick === r.odd ? 1100 : 2000);
-  }
-
-  // ---------- Select all: after answering, which were members ----------
-  const SELECT_CLASS = { right: "sel-right", wrong: "sel-wrong", missed: "sel-missed" };
-  function selectLine(r) {
-    if (!r.members) return [];
-    return ["Found " + r.right + " of " + r.members + (r.wrong ? " · " + r.wrong + " wrong" : "")];
-  }
-  async function revealSelect(r) {
-    $("photos").classList.add("revealing");
-    $("photos").querySelectorAll(".cell").forEach((cell, i) => {
-      const cls = SELECT_CLASS[r.tiles[i]];
-      if (cls) { cell.classList.remove("tapped"); cell.classList.add(cls); }
+      const mark = (MARK[review.mode] || {})[t.state];
+      if (mark) cellEl.classList.add(mark);
+      cellEl.appendChild(node("span", "rv-num", String(i + 1)));
+      const badge = t.points ? [pts(t.points), t.points > 0 ? "up" : "down"] : t.state === "missed" ? ["missed", "flat"]
+                  : t.state === "vote" || t.state === "pick" ? ["vote", "flat"] : null;
+      if (badge) cellEl.appendChild(node("span", "rv-badge " + badge[1], badge[0]));
+      if (t.name && (t.state === "odd" || t.state === "right" && review.mode === "odd" || t.state === "wrong"))
+        cellEl.appendChild(node("span", "odd-name", t.name));
     });
-    $("select-result").replaceChildren(...selectLine(r));
-    await pause(reduceMotion ? 1200 : 2200);   // nine photos: a little longer to look
   }
 
-  // ---------- Back: your last beetle and what you said ----------
-  let previous = null;
-  function describeAnswer(extra) {
-    if (extra.reported) return "Reported";
-    if (extra.skipped || extra.pair_answer === "unsure") return "Skipped";
-    if (extra.pick !== undefined) return "The one with the dark ring";
-    if (extra.picks) return extra.picks.length + " tapped";
-    if (extra.pair_answer) {
-      const rung = rungs.find((r) => r.dataset.choice === extra.pair_answer);
-      return rung ? rung.firstChild.textContent.trim() : extra.pair_answer;
-    }
-    const names = RANKS.map((r) => extra[r]).filter(Boolean);
-    return names.length ? names.join(" › ") : "Skipped";
-  }
-  function rememberPrevious(it, extra, community, reveal, verified) {
-    previous = { item: it, answer: describeAnswer(extra), community, reveal, verified: verified || [], pick: extra.pick, picks: extra.picks || [] };
-    if (reveal && extra.pick !== undefined && extra.pick === reveal.odd) previous.answer = "The odd one";
-    $("back").disabled = false;
-  }
+  // ---------- Back: your last beetle's review ----------
+  let previous = null;                                  // the last answer's review, from memory...
+  let previousUrl = root.dataset.lastReviewUrl || "";   // ...or, after a reload, where to fetch it
+  function rememberPrevious(review) { previous = review; previousUrl = ""; }
+  function updateBack() { $("back").disabled = busy || !(previous || previousUrl); }
   async function showPrevious() {
-    if (!previous) return false;
-    const box = $("previous-photos");
-    const odd = previous.item.mode === "odd" || previous.item.mode === "select";
-    box.innerHTML = "";
-    // Odd One Out: the same grid, your pick ringed dark and the odd one green
-    box.className = odd ? "flex-1 min-h-0 grid gap-2 p-2 bg-gray-100 auto-rows-fr " + (previous.item.images.length > 4 ? "grid-cols-3" : "grid-cols-2")
-                        : "flex-1 min-h-0 flex items-center justify-center gap-2 p-2 bg-gray-100";
-    previous.item.images.forEach((im, i) => {
-      const canvas = document.createElement("canvas");
-      canvas.className = "max-h-full max-w-full rounded-2xl";
-      if (odd) {
-        let ring = previous.reveal && i === previous.reveal.odd ? " ring-4 ring-green-600" : previous.pick === i ? " ring-4 ring-gray-700" : "";
-        if (previous.item.mode === "select" && previous.reveal) {   // the same colours as after answering
-          const state = previous.reveal.tiles[i];
-          ring = { right: " ring-4 ring-green-600", wrong: " ring-4 ring-red-600", missed: " outline-dashed outline-4 outline-green-600 -outline-offset-4",
-                   vote: " ring-4 ring-gray-700" }[state] || "";
-        }
-        canvas.className = "w-full h-full min-h-0 object-contain rounded-2xl" + ring;
+    if (busy) return false;   // never over a review in progress
+    if (!previous && previousUrl) {
+      try {
+        previous = (await api(previousUrl)).review;
+      } catch (e) {
+        showError(e.message);
       }
-      box.appendChild(canvas);
-      loadImage(im.url).then((img) => drawCrop(canvas, img, im.box)).catch(() => {});
-      if (previous.item.images.length === 2) canvas.title = i === 0 ? "A" : "B";
-    });
-    $("previous-answer").textContent = previous.answer;
-    // A validated beetle: its true name and how reliable it is (#424), "A: ... · B: ..." for the two of Similarity
-    const truth = [];
-    previous.verified.forEach((v, i) => {
-      if (truth.length) truth.push(document.createElement("br"));
-      const label = previous.verified.length > 1 ? (i === 0 ? "A: " : "B: ") : "Verified: ";
-      if (!v) { truth.push(label + "not verified yet"); return; }
-      const name = document.createElement(v.rank === "species" || v.rank === "genus" ? "em" : "span");
-      name.textContent = v.name;
-      truth.push(label, name, " · " + v.tier);
-    });
-    $("previous-truth").replaceChildren(...truth);
-    $("previous-community").replaceChildren(...(previous.community ? linesOf(communityLines(previous.community)) : []));
-    if (odd && previous.reveal) {
-      $("previous-community").replaceChildren(...(previous.item.mode === "select"
-        ? ["Tap every " + previous.reveal.target + ". ", ...selectLine(previous.reveal)] : oddLine(previous.reveal)));
+      previousUrl = "";
+      updateBack();
+      if (busy) return false;
     }
+    if (!previous) return false;
+    const box = $("previous-photos"), n = previous.images.length;
+    box.style.setProperty("--cols", n > 2 ? Math.ceil(Math.sqrt(n)) : n);
+    const cells = previous.images.map((im, i) => {
+      const c = node("div", "cell");
+      const canvas = document.createElement("canvas");
+      c.appendChild(canvas);
+      if (n === 2) c.appendChild(node("span", "rv-num", i === 0 ? "A" : "B"));
+      if (im) loadImage(im.url).then((img) => drawCrop(canvas, img, im.box)).catch(() => {});
+      return c;
+    });
+    box.replaceChildren(...cells);
+    markTiles(cells, previous);
+    renderReview(previous, $("previous-review"));
     $("previous").classList.remove("hidden");
     return true;
   }
@@ -1297,7 +1565,11 @@
   $("skip").addEventListener("click", () => {
     send(MODE === "pair" ? { pair_answer: "unsure" } : { skipped: true });
   });
-  $("submit").addEventListener("click", () => send(currentAnswer()));
+  // The main button: Submit while answering, Next on the review
+  $("submit").addEventListener("click", () => {
+    if (phase === "review") { if (performance.now() >= readyAt) next(); }
+    else send(currentAnswer());
+  });
 
   // Leave: close the feed so the answers count, show how the sitting went, then the game home has the score.
   let leaving = false;
@@ -1307,7 +1579,8 @@
     let data = null;
     try {
       data = await Promise.race([
-        api(root.dataset.exitUrl, { round: roundId, since: openedAt }),
+        // on a review that ended a batch, the next batch is the open one
+        api(root.dataset.exitUrl, { round: (upcoming && upcoming.round) || roundId, since: openedAt }),
         new Promise((resolve) => setTimeout(() => resolve(null), 2500)),
       ]);
     } catch (e) { /* the home page closes anything left open */ }
@@ -1346,7 +1619,7 @@
   let pairChoice = null;
   const rungs = Array.from(document.querySelectorAll(".rung"));
   function setRung(index) {
-    if (index < 0 || index >= rungs.length || rungs[index].classList.contains("locked")) return;
+    if (busy || index < 0 || index >= rungs.length || rungs[index].classList.contains("locked")) return;
     pairChoice = rungs[index].dataset.choice;
     rungs.forEach((r, i) => {
       r.classList.toggle("selected", i === index);
@@ -1443,6 +1716,7 @@
 
   Object.entries(selects).forEach(([rank, select]) => {
     select.addEventListener("change", () => {
+      if (busy) { select.value = pick[rank]; return; }   // locked in after Submit
       const v = select.value;
       if (rank === "subfamily") pick = { subfamily: v, tribe: "", genus: "", species: "" };
       if (rank === "tribe") pick = { subfamily: pick.subfamily, tribe: v, genus: "", species: "" };
@@ -1498,6 +1772,7 @@
     });
   }
   function openFinder(rank, text) {
+    if (busy) return;
     if (finding && finding !== rank) closeFinder();
     finding = rank;
     findActive = 0;
@@ -1600,7 +1875,7 @@
   // ---------- Odd One Out: picking a beetle ----------
   let oddPick = null;
   function pickTile(i) {
-    if (MODE !== "odd" || busy) return;
+    if (MODE !== "odd" || busy || flagged.has(i)) return;
     oddPick = i;
     $("photos").querySelectorAll(".cell").forEach((c, j) => c.classList.toggle("picked", j === i));
     updateSubmit();
@@ -1609,7 +1884,7 @@
   // ---------- Select all: tapping beetles ----------
   const tapped = new Set();
   function toggleTile(i) {
-    if (MODE !== "select" || busy) return;
+    if (MODE !== "select" || busy || flagged.has(i)) return;
     if (tapped.has(i)) tapped.delete(i); else tapped.add(i);
     $("photos").querySelectorAll(".cell").forEach((c, j) => c.classList.toggle("tapped", tapped.has(j)));
     updateSubmit();
@@ -1620,14 +1895,42 @@
     $("photos").querySelectorAll(".cell").forEach((c, j) => c.classList.toggle("key-cursor", j === i && MODE === "select"));
   }
 
+  // ---------- the grid games: a flagged photo drops out and the grid carries on (#489) ----------
+  const flagged = new Set();
+  function flagTile(i) {
+    const cell = $("photos").querySelectorAll(".cell")[i];
+    if (!cell || flagged.has(i)) return;
+    flagged.add(i);
+    if (oddPick === i) oddPick = null;
+    tapped.delete(i);
+    cell.classList.remove("picked", "tapped");
+    cell.classList.add("flagged");
+    const badge = document.createElement("span");
+    badge.className = "flag-badge";
+    badge.innerHTML = '<i class="fi fi-rr-flag"></i>';
+    badge.append(document.createTextNode("Flagged"));
+    cell.appendChild(badge);
+    updateSubmit();
+  }
+  // The next beetle from ``from`` in steps of ``step`` that isn't flagged; ``from`` itself when there is none
+  function nextTile(from, step, count) {
+    for (let i = from + step; i >= 0 && i < count; i += step) if (!flagged.has(i)) return i;
+    return from;
+  }
+
   // ---------- shared ----------
   function currentAnswer() {
-    if (MODE === "odd") return { pick: oddPick };
-    if (MODE === "select") return { picks: Array.from(tapped).sort((a, b) => a - b) };
+    const flags = Array.from(flagged).sort((a, b) => a - b);   // photos flagged in this grid, left out of its score
+    if (MODE === "odd") return { pick: oddPick, flagged: flags };
+    if (MODE === "select") return { picks: Array.from(tapped).sort((a, b) => a - b), flagged: flags };
     return MODE === "classify" ? Object.assign({}, pick) : { pair_answer: pairChoice };
   }
 
+  // Submit while answering (once there is an answer), Next on the review (off while the next beetle loads)
   function updateSubmit() {
+    const onReview = phase === "review" || phase === "next";
+    $("submit-text").textContent = onReview ? "Next" : "Submit";
+    if (onReview) { $("submit").disabled = phase === "next"; return; }
     const ready = MODE === "classify" ? RANKS.some((r) => pick[r]) : MODE === "odd" ? oddPick !== null
       : MODE === "select" ? tapped.size > 0 : !!pairChoice;
     $("submit").disabled = busy || !ready;
@@ -1637,9 +1940,8 @@
     pairChoice = null;
     oddPick = null;
     tapped.clear();
+    flagged.clear();
     keyCursor = null;
-    $("odd-result").replaceChildren();
-    $("select-result").replaceChildren();
     rungs.forEach((r) => { r.classList.remove("selected", "filled"); r.setAttribute("aria-checked", "false"); });
     pick = { subfamily: "", tribe: "", genus: "", species: "" };
     if (MODE === "classify") renderPickers();
@@ -1668,7 +1970,8 @@
     // Back once shows your last beetle; back again (from there) leaves
     if (!$("previous").classList.contains("hidden")) { hidePrevious(); $("exit").click(); return; }
     if (closeOverlays()) return;
-    if (previous) { showPrevious(); return; }
+    if (busy) { $("exit").click(); return; }   // the review on screen is already your last beetle
+    if (previous || previousUrl) { showPrevious(); return; }
     $("exit").click();
   });
 
@@ -1676,8 +1979,8 @@
   //   arrows                     WASD
   //   Up/Down: rank or line      W/S: rank or line
   //   Left/Right: change it      A/D: change it
-  //   Enter or Space: Next       Delete or End (or X): Skip       Backspace (or Z): Back, your last beetle
-  //   Home (or Q, V): whole photo    Page Up (or E, L): Lighting    Page Down (or R): Report    Esc: close, or exit
+  //   Enter or Space: Submit, then Next (on the review)    Delete or End (or X): Skip    Backspace (or Z): Back, your last beetle
+  //   Home (or Q, V): whole photo    Page Up (or E, L): Lighting    Page Down (or R): Flag    Esc: close, or exit
   // A letter typed on a focused list still searches it (the lists keep their own keys).
   function isTyping(el) { return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable); }
   let cursorRank = 0;
@@ -1739,8 +2042,8 @@
     if (!pressed) return;
     e.preventDefault();   // also keeps a focused list from opening, and Space from scrolling
     if ((pressed === "next" || pressed === "skip") && e.repeat) return;   // a held key is not a burst of answers
-    // Select all: Space taps the beetle the arrows are on (Enter is Next)
-    if (MODE === "select" && key === " ") { if (keyCursor !== null) toggleTile(keyCursor); return; }
+    // Select all: Space taps the beetle the arrows are on (Enter is Submit); on the review it is Next, as everywhere
+    if (MODE === "select" && key === " " && !busy) { if (keyCursor !== null) toggleTile(keyCursor); return; }
     if (pressed === "next") { if (!$("submit").disabled) $("submit").click(); }
     else if (pressed === "skip") { if (!$("skip").disabled) $("skip").click(); }
     else if (pressed === "back") { if (!$("back").disabled) showPrevious(); }
@@ -1753,17 +2056,15 @@
       }
     }
     else if (pressed === "light") { if (!$("light-btn").classList.contains("hidden")) toggleLight(); }
-    else if (MODE === "odd") {
-      // move around the grid: the first press picks the first beetle
+    else if (busy) { /* locked in after Submit: no more changes */ }
+    else if (MODE === "odd" || MODE === "select") {
+      // move around the grid, over flagged photos; in Odd One Out the first press picks the first beetle
       const count = item ? item.images.length : 0;
       const cols = getComputedStyle($("photos")).gridTemplateColumns.split(" ").length || 2;
       const step = { left: -1, right: 1, up: -cols, down: cols }[pressed];
-      if (count && step !== undefined) pickTile(oddPick === null ? 0 : Math.max(0, Math.min(count - 1, oddPick + step)));
-    } else if (MODE === "select") {
-      // move around the grid, three across
-      const count = item ? item.images.length : 0;
-      const step = { left: -1, right: 1, up: -3, down: 3 }[pressed];
-      if (count && step !== undefined) moveCursor(keyCursor === null ? 0 : Math.max(0, Math.min(count - 1, keyCursor + step)));
+      const from = MODE === "odd" ? oddPick : keyCursor;
+      const at = from === null ? nextTile(-1, 1, count) : nextTile(from, step, count);
+      if (count && step !== undefined && at >= 0) (MODE === "odd" ? pickTile : moveCursor)(at);
     } else if (MODE === "pair" && (pressed === "up" || pressed === "down")) {
       const now = rungs.findIndex((r) => r.classList.contains("selected"));
       const open = rungs.filter((r) => !r.classList.contains("locked")).length;

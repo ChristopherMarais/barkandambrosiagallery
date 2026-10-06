@@ -79,7 +79,7 @@ class DetailClassifyLinkTests(PageBehaviourCase):
         beetle = make_beetle(image=image)
         html = self.detail_html(beetle)
         self.assertIn("Generate AI recommendation", html)
-        self.assertIn(f'{reverse("tool_classify")}?image_url=', html)
+        self.assertIn(f'{reverse("tool_classify")}?asset={image.id}', html)
 
     def test_identified_specimen_has_no_classify_link(self):
         taxon = make_taxon("T-PLA", scientific_name="Platypus cylindrus")
@@ -101,8 +101,8 @@ class DetailClassifyLinkTests(PageBehaviourCase):
 
 
 class DetailAnnotateLinkTests(PageBehaviourCase):
-    """The pencil-adjacent link on the detail page opens the full Annotation
-    Tool focused on this specimen's image; only staff see it."""
+    """The pen on the detail page opens the full Annotation Tool focused on
+    this specimen's image; only staff see it (more in test_details_photo_controls)."""
 
     def test_staff_sees_a_link_into_the_annotation_tool_for_this_image(self):
         beetle = make_beetle()
@@ -118,4 +118,4 @@ class DetailAnnotateLinkTests(PageBehaviourCase):
 
         html = self.client.get(reverse("beetle_detail", args=[beetle.id])).content.decode()
 
-        self.assertNotIn("Open in Annotation Tool", html)
+        self.assertNotIn("Open in the annotation page", html)

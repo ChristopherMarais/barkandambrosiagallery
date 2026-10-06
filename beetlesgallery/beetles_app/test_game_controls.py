@@ -35,7 +35,7 @@ class GameControlsTests(GameCase):
     def test_back_shows_the_last_beetle_first_then_leaves(self):
         page = self.page()
         self.assertIn('data-testid="previous"', page)
-        self.assertIn("if (previous) { showPrevious(); return; }", page)
+        self.assertIn("if (previous || previousUrl) { showPrevious(); return; }", page)
 
     def test_button_mashing_is_ignored(self):
         page = self.page()

@@ -41,7 +41,7 @@ from django.utils import timezone
 
 from . import roi_defaults
 from .bbox_rules import BOX_COLUMNS, is_blank, parse_box
-from .classify_assist import SAME_BOX_IOU, iou
+from .classify_assist import SAME_BOX_IOU, iou, readable_model_name
 from .models import Beetles, ImageAsset, ModelPrediction, PredictionUpload, RoiDifficulty, Taxon
 
 COLUMN_ALIASES = {
@@ -481,8 +481,10 @@ MAX_MODELS_SHOWN = 3
 def suggestions_for(rois):
     """
     What the models said about these ROIs, for curators and viewers: {roi_id: [suggestion, ...]}, newest model
-    first. Each suggestion has the model and version, one line per rank (subfamily, tribe, genus, species) with the
-    model's name and confidence and whether the ROI's current label agrees, and the species runners-up.
+    first. Each suggestion has the model as people read it ("IBBI-AI · DINOv3"; model_key is the stored name) and
+    version, one line per rank (subfamily, tribe, genus, species) with the model's name and confidence and whether the
+    ROI's current label agrees, and the species runners-up. Its ``top_species`` is the species the model ranks first,
+    if that is in the species list: what a curator can accept on the annotation page (None otherwise).
     """
     rois = list(rois)
     preds = list(ModelPrediction.objects.filter(roi_id__in=[r.id for r in rois]).order_by("-created_at"))
@@ -520,11 +522,14 @@ def suggestions_for(rois):
                        "source": "model",
                        "agrees": (label.valid_species_id == p.valid_species_id) if label else None})
         shown.append({
-            "model_name": p.model_name,
+            "model_name": readable_model_name(p.model_name),
+            "model_key": p.model_name,
             "model_version": p.model_version,
             "created_at": p.created_at,
             "levels": levels,
             "runners_up": [{"value": species_name(c["valid_species_id"]), "confidence": c["confidence"]}
                            for c in (p.top_k or [])[:3]],
+            "top_species": {"valid_species_id": p.valid_species_id, "name": species_name(p.valid_species_id),
+                            "confidence": p.confidence} if p.valid_species_id in taxa else None,
         })
     return out

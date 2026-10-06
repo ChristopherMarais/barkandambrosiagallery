@@ -43,16 +43,21 @@
 /* The site's house style (keep to it on every page; CLAUDE.md points here):
    - Mostly white and grey. Colour is only for meaning: green = done or correct, red = a problem or a danger,
      amber = waiting or needs attention, and the game's rarity colours for levels, challenge and accuracy.
-   - Each page has at most one main button (Search, Classify image, Play ...): .btn-main, a mid-grey button
-     with dark bold text, never black. Other actions use .btn-primary or .btn-secondary.
+   - Buttons come in three looks, the classes below. Use them rather than grey utilities of your own, and set
+     only size, spacing and rounding per page (e.g. "btn-main w-full text-2xl py-6"):
+       .btn-main       light grey, dark bold text (the image browser's Search): what the page is for, such as
+                       Search, Classify image or Play.
+       .btn-primary    dark grey, white text (the annotation page's Save): Save, Apply filters, Generate and
+                       other work in tools and forms.
+       .btn-secondary  white with a grey outline: the quieter choice next to those, such as Undo.
+     No black buttons.
    - Ticked boxes and radio buttons are dark grey (see above).
    - Numbers of four digits or more are grouped in threes (12 345): the |digit_groups filter in templates,
      digitGroups() / digitGroupsText() in scripts (static/js/digit_groups.js).
    - Text for players and visitors is short and plain. */
 @layer components {
-    /* The one main action of a page. Size it per page with utilities (e.g. "btn-main w-full text-2xl py-6"). */
     .btn-main {
-        @apply inline-flex items-center justify-center gap-3 rounded-xl bg-gray-300 border border-gray-400 px-8 py-3 text-lg font-bold tracking-wide text-gray-900 shadow-sm transition hover:bg-gray-400 hover:text-black active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-gray-300 disabled:opacity-60 disabled:cursor-not-allowed;
+        @apply inline-flex items-center justify-center gap-3 rounded-xl bg-gray-200 border border-gray-300 px-8 py-3 text-lg font-bold tracking-wide text-gray-800 shadow-sm transition hover:bg-gray-300 hover:text-black active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-gray-300 disabled:opacity-60 disabled:cursor-not-allowed;
     }
 
     .page-title {
@@ -62,10 +67,10 @@
     .page-intro { @apply text-sm sm:text-base text-gray-500; }
 
     .btn-primary {
-        @apply inline-flex items-center justify-center gap-2 rounded-lg bg-gray-600 border border-gray-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-700 hover:border-gray-700 disabled:bg-gray-300 disabled:border-gray-300 disabled:cursor-not-allowed;
+        @apply inline-flex items-center justify-center gap-2 rounded-lg bg-gray-500 border border-gray-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-600 hover:border-gray-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-gray-300 disabled:bg-gray-300 disabled:border-gray-300 disabled:cursor-not-allowed;
     }
     .btn-secondary {
-        @apply inline-flex items-center justify-center gap-2 rounded-lg bg-white border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 hover:text-black;
+        @apply inline-flex items-center justify-center gap-2 rounded-lg bg-white border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 hover:text-black focus:outline-none focus-visible:ring-4 focus-visible:ring-gray-300 disabled:opacity-60 disabled:cursor-not-allowed;
     }
 }
 

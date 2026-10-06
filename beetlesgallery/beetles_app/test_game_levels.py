@@ -168,8 +168,8 @@ class EliteTests(ScoringCase):
         from django.core.cache import cache
         from beetlesgallery.beetles_app.game_trust import elite_players
         best = self.strong("best", right=40)
-        ok = self.strong("ok", right=30, wrong=10)
-        meh = self.strong("meh", right=20, wrong=20)
+        self.strong("ok", right=30, wrong=10)
+        self.strong("meh", right=20, wrong=20)
         cache.clear()
         self.assertEqual(elite_players(), {best.id})
 
@@ -239,7 +239,7 @@ class PageTests(ScoringCase):
     def test_the_unlocks_page(self):
         self.client.force_login(self.user)
         page = self.client.get("/game/unlocks/").content.decode()
-        for text in ("Levels and unlocks", "Colony founder", "Focus on a genus", "Your labels go to curators", "proven experts", "expertise tree"):
+        for text in ("Levels and unlocks", "Colony founder", "Focus on a genus", "Your labels go to curators", "Identification experts", "expertise tree"):
             self.assertIn(text, page)
 
     def test_it_says_when_your_labels_go_to_curators(self):
@@ -253,7 +253,7 @@ class PageTests(ScoringCase):
         recompute_skills(expert)
         self.client.force_login(expert)
         page = self.client.get("/game/expertise/").content.decode()
-        self.assertIn("st-expert", page)
+        self.assertIn('class="tree-dot mark-expert"', page)
         self.assertIn("Xyleborini", page)
         self.assertIn("Xyleborus", page)
         self.assertIn("not played yet", page)   # Platypodinae
@@ -278,12 +278,12 @@ class LevelIconTests(SimpleTestCase):
         self.assertIn("fi-rr-worm", html)
         self.assertIn(">2</span>", html)
 
-    def test_a_proven_expert_is_a_glowing_gold_dot_like_the_top_level(self):
+    def test_an_identification_expert_is_a_glowing_gold_dot_like_the_top_level(self):
         import re
         from pathlib import Path
         from django.conf import settings
         css = (Path(settings.BASE_DIR) / "beetlesgallery/templates/beetles/game_expertise.html").read_text()
-        rule = re.search(r"\.st-expert \.tree-dot \{([^}]*)\}", css).group(1)
+        rule = re.search(r"\.tree-dot\.mark-expert \{([^}]*)\}", css).group(1)
         self.assertIn("#facc15", rule)        # gold, as the level 10 badge
         self.assertIn("box-shadow", rule)     # glowing
 
@@ -328,4 +328,4 @@ class RarityColourTests(SimpleTestCase):
         self.assertEqual(status(95, proven=True), "expert")
         self.assertEqual(status(4, judged=4), "unknown")
         self.assertEqual([label for _, label in game_trust.expertise_legend()],
-                         ["under 50%", "50\u201360%", "60\u201370%", "70\u201380%", "80%+", "proven expert"])
+                         ["under 50%", "50\u201360%", "60\u201370%", "70\u201380%", "80%+"])

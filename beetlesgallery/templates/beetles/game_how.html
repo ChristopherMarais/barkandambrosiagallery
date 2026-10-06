@@ -13,14 +13,14 @@
   <section class="mt-4 mb-8 p-5 bg-white border border-gray-200 rounded-2xl" data-testid="quick-start">
     <h2 class="text-lg font-semibold text-gray-900 mb-3">In 30 seconds</h2>
     <ol class="text-sm text-gray-700 list-decimal pl-5 space-y-1.5">
-      <li>Tap <strong>Play</strong>. Each beetle is one of four games: <strong>Similarity</strong> (how related are two beetles?), <strong>Odd One Out</strong> (which beetle doesn't belong?), <strong>Select all</strong> (tap every beetle of one group) or <strong>Identification</strong> (name it).</li>
+      <li>Tap <strong>Play</strong>. Each beetle is one of four games: <strong>Similarity</strong> (how related are two beetles?), <strong>Imposter Picker</strong> (which beetle doesn't belong?), <strong>Find Them All</strong> (tap every beetle of one group) or <strong>Identification</strong> (name it).</li>
       <li><strong>Stop at the rank you're sure of.</strong> A correct tribe scores more than the same tribe with a guessed, wrong genus. Skipping costs almost nothing.</li>
       <li><strong>Take your time.</strong> There is no timer: look things up in keys, papers or a reference collection, and pause whenever you like.</li>
-      <li>Photo shows no useful characters (an underside, a leg)? Still answer as far as you can: even just the subfamily helps. Report only a photo that is broken: wrong name, a box that misses the beetle, blurry, not a beetle.</li>
+      <li>A photo must show a good part of the beetle. Flag one that shows too little of it (a leg, a fragment), is blurry or dark, isn't a beetle, or whose box misses it. A clear photo from an unusual side (from below, say) isn't bad: answer as far as you can, even just the subfamily helps.</li>
       <li>Tap <strong>Exit</strong> when you're done.</li>
     </ol>
     <p class="mt-3 text-sm text-gray-600">Your <strong>daily goal</strong> adapts to how much you play, like a step goal on a fitness watch: beat it and tomorrow's goal goes up a little, fall short or take a day off and it eases down. It never drops below {{ goal_floor }} beetles.</p>
-    <p class="mt-3 text-sm text-gray-600">You start with Similarity. Odd One Out, and choosing your game, unlock at level {{ odd_level }}, Select all at level {{ select_level }} and Identification at level {{ identify_level }}. New players get more Similarity, experts more Identification.</p>
+    <p class="mt-3 text-sm text-gray-600">You start with Similarity. Imposter Picker, and choosing your game, unlock at level {{ odd_level }}, Find Them All at level {{ select_level }} and Identification at level {{ identify_level }}. New players get more Similarity, higher levels more Identification.</p>
     <p class="mt-3 text-sm text-gray-600" data-testid="rank-steps">New players start with the big groups: only the subfamily at first. The tribe opens after {{ rank_steps.tribe }} beetles, the genus after {{ rank_steps.genus }} and the species after {{ rank_steps.species }}, in every game. From level {{ ranks_all_level }} every rank is open.</p>
   </section>
 
@@ -29,7 +29,7 @@
     <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl">
       <h2 class="text-lg font-semibold text-gray-900 mb-2">1. Beetles we already know</h2>
       <p class="text-sm text-gray-600 mb-3">Some beetles in the feed have an expert-checked name. You never know which ones, so treat every beetle as if it counts.</p>
-      <h3 class="text-sm font-semibold text-gray-900 mb-1">Identification (Name That Beetle)</h3>
+      <h3 class="text-sm font-semibold text-gray-900 mb-1">Identification</h3>
       <p class="text-sm text-gray-600 mb-2">Naming a beetle is the harder game, so it is worth {{ classify_weight }}&times; the points. You get partial credit: each rank you get correct earns its points.</p>
       <table class="text-sm mb-3"><tbody>
         {% for rank, pts in rank_points.items %}<tr><td class="pr-6 py-0.5 capitalize text-gray-700">{{ rank }}</td><td class="font-semibold text-gray-900 tabular-nums">{{ pts|digit_groups }}</td></tr>{% endfor %}
@@ -41,21 +41,23 @@
         {% for name, pts in pair_points %}<tr><td class="pr-6 py-0.5 text-gray-700">{{ name|capfirst }}</td><td class="font-semibold text-gray-900 tabular-nums">{{ pts|digit_groups }}</td></tr>{% endfor %}
       </tbody></table>
       <p class="text-sm text-gray-600 mb-4">Two photos that look alike (same photographer, place or magnification) earn up to a quarter more. Partial credit here too: &ldquo;same tribe&rdquo; for two beetles of one genus is true, so it earns the tribe&rsquo;s points; &ldquo;same species&rdquo; earns the genus&rsquo;s points minus a little. Calling relatives strangers (or strangers relatives) loses 1 point per step.</p>
-      <h3 class="text-sm font-semibold text-gray-900 mb-1" data-testid="how-odd">Odd One Out</h3>
+      {% if difficulty_spread %}<p class="text-sm text-gray-600 mb-4" data-testid="how-difficulty">In both games, harder beetles are worth more: up to {{ difficulty_spread }}% more on the hardest, where a miss also costs up to {{ difficulty_spread }}% less. Easy beetles work the other way round.</p>{% endif %}
+      <h3 class="text-sm font-semibold text-gray-900 mb-1" data-testid="how-odd">Imposter Picker</h3>
       <p class="text-sm text-gray-600">All but one beetle share a name at one rank. Picking the odd one earns {{ odd_weight }}&times; what Similarity pays for telling those two apart. Picking one of the rest costs a little more than a correct pick earns, so pick only when you&rsquo;re fairly sure: <strong>Skip</strong> here earns {{ odd_skip }}.</p>
-      <h3 class="text-sm font-semibold text-gray-900 mb-1 mt-4" data-testid="how-select">Select all</h3>
+      <h3 class="text-sm font-semibold text-gray-900 mb-1 mt-4" data-testid="how-select">Find Them All</h3>
       <p class="text-sm text-gray-600">Tap every beetle of the group named under the photos. A perfect grid earns about twice a Similarity answer. Every wrong tap costs {{ select_wrong }} times a correct one, and a member you leave out costs nothing, so leave out any you&rsquo;re unsure of. Some beetles in the grid haven&rsquo;t been checked yet: your taps on those help name them and are never held against you.</p>
+      <p class="text-sm text-gray-600 mt-4" data-testid="how-grids">Both grids grow as you get better: from 4 to 9 to 16 beetles, then a rank deeper, from subfamily to species. A run of good grids takes you up a step, a poor one back down. Bigger grids are worth more. A bad photo in a grid? Flag it and carry on with the rest.</p>
     </section>
 
     <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl" id="unchecked">
       <h2 class="text-lg font-semibold text-gray-900 mb-2">2. Beetles nobody has checked yet</h2>
       <p class="text-sm text-gray-600 mb-2">Here there is no correct answer to compare with yet, so you earn points by <strong>agreeing with strong players</strong>:</p>
       <ul class="text-sm text-gray-600 list-disc pl-5 space-y-1">
-        <li>Only players in the better half on known beetles count as judges, and proven experts for that part of the tree count the most.</li>
+        <li>Only players in the better half on known beetles count as judges, and Identification experts for that part of the tree count the most.</li>
         <li>Agreeing with players stronger than you earns nearly full credit; agreeing with weaker players earns very little.</li>
         <li>If a stronger player disagrees with you, agreeing with lots of weaker players does not help.</li>
         <li>The more strong players agree with you, the more you earn, up to {{ cap }}% of what the same answer would earn on a known beetle. It never costs you points.</li>
-        <li>You can also earn that straight away when you match what <strong>proven experts</strong> said about the beetle, or what the <strong>identification model</strong> says when it is sure and has a good record on that exact group. Not matching them costs nothing, and none of this counts towards your accuracy: only checked beetles do.</li>
+        <li>You can also earn that straight away when you match what <strong>Identification experts</strong> said about the beetle, or what the <strong>identification model</strong> says when it is sure and has a good record on that exact group. Not matching them costs nothing, and none of this counts towards your accuracy: only checked beetles do.</li>
       </ul>
     </section>
 
@@ -66,7 +68,7 @@
 
     <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl">
       <h2 class="text-lg font-semibold text-gray-900 mb-2">4. Learning from mistakes</h2>
-      <p class="text-sm text-gray-600">A known beetle you got wrong comes back after {{ retry_days }} days or more, marked &ldquo;Seen before&rdquo;. Getting it correct then earns half points. Second tries help your score but not your accuracy, which only counts the first time you see a beetle.</p>
+      <p class="text-sm text-gray-600">A known beetle you got wrong comes back in a later session, first in an easier game, marked &ldquo;Seen before&rdquo;. Getting it correct then earns half points. Second tries help your score but not your accuracy, which only counts the first time you see a beetle.</p>
     </section>
 
     <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl">
@@ -83,16 +85,17 @@
       <div class="overflow-x-auto"><table class="text-sm w-full"><thead class="text-xs uppercase tracking-wider text-gray-500"><tr><th class="text-left py-1 pr-3">Level</th><th class="text-right py-1 pr-3">Points</th><th class="text-right py-1 pr-3">Reliability</th></tr></thead><tbody>
         {% for l in levels %}<tr class="border-t border-gray-200"><td class="py-1.5 pr-3 text-gray-900"><span class="inline-flex items-center gap-2">{% include "beetles/includes/game_level_badge.html" with level=l.level name=l.name %}{{ l.name }}</span>{% if l.perks %}<div class="text-xs text-gray-500">Unlocks: {% for p in l.perks %}{{ p.title|lower }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>{% endif %}</td><td class="py-1 pr-3 text-right tabular-nums">{{ l.points|digit_groups }}</td><td class="py-1 pr-3 text-right tabular-nums">{% if l.rating %}{% widthratio l.rating 1 100 %}%{% else %}&ndash;{% endif %}</td></tr>{% endfor %}
       </tbody></table></div>
-      <p class="mt-3 text-sm text-gray-600"><strong>Focus</strong> lets you play only one subfamily, tribe or genus: beetles named in it, and beetles nobody has named yet that the species classifier places there. Change it any time on the <a href="{% url 'game_unlocks' %}" class="underline">unlocks page</a>.</p>
+      <p class="mt-3 text-sm text-gray-600"><strong>Focus</strong> lets you play only one subfamily, tribe or genus: beetles named in it, and beetles nobody has named yet that IBBI-AI places there. Change it any time on the <a href="{% url 'game_unlocks' %}" class="underline">unlocks page</a>.</p>
     </section>
 
     <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl" id="labels">
       <h2 class="text-lg font-semibold text-gray-900 mb-2">Where your labels go</h2>
       <ul class="text-sm text-gray-600 list-disc pl-5 space-y-1">
         <li>From level {{ proposal_level }}, your names for beetles nobody has checked yet go to the curators as <strong>suggestions</strong>. Curators decide.</li>
-        <li>Only real <strong>experts</strong> have their labels written to the database without review. You become one by proving yourself on <strong>beetles experts have already checked</strong>, in that exact taxon: {{ per_species }} images each of at least {% widthratio children_share 1 100 %}% of its members (a genus&rsquo;s species, a tribe&rsquo;s genera, a subfamily&rsquo;s tribes), with at least {% widthratio trust_accuracy 1 100 %}% correct. Small taxa need few answers, large ones many. You must also be among the most reliable players overall.</li>
-        <li>Then, when {{ min_experts }} or more such experts give the same species for a beetle with no name yet, and no proven player disagrees, it is written to the database. It stays marked unvalidated until a curator checks it.</li>
-        <li>Expertise is earned one taxon at a time (a subfamily, a tribe, a genus). You can be an expert on one genus and not on another, so some of your labels may skip review and others not. Being good in neighbouring taxa only makes your labels suggestions. Your <a href="{% url 'game_expertise' %}" class="underline">expertise tree</a> shows where you stand.</li>
+        <li>Only <strong>Identification experts</strong> have their labels written to the database without review. You become one by proving yourself on <strong>beetles curators have already checked</strong>, in that exact taxon: {{ per_species }} images each of at least {% widthratio children_share 1 100 %}% of its members (a genus&rsquo;s species, a tribe&rsquo;s genera, a subfamily&rsquo;s tribes), with at least {% widthratio trust_accuracy 1 100 %}% correct. Small taxa need few answers, large ones many. You must also be among the most reliable players overall.</li>
+        <li>Then, when {{ min_experts }} or more such Identification experts give the same species for a beetle with no name yet, and no other Identification expert disagrees, it is written to the database. It stays marked unvalidated until a curator checks it.</li>
+        <li>Expertise is earned one taxon at a time (a subfamily, a tribe, a genus). You can be an Identification expert on one genus and not on another, so some of your labels may skip review and others not. Being good in neighbouring taxa only makes your labels suggestions. Your <a href="{% url 'game_expertise' %}" class="underline">expertise tree</a> shows where you stand.</li>
+        <li>Telling a taxon&rsquo;s beetles apart just as well, in Similarity, Imposter Picker and Find Them All, makes you a <strong>Distinction expert</strong> there. It shows on your tree but doesn&rsquo;t change where your labels go.</li>
         <li>Expertise is checked again all the time, so it can be lost as well as earned.</li>
         <li><strong>Found a new species?</strong> If you name a species the gallery has no validated images of yet, and a curator later confirms you were correct, you get a pop-up and a <em>New species finder</em> badge on your profile.</li>
       </ul>
@@ -107,18 +110,18 @@
   <h2 class="text-xl font-semibold text-gray-900 mt-10 mb-3" id="faq">Quick answers</h2>
   <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl" data-testid="how-faq">
     <dl class="text-sm text-gray-600 space-y-3">
-      <div><dt class="font-semibold text-gray-900">Do I lose points if I report a photo?</dt>
+      <div><dt class="font-semibold text-gray-900">Do I lose points if I flag a photo?</dt>
         <dd>No. It goes to the curators and you get the next beetle.</dd></div>
       <div><dt class="font-semibold text-gray-900">What does skipping cost?</dt>
-        <dd>A tiny {{ unsure }} points in Similarity and Identification, much less than a wrong guess. In Odd One Out and Select all, skipping earns {{ odd_skip }}.</dd></div>
+        <dd>A tiny {{ unsure }} points in Similarity and Identification, much less than a wrong guess. In Imposter Picker and Find Them All, skipping earns {{ odd_skip }}.</dd></div>
       <div><dt class="font-semibold text-gray-900">Is there a time limit?</dt>
         <dd>No. Take your time, use keys, papers or a reference collection, and stop whenever you like.</dd></div>
-      <div><dt class="font-semibold text-gray-900">The photo is clear but shows too little to name it (an underside, a leg).</dt>
-        <dd>Don&rsquo;t report it: name it as far as you can, even just the subfamily. Those answers show which views allow a name at which rank. Report only a photo that is broken: blurry or dark, not a beetle, or a box that misses the beetle or frames the label. A name that looks wrong is reported after you play, from the round&rsquo;s answers in <a href="{% url 'game_history' %}" class="underline">History</a>.</dd></div>
+      <div><dt class="font-semibold text-gray-900">When should I flag a photo?</dt>
+        <dd>When it shows too little to name it (just a leg or a fragment of the beetle), is blurry or dark, isn&rsquo;t a beetle, or its box misses the beetle or frames the label. A clear photo of a good part of the beetle from an unusual side (from below, say) isn&rsquo;t bad: name it as far as you can, even just the subfamily. Those answers show which views allow a name at which rank. A name that looks wrong is reported after you play, from the round&rsquo;s answers in <a href="{% url 'game_history' %}" class="underline">History</a>.</dd></div>
       <div><dt class="font-semibold text-gray-900">Do other players affect my score?</dt>
         <dd>Only on beetles nobody has checked yet: there you earn points when strong players agree with you, and you never lose any (<a href="#unchecked" class="underline">more</a>). On checked beetles only the real name counts.</dd></div>
       <div><dt class="font-semibold text-gray-900">What is an expert?</dt>
-        <dd>A player proven on checked beetles of one taxon. Their names for unchecked beetles in that taxon can go into the database without review (<a href="#labels" class="underline">more</a>).</dd></div>
+        <dd>There are two kinds, each for one taxon. An <strong>Identification expert</strong> names its beetles reliably, proven on checked beetles across most of its members: their names for unchecked beetles there can go into the database without review (<a href="#labels" class="underline">more</a>). A <strong>Distinction expert</strong> tells its beetles apart just as reliably but may not know their names; it doesn&rsquo;t unlock anything.</dd></div>
     </dl>
   </section>
 

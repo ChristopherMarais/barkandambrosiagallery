@@ -14,7 +14,7 @@ from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncWeek
 from django.utils import timezone
 
-from . import game, game_levels, game_rewards
+from . import game, game_levels, game_rewards, game_trust
 from .models import AnswerPoints, GameAnswer, PlayerScore, PlayerSkill, SpeciesDiscovery
 
 SORTS = {"score": "Score", "identification": "Identification accuracy", "similarity": "Similarity accuracy",
@@ -120,43 +120,31 @@ def weekly_wins(player_id=None, top=3, now=None):
     return out
 
 
-ANONYMOUS = "A player"
-
-
-def hidden_names():
-    """The players who chose not to show their name on boards (#394)."""
-    from .models import GamePreference
-
-    return set(GamePreference.objects.filter(hide_name=True).values_list("player_id", flat=True))
-
-
-def shown_name(player, viewer_id=None):
-    """A player's name as others see it in the game: "A player" if they hid it (#394), except to themselves."""
-    if player.id != viewer_id and player.id in hidden_names():
-        return ANONYMOUS
-    return player.username
-
-
-def _anonymise(rows, viewer_id):
-    """Board rows of players who hid their name show "A player" (and no profile link), except their own row."""
-    hidden = hidden_names() - {viewer_id}
-    for row in rows:
-        row["anonymous"] = row["player_id"] in hidden
-        if row["anonymous"]:
-            row["username"] = ANONYMOUS
-    return rows
-
-
-def board(sort="score", period="week", q="", limit=50, viewer_id=None):
+def last_week_top(top=3, now=None):
     """
-    Rows: position, player_id, username, anonymous, level, level_name, score, accuracy, id_accuracy, sim_accuracy,
-    viewed, is_expert, discoveries. Sort by score, identification or similarity accuracy, or beetles seen.
+    Last week's top players, placed as weekly_wins places them: [{"position", "player_id", "username", "points"}],
+    best first, or [] if nobody scored. Reads that one week only, so it is cheap enough for the game home.
+    """
+    end = game.week_start(now)
+    start = game.week_start(end - timedelta(days=1))
+    places = list(
+        AnswerPoints.objects.filter(answer__answered_at__gte=start, answer__answered_at__lt=end)
+        .values("answer__player").annotate(total=Sum("points")).filter(total__gt=0)
+        .order_by("-total", "answer__player").values_list("answer__player", "total")[:top]
+    )
+    names = dict(get_user_model().objects.filter(id__in=[p for p, _ in places]).values_list("id", "username"))
+    return [{"position": i, "player_id": p, "username": names.get(p, ""), "points": round(total)}
+            for i, (p, total) in enumerate(places, start=1)]
+
+
+def board(sort="score", period="week", q="", limit=50):
+    """
+    Rows: position, player_id, username, level, level_name, score, accuracy, id_accuracy, sim_accuracy, viewed,
+    is_expert, discoveries. Sort by score, identification or similarity accuracy, or beetles seen.
     Everything but the level and the expert mark follows the period: points, beetles seen, accuracy and finds.
-    Players who hid their name show as "A player" to everyone but themselves, and a name search doesn't find them.
     """
     scores = {s.player_id: s for s in PlayerScore.objects.all()}
     names = dict(get_user_model().objects.filter(id__in=scores).values_list("id", "username"))
-    unsearchable = hidden_names() - {viewer_id} if q else set()
     experts = set(PlayerSkill.objects.filter(proven=True).values_list("player_id", flat=True))
     since = period_start(period)
     found = SpeciesDiscovery.objects.all() if since is None else SpeciesDiscovery.objects.filter(created_at__gte=since)
@@ -175,7 +163,7 @@ def board(sort="score", period="week", q="", limit=50, viewer_id=None):
     for pid, s in scores.items():
         if pid not in names or (s.viewed == 0):
             continue
-        if q and (pid in unsearchable or q.lower() not in names[pid].lower()):
+        if q and q.lower() not in names[pid].lower():
             continue
         level = game_levels.describe(s.score, s.rating)
         score, viewed = (max(0.0, week_points.get(pid, 0.0)), week_viewed.get(pid, 0)) if since else (s.score, s.viewed)
@@ -196,10 +184,10 @@ def board(sort="score", period="week", q="", limit=50, viewer_id=None):
         rows.sort(key=lambda r: (-r["score"], r["username"]))
     for i, row in enumerate(rows, start=1):
         row["position"] = i
-    return _anonymise(rows[:limit] if limit else rows, viewer_id)
+    return rows[:limit] if limit else rows
 
 
-def branch_board(rank, value, limit=50, viewer_id=None):
+def branch_board(rank, value, limit=50):
     """
     Players ranked inside one part of the tree: for a genus, how well they name its species; for a tribe, its
     genera; for a subfamily, its tribes. Proven experts first, then by the cautious estimate of their accuracy.
@@ -216,7 +204,7 @@ def branch_board(rank, value, limit=50, viewer_id=None):
     rows.sort(key=lambda r: (not r["is_expert"], -r["lower_bound"], -r["judged"]))
     for i, row in enumerate(rows, start=1):
         row["position"] = i
-    return _anonymise(rows[:limit], viewer_id)
+    return rows[:limit]
 
 
 def profile(player):
@@ -225,14 +213,14 @@ def profile(player):
 
     s = score_for(player)
     proven = list(PlayerSkill.objects.filter(player=player, proven=True).order_by("rank", "branch"))
+    what = {"tribe": "tribes of", "genus": "genera of", "species": "species of", "subfamily": "subfamilies"}
     return {
         "score": s, "level": game_levels.describe(s.score, s.rating), "badges": game_rewards.badge_cards(player),
         "streak": game_rewards.streak_days(game_rewards.goal_days(player)),
         "accuracy": s.accuracy if s.judged >= game.game_setting("GAME_MIN_JUDGED_FOR_ACCURACY", 10) else None,
-        "expert_in": [
-            {"what": {"tribe": "tribes of", "genus": "genera of", "species": "species of", "subfamily": "subfamilies"}[k.rank],
-             "branch": k.branch} for k in proven
-        ],
+        "expert_in": [{"what": what[k.rank], "branch": k.branch} for k in proven],   # Identification experts
+        "distinction_in": [{"what": what[rank], "branch": branch}
+                           for rank, branch in game_trust.distinction_experts(player)],   # #498
         "discoveries": list(player.species_discoveries.order_by("genus", "species")),
         "modes": dict(GameAnswer.objects.filter(player=player, skipped=False).values_list("mode").annotate(n=Count("id"))),
         "games": mode_stats([player.id])[player.id],

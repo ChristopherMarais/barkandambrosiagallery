@@ -1,7 +1,5 @@
 """The Beetle ID game as one continuous feed: no rounds to the player, checks dropped in now and then, confetti, exit."""
-import json
 from datetime import timedelta
-from unittest import mock
 
 from django.test import override_settings
 from django.urls import reverse
@@ -30,7 +28,7 @@ class FeedTests(GameCase):
         self.assertEqual(len(seen), 1)   # the first batch ended after two answers...
         self.assertNotIn("done", data)   # ...and the second answer already returned the next beetle
         self.assertIsNotNone(GameRound.objects.filter(finished_at__isnull=False).first())
-        self.assertEqual(GameRound.objects.filter(finished_at__isnull=True).count(), 1)
+        self.assertIsNone(GameRound.objects.get(id=data["round"]).finished_at)   # (the one after may be built ahead, #494)
 
     @override_settings(GAME_ROUND_SIZE=2)
     def test_the_feed_ends_only_when_there_is_nothing_new_left(self):
@@ -58,16 +56,16 @@ class ConfettiTests(GameCase):
             self.roi(self.t_ferr)
         rnd, item = self.play(mode)
         body = answer if mode == "classify" else {"pair_answer": answer}
-        return self.post("game_answer", dict(body, index=item["index"], **extra), rnd.id).json()
+        return self.post("game_answer", dict(body, index=item["index"], **extra), rnd.id).json()["review"]
 
     def test_a_right_species_on_a_scored_beetle_gets_confetti(self):
         self.assertTrue(self.answer(self.t_affinis, AFFINIS)["celebrate"])
 
     def test_a_wrong_species_with_the_right_genus_gets_the_small_partial_kind(self):
-        self.assertEqual(self.answer(self.t_affinis, FERR)["celebrate"], "partial")
+        self.assertEqual(self.answer(self.t_affinis, FERR)["celebrate"]["kind"], "partial")
 
     def test_a_genus_only_answer_gets_the_partial_kind(self):
-        self.assertEqual(self.answer(self.t_affinis, {"subfamily": "Scolytinae", "genus": "Xyleborus"})["celebrate"], "partial")
+        self.assertEqual(self.answer(self.t_affinis, {"subfamily": "Scolytinae", "genus": "Xyleborus"})["celebrate"]["kind"], "partial")
 
     def test_no_confetti_on_a_beetle_we_do_not_know_the_answer_to(self):
         self.assertFalse(self.answer(self.t_affinis, AFFINIS, validated=False)["celebrate"])
@@ -170,11 +168,11 @@ class PlayPageTests(GameCase):
         return self.client.get(reverse("game_play", args=[mode])).content.decode()
 
     def test_the_games_have_catchy_names(self):
-        self.assertIn("Name That Beetle", self.page("classify"))
-        self.assertIn("Family Ties", self.page("pair"))
+        self.assertIn("Identification", self.page("classify"))
+        self.assertIn("Similarity", self.page("pair"))
         mixed = self.page("mixed")
-        self.assertIn("Name That Beetle", mixed)
-        self.assertIn("Family Ties", mixed)
+        self.assertIn("Identification", mixed)
+        self.assertIn("Similarity", mixed)
         self.assertNotIn("Spot the relatives", mixed + self.page("pair"))
 
     def test_the_home_page_has_one_play_button_for_the_mixed_game(self):
@@ -209,7 +207,7 @@ class PlayPageTests(GameCase):
         self.assertNotIn('id="open-search"', page)
         self.assertIn('(hover: hover) and (pointer: fine)', page)   # shortcuts only shown on a computer
         self.assertIn('addEventListener("popstate"', page)          # the phone's back button acts like Exit
-        self.assertIn('id="community"', page)                        # what others said stays until closed
+        self.assertIn('id="review"', page)                           # the review after each answer, in the panel
 
     def test_each_rank_list_has_its_own_search(self):
         self.client.force_login(self.user)
@@ -286,14 +284,14 @@ class OnboardingTests(GameCase):
         self.assertNotIn("photo-edge", page)                 # past the photo's edge is plain grey: no label needed
 
     def test_the_report_button_is_labelled(self):
-        self.assertIn("<span>Report</span>", self.page())
+        self.assertIn("<span>Flag</span>", self.page())
 
     def test_every_photo_has_a_report_button_and_the_help_says_where(self):
         from pathlib import Path
         from django.conf import settings
         page = self.page()
         self.assertIn('report.className = "report-chip"', page)          # drawn on each photo in play
-        self.assertIn("top right of the photo", page)                    # the report tip card
+        self.assertIn("bottom left of the photo", page)                  # the report tip card
         tour = (Path(settings.BASE_DIR) / "beetlesgallery/static/js/game_tour.js").read_text()
         self.assertIn('el: "report-chip-0"', tour)                        # the tour spotlights the button itself
-        self.assertIn("top right of the photo", tour)
+        self.assertIn("bottom left of the photo", tour)

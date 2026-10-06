@@ -20,10 +20,11 @@ class PhotoPanelPageTests(GameCase):
     def test_every_list_can_be_searched(self):
         self.assertIn("const FIND_MIN = 0;", self.page())
 
-    def test_light_sits_bottom_left_and_waits_for_its_level(self):
+    def test_light_sits_bottom_right_and_waits_for_its_level(self):
         page = self.page()
         self.assertIn('id="light-btn" class="hidden"', page)
-        self.assertIn("#light-btn { position: absolute; left: 0.375rem; bottom: 0.375rem;", page)
+        # bottom right, as in the whole-photo view: each photo's Flag has its bottom left (#495)
+        self.assertIn("#light-btn { position: absolute; right: 0.375rem; bottom: 0.375rem;", page)
         self.assertIn('$("light-btn").classList.toggle("hidden", !p.light)', page)
 
     def test_the_crop_can_be_zoomed_and_the_photo_to_name_is_marked(self):

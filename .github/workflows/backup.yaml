@@ -73,7 +73,7 @@ jobs:
               # 'nohup' and '&' force the task to run invisibly in the server's background
               # The output is saved to a log file so SSH doesn't hang waiting for it
               # The notice goes off when the copy ends, whether it worked or not
-              nohup sh -c "rclone copy /opt/barkandambrosia_data '$DROPBOX_PATH/' --exclude 'postgres/**' --verbose; \
+              nohup sh -c "rclone copy /opt/barkandambrosia_data '$DROPBOX_PATH/' --exclude 'postgres/**' --exclude 'media/crops/**' --verbose; \
                 $COMPOSE exec -T web pixi run backup-notice off" \
                 > /opt/barkandambrosiagallery/full_backup_progress.log 2>&1 < /dev/null &
               
@@ -89,6 +89,7 @@ jobs:
                 --exclude "media/originals/**" \
                 --exclude "media/display/**" \
                 --exclude "media/thumbnails/**" \
+                --exclude "media/crops/**" \
                 --exclude "media/uploads/**" \
                 --exclude "media/tmp_uploads/**" \
                 --exclude "*.zip" \

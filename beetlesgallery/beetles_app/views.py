@@ -1,54 +1,41 @@
 import os
-import re
 import zipfile
-import shlex
-import uuid, json
-import subprocess
-import sys
-import os
+import uuid
+import json
 import math
-import requests
-import time
 import logging
 from beetlesgallery.tools import ibbi_models
 from datetime import date, timedelta
-from io import BytesIO
 
-from django.db.models import Q, Count, F
+from django.db.models import Q, F
 from django.utils import timezone
 from django.urls import reverse
 from django.db import transaction
 from django.conf import settings
 from django.contrib import messages
-from django.utils.http import http_date, url_has_allowed_host_and_scheme
-from django.http import HttpResponseNotAllowed, FileResponse, HttpResponse, Http404, JsonResponse, StreamingHttpResponse
+from django.http import HttpResponseNotAllowed, FileResponse, Http404, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth import login, update_session_auth_hash, get_user_model
+from django.contrib.auth import update_session_auth_hash, get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.views.decorators.http import require_POST
-from django.contrib.auth.views import LoginView as DjangoLoginView, LogoutView, redirect_to_login
+from django.contrib.auth.views import LoginView as DjangoLoginView, LogoutView
 from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
-from django.contrib.admin.views.decorators import staff_member_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.files.storage import default_storage
 from django.core.management import call_command
 
 from . import chunked_upload
-from .areas import ANNOTATE, BOXES, DETAILS, DOWNLOAD, SPECIES, UPLOAD, INTERACTIONS, AREAS, area_required, has_area
-from .areas import CURATOR_AREAS, page_groups, AI_RECOMMEND, ANNOTATE, BOXES, BULK_VALIDATE, NOTICE, PREDICTIONS, UPDATE, VALIDATE, DETAILS, DOWNLOAD, SPECIES, UPLOAD, INTERACTIONS, AREAS, area_required, has_area
+from .areas import (CURATOR_AREAS, page_groups, AI_RECOMMEND, ANNOTATE, BOXES, PREDICTIONS, UPDATE, VALIDATE, DETAILS,
+                    DOWNLOAD, SPECIES, UPLOAD, INTERACTIONS, AREAS, area_required, has_area)
 from .csv_columns import modern_columns
 from .models import Beetles, UploadBatch, DownloadJob, UpdateBatch, ImageAsset
 from .schema import REQUIRED_COLS, MAX_ROWS
-from .forms import TailwindUserCreationForm, ProfileForm, PasswordChangeFormStyled, ValidSpeciesUploadForm, DescribedNamesUploadForm, UpdateBatchUploadForm
+from .forms import TailwindUserCreationForm, PasswordChangeFormStyled, ValidSpeciesUploadForm, DescribedNamesUploadForm
 from .predictions import import_predictions, suggestions_for
 from .roi_reports import REASONS as REPORT_REASONS
 from .tasks import process_upload_task, process_update_task, build_downloads_task
 
 import pandas as pd
-from io import BytesIO, StringIO
-
-MODAL_API_URL = settings.MODAL_API_URL
 
 logger = logging.getLogger(__name__)
 
@@ -319,14 +306,10 @@ def _format_size(num_bytes):
 
 @area_required(UPLOAD)
 def upload_file(request):
-    print("DEBUG: entered upload_file view", flush=True)
     if request.method != "POST":
         return redirect("data_management")
 
-    # --- DEBUGGING LOGS  ---
-    print(f"DEBUG: POST keys: {list(request.POST.keys())}", flush=True)
-    print(f"DEBUG: FILES keys: {list(request.FILES.keys())}", flush=True)
-    # ------------------------
+    logger.debug("upload_file: POST keys %s, FILES keys %s", list(request.POST.keys()), list(request.FILES.keys()))
 
     # --- require both files present ---
     csv_file = request.FILES.get("csv_file") or request.FILES.get("csv")
@@ -340,7 +323,7 @@ def upload_file(request):
             messages.error(request, "The images ZIP did not arrive completely. Please upload it again.")
             return redirect("data_management")
 
-    print(f"DEBUG: Resolved csv_file: {csv_file}, zipf: {zipf}", flush=True)
+    logger.debug("upload_file: csv_file=%s zip=%s", csv_file, zipf)
 
     if not csv_file or not zipf:
         messages.error(request, "Please attach both a .csv metadata file and a .zip of images.")
@@ -409,11 +392,11 @@ def upload_file(request):
     except Exception:
         pass
     batch.save()
-    print("DEBUG: after batch.save, batch id=", batch.id, "status=", batch.status, flush=True)
+    logger.debug("upload_file: saved batch %s, status %s", batch.id, batch.status)
 
     # --- quick preflight of the XLSX (single sheet) ---
     if pd is None:
-        print("DEBUG: pd is None; returning early (no worker spawned)", flush=True)
+        logger.warning("upload_file: pandas is missing; batch %s saved without checks or processing", batch.id)
         messages.warning(request, "Uploaded. Note: server missing pandas; skipping quick XLSX checks.")
         return redirect("data_management")
 
@@ -435,7 +418,7 @@ def upload_file(request):
     if MAX_ROWS is not None and len(df) > MAX_ROWS:
         errors.append(f"Sheet has {len(df)} rows (max {MAX_ROWS}).")
 
-    print("DEBUG: preflight complete, errors=", errors, flush=True)
+    logger.debug("upload_file: preflight of batch %s done, errors=%s", batch.id, errors)
 
     if errors:
         reason = "; ".join(map(str, errors))[:2000]
@@ -446,9 +429,10 @@ def upload_file(request):
     # Pass preflight; full validator will hash images, check 1:1 mapping, etc.
     # Kick off background processing for this batch (validate + import)
     process_upload_task.delay(batch.id)
-    print(f"Queued process_single_upload for batch {batch.id}", flush=True)
+    logger.info("Queued process_single_upload for batch %s", batch.id)
 
-    messages.success(request, "Files received. Track the upload status below in the Activity Logs.")
+    messages.success(request, "Files received. You can close this page: the server checks and imports them. "
+                              "Track the upload status below in the Activity Logs.")
     return redirect("data_management")
 
 
@@ -555,7 +539,6 @@ GALLERY_SORTS = {
 
 def gallery(request):
     from .utils import build_query_q, filter_beetles_queryset, FILTERS_CONFIG
-    NA = "None"
     try:
         page_size = int(request.GET.get("per_page", 12))
     except (ValueError, TypeError):
@@ -1032,8 +1015,8 @@ def data_management(request):
             else:
                 t_label = "Database Managed (v2.0)"
                 t_timestamp = timezone.now().isoformat()
-        except Exception as e:
-            print(f"Safe error parsing Taxon: {e}")
+        except Exception:
+            logger.warning("Could not read the taxonomy's last update for the data page", exc_info=True)
             t_label = "Database Managed (v2.0)"
             t_timestamp = timezone.now().isoformat()
 
@@ -1064,8 +1047,8 @@ def data_management(request):
                                 ts = timezone.now().isoformat()
                             archives.append({"filename": f, "timestamp": ts})
                     archives.sort(key=lambda x: x["filename"], reverse=True)
-            except Exception as e:
-                print(f"Safe error reading storage: {e}")
+            except Exception:
+                logger.warning("Could not list the %s archives", ref_type, exc_info=True)
             return archives
 
         vs_archives = fetch_archives("valid_species")
@@ -1109,123 +1092,6 @@ def data_management(request):
         }
     )
 
-
-@area_required(BOXES)
-def tool_annotate(request):
-    """
-    Data annotation tool page (staff only).
-    """
-    from .utils import FILTERS_CONFIG
-    from collections import defaultdict
-    from django.db.models import Q
-    from .models import Beetles, Taxon
-    from django.core.serializers.json import DjangoJSONEncoder
-    import json
-    
-    # Query the base records to discover available filter options
-    base_qs = Beetles.objects.filter(is_deleted=False)
-    grouped_filters = defaultdict(list)
-    
-    categories = []
-    seen_cats = set()
-    for cfg in FILTERS_CONFIG:
-        if cfg["category"] not in seen_cats:
-            categories.append(cfg["category"])
-            seen_cats.add(cfg["category"])
-
-    for cfg in FILTERS_CONFIG:
-        param = cfg["param"]
-        options = []
-        has_na = False
-
-        if cfg["type"] == "db":
-            field = cfg['field']
-            is_strict_type = field in ["image_asset__image_date_taken", "image_asset__resolution_in_ppmm"]
-            
-            if is_strict_type:
-                raw_options = base_qs.exclude(**{f"{field}__isnull": True}).values_list(field, flat=True).distinct().order_by(field)
-                has_na = base_qs.filter(**{f"{field}__isnull": True}).exists()
-            else:
-                raw_options = base_qs.exclude(**{f"{field}__isnull": True}).exclude(**{f"{field}": ""}).values_list(field, flat=True).distinct().order_by(field)
-                has_na = base_qs.filter(Q(**{f"{field}__isnull": True}) | Q(**{f"{field}": ""})).exists()
-            
-            for o in raw_options:
-                val = o.strftime("%Y-%m-%d") if hasattr(o, "strftime") else str(o).strip()
-                if val and val not in options:
-                    options.append(val)
-
-        elif cfg["type"] in ["bool", "custom_has_rois", "custom_all_rois_val"]:
-            options = ["Yes", "No"]
-            if cfg["type"] == "bool":
-                has_na = base_qs.filter(**{f"{cfg['field']}__isnull": True}).exists()
-            else:
-                has_na = False
-            
-        elif cfg["type"] == "ref":
-            field_name = f"taxon__{cfg['field']}"
-            raw_options = base_qs.exclude(taxon__isnull=True).exclude(**{f"{field_name}__isnull": True}).exclude(**{f"{field_name}": ""}).values_list(field_name, flat=True).distinct().order_by(field_name)
-            for o in raw_options:
-                val = str(o).strip()
-                if val and val not in options:
-                    options.append(val)
-
-            has_na = base_qs.filter(Q(taxon__isnull=True) | Q(**{f"{field_name}__isnull": True}) | Q(**{f"{field_name}": ""})).exists()
-
-        if has_na:
-            options.insert(0, "None")
-
-        if options:
-            grouped_filters[cfg["category"]].append({
-                "param": param,
-                "label": cfg["label"],
-                "options": options,
-                "selected": [],
-            })
-
-    filter_context = []
-    for cat in categories:
-        if grouped_filters[cat]:
-            filter_context.append((cat, grouped_filters[cat]))
-
-    # --- Inject Taxonomy Tree for Cascading Dropdowns ---
-    taxa = Taxon.objects.all()
-    tree_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-    species_map = {}
-
-    for t in taxa:
-        subf = t.subfamily.strip() if t.subfamily else "Unknown Subfamily"
-        tribe = t.tribe.strip() if t.tribe else "Unknown Tribe"
-        genus = t.genus.strip() if t.genus else "Unknown Genus"
-
-        tree_dict[subf][tribe][genus].append({
-            "name": t.species.strip() if t.species else "sp.",
-            "species_id": str(t.valid_species_id),
-        })
-
-        species_map[str(t.valid_species_id)] = {
-            "subfamily": subf,
-            "tribe": tribe,
-            "genus": genus,
-            "name": t.species.strip() if t.species else "sp."
-        }
-
-    # Convert defaultdict to standard dict to prevent silent serialization failures
-    def default_to_regular(d):
-        if isinstance(d, defaultdict):
-            d = {k: default_to_regular(v) for k, v in d.items()}
-        return d
-    
-    tree_dict_clean = default_to_regular(tree_dict)
-
-    return render(request, 'beetles/tool_annotate.html', {
-        # someone who may only edit boxes sees names and details read-only (the API refuses changes to them)
-        'can_edit_records': has_area(request.user, ANNOTATE),
-        'can_validate': has_area(request.user, VALIDATE),
-        'can_ai_recommend': has_area(request.user, AI_RECOMMEND),
-        'filter_groups': filter_context,
-        'taxonomy_tree_json': json.dumps(tree_dict_clean, cls=DjangoJSONEncoder, ensure_ascii=False),
-        'species_map_json': json.dumps(species_map, cls=DjangoJSONEncoder, ensure_ascii=False),
-    })
 
 @area_required(SPECIES)
 def download_taxonomy_ref(request):
@@ -1286,7 +1152,30 @@ def download_taxonomy_archive(request, ref_type, filename):
 
     return resp
 
+def keep_messages_for_reload(view):
+    """
+    The uploads page sends these forms in the background (XMLHttpRequest) and then reloads itself. A background
+    request follows the view's redirect, and the page it fetches out of sight would use up the message the view
+    left ("Update file received", "Update rejected: ...") before the reload could show it. So a background send is
+    answered with {"reload": true} instead, and the messages are kept for the reloaded page. A form sent the normal
+    way (no JavaScript, or the admin tools pages) gets the view's own answer.
+    """
+    from functools import wraps
+
+    @wraps(view)
+    def wrapped(request, *args, **kwargs):
+        response = view(request, *args, **kwargs)
+        background = request.method == "POST" and request.headers.get("x-requested-with") == "XMLHttpRequest"
+        page = response.status_code == 200 and response.get("Content-Type", "").startswith("text/html")
+        if background and (response.status_code in (301, 302, 303) or page):
+            messages.get_messages(request).used = False   # a page rendered for it was never seen
+            return JsonResponse({"reload": True})
+        return response
+    return wrapped
+
+
 @area_required(SPECIES)
+@keep_messages_for_reload
 def admin_valid_species(request):
     current_status = {'label': 'Database Managed (v2.0)', 'version': 'v2.0'}
 
@@ -1323,6 +1212,7 @@ def admin_valid_species(request):
 
 
 @area_required(SPECIES)
+@keep_messages_for_reload
 def admin_described_names(request):
     current_status = {'label': 'Database Managed (v2.0)', 'version': 'v2.0'}
 
@@ -1372,6 +1262,7 @@ UPDATE_IGNORED_COLS = {
 }
 
 @area_required(UPDATE)
+@keep_messages_for_reload
 def update_upload(request):
     """
     Staff-only portal to submit a CSV of metadata updates by Record ID (UUID).
@@ -1473,173 +1364,13 @@ def update_upload(request):
     # Send them where they can see the batch status
     return redirect("data_management")
 
-@area_required(ANNOTATE)
-@require_POST
-def update_single_beetle(request, beetle_id):
-    """
-    Receives individual field edits. Handles fields for both Beetles and ImageAsset.
-    """
-    beetle = get_object_or_404(Beetles, pk=beetle_id)
-    
-    row_data = {"record_id": str(beetle.id)}
-    
-    # Combined list of fields form detail.html
-    fields = [
-        "depicts_specimen", "depicts_valid_name_id", "depicts_described_name_id", 
-        "alias_id", "depicts_name_verbatim", "image_institution", 
-        "photographer", "image_email", "photo_usage_statement", "aspect", 
-        "resolution_in_ppmm", "image_date_taken", "image_has_multiple_individuals", 
-        "collection_country", "collection_stateProvince", "specimen_sex", 
-        "specimen_type_status", "image_notes", "specimen_notes"
-    ]
 
-    for f in fields:
-        val = request.POST.get(f)
-        if f == "image_has_multiple_individuals":
-            if val == "unknown": val = ""
-        row_data[f] = val
-
-    _run_update_batch(request, row_data, f"single_edit_{beetle.id}.csv")
-    messages.success(request, "Update queued successfully. Changes will appear shortly.")
-    return redirect("beetle_detail", beetle_id=beetle_id)
-
-
-@area_required(ANNOTATE)
-@require_POST
-def toggle_beetle_validation(request, beetle_id):
-    """
-    Staff action to toggle ROI validation between validated and unvalidated.
-    If unvalidated, parent image also moves to unvalidated.
-    """
-    beetle = get_object_or_404(Beetles, pk=beetle_id)
-    target_state = request.POST.get("state")  # optional explicit 'validate' or 'unvalidate'
-    
-    if target_state == "unvalidate" or (target_state is None and beetle.bbox_is_validated):
-        beetle.unvalidate(user=request.user)
-        msg = f"ROI {beetle.depicts_specimen or str(beetle.id)[:8]} has been marked as UNVALIDATED. The image is now unvalidated."
-        status_code = "unvalidated"
-    else:
-        beetle.validate(user=request.user)
-        msg = f"ROI {beetle.depicts_specimen or str(beetle.id)[:8]} has been marked as VALIDATED."
-        status_code = "validated"
-
-    if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
-        return JsonResponse({
-            "success": True,
-            "status": status_code,
-            "bbox_is_validated": beetle.bbox_is_validated,
-            "image_is_validated": beetle.image_asset.is_validated if beetle.image_asset else False,
-            "message": msg
-        })
-
-    messages.success(request, msg)
-    return redirect("beetle_detail", beetle_id=beetle.id)
-
-
-@area_required(ANNOTATE)
-@require_POST
-def toggle_image_validation(request, image_id):
-    """
-    Staff action to move an entire image and all its ROIs between validated and unvalidated.
-    """
-    image_asset = get_object_or_404(ImageAsset, pk=image_id)
-    target_state = request.POST.get("state")
-    
-    first_beetle = image_asset.specimens.filter(is_deleted=False).first()
-    redirect_target = first_beetle.id if first_beetle else None
-
-    if target_state == "unvalidate" or (target_state is None and image_asset.is_validated):
-        image_asset.unvalidate(user=request.user)
-        msg = "Image and all its Regions of Interest have been marked as UNVALIDATED."
-        status_code = "unvalidated"
-    elif image_asset.validate(user=request.user):
-        msg = "Image and all its Regions of Interest have been marked as VALIDATED."
-        status_code = "validated"
-    else:
-        msg = "Image has no bounding boxes, so it cannot be validated."
-        status_code = "unvalidated"
-
-    if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
-        return JsonResponse({
-            "success": True,
-            "status": status_code,
-            "is_validated": image_asset.is_validated,
-            "message": msg
-        })
-
-    messages.success(request, msg)
-    if redirect_target:
-        return redirect("beetle_detail", beetle_id=redirect_target)
-    return redirect("beetles_image_browser")
-
-
-@area_required(ANNOTATE)
-@require_POST
-def create_specimen_for_image(request, image_id):
-    """
-    Creates a NEW beetle record linked to an existing ImageAsset via 'Plus' button.
-    Forces 'image_has_multiple_individuals' to True.
-    """
-    image_asset = get_object_or_404(ImageAsset, pk=image_id)
-    
-    # 1. Update flag immediately on the image
-    if not image_asset.image_has_multiple_individuals:
-        image_asset.image_has_multiple_individuals = True
-        image_asset.save(update_fields=['image_has_multiple_individuals'])
-
-    # 2. Prepare payload for UpdateBatch (Special "NEW" mode)
-    row_data = {
-        "record_id": "NEW",
-        "link_image_uuid": str(image_asset.id),
-        # Ensure we send 'True' so the new record is consistent
-        "image_has_multiple_individuals": "True" 
-    }
-    
-    # Capture only Beetle-specific fields from the form
-    beetle_fields = [
-        "depicts_specimen", "depicts_valid_name_id", "depicts_described_name_id", 
-        "alias_id", "depicts_name_verbatim", "aspect", 
-        "collection_country", "collection_stateProvince", "specimen_sex", 
-        "specimen_type_status", "specimen_notes"
-    ]
-    
-    for f in beetle_fields:
-        row_data[f] = request.POST.get(f)
-
-    _run_update_batch(request, row_data, f"add_specimen_{image_asset.id.hex[:8]}.csv")
-    
-    messages.success(request, "Update queued successfully. Changes will appear shortly.")
-    referer = request.META.get('HTTP_REFERER')
-    if referer and url_has_allowed_host_and_scheme(
-        url=referer,
-        allowed_hosts={request.get_host()},
-        require_https=request.is_secure(),
-    ):
-        return redirect(referer)
-    return redirect(reverse('image_browser'))
-
-
-def _run_update_batch(request, row_data, filename):
-    """Helper to package row_data into an XLSX and spawn the processor."""
-    df = pd.DataFrame([row_data])
-    
-    s_buf = StringIO()
-    df.to_csv(s_buf, index=False)
-    csv_content = s_buf.getvalue().encode('utf-8-sig')
-    
-    batch = UpdateBatch.objects.create(
-        uploaded_by=request.user,
-        original_filename=filename,
-        status=UpdateBatch.Status.STAGING,
-    )
-    
-    from django.core.files.base import ContentFile
-    batch.file.save(filename, ContentFile(csv_content), save=False)
-    batch.size_bytes = batch.file.size
-    batch.save()
-
-    # Trigger
-    process_update_task.delay(batch.id)
+def _hourly_saves(request):
+    """The cache key and count of what the AI page kept for this person (or address) this hour."""
+    from django.core.cache import cache
+    who = request.user.pk if request.user.is_authenticated else request.META.get("REMOTE_ADDR", "")
+    key = f"classifier-saves:{who}"
+    return key, cache.get(key, 0)
 
 
 def _keep_classifier_image(request, image_file, data):
@@ -1655,9 +1386,7 @@ def _keep_classifier_image(request, image_file, data):
             return classify_assist.OPTED_OUT   # the person asked us not to keep it (or it is a built-in example)
         if data.get("status") != "success" or not data.get("detections"):
             return classify_assist.NOT_SAVED
-        who = request.user.pk if request.user.is_authenticated else request.META.get("REMOTE_ADDR", "")
-        key = f"classifier-saves:{who}"
-        count = cache.get(key, 0)
+        key, count = _hourly_saves(request)
         if count >= classify_assist.SUBMISSIONS_PER_HOUR:
             return classify_assist.NOT_SAVED
         image_file.seek(0)
@@ -1670,6 +1399,45 @@ def _keep_classifier_image(request, image_file, data):
         return "not_saved"
 
 
+def _keep_ai_suggestions(request, asset, data):
+    """
+    A gallery photo run from its specimen page: keep the AI's names on its ROIs that have no AI suggestion yet.
+    Limited like kept images (not for accounts that may generate AI recommendations on the annotation page anyway),
+    and never fails the classification. Returns (outcome, how many ROIs got one).
+    """
+    from django.core.cache import cache
+    from . import classify_assist
+
+    try:
+        if not data.get("detections"):
+            return classify_assist.NOT_SAVED, 0
+        limited = not has_area(request.user, AI_RECOMMEND)
+        key, count = _hourly_saves(request)
+        if limited and count >= classify_assist.SUBMISSIONS_PER_HOUR:
+            return classify_assist.NOT_SAVED, 0
+        user = request.user if request.user.is_authenticated else None
+        attached = classify_assist.attach_suggestions(asset, data, user)
+        if not attached:
+            return classify_assist.NOTHING_NEW, 0
+        if limited:
+            cache.set(key, count + 1, 3600)
+        return classify_assist.ATTACHED, attached
+    except Exception:
+        logger.exception("Could not keep the AI's names for a gallery photo")
+        return classify_assist.NOT_SAVED, 0
+
+
+def _gallery_photo(asset_id):
+    """The gallery photo (ImageAsset) with this id, if it is there and has a file; else None."""
+    if not asset_id:
+        return None
+    try:
+        asset = ImageAsset.objects.filter(pk=asset_id, is_deleted=False).first()
+    except (ValueError, ValidationError):
+        return None
+    return asset if asset is not None and asset.image_file else None
+
+
 # Built-in examples on the classifier page (files in static/img/classifier_examples/). They are never kept.
 CLASSIFIER_EXAMPLES = [
     {"file": "monarthrum_nudum.jpg", "title": "Monarthrum nudum", "credit": "SL Wood, Brigham Young University", "licence": "CC-BY-NC 4.0"},
@@ -1679,47 +1447,43 @@ CLASSIFIER_EXAMPLES = [
 ]
 
 
-# @login_required
+# Open to everyone on purpose (no sign-in); a signed-in visitor is recorded with what the page keeps.
 def tool_classify(request):
     """
-    Proxies image upload to Modal GPU API.
-    Returns JSON for AJAX requests, renders template for GET.
+    The AI page (IBBI-AI). GET shows it, with a gallery photo ready when ?asset=<image id> names one (the specimen
+    page's "Generate AI recommendation"). POST classifies the uploaded image, or with ``asset`` that gallery photo as
+    stored here, never an upload, so a record only gets the AI's names for its own photo. Answers in JSON, with what
+    was kept in "saved".
     """
-    if request.method == 'POST' and request.FILES.get('image'):
+    from . import classify_assist
+
+    # A POST names the gallery photo in its form: the page posts to its own address, which keeps ?asset= even after
+    # the visitor has picked another image instead.
+    asset = _gallery_photo(request.POST.get("asset") if request.method == "POST" else request.GET.get("asset"))
+    if request.method == 'POST' and (asset is not None or request.FILES.get('image')):
+        architecture = ibbi_models.resolve(request.POST.get('architecture')) or ibbi_models.DEFAULT
         try:
-            # 1. Prepare Data
-            image_file = request.FILES['image']
-            
-            # Extract form data
-            architecture = ibbi_models.resolve(request.POST.get('architecture')) or ibbi_models.DEFAULT
-            payload = {
-                'architecture': architecture,
-                'box_threshold': request.POST.get('box_threshold', 0.25),
-            }
-            
-            # Prepare file for upload
-            files = {
-                'image': (image_file.name, image_file.read(), image_file.content_type)
-            }
-
-            # 2. Call Modal API
-            response = requests.post(MODAL_API_URL, data=payload, files=files, timeout=300)
-            
-            if response.status_code == 200:
-                data = response.json()
-                data["saved"] = _keep_classifier_image(request, image_file, data)
-                return JsonResponse(data)
+            threshold = min(1.0, max(0.05, float(request.POST.get('box_threshold', 0.25))))
+        except (TypeError, ValueError):
+            threshold = 0.25
+        try:
+            if asset is not None:
+                with asset.image_file.open('rb') as fh:
+                    image_bytes = fh.read()
+                data = classify_assist.call_classifier(image_bytes, os.path.basename(asset.image_file.name),
+                                                       'image/jpeg', architecture, threshold)
+                data["saved"], data["attached"] = _keep_ai_suggestions(request, asset, data)
             else:
-                return JsonResponse({
-                    "status": "error", 
-                    "message": f"AI Service Error: {response.status_code}"
-                }, status=500)
-
-        except requests.exceptions.Timeout:
+                image_file = request.FILES['image']
+                data = classify_assist.call_classifier(image_file.read(), image_file.name, image_file.content_type,
+                                                       architecture, threshold)
+                data["saved"] = _keep_classifier_image(request, image_file, data)
+        except classify_assist.ClassifyError as exc:
+            logger.warning("AI classification service error: %s", exc, exc_info=True)
             return JsonResponse({
-                "status": "error", 
-                "message": "The AI model is waking up (Cold Start). Please try again in 1 minute."
-            }, status=504)
+                "status": "error",
+                "message": "Classification service is temporarily unavailable. Please try again later."
+            }, status=502)
         except Exception:
             # Details go to the server log, not to the browser.
             logger.exception("AI classification request failed")
@@ -1727,9 +1491,15 @@ def tool_classify(request):
                 "status": "error", 
                 "message": "Processing failed. Please try again later."
             }, status=500)
+        return JsonResponse(data)
+    if request.method == 'POST' and request.POST.get("asset"):
+        return JsonResponse({"status": "error", "message": "That photo is not in the gallery."}, status=404)
 
     # GET request: Render the page
-    return render(request, 'beetles/tool_classify.html', {'examples': CLASSIFIER_EXAMPLES, 'ibbi_docs_url': ibbi_models.IBBI_DOCS_URL})
+    gallery_photo = {"id": str(asset.id), "url": asset.display_url} if asset is not None else None
+    return render(request, 'beetles/tool_classify.html', {
+        'examples': CLASSIFIER_EXAMPLES, 'ibbi_docs_url': ibbi_models.IBBI_DOCS_URL, 'gallery_photo': gallery_photo,
+    })
 
 @login_required
 def stream_updates(request):

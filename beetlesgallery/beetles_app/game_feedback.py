@@ -69,6 +69,11 @@ def _verdict(answer):
     return "partly" if any(judged) else "wrong"
 
 
+def grid_verdict(grid):
+    """A Select all grid's verdict (game.score_select): "right" when perfect, "partly" with some found and none wrong."""
+    return "right" if grid["perfect"] else "partly" if grid["right"] and not grid["wrong"] else "wrong"
+
+
 def _side(roi, player_reports, others):
     """What the database says about one ROI in a feedback item."""
     verified = bool(roi.bbox_is_validated and roi.taxon)
@@ -113,26 +118,28 @@ def round_feedback(rnd):
         truth_odd = truth_select = select_verdict = None
         if a.mode == "select":
             shown = [tiles.get(str(t)) for t in a.tiles or []]
-            grid = game.score_select(shown, a.picks, a.grid_rank, a.grid_group)
+            grid = game.score_select(shown, a.picks, a.grid_rank, a.grid_group, a.flagged)
             sides = []
             for i, tile in enumerate(shown):
                 if tile is not None:
                     side = _side(tile, player_reports, others)
                     side.update(state=grid["tiles"][i], picked=i in set(a.picks or []), odd=False,
+                                flagged=i in set(a.flagged or []),
                                 label=_rank_label(tile.taxon, a.grid_rank))   # only as far as the round showed
                     sides.append(side)
             truth_select = {"rank": a.grid_rank, "target": (a.grid_group or {}).get(a.grid_rank, ""),
                             "right": grid["right"], "wrong": grid["wrong"], "missed": grid["missed"],
                             "members": grid["members"]}
             if not a.skipped and not a.score_hold and grid["members"]:
-                select_verdict = "right" if grid["perfect"] else "partly" if grid["right"] and not grid["wrong"] else "wrong"
+                select_verdict = grid_verdict(grid)
         elif a.mode == "odd":
             sides = []
-            for tile_id in a.tiles or []:
+            for i, tile_id in enumerate(a.tiles or []):
                 if str(tile_id) in tiles:
                     side = _side(tiles[str(tile_id)], player_reports, others)
                     side["picked"] = not a.skipped and str(tile_id) == str(a.roi_id)
                     side["odd"] = str(tile_id) == str(a.roi_b_id)
+                    side["flagged"] = i in set(a.flagged or [])
                     if not (side["picked"] or side["odd"]):
                         side["label"] = _rank_label(tiles[str(tile_id)].taxon, a.grid_rank)
                     sides.append(side)
@@ -197,8 +204,10 @@ def answer_losses(answer, points=None):
     Similarity: {"kind": "pair", "state": "right" | "cautious" | "too_close" | "wrong", "said", "truth", "earned", "lost"}.
     Odd One Out: {"kind": "odd", "state": "right" | "wrong", "rank", "earned", "lost"}.
     Select all: {"kind": "select", "rank", "right", "wrong", "missed", "members", "earned", "lost"}.
+    Identification and Similarity also carry "multiplier": the beetle's difficulty multiplier m (None on older
+    answers); a gain was × m, a loss × (2 − m), and "worth" and "lost" follow it (#492).
     """
-    from .game_scoring import PAIR_POINTS, RANK_POINTS
+    from .game_scoring import PAIR_POINTS, RANK_POINTS, difficulty_factor
     from .models import AnswerPoints
 
     if points is None:
@@ -209,8 +218,10 @@ def answer_losses(answer, points=None):
     if points.basis != AnswerPoints.Basis.TRUTH or answer.skipped or answer.score_hold:
         return None
     detail = points.detail or {}
-    factor = 0.5 if detail.get("retry") else 1.0
     earned = round(points.points - detail.get("participation", 0.0), 1)
+    # what a rank or rung was worth follows the beetle's difficulty, like the points themselves (#492)
+    retry = game.game_setting("GAME_POINTS_RETRY_FACTOR", 0.5) if detail.get("retry") else 1.0
+    factor = retry * difficulty_factor(detail, earned)
     if answer.mode == "classify":
         weight = float(detail.get("weight", 1.0)) * factor
         ranks, lost, wrong_above = {}, 0.0, False
@@ -231,7 +242,8 @@ def answer_losses(answer, points=None):
                 state, miss = None, 0.0
             ranks[r] = {"state": state, "points": round(got, 1), "lost": round(miss, 1)}
             lost += miss
-        return {"kind": "classify", "ranks": ranks, "earned": earned, "lost": round(lost, 1)}
+        return {"kind": "classify", "ranks": ranks, "earned": earned, "lost": round(lost, 1),
+                "multiplier": detail.get("multiplier")}
     if answer.mode == "select":
         worth = float(detail.get("worth", 0.0))
         return {"kind": "select", "rank": answer.grid_rank, **{k: detail.get(k, 0) for k in ("right", "wrong", "missed", "members")},
@@ -251,7 +263,7 @@ def answer_losses(answer, points=None):
     right = detail.get("right")
     state = "right" if right is True else "wrong" if right is False else ("cautious" if given is not None and given < depth else "too_close")
     return {"kind": "pair", "state": state, "said": answer.get_pair_answer_display(), "truth": truth,
-            "earned": earned, "lost": round(max(0.0, worth - earned), 1)}
+            "earned": earned, "lost": round(max(0.0, worth - earned), 1), "multiplier": detail.get("multiplier")}
 
 
 def loss_summary(answers):
@@ -367,7 +379,7 @@ def rescore_roi(roi):
             ans.ref_species = roi.taxon.species or ""
         elif ans.mode == "select":
             from .game_scoring import grid_tiles
-            grid = game.score_select(grid_tiles(ans), ans.picks, ans.grid_rank, ans.grid_group)
+            grid = game.score_select(grid_tiles(ans), ans.picks, ans.grid_rank, ans.grid_group, ans.flagged)
             scores = {r: None for r in game.RANKS}
             if not ans.skipped and grid["members"]:
                 scores[ans.grid_rank] = grid["perfect"]

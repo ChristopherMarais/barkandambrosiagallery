@@ -1,5 +1,4 @@
 """Accuracy standing, badges, sharing, review links, levels and safe concurrent scoring."""
-from django.contrib.auth import get_user_model
 from django.urls import reverse
 
 from beetlesgallery.beetles_app import game_board, game_levels, game_rewards, game_scoring

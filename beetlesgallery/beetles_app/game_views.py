@@ -7,7 +7,10 @@ label, or whether the item is a check, so the player cannot tell which answers a
 """
 import csv
 import json
+import logging
+import time
 from datetime import datetime, timedelta, timezone as dt_timezone
+from functools import wraps
 from urllib.parse import urlencode
 
 from django.conf import settings
@@ -16,23 +19,26 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
-from django.db.models import Max, Q
-from django.http import Http404, HttpResponse, JsonResponse
+from django.db.models import Max
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from . import game, game_board, game_checked, game_discoveries, game_feedback, game_queue, game_levels, game_rewards, game_scoring, game_tips, game_trust
-from . import game_applied
+from . import game_answer_review, game_applied, game_crops
+from . import game_grid_ladder
 from . import game_taxa as taxa_tree
 from .areas import ANNOTATE, BOXES, VALIDATE, area_required, has_area
 from .models import Beetles, GameAnswer, GameReport, GameRound, ImageLock, LabelReview, PlayerScore, RetroCredit, Taxon
 from .predictions import suggestions_for
 
+logger = logging.getLogger(__name__)
+
 MODES = {m.value: m.label for m in GameRound.Mode}
 # What players see. (The model keeps its own plain labels; changing those would need a migration.)
-GAME_NAMES = {"classify": "Name That Beetle", "pair": "Similarity", "odd": "Odd One Out", "select": "Select all",
+GAME_NAMES = {"classify": "Identification", "pair": "Similarity", "odd": "Imposter Picker", "select": "Find Them All",
               "mixed": settings.GAME_DISPLAY_NAME}
 GAME_TAGLINES = {
     "classify": "One beetle, four guesses: subfamily, tribe, genus, species. Go as deep as you dare.",
@@ -55,8 +61,9 @@ DISCUSSIONS_URL = "https://github.com/ChristopherMarais/barkandambrosiagallery/d
 
 # Reporting a photo from the feed, before answering (a wrong name is reported from the round review instead)
 FEED_REPORT_REASONS = [("bad_box", "Box doesn't fit"), ("bad_image", "Bad photo"), ("other", "Something else")]
-# A short line under a reason in that menu, so a clear photo that just shows little isn't reported as bad (#360)
-FEED_REPORT_HINTS = {"bad_box": "Misses the beetle or frames the label", "bad_image": "Blurry, dark, or not a beetle"}
+# A short line under a reason in that menu (#360): a photo must show a good part of the beetle (#498)
+FEED_REPORT_HINTS = {"bad_box": "Misses the beetle or frames the label",
+                     "bad_image": "Blurry, dark, too little of the beetle, or not a beetle"}
 
 
 def discussions_url():
@@ -72,12 +79,8 @@ def game_home(request):
     game.close_idle_rounds(request.user)   # anything they left open counts now
     game_discoveries.find([request.user.id])
     checked, checked_new, checked_change = game_checked.pop_unseen(request.user)
-    # this week's top players; at the start of a quiet week, all time instead
-    board, board_period = game_board.board(limit=5, viewer_id=request.user.id), "week"
-    if not board:
-        board, board_period = game_board.board(period="all", limit=5, viewer_id=request.user.id), "all"
-    from .models import GamePreference
-    hide_boards = GamePreference.objects.filter(player=request.user, hide_boards=True).exists()   # #394
+    # this week's top players (#497); while the week is empty, the home says so and shows last week's top three
+    board = game_board.board(limit=5)
     rewards = game_rewards.progress(request.user)
     return render(request, "beetles/game_home.html", {
         "checked": checked, "checked_new": checked_new, "checked_change": checked_change,
@@ -85,7 +88,7 @@ def game_home(request):
         "discoveries": game_discoveries.pop_unseen(request.user),
         "score": game_scoring.score_for(request.user),
         "rewards": rewards,
-        "board": board, "board_period": board_period, "hide_boards": hide_boards,
+        "board": board, "last_week": [] if board else game_board.last_week_top(),
         "standing": game_board.accuracy_standing(request.user),
         "goal_floor": game_rewards.daily_goal(),
         "games": game_board.mode_stats([request.user.id])[request.user.id],
@@ -182,7 +185,7 @@ def game_history(request):
     sessions = Paginator(rounds, HISTORY_PER_PAGE).get_page(request.GET.get("page") if tab == "sessions" else 1)
     for r in sessions:   # which games a session was: one by name, or how many
         played = [name for name, n in (("Identification", r.identified), ("Similarity", r.compared),
-                                       ("Odd One Out", r.spotted), ("Select all", r.selected)) if n]
+                                       ("Imposter Picker", r.spotted), ("Find Them All", r.selected)) if n]
         r.games_label = played[0] if len(played) == 1 else f"{len(played)} games"
     checked_page = Paginator(checked, HISTORY_PER_PAGE).get_page(request.GET.get("page") if tab == "checked" else 1)
     return render(request, "beetles/game_history.html", {
@@ -198,22 +201,15 @@ def game_leaderboard(request):
     sort = {"accuracy": "identification"}.get(request.GET.get("sort"), request.GET.get("sort"))   # old links
     sort = sort if sort in game_board.SORTS else "score"
     period = request.GET.get("period") if request.GET.get("period") in game_board.PERIODS else "week"
-    last_week = game_board.weekly_wins()[:1]
-    names = dict(get_user_model().objects.filter(id__in=[p for w in last_week for p, _ in w["places"]])
-                 .values_list("id", "username"))
-    hidden = game_board.hidden_names() - {request.user.id}   # #394
     q = (request.GET.get("q") or "").strip()[:50]
     branch_rank = request.GET.get("rank") if request.GET.get("rank") in game_board.BRANCH_SKILL else ""
     branch_value = (request.GET.get("branch") or "").strip()[:100]
     return render(request, "beetles/game_leaderboard.html", {
-        "rows": game_board.board(sort=sort, period=period, q=q, limit=100, viewer_id=request.user.id),
-        "branch_rows": (game_board.branch_board(branch_rank, branch_value, viewer_id=request.user.id)
-                        if branch_rank and branch_value else None),
+        "rows": game_board.board(sort=sort, period=period, q=q, limit=100),
+        "branch_rows": game_board.branch_board(branch_rank, branch_value) if branch_rank and branch_value else None,
         "sort": sort, "period": period, "q": q, "sorts": game_board.SORTS, "periods": game_board.PERIODS,
         "resets_at": game_board.period_end(period),
-        "last_week": [{"position": i, "player_id": p, "points": round(pts), "anonymous": p in hidden,
-                       "username": game_board.ANONYMOUS if p in hidden else names.get(p, "")}
-                      for i, (p, pts) in enumerate(last_week[0]["places"], start=1)] if last_week else [],
+        "last_week": game_board.last_week_top(),
         "branch_rank": branch_rank, "branch_value": branch_value,
     })
 
@@ -224,7 +220,6 @@ def game_profile(request, user_id):
     player = get_object_or_404(get_user_model(), id=user_id)
     return render(request, "beetles/game_profile.html", {
         "player": player, "is_self": player == request.user, "p": game_board.profile(player),
-        "name": game_board.shown_name(player, request.user.id),
     })
 
 
@@ -236,11 +231,9 @@ def game_unlocks(request):
     info = game_levels.for_player(request.user)
     pref, _ = GamePreference.objects.get_or_create(player=request.user)
     error = ""
-    if request.method == "POST" and request.POST.get("boards"):   # #394: the leaderboard settings
-        pref.hide_name = request.POST.get("hide_name") == "on"
-        pref.hide_boards = request.POST.get("hide_boards") == "on"
-        pref.save(update_fields=["hide_name", "hide_boards", "updated_at"])
-        return redirect(reverse("game_unlocks") + "#boards")
+    # only the focus form posts here: a post without its fields (say, the removed Leaderboards card) changes nothing
+    if request.method == "POST" and "focus_rank" not in request.POST:
+        return redirect("game_unlocks")
     if request.method == "POST":
         rank = request.POST.get("focus_rank", "")
         value = (request.POST.get("focus_value") or "").strip()[:100]
@@ -278,7 +271,6 @@ def game_expertise(request, user_id=None):
     player = request.user if user_id is None else get_object_or_404(get_user_model(), id=user_id)
     return render(request, "beetles/game_expertise.html", {
         "player": player, "is_self": player == request.user, "tree": game_trust.expertise_tree(player),
-        "name": game_board.shown_name(player, request.user.id),
         "info": game_levels.for_player(player),
     })
 
@@ -314,13 +306,13 @@ def game_how(request):
         "overreach": game.game_setting("GAME_POINTS_OVERREACH", 0.35),
         "cap": int(game.game_setting("GAME_POINTS_CONSENSUS_CAP", 0.6) * 100),
         "unsure": game.game_setting("GAME_POINTS_UNSURE", 0.25),
-        "retry_days": game.game_setting("GAME_RETRY_AFTER_DAYS", 2),
         "rank_steps": game_levels.rank_steps(), "ranks_all_level": game_levels.RANKS_ALL_FROM_LEVEL,
         "odd_level": game_levels.game_level("odd"), "identify_level": game_levels.game_level("classify"),
         "select_level": game_levels.game_level("select"),
         "select_wrong": game.game_setting("GAME_POINTS_SELECT_WRONG", 1.5),
         "odd_weight": _weight_label(game.game_setting("GAME_POINTS_ODD_WEIGHT", 1.5)),
         "odd_skip": game.game_setting("GAME_POINTS_ODD_SKIP", 0.25),
+        "difficulty_spread": round(game_scoring.difficulty_spread() * 100),
     })
 
 
@@ -338,8 +330,15 @@ def game_play(request, mode):
         "break_minutes": game.game_setting("GAME_BREAK_NUDGE_MINUTES", 60),   # 0 turns the break nudge off
         "ranks": [(r, r.capitalize()) for r in game.RANKS],
         "rungs": RUNGS,
+        "last_review": _last_review_url(request.user),
         **_onboarding(request),
     })
+
+
+def _last_review_url(player):
+    """Where Back finds the review of the player's latest answer after a reload ("" before their first answer)."""
+    last = GameAnswer.objects.filter(player=player).order_by("-answered_at").values_list("round_id", "index").first()
+    return reverse("game_past_review", args=last) if last else ""
 
 
 def _onboarding(request):
@@ -425,9 +424,10 @@ def game_report_item(request):
     """
     A player reports a photo straight from the feed (the cog in the full-image view): the beetle goes to the
     curators on the Image Annotation page and stays out of the game until they deal with it.
-    Body: {"round", "index", "image": 0 or 1 (A or B, as shown; in Odd One Out the beetle's place in the grid), "reason",
+    Body: {"round", "index", "image": 0 or 1 (A or B, as shown; in a grid the beetle's place in it), "reason",
     "note"}, and "photo": n to report the beetle's n-th other photo (the "More photos" gallery, 1 = its first) instead
-    of the one in play.
+    of the one in play. In a grid the player carries on without the flagged photo: the reply lists the places flagged so
+    far ("flagged") and says whether that ends the grid ("end", see _grid_over).
     """
     body = _json_body(request) or {}
     rnd = GameRound.objects.filter(id=body.get("round"), player=request.user).first() if _is_uuid(body.get("round")) else None
@@ -456,7 +456,11 @@ def game_report_item(request):
             return JsonResponse({"error": "Unknown photo."}, status=400)
         roi = others[photo - 1]
     report = game_feedback.create_report(request.user, roi, reason, str(body.get("note") or ""))
-    return JsonResponse({"status": report.status, "reason": report.get_reason_display()})
+    out = {"status": report.status, "reason": report.get_reason_display()}
+    if rnd.items[index].get("tiles"):
+        out["flagged"] = _flagged_places(shown, request.user)
+        out["end"] = _grid_over(rnd.items[index], _item_mode(rnd, index), out["flagged"])
+    return JsonResponse(out)
 
 
 def _is_uuid(value):
@@ -485,12 +489,29 @@ def _box(roi):
 
 
 def _item_tiles(item):
-    """The Beetles rows of an Odd One Out item, in the order shown. None if any is gone."""
+    """The Beetles rows of a grid item (Odd One Out, Select all), in the order shown. None if any is gone."""
     ids = item.get("tiles") or []
     found = {str(k): v for k, v in Beetles.objects.select_related("image_asset", "taxon").in_bulk(ids).items()}
     if not ids or any(i not in found or not found[i].has_bbox() for i in ids):
         return None
     return [found[i] for i in ids]
+
+
+def _flagged_places(tiles, player):
+    """The places in a grid whose photo this player has an open report on: the ones they flagged (#489)."""
+    reported = set(GameReport.objects.filter(reporter=player, status=GameReport.Status.OPEN,
+                                             roi_id__in=[t.id for t in tiles]).values_list("roi_id", flat=True))
+    return [i for i, t in enumerate(tiles) if t.id in reported]
+
+
+def _grid_over(item, mode, flagged):
+    """
+    Whether flags end a grid, unscored like a reported photo (#489): once half its photos are flagged, or in Odd One Out
+    the odd one is, since without it there is nothing to find.
+    """
+    tiles = item.get("tiles") or []
+    odd = tiles.index(item["a"]) if mode == GameRound.Mode.ODD and item["a"] in tiles else None
+    return 2 * len(flagged) >= len(tiles) or odd in flagged
 
 
 def _item_rois(item):
@@ -519,17 +540,35 @@ def _next_index(rnd, start=None):
     return None
 
 
+def _shown_rois(item):
+    """The Beetles rows of an item in the order shown (A then B, or the grid's tiles). None if any is gone."""
+    if item.get("tiles"):
+        return _item_tiles(item)
+    rois = _item_rois(item)
+    if rois is None:
+        return None
+    a, b = rois
+    return [a] if b is None else ([b, a] if item.get("flip") else [a, b])
+
+
+def _crop_url(rnd, index, image, roi, size):
+    """Where the feed gets a beetle's crop (game_crop); ``v`` changes with the box, so the browser may keep it for good."""
+    url = reverse("game_crop", args=[rnd.id, index, image, size])
+    return f"{url}?v={game_crops.crop_key(roi)}"
+
+
 def _item_images(rnd, index, extras=False):
     """
-    The photos of one item. With ``extras``, each also says how many other photos there are of that same beetle
-    ("more"), and lists them ("photos") once the player has unlocked them (game_levels.SPECIMEN_PHOTOS).
-    Odd One Out shows its beetles in a grid, each on its own (no other photos of them).
+    The photos of one item: the whole photo ("url", for the whole-photo view), its box, and the crop the feed shows
+    ("small" at once, "large" swapped in when it arrives; #494). With ``extras``, each also says how many other photos
+    there are of that same beetle ("more"), and lists them ("photos") once the player has unlocked them
+    (game_levels.SPECIMEN_PHOTOS). Odd One Out shows its beetles in a grid, each on its own (no other photos of them).
     """
+    rois = _shown_rois(rnd.items[index])
+    images = [{"url": r.display_url, "box": _box(r), "small": _crop_url(rnd, index, i, r, "small"),
+               "large": _crop_url(rnd, index, i, r, "large")} for i, r in enumerate(rois)]
     if rnd.items[index].get("tiles"):
-        return [{"url": r.display_url, "box": _box(r)} for r in _item_tiles(rnd.items[index])]
-    a, b = _item_rois(rnd.items[index])
-    rois = [a] if b is None else ([b, a] if rnd.items[index].get("flip") else [a, b])
-    images = [{"url": r.display_url, "box": _box(r)} for r in rois]
+        return images
     if extras:
         unlocked = game_levels.SPECIMEN_PHOTOS in game_levels.for_player(rnd.player)["perks"]
         for image, roi in zip(images, rois):
@@ -547,6 +586,7 @@ def _item_mode(rnd, index):
 
 
 def _item_payload(rnd, index):
+    game_grid_ladder.restep(rnd, index)   # grids picked before the player's step moved are built again at the new one
     payload = {
         "index": index,
         "mode": _item_mode(rnd, index),
@@ -559,32 +599,166 @@ def _item_payload(rnd, index):
         payload["more_level"] = game_levels.perk_level(game_levels.SPECIMEN_PHOTOS)
     if rnd.items[index].get("retry"):
         payload["again"] = True   # a beetle they got wrong before, shown again so they can learn it
-    if payload["mode"] == GameRound.Mode.ODD:
-        payload["rank"] = rnd.items[index]["rank"]   # all but one share a name at this rank
-    if payload["mode"] == GameRound.Mode.SELECT:   # "Tap every <target>"
-        payload["rank"] = rnd.items[index]["rank"]
-        payload["target"] = rnd.items[index]["group"][rnd.items[index]["rank"]]
+    if payload["mode"] in (GameRound.Mode.ODD, GameRound.Mode.SELECT):
+        grid = rnd.items[index]
+        # Odd One Out: all but one share a name at this rank; the grid's size, and the player's step when it was built
+        payload.update(rank=grid["rank"], size=len(grid["tiles"]), step=grid.get("step"))
+        if payload["mode"] == GameRound.Mode.SELECT:   # "Tap every <target>"
+            payload["target"] = grid["group"][grid["rank"]]
     if payload["mode"] == GameRound.Mode.CLASSIFY:
         others = (GameAnswer.objects.filter(roi_id=rnd.items[index]["a"], skipped=False)
                   .exclude(player=rnd.player).values("player").distinct().count())
         if others:
             payload["others"] = others   # how many other players named it (not what they said, until you answer)
-    # Let the browser start downloading the next photos while this item is answered.
+    # Let the browser start downloading the next crops while this item is answered: small ones first. On the last
+    # item of a batch, those of the next batch, built now so the batch can end without a wait (#494).
     following = _next_index(rnd, index + 1)
+    ahead = None
+    if following is None and rnd.finished_at is None:
+        ahead = _batch_ahead(rnd) or _build_ahead(rnd, index)
+        following = _next_index(ahead, 0) if ahead else None
     if following is not None:
-        payload["prefetch"] = [im["url"] for im in _item_images(rnd, following)]
+        upcoming = _item_images(ahead or rnd, following)
+        payload["prefetch"] = [im["small"] for im in upcoming] + [im["large"] for im in upcoming]
     return payload
+
+
+# ---------------------------------------------------------------------------
+# Speed (#494): the next batch is built while the last item of a batch is on screen, the end of a batch is
+# refreshed on the worker, and each beetle comes as a crop cut on the server.
+# ---------------------------------------------------------------------------
+def _batch_ahead(rnd):
+    """The batch built to follow ``rnd`` (_build_ahead), if there is one: a later unfinished one with no answers."""
+    return (GameRound.objects.filter(player_id=rnd.player_id, mode=rnd.mode, finished_at__isnull=True,
+                                     started_at__gt=rnd.started_at, answers__isnull=True)
+            .exclude(id=rnd.id).order_by("started_at").first())
+
+
+def _build_ahead(rnd, index):
+    """
+    Build the batch that follows ``rnd`` while its last item (``index``) is still being answered, so the feed can
+    prefetch its first beetle and the batch can end without a wait. Beetles still to come in ``rnd`` are left out of
+    it. None when there is nothing new to build.
+    """
+    fresh = game.start_round(rnd.player, rnd.mode, fresh_only=True)
+    if fresh is None:
+        return None
+    coming = set().union(*(game._item_ids(item) for item in rnd.items[index:]))
+    items = [item for item in fresh.items if coming.isdisjoint(game._item_ids(item))]
+    if not items:
+        fresh.delete()
+        return None
+    if len(items) < len(fresh.items):
+        fresh.items = items
+        fresh.save(update_fields=["items"])
+    if fresh.notice:   # not saved with the batch: kept until the feed reaches it (_next_batch)
+        from django.core.cache import cache
+
+        cache.set(AHEAD_NOTICE.format(fresh.id), fresh.notice, 60 * 60 * 24)
+    return fresh
+
+
+def _drop_ahead(rnd):
+    """A batch built ahead under rules that no longer apply (a new level opened a game): it goes, unanswered."""
+    ahead = _batch_ahead(rnd)
+    if ahead is not None:
+        ahead.delete()
+
+
+AHEAD_NOTICE = "game:ahead-notice:{}"
+
+
+def _next_batch(rnd):
+    """
+    The batch that carries the feed on after ``rnd``, and its first item: the one built ahead, or a new one. Either
+    has its ``notice`` (game.start_round): a batch built ahead gets it back from the cache, where _build_ahead left it.
+    """
+    ahead = _batch_ahead(rnd)
+    if ahead is not None:
+        first = _next_index(ahead, 0)
+        if first is not None:
+            from django.core.cache import cache
+
+            ahead.notice = cache.get(AHEAD_NOTICE.format(ahead.id)) or ""
+            return ahead, first
+        ahead.delete()   # its beetles have gone since
+    fresh = game.start_round(rnd.player, rnd.mode, fresh_only=True)
+    return fresh, (_next_index(fresh, 0) if fresh else None)
+
+
+LEVEL_SHOWN = "game:level-shown:{}"
+
+
+def _late_level_events(player, before, events, level):
+    """
+    A level reached through the work done after a batch (on the worker, between two answers) raises no event on its
+    own: play_events compares the moments just before and after one answer. So the feed remembers the last level it
+    showed each player, and announces a higher one on the next answer (toast and gold confetti), once. Without the
+    cache nothing is announced twice: a level it doesn't know of is simply remembered.
+    """
+    from django.core.cache import cache
+
+    key = LEVEL_SHOWN.format(player.pk)
+    shown = cache.get(key)
+    cache.set(key, level, 60 * 60 * 24 * 30)
+    if shown is None or level <= shown or any(e["kind"] == "level" for e in events):
+        return []
+    # what the player had at the level last shown, plus any unlocks granted or kept outside the levels
+    extra = set(before["perks"]) - game_levels.unlocked_perks(before["level"] - 1)
+    then = dict(before, level=shown, perks=sorted(game_levels.unlocked_perks(shown - 1) | extra))
+    return [e for e in game_rewards.play_events(player, then) if e["kind"] in ("level", "proposals")]
+
+
+def _timed(view):
+    """Log how long a feed request took and what it built (one line), so lag shows in the server logs (#494)."""
+    @wraps(view)
+    def timed(request, *args, **kwargs):
+        stats = {"batches": 0, "items": 0, "crops": 0}
+        token = game_crops.built.set(stats)
+        started = time.perf_counter()
+        try:
+            return view(request, *args, **kwargs)
+        finally:
+            game_crops.built.reset(token)
+            logger.info("%s took %d ms: %d new batch(es), %d item(s), %d crop(s) queued", view.__name__,
+                        (time.perf_counter() - started) * 1000, stats["batches"], stats["items"], stats["crops"])
+    return timed
+
+
+@login_required
+@require_GET
+def game_crop(request, round_id, index, image, size):
+    """
+    One beetle of the player's own batch, as the crop the feed shows (game_crops), cut on first request. The URL names
+    the batch, the item and the photo, never the beetle, so it gives away nothing the feed doesn't show.
+    """
+    size = game_crops.size_name(size)   # from here on, SIZES' own key: the request's string never reaches a path
+    if size is None:
+        raise Http404("Unknown size.")
+    rnd = get_object_or_404(GameRound, id=round_id, player=request.user)
+    rois = _shown_rois(rnd.items[index]) if index < len(rnd.items) else None
+    if not rois or image >= len(rois) or not game.playable_rois().filter(pk=rois[image].pk).exists():
+        raise Http404("Unknown beetle.")
+    path = game_crops.ensure(rois[image], size)
+    if path is None:
+        raise Http404("No crop.")
+    response = FileResponse(open(path, "rb"), content_type=game_crops.file_format()[2])
+    # the name changes with the box (?v=), so the browser can keep it for good; private, as it needs a login
+    response["Cache-Control"] = "private, max-age=31536000, immutable"
+    return response
 
 
 def _finish(rnd):
     game.finish_round(rnd)
     summary = game.player_summary(rnd.player)
     summary["round_labelled"] = rnd.answers.filter(skipped=False).count()
-    return {"done": True, "summary": summary, "review_url": reverse("game_round_review", args=[rnd.id])}
+    return {"done": True, "summary": summary, "review_url": reverse("game_round_review", args=[rnd.id]),
+            "caught_up": game.nothing_to_play(rnd.player, rnd.mode)}   # why, and whether clearing the focus gives more
 
 
 @login_required
 @require_POST
+@_timed
 def game_start(request):
     body = _json_body(request)
     mode = (body or {}).get("mode")
@@ -603,15 +777,15 @@ def game_start(request):
             game.finish_round(rnd)
         rnd = game.start_round(request.user, mode)
         index = _next_index(rnd, 0) if rnd else None
-    if index is None:
-        return JsonResponse({
-            "error": "There are no images ready for this game yet. Please check back later."
-        }, status=404)
+    if index is None:   # nothing in any of their games: say why (no beetles yet, all seen, their focus, ...)
+        return JsonResponse({"error": game.nothing_to_play(request.user, mode)["text"]}, status=404)
     focus = game.player_focus(request.user)
     return JsonResponse({
         "round": str(rnd.id), "item": _item_payload(rnd, index), "chip": _chip(request.user),
         "focus": f"{focus[0].capitalize()}: {focus[1]}" if focus else "",
         "prefs": _prefs(request.user),
+        # the game they chose has nothing for them right now, so the feed plays their other games (game.start_round)
+        "notice": getattr(rnd, "notice", ""),
     })
 
 
@@ -644,7 +818,7 @@ def _prefs(player):
 @require_POST
 def game_prefs(request):
     """
-    Change the game (the mix / Similarity / Odd One Out / Identification) or the focus from the feed. Each only if
+    Change the game (All modes / Similarity / Imposter Picker / Find Them All / Identification) or the focus from the feed. Each only if
     unlocked. Body: {"play_mode": ...} and/or {"focus_rank": ..., "focus_value": ...} (focus_rank "" clears the focus).
     """
     from .models import GamePreference
@@ -719,6 +893,7 @@ def _response_ms(body):
 
 @login_required
 @require_POST
+@_timed
 def game_answer(request, round_id):
     rnd = get_object_or_404(GameRound, id=round_id, player=request.user)
     body = _json_body(request)
@@ -747,7 +922,17 @@ def game_answer(request, round_id):
     if record.mode in (GameRound.Mode.ODD, GameRound.Mode.SELECT):
         tiles = _item_tiles(item)
         record.tiles, record.grid_rank, record.grid_group = item["tiles"], item["rank"], item["group"]
+        record.grid_step = item.get("step")
         record._grid_tiles = tiles
+        # Photos flagged before answering (each one reported) are left out; half of them, or the odd one, end the grid
+        # unscored like a reported photo (#489)
+        flagged = body.get("flagged") or []
+        if (not isinstance(flagged, list) or len(set(map(str, flagged))) != len(flagged)
+                or any(not isinstance(i, int) or isinstance(i, bool) or not 0 <= i < len(tiles) for i in flagged)):
+            return JsonResponse({"error": "Unknown flagged photo."}, status=400)
+        record.flagged = sorted(set(flagged) & set(_flagged_places(tiles, request.user)))
+        if _grid_over(item, record.mode, record.flagged):
+            record.skipped = record.score_hold = True
     if record.mode == GameRound.Mode.ODD:
         # roi_b: the odd one the round was built around. Only a pick on a validated beetle is scored straight away.
         record.roi_b, record.is_check = roi_a, False
@@ -775,6 +960,8 @@ def game_answer(request, round_id):
             pick = body.get("pick")
             if not isinstance(pick, int) or isinstance(pick, bool) or not 0 <= pick < len(tiles):
                 return JsonResponse({"error": "Please pick a beetle."}, status=400)
+            if pick in record.flagged:
+                return JsonResponse({"error": "That photo is flagged: pick another beetle."}, status=400)
             record.roi = tiles[pick]
             record.is_check = game_scoring.is_truth(record.roi)
             if record.is_check:
@@ -787,8 +974,10 @@ def game_answer(request, round_id):
             if (not isinstance(picks, list) or not picks or len(set(map(str, picks))) != len(picks)
                     or any(not isinstance(i, int) or isinstance(i, bool) or not 0 <= i < len(tiles) for i in picks)):
                 return JsonResponse({"error": "Tap the beetles first."}, status=400)
+            if set(picks) & set(record.flagged):
+                return JsonResponse({"error": "A flagged photo can't be tapped."}, status=400)
             record.picks = sorted(picks)
-            grid = game.score_select(tiles, record.picks, record.grid_rank, record.grid_group)
+            grid = game.score_select(tiles, record.picks, record.grid_rank, record.grid_group, record.flagged)
             if grid["members"]:
                 scores = {record.grid_rank: grid["perfect"]}   # the rank's "correct": a perfect grid
         else:
@@ -802,6 +991,7 @@ def game_answer(request, round_id):
                 scores = game.score_pair(choice, roi_a.taxon, roi_b.taxon)
     for r, ok in scores.items():
         setattr(record, f"correct_{r}", ok)
+    game_scoring.note_difficulty(record)   # how hard the beetle is now: its points follow it (#492)
     try:
         with transaction.atomic():
             record.save()
@@ -810,288 +1000,50 @@ def game_answer(request, round_id):
         return JsonResponse({"error": "That answer was already saved; please reload."}, status=409)
 
     game_scoring.score_new_answer(record)
+    game_grid_ladder.update(record)   # the grid games grow, or shrink, with each grid answered (#489)
     extra = {
-        "community": None if record.skipped else _community(record),
-        "celebrate": _worth_celebrating(record, scores),
-        "celebrate_size": _celebration_size(record, scores),
+        # what the answer earned next to what is known about the beetle, shown before the next one (#488)
+        "review": game_answer_review.review(record, item),
         "events": game_rewards.play_events(request.user, before),
         "chip": _chip(request.user),
     }
-    extra["verified"] = _verified_names(record, item)   # for Back (#424)
-    if record.mode == GameRound.Mode.ODD:
-        extra["reveal"] = _odd_reveal(item, tiles)
-    elif record.mode == GameRound.Mode.SELECT:
-        # which were members: tapped right, tapped wrong, left out (votes on unchecked beetles stay as they were)
-        grid = grid or game.score_select(tiles, [], record.grid_rank, record.grid_group)
-        extra["reveal"] = {"rank": item["rank"], "target": item["group"][item["rank"]], "tiles": grid["tiles"],
-                           "right": grid["right"], "members": grid["members"], "wrong": grid["wrong"]}
+    extra["events"] += _late_level_events(request.user, before, extra["events"], extra["chip"]["level"])
     if any(e["kind"] == "level" for e in extra["events"]):
         # A new level's unlocks apply at once: the toolbar learns about them, and when the level opens a new game
         # the rest of this batch (picked under the old rules) is set aside for a fresh one.
         extra["prefs"] = _prefs(request.user)
         opened = {g["key"] for g in extra["prefs"]["games"] if g["unlocked"]}
         if opened - set(game_levels.games(before["perks"])):
-            game.finish_round(rnd)
+            _drop_ahead(rnd)
+            game.finish_round_later(rnd)
             fresh = game.start_round(request.user, rnd.mode, fresh_only=True)
             first = _next_index(fresh, 0) if fresh else None
             if first is not None:
-                return JsonResponse(dict(extra, round=str(fresh.id), item=_item_payload(fresh, first)))
+                return JsonResponse(dict(extra, round=str(fresh.id), item=_item_payload(fresh, first), notice=fresh.notice))
     nxt = _next_index(rnd, index + 1)
     if nxt is None:
-        # The feed carries straight on into a new batch. It only ends when there is nothing new left to show.
-        game.finish_round(rnd)
-        fresh = game.start_round(request.user, rnd.mode, fresh_only=True)
-        first = _next_index(fresh, 0) if fresh else None
+        # The feed carries straight on into a new batch (usually built ahead), and the work of closing this one is
+        # done on the worker. It only ends when there is nothing new left to show.
+        fresh, first = _next_batch(rnd)
         if first is not None:
-            return JsonResponse(dict(extra, round=str(fresh.id), item=_item_payload(fresh, first)))
+            game.finish_round_later(rnd)
+            return JsonResponse(dict(extra, round=str(fresh.id), item=_item_payload(fresh, first), notice=fresh.notice))
         return JsonResponse(dict(_finish(rnd), **extra))
     return JsonResponse(dict(extra, item=_item_payload(rnd, nxt)))
 
 
-def _verified_names(record, item):
+@login_required
+@require_GET
+def game_past_review(request, round_id, index):
     """
-    For Back (#424): each validated beetle just answered in Identification or Similarity, in the order shown, with its
-    true name and how reliable that name is, e.g. [{"name": "Xyleborus affinis", "rank": "species", "tier": "Taxonomist
-    ID"}] (None for a beetle not validated). Empty when none is validated (Back then shows what other players said) and
-    in the grid games, whose answer already names them.
+    The review of one of the player's own answers (its round and place in it), for Back after a reload: the same card
+    the feed showed after the answer (game_answer_review). Anyone else's answer is a 404, like one that doesn't exist.
     """
-    if record.mode == GameRound.Mode.CLASSIFY:
-        rois = [record.roi]
-    elif record.mode == GameRound.Mode.PAIR:
-        rois = [record.roi_b, record.roi] if item.get("flip") else [record.roi, record.roi_b]
-    else:
-        return []
-    out = []
-    for roi in rois:
-        if roi is None or not game_scoring.is_truth(roi):
-            out.append(None)
-            continue
-        t = roi.taxon
-        name, rank = (f"{t.genus} {t.species}", "species") if t.genus and t.species else (t.genus, "genus")
-        out.append({"name": name, "rank": rank, "tier": roi.get_label_source_display() or "Verified"})
-    return out if any(out) else []
-
-
-def _odd_reveal(item, tiles):
-    """
-    After an Odd One Out answer: which beetle was the odd one, and the names at the round's rank, e.g. {"odd": 2,
-    "rank": "tribe", "odd_name": "Ipini", "group": "Xyleborini"}. The odd one is always validated, so this is the truth.
-    """
-    rank = item["rank"]
-    odd = next(i for i, t in enumerate(tiles) if str(t.id) == item["a"])
-    values = game.lineage(tiles[odd].taxon, rank) if tiles[odd].taxon else None
-    return {"odd": odd, "rank": rank, "odd_name": (values or {}).get(rank, ""), "group": item["group"].get(rank, "")}
-
-
-def _ahead_of(player):
-    """Players ranked above this one: a higher all-time score, or (both rated) a higher overall accuracy."""
-    min_judged = game.game_setting("GAME_MIN_JUDGED_FOR_ACCURACY", 10)
-    me = PlayerScore.objects.filter(player=player).first()
-    my_score, my_acc = (me.score, me.accuracy if me.judged >= min_judged else None) if me else (0.0, None)
-    ahead = Q(score__gt=my_score)
-    if my_acc is not None:
-        ahead |= Q(judged__gte=min_judged, accuracy__gt=my_acc)
-    return set(PlayerScore.objects.filter(ahead).exclude(player=player).values_list("player_id", flat=True))
-
-
-def _community(record):
-    """
-    The "Last beetle" bar after a Name That Beetle answer: how far players ranked above this one agree
-    (_players_ahead), and what proven experts said (_experts_said) and the species classifier leans to (_model_leans).
-    The same for every beetle, validated or not, so it never shows which ones are (#382); and it is agreement, never
-    "correct".
-    """
-    if record.mode != GameRound.Mode.CLASSIFY:
-        return None
-    latest = {}
-    for ans in (GameAnswer.objects.filter(roi=record.roi, skipped=False).exclude(player=record.player)
-                .order_by("answered_at")):
-        latest[ans.player_id] = ans
-    out = _players_ahead(record, latest)
-    for key, line in (("experts", _experts_said(record, latest)), ("model", _model_leans(record))):
-        if line:
-            out[key] = line
-    return out
-
-
-def _experts_said(record, latest):
-    """
-    What proven experts (game_trust) said about this beetle, as agreement: "A proven expert agrees with you to genus",
-    "2 proven experts agree with you to tribe; on genus they said Xylosandrus". A rank counts only where every expert
-    who named it agrees, as for reference points (game_reference). ``latest``: each other player's latest answer.
-    None when no proven expert has named it.
-    """
-    votes = [(pid, game.implied_labels(ans)) for pid, ans in latest.items()]
-    trust = game_trust.TrustContext({pid for pid, labels in votes if labels})
-    said, experts = {}, set()
-    for pid, labels in votes:
-        for rank, value in labels.items():
-            if trust.trusted_through(pid, rank, labels):
-                said.setdefault(rank, {}).setdefault(game._norm(value), value.strip())
-                experts.add(pid)
-    if not said:
-        return None
-    one = len(experts) == 1
-    who, agree = ("A proven expert", "agrees") if one else (f"{len(experts)} proven experts", "agree")
-    mine = game.answer_values({r: getattr(record, r) for r in game.RANKS})
-    agreed = ""
-    for rank in game.RANKS:
-        if rank not in said:
-            continue
-        if len(said[rank]) > 1:
-            return (f"{who} {agree} with you to {agreed}; they're split on {rank}." if agreed
-                    else f"Proven experts are split on {rank}.")
-        value, name = next(iter(said[rank].items()))
-        if mine[rank] == value:
-            agreed = rank
-        elif not mine[rank]:
-            return (f"{who} {agree} with you to {agreed} and went on to {rank} {name}." if agreed
-                    else f"{who} went on to {rank} {name}.")
-        else:
-            return (f"{who} {agree} with you to {agreed}; on {rank} they said {name}." if agreed
-                    else f"On {rank}, {who[0].lower() + who[1:]} said {name}.")
-    return f"{who} {agree} with you to {agreed}."
-
-
-def _model_leans(record):
-    """
-    What the species classifier leans to for this beetle, after the answer: its deepest rank with at least
-    GAME_FEEDBACK_AI_MIN (50%) confidence, e.g. "The species classifier leans genus Xyleborus (71%)". None without a
-    prediction or below that everywhere.
-    """
-    from .models import ModelPrediction
-    from .predictions import rank_tips
-
-    prediction = ModelPrediction.objects.filter(roi=record.roi).order_by("-created_at").first()
-    if prediction is None:
-        return None
-    tips = rank_tips(prediction)
-    least = game.game_setting("GAME_FEEDBACK_AI_MIN", 0.5)
-    for rank in reversed(game.RANKS):
-        tip = tips.get(rank)
-        if tip and tip["confidence"] >= least:
-            name = tip["value"] if rank == "species" else f"{rank} {tip['value']}"
-            return f"The species classifier leans {name} ({round(tip['confidence'] * 100)}%)."
-    return None
-
-
-def _players_ahead(record, latest):
-    """
-    What players ranked above this one said about the beetle just answered (Name That Beetle), rank by rank, and
-    how far they agree with this player: "Players ahead of you agree with you to tribe; on genus, 3 of 4 said
-    Xylosandrus." Only players ahead count, so newcomers learn from better players, not from each other. Their
-    latest answer each, never the truth.
-    """
-    if not latest:
-        return {"players": 0}
-    ahead = _ahead_of(record.player)
-    above = [a for pid, a in latest.items() if pid in ahead]
-    out = {"players": len(latest), "ahead": len(above), "ranks": []}
-    if not above:
-        out["text"] = (f"{len(latest)} other player{'s' if len(latest) != 1 else ''} named it, "
-                       "none of them ranked above you yet.")
-        return out
-    mine = game.answer_values({r: getattr(record, r) for r in game.RANKS})
-    for rank in game.RANKS:
-        names = {}
-        for ans in above:
-            value = game.answer_values({r: getattr(ans, r) for r in game.RANKS})[rank]
-            if value:
-                display = f"{ans.genus} {ans.species}" if rank == "species" else getattr(ans, rank)
-                names.setdefault(value, [display, 0])[1] += 1
-        named = sum(n for _, n in names.values())
-        if not named:
-            continue   # nobody ahead named this rank (some name only the genus, say)
-        value, (display, count) = max(names.items(), key=lambda kv: kv[1][1])
-        majority = count * 2 > named
-        out["ranks"].append({
-            "rank": rank, "name": display if majority else "", "count": count, "of": named, "split": not majority,
-            "agree": (mine[rank] == value) if (mine[rank] and majority) else None,
-        })
-    if not out["ranks"]:
-        out["text"] = f"{len(above)} player{'s' if len(above) != 1 else ''} ahead of you named it."
-        return out
-    agreed = [r for r in _leading(out["ranks"], lambda r: r["agree"] is True)]
-    rest = out["ranks"][len(agreed):]
-    who = "Players ahead of you"
-    if agreed and not rest:
-        out["text"] = f"{who} agree with you to {agreed[-1]['rank']}."
-        out["agree"] = True
-        return out
-    lead = f"{who} agree with you to {agreed[-1]['rank']}; " if agreed else f"{who}: "
-    nxt = rest[0]
-    if nxt["split"]:
-        out["text"] = lead + f"they're split on {nxt['rank']}."
-    elif nxt["agree"] is None and agreed:
-        out["text"] = lead + f"{nxt['count']} of {nxt['of']} went on to {nxt['rank']} {nxt['name']}."
-    else:
-        out["text"] = lead + f"on {nxt['rank']}, {nxt['count']} of {nxt['of']} said {nxt['name']}."
-    out["agree"] = False if nxt["agree"] is False else None
-    return out
-
-
-def _leading(items, ok):
-    """The items from the start for which ok() holds, up to the first that fails."""
-    for item in items:
-        if not ok(item):
-            return
-        yield item
-
-
-def _worth_celebrating(record, scores):
-    """
-    What to celebrate after an answer (#425): "validated" (beetle confetti) for a checked beetle the player got right,
-    the species or a pair with every judged claim right; "partial" (a few grey beetles) for a checked beetle named
-    correctly to some rank but not the species; "strong" (ordinary confetti) for an Identification answer
-    on an unchecked beetle that proven experts or a trusted model back to genus or species, or that most reliable
-    players agree with at species; otherwise False. Validated and strong look different, but neither shows on a
-    wrong or weak answer, so it hints at little.
-    """
-    if record.skipped:
-        return False
-    if record.mode == GameRound.Mode.SELECT:   # a perfect grid; some found and nothing wrong: a few grey beetles
-        grid = game.score_select(record._grid_tiles, record.picks, record.grid_rank, record.grid_group)
-        if grid["perfect"]:
-            return "validated"
-        return "partial" if grid["right"] and not grid["wrong"] else False
-    if record.is_check:
-        if record.mode == GameRound.Mode.CLASSIFY:
-            if scores.get("species") is True:
-                return "validated"
-            return "partial" if any(ok is True for ok in scores.values()) else False
-        judged = [ok for ok in scores.values() if ok is not None]
-        return "validated" if judged and all(judged) else False
-    strong = record.mode in (GameRound.Mode.CLASSIFY, GameRound.Mode.ODD) and _strong_unvalidated(record)
-    return "strong" if strong else False
-
-
-def _celebration_size(record, scores):
-    """
-    How big the celebration is, 0.25 to 1: the share of the ranks the player got correct (all of them: 1); in Select
-    all, the share of the group found.
-    """
-    if record.mode == GameRound.Mode.SELECT and not record.skipped:
-        grid = game.score_select(record._grid_tiles, record.picks, record.grid_rank, record.grid_group)
-        return round(max(0.25, grid["right"] / grid["members"]), 2) if grid["members"] else 1.0
-    judged = [ok for ok in scores.values() if ok is not None]
-    if record.skipped or not judged:
-        return 1.0
-    return round(max(0.25, sum(1 for ok in judged if ok) / len(judged)), 2)
-
-
-def _strong_unvalidated(record):
-    """An unchecked beetle's answer that the references (experts, a trusted model) or a clear consensus back."""
-    from .models import AnswerPoints
-
-    row = AnswerPoints.objects.filter(answer=record).values_list("detail", flat=True).first() or {}
-    reference = row.get("reference") or {}
-    if record.mode == GameRound.Mode.ODD:   # experts, a trusted model or most strong players agree it doesn't belong
-        rank = record.grid_rank
-        return bool(reference.get(rank, {}).get("match")) or \
-            (row.get("agreement") or {}).get(rank, 0) >= game.game_setting("GAME_CELEBRATE_AGREEMENT", 0.75)
-    if any(reference.get(r, {}).get("match") for r in ("genus", "species")):
-        return True
-    return (row.get("agreement") or {}).get("species", 0) >= game.game_setting("GAME_CELEBRATE_AGREEMENT", 0.75)
+    rnd = GameRound.objects.filter(id=round_id, player=request.user).first()
+    card = game_answer_review.past(rnd, index) if rnd else None
+    if card is None:
+        return JsonResponse({"error": "No such answer."}, status=404)
+    return JsonResponse({"review": card})
 
 
 @login_required
@@ -1101,7 +1053,7 @@ def game_exit(request):
     body = _json_body(request) or {}
     rnd = GameRound.objects.filter(id=body.get("round"), player=request.user).first() if _is_uuid(body.get("round")) else None
     if rnd is not None and rnd.finished_at is None:
-        game.finish_round(rnd)
+        game.finish_round_later(rnd)
     # How the sitting went. "since" is when the page was opened (milliseconds since 1970); without it, the last hour.
     try:
         since = datetime.fromtimestamp(int(body["since"]) / 1000, tz=dt_timezone.utc)
@@ -1235,10 +1187,12 @@ def game_resolve_reports(request, roi_id):
 @require_POST
 def game_proposal_review(request, roi_id):
     """
-    Accept or dismiss the game proposal for one ROI.
+    Accept or dismiss ("Reject" on the page) the game proposal for one ROI.
 
     Accepting sets the ROI's species to the proposal's species (it does not validate the
-    ROI; staff still do that as usual). Both decisions are recorded in LabelReview.
+    ROI; staff still do that as usual). Both decisions are recorded in LabelReview: either way
+    the proposal leaves the queue until new answers arrive (game_queue), and the game never
+    writes a label onto the ROI by itself afterwards (game_trust.auto_apply_expert_labels).
     """
     roi = get_object_or_404(Beetles, id=roi_id, is_deleted=False)
     body = _json_body(request) or {}
@@ -1267,6 +1221,7 @@ def game_proposal_review(request, roi_id):
         roi.label_source = Beetles.LabelSource.EXPERT   # a curator accepted the game's consensus
         roi.label_source_detail = f"{entry['answers']} game answers, accepted by {request.user.username}"[:255]
         roi.last_updated_by = request.user
+        roi._name_by_hand = True   # the curator chose it: it shows even over a Taxonomist ID (identification.py)
         roi.save()
         review.decision = LabelReview.Decision.ACCEPTED
     else:

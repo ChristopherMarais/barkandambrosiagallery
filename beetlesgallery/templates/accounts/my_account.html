@@ -10,37 +10,32 @@
     <div class="flex flex-wrap gap-4">
         
         {# Action 1: Change Password (All Users) #}
-        <button onclick="openModal('modal-password')" 
-           class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+        <button onclick="openModal('modal-password')" class="btn-secondary">
             <i class="fi fi-rr-lock"></i>
             <span>Change Password</span>
         </button>
 
-        {# Action 2: Create User (Superusers Only) #}
-        {% if request.user.is_superuser %}
-            <button onclick="openModal('modal-create-user')" 
-               class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
-                <i class="fi fi-rr-user-add"></i>
-                <span>Create New User</span>
-            </button>
-        {% endif %}
-
     </div>
   </div>
 
-  {# --- SECTION 2: ACCESS REQUESTS (Superusers Only) --- #}
+  {# --- SECTION 2: ACCESS REQUESTS AND NEW USERS (Superusers Only) --- #}
   {% if request.user.is_superuser %}
-  <div class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm">
+  <div class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm" data-testid="access-requests">
     <h2 class="text-2xl font-bold mb-2 text-gray-800">Access Requests</h2>
     <p class="text-sm text-gray-600 mb-4 max-w-2xl">
-      People ask for accounts on the request access page. Approve them as a Member or a Curator, or deny them.
+      People ask for more access on the request access page. Review their requests, or create an account for someone yourself.
     </p>
-    <a href="{% url 'access_requests' %}"
-      class="inline-flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
-      <i class="fi fi-rr-user-add"></i>
-      <span>Review Access Requests</span>
-      {% if pending_access_requests %}<span class="ml-1 rounded-full bg-gray-200 border border-gray-300 px-2 py-0.5 text-xs text-gray-800" data-testid="pending-access-count">{{ pending_access_requests }} waiting</span>{% endif %}
-    </a>
+    <div class="flex flex-wrap gap-4">
+      <a href="{% url 'access_requests' %}" class="btn-secondary">
+        <i class="fi fi-rr-list-check"></i>
+        <span>Review Access Requests</span>
+        {% if pending_access_requests %}<span class="ml-1 rounded-full bg-gray-200 border border-gray-300 px-2 py-0.5 text-xs text-gray-800" data-testid="pending-access-count">{{ pending_access_requests }} waiting</span>{% endif %}
+      </a>
+      <button type="button" onclick="openModal('modal-create-user')" class="btn-secondary">
+        <i class="fi fi-rr-user-add"></i>
+        <span>Create New User</span>
+      </button>
+    </div>
   </div>
   {% endif %}
 
@@ -48,8 +43,7 @@
   <div class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-sm">
     <h2 class="text-2xl font-bold mb-2 text-gray-800">Site Notice</h2>
     <p class="text-sm text-gray-600 mb-4 max-w-2xl">A one-line message at the top of every page, e.g. during a stress test or a backup.</p>
-    <a href="{% url 'site_notice' %}" data-testid="site-notice-link"
-      class="inline-flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:text-black transition">
+    <a href="{% url 'site_notice' %}" data-testid="site-notice-link" class="btn-secondary">
       <i class="fi fi-rr-megaphone"></i>
       <span>Edit Site Notice</span>
     </a>
@@ -142,11 +136,8 @@
           </tbody>
         </table>
       </div>
-    </form>
   </div>
   {% endif %}
-
-</section>
 
 {# --- MODAL 1: CHANGE PASSWORD --- #}
 <div id="modal-password" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title-pw" role="dialog" aria-modal="true">

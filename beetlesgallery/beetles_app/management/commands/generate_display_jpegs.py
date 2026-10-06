@@ -1,4 +1,3 @@
-import os
 from django.core.management.base import BaseCommand
 from beetlesgallery.beetles_app.models import Beetles
 from beetlesgallery.beetles_app.image_pipeline import ensure_display_jpeg

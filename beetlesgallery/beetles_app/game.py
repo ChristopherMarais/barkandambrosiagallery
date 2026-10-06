@@ -5,9 +5,11 @@ Four modes:
   classify  one region of interest (ROI) is shown; the player names its subfamily,
             tribe, genus and species, stopping at any rank.
   pair      two ROIs are shown; the player says the deepest rank they share.
-  odd       four or six ROIs are shown; all but one share a name at some rank, and the
+  odd       4, 9 or 16 ROIs are shown; all but one share a name at some rank, and the
             player picks the one that doesn't belong (Odd One Out).
-  select    nine ROIs are shown; the player taps every one of a named group (Select all).
+  select    4, 9 or 16 ROIs are shown; the player taps every one of a named group (Select all).
+            Both grid games grow with the player, from 4 to 16 and from subfamily to species
+            (game_grid_ladder).
 
 Some items in every round are "checks": items with a validated answer
 (``Beetles.bbox_is_validated``). Only checks are scored, and the player is never told
@@ -156,9 +158,41 @@ def revealed_ids(player):
 # Difficulty
 # ---------------------------------------------------------------------------
 UNKNOWN_DIFFICULTY = 0.5
+DIFFICULTY_FLOOR = 0.05   # easing off never takes the target below this
+
+# An answer on a validated beetle counts as right when nothing in it was wrong and something was judged right; a skip
+# or "Not sure" is not right. ANSWERED_RIGHT says the same in SQL (the Scoring page's distributions).
+JUDGED = [f"correct_{r}" for r in RANKS]
+ANSWERED_RIGHT = (
+    Q(skipped=False) & ~Q(correct_subfamily=False) & ~Q(correct_tribe=False) & ~Q(correct_genus=False)
+    & ~Q(correct_species=False)
+    & (Q(correct_subfamily=True) | Q(correct_tribe=True) | Q(correct_genus=True) | Q(correct_species=True))
+)
 
 
-def target_difficulty(player):
+def answered_right(skipped, judged):
+    return not skipped and True in judged and False not in judged
+
+
+def recent_share_right(player, mode):
+    """
+    How many of the player's last GAME_DIFFICULTY_RECENT answers on validated beetles in this game were right
+    (0 to 1), or None until they have given that many. Held answers (reported photos) are left out.
+    """
+    n = int(game_setting("GAME_DIFFICULTY_RECENT", 10))
+    if n <= 0:
+        return None
+    rows = list(
+        GameAnswer.objects.filter(player=player, mode=mode, score_hold=False)
+        .filter(Q(is_check=True) | Q(validated_later=True))
+        .order_by("-answered_at").values_list("skipped", *JUDGED)[:n]
+    )
+    if len(rows) < n:
+        return None
+    return sum(answered_right(skipped, judged) for skipped, *judged in rows) / n
+
+
+def target_difficulty(player, mode=None):
     """
     The difficulty this player's next items should sit around, from 0 (easy) to 1.
 
@@ -166,17 +200,29 @@ def target_difficulty(player):
     hard beetles and novices easy ones, plus a little for every finished round so it keeps creeping up.
     How hard a beetle is comes from how often other players get it right (update_difficulty); how hard a
     Family Ties pair is also depends on how close the two beetles are (RELATION_DIFFICULTY). GAME_DIFFICULTY_*.
+
+    The rating moves slowly, so with a ``mode`` the target also follows how the player is doing in that game right
+    now (#492): when under GAME_DIFFICULTY_EASE_BELOW of their recent answers there are right it eases off by
+    GAME_DIFFICULTY_EASE (never below DIFFICULTY_FLOOR), and over GAME_DIFFICULTY_PUSH_ABOVE it rises by
+    GAME_DIFFICULTY_PUSH (never above the maximum). Struggling players get a breather; strong ones keep being stretched.
     """
     from .models import PlayerScore
 
     rounds = GameRound.objects.filter(player=player, finished_at__isnull=False).count()
     skill = PlayerScore.objects.filter(player=player).values_list("rating", flat=True).first() or 0.0
     target = (
-        game_setting("GAME_DIFFICULTY_START", 0.2)
-        + game_setting("GAME_DIFFICULTY_PER_ROUND", 0.02) * rounds
-        + game_setting("GAME_DIFFICULTY_SKILL_WEIGHT", 0.3) * skill
+        game_setting("GAME_DIFFICULTY_START", 0.15)
+        + game_setting("GAME_DIFFICULTY_PER_ROUND", 0.005) * rounds
+        + game_setting("GAME_DIFFICULTY_SKILL_WEIGHT", 0.7) * skill
     )
-    return min(game_setting("GAME_DIFFICULTY_MAX", 0.9), target)
+    top = game_setting("GAME_DIFFICULTY_MAX", 0.9)
+    target = min(top, target)
+    share = recent_share_right(player, mode) if mode else None
+    if share is not None and share < game_setting("GAME_DIFFICULTY_EASE_BELOW", 0.5):
+        target = max(min(target, DIFFICULTY_FLOOR), target - game_setting("GAME_DIFFICULTY_EASE", 0.15))
+    elif share is not None and share > game_setting("GAME_DIFFICULTY_PUSH_ABOVE", 0.85):
+        target = max(target, min(top, target + game_setting("GAME_DIFFICULTY_PUSH", 0.05)))
+    return target
 
 
 def _difficulties(ids):
@@ -372,9 +418,11 @@ def peer_rois(player, pool):
 
 
 def build_classify_items(player, size, fresh_only=False):
+    from . import game_relearn
+
     n_checks, n_open = _split_round(player, "classify", size)
     check_pool, open_pool = pools(player)
-    target = target_difficulty(player)
+    target = target_difficulty(player, "classify")
     revealed = list(revealed_ids(player))
     seen_open = _seen(player, "classify", False)
     focus = focus_filter(player)
@@ -392,44 +440,12 @@ def build_classify_items(player, size, fresh_only=False):
         # about half of them beetles others have named, so names get a second and third opinion
         n_peer = round(n * game_setting("GAME_PEER_SHARE", 0.5))
         ids = _sample(peer_rois(player, open_pool), n_peer, target, allow_seen=False) if n_peer else []
-        ids += _sample(open_pool, n - len(ids), target, seen_open, exclude=ids, allow_seen=not fresh_only)
+        # placed beetles first; hard, unplaced ones wait for the easier games (game_relearn, #490)
+        ids += game_relearn.identification_open(open_pool, n - len(ids), target, seen_open, ids, fresh_only)
         return [{"a": str(i), "b": None, "check": False} for i in ids]
 
     checks, opens = _fill(n_checks, n_open, pick_checks, pick_open)
-    # Beetles they got wrong before come back now and then, so they can learn them (see retry_ids)
-    retries = [{"a": str(i), "b": None, "check": True, "retry": True} for i in retry_ids(player, len(checks))]
-    if retries:
-        checks = retries + checks[len(retries):] if len(checks) > len(retries) else retries
-    return checks + opens
-
-
-def retry_ids(player, room):
-    """
-    Validated beetles this player got wrong, ready to be shown again: last seen at least GAME_RETRY_AFTER_DAYS
-    ago, not yet answered right since, and shown again at most GAME_RETRY_MAX times. At most
-    GAME_RETRY_PER_BATCH of them, never more than ``room``.
-    """
-    want = min(game_setting("GAME_RETRY_PER_BATCH", 1), room)
-    if want <= 0:
-        return []
-    cutoff = timezone.now() - timedelta(days=game_setting("GAME_RETRY_AFTER_DAYS", 2))
-    last, retries = {}, defaultdict(int)
-    rows = (
-        GameAnswer.objects.filter(player=player, mode="classify", is_check=True, skipped=False, score_hold=False)
-        .order_by("answered_at").values("roi_id", "answered_at", "is_retry", *[f"correct_{r}" for r in RANKS])
-    )
-    for row in rows:   # the latest answer on each beetle wins
-        last[row["roi_id"]] = (row["answered_at"], any(row[f"correct_{r}"] is False for r in RANKS))
-        retries[row["roi_id"]] += int(row["is_retry"])
-    candidates = [
-        roi_id for roi_id, (when, wrong) in last.items()
-        if wrong and when <= cutoff and retries[roi_id] < game_setting("GAME_RETRY_MAX", 3)
-    ]
-    if not candidates:
-        return []
-    usable = list(check_rois().filter(id__in=candidates).values_list("id", flat=True))
-    random.shuffle(usable)
-    return usable[:want]
+    return checks + opens   # beetles they got wrong come back in every game's batches (game_relearn)
 
 
 # How hard a Family Ties pair is by how closely related the two beetles are: telling apart two species of one genus
@@ -449,11 +465,11 @@ def _relation_order(target, table=RELATION_DIFFICULTY):
     return order
 
 
-def _partner_for(anchor, target, exclude=()):
+def _partner_for(anchor, target, exclude=(), relation=None):
     """
     A validated ROI to pair with ``anchor``, at a relation (same species / genus / tribe / subfamily / different)
     chosen at random but leaning towards the player's difficulty: close relatives for experts, distant ones for
-    novices (RELATION_DIFFICULTY).
+    novices (RELATION_DIFFICULTY). ``relation`` is tried first when given (a retry, game_relearn).
 
     For an unvalidated anchor its current (unchecked) label is only used to aim the
     pairing; the answer is what we record.
@@ -480,7 +496,7 @@ def _partner_for(anchor, target, exclude=()):
                       bool(taxon.subfamily and taxon.tribe)),
         "different": (~Q(taxon__subfamily=taxon.subfamily), bool(taxon.subfamily)),
     }
-    for rel in _relation_order(target):
+    for rel in ([relation] if relation in relations else []) + _relation_order(target):
         condition, usable = relations[rel]
         if usable:
             partner = one(pool.filter(condition))
@@ -502,9 +518,11 @@ def stuck_rois(player, pool):
 
 
 def build_pair_items(player, size, fresh_only=False):
+    from . import game_relearn
+
     n_checks, n_open = _split_round(player, "pair", size)
     check_pool, open_pool = pools(player)
-    target = target_difficulty(player)
+    target = target_difficulty(player, "pair")
     revealed = list(revealed_ids(player))
     seen_open = _seen(player, "pair", False)
 
@@ -514,9 +532,11 @@ def build_pair_items(player, size, fresh_only=False):
         if is_check:
             anchor_ids = _sample(anchor_qs, n, target, exclude=exclude + revealed, allow_seen=False)
         else:
-            # about half of them beetles nobody could name, so Family Ties narrows down what they are not
+            # about half of them hard beetles (nobody could name them, players disagree, IBBI-AI is unsure): Family
+            # Ties narrows down what they are before anyone has to name them (game_relearn.hard_rois)
             n_stuck = round(n * game_setting("GAME_STUCK_SHARE", 0.5))
-            anchor_ids = _sample(stuck_rois(player, anchor_qs), n_stuck, target, allow_seen=False) if n_stuck else []
+            anchor_ids = (_sample(game_relearn.hard_rois(player, anchor_qs), n_stuck, target, allow_seen=False)
+                          if n_stuck else [])
             anchor_ids += _sample(anchor_qs, n - len(anchor_ids), target, seen, list(exclude) + anchor_ids,
                                   allow_seen=not fresh_only)
         for anchor in Beetles.objects.select_related("taxon").filter(id__in=anchor_ids):
@@ -539,16 +559,12 @@ def build_pair_items(player, size, fresh_only=False):
 
 
 # ---------------------------------------------------------------------------
-# Odd One Out (#369)
+# The grid games: Odd One Out (#369) and Select all (#370)
 # ---------------------------------------------------------------------------
-# How hard it is to spot the odd one by the rank at which it differs: another subfamily stands out, another species of
-# the same genus hardly at all.
-ODD_RANK_DIFFICULTY = {"subfamily": 0.15, "tribe": 0.4, "genus": 0.65, "species": 0.85}
-
-
-def odd_tile_count(level):
-    """Four beetles (2x2) to choose from, and six (2x3) from level GAME_ODD_SIX_FROM_LEVEL."""
-    return 6 if level >= game_setting("GAME_ODD_SIX_FROM_LEVEL", 5) else 4
+# Every grid is built at the player's step on the grid ladder (game_grid_ladder, #489): 4, 9 or 16 beetles, at a rank
+# from subfamily down to species. When the beetles for that are short it falls back to an easier grid, never to none.
+GRID_SIZES = (4, 9, 16)
+GRID_ANCHORS = 8   # beetles tried per rank as the heart of a grid: enough for a sparse tree, few enough to stay quick
 
 
 def odd_open_count(level, tiles):
@@ -562,6 +578,35 @@ def odd_open_count(level, tiles):
     end = game_setting("GAME_ODD_OPEN_SHARE_END", 0.5)
     share = start + (end - start) * (level - 1) / (len(LEVELS) - 1)
     return max(0, min(tiles - 2, round((tiles - 1) * share)))
+
+
+# Select all by the grid's size: the fewest and most validated members (about a quarter to under half of the grid),
+# and its AI beetles at level 1 and at the top level. Validated non-members are never fewer than the members, so
+# tapping everything loses while a wrong tap costs more than a member earns (GAME_POINTS_SELECT_WRONG above 1).
+SELECT_MEMBERS = {4: (1, 2), 9: (3, 4), 16: (5, 7)}
+SELECT_AI = {4: (1, 1), 9: (1, 3), 16: (2, 4)}
+
+
+def select_open_count(level, size):
+    """How many AI beetles a Select all grid of ``size`` holds: more as the player rises (SELECT_AI)."""
+    from .game_levels import LEVELS
+
+    low, high = SELECT_AI[size]
+    return low + round((high - low) * (level - 1) / (len(LEVELS) - 1))
+
+
+def select_mix(size, members, opens, others, ai):
+    """
+    (members, AI beetles, others) for a Select all grid of ``size`` from the beetles found: at most ``ai`` AI beetles,
+    members within SELECT_MEMBERS, and never fewer others than members. None when what was found can't make one.
+    """
+    low, high = SELECT_MEMBERS[size]
+    a = min(opens, ai)
+    fits = [m for m in range(low, min(high, members) + 1) if m <= size - m - a <= others]
+    if not fits:
+        return None
+    m = random.choice(fits)
+    return m, a, size - m - a
 
 
 def lineage(taxon, rank):
@@ -595,17 +640,19 @@ def _named_at(rank):
 
 def _predicted(rank, value, low, high):
     """
-    Q for unvalidated beetles a classifier puts at ``value`` at ``rank`` with a confidence in [low, high): what it
-    said for that rank, or else what its species implies, with the species' confidence.
+    Q for unvalidated beetles a classifier puts at ``value`` at ``rank`` (at any name when ``value`` is None) with a
+    confidence in [low, high): what it said for that rank, or else what its species implies, with the species' confidence.
     """
     if rank == "species":
-        return rank_q(rank, value, "predictions__taxon__") & Q(predictions__confidence__gte=low,
-                                                                predictions__confidence__lt=high)
-    said = Q(**{f"predictions__rank_confidence__{rank}__value__iexact": value,
-                f"predictions__rank_confidence__{rank}__confidence__gte": low,
+        named = rank_q(rank, value, "predictions__taxon__") if value else Q()
+        return named & Q(predictions__confidence__gte=low, predictions__confidence__lt=high)
+    said = Q(**{f"predictions__rank_confidence__{rank}__confidence__gte": low,
                 f"predictions__rank_confidence__{rank}__confidence__lt": high})
-    implied = (Q(**{f"predictions__rank_confidence__{rank}__isnull": True}) & rank_q(rank, value, "predictions__taxon__")
+    implied = (Q(**{f"predictions__rank_confidence__{rank}__isnull": True})
                & Q(predictions__confidence__gte=low, predictions__confidence__lt=high))
+    if value:
+        said &= Q(**{f"predictions__rank_confidence__{rank}__value__iexact": value})
+        implied &= rank_q(rank, value, "predictions__taxon__")
     return said | implied
 
 
@@ -627,218 +674,264 @@ def _distinct_photos(ids, taken, limit):
     return out
 
 
-# The AI beetles in a grid (Odd One Out, Select all): unvalidated beetles a classifier puts in the group. Every grid
-# has at least one it is sure about (a sure call makes a hard, informative round) and one it is unsure about (could be
-# anything: hard or very easy), as well as validated ones; more fill out bigger grids. Below GAME_AI_UNSURE_BELOW is
-# "unsure", from GAME_AI_SURE_FROM up "sure", and the band between them fills the rest.
+# The AI beetles in a grid (Odd One Out, Select all): unvalidated beetles IBBI-AI puts in the group. When its
+# predictions allow, a grid holds one it is sure about (a sure call makes a hard, informative round) and one it is
+# unsure about (could be anything: hard or very easy), as well as validated ones; more fill out bigger grids. Below
+# GAME_AI_UNSURE_BELOW is "unsure", from GAME_AI_SURE_FROM up "sure", and the band between them fills the rest. That pair
+# is looked for, not required: where no group has both, the grid is built without them (#489).
 def ai_bands():
     sure = game_setting("GAME_AI_SURE_FROM", 0.9)
     unsure = game_setting("GAME_AI_UNSURE_BELOW", 0.6)
     return (sure, 1.01), (0.0, unsure), (unsure, sure)
 
 
-def ai_required():
-    """The sure + unsure minimum applies once predictions exist (before any upload a grid is validated beetles only)."""
+def ai_preferred():
+    """Grids look for a sure and an unsure AI beetle once predictions exist (GAME_GRID_PREFER_AI)."""
     from .models import ModelPrediction
-    return game_setting("GAME_GRID_REQUIRE_AI", True) and ModelPrediction.objects.exists()
+    return game_setting("GAME_GRID_PREFER_AI", True) and ModelPrediction.objects.exists()
 
 
-def _ai_beetles(open_pool, rank, value, n_open, target, avoid, photos, required):
+def _ai_beetles(open_pool, rank, value, n, target, avoid, photos, pair):
     """
-    ``n_open`` (at least 2 when required) unvalidated beetles the classifier puts at ``value``: one sure, one unsure,
-    then the rest from all bands. None when a required sure or unsure one cannot be found.
+    Up to ``n`` unvalidated beetles IBBI-AI puts at ``value``, each on a photo not used yet. With ``pair``, one it is
+    sure about and one it is unsure about first (for a single place, one of either), then any confidence.
+    Returns (ids, kinds): each one's "sure", "unsure" or "other".
     """
-    sure_band, unsure_band, middle_band = ai_bands()
+    sure, unsure, _ = ai_bands()
+    chosen, kinds, avoid = [], [], set(avoid)
 
-    def pick(band, n):
-        if n <= 0:
-            return []
+    def take(band, k, kind):
+        if k <= 0:
+            return
         q = open_pool.filter(_predicted(rank, value, *band)).exclude(id__in=avoid).distinct()
-        return _distinct_photos(_sample(q, n * 2, target, allow_seen=False), photos, n)
+        got = _distinct_photos(_sample(q, k * 2, target, allow_seen=False), photos, k)
+        avoid.update(got)
+        chosen.extend(got)
+        kinds.extend([kind] * len(got))
 
-    sure, unsure = pick(sure_band, 1), pick(unsure_band, 1)
-    if required and not (sure and unsure):
+    if pair and n >= 2:
+        take(sure, 1, "sure")
+        take(unsure, 1, "unsure")
+    elif pair and n == 1:
+        for band, kind in random.sample([(sure, "sure"), (unsure, "unsure")], 2):
+            take(band, 1, kind)
+            if chosen:
+                break
+    take((0.0, 1.01), n - len(chosen), "other")
+    return chosen, kinds
+
+
+def _has_pair(kinds, n):
+    """Whether the first ``n`` AI beetles are what a grid looks for: a sure and an unsure one (one of either for one)."""
+    head = kinds[:n]
+    if n <= 0:
+        return True
+    if n == 1:
+        return head[:1] in (["sure"], ["unsure"])
+    return "sure" in head and "unsure" in head
+
+
+class _Grids:
+    """One batch's grids of one game, and what they all share: the player's step and the beetles to draw on."""
+
+    def __init__(self, game_key, player, avoid=()):
+        from .game_grid_ladder import plan
+        from .game_levels import for_player, rank_unlock
+
+        info = for_player(player)
+        answered = GameAnswer.objects.filter(player=player, skipped=False).count()
+        deepest = rank_unlock(info["level"], answered, bool(info.get("granted")))["rank"]
+        self.game, self.level = game_key, info["level"]
+        self.plan = plan(player, game_key, deepest, player_focus(player))
+        self.check_pool, self.open_pool = pools(player)
+        self.target = target_difficulty(player)
+        # Beetles whose answer the player has been shown are never used again for them (revealed_ids)
+        self.avoid = set(revealed_ids(player)) | {uuid.UUID(str(i)) for i in avoid}
+        self.prefer_ai = ai_preferred()
+        self.pairs = {}   # rank: whether IBBI-AI's predictions could give a grid there a sure and an unsure beetle
+
+    def items(self, n):
+        items = []
+        while len(items) < n:
+            item = self.item()
+            if item is None:
+                break
+            self.avoid.update(uuid.UUID(t) for t in item["tiles"])
+            items.append(item)
+        return items
+
+    def item(self):
+        """
+        One grid at the player's step. When the beetles for it are short, in turn: the same grid without the pair of AI
+        beetles, a smaller one at that rank, the nearest other ranks (the shallower first). None when there is nothing.
+        """
+        size = self.plan["size"]
+        for rank in self.plan["ranks"]:
+            pair = self.pair_wanted(rank)
+            best = None
+            anchors = _sample(self.check_pool.filter(_named_at(rank)).exclude(id__in=self.avoid), GRID_ANCHORS,
+                              self.target, allow_seen=False)
+            for anchor in Beetles.objects.select_related("taxon").filter(id__in=anchors):
+                grid = (self.odd if self.game == "odd" else self.select)(anchor, rank, pair)
+                if grid is None:
+                    continue
+                if grid["size"] == size and grid["paired"]:
+                    return self.finish(grid, rank)
+                if best is None or (grid["size"], grid["paired"]) > (best["size"], best["paired"]):
+                    best = grid
+            if best is not None:
+                if pair and not best["paired"]:
+                    self.pairs[rank] = False   # no group here had both: the rest of the batch doesn't look again
+                return self.finish(best, rank)
         return None
-    chosen = sure + unsure
-    for band in (sure_band, unsure_band, middle_band):   # fill out bigger grids, any confidence
-        if len(chosen) >= n_open:
-            break
-        more = pick(band, n_open - len(chosen))
-        chosen += more
-        avoid = set(avoid) | set(more)
-    return chosen[:max(n_open, 2 if required else 0)]
+
+    def pair_wanted(self, rank):
+        """Look for a sure and an unsure AI beetle at ``rank``? Only when predictions there have both somewhere."""
+        if not self.prefer_ai:
+            return False
+        if rank not in self.pairs:
+            sure, unsure, _ = ai_bands()
+            self.pairs[rank] = all(self.open_pool.filter(_predicted(rank, None, *band)).exists() for band in (sure, unsure))
+        return self.pairs[rank]
+
+    def finish(self, grid, rank):
+        tiles = [str(i) for i in grid["tiles"]]
+        random.shuffle(tiles)
+        return {"a": str(grid["a"]), "b": None, "check": True, "mode": self.game, "tiles": tiles, "rank": rank,
+                "group": grid["group"], "size": len(tiles), "step": self.plan["step"]}
+
+    def sizes(self):
+        """The grid sizes this batch may use, biggest first: the step's size and the smaller ones."""
+        return [s for s in reversed(GRID_SIZES) if s <= self.plan["size"]]
+
+    def near(self, rank, group):
+        """On harder rounds the beetles outside the group are near relatives: Q for the group's parent, else None."""
+        parent = RANKS[RANKS.index(rank) - 1] if rank != "subfamily" else None
+        if parent and random.random() < min(0.9, game_setting("GAME_ODD_NEAR_FLOOR", 0.3) + self.target):
+            return rank_q(parent, group[parent])
+        return None
+
+    def odd_ai(self, size, pair):
+        """AI beetles among the rest of an Odd One Out grid: more as the player rises, two when looking for a pair."""
+        n = odd_open_count(self.level, size)
+        return min(size - 2, max(n, 2) if pair else n)
+
+    def select_ai(self, size, pair):
+        """AI beetles in a Select all grid: more as the player rises, two when looking for a pair and there is room."""
+        n = select_open_count(self.level, size)
+        return max(n, 2) if pair and size > 4 else n
+
+    def odd(self, anchor, rank, pair):
+        """The biggest Odd One Out grid up to the step's size around ``anchor``'s group at ``rank``, or None."""
+        group = lineage(anchor.taxon, rank) if anchor.taxon else None
+        if group is None:
+            return None
+        same = rank_q(rank, group[rank])
+        photos = {anchor.image_asset_id}
+        # The odd one: validated, so there is always a known answer; a near relative (the same parent) on harder rounds
+        odd_pool = self.check_pool.filter(_named_at(rank)).exclude(same).exclude(id__in=self.avoid)
+        near = self.near(rank, group)
+        odd = _distinct_photos(_sample(odd_pool.filter(near), 3, self.target, allow_seen=False), photos, 1) if near else []
+        odd = odd or _distinct_photos(_sample(odd_pool, 3, self.target, allow_seen=False), photos, 1)
+        if not odd:
+            return None
+        # The rest share the group: AI beetles (a sure and an unsure one when there are predictions), then validated
+        # ones, at least the anchor
+        most = self.plan["size"]
+        opens, kinds = _ai_beetles(self.open_pool, rank, group[rank], self.odd_ai(most, pair), self.target, self.avoid,
+                                   photos, pair)
+        rest = _distinct_photos(
+            _sample(self.check_pool.filter(same).exclude(id__in=self.avoid).exclude(id=anchor.id), (most - 2) * 3,
+                    self.target, allow_seen=True), photos, most - 2)
+        for size in self.sizes():
+            n = min(len(opens), self.odd_ai(size, pair))
+            need = size - 2 - n
+            if len(rest) >= need:
+                return {"a": odd[0], "tiles": [anchor.id, *rest[:need], *opens[:n], odd[0]], "group": group,
+                        "size": size, "paired": not pair or _has_pair(kinds, n)}
+        return None
+
+    def select(self, anchor, rank, pair):
+        """The biggest Select all grid up to the step's size around ``anchor``'s group at ``rank``, or None."""
+        group = lineage(anchor.taxon, rank) if anchor.taxon else None
+        if group is None:
+            return None
+        same = rank_q(rank, group[rank])
+        photos = {anchor.image_asset_id}
+        most = self.plan["size"]
+        # Validated members: the anchor and as many more as the biggest grid takes
+        members = [anchor.id] + _distinct_photos(
+            _sample(self.check_pool.filter(same).exclude(id__in=self.avoid).exclude(id=anchor.id),
+                    (SELECT_MEMBERS[most][1] - 1) * 3, self.target, allow_seen=True), photos, SELECT_MEMBERS[most][1] - 1)
+        # AI beetles: a sure and an unsure one first when there are predictions. Taps on them are votes, never scored
+        opens, kinds = _ai_beetles(self.open_pool, rank, group[rank], self.select_ai(most, pair), self.target, self.avoid,
+                                   photos, pair)
+        # The rest: validated beetles of other groups at this rank; near relatives (the same parent) on harder rounds
+        want = most - SELECT_MEMBERS[most][0]
+        others = self.check_pool.filter(_named_at(rank)).exclude(same).exclude(id__in=self.avoid)
+        near = self.near(rank, group)
+        rest = _distinct_photos(_sample(others.filter(near), want * 2, self.target, allow_seen=True),
+                                photos, want) if near else []
+        rest += _distinct_photos(_sample(others.exclude(id__in=rest), (want - len(rest)) * 3, self.target, allow_seen=True),
+                                 photos, want - len(rest))
+        for size in self.sizes():
+            mix = select_mix(size, len(members), len(opens), len(rest), self.select_ai(size, pair))
+            if mix:
+                m, a, k = mix
+                return {"a": anchor.id, "tiles": [*members[:m], *opens[:a], *rest[:k]], "group": group, "size": size,
+                        "paired": not pair or _has_pair(kinds, a)}
+        return None
 
 
-def _odd_item(tiles, n_open, target, deepest, check_pool, open_pool, avoid, required=False):
-    """One Odd One Out item, or None when no part of the tree has enough beetles for it."""
-    for rank in _relation_order(target, {r: d for r, d in ODD_RANK_DIFFICULTY.items()
-                                         if RANKS.index(r) <= RANKS.index(deepest)}):
-        anchors = _sample(check_pool.filter(_named_at(rank)).exclude(id__in=avoid), 3, target, allow_seen=False)
-        for anchor in Beetles.objects.select_related("taxon").filter(id__in=anchors):
-            group = lineage(anchor.taxon, rank) if anchor.taxon else None
-            if group is None:
-                continue
-            same = rank_q(rank, group[rank])
-            photos = {anchor.image_asset_id}
-            # The odd one: validated, so there is always a known answer; a near relative (the same parent) on harder rounds
-            odd_pool = check_pool.filter(_named_at(rank)).exclude(same).exclude(id__in=avoid)
-            parent = RANKS[RANKS.index(rank) - 1] if rank != "subfamily" else None
-            near = parent and random.random() < min(0.9, game_setting("GAME_ODD_NEAR_FLOOR", 0.3) + target)
-            odd = _distinct_photos(_sample(odd_pool.filter(rank_q(parent, group[parent])), 3, target, allow_seen=False),
-                                   photos, 1) if near else []
-            odd = odd or _distinct_photos(_sample(odd_pool, 3, target, allow_seen=False), photos, 1)
-            if not odd:
-                continue
-            # The rest: AI beetles (at least one sure and one unsure, ai_bands), then validated ones
-            opens = _ai_beetles(open_pool, rank, group[rank], max(n_open, 2) if required else n_open, target, avoid,
-                                photos, required)
-            if opens is None:
-                continue
-            need = tiles - 2 - len(opens)
-            rest = _distinct_photos(
-                _sample(check_pool.filter(same).exclude(id__in=avoid).exclude(id=anchor.id), need * 3, target,
-                        allow_seen=True), photos, need)
-            shown = [anchor.id, *rest, *opens, odd[0]]
-            if len(shown) < tiles:
-                continue
-            random.shuffle(shown)
-            return {"a": str(odd[0]), "b": None, "check": True, "mode": "odd",
-                    "tiles": [str(i) for i in shown], "rank": rank, "group": group}
-    return None
+def build_grid_items(game_key, player, n, avoid=()):
+    """``n`` grids of one grid game ("odd" or "select") at the player's step, none showing a beetle in ``avoid``."""
+    return _Grids(game_key, player, avoid).items(n)
 
 
-def build_odd_items(player, size, fresh_only=False):
+def build_odd_items(player, size, fresh_only=False, avoid=()):
     """
-    Odd One Out: each item shows four beetles (six at higher levels) of which all but one share a name at one rank,
-    and the player picks the one that doesn't belong. The rank follows the player's open ranks (game_levels rank steps)
-    and their target difficulty: subfamily first, then tribe, genus and species, and on harder rounds the odd one is a
-    near relative (the same tribe, say, but another genus).
+    Odd One Out: each item shows 4, 9 or 16 beetles of which all but one share a name at one rank, and the player picks
+    the one that doesn't belong. The size and the rank follow the player's step on the grid ladder (game_grid_ladder):
+    the grids grow first, then go a rank deeper, from subfamily to species; on harder rounds the odd one is a near
+    relative (the same tribe, say, but another genus).
 
-    The odd one and at least one of the rest are always validated, so every item has a known answer. Of the rest, at
-    least one is a beetle the classifier is sure belongs and one it is unsure about (ai_bands), more as the player
-    rises (GAME_ODD_OPEN_SHARE_*):
-    a player who picks one of those says it does not belong, which is scored later by agreement, like a name.
-    Beetles whose answer the player has been shown are never used again for them (revealed_ids).
+    The odd one and at least one of the rest are always validated, so every item has a known answer. Of the rest, when
+    IBBI-AI's predictions allow, one is a beetle it is sure belongs and one it is unsure about (ai_bands), more as the
+    player rises (GAME_ODD_OPEN_SHARE_*): a player who picks one of those says it does not belong, which is scored later
+    by agreement, like a name. Beetles whose answer the player has been shown are never used again for them.
     """
-    from .game_levels import for_player, rank_unlock
-
-    info = for_player(player)
-    answered = GameAnswer.objects.filter(player=player, skipped=False).count()
-    deepest = rank_unlock(info["level"], answered, bool(info.get("granted")))["rank"]
-    tiles = odd_tile_count(info["level"])
-    n_open = odd_open_count(info["level"], tiles)
-    check_pool, open_pool = pools(player)
-    target = target_difficulty(player)
-    avoid = set(revealed_ids(player))
-    required = ai_required()
-    items = []
-    for _ in range(size * 2):
-        if len(items) >= size:
-            break
-        item = _odd_item(tiles, n_open, target, deepest, check_pool, open_pool, avoid, required)
-        if item is None:
-            break
-        avoid.update(uuid.UUID(t) for t in item["tiles"])
-        items.append(item)
-    return items
+    return build_grid_items("odd", player, size, avoid)
 
 
-# ---------------------------------------------------------------------------
-# Select all (#370)
-# ---------------------------------------------------------------------------
-SELECT_TILES = 9
-
-
-def select_open_count(level, members):
+def build_select_items(player, size, fresh_only=False, avoid=()):
     """
-    How many beetles in a Select all grid are not validated: one at level 1, up to three at the top, never so many
-    that the grid holds fewer validated non-members than validated members (so tapping everything always loses).
+    Select all: 4, 9 or 16 beetles and a group to find ("Tap every Platypodinae"), the size and the rank following the
+    player's step on the grid ladder like Odd One Out. About a quarter to under half are validated members
+    (SELECT_MEMBERS), validated beetles of other groups at least as many (near relatives on harder rounds), plus beetles
+    nobody has validated that IBBI-AI puts in the group (SELECT_AI): a sure and an unsure one when its predictions
+    allow. Taps on those are recorded, never scored. Beetles whose answer the player has been shown are never used
+    again for them (revealed_ids).
     """
-    from .game_levels import LEVELS
-
-    wanted = 1 + round(2 * (level - 1) / (len(LEVELS) - 1))
-    return max(0, min(wanted, SELECT_TILES - 2 * members))
-
-
-def _select_item(n_open_at, target, deepest, check_pool, open_pool, avoid, required=False):
-    """One Select all item, or None when no part of the tree has enough beetles for it."""
-    for rank in _relation_order(target, {r: d for r, d in ODD_RANK_DIFFICULTY.items()
-                                         if RANKS.index(r) <= RANKS.index(deepest)}):
-        # a few more anchors than Odd One Out tries: a grid needs three members of one group
-        anchors = _sample(check_pool.filter(_named_at(rank)).exclude(id__in=avoid), 5, target, allow_seen=False)
-        for anchor in Beetles.objects.select_related("taxon").filter(id__in=anchors):
-            group = lineage(anchor.taxon, rank) if anchor.taxon else None
-            if group is None:
-                continue
-            same = rank_q(rank, group[rank])
-            photos = {anchor.image_asset_id}
-            # 3 or 4 validated members (a third to under half of the grid), so tapping everything never pays; 3 when
-            # the grid must also hold a sure and an unsure AI beetle (two more), so non-members still outnumber members
-            members = [anchor.id] + _distinct_photos(
-                _sample(check_pool.filter(same).exclude(id__in=avoid).exclude(id=anchor.id), 9, target, allow_seen=True),
-                photos, 2 if required else random.choice((2, 3)))
-            if len(members) < 3:
-                continue
-            n_open = max(2, n_open_at(len(members))) if required else n_open_at(len(members))
-            # AI beetles: at least one the classifier is sure is in the group and one it is unsure about (ai_bands)
-            opens = _ai_beetles(open_pool, rank, group[rank], n_open, target, avoid, photos, required) if n_open else []
-            if opens is None:
-                continue
-            # the rest: validated beetles of other groups at this rank; near relatives (the same parent) on harder rounds
-            need = SELECT_TILES - len(members) - len(opens)
-            others = check_pool.filter(_named_at(rank)).exclude(same).exclude(id__in=avoid)
-            parent = RANKS[RANKS.index(rank) - 1] if rank != "subfamily" else None
-            near = parent and random.random() < min(0.9, game_setting("GAME_ODD_NEAR_FLOOR", 0.3) + target)
-            rest = _distinct_photos(_sample(others.filter(rank_q(parent, group[parent])), need * 2, target, allow_seen=True),
-                                    photos, need) if near else []
-            rest += _distinct_photos(_sample(others.exclude(id__in=rest), need * 3, target, allow_seen=True),
-                                     photos, need - len(rest))
-            shown = [*members, *opens, *rest]
-            if len(rest) < len(members) or len(shown) < SELECT_TILES:
-                continue
-            random.shuffle(shown)
-            return {"a": str(anchor.id), "b": None, "check": True, "mode": "select",
-                    "tiles": [str(i) for i in shown], "rank": rank, "group": group}
-    return None
-
-
-def build_select_items(player, size, fresh_only=False):
-    """
-    Select all: nine beetles and a group to find ("Tap every Platypodinae"). The rank follows the player's open ranks
-    and difficulty, like Odd One Out; three or four of the nine are validated members, the rest validated beetles of
-    other groups (near relatives on harder rounds), plus beetles nobody has validated that a classifier puts in the
-    group: at least one it is sure about and one it is unsure about (ai_bands), up to three as players rise. Taps on those are recorded, never scored. Beetles whose answer the player has been shown are
-    never used again for them (revealed_ids).
-    """
-    from .game_levels import for_player, rank_unlock
-
-    info = for_player(player)
-    answered = GameAnswer.objects.filter(player=player, skipped=False).count()
-    deepest = rank_unlock(info["level"], answered, bool(info.get("granted")))["rank"]
-    check_pool, open_pool = pools(player)
-    target = target_difficulty(player)
-    avoid = set(revealed_ids(player))
-    required = ai_required()
-    items = []
-    for _ in range(size * 2):
-        if len(items) >= size:
-            break
-        item = _select_item(lambda members: select_open_count(info["level"], members), target, deepest,
-                            check_pool, open_pool, avoid, required)
-        if item is None:
-            break
-        avoid.update(uuid.UUID(t) for t in item["tiles"])
-        items.append(item)
-    return items
+    return build_grid_items("select", player, size, avoid)
 
 
 def resumable_round(player, mode):
-    """The player's latest unfinished round in this mode, if recent enough to pick up again."""
+    """
+    The player's latest unfinished round in this mode, if recent enough to pick up again. A batch built ahead of time
+    (game_views: nothing answered in it yet) waits while the batch in play before it still has items to answer.
+    """
+    from django.db.models import Max
+
     since = timezone.now() - timedelta(hours=game_setting("GAME_RESUME_HOURS", 12))
-    return (
+    latest = list(
         GameRound.objects.filter(player=player, mode=mode, finished_at__isnull=True, started_at__gte=since)
-        .order_by("-started_at").first()
+        .order_by("-started_at")[:2]
     )
+    if len(latest) == 2 and not latest[0].answers.exists():
+        last = latest[1].answers.aggregate(m=Max("index"))["m"]
+        if last is not None and last < len(latest[1].items) - 1:
+            return latest[1]
+    return latest[0] if latest else None
 
 
 def spread(items):
@@ -876,15 +969,27 @@ def start_round(player, mode, size=None, fresh_only=False):
 
     ``fresh_only`` leaves out unscored items the player has already answered: used to carry on from one batch
     into the next, where running out of new beetles should end the feed rather than repeat what they've seen.
+
+    When the game a player chose has nothing for them, the feed plays their other games instead (fallback_mix). The
+    round's ``notice`` says so for the page ("" when there is nothing to say); it is not saved, so a reload that picks
+    the batch up again doesn't repeat it.
     """
+    from . import game_relearn
+
     size = size or game_setting("GAME_ROUND_SIZE", 10)
+    notice = ""
     if mode == GameRound.Mode.MIXED:
         items = build_mixed_items(player, size, fresh_only=fresh_only)
+        if not items:
+            items, notice = fallback_mix(player, size, fresh_only)
     else:
         items = build(mode, player, size, fresh_only)
     if not items:
         return None
-    return GameRound.objects.create(player=player, mode=mode, items=spread(items))
+    # spread(), with the player's due mistakes in place of some scored items (#490)
+    rnd = GameRound.objects.create(player=player, mode=mode, items=game_relearn.feed_with_retries(player, mode, items))
+    rnd.notice = notice
+    return rnd
 
 
 BUILDERS = {"pair": "build_pair_items", "odd": "build_odd_items", "select": "build_select_items",
@@ -919,7 +1024,7 @@ def build_mixed_items(player, size, fresh_only=False):
     Identification, with Odd One Out beside them (game_levels.game_shares); a player who chose one game sees only that
     one. In the mix, a game that runs out of beetles is filled in by the others. Every item carries its own "mode".
     """
-    from .game_levels import for_player, game_shares, games
+    from .game_levels import for_player, games
 
     info = for_player(player)
     chosen = play_mode(player, info)
@@ -928,7 +1033,36 @@ def build_mixed_items(player, size, fresh_only=False):
         for it in items:
             it["mode"] = chosen
         return items
-    shares = game_shares(info["level"], games(info["perks"]))
+    return _mix(player, info["level"], games(info["perks"]), size, fresh_only)
+
+
+def fallback_mix(player, size, fresh_only=False):
+    """
+    (items, notice) for a player whose chosen game has nothing for them right now (too few beetles of the kind it
+    needs): a mix of their other games, and one line for the page that says so. Their choice is kept, so the next batch
+    tries their game again. ([], "") when they play the mix already, or their other games have nothing either.
+    """
+    from .game_levels import GAME_NAMES, for_player, games
+
+    info = for_player(player)
+    chosen = play_mode(player, info)
+    others = [g for g in games(info["perks"]) if g != chosen]
+    if chosen not in BUILDERS or not others:
+        return [], ""
+    items = _mix(player, info["level"], others, size, fresh_only)
+    if not items:
+        return [], ""
+    instead = f"here's {GAME_NAMES[others[0]]} instead" if len(others) == 1 else "here's a mix of your other games"
+    return items, f"Not enough beetles for {GAME_NAMES[chosen]} right now: {instead}."
+
+
+def _mix(player, level, game_keys, size, fresh_only=False):
+    """``size`` items of these games by their shares of the feed; one that runs short is filled in by the rest."""
+    from .game_levels import game_shares
+
+    shares = game_shares(level, game_keys)
+    if not shares:
+        return []
     plan = defaultdict(int)
     for game_key in random.choices(list(shares), weights=list(shares.values()), k=size):
         plan[game_key] += 1
@@ -958,6 +1092,33 @@ def _item_ids(item):
     return set(item.get("tiles") or []) | {item["a"]} | ({item["b"]} if item.get("b") else set())
 
 
+def nothing_to_play(player, mode=GameRound.Mode.MIXED):
+    """
+    Why the feed has nothing (new) for this player, in plain words for the page: there are no beetles at all yet, they
+    have seen every one, they have seen every one in their focus (``clear_focus``: clearing it would give them more),
+    or their games can't use the ones there are (Similarity and the grid games need checked beetles). ``mode`` is the
+    page's game, or the mix. A few EXISTS queries; nothing is built.
+    """
+    from .game_levels import GAME_NAMES, for_player, games
+
+    checks, opens = check_rois(), open_rois()
+    if not (checks.exists() or opens.exists()):
+        return {"text": "No beetles are ready for the game yet. Please check back soon.", "clear_focus": False}
+    answered = GameAnswer.objects.filter(player=player).values("roi_id")
+    revealed = list(revealed_ids(player))
+
+    def new(check_pool, open_pool):   # never answered, or validated and its answer not shown to them yet
+        return open_pool.exclude(id__in=answered).exists() or check_pool.exclude(id__in=revealed).exists()
+
+    if not new(checks, opens):
+        return {"text": "You've seen every beetle we have. New photos are added regularly.", "clear_focus": False}
+    if player_focus(player) and not new(*pools(player)):
+        return {"text": "You've seen every beetle in your focus. Clear it to see more.", "clear_focus": True}
+    mine = [mode] if mode in GAME_NAMES else games(for_player(player)["perks"])
+    which = GAME_NAMES[mine[0]] if len(mine) == 1 else "your games"
+    return {"text": f"Not enough checked beetles for {which} yet. Please check back soon.", "clear_focus": False}
+
+
 def _in_background(player_ids):
     """Queue a recompute for these players on the Celery worker; do it here if the queue can't be reached."""
     from django.db import transaction
@@ -978,25 +1139,62 @@ def close_idle_rounds(player, idle_minutes=10):
     """
     Finish the player's feed batches that were left open (they closed the tab, or their phone went to sleep),
     so their answers reach their skills and the difficulty of the images without waiting for them to come back.
+    The work is done on the worker (finish_round_later). A batch with nothing answered (one built ahead and never
+    reached) has nothing to count, so it is dropped rather than counted as played.
     """
     cutoff = timezone.now() - timedelta(minutes=idle_minutes)
     for rnd in GameRound.objects.filter(player=player, finished_at__isnull=True, started_at__lt=cutoff):
         last = rnd.answers.order_by("-answered_at").values_list("answered_at", flat=True).first()
-        if last is None or last < cutoff:
-            finish_round(rnd)
+        if last is None:
+            rnd.delete()
+        elif last < cutoff:
+            finish_round_later(rnd)
 
 
 def finish_round(rnd):
     """Close a round and refresh everything derived from its answers."""
+    _close(rnd)
+    refresh_round(rnd)
+
+
+def finish_round_later(rnd):
+    """
+    Close a round now, and refresh everything derived from its answers on the Celery worker (#494), so the player
+    isn't kept waiting at the end of a batch. Done here if the queue can't be reached, and here too where game work
+    isn't sent to the worker (GAME_RECOMPUTE_IN_BACKGROUND off, as when developing).
+    """
+    from django.db import transaction
+
+    from .tasks import finish_game_round_task
+
+    if not game_setting("GAME_RECOMPUTE_IN_BACKGROUND", False):
+        finish_round(rnd)
+        return
+    _close(rnd)
+
+    def queue():
+        try:
+            finish_game_round_task.apply_async(args=[str(rnd.id)], retry=False)
+        except Exception:
+            refresh_round(rnd)
+
+    transaction.on_commit(queue)
+
+
+def _close(rnd):
+    if rnd.finished_at is None:
+        rnd.finished_at = timezone.now()
+        rnd.save(update_fields=["finished_at"])
+
+
+def refresh_round(rnd):
+    """Everything derived from a closed round's answers: skills, image difficulty, scores, applied labels, discoveries."""
     from .game_trust import recompute_skills
 
     from .game_scoring import recompute
 
     from .game_scoring import players_sharing_beetles, sync_late_truth
 
-    if rnd.finished_at is None:
-        rnd.finished_at = timezone.now()
-        rnd.save(update_fields=["finished_at"])
     sync_late_truth([rnd.player_id])
     recompute_skills(rnd.player)
     update_difficulty(rnd.answers.values_list("roi_id", flat=True))
@@ -1110,16 +1308,20 @@ def score_odd(picked_taxon, rank, group):
     return out
 
 
-def score_select(tiles, picks, rank, group):
+def score_select(tiles, picks, rank, group, flagged=()):
     """
     How a Select all grid went. ``tiles`` are the Beetles shown (None for one that is gone), ``picks`` the places
     tapped. Each validated beetle is "right" (a member, tapped), "wrong" (not one, tapped), "missed" (a member left
-    out) or "clear" (not one, left out); one nobody has validated is "vote" when tapped and "" otherwise.
+    out) or "clear" (not one, left out); one nobody has validated is "vote" when tapped and "" otherwise. A photo the
+    player flagged (``flagged``: its place) is "flagged" and counts for nothing, so a flagged member isn't missed.
     Returns {"tiles": [state, ...], "right", "wrong", "missed", "members", "perfect"}.
     """
-    theirs, picked = _norm((group or {}).get(rank)), set(picks or [])
+    theirs, picked, flagged = _norm((group or {}).get(rank)), set(picks or []), set(flagged or [])
     states, count = [], {"right": 0, "wrong": 0, "missed": 0, "clear": 0, "members": 0}
     for i, roi in enumerate(tiles):
+        if i in flagged:
+            states.append("flagged")
+            continue
         mine = rank_values(roi.taxon).get(rank, "") if roi is not None and roi.taxon else ""
         if roi is None or not roi.bbox_is_validated or roi.is_deleted or not mine or not theirs:
             states.append("vote" if i in picked else "")
@@ -1268,22 +1470,30 @@ def showing(roi_ids):
 
 def tap_votes(roi_ids=None, voters=None):
     """
-    [(roi_id, player_id, Vote)] from Select all grids: tapping a beetle nobody has validated says it is in the grid's
-    group, down to the grid's rank (e.g. tribe Xyleborini and genus Xyleborus). Each counts tap_weight() of a name.
+    [(roi_id, player_id, Vote)] from the grid games, for beetles nobody has validated: a Select all tap says the beetle
+    is in the grid's group, and so does being left with the rest in an Odd One Out grid whose odd one the player found
+    (#489), down to the grid's rank (e.g. tribe Xyleborini and genus Xyleborus). Each counts tap_weight() of a name.
+    A photo the player flagged says nothing.
     """
-    answers = GameAnswer.objects.filter(mode="select", skipped=False).exclude(picks=[])
+    answers = GameAnswer.objects.filter(mode__in=["odd", "select"], skipped=False).filter(
+        (Q(mode="select") & ~Q(picks=[])) | (Q(mode="odd") & Q(roi_id=F("roi_b_id"))))
     if roi_ids is not None:
         answers = answers.filter(showing(roi_ids))
     if voters is not None:
         answers = answers.filter(player_id__in=list(voters))
     rows, wanted = [], {str(r) for r in roi_ids} if roi_ids is not None else None
-    for ans in answers.only("player_id", "tiles", "picks", "grid_rank", "grid_group"):
+    for ans in answers.only("player_id", "mode", "roi_id", "tiles", "picks", "flagged", "grid_rank", "grid_group"):
         if ans.grid_rank not in RANKS or not ans.grid_group:
             continue
         labels = {r: ans.grid_group[r] for r in RANKS[: RANKS.index(ans.grid_rank) + 1] if ans.grid_group.get(r)}
-        for i in ans.picks or []:
-            if isinstance(i, int) and 0 <= i < len(ans.tiles or []) and (wanted is None or ans.tiles[i] in wanted):
-                rows.append((ans.tiles[i], ans.player_id, labels))
+        tiles, flagged = ans.tiles or [], set(ans.flagged or [])
+        if ans.mode == "select":
+            places = [i for i in ans.picks or [] if isinstance(i, int) and 0 <= i < len(tiles)]
+        else:   # the odd one found: every other beetle was judged one of the group
+            places = [i for i, t in enumerate(tiles) if str(t) != str(ans.roi_id)]
+        for i in places:
+            if i not in flagged and (wanted is None or tiles[i] in wanted):
+                rows.append((tiles[i], ans.player_id, labels))
     if not rows:
         return []
     open_ids = {str(i) for i in Beetles.objects.filter(id__in={r for r, _, _ in rows}, bbox_is_validated=False)
@@ -1295,7 +1505,8 @@ def tap_votes(roi_ids=None, voters=None):
 def grid_exclusions(answer):
     """
     [(roi_id, rank, value)] a grid answer says beetles nobody has validated are *not* in: in Odd One Out the picked
-    beetle is not of the rest's group; in Select all the beetles left untapped are not of the grid's group.
+    beetle is not of the rest's group; in Select all the beetles left untapped are not of the grid's group (a photo the
+    player flagged says nothing).
     """
     if answer.skipped or answer.mode not in ("odd", "select") or answer.grid_rank not in RANKS or not answer.grid_group:
         return []
@@ -1308,7 +1519,8 @@ def grid_exclusions(answer):
     picked = set(answer.picks or [])
     if not picked:   # tapped nothing: says too little about each beetle
         return []
-    untapped = [t for i, t in enumerate(answer.tiles or []) if i not in picked]
+    left_out = picked | set(answer.flagged or [])
+    untapped = [t for i, t in enumerate(answer.tiles or []) if i not in left_out]
     open_ids = Beetles.objects.filter(id__in=untapped, bbox_is_validated=False, is_deleted=False).values_list("id", flat=True)
     return [(rid, answer.grid_rank, value) for rid in open_ids]
 
@@ -1320,8 +1532,8 @@ def implied_labels(answer):
     Classify: what the player picked. Pair: the ranks the player says the unvalidated
     ROI shares with its validated partner, taken from the partner's taxon. "Different
     subfamily" and "not sure" say nothing positive, so they imply nothing, and nor does a grid answer here: it is about
-    other beetles than its own ``roi`` (Select all taps count through tap_votes, what a grid says a beetle is not
-    through grid_exclusions).
+    other beetles than its own ``roi`` (what a grid says a beetle is counts through tap_votes, what it says a beetle is
+    not through grid_exclusions).
     Species values are "Genus species".
     """
     if answer.skipped or answer.mode in ("odd", "select"):
@@ -1380,7 +1592,8 @@ def consensus(limit=None, roi_ids=None, voters=None):
         labels = implied_labels(ans)
         if labels:
             entry["votes"].append((ans.player_id, labels))
-    # Select all taps: a little lighter than a name (tap_weight), and never enough for an expert's verdict
+    # The grid games (Select all taps, the rest of a solved Odd One Out grid): a little lighter than a name
+    # (tap_weight), and never enough for an expert's verdict
     taps = tap_votes(roi_ids, voters)
     if taps:
         tapped = Beetles.objects.select_related("taxon").in_bulk({r for r, _, _ in taps})

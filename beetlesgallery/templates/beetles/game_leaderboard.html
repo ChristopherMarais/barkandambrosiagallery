@@ -26,11 +26,7 @@
   <p class="text-xs text-gray-500 mb-2" data-testid="resets">Since {% if period == 'week' %}Monday{% elif period == 'month' %}the 1st{% else %}1 January{% endif %}; starts again in {{ resets_at|timeuntil }} ({{ resets_at|date:"D j M" }}). Levels, expertise and badges never reset.</p>
   {% endif %}
   {% include "beetles/includes/game_board_table.html" with rows=rows %}
-  {% if period == 'week' and last_week %}
-  <p class="mt-2 text-sm text-gray-600" data-testid="last-week">Last week:
-    {% for w in last_week %}<span class="whitespace-nowrap">{% if w.position == 1 %}<i class="fi fi-rr-trophy text-gray-700"></i>{% else %}{{ w.position }}.{% endif %} {% if w.anonymous %}{{ w.username }}{% else %}<a href="{% url 'game_profile' w.player_id %}" class="underline decoration-gray-300 hover:decoration-gray-900">{{ w.username }}</a>{% endif %} ({{ w.points|digit_groups }})</span>{% if not forloop.last %} &middot; {% endif %}{% endfor %}
-  </p>
-  {% endif %}
+  {% if period == 'week' and last_week %}{% include "beetles/includes/game_last_week.html" %}{% endif %}
 
   <!-- Specialists -->
   <h2 class="text-lg font-semibold text-gray-900 mt-10 mb-1">Specialists</h2>
@@ -55,7 +51,7 @@
         {% for row in branch_rows %}
         <tr class="border-t border-gray-100 {% if row.player_id == user.id %}bg-gray-100 font-semibold{% endif %}">
           <td class="py-2.5 pl-4 pr-2 text-gray-400">{{ row.position }}</td>
-          <td class="py-2.5 px-2">{% if row.anonymous %}<span class="text-gray-500">{{ row.username }}</span>{% else %}<a href="{% url 'game_profile' row.player_id %}" class="underline decoration-gray-300 hover:decoration-gray-900">{{ row.username }}</a>{% endif %}{% if row.is_expert %} <span class="text-xs font-semibold text-green-700">expert</span>{% endif %}</td>
+          <td class="py-2.5 px-2"><a href="{% url 'game_profile' row.player_id %}" class="underline decoration-gray-300 hover:decoration-gray-900">{{ row.username }}</a>{% if row.is_expert %} <span class="text-xs font-semibold text-green-700">Identification expert</span>{% endif %}</td>
           <td class="py-2.5 px-2 text-right tabular-nums">{{ row.correct|digit_groups }}/{{ row.judged|digit_groups }}</td>
           <td class="py-2.5 pl-2 pr-4 text-right tabular-nums">{% widthratio row.accuracy 1 100 %}%</td>
         </tr>

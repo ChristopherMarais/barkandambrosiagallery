@@ -1,11 +1,11 @@
 from __future__ import annotations
-import io, os, hashlib, zipfile
+import os
+import hashlib
+import zipfile
 from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
-from django.core.files.base import File
 from django.core.files.storage import default_storage
-from django.db.models import Q
 
 from beetlesgallery.beetles_app.models import Beetles
 from beetlesgallery.beetles_app.image_pipeline import write_original_and_thumb96
@@ -26,7 +26,7 @@ class Command(BaseCommand):
         parser.add_argument("--limit", type=int, default=100000, help="Max files to scan from source.")
         parser.add_argument("--dry-run", action="store_true", help="List what would be restored but do not write.")
         parser.add_argument("--only-missing", action="store_true", help="Restore only when original is missing (default).")
-        parser.add_argument("--force-thumbs", action="store_true", help="Rebuild thumb even if original exists.")
+        parser.add_argument("--force-thumbs", action="store_true", help="Not implemented yet; accepted so existing scripts still run.")
 
     def handle(self, *args, **opts):
         zip_path = opts.get("zip_path")
@@ -34,7 +34,6 @@ class Command(BaseCommand):
         dry = opts.get("dry_run", False)
         limit = int(opts.get("limit", 100000))
         only_missing = bool(opts.get("only_missing", True))
-        force_thumbs = bool(opts.get("force_thumbs", False))
 
         # Build a quick lookup of shas that need restoring
         needs = {}

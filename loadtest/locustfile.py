@@ -9,7 +9,6 @@ would be.
 import itertools
 import os
 import random
-import re
 
 from locust import HttpUser, between, events, task
 
@@ -52,9 +51,11 @@ class Player(HttpUser):
             self.load_photos()
 
     def load_photos(self):
+        # what the feed loads: each beetle's small crop, then its large one (the whole photo only when it is opened)
         for image in (self.item or {}).get("images", []):
-            if image.get("url"):
-                self.client.get(image["url"], name="beetle photo")
+            for size in ("small", "large"):
+                if image.get(size):
+                    self.client.get(image[size], name=f"beetle crop ({size})")
 
     def answer_body(self):
         body = {"index": self.item["index"], "elapsed_ms": random.randint(3000, 10000)}

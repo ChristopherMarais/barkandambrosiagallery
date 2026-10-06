@@ -20,12 +20,12 @@
     { el: "find-btn-genus", text: "Long list? Tap the magnifier, or just start typing, to search it." },
     { el: "skip", text: "Not sure? Skip it. It costs very little." },
     { el: "back", text: "Back shows your last beetle and what you answered." },
-    { el: "submit", text: "Next saves your answer and brings the next beetle. Naming a beetle earns the most points, but a sure tribe beats a wrong genus." },
+    { el: "submit", text: "Submit locks in your answer and shows what it earned; Next brings the next beetle. Naming a beetle earns the most points, but a sure tribe beats a wrong genus." },
     { el: "chip", text: "Beetles today against your daily goal. The flame is your streak: days in a row you reached the goal." },
     { el: "level-chip", text: "Your level and points. New levels unlock more of the game." },
     { el: "open-help", text: "How to play: the rules in short, any time." },
     { el: "toolbar", text: "Pick the game and a focus here once you've unlocked them." },
-    { el: "report-chip-0", text: "Bad photo (blurry, not a beetle, a box that misses it)? Tap Report here, at the top right of the photo. You lose no points. A clear photo that just shows too little isn't bad: name it as far as you can." },
+    { el: "report-chip-0", text: "Bad photo (too little of the beetle, blurry, not a beetle, a box that misses it)? Tap Flag here, at the bottom left of the photo. You lose no points. A clear photo of a good part of the beetle from an unusual side isn't bad: name it as far as you can." },
     { el: "exit", text: "No timer: take your time, use keys or references, and leave any time. You'll see how the session went." },
   ];
 
@@ -89,7 +89,7 @@
   $("report-tip-ok").addEventListener("click", closeTip);
   $("report-tip-show").addEventListener("click", () => {
     closeTip();
-    // point at the Report button on the photo itself
+    // point at the Flag on the photo itself
     const chip = $("report-chip-0");
     if (!chip) return;
     chip.classList.add("tour-pulse");
