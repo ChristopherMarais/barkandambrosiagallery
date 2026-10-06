@@ -5,12 +5,14 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from ..areas import AI_RECOMMEND, ANNOTATE, BOXES, VALIDATE, has_area
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import FileResponse
 from django.db import transaction
 from django.utils import timezone
 from django.conf import settings
 from beetlesgallery.beetles_app.models import ImageAsset, Beetles, ImageLock
 from .. import roi_defaults
+from .. import label_history as roi_history
 from .serializers import ImageAssetSerializer, BeetlesSerializer, SpeciesSerializer
 import json
 import zipfile
@@ -672,6 +674,31 @@ class BeetlesViewSet(viewsets.ModelViewSet):
             'results': images,
             'stats': stats_data  # Will be a dictionary on Page 1, and null on subsequent pages
         })
+
+    @action(detail=True, methods=['get'], url_path='label-history')
+    def label_history(self, request, pk=None):
+        """
+        What this ROI has been called over time and by whom, newest first (#504; label_history.py).
+        GET /api/v1/beetles/{uuid}/label-history/ -> {"events": [...], "total": n}  (at most roi_history.LIMIT)
+        """
+        beetle = self.get_object()
+        events, total = roi_history.events_for([beetle.id])[beetle.id]
+        return Response({'events': [roi_history.as_json(e) for e in events], 'total': total})
+
+    @action(detail=False, methods=['get'], url_path='label-history-counts')
+    def label_history_counts(self, request):
+        """
+        How many history entries each ROI on an image has, for the closed "Label history (N)" sections.
+        GET /api/v1/beetles/label-history-counts/?image_asset={uuid} -> {"counts": {roi_id: n}}
+        """
+        if not request.query_params.get('image_asset'):
+            return Response({'error': 'image_asset is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            ids = list(self.get_queryset().values_list('id', flat=True))
+        except (ValueError, DjangoValidationError):
+            return Response({'error': 'image_asset is not a valid id.'}, status=status.HTTP_400_BAD_REQUEST)
+        counts = roi_history.events_for(ids)
+        return Response({'counts': {str(rid): total for rid, (_, total) in counts.items()}})
 
 
 class SpeciesViewSet(viewsets.ReadOnlyModelViewSet):

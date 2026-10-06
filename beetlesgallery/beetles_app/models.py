@@ -13,6 +13,18 @@ from treebeard.mp_tree import MP_Node
 # -----------------------------
 # Unified Beetle record
 # -----------------------------
+# Change reasons on the ROI history records written when a whole image is (un)validated (label_history.py)
+IMAGE_VALIDATED = "Validated with the whole image"
+IMAGE_UNVALIDATED = "Unvalidated with the whole image"
+
+
+def record_roi_history(roi_ids, user, reason):
+    """Bulk updates skip save() and so leave no history: write one record per changed ROI, so its history shows it."""
+    if roi_ids:
+        Beetles.history.bulk_history_create(list(Beetles.objects.filter(id__in=roi_ids)), update=True,
+                                            default_user=user, default_change_reason=reason)
+
+
 class ImageAsset(models.Model):
     """
     Represents the physical image file and its technical/provenance metadata.
@@ -104,7 +116,9 @@ class ImageAsset(models.Model):
         if user:
             roi_updates["last_updated_by"] = user
             self.last_updated_by = user
+        changed = list(self.specimens.filter(is_deleted=False, bbox_is_validated=True).values_list("id", flat=True))
         self.specimens.filter(is_deleted=False).update(**roi_updates)
+        record_roi_history(changed, user, IMAGE_UNVALIDATED)
         self.is_validated = False
         self.save(update_fields=['is_validated', 'last_updated_by', 'updated_at'])
 
@@ -120,9 +134,11 @@ class ImageAsset(models.Model):
             roi_updates["bbox_validated_by"] = user
             roi_updates["last_updated_by"] = user
             self.last_updated_by = user
+        changed = list(boxed_rois.filter(bbox_is_validated=False).values_list("id", flat=True))
         boxed_rois.filter(bbox_is_validated=False).update(**roi_updates)
         from beetlesgallery.beetles_app import identification
         identification.vouch(list(boxed_rois), user)   # validated names are Expert IDs at least
+        record_roi_history(changed, user, IMAGE_VALIDATED)
         self.is_validated = boxed_rois.exists()
         self.save(update_fields=['is_validated', 'last_updated_by', 'updated_at'])
         return self.is_validated

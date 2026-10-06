@@ -13,6 +13,9 @@ from django.db.models import OuterRef, Subquery
 
 from .models import Beetles, LabelReview
 
+# The beetle's history record of a revert says so (label_history.py lists it)
+REVERT_REASON = "Reverted a label applied from the game"
+
 
 def _latest_decision():
     return Subquery(LabelReview.objects.filter(roi=OuterRef("pk")).order_by("-reviewed_at").values("decision")[:1])
@@ -61,7 +64,7 @@ def revert(roi, user):
     roi.label_source = before["label_source"] or ""
     roi.label_source_detail = before["label_source_detail"] or ""
     roi.last_updated_by = user
-    roi._change_reason = "Reverted a label applied from the game"
+    roi._change_reason = REVERT_REASON
     roi._name_by_hand = True   # a curator puts the earlier name back, whatever its tier (identification.py)
     roi.save()
     LabelReview.objects.create(
