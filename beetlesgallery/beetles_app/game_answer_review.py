@@ -296,6 +296,9 @@ def _explain(mode, tiles, cells, chosen, rank, target):
             first = " The odd ones: " if len(odd_ones) > 1 else " The odd one: "   # several since #540
             lead += [first if n == 0 else ", ", f"{i + 1} (", _part(_name_at(tiles[i], rank), rank), ")"]
         lead += ["." if odd_ones else ""]
+        if len(odd_ones) > 1:   # each is one of several: "an odd one"
+            for line in lines:
+                line["parts"] = [", an odd one. " if p == ", the odd one. " else p for p in line["parts"]]
     return {"lead": lead, "lines": lines}
 
 

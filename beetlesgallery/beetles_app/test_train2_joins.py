@@ -68,16 +68,18 @@ class SeveralOddReviewTests(SeveralOddCase):
         self.assertEqual([line["tile"] for line in grid["lines"]], list(range(1, 10)))
         by_tile = {line["tile"]: words(line["parts"]) for line in grid["lines"]}
         self.assertIn("correct", by_tile[self.odd_places[0] + 1])
-        self.assertIn("Not picked — missed", by_tile[self.odd_places[1] + 1])
+        self.assertIn("an odd one. Not picked — missed", by_tile[self.odd_places[1] + 1])
         self.assertIn("not correct", by_tile[self.rest[0] + 1])
         self.assertEqual((grid["found"], grid["wrong"], grid["count"]), (1, 1, 2))
         self.assertEqual({grid["tiles"][p]["state"] for p in self.odd_places}, {"right", "odd"})
 
     def test_one_odd_one_still_says_the_odd_one(self):
         self.start(odds=1)
-        lead = words(self.answer(self.odd_places)["review"]["grid"]["lead"])
+        grid = self.answer(self.odd_places)["review"]["grid"]
+        lead = words(grid["lead"])
         self.assertIn("The odd one: ", lead)
         self.assertNotIn("The odd ones", lead)
+        self.assertNotIn("an odd one", " ".join(words(line["parts"]) for line in grid["lines"]))
 
     def test_a_grid_whose_second_odd_one_was_shown_before_is_seen_before(self):
         self.start()
