@@ -5,9 +5,9 @@ Mistakes come back. A validated beetle the player got wrong, in any game, comes 
 they missed it in) until they get it right, at most GAME_RETRY_MAX times and GAME_RETRY_PER_BATCH per batch. It comes
 back first in an easier game than the one it was missed in (Similarity < Odd One Out < Select all < Identification,
 among the games the player has), and once they get it right there, in the game it was missed in. A mistake in the
-easiest game they have comes back in that game. Retries are the one deliberate exception to "a beetle whose answer you
-have seen is never scored again" (game.revealed_ids): they earn GAME_POINTS_RETRY_FACTOR of the points and stay out
-of ratings, skills and badges (GameAnswer.is_retry).
+easiest game they have comes back in that game. Retries earn GAME_POINTS_RETRY_FACTOR of the points and stay out
+of ratings, skills and badges (GameAnswer.is_retry). Any other beetle whose names a player has seen comes back too,
+after a while (game.held_back_ids), at full points but likewise out of ratings and skills (GameAnswer.seen_before).
 
 Hard beetles go through the easy games first. An unvalidated beetle is hard when players disagree on it, nobody could
 take it to species, IBBI-AI is unsure of it, or nobody has answered it and IBBI-AI has no confident call (hard_q).
@@ -302,7 +302,8 @@ def retry_items(player, mode, room, avoid=()):
     ready = due(player)
     if not ready:
         return []
-    ctx = {"target": game.target_difficulty(player), "revealed": set(game.revealed_ids(player)),
+    # the partners and the rest of a grid: never a beetle whose names were shown a moment ago (game.held_back_ids)
+    ctx = {"target": game.target_difficulty(player), "revealed": game.held_back_ids(player),
            "avoid": {uuid.UUID(str(a)) for a in avoid}, "deepest": rank_for(player)["rank"]}
     beetles = Beetles.objects.select_related("taxon").in_bulk(list(ready))
     items = []

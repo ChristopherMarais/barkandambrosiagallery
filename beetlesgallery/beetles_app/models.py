@@ -1430,6 +1430,12 @@ class GameAnswer(models.Model):
         help_text="A validated beetle shown again so the player can learn it. Earns points, but is left out of "
                   "accuracy and expertise, which only count the first time a beetle is seen.",
     )
+    seen_before = models.BooleanField(
+        default=False,
+        help_text="The player had been shown this beetle's names before (the review after an answer names every "
+                  "beetle, #541), so it came back after a wait. Earns full points, but is left out of accuracy and "
+                  "expertise, which count only beetles named unseen.",
+    )
     validated_later = models.BooleanField(
         default=False, db_index=True,
         help_text="The beetle was not validated when answered but has been since. Its correct_* and ref_* fields are "

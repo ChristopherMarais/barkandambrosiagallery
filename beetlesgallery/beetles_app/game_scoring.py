@@ -470,8 +470,8 @@ def ratings():
     tallies = defaultdict(lambda: [0, 0])
     first = set()
     rows = (
-        GameAnswer.objects.filter(Q(is_check=True) | Q(validated_later=True), is_retry=False, skipped=False,
-                                  score_hold=False)
+        GameAnswer.objects.filter(Q(is_check=True) | Q(validated_later=True), is_retry=False, seen_before=False,
+                                  skipped=False, score_hold=False)
         .order_by("answered_at")
         .values_list("player_id", "mode", "roi_id", "roi_b_id", *[f"correct_{r}" for r in RANKS])
     )

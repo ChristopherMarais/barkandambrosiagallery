@@ -291,7 +291,7 @@ class PageTests(GridCase):
         self.assertIn("else if (oddPicks.size < oddWant) oddPicks.add(i);", html)
         self.assertIn('MODE === "odd" ? oddPicks.size === oddWant', html)
         self.assertIn("picks: Array.from(oddPicks).sort((a, b) => a - b)", html)
-        self.assertIn('"The odd ones: "', html)
+        self.assertIn('several ? "the odd ones" : "the odd one"', html)   # the card's lead says "The odd ones" (#541)
 
     def test_review_card_keeps_its_shape_for_one_odd_one(self):
         """The card's per-tile fields stay, and the new lists are added (#541 reworks how the names show)."""
