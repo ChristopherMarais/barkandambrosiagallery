@@ -20,6 +20,10 @@
     </div>
   </div>
 
+  {% if only %}
+  <p class="mb-4 text-sm text-gray-600" data-testid="only-game">Only your {{ only_label }} answers. <a href="{% url 'game_round_review' round.id %}" class="underline hover:text-gray-900">Show all</a></p>
+  {% endif %}
+
   <div class="p-4 mb-4 bg-gray-50 border border-gray-200 rounded-lg">
     {% if feedback.scored %}
     <p class="text-gray-900"><span class="text-2xl font-semibold tabular-nums">{{ feedback.right|digit_groups }}</span> of {{ feedback.scored|digit_groups }} verified beetles fully correct.</p>

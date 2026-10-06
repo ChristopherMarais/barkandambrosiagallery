@@ -185,20 +185,26 @@ HISTORY_PER_PAGE = 20
 def game_history(request):
     """
     A player's history: every session (batch) they played, newest first, with what it earned and a link to its
-    answers; and every beetle a curator checked after they answered it.
+    answers; and every beetle a curator checked after they answered it. Sessions can be narrowed to one game and to
+    today, the streak or one day (#574): the game home's cards open them that way.
     """
     from django.core.paginator import Paginator
     from django.db.models import Count, Q, Sum
 
+    from . import game_history_filters as filters
+
     tab = "checked" if request.GET.get("tab") == "checked" else "sessions"
+    game_key = filters.game(request.GET.get("game"))
+    window = filters.day_window(request.user, request.GET.get("day"))
+    kept = filters.answers_q(game_key, window, prefix="answers__")   # what a session shows of its answers
+    in_window = filters.answers_q("", window, prefix="answers__")
+    scored = filters.answers_q(game_key, window, prefix="answers__", labelled=False)   # skips carry points too
     rounds = (
         GameRound.objects.filter(player=request.user, finished_at__isnull=False)
-        .annotate(labelled=Count("answers", filter=Q(answers__skipped=False), distinct=True),
-                  identified=Count("answers", filter=Q(answers__skipped=False, answers__mode="classify"), distinct=True),
-                  compared=Count("answers", filter=Q(answers__skipped=False, answers__mode="pair"), distinct=True),
-                  spotted=Count("answers", filter=Q(answers__skipped=False, answers__mode="odd"), distinct=True),
-                  selected=Count("answers", filter=Q(answers__skipped=False, answers__mode="select"), distinct=True),
-                  points=Sum("answers__points__points"))
+        .annotate(labelled=Count("answers", filter=kept, distinct=True),
+                  **{f"n_{g}": Count("answers", filter=in_window & Q(answers__mode=g), distinct=True)
+                     for g in game_levels.GAMES},
+                  points=Sum("answers__points__points", filter=scored))
         .filter(labelled__gt=0).order_by("-finished_at")
     )
     checked = game_checked.items(request.user, limit=500)
@@ -208,13 +214,26 @@ def game_history(request):
         RetroCredit.objects.filter(player=request.user, seen_at__isnull=True).update(seen_at=timezone.now())
     sessions = Paginator(rounds, HISTORY_PER_PAGE).get_page(request.GET.get("page") if tab == "sessions" else 1)
     for r in sessions:   # which games a session was: one by name, or how many
-        played = [name for name, n in (("Naming", r.identified), ("Similarity", r.compared),
-                                       ("Odd One Out", r.spotted), ("Find Them All", r.selected)) if n]
-        r.games_label = played[0] if len(played) == 1 else f"{len(played)} games"
+        played = [game_levels.GAME_NAMES[g] for g in ("classify", "pair", "odd", "select") if getattr(r, f"n_{g}")]
+        r.games_label = game_levels.GAME_NAMES[game_key] if game_key else (
+            played[0] if len(played) == 1 else f"{len(played)} games")
     checked_page = Paginator(checked, HISTORY_PER_PAGE).get_page(request.GET.get("page") if tab == "checked" else 1)
+    summary = None
+    if game_key or window:   # the filtered beetles and points, and the game's own accuracy and points
+        summary = GameAnswer.objects.filter(filters.answers_q(game_key, window, labelled=False), player=request.user,
+                                            round__finished_at__isnull=False).aggregate(
+            beetles=Count("id", filter=Q(skipped=False)), points=Sum("points__points"))
+        if game_key:
+            summary["game"] = game_board.mode_stats([request.user.id])[request.user.id][game_key]
+    game_chips, day_chips = filters.choices(game_key, window)
+    heading = " · ".join(x for x in (window["heading"] if window else "",
+                                           game_levels.GAME_NAMES.get(game_key, "")) if x)
     return render(request, "beetles/game_history.html", {
         "tab": tab, "sessions": sessions, "checked": checked_page, "checked_total": len(checked),
         "new_gain": round(new_gain, 1), "new_checked": sum(1 for c in checked if c["new"]),
+        "game_key": game_key, "game_label": game_levels.GAME_NAMES.get(game_key, ""), "window": window,
+        "filters": filters.query(game_key, window["key"] if window else ""),
+        "game_chips": game_chips, "day_chips": day_chips, "heading": heading, "summary": summary,
     })
 
 
@@ -410,9 +429,11 @@ def game_round_review(request, round_id):
         raise Http404("No such round")
     if rnd.finished_at is None:
         return redirect("game_play", mode=rnd.mode)
-    feedback = game_feedback.round_feedback(rnd)
+    # opened from History filtered to one game (#574): a mixed session shows that game's answers only
+    only = request.GET.get("game") if request.GET.get("game") in game_levels.GAMES else ""
+    feedback = game_feedback.round_feedback(rnd, mode=only)
     return render(request, "beetles/game_round_review.html", {
-        "round": rnd,
+        "round": rnd, "only": only, "only_label": game_levels.GAME_NAMES.get(only, ""),
         "feedback": feedback,
         "feedback_json": feedback["items"],
         "is_self": rnd.player == request.user,

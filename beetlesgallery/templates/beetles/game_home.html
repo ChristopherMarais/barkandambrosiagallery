@@ -32,17 +32,18 @@
     </div>
   </a>
 
+  <!-- Each opens History for those days (#574) -->
   <div class="grid grid-cols-2 gap-3 mb-5">
-    <div class="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex items-center gap-2 text-sm">
+    <a href="{% url 'game_history' %}?day=streak" class="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex items-center gap-2 text-sm hover:border-gray-300 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900" data-testid="streak-card">
       {% include "beetles/includes/game_streak.html" with days=rewards.streak alive=rewards.goal_met %}
-    </div>
-    <div class="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex items-center gap-2" title="Your daily goal adapts to how much you play, like a step goal: it rises when you beat it and eases when you don't (never below {{ goal_floor }})." data-testid="daily-goal">
+    </a>
+    <a href="{% url 'game_history' %}?day=today" class="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex items-center gap-2 hover:border-gray-300 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900" title="Your daily goal adapts to how much you play, like a step goal: it rises when you beat it and eases when you don't (never below {{ goal_floor }})." data-testid="daily-goal">
       <i class="fi fi-rr-bullseye-arrow {% if rewards.goal_met %}text-green-600{% else %}text-gray-400{% endif %}"></i>
       <span class="text-sm font-semibold text-gray-900">{{ rewards.today }}/{{ rewards.goal }} today</span>
-    </div>
+    </a>
   </div>
 
-  <div class="mb-3">{% include "beetles/includes/game_split.html" %}</div>
+  <div class="mb-3">{% include "beetles/includes/game_split.html" with link=True %}</div>
   <div class="mb-5">{% include "beetles/includes/game_accuracy.html" %}</div>
 
   {% if checked %}
