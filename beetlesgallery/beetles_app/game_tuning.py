@@ -136,7 +136,12 @@ GROUPS = [
         _t("GAME_REVEAL_COOLDOWN_HOURS", "Wait before a beetle whose names were shown comes back (hours)", 2,
            "After each answer the review shows every beetle's names. Such a beetle is scored for that player again "
            "only in a later sitting and after at least this many hours, in another game first when it can be. It "
-           "earns full points but doesn't count towards accuracy or expertise.", 0, 720, 0.5),
+           "earns full points but doesn't count towards accuracy or expertise until the recall gap below has passed.",
+           0, 720, 0.5),
+        _t("GAME_EXPERTISE_RECALL_DAYS", "Gap after which a shown beetle counts again (days)", 30,
+           "A beetle whose names a player was shown counts towards their accuracy, expertise and rating again "
+           "once it hasn't been shown to them for this many days: naming it then is recall, not short-term "
+           "memory. Points are the same either way.", 0, 365, 1),
         _t("GAME_HARD_FROM", "A beetle nobody has validated is hard from", 0.5,
            "Hard when players disagree on its genus this much, or IBBI-AI is this unsure (0 to 1); also when nobody "
            "could take it to species, or nobody has answered it and IBBI-AI has no confident call. Similarity shows "
