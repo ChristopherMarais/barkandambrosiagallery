@@ -179,7 +179,7 @@ BADGES = OrderedDict([
     ("discovery", ("New species finder", "Name a species the gallery had never validated, confirmed later by a curator", "fi-rr-sparkles", False)),
     # round 4 (#608): a few more, some of them strange
     ("fullhouse", ("Full house", "A perfect 25-beetle Find Them All grid", "fi-rr-grid", False)),
-    ("imposters", ("Imposter hunter", "Find every odd one in 50 Odd One Out grids", "fi-rr-incognito", False)),
+    ("imposters", ("Odd one hunter", "Find every odd one in 50 Odd One Out grids", "fi-rr-incognito", False)),
     ("splitter", ("Splitter", "Become a Distinction expert in a taxon", "fi-rr-split", False)),
     ("lumpsplit", ("Lumper and splitter", "Naming and Distinction expert in the same taxon", "fi-rr-arrows-repeat", False)),
     ("fungus", ("Fungus farmer", "Name 25 Xyleborini species correctly", "fi-rr-mushroom", False)),
@@ -309,7 +309,7 @@ def _harder_badges(player, answers, done, total, best, per_day):
 
 
 def _skill_badges(player, first, right_species):
-    """Full house, Imposter hunter, Beat the machine and Lone wolf (#608), from scored answers."""
+    """Full house, Odd one hunter, Beat the machine and Lone wolf (#608), from scored answers."""
     from django.db.models import Exists, OuterRef, Subquery
     from django.db.models.functions import Coalesce
 
