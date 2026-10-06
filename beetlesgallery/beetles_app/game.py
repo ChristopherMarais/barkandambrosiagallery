@@ -171,15 +171,18 @@ def reveals(player):
     return out
 
 
-def was_shown(player, roi_ids):
+def was_shown(player, roi_ids, since=None):
     """
     Whether this player has been shown the names of any of these ROIs, or of another photo of the same specimen
-    (reveals, asked about a few beetles: a handful of EXISTS queries instead of all the player's answers).
+    (reveals, asked about a few beetles: a handful of EXISTS queries instead of all the player's answers). With
+    ``since``, only reveals from then on count.
     """
     ids = same_specimen(roi_ids)
     if not ids:
         return False
     answers = GameAnswer.objects.filter(player=player)
+    if since is not None:
+        answers = answers.filter(answered_at__gte=since)
     in_grid = Q()
     for i in ids:
         in_grid |= Q(tiles__contains=[str(i)])
@@ -187,6 +190,16 @@ def was_shown(player, roi_ids):
             or answers.filter(mode__in=["pair", "odd"], roi_b_id__in=ids).exists()
             or answers.filter(mode__in=["odd", "select"]).filter(Q(skipped=False) | Q(grid_rank="species"))
             .filter(in_grid).exists())
+
+
+def seen_recently(player, roi_ids, now=None):
+    """
+    Whether naming these ROIs now would only show memory, not expertise (GameAnswer.seen_before): the player was
+    shown their names less than GAME_EXPERTISE_RECALL_DAYS ago (#555). Naming a beetle after a longer gap is real
+    recall, so it counts again: players can become experts in a taxon whose checked photos they have all seen.
+    """
+    days = game_setting("GAME_EXPERTISE_RECALL_DAYS", 30)
+    return was_shown(player, roi_ids, since=(now or timezone.now()) - timedelta(days=days))
 
 
 def same_specimen(roi_ids):
@@ -205,8 +218,9 @@ def same_specimen(roi_ids):
 
 def revealed_ids(player):
     """
-    Validated ROIs whose names this player has been shown (reveals). An answer on one of them counts for points but not
-    for accuracy or expertise (GameAnswer.seen_before), and it comes back only after a while (held_back_ids).
+    Validated ROIs whose names this player has been shown (reveals). An answer on one of them counts for points but,
+    within GAME_EXPERTISE_RECALL_DAYS, not for accuracy or expertise (seen_recently), and it comes back only after a
+    while (held_back_ids).
     """
     return set(reveals(player))
 
