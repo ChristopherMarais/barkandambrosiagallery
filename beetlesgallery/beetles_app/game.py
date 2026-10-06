@@ -5,10 +5,10 @@ Four modes:
   classify  one region of interest (ROI) is shown; the player names its subfamily,
             tribe, genus and species, stopping at any rank.
   pair      two ROIs are shown; the player says the deepest rank they share.
-  odd       4, 9 or 16 ROIs are shown; all but one, two or three share a name at some rank,
+  odd       4, 9, 16 or 25 ROIs are shown; all but one to four share a name at some rank,
             and the player picks the ones that don't belong (Odd One Out).
-  select    4, 9 or 16 ROIs are shown; the player taps every one of a named group (Select all).
-            Both grid games grow with the player, from 4 to 16 and from subfamily to species
+  select    4, 9, 16 or 25 ROIs are shown; the player taps every one of a named group (Select all).
+            Both grid games grow with the player, from 4 to 25 and from subfamily to species
             (game_grid_ladder).
 
 Some items in every round are "checks": items with a validated answer
@@ -655,9 +655,9 @@ def build_pair_items(player, size, fresh_only=False):
 # ---------------------------------------------------------------------------
 # The grid games: Odd One Out (#369) and Select all (#370)
 # ---------------------------------------------------------------------------
-# Every grid is built at the player's step on the grid ladder (game_grid_ladder, #489): 4, 9 or 16 beetles, at a rank
+# Every grid is built at the player's step on the grid ladder (game_grid_ladder, #489): 4, 9, 16 or 25 beetles, at a rank
 # from subfamily down to species. When the beetles for that are short it falls back to an easier grid, never to none.
-GRID_SIZES = (4, 9, 16)
+GRID_SIZES = (4, 9, 16, 25)   # 25 (5×5) is the most a phone shows comfortably
 GRID_ANCHORS = 8   # beetles tried per rank as the heart of a grid: enough for a sparse tree, few enough to stay quick
 
 
@@ -678,8 +678,8 @@ def odd_open_count(level, tiles, odds=1):
 # Select all by the grid's size: the fewest and most validated members (about a quarter to under half of the grid),
 # and its AI beetles at level 1 and at the top level. Validated non-members are never fewer than the members, so
 # tapping everything loses while a wrong tap costs more than a member earns (k above 1: GAME_POINTS_CONFIDENCE over 50%).
-SELECT_MEMBERS = {4: (1, 2), 9: (3, 4), 16: (5, 7)}
-SELECT_AI = {4: (1, 1), 9: (1, 3), 16: (2, 4)}
+SELECT_MEMBERS = {4: (1, 2), 9: (3, 4), 16: (5, 7), 25: (7, 10)}
+SELECT_AI = {4: (1, 1), 9: (1, 3), 16: (2, 4), 25: (3, 6)}
 
 
 def select_open_count(level, size):
@@ -1014,7 +1014,7 @@ def build_grid_items(game_key, player, n, avoid=()):
 
 def build_odd_items(player, size, fresh_only=False, avoid=()):
     """
-    Odd One Out: each item shows 4, 9 or 16 beetles of which all but one, two or three share a name at one rank, and
+    Odd One Out: each item shows 4, 9, 16 or 25 beetles of which all but one to four share a name at one rank, and
     the player picks the ones that don't belong. The size, the number of odd ones and the rank follow the player's step
     on the grid ladder (game_grid_ladder): at each rank the grids grow first, then hide more odd ones (#540), then go a
     rank deeper, from subfamily to species; on harder rounds the odd ones are near relatives (the same tribe, say, but
@@ -1030,7 +1030,7 @@ def build_odd_items(player, size, fresh_only=False, avoid=()):
 
 def build_select_items(player, size, fresh_only=False, avoid=()):
     """
-    Select all: 4, 9 or 16 beetles and a group to find ("Tap every Platypodinae"), the size and the rank following the
+    Select all: 4, 9, 16 or 25 beetles and a group to find ("Tap every Platypodinae"), the size and the rank following the
     player's step on the grid ladder like Odd One Out. About a quarter to under half are validated members
     (SELECT_MEMBERS), validated beetles of other groups at least as many (near relatives on harder rounds), plus beetles
     nobody has validated that IBBI-AI puts in the group (SELECT_AI): a sure and an unsure one when its predictions
