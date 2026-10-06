@@ -1516,9 +1516,6 @@ class GamePreference(models.Model):
         help_text="Unlocks the player keeps from before the levels changed (game_levels.PERKS keys), e.g. "
                   "Identification for players who had it when it moved from level 2 to level 4.",
     )
-    # Leaderboards (#394): appear as "A player" to others; or don't see the boards at all (personal progress only)
-    hide_name = models.BooleanField(default=False)
-    hide_boards = models.BooleanField(default=False)
     proposals_notice_seen_at = models.DateTimeField(
         null=True, blank=True, help_text="When the player saw 'Your labels now go to the curators' (shown once)."
     )

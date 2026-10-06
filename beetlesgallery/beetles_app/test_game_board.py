@@ -71,6 +71,7 @@ class BoardTests(ScoringCase):
         page = self.client.get(reverse("game_leaderboard"), {"sort": "viewed", "q": "a", "period": "all"}).content.decode()
         self.assertIn(reverse("game_profile", args=[self.ann.id]), page)
         self.assertNotIn(">bob<", page)
+        self.answer(self.bob, self.roi(self.t_affinis))   # the home board is this week's only (#497)
         home = self.client.get(reverse("game_home")).content.decode()
         self.assertIn(reverse("game_profile", args=[self.bob.id]), home)
         self.assertIn(reverse("game_leaderboard"), home)
