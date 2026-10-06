@@ -15,7 +15,7 @@ class ReviewPaginationTests(GameCase):
         self.client.force_login(self.superuser)
 
     def page(self, query=""):
-        html = self.client.get(reverse("game_review") + query).content.decode()
+        html = self.client.get(reverse("game_settings") + query).content.decode()
         return html.replace('<span class="digit-group">', "").replace("</span>", "")   # numbers as plain text
 
     def test_open_reports_come_25_at_a_time(self):
@@ -41,7 +41,7 @@ class ReviewPaginationTests(GameCase):
         self.assertIn("trusted=1", page[page.index('data-testid="pager-labels"'):])
 
     def test_a_bad_page_number_shows_the_first_or_last_page(self):
-        self.assertEqual(self.client.get(reverse("game_review") + "?players_page=zzz").status_code, 200)
+        self.assertEqual(self.client.get(reverse("game_settings") + "?players_page=zzz").status_code, 200)
         self.assertEqual(game_views.REVIEW_PER_PAGE, 25)
 
     def test_every_column_sorts_both_ways_and_starts_from_page_one(self):
@@ -62,4 +62,4 @@ class ReviewPaginationTests(GameCase):
         self.assertIn('data-sort="labelled"', page)
         self.assertIn('data-sort="id_species"', page)
         self.assertIn('data-sort="species"', page)
-        self.assertEqual(self.client.get(reverse("game_review") + "?players_sort=nonsense").status_code, 200)
+        self.assertEqual(self.client.get(reverse("game_settings") + "?players_sort=nonsense").status_code, 200)

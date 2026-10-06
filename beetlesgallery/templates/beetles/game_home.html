@@ -120,11 +120,8 @@
   {% endif %}
 
   {% if user.is_superuser %}
-  <a href="{% url 'game_review' %}" class="flex items-center gap-2 mt-4 text-sm text-gray-500 hover:text-gray-900">
-    <i class="fi fi-rr-chart-histogram"></i> Superuser: review game labels
-  </a>
-  <a href="{% url 'game_staff_unlocks' %}" class="flex items-center gap-2 mt-2 text-sm text-gray-500 hover:text-gray-900">
-    <i class="fi fi-rr-key"></i> Superuser: manage players' unlocks
+  <a href="{% url 'game_settings' %}" class="flex items-center gap-2 mt-4 text-sm text-gray-500 hover:text-gray-900" data-testid="game-settings-link">
+    <i class="fi fi-rr-settings"></i> Superuser: Game settings
   </a>
   {% endif %}
 </div>
