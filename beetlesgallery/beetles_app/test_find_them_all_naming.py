@@ -4,6 +4,8 @@ its members, so a member tapped is a right name for its taxon at the grid's rank
 wrong one. A grid counts once per taxon it showed, each beetle once per rank, so big grids can't be farmed. And the
 leaderboard shows every game's accuracy.
 """
+import html
+
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils.html import strip_tags
@@ -93,18 +95,18 @@ class NamingTests(FindThemAllNamingCase):
 
 
 class PagesTests(FindThemAllNamingCase):
-    def test_the_expertise_legend_lists_find_them_all_under_identification(self):
-        page = " ".join(strip_tags(self.client.get(reverse("game_expertise")).content.decode()).split())
+    def test_the_expertise_page_lists_find_them_all_under_naming(self):
+        page = " ".join(html.unescape(strip_tags(self.client.get(reverse("game_expertise")).content.decode())).split())
         # the "What it takes" box (#539) says which games count where
-        self.assertIn("Identification expert: names a taxon’s beetles in Identification and Find Them All.", page)
-        self.assertIn("Distinction expert: tells them apart in Similarity and Imposter Picker.", page)
+        self.assertIn("Naming expert: names a taxon’s beetles in Naming and Find Them All.", page)
+        self.assertIn("Distinction expert: tells them apart in Similarity and Odd One Out.", page)
 
     def test_how_it_works_and_scoring_say_the_same(self):
         how = " ".join(strip_tags(self.client.get(reverse("game_how")).content.decode()).split())
-        self.assertIn("in Similarity and Imposter Picker, makes you a Distinction expert", how.replace("’", "'"))
+        self.assertIn("in Similarity and Odd One Out, makes you a Distinction expert", how.replace("’", "'"))
         self.client.force_login(self.superuser)   # the scoring page is for superusers
         scoring = " ".join(strip_tags(self.client.get(reverse("game_scoring")).content.decode()).split())
-        self.assertIn("Naming counts Identification answers and Find Them All grids", scoring)
+        self.assertIn("Naming counts Naming answers and Find Them All grids", scoring)
 
 
 class LeaderboardTests(FindThemAllNamingCase):
@@ -137,8 +139,8 @@ class LeaderboardTests(FindThemAllNamingCase):
         for testid in ("id-accuracy", "sim-accuracy", "odd-accuracy", "select-accuracy"):
             self.assertIn(f'data-testid="{testid}"', page)
         self.assertIn('value="select" selected', page)
-        self.assertIn("Imposter Picker accuracy", page)
-        for short in (">ID<", ">Sim.<", ">Imp.<", ">Find<"):   # short headings on phones
+        self.assertIn("Odd One Out accuracy", page)
+        for short in (">Name<", ">Sim.<", ">Odd<", ">Find<"):   # short headings on phones (names from #538)
             self.assertIn(short, page)
 
     def test_find_them_all_accuracy_on_the_board_is_perfect_grids(self):
@@ -151,5 +153,5 @@ class LeaderboardTests(FindThemAllNamingCase):
     def test_the_profile_shows_every_game(self):
         page = self.client.get(reverse("game_profile", args=[self.ann.id])).content.decode()
         self.assertIn('data-testid="game-split"', page)
-        for name in ("Identification", "Similarity", "Imposter Picker", "Find Them All"):
+        for name in ("Naming", "Similarity", "Odd One Out", "Find Them All"):
             self.assertIn(name, page)

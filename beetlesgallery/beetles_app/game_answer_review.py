@@ -289,7 +289,7 @@ def _explain(mode, tiles, cells, chosen, rank, target):
         lines.append({"tile": i + 1, "parts": parts})
     name = _part(target, rank)
     if mode == "select":
-        lead = ["Find every ", name, "."]
+        lead = ["Select every ", name, "."]   # as the question put it (#538)
     else:
         lead = ["Group: ", name, "."]
         for n, i in enumerate(odd_ones):

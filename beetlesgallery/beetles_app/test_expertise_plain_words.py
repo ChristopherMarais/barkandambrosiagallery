@@ -78,8 +78,8 @@ class RuleBoxTests(PlainWordsCase):
         box = self.section(self.page(), "expertise-rule")
         self.assertIn("What it takes", box)
         # Find Them All counts as naming since #543
-        self.assertIn("Identification expert: names a taxon’s beetles in Identification and Find Them All.", box)
-        self.assertIn("Distinction expert: tells them apart in Similarity and Imposter Picker.", box)
+        self.assertIn("Naming expert: names a taxon’s beetles in Naming and Find Them All.", box)
+        self.assertIn("Distinction expert: tells them apart in Similarity and Odd One Out.", box)
         self.assertIn("Either one, in a taxon: at least 90% correct over 10 or more checked answers, covering 75% of "
                       "its members (a tribe’s genera, a genus’s species) with at least 5 answers each.", box)
 

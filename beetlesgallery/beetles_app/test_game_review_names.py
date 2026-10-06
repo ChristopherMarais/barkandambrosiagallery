@@ -134,7 +134,7 @@ class FindThemAllLinesTests(ReviewCase):
         ferr = self.roi(self.t_ferr)   # another Xyleborus
         review = self.grid([*self.members, *self.others, ferr, tap], [0, 2, 4])
         lines = [text(line) for line in review["grid"]["lines"]]
-        self.assertEqual(text(review["grid"]["lead"]), "Find every Xyleborus.")
+        self.assertEqual(text(review["grid"]["lead"]), "Select every Xyleborus.")
         self.assertRegex(lines[0], r"^Xyleborus: belongs to Xyleborus\. You selected it — correct · \+[\d.]+ points$")
         self.assertEqual(lines[1], "Xyleborus: belongs to Xyleborus. You left it out — missed")
         self.assertRegex(lines[2],

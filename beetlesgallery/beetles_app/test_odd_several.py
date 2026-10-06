@@ -304,5 +304,7 @@ class PageTests(GridCase):
         card = data["review"]["grid"]
         self.assertEqual(card["odd"], card["pick"])
         self.assertEqual((card["odds"], card["picks"], card["count"]), ([card["odd"]], [card["pick"]], 1))
-        self.assertEqual(set(card["tiles"][card["pick"]]), {"validated", "name", "state", "points"})
+        tile = card["tiles"][card["pick"]]
+        self.assertLessEqual({"validated", "name", "state", "points"}, set(tile))
+        self.assertEqual((tile["belongs"], tile["chosen"]), (False, True))   # and #541's, per tile
         self.assertEqual(GridStep.objects.get(player=self.user, game="odd").step, 1)

@@ -437,7 +437,7 @@
     <div class="p-5 text-gray-700 space-y-4 overflow-y-auto">
       <p class="hidden" data-help-mode="classify">Name it as far as you're sure: subfamily, tribe, genus, species.</p>
       <p class="hidden" data-help-mode="pair">How related are <strong>A</strong> and <strong>B</strong>? Pick the lowest line you're sure of.</p>
-      <p class="hidden" data-help-mode="odd">All but one share a name. Select the one that doesn't, then <strong>Submit</strong>. The grid grows as you get better.</p>
+      <p class="hidden" data-help-mode="odd">All but one share a name (bigger grids hide two or three). Select the ones that don't, then <strong>Submit</strong>. The grid grows as you get better.</p>
       <p class="hidden" data-help-mode="select">Select every beetle of the group named below the photos, then <strong>Submit</strong>. A wrong tap costs, a missed one doesn't. The grid grows as you get better.</p>
       <ul class="list-disc pl-5 space-y-2 text-sm" data-testid="help-rules">
         <li>Answer only as far as you're sure: a wrong guess costs more than stopping early.</li>
@@ -1336,7 +1336,8 @@
     if (MODE === "odd" && window.gameTour && window.gameTour.unlocked) {
       // the first time: how to play it (once on this device)
       setTimeout(() => window.gameTour.unlocked([{ key: "odd-intro", el: "photos", text:
-        "Odd One Out: all but one of these share a " + item.rank + ". Select the one that doesn't, then Submit. Not sure? Skip earns a little, a wrong pick costs." }]), 400);
+        "Odd One Out: all but " + (oddWant > 1 ? oddWant : "one") + " of these share a " + item.rank + ". Select "
+        + (oddWant > 1 ? "the " + oddWant + " that don't" : "the one that doesn't") + ", then Submit. Not sure? Skip earns a little, a wrong pick costs." }]), 400);
     }
     if (MODE === "select" && window.gameTour && window.gameTour.unlocked) {
       setTimeout(() => window.gameTour.unlocked([{ key: "select-intro", el: "photos", text:
