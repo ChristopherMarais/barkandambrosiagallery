@@ -263,13 +263,15 @@
   {% if mode == 'mixed' %}
   <!-- Your unlocks, right where you play: which game, and a focus. Locked ones say the level that opens them. -->
   <div id="toolbar" class="hidden items-center gap-2 px-2 py-1.5 border-b border-gray-200 bg-white">
-    <div class="flex flex-1 min-w-0 p-0.5 bg-gray-100 rounded-lg text-[11px] sm:text-xs font-semibold" role="radiogroup" aria-label="Which game">
-      {# Short names on a phone, so all five fit #}
-      <button type="button" data-play="both" data-short="Mix" data-long="Mix" class="play-opt flex-1 h-8 rounded-md">Mix</button>
-      <button type="button" data-play="pair" data-short="Similar" data-long="Similarity" class="play-opt flex-1 h-8 rounded-md">Similarity</button>
-      <button type="button" data-play="odd" data-short="Odd one" data-long="Odd One Out" class="play-opt flex-1 h-8 rounded-md">Odd One Out</button>
-      <button type="button" data-play="select" data-short="Select" data-long="Select all" class="play-opt flex-1 h-8 rounded-md">Select all</button>
-      <button type="button" data-play="classify" data-short="ID" data-long="Identification" class="play-opt flex-1 h-8 rounded-md">Identification</button>
+    <div class="flex flex-1 min-w-0 items-center gap-1.5 text-[11px] sm:text-xs font-semibold" role="radiogroup" aria-label="Which game">
+      {# Short names on a phone, so all five fit. All modes mixes the others, so it sits apart: its own dashed pill. #}
+      <button type="button" role="radio" data-play="both" data-short="All" data-long="All modes" class="play-opt play-all shrink-0 h-8 px-2 rounded-lg border border-dashed border-gray-400">All modes</button>
+      <div class="flex flex-1 min-w-0 p-0.5 bg-gray-100 rounded-lg">
+        <button type="button" role="radio" data-play="pair" data-short="Similar" data-long="Similarity" class="play-opt flex-1 h-8 rounded-md">Similarity</button>
+        <button type="button" role="radio" data-play="odd" data-short="Imposter" data-long="Imposter Picker" class="play-opt flex-1 h-8 rounded-md">Imposter Picker</button>
+        <button type="button" role="radio" data-play="select" data-short="Find all" data-long="Find Them All" class="play-opt flex-1 h-8 rounded-md">Find Them All</button>
+        <button type="button" role="radio" data-play="classify" data-short="ID" data-long="Identification" class="play-opt flex-1 h-8 rounded-md">Identification</button>
+      </div>
     </div>
     <button type="button" id="focus-btn" class="inline-flex items-center gap-1 h-9 px-3 max-w-[45%] rounded-lg border border-gray-300 text-xs font-semibold text-gray-700">
       <i class="fi fi-rr-bullseye" id="focus-icon"></i><span id="focus-label" class="truncate">Focus</span>
@@ -475,7 +477,7 @@
   const root = document.getElementById("game");
   const PAGE_MODE = root.dataset.mode;          // "mixed" (both games in one feed) or one game
   let MODE = PAGE_MODE === "mixed" ? "classify" : PAGE_MODE;   // the game of the beetle on screen
-  const GAME_NAMES = { classify: "Name That Beetle", pair: "Similarity", odd: "Odd One Out", select: "Select all" };
+  const GAME_NAMES = { classify: "Identification", pair: "Similarity", odd: "Imposter Picker", select: "Find Them All" };
   // badge accents, the same as on the profile (includes/game_badge.html)
   // badge colours by rarity, the same as the levels and the profile (includes/game_badge.html)
   const TIER_INK = { common: "text-gray-600", uncommon: "text-green-600", rare: "text-blue-600", epic: "text-purple-600",
@@ -870,10 +872,10 @@
       const opened = (q, key) => !!(gameInfo(q, key) || {}).unlocked;
       const tips = [];
       if (!prefs.light && p.light) tips.push({ key: "light", el: "light-btn", text: "New: Lighting. Make a dark or flat photo brighter or sharper. Key: E (or L)." });
-      if (!opened(prefs, "odd") && opened(p, "odd")) tips.push({ key: "game-odd", el: "toolbar", text: "New game: Odd One Out. All but one beetle share a name; tap the one that doesn't." });
-      if (!opened(prefs, "select") && opened(p, "select")) tips.push({ key: "game-select", el: "toolbar", text: "New game: Select all. Tap every beetle of the group named below the photos." });
+      if (!opened(prefs, "odd") && opened(p, "odd")) tips.push({ key: "game-odd", el: "toolbar", text: "New game: Imposter Picker. All but one beetle share a name; tap the one that doesn't." });
+      if (!opened(prefs, "select") && opened(p, "select")) tips.push({ key: "game-select", el: "toolbar", text: "New game: Find Them All. Tap every beetle of the group named below the photos." });
       if (!opened(prefs, "classify") && opened(p, "classify")) tips.push({ key: "game-classify", el: "toolbar", text: "New game: Identification. Name the beetle, rank by rank, as far as you're sure." });
-      if (!prefs.choose_game && p.choose_game) tips.push({ key: "choose-game", el: "toolbar", text: "New: pick one game here, or play a mix of them all." });
+      if (!prefs.choose_game && p.choose_game) tips.push({ key: "choose-game", el: "toolbar", text: "New: pick one game here, or All modes to mix them." });
       if (!anyFocus(prefs) && anyFocus(p)) tips.push({ key: "focus", el: "focus-btn", text: "New: Focus. Play only beetles from one group you want to learn." });
       if (tips.length) window.gameTour.unlocked(tips);
     }
@@ -884,7 +886,10 @@
     document.querySelectorAll(".play-opt").forEach((b) => {
       const on = b.dataset.play === p.play_mode;
       const why = lockReason(p, b.dataset.play);
-      b.className = "play-opt flex-1 min-w-0 h-8 px-1 rounded-md truncate " + (on ? "bg-white text-gray-900 shadow-sm" : why ? "text-gray-400" : "text-gray-600");
+      const all = b.dataset.play === "both";   // All modes: its own pill, dashed until chosen
+      b.className = all
+        ? "play-opt play-all shrink-0 inline-flex items-center gap-1 h-8 px-2 rounded-lg border " + (on ? "border-gray-600 bg-white text-gray-900 shadow-sm" : why ? "border-dashed border-gray-300 text-gray-400" : "border-dashed border-gray-400 text-gray-600")
+        : "play-opt flex-1 min-w-0 h-8 px-1 rounded-md truncate " + (on ? "bg-white text-gray-900 shadow-sm" : why ? "text-gray-400" : "text-gray-600");
       const short = document.createElement("span"), long = document.createElement("span");
       short.className = "sm:hidden";
       long.className = "hidden sm:inline";
@@ -892,6 +897,7 @@
       long.textContent = b.dataset.long;
       b.replaceChildren();
       if (why) { const lock = document.createElement("i"); lock.className = "fi fi-rr-lock text-[10px] mr-0.5"; b.append(lock); }
+      else if (all) { const mixIcon = document.createElement("i"); mixIcon.className = "fi fi-rr-shuffle text-[11px]"; mixIcon.setAttribute("aria-hidden", "true"); b.append(mixIcon); }
       b.append(short, long);
       b.title = why;
       b.setAttribute("aria-checked", on ? "true" : "false");
@@ -1123,11 +1129,11 @@
     if (MODE === "odd" && window.gameTour && window.gameTour.unlocked) {
       // the first time: how to play it (once on this device)
       setTimeout(() => window.gameTour.unlocked([{ key: "odd-intro", el: "photos", text:
-        "Odd One Out: all but one of these share a " + item.rank + ". Tap the one that doesn't, then Next. Not sure? Skip earns a little, a wrong pick costs." }]), 400);
+        "Imposter Picker: all but one of these share a " + item.rank + ". Tap the one that doesn't, then Next. Not sure? Skip earns a little, a wrong pick costs." }]), 400);
     }
     if (MODE === "select" && window.gameTour && window.gameTour.unlocked) {
       setTimeout(() => window.gameTour.unlocked([{ key: "select-intro", el: "photos", text:
-        "Select all: tap every beetle of the group named below, then Next. Leave out any you're unsure of: a wrong tap costs, a missed one doesn't." }]), 400);
+        "Find Them All: tap every beetle of the group named below, then Next. Leave out any you're unsure of: a wrong tap costs, a missed one doesn't." }]), 400);
     }
     shownAt = Date.now();
     readyAt = performance.now() + MASH_GUARD_MS;

@@ -31,14 +31,14 @@ GROUPS = [
            "Every Identification answer counts this many times the points above, gains and losses alike: naming a "
            "beetle is the harder and more useful game.", 0.5, 10, 0.5),
         _t("GAME_PAIR_POINTS", "Similarity points by true relationship", {"-1": 1.0, "0": 2.0, "1": 3.0, "2": 5.0, "3": 5.0},
-           "Similarity: the correct answer earns more the finer the line the player had to draw. Odd One Out and "
-           "Select all are priced from these too.", 0, 50, 0.5, keys=RUNGS),
+           "Similarity: the correct answer earns more the finer the line the player had to draw. Imposter Picker and "
+           "Find Them All are priced from these too.", 0, 50, 0.5, keys=RUNGS),
         _t("GAME_POINTS_SIMILARITY_BONUS", "Bonus when the two photos look alike", 0.25,
            "Up to this share more when the two photos share photographer, place, magnification... (harder to tell apart).",
            0, 2),
-        _t("GAME_POINTS_ODD_WEIGHT", "Odd One Out: correct pick", 1.5,
+        _t("GAME_POINTS_ODD_WEIGHT", "Imposter Picker: correct pick", 1.5,
            "A correct pick earns this many times the Similarity points for how related the odd one is to the rest.", 0, 10),
-        _t("GAME_POINTS_SELECT_WEIGHT", "Select all: a perfect grid", 2.0,
+        _t("GAME_POINTS_SELECT_WEIGHT", "Find Them All: a perfect grid", 2.0,
            "A perfect grid earns this many times the Similarity points for its rank, shared between the members.", 0, 10),
         _t("GAME_POINTS_RETRY_FACTOR", "A beetle seen again (retry)", 0.5,
            "A beetle the player got wrong, shown again to learn it, earns this share of the points.", 0, 1),
@@ -54,17 +54,17 @@ GROUPS = [
         _t("GAME_POINTS_PAIR_STEP", "Similarity: related vs unrelated mixed up", 1.0,
            "Calling related beetles 'different subfamilies', or unrelated ones related, costs this per step it is off.",
            0, 10, 0.25),
-        _t("GAME_POINTS_ODD_WRONG_FACTOR", "Odd One Out: wrong pick", 1.25,
+        _t("GAME_POINTS_ODD_WRONG_FACTOR", "Imposter Picker: wrong pick", 1.25,
            "A wrong pick costs this many times what a correct one earns. Above 1/3 (four beetles) a blind guess loses "
            "on average.", 0, 5),
-        _t("GAME_POINTS_SELECT_WRONG", "Select all: tapping a beetle that doesn't belong", 1.5,
+        _t("GAME_POINTS_SELECT_WRONG", "Find Them All: tapping a beetle that doesn't belong", 1.5,
            "Each wrong tap costs this many members' shares; a member left out costs nothing. Above 1, tapping "
            "everything loses.", 0, 5),
     ]),
     ("Skipping and taking part", [
         _t("GAME_POINTS_UNSURE", "Skip in Identification and Similarity (cost)", 0.25,
            "A skip costs this little: less than any wrong answer, so not knowing is always better than guessing.", 0, 5),
-        _t("GAME_POINTS_ODD_SKIP", "Skip in Odd One Out and Select all (earns)", 0.25,
+        _t("GAME_POINTS_ODD_SKIP", "Skip in Imposter Picker and Find Them All (earns)", 0.25,
            "In the grid games a skip earns this, to reward knowing when you don't know.", 0, 5),
         _t("GAME_POINTS_PARTICIPATION", "Taking part", 0.5,
            "Every real answer earns this on top, so the score grows with play; accuracy still decides most of it.", 0, 5),
@@ -89,8 +89,8 @@ GROUPS = [
            "...over at least this many of its sure calls there.", 1, 1000, 1),
     ]),
     ("Naming confidence: what a beetle is, and is not", [
-        _t("GAME_SELECT_TAP_WEIGHT", "A Select all tap, against a name", 0.8,
-           "Tapping an unvalidated beetle in Select all counts as this share of a direct identification towards its "
+        _t("GAME_SELECT_TAP_WEIGHT", "A Find Them All tap, against a name", 0.8,
+           "Tapping an unvalidated beetle in Find Them All counts as this share of a direct identification towards its "
            "name (down to the grid's rank). Taps never make an expert's verdict on their own.", 0, 1, 0.05),
         _t("GAME_TIP_MIN_VOTES", "Players needed for a name tip", 3,
            "Curators see 'N reliable players say genus X' once at least this many players agree...", 1, 50, 1),
@@ -221,13 +221,13 @@ def examples():
         ("Similarity", "'Same genus' for two of one tribe (one rung too close)",
          pair[1] - v["GAME_POINTS_OVERREACH"] * pair[2]),
         ("Similarity", "'Different subfamilies' for two of one genus", -v["GAME_POINTS_PAIR_STEP"] * 3),
-        ("Odd One Out", "Correct pick, species round", odd_species),
-        ("Odd One Out", "Wrong pick, species round", -odd_species * v["GAME_POINTS_ODD_WRONG_FACTOR"]),
-        ("Select all", "Perfect grid, species", select_species),
-        ("Select all", "3 of 3 found plus one wrong tap, species",
+        ("Imposter Picker", "Correct pick, species round", odd_species),
+        ("Imposter Picker", "Wrong pick, species round", -odd_species * v["GAME_POINTS_ODD_WRONG_FACTOR"]),
+        ("Find Them All", "Perfect grid, species", select_species),
+        ("Find Them All", "3 of 3 found plus one wrong tap, species",
          select_species / 3 * (3 - v["GAME_POINTS_SELECT_WRONG"])),
         ("Any game", "Skip (Identification, Similarity)", -v["GAME_POINTS_UNSURE"]),
-        ("Any game", "Skip (Odd One Out, Select all)", v["GAME_POINTS_ODD_SKIP"]),
+        ("Any game", "Skip (Imposter Picker, Find Them All)", v["GAME_POINTS_ODD_SKIP"]),
         ("Any game", "Taking part (added to every real answer)", part),
     ]
     return [(game, what, round(p, 2)) for game, what, p in rows]
@@ -250,9 +250,9 @@ def checks():
          "Species ≥ genus ≥ tribe ≥ subfamily, so precise names pay most."),
         ("Skipping costs less than the smallest mistake", v["GAME_POINTS_UNSURE"] < wrong_least,
          f"A skip costs {v['GAME_POINTS_UNSURE']:g}; the smallest mistake costs about {wrong_least:.2f}."),
-        ("A blind guess in Odd One Out loses on average", odd_ev < 0,
+        ("A blind guess in Imposter Picker loses on average", odd_ev < 0,
          f"With four beetles a guess is right 1 time in 4: expected {odd_ev * v['GAME_POINTS_ODD_WEIGHT']:+.2f} × the round's points."),
-        ("Tapping everything in Select all loses", v["GAME_POINTS_SELECT_WRONG"] > 1,
+        ("Tapping everything in Find Them All loses", v["GAME_POINTS_SELECT_WRONG"] > 1,
          "Non-members always outnumber members, so wrong taps must cost more than a member earns."),
         ("Known beetles pay more than agreement on unknown ones",
          v["GAME_POINTS_CONSENSUS_CAP"] < 1 and v["GAME_POINTS_REFERENCE_CAP"] < 1,

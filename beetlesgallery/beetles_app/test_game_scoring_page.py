@@ -54,7 +54,7 @@ class ScoringPageTests(GameCase):
     def test_a_tuning_that_rewards_guessing_is_flagged(self):
         GameTuning.objects.create(key="GAME_POINTS_ODD_WRONG_FACTOR", value=0.1)
         failing = [rule for rule, ok, _ in game_tuning.checks() if not ok]
-        self.assertEqual(failing, ["A blind guess in Odd One Out loses on average"])
+        self.assertEqual(failing, ["A blind guess in Imposter Picker loses on average"])
 
     def test_rescore_everyone_runs_in_the_background(self):
         self.client.force_login(self.superuser)
