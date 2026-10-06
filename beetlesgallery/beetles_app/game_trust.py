@@ -9,13 +9,18 @@ Expertise is measured per rank *within a branch* of the taxonomy, from a player'
     tribe     within a subfamily
     subfamily overall
 
-A player is *proven* (an expert) at a rank in a taxon once they have covered it: answered at least
+A player is *proven*, an *Identification expert*, at a rank in a taxon once they have covered it: answered at least
 GAME_TRUST_IMAGES_PER_SPECIES validated images (all of them for one with fewer) of at least GAME_TRUST_CHILDREN_SHARE
 of its children with validated images (the species of a genus, the genera of a tribe, the tribes of a subfamily),
 rounded up so a taxon with three or fewer needs all of them; at least GAME_TRUST_MIN_JUDGED answers in total; and at
 least GAME_TRUST_MIN_ACCURACY of those answers are right. So a genus with two species needs far fewer answers than
 one with forty, a rare genus doesn't stop anyone becoming a tribe expert (#381), and nobody is an expert on a taxon
 most of whose members they have never seen.
+
+A *Distinction expert* meets the same rule on telling a taxon's members apart in Similarity, Odd One Out and Select
+all (apart_counts) instead of naming them (#498): someone who can tell the beetles apart without knowing their names.
+It is worked out when shown (the expertise tree, the profile), never stored, and unlocks nothing: trust, judging and
+the labels written without review only ever look at naming.
 
 A player is *reliable* in a taxon with at least GAME_TRUST_MIN_JUDGED answers there and the same accuracy, without
 the full coverage. A game label on an unvalidated ROI is *trusted* at a rank when a player proven for the label's
@@ -113,6 +118,14 @@ def is_proven(ok, n, cover):
 def is_reliable(ok, n):
     """Enough answers in a taxon, accurate enough, without the full coverage an expert needs."""
     return n >= game_setting("GAME_TRUST_MIN_JUDGED", 10) and ok / n >= min_accuracy()
+
+
+def is_distinction_expert(ok, n, cover):
+    """
+    Tells a taxon's members apart as reliably as an Identification expert names them (#498): the same coverage, and
+    at least GAME_TRUST_MIN_ACCURACY right over at least GAME_TRUST_MIN_JUDGED judged answers (apart_counts).
+    """
+    return bool(cover["complete"]) and is_reliable(ok, n)
 
 
 def species_key(genus, species):
@@ -530,7 +543,8 @@ def direct_experts(entry, trust):
 # ---------------------------------------------------------------------------
 EXPERTISE_FLOOR = 0.5
 # Accuracy bands in the levels' rarity colours: under 50% grey, then four equal steps from 50% up to what an expert
-# needs (green, blue, purple, orange), and a proven expert glowing gold like the top level.
+# needs (green, blue, purple, orange). An Identification expert glows gold like the top level; a Distinction expert is
+# plain dark gold, since it unlocks nothing (#498).
 EXPERTISE_TIERS = ("uncommon", "rare", "epic", "legendary")
 
 
@@ -552,7 +566,7 @@ def accuracy_status(ok, n, min_shown):
 
 
 def node_status(skill, min_shown):
-    """How a branch is shown: unknown (too few answers yet), common .. legendary by accuracy, or expert."""
+    """How naming in a branch is shown: unknown (too few answers yet), common .. legendary by accuracy, or expert."""
     if skill is None or skill.judged < min_shown:
         return "unknown"
     if skill.proven:
@@ -560,66 +574,105 @@ def node_status(skill, min_shown):
     return accuracy_status(skill.correct, skill.judged, min_shown)
 
 
+def apart_status(ok, n, cover, min_shown):
+    """How telling a branch apart is shown: like node_status, with expert for a Distinction expert (#498)."""
+    if n >= min_shown and is_distinction_expert(ok, n, cover):
+        return "expert"
+    return accuracy_status(ok, n, min_shown)
+
+
 def apart_counts(player):
     """
-    {(rank, branch_lower): [correct, judged]}: how well the player tells a taxon's children apart, from Similarity,
-    Odd One Out and Select all answers judged against validated beetles (#381). Keyed like the naming skills, so
-    ("genus", "xyleborini") is telling Xyleborini's genera apart. A Similarity answer judges each rank whose parent
-    the two beetles share (both in Xyleborini: did they say rightly whether the genus is the same?). A grid judges its
-    own rank within its group's parent: Odd One Out a pick outside the group, Select all a perfect grid. Shown only:
-    naming alone makes an expert.
+    {(rank, branch_lower): [correct, judged, branch_display, {child: answers}]}, shaped like skill_counts: how well
+    the player tells a taxon's children apart, from Similarity, Odd One Out and Select all answers judged against
+    validated beetles (#381). ("genus", "xyleborini") is telling Xyleborini's genera apart. A Similarity answer
+    judges each rank whose parent the two beetles share (both in Xyleborini: did they say rightly whether the genus
+    is the same?), and shows both beetles' children. A grid judges its own rank within its group's parent (Odd One
+    Out a pick outside the group, Select all a perfect grid), and shows the group's child, and in Odd One Out the odd
+    one's when it has the same parent. Coverage counts the judged answers that showed each child, as naming counts
+    the images named.
     """
-    out = defaultdict(lambda: [0, 0])
+    out = {}
+
+    def judge(rank, branch, ok, children):
+        row = out.setdefault((rank, branch.lower()), [0, 0, branch, defaultdict(int)])
+        row[0] += int(ok)
+        row[1] += 1
+        for child in {c for c in children if c}:
+            row[3][child] += 1
+
+    def child(a, side, rank):
+        return child_at(rank, a[f"{side}__taxon__genus"], a[f"{side}__taxon__species"], a[f"{side}__taxon__{rank}"])
+
     answers = GameAnswer.objects.filter(player=player, is_retry=False, skipped=False, score_hold=False)
     correct = [f"correct_{r}" for r in RANKS]
     sides = [f"{side}__taxon__{r}" for side in ("roi", "roi_b") for r in RANKS]
     for a in answers.filter(mode="pair").values(*sides, *correct):
         for r in RANKS:
             parent = BRANCH_OF[r]
-            branch = (a[f"roi__taxon__{parent}"] or "").lower() if parent else ""
-            if parent and (not branch or branch != (a[f"roi_b__taxon__{parent}"] or "").lower()):
+            branch = (a[f"roi__taxon__{parent}"] or "") if parent else ""
+            if parent and (not branch or branch.lower() != (a[f"roi_b__taxon__{parent}"] or "").lower()):
                 break   # different above this rank: nothing inside one taxon to tell apart
             if a[f"correct_{r}"] is not None:
-                out[(r, branch)][0] += int(a[f"correct_{r}"])
-                out[(r, branch)][1] += 1
-    for a in answers.filter(mode__in=["odd", "select"], grid_rank__in=RANKS).values("grid_rank", "grid_group", *correct):
+                judge(r, branch, a[f"correct_{r}"], [child(a, "roi", r), child(a, "roi_b", r)])
+    odd_one = [f"roi_b__taxon__{r}" for r in RANKS]
+    for a in answers.filter(mode__in=["odd", "select"], grid_rank__in=RANKS).values(
+            "mode", "grid_rank", "grid_group", *odd_one, *correct):
         r, ok = a["grid_rank"], a[f"correct_{a['grid_rank']}"]
-        parent = BRANCH_OF[r]
-        branch = ((a["grid_group"] or {}).get(parent) or "").lower() if parent else ""
+        parent, group = BRANCH_OF[r], a["grid_group"] or {}
+        branch = (group.get(parent) or "") if parent else ""
         if ok is None or (parent and not branch):
             continue
-        out[(r, branch)][0] += int(ok)
-        out[(r, branch)][1] += 1
+        shown = [(group.get(r) or "").lower()]   # species groups are "Genus species", as child_at keys them
+        if a["mode"] == "odd" and (not parent or (a[f"roi_b__taxon__{parent}"] or "").lower() == branch.lower()):
+            shown.append(child(a, "roi_b", r))
+        judge(r, branch, ok, shown)
     return out
 
 
+def distinction_experts(player):
+    """[(rank, branch)] where the player is a Distinction expert (#498): worked out when asked, never stored."""
+    available = children_available()
+    return sorted(
+        (rank, display) for (rank, branch), (ok, n, display, shown) in apart_counts(player).items()
+        if is_distinction_expert(ok, n, coverage(available.get((rank, branch), {}), shown))
+    )
+
+
 def expertise_legend():
-    """The tree's legend: (status, label) from lowest to highest."""
+    """The tree's colour bands: (status, label) from lowest to highest. Each kind of expert has its own legend line."""
     bands = list(reversed(expertise_bands()))
     pct = lambda x: f"{round(x * 100)}%"   # noqa: E731
     legend = [("common", f"under {pct(EXPERTISE_FLOOR)}")]
     for i, (tier, lowest) in enumerate(bands):
         upper = bands[i + 1][1] if i + 1 < len(bands) else None
         legend.append((tier, f"{round(lowest * 100)}\u2013{pct(upper)}" if upper else f"{pct(lowest)}+"))
-    return legend + [("expert", "proven expert")]
+    return legend
 
 
 def expertise_tree(player):
     """
     The taxonomy as subfamily > tribe > genus, each branch with how well the player identifies what is inside it:
     a subfamily shows their tribe calls within it, a tribe their genus calls, a genus their species calls; and how
-    well they tell those apart in Similarity, Odd One Out and Select all (apart_counts). Branches they have not
-    played are counted but not listed one by one.
+    well they tell those apart in Similarity, Odd One Out and Select all (apart_counts). ``status`` is expert for an
+    Identification expert, ``apart_status`` for a Distinction expert. Branches they have not played are counted but
+    not listed one by one.
     """
     min_shown = game_setting("GAME_REPORT_MIN_JUDGED", 5)
     skills = {(s.rank, s.branch.lower()): s for s in skills_for(player)}
     apart = apart_counts(player)
+    available = children_available()
 
     def node(rank, name):
-        skill = skills.get((rank, name.lower()))
-        apart_ok, apart_n = apart.get((rank, name.lower()), (0, 0))
+        key = (rank, name.lower())
+        skill = skills.get(key)
+        apart_ok, apart_n, _, shown = apart.get(key, (0, 0, name, {}))
+        apart_cover = coverage(available.get(key, {}), shown)
         return {
-            "apart_correct": apart_ok, "apart_judged": apart_n, "apart_status": accuracy_status(apart_ok, apart_n, min_shown),
+            "apart_correct": apart_ok, "apart_judged": apart_n,
+            "apart_status": apart_status(apart_ok, apart_n, apart_cover, min_shown),
+            "apart_children_total": apart_cover["children_total"], "apart_children_done": apart_cover["children_done"],
+            "apart_children_needed": apart_cover["children_needed"],
             "name": name, "status": node_status(skill, min_shown),
             "judged": skill.judged if skill else 0, "correct": skill.correct if skill else 0,
             "accuracy": (skill.correct / skill.judged) if skill and skill.judged else None,

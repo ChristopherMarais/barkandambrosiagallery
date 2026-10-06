@@ -19,7 +19,7 @@
           <span class="inline-flex items-center gap-1 flex-wrap">
             {% include "beetles/includes/game_level_badge.html" with level=row.level name=row.level_name %}
             {% if row.anonymous %}<span class="text-gray-500">{{ row.username }}</span>{% else %}<a href="{% url 'game_profile' row.player_id %}" class="text-gray-900 underline decoration-gray-300 hover:decoration-gray-900">{{ row.username }}</a>{% endif %}
-            {% if row.is_expert %}<i class="fi fi-rr-shield-check text-green-600" title="Proven expert in a taxon"></i>{% endif %}
+            {% if row.is_expert %}<i class="fi fi-rr-shield-check text-green-600" title="Identification expert in a taxon"></i>{% endif %}
             {% if row.discoveries %}<i class="fi fi-rr-sparkles text-amber-600" title="New species finder: {{ row.discoveries }}" data-testid="finder-badge"></i>{% endif %}
           </span>
         </td>

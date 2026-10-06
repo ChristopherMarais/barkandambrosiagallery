@@ -34,17 +34,18 @@ class GuidanceTests(ScoringCase):
     def test_the_report_menu_says_what_each_reason_means(self):
         page = self.page("game_play", "mixed")
         self.assertIn("Misses the beetle or frames the label", page)
-        self.assertIn("Blurry, dark, or not a beetle", page)
+        self.assertIn("Blurry, dark, too little of the beetle, or not a beetle", page)
         self.assertNotIn('data-reason="wrong_label"', page)
         # the reasons the server accepts are unchanged
         self.assertEqual([value for value, _ in game_views.FEED_REPORT_REASONS], ["bad_box", "bad_image", "other"])
 
-    def test_the_report_tip_drops_wrong_name_and_says_a_photo_showing_little_is_not_bad(self):
+    def test_the_report_tip_drops_wrong_name_and_says_too_little_of_the_beetle_is_bad(self):
         page = self.page("game_play", "mixed")
         start = page.index('id="report-tip"')
         tip = page[start:page.index('id="report-tip-show"', start)]
         self.assertNotIn("wrong name", tip.lower())   # not offered before answering (it would hint at the answer)
-        self.assertIn("just shows too little isn't bad", tip)
+        self.assertIn("Too little of the beetle (a leg, a fragment) is a bad photo", tip)   # #498
+        self.assertIn("from an unusual side isn't bad", tip)
 
     def test_the_walkthrough_shows_the_rules_button_and_when_to_report(self):
         with open(finders.find("js/game_tour.js"), encoding="utf-8") as f:

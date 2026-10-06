@@ -33,7 +33,7 @@
       <div class="mt-1 text-2xl font-semibold text-gray-900 tabular-nums">{{ report.rounds|digit_groups }}</div>
     </div>
     <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-      <div class="text-xs uppercase tracking-wider text-gray-500 font-semibold">Expert areas</div>
+      <div class="text-xs uppercase tracking-wider text-gray-500 font-semibold">ID expert areas</div>
       <div class="mt-1 text-2xl font-semibold text-gray-900 tabular-nums">{{ report.proven|length }}</div>
     </div>
   </div>
@@ -54,9 +54,10 @@
   <div class="mb-8">
     <h2 class="text-lg font-semibold text-gray-900 mb-1">Expertise</h2>
     <p class="text-xs text-gray-500 mb-3">
-      You become an expert in a taxon once you have named {{ report.per_species }} validated images each of at least
+      You become an Identification expert in a taxon once you have named {{ report.per_species }} validated images each of at least
       {% widthratio report.children_share 1 100 %}% of its members (a genus's species, a tribe's genera, a subfamily's tribes) and got at least {% widthratio report.min_accuracy 1 100 %}% correct.
-      A genus with two species needs far fewer answers than one with forty. Experts' labels are flagged to our curators as trusted.
+      A genus with two species needs far fewer answers than one with forty. Identification experts' labels are flagged to our curators as trusted.
+      Telling the members apart just as well makes you a Distinction expert, which unlocks nothing: the <a href="{% url 'game_player_expertise' player.id %}" class="underline hover:text-gray-900">expertise tree</a> shows both.
     </p>
 
     {% if report.proven %}
@@ -70,7 +71,7 @@
           </div>
           <div class="text-xs text-gray-500">{{ s.correct|digit_groups }} of {{ s.judged|digit_groups }} correct{% if s.proven_at %} · expert since {{ s.proven_at|date:"M j, Y" }}{% endif %}</div>
         </div>
-        <span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-green-100 text-green-800 border border-green-200">Expert</span>
+        <span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-green-100 text-green-800 border border-green-200">Identification expert</span>
       </li>
       {% endfor %}
     </ul>

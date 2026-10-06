@@ -57,14 +57,14 @@
   <!-- Your labels: short, with the details for those who want them -->
   <div id="labels" class="p-4 border border-gray-200 bg-white rounded-2xl mb-8{% if labels_new %} labels-new{% endif %}" data-testid="labels-status">
     <h2 class="text-base font-semibold text-gray-900 mb-1">Your labels</h2>
-    <p class="text-sm text-gray-700">{% if info.proposals %}Your labels go to the curators as suggestions.{% else %}From level {{ proposal_level }}, your labels go to the curators as suggestions.{% endif %} Only proven experts skip review.</p>
+    <p class="text-sm text-gray-700">{% if info.proposals %}Your labels go to the curators as suggestions.{% else %}From level {{ proposal_level }}, your labels go to the curators as suggestions.{% endif %} Only Identification experts skip review.</p>
     <details class="mt-2 text-sm text-gray-700" data-testid="expert-rule">
-      <summary class="cursor-pointer text-gray-500 underline">How experts are proven</summary>
+      <summary class="cursor-pointer text-gray-500 underline">How Identification experts are proven</summary>
       <ul class="mt-2 list-disc pl-5 space-y-1">
         <li>Expertise is per taxon: answer {{ per_species }} checked images each of at least {% widthratio children_share 1 100 %}% of its species, genera or tribes, and get at least {% widthratio trust_accuracy 1 100 %}% correct.</li>
         <li>Be among the most reliable players overall.</li>
         <li>Being good in neighbouring taxa is not enough to skip review.</li>
-        <li>{{ min_experts }} experts must agree, and no proven player disagree.</li>
+        <li>{{ min_experts }} Identification experts must agree, and no other Identification expert disagree.</li>
         <li>Expertise can be lost. See your <a href="{% url 'game_expertise' %}" class="underline">expertise tree</a>.</li>
       </ul>
     </details>

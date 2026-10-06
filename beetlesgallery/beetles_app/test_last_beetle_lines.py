@@ -1,5 +1,5 @@
 """
-The "Last beetle" bar after an Identification answer also says what proven experts said and what the species
+The "Last beetle" bar after an Identification answer also says what Identification experts said and what the species
 classifier leans to (#382): as agreement, never "correct", and the same for validated and unvalidated beetles.
 """
 from django.contrib.auth import get_user_model
@@ -34,25 +34,25 @@ class LastBeetleLineTests(GameCase):
     def test_an_expert_who_agrees_says_so_and_never_correct(self):
         self.answer(self.expert("e"), **AFFINIS)
         out = _community(self.answer(self.user, **AFFINIS))
-        self.assertEqual(out["experts"], "A proven expert agrees with you to species.")
+        self.assertEqual(out["experts"], "An Identification expert agrees with you to species.")
         self.assertNotIn("correct", " ".join(str(v) for v in out.values()).lower())
 
     def test_where_experts_differ_the_bar_says_what_they_said(self):
         self.answer(self.expert("e"), **AFFINIS)
         self.answer(self.expert("f"), **AFFINIS)
         out = _community(self.answer(self.user, **FERR))
-        self.assertEqual(out["experts"], "2 proven experts agree with you to genus; on species they said Xyleborus affinis.")
+        self.assertEqual(out["experts"], "2 Identification experts agree with you to genus; on species they said Xyleborus affinis.")
 
     def test_where_the_player_stopped_the_bar_says_how_far_experts_went(self):
         self.answer(self.expert("e"), **AFFINIS)
         out = _community(self.answer(self.user, subfamily="Scolytinae", tribe="Xyleborini"))
-        self.assertEqual(out["experts"], "A proven expert agrees with you to tribe and went on to genus Xyleborus.")
+        self.assertEqual(out["experts"], "An Identification expert agrees with you to tribe and went on to genus Xyleborus.")
 
     def test_split_experts_are_reported_as_split(self):
         self.answer(self.expert("e"), **AFFINIS)
         self.answer(self.expert("f"), **FERR)
         out = _community(self.answer(self.user, **AFFINIS))
-        self.assertEqual(out["experts"], "2 proven experts agree with you to genus; they're split on species.")
+        self.assertEqual(out["experts"], "2 Identification experts agree with you to genus; they're split on species.")
 
     def test_players_who_are_not_proven_are_not_experts(self):
         self.answer(get_user_model().objects.create_user("x", password="pw"), **AFFINIS)
@@ -76,5 +76,5 @@ class LastBeetleLineTests(GameCase):
         self.answer(self.expert("e"), roi=checked, **AFFINIS)
         self.predict(self.t_affinis, 0.8, roi=checked)
         out = _community(self.answer(self.user, roi=checked, is_check=True, **AFFINIS))
-        self.assertEqual(out["experts"], "A proven expert agrees with you to species.")
+        self.assertEqual(out["experts"], "An Identification expert agrees with you to species.")
         self.assertEqual(out["model"], "The species classifier leans Xyleborus affinis (80%).")

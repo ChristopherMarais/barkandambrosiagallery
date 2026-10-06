@@ -55,7 +55,7 @@
         {% for row in branch_rows %}
         <tr class="border-t border-gray-100 {% if row.player_id == user.id %}bg-gray-100 font-semibold{% endif %}">
           <td class="py-2.5 pl-4 pr-2 text-gray-400">{{ row.position }}</td>
-          <td class="py-2.5 px-2">{% if row.anonymous %}<span class="text-gray-500">{{ row.username }}</span>{% else %}<a href="{% url 'game_profile' row.player_id %}" class="underline decoration-gray-300 hover:decoration-gray-900">{{ row.username }}</a>{% endif %}{% if row.is_expert %} <span class="text-xs font-semibold text-green-700">expert</span>{% endif %}</td>
+          <td class="py-2.5 px-2">{% if row.anonymous %}<span class="text-gray-500">{{ row.username }}</span>{% else %}<a href="{% url 'game_profile' row.player_id %}" class="underline decoration-gray-300 hover:decoration-gray-900">{{ row.username }}</a>{% endif %}{% if row.is_expert %} <span class="text-xs font-semibold text-green-700">Identification expert</span>{% endif %}</td>
           <td class="py-2.5 px-2 text-right tabular-nums">{{ row.correct|digit_groups }}/{{ row.judged|digit_groups }}</td>
           <td class="py-2.5 pl-2 pr-4 text-right tabular-nums">{% widthratio row.accuracy 1 100 %}%</td>
         </tr>
