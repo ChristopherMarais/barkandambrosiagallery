@@ -1,9 +1,15 @@
 {% extends "base.html" %}
-{% load beetle_tags %}
+{% load static beetle_tags %}
 
 {% block extra_css %}
 <style>
   .game-crop { display: block; margin: 0 auto; max-width: 100%; width: auto; height: auto; max-height: 30vh; border-radius: 0.5rem; background: #f3f4f6; }
+  /* a photo is held to open the whole photo: no long-press menu or text selection on it */
+  .review-photo { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+  /* The beetle's box on the whole photo: the specimen page's box (white with a dark edge, so it shows on light and
+     dark photos), and the rest of the photo dimmed so the beetle of this answer stands out, as on that page. */
+{% include "beetles/includes/roi_box_css.html" %}
+  #lightbox-box { box-shadow: 0 0 0 1px rgb(0 0 0 / 0.4), inset 0 0 0 1px rgb(0 0 0 / 0.4), 0 0 0 9999px rgb(0 0 0 / 0.35); }
 </style>
 {% endblock %}
 
@@ -75,9 +81,9 @@
 
 <!-- Full image viewer -->
 <div id="lightbox" class="hidden fixed inset-0 z-100 bg-black/90 flex items-center justify-center p-3" role="dialog" aria-label="Whole image">
-  <div class="relative inline-block">
-    <img id="lightbox-img" alt="Whole image" class="block max-w-[94vw] max-h-[85vh] object-contain">
-    <div id="lightbox-box" class="absolute border-2 border-white rounded-xs pointer-events-none"></div>
+  <div class="relative inline-block overflow-hidden">
+    <img id="lightbox-img" alt="Whole image" draggable="false" class="block max-w-[94vw] max-h-[85vh] object-contain">
+    <div id="lightbox-box" class="roi-box pointer-events-none" data-testid="lightbox-box"></div>
   </div>
 </div>
 
@@ -85,6 +91,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/long_press.js' %}"></script>
 <script>
 (function () {
   const root = document.getElementById("review");
@@ -313,6 +320,10 @@
     return item.verdict === "right" && !item.held;
   }
 
+  // A photo held down (about half a second) opens the whole photo too; a tap does what it always did.
+  const openers = new WeakMap();
+  window.onLongPress($("items"), ".review-photo", (btn) => { const open = openers.get(btn); if (open) open(); });
+
   function render() {
     const list = $("items");
     list.innerHTML = "";
@@ -349,7 +360,7 @@
       item.sides.forEach((side, i) => {
         const btn = document.createElement("button");
         btn.type = "button";
-        btn.className = "relative block mx-auto rounded-lg" + (item.mode === "select"
+        btn.className = "review-photo relative block mx-auto rounded-lg" + (item.mode === "select"
           ? ({ right: " ring-4 ring-green-600", wrong: " ring-4 ring-red-600", missed: " outline-dashed outline-4 outline-green-600 -outline-offset-4",
                vote: " ring-4 ring-gray-700" }[side.state] || "")
           : side.odd ? " ring-4 ring-green-600" : side.picked ? " ring-4 ring-gray-700" : "") + (side.flagged ? " opacity-40" : "");
@@ -364,6 +375,7 @@
           btn.appendChild(tag);
         }
         btn.addEventListener("click", () => openLightbox(side.url, side.box));
+        openers.set(btn, () => openLightbox(side.url, side.box));
         holder.appendChild(btn);
         const img = new Image();
         img.onload = () => drawCrop(canvas, img, side.box);
