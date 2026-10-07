@@ -97,6 +97,7 @@ def _with_context(requests):
     for r in requests:
         r.area_labels = access.area_labels(r.areas)
         r.wanted = set(access.extras(r.areas))
+        r.area_groups = access.grouped(r.wanted)
         r.existing_users = [u for u in users.get(r.email.lower(), []) if u != r.user]
     return requests
 

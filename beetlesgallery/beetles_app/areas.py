@@ -52,6 +52,15 @@ PAGES = [
 AREAS = [area for _, items in PAGES for area in items]
 KEYS = [key for key, _, _ in AREAS]
 LABELS = {key: label for key, label, _ in AREAS}
+# The same areas, grouped for a request's one long list (acc-groups, #618): what you look at (Viewing), what you
+# change (Editing), and site-level configuration (Admin). Order matters: that's the order shown.
+GROUP_ORDER = ["Viewing", "Editing", "Admin"]
+GROUP_OF = {
+    DETAILS: "Viewing", DOWNLOAD: "Viewing",
+    BOXES: "Editing", ANNOTATE: "Editing", VALIDATE: "Editing", AI_RECOMMEND: "Editing",
+    UPLOAD: "Editing", UPDATE: "Editing", BULK_VALIDATE: "Editing", INTERACTIONS: "Editing",
+    PREDICTIONS: "Admin", SPECIES: "Admin", NOTICE: "Admin",
+}
 # Areas that come with another one: editing names and records includes boxes; bulk validation includes validating one at a time
 INCLUDED = {BOXES: {ANNOTATE}, VALIDATE: {BULK_VALIDATE}}
 # The "Staff" preset on the account page (what a curator usually needs); every box can still be changed one by one.
@@ -110,3 +119,20 @@ def page_groups(granted=()):
     granted = set(granted)
     return [{"page": page, "areas": [{"key": k, "label": label, "description": d, "checked": k in granted}
                                      for k, label, d in items]} for page, items in PAGES]
+
+
+def grouped_areas(wanted=()):
+    """AREAS grouped into Viewing / Editing / Admin (GROUP_ORDER), each tagged with whether it was asked for.
+
+    Requested areas are listed first within their group (acc-groups, acc-asked, #618), so a reviewer sees what was
+    asked for without hunting through every box.
+    """
+    wanted = set(wanted)
+    by_group = {g: [] for g in GROUP_ORDER}
+    for key, label, description in AREAS:
+        by_group[GROUP_OF[key]].append(
+            {"key": key, "label": label, "description": description, "wanted": key in wanted}
+        )
+    for areas_in_group in by_group.values():
+        areas_in_group.sort(key=lambda a: not a["wanted"])
+    return [{"group": g, "areas": by_group[g]} for g in GROUP_ORDER]

@@ -4,12 +4,12 @@
 
 {% block content %}
 <section class="max-w-4xl">
-  <a href="{% url 'my_account' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Account Management</a>
+  <a href="{% url 'my_account' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Account</a>
   <h1 class="page-title">Access requests</h1>
   <p class="text-gray-600 mb-8">
     Everyone who confirms their email gets a <strong>Basic</strong> account straight away (image browser, taxonomy
     browser, interactions, IBBI-AI and {{ game_name }}). Requests here asked for more: tick what to grant (what they asked
-    for is ticked already) and save, or deny to leave them on Basic. Each area can be changed later per person under My Account.
+    for is ticked already) and save, or deny to leave them on Basic. Each area can be changed later per person under Account.
   </p>
 
   <h2 class="text-xl font-semibold text-gray-900 mb-3">Waiting <span class="text-gray-400 font-normal">({{ pending|length }})</span></h2>
@@ -34,12 +34,19 @@
     <p class="text-sm text-gray-800 whitespace-pre-line">{{ r.reason|default:"(no reason given)" }}</p>
     <fieldset class="mt-3" data-testid="grant-areas">
       <legend class="text-xs font-bold text-gray-500 uppercase tracking-wide">Grant</legend>
-      <div class="mt-1 grid sm:grid-cols-2 gap-1">
-        {% for key, label, description in areas %}
-        <label class="flex items-start gap-2 text-sm text-gray-800" title="{{ description }}">
-          <input type="checkbox" name="areas" value="{{ key }}" class="mt-0.5 rounded-sm border-gray-300" {% if key in r.wanted %}checked{% endif %}>
-          <span>{{ label }}{% if key in r.wanted %} <span class="text-xs text-gray-500">(asked)</span>{% endif %}</span>
-        </label>
+      <div class="mt-2 grid sm:grid-cols-3 gap-4">
+        {% for group in r.area_groups %}
+        <div data-testid="grant-group">
+          <p class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">{{ group.group }}</p>
+          <div class="space-y-1">
+            {% for area in group.areas %}
+            <label class="flex items-start gap-2 text-sm text-gray-800" title="{{ area.description }}">
+              <input type="checkbox" name="areas" value="{{ area.key }}" class="mt-0.5 rounded-sm border-gray-300" {% if area.wanted %}checked{% endif %}>
+              <span class="flex items-center gap-1.5">{{ area.label }}{% if area.wanted %}<span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 whitespace-nowrap" data-testid="requested-pill">Requested</span>{% endif %}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
         {% endfor %}
       </div>
     </fieldset>
@@ -47,17 +54,19 @@
     <p class="mt-3 text-xs text-red-700">The approvers' email could not be sent ({{ r.notify_error }}), so this request only shows here.</p>
     {% endif %}
 
-    <label for="note-{{ r.id }}" class="block mt-4 text-xs font-bold text-gray-500 uppercase tracking-wide">Note to them <span class="font-normal normal-case">(optional, included in the email)</span></label>
+    <label for="note-{{ r.id }}" class="block mt-4 text-xs font-bold text-gray-500 uppercase tracking-wide">Note <span class="font-normal normal-case">(optional)</span></label>
+    <p class="text-xs text-gray-400">Included in the email.</p>
     <textarea id="note-{{ r.id }}" name="note" rows="2" maxlength="1000"
       class="mt-1 w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 focus:outline-hidden focus:ring-2 focus:ring-gray-400"></textarea>
 
-    <div class="mt-3 flex flex-wrap gap-2">
+    <div class="mt-3 flex flex-wrap items-center gap-3">
       <button type="submit" name="decision" value="grant"
         class="btn-primary">
-        Save: grant the ticked areas</button>
+        Grant selected</button>
       <button type="submit" name="decision" value="deny"
-        class="px-4 py-2 text-sm font-semibold rounded-lg border bg-white border-gray-300 text-red-700 hover:bg-red-50">
-        Deny (stays Basic)</button>
+        class="px-4 py-2 text-sm font-semibold rounded-lg border border-red-300 bg-white text-red-700 hover:bg-red-50">
+        Deny</button>
+      <span class="text-xs text-gray-500">They stay on Basic.</span>
     </div>
   </form>
   {% empty %}

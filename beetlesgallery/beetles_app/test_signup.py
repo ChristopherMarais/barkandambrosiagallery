@@ -91,6 +91,6 @@ class SignUpTests(PageBehaviourCase):
     def test_the_superusers_create_account_page_moved(self):
         self.client.force_login(self.superuser)
         self.assertEqual(reverse("create_account"), "/accounts/create-account/")
-        self.assertContains(self.client.get(reverse("create_account")), "Create User")
+        self.assertContains(self.client.get(reverse("create_account")), "Create user")
         self.client.force_login(self.user)
         self.assertRedirects(self.client.get(reverse("create_account")), reverse("login"), fetch_redirect_response=False)

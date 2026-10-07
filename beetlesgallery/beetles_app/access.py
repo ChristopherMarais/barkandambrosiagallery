@@ -59,6 +59,11 @@ def extras(keys):
     return [k for k in keys if k in site_areas.KEYS]
 
 
+def grouped(wanted):
+    """The areas grouped into Viewing / Editing / Admin, the ones in ``wanted`` ticked and listed first."""
+    return site_areas.grouped_areas(wanted)
+
+
 def throttled(request):
     """True when this address (or everyone together) has sent too many requests in the last hour."""
     from django.core.cache import cache

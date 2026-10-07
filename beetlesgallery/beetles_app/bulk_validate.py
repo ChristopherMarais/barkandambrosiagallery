@@ -33,6 +33,20 @@ def unvalidated_images(q="", source="", named_only=False):
     return images.order_by("-created_at", "pk")
 
 
+def annotate_caption(image):
+    """
+    Set what the card's caption shows (bulk-boxes, #618): the species name when every named box agrees on one, how
+    many boxes there are (validating the image validates each of them) and how many (if any) have no name yet.
+    Needs ``image.active_rois`` (prefetched); an ROI without a box is not counted (it is not validated either).
+    """
+    boxes = [roi for roi in image.active_rois if roi.bbox_x is not None]
+    names = {roi.taxon.scientific_name for roi in boxes if roi.taxon_id}
+    image.box_count = len(boxes)
+    image.unnamed_count = sum(1 for roi in boxes if not roi.taxon_id)
+    image.caption_name = next(iter(names)) if len(names) == 1 else None
+    return image
+
+
 @area_required(BULK_VALIDATE)
 def bulk_validate(request):
     if request.method == "POST":
@@ -63,6 +77,8 @@ def bulk_validate(request):
     page.object_list = list(page.object_list.prefetch_related(Prefetch(
         "specimens", queryset=Beetles.objects.filter(is_deleted=False).select_related("taxon").order_by("bbox_y", "bbox_x"),
         to_attr="active_rois")))
+    for image in page.object_list:
+        annotate_caption(image)
     return render(request, "beetles/bulk_validate.html", {
         "page": page, "q": q, "source": source, "named_only": named_only,
         "sources": Beetles.LabelSource.choices, "total": page.paginator.count,
