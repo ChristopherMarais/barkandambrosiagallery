@@ -5,12 +5,14 @@
 {% block content %}
 <section class="max-w-2xl space-y-6" data-testid="privacy-notice">
   <h1 class="page-title">Privacy notice</h1>
+  <p class="text-sm text-gray-500">Last updated: October 2026.</p>
 
   <div class="space-y-2">
     <h2 class="font-bold">Who we are</h2>
-    <p>The Bark and Ambrosia Gallery is the owner of this website. It is responsible for your personal data here (the
-      "controller").{% if privacy_contact_email %} To ask about your data, write to
-      <a class="underline" href="mailto:{{ privacy_contact_email }}">{{ privacy_contact_email }}</a>.{% endif %}</p>
+    <p>The Forest Entomology Lab, University of Florida, runs this website (Bark and Ambrosia Gallery) and is
+      responsible for your personal data here (the "controller").{% if privacy_contact_email %} To ask about your
+      data, write to <a class="underline" href="mailto:{{ privacy_contact_email }}">{{ privacy_contact_email }}</a>.
+      {% endif %}</p>
   </div>
 
   <div class="space-y-2">
@@ -26,17 +28,73 @@
   </div>
 
   <div class="space-y-2">
+    <h2 class="font-bold">Cookies this site uses</h2>
+    <p>Some cookies keep the site working and are set however you answer the cookie notice ("essential"); one more
+      is set only if you accept, to measure visits ("analytics"). None are used for advertising.</p>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden" data-testid="cookie-table">
+        <thead class="bg-gray-50 text-left">
+          <tr>
+            <th class="p-2 border-b border-gray-200">Cookie</th>
+            <th class="p-2 border-b border-gray-200">Set by</th>
+            <th class="p-2 border-b border-gray-200">Purpose</th>
+            <th class="p-2 border-b border-gray-200">Kept for</th>
+            <th class="p-2 border-b border-gray-200">Kind</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="p-2 border-b border-gray-200"><code>sessionid</code></td>
+            <td class="p-2 border-b border-gray-200">Us</td>
+            <td class="p-2 border-b border-gray-200">Keeps you signed in</td>
+            <td class="p-2 border-b border-gray-200">About two weeks of inactivity</td>
+            <td class="p-2 border-b border-gray-200">Essential</td>
+          </tr>
+          <tr>
+            <td class="p-2 border-b border-gray-200"><code>csrftoken</code></td>
+            <td class="p-2 border-b border-gray-200">Us</td>
+            <td class="p-2 border-b border-gray-200">Stops forged form submissions (security)</td>
+            <td class="p-2 border-b border-gray-200">About a year</td>
+            <td class="p-2 border-b border-gray-200">Essential</td>
+          </tr>
+          <tr>
+            <td class="p-2 border-b border-gray-200"><code>django_timezone</code></td>
+            <td class="p-2 border-b border-gray-200">Us</td>
+            <td class="p-2 border-b border-gray-200">Shows times in your own timezone, not ours</td>
+            <td class="p-2 border-b border-gray-200">One year</td>
+            <td class="p-2 border-b border-gray-200">Essential</td>
+          </tr>
+          <tr>
+            <td class="p-2 border-b border-gray-200"><code>ga_consent</code></td>
+            <td class="p-2 border-b border-gray-200">Us</td>
+            <td class="p-2 border-b border-gray-200">Remembers your Accept/Reject choice, so you are not asked every visit</td>
+            <td class="p-2 border-b border-gray-200">One year</td>
+            <td class="p-2 border-b border-gray-200">Essential</td>
+          </tr>
+          <tr>
+            <td class="p-2"><code>_ga</code>, <code>_ga_&lt;ID&gt;</code></td>
+            <td class="p-2">Google Analytics</td>
+            <td class="p-2">Tells visits apart, so we can count them</td>
+            <td class="p-2">Up to 2 years; only set if you accept</td>
+            <td class="p-2">Analytics (optional)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="space-y-2">
     <h2 class="font-bold">Google Analytics</h2>
-    <p>Google Analytics is run by Google. It sets cookies named <code>_ga</code> and <code>_ga_</code> followed by an ID, so
-      it can tell visits apart. Google processes the analytics data for us as our processor, under Google's data processing
-      terms. Google may process it in other countries, including the United States, with the safeguards those terms provide.
-      Google does not get your name, your account or anything you type into the site from us.</p>
+    <p>Google Analytics is run by Google. Google processes the analytics data for us as our processor, under Google's
+      data processing terms, which include the EU Standard Contractual Clauses and other safeguards for sending data
+      to countries outside the UK and EEA, including the United States. Google does not get your name, your account
+      or anything you type into the site from us.</p>
   </div>
 
   <div class="space-y-2">
     <h2 class="font-bold">How long we keep it</h2>
     <ul class="list-disc pl-5 space-y-1">
-      <li>Analytics data: 14 months in Google Analytics.</li>
+      <li>Analytics data: 14 months in Google Analytics, then it is deleted automatically.</li>
       <li>Your cookie choice: one year, then you are asked again.</li>
       <li>Accounts: while the account exists. Ask us to delete it.</li>
     </ul>
@@ -44,17 +102,21 @@
 
   <div class="space-y-2">
     <h2 class="font-bold">Your choice, and how to change it</h2>
-    <p>We set the analytics cookie only if you click <strong>Accept</strong>. You can click <strong>Reject</strong> instead,
-      and you can change your mind at any time: use <strong>Cookie settings</strong> at the bottom of any page. Rejecting
-      stops analytics straight away and removes the Google Analytics cookies from your browser.</p>
+    <p>Analytics runs only with your consent (the legal basis for it), which you give by clicking <strong>Accept</strong>
+      on the cookie notice. Nothing analytics-related is set before that. You can click <strong>Reject</strong> instead,
+      and withdrawing is just as easy as giving: open <strong>Cookie settings</strong> at the bottom of any page, or from
+      "How to play" on the game page, and choose again at any time. Rejecting (or withdrawing) stops analytics straight
+      away and removes the Google Analytics cookies from your browser. Saying no, or changing your mind, never affects
+      your access to the site.</p>
   </div>
 
   <div class="space-y-2">
     <h2 class="font-bold">Your rights</h2>
-    <p>You can ask us for a copy of your data, to correct it, to delete it, or to limit how we use it. You can object to
-      analytics, and withdraw your consent, at any time, as described above.</p>
-    <p>If you are not happy with how we handle your data, you can complain to your national data protection authority. In
-      the UK that is the Information Commissioner's Office (ico.org.uk).</p>
+    <p>You can ask us for a copy of your data, to correct it, to delete it, to limit how we use it, or for it in a
+      portable format. You can object to analytics, and withdraw your consent, at any time, as described above.</p>
+    <p>If you are not happy with how we handle your data, you can complain to a data protection authority: your own
+      country's authority if you are in the EU, the Information Commissioner's Office (ico.org.uk) if you are in the
+      UK, or ours if you tell us first and we will try to put it right.</p>
   </div>
 </section>
 {% endblock %}

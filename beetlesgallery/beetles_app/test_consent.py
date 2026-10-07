@@ -107,3 +107,38 @@ class PrivacyPageTests(TestCase):
     def test_no_contact_line_when_the_address_is_not_set(self):
         html = self.client.get("/privacy/").content.decode()
         self.assertNotIn("mailto:", html)
+
+    def test_the_controller_is_named(self):
+        html = self.client.get("/privacy/").content.decode()
+        self.assertIn("The Forest Entomology Lab, University of Florida", html)
+        self.assertNotIn("The Bark and Ambrosia Gallery is the owner", html)
+
+    def test_the_cookie_table_lists_essential_and_analytics_cookies(self):
+        html = self.client.get("/privacy/").content.decode()
+        table = re.search(r'data-testid="cookie-table".*?</table>', html, re.S).group(0)
+        for name in ("sessionid", "csrftoken", "django_timezone", "ga_consent", "_ga"):
+            self.assertIn(name, table, name)
+        self.assertIn("Essential", table)
+        self.assertIn("Analytics", table)
+
+    def test_rights_include_withdrawal_and_a_complaints_route(self):
+        html = self.client.get("/privacy/").content.decode()
+        self.assertIn("withdraw", html.lower())
+        self.assertIn("complain", html.lower())
+        self.assertIn("Information Commissioner", html)
+
+
+class GamePageReopensConsentTests(TestCase):
+    """The footer with "Cookie settings" is covered by the game's full-screen layout, so the game page offers its
+    own way to reopen the choice (from "How to play"), reachable without leaving the game."""
+
+    TEMPLATE = Path(settings.BASE_DIR) / "beetlesgallery" / "templates" / "beetles" / "game_play.html"
+
+    def test_how_to_play_offers_cookie_settings(self):
+        source = self.TEMPLATE.read_text(encoding="utf-8")
+        rules_link = source.index('data-testid="help-how"')
+        cookie_button = source.index("data-open-consent")
+        # inside the same help sheet, right after the rules link, and gated on GA being on
+        self.assertLess(rules_link, cookie_button)
+        self.assertLess(cookie_button - rules_link, 200)
+        self.assertIn('{% if ga_measurement_id %}', source[rules_link:cookie_button])

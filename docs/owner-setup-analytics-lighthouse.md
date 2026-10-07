@@ -34,15 +34,16 @@ Never put the Measurement ID in git. It goes only in the server's `.env.prod`.
 ## C. Approve the cookie wording
 
 15. Read the notice (it appears at the bottom of the site in a private window):
-    > Can we use Google Analytics to count page visits? We never send it your name or your account.
-    > Your choice is remembered for a year.
-    Buttons: **Accept** and **Reject** (same size and style, on purpose). If you want different words, tell Claude the new text.
-    The exact text is in `docs/analytics.md` under "Consent".
-15a. Check the privacy notice at `/privacy/` and fill in the two facts only you know: the legal name of the controller
-    (it says "The Bark and Ambrosia Gallery") and, in `.env.prod`, add `PRIVACY_CONTACT_EMAIL=you@example.org` (same
-    way as step 11). Restart the web container (step 13) so the contact line appears.
-15b. In GA4, **Admin > Data collection > Data retention**, set **Event data retention** to **14 months**. The privacy
-    notice says 14 months. Then click **Save**.
+    > **May we count your visits?** We would like to set an analytics cookie from Google Analytics, which Google runs
+    > for us. It counts page visits and which games are played, so we can see what to improve. It is set only if you
+    > accept. Your choice is kept in an essential cookie for a year. You can change it at any time with Cookie settings
+    > at the bottom of a page.
+    Buttons: **Accept** and **Reject** (same size and style, on purpose). If you want different words, tell Claude the
+    new text. The exact wording is also in `docs/analytics.md` under "Consent".
+15a. Check the privacy notice at `/privacy/`: the controller is named as "The Forest Entomology Lab, University of
+    Florida". Add `PRIVACY_CONTACT_EMAIL=you@example.org` to `.env.prod` (same way as step 11) so the contact line
+    appears, then restart the web container (step 13).
+15b. Done: GA4 event data retention is set to 14 months, matching the privacy notice.
 
 ## D. Check that the numbers arrive
 

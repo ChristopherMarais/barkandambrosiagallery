@@ -24,15 +24,20 @@ Nothing non-essential runs before a clear choice.
   white panel with a grey border, pinned to the bottom above the content. **Accept** and **Reject** are the same size and
   style (both `btn-secondary`, one grid cell each), and no box is pre-ticked. On the game page the game screen stops above
   the panel (`--consent-h`), so its buttons stay usable on a phone.
-- **Withdrawing** is as easy as giving: **Cookie settings** in the footer (every page) reopens the notice. **Reject**
-  stops analytics straight away (consent updated to denied) and deletes the `_ga` cookies from the browser.
+- **Withdrawing** is as easy as giving: **Cookie settings** in the footer (every page) and in "How to play" on the game
+  page (where the footer is covered by the game screen) reopens the notice. **Reject** stops analytics straight away
+  (consent updated to denied) and deletes the `_ga` cookies from the browser.
 - **The choice** is stored in `ga_consent` (`granted` or `denied`) for 365 days, and only once the visitor has chosen.
   It is an essential cookie: it only remembers the choice; nothing tracks with it.
 - **Do Not Track is not used.** The notice asks, so the choice stays the visitor's. Honouring a browser flag would skip
   the question silently, and would not replace consent under the EU rules.
+- **Legal basis** for analytics is consent (GDPR Art. 6(1)(a)), given and withdrawn as above. No other basis (e.g.
+  "legitimate interest") is used for it, so there is no fallback that runs without a yes.
 - **Privacy notice** at `/privacy/` (`templates/privacy.html`), linked from the notice and the footer. It names the
-  controller, what is collected, Google as processor, retention, rights and how to withdraw. The contact address comes
-  from `PRIVACY_CONTACT_EMAIL` (set in `.env.prod`); the line is left out when it is empty.
+  controller, a cookie-by-cookie table (name, who sets it, purpose, how long, essential or not), Google as processor
+  (with the Standard Contractual Clauses for data leaving the UK/EEA), retention, rights (including portability) and
+  the complaints route. The contact address comes from `PRIVACY_CONTACT_EMAIL` (set in `.env.prod`); the line is left
+  out when it is empty.
 - Current wording (for the owner to approve):
   > **May we count your visits?**
   > We would like to set an analytics cookie from Google Analytics, which Google runs for us. It counts page visits and

@@ -577,6 +577,9 @@
         <li>On beetles nobody has checked yet, you earn points when strong players agree with you. Once a curator checks one, it is scored again.</li>
       </ul>
       <a href="{% url 'game_how' %}" target="_blank" rel="noopener" class="inline-block text-sm text-gray-600 underline hover:text-gray-900" data-testid="help-how">All the rules and scoring</a>
+      {% if ga_measurement_id %}
+      <button type="button" class="block text-sm text-gray-600 underline hover:text-gray-900" data-open-consent>Cookie settings</button>
+      {% endif %}
     </div>
   </div>
 
