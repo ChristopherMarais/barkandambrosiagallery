@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% block meta_description %}Bark and Ambrosia Beetle Gallery: photographs, specimen records and identification tools for bark and ambrosia beetles.{% endblock %}
 {% load static beetle_tags %}
 
 {% block content %}
@@ -14,14 +15,14 @@
         <p class="text-base mt-6 md:text-lg md:leading-7 text-gray-600 max-w-3xl mx-auto leading-relaxed text-balance">
           Welcome to the Bark & Ambrosia Beetle Gallery. The world's largest collection of bark and ambrosia beetle images and specimen data. 
           
-        <span class="block mt-6 text-sm md:text-base font-medium text-gray-400">
+        <span class="block mt-6 text-sm md:text-base font-medium text-gray-600">
           Image Attribution
           <span class="block text-gray-600 font-normal mt-1">
             Images in this database were contributed by the global community of entomologists and museum curators. Their names and institutions are listed with each respective file and will be acknowledged in an upcoming publication.
           </span>
         </span>
 
-          <span class="block mt-6 text-sm md:text-base font-medium text-gray-400">Maintained by the 
+          <span class="block mt-6 text-sm md:text-base font-medium text-gray-600">Maintained by the 
             <a href="https://pitchtube.org/" target="_blank" class="block text-gray-600 hover:underline">
               University of Florida Forest Entomology Lab.
             </a>
@@ -79,19 +80,19 @@
       <div class="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 max-w-5xl mx-auto px-4">
         <div class="flex flex-col items-center text-center">
           <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ total_images|default:0|digit_groups }}</span>
-          <span class="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Images</span>
+          <span class="text-xs md:text-sm font-bold text-gray-600 uppercase tracking-widest mt-1">Images</span>
         </div>
         <div class="flex flex-col items-center text-center">
           <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ total_genera|default:0|digit_groups }}</span>
-          <span class="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Genera</span>
+          <span class="text-xs md:text-sm font-bold text-gray-600 uppercase tracking-widest mt-1">Genera</span>
         </div>
         <div class="flex flex-col items-center text-center">
           <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ total_species|default:0|digit_groups }}</span>
-          <span class="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Species</span>
+          <span class="text-xs md:text-sm font-bold text-gray-600 uppercase tracking-widest mt-1">Species</span>
         </div>
         <div class="flex flex-col items-center text-center">
           <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ type_status_count|default:0|digit_groups }}</span>
-          <span class="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Type Specimens</span>
+          <span class="text-xs md:text-sm font-bold text-gray-600 uppercase tracking-widest mt-1">Type Specimens</span>
         </div>
       </div>
     </div>
@@ -125,7 +126,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-y-16 lg:gap-6 text-center max-w-6xl mx-auto items-start">
 
             <div class="flex flex-col gap-6 min-w-0">
-            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 mx-auto w-24">
+            <h3 class="text-xs font-bold text-gray-600 uppercase tracking-widest border-b border-gray-100 pb-2 mx-auto w-24">
                 Taxonomy Team
             </h3>
 
@@ -133,9 +134,9 @@
                 <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Andrew Johnson</h3>
                 <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
                     Lead Taxonomist & Data Curator
-                    <span class="block text-xs text-gray-400 font-normal mt-1">Photo Management & Taxonomic Quality Control</span>
+                    <span class="block text-xs text-gray-600 font-normal mt-1">Photo Management & Taxonomic Quality Control</span>
                 </p>
-                <a href="https://pitchtube.org/researchers-lab-andrew/" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors" title="Lab Webpage">
+                <a href="https://pitchtube.org/researchers-lab-andrew/" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-black transition-colors" title="Lab Webpage">
                 <i class="fi fi-rr-bugs text-l text-base w-4 text-center"></i>
                 <span>UF Forest Entomology Lab</span>
                 </a>
@@ -147,9 +148,9 @@
                 <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Jiri Hulcr</h3>
                 <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
                     Principal Investigator
-                    <span class="block text-xs text-gray-400 font-normal mt-1">Project Conception, Scientific Direction & Oversight</span>
+                    <span class="block text-xs text-gray-600 font-normal mt-1">Project Conception, Scientific Direction & Oversight</span>
                 </p>
-                <a href="https://pitchtube.org/researchers-lab-jiri/" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors" title="Lab Webpage">
+                <a href="https://pitchtube.org/researchers-lab-jiri/" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-black transition-colors" title="Lab Webpage">
                 <i class="fi fi-rr-bugs text-l text-base w-4 text-center"></i>
                 <span>UF Forest Entomology Lab</span>
                 </a>
@@ -157,7 +158,7 @@
             </div>
 
             <div class="flex flex-col gap-6 min-w-0">
-            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 mx-auto w-24">
+            <h3 class="text-xs font-bold text-gray-600 uppercase tracking-widest border-b border-gray-100 pb-2 mx-auto w-24">
                 Development Team
             </h3>
             
@@ -165,13 +166,13 @@
                 <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Christopher Marais</h3>
                 <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
                     Co-Lead Full Stack Developer
-                    <span class="block text-xs text-gray-400 font-normal mt-1">Backend, Frontend, DevOps & MLOps</span>
+                    <span class="block text-xs text-gray-600 font-normal mt-1">Backend, Frontend, DevOps & MLOps</span>
                 </p>
-                <a href="https://github.com/ChristopherMarais" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors" title="GitHub">
+                <a href="https://github.com/ChristopherMarais" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-black transition-colors" title="GitHub">
                 <i class="fi fi-brands-github text-base"></i>
                 </a>
                 <span class="text-gray-300 text-xs">|</span>
-                <a href="https://www.linkedin.com/in/christopher-marais/" target="_blank" class="text-gray-400 hover:text-black transition-colors" title="LinkedIn">
+                <a href="https://www.linkedin.com/in/christopher-marais/" target="_blank" class="text-gray-600 hover:text-black transition-colors" title="LinkedIn">
                 <i class="fi fi-brands-linkedin text-base"></i>
                 </a>
             </div>
@@ -182,13 +183,13 @@
                 <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Layla Schuster</h3>
                 <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
                     Co-Lead Full Stack Developer
-                    <span class="block text-xs text-gray-400 font-normal mt-1">Frontend, Backend & Database Architecture</span>
+                    <span class="block text-xs text-gray-600 font-normal mt-1">Frontend, Backend & Database Architecture</span>
                 </p>
-                    <a href="https://github.com/laylaaschuster" target="_blank" class="text-gray-400 hover:text-black transition-colors" title="GitHub">
+                    <a href="https://github.com/laylaaschuster" target="_blank" class="text-gray-600 hover:text-black transition-colors" title="GitHub">
                     <i class="fi fi-brands-github text-base"></i>
                     </a>
                     <span class="text-gray-300 text-xs">|</span>
-                    <a href="https://www.linkedin.com/in/layla-schuster-350712233/" target="_blank" class="text-gray-400 hover:text-black transition-colors" title="LinkedIn">
+                    <a href="https://www.linkedin.com/in/layla-schuster-350712233/" target="_blank" class="text-gray-600 hover:text-black transition-colors" title="LinkedIn">
                     <i class="fi fi-brands-linkedin text-base"></i>
                     </a>
             </div>
@@ -199,13 +200,13 @@
                 <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Eric Kuo</h3>
                 <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
                     Full Stack Developer
-                    <span class="block text-xs text-gray-400 font-normal mt-1">Backend & Database Architecture</span>
+                    <span class="block text-xs text-gray-600 font-normal mt-1">Backend & Database Architecture</span>
                 </p>
-                <a href="https://github.com/Ekuo79" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors" title="GitHub">
+                <a href="https://github.com/Ekuo79" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-black transition-colors" title="GitHub">
                 <i class="fi fi-brands-github text-base"></i>
                 </a>
                 <span class="text-gray-300 text-xs">|</span>
-                <a href="https://www.linkedin.com/in/eric-kuo79/" target="_blank" class="text-gray-400 hover:text-black transition-colors" title="LinkedIn">
+                <a href="https://www.linkedin.com/in/eric-kuo79/" target="_blank" class="text-gray-600 hover:text-black transition-colors" title="LinkedIn">
                     <i class="fi fi-brands-linkedin text-base"></i>
                 </a>
             </div>
@@ -214,20 +215,20 @@
                 <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Yiqiao (Emily) Huang</h3>
                 <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
                     Developer
-                    <span class="block text-xs text-gray-400 font-normal mt-1">Frontend & MLOps</span>
+                    <span class="block text-xs text-gray-600 font-normal mt-1">Frontend & MLOps</span>
                 </p>
-                <a href="https://github.com/APCSAemily" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors" title="GitHub">
+                <a href="https://github.com/APCSAemily" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-black transition-colors" title="GitHub">
                 <i class="fi fi-brands-github text-base"></i>
                 </a>
                 <span class="text-gray-300 text-xs">|</span>
-                <a href="https://www.linkedin.com/in/emily-h-profile/" target="_blank" class="text-gray-400 hover:text-black transition-colors" title="LinkedIn">
+                <a href="https://www.linkedin.com/in/emily-h-profile/" target="_blank" class="text-gray-600 hover:text-black transition-colors" title="LinkedIn">
                     <i class="fi fi-brands-linkedin text-base"></i>
                 </a>
             </div>
             </div>
 
             <div class="flex flex-col gap-6 min-w-0">
-            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 mx-auto w-24">
+            <h3 class="text-xs font-bold text-gray-600 uppercase tracking-widest border-b border-gray-100 pb-2 mx-auto w-24">
                 Support Team
             </h3>
 
@@ -235,13 +236,13 @@
                 <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Raquel Dias</h3>
                 <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
                 Technical Director
-                <span class="block text-xs text-gray-400 font-normal mt-1">Project Oversight & Digital Architecture</span>
+                <span class="block text-xs text-gray-600 font-normal mt-1">Project Oversight & Digital Architecture</span>
                 </p>
-                <a href="https://github.com/Dias-Lab" target="_blank" class="text-gray-400 hover:text-black transition-colors" title="GitHub">
+                <a href="https://github.com/Dias-Lab" target="_blank" class="text-gray-600 hover:text-black transition-colors" title="GitHub">
                     <i class="fi fi-brands-github text-base"></i>
                 <span class="text-gray-300 text-xs">|</span>
                 </a>
-                <a href="https://microcell.ufl.edu/people/raquel-dias/" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors" title="Lab Webpage">
+                <a href="https://microcell.ufl.edu/people/raquel-dias/" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-black transition-colors" title="Lab Webpage">
                     <i class="fi fi-rr-brain-circuit text-base w-4 text-center"></i>
                     <span>Dias Lab</span>
                 </a>
@@ -253,13 +254,13 @@
                 <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-600 transition-colors">Cleydson Silva</h3>
                 <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed mb-1">
                     Technical Consultant
-                    <span class="block text-xs text-gray-400 font-normal mt-1">General Support & Assistance</span>
+                    <span class="block text-xs text-gray-600 font-normal mt-1">General Support & Assistance</span>
                 </p>
-                <a href="https://github.com/jcleydsonsilva" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors" title="GitHub">
+                <a href="https://github.com/jcleydsonsilva" target="_blank" class="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-black transition-colors" title="GitHub">
                 <i class="fi fi-brands-github text-base"></i>
                 </a>
                 <span class="text-gray-300 text-xs">|</span>
-                <a href="https://www.linkedin.com/in/jose-cleydson-ferreira-silva-a790b617b/" target="_blank" class="text-gray-400 hover:text-black transition-colors" title="LinkedIn">
+                <a href="https://www.linkedin.com/in/jose-cleydson-ferreira-silva-a790b617b/" target="_blank" class="text-gray-600 hover:text-black transition-colors" title="LinkedIn">
                 <i class="fi fi-brands-linkedin text-base"></i>
                 </a>
             </div>
@@ -331,12 +332,12 @@
 
     <footer class="py-6 flex flex-col items-center justify-center gap-3 border-t border-gray-200 mt-auto">
       <div class="flex gap-6 opacity-40 hover:opacity-100 transition-opacity duration-300">
-        <img src="{% static 'img/NSF_4-Color_bitmap_Logo_RGB.png' %}" class="h-16 w-auto grayscale" alt="NSF">
-        <img src="{% static 'img/PngItem_2222864.png' %}" class="h-16 w-auto grayscale" alt="USDA">
-        <img src="{% static 'img/forest-service-usda-logos.png' %}" class="h-16 w-auto grayscale" alt="USDA">
-        <img src="{% static 'img/Florida-Forest-Service-Logo-Vector.jpg' %}" class="h-16 w-auto grayscale" alt="USDA">
+        <img src="{% static 'img/NSF_4-Color_bitmap_Logo_RGB.png' %}" class="h-16 w-auto grayscale" alt="NSF" loading="lazy" decoding="async">
+        <img src="{% static 'img/PngItem_2222864.png' %}" class="h-16 w-auto grayscale" alt="USDA" loading="lazy" decoding="async">
+        <img src="{% static 'img/forest-service-usda-logos.png' %}" class="h-16 w-auto grayscale" alt="USDA" loading="lazy" decoding="async">
+        <img src="{% static 'img/Florida-Forest-Service-Logo-Vector.jpg' %}" class="h-16 w-auto grayscale" alt="USDA" loading="lazy" decoding="async">
       </div>
-      <p class="text-[10px] text-gray-400 italic text-center">The National Science Foundation (NSF)<br>
+      <p class="text-[10px] text-gray-600 italic text-center">The National Science Foundation (NSF)<br>
         The United States Department of Agriculture (USDA) Animal and Plant Health Inspection Service (APHIS)<br>
         The United States Department of Agriculture (USDA) Forest Service<br>
         The Florida Forest Service</p>

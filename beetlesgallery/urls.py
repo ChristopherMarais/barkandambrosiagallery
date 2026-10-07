@@ -7,6 +7,7 @@ from django.conf.urls.static import static
 from django.http import Http404
 from django.views.static import serve
 
+from beetlesgallery.cache_policy import media_cache_control
 from beetlesgallery.beetles_app import views as beetles_views
 from beetlesgallery.beetles_app import chunked_upload
 from beetlesgallery.beetles_app import game_views
@@ -140,8 +141,8 @@ def media_serve_with_cache(request, path, document_root=None, show_indexes=False
     if PRIVATE_MEDIA.search(path):
         raise Http404
     response = serve(request, path, document_root, show_indexes)
-    # Cache thumbnails and images for 30 days in browser & Cloudflare CDN
-    response["Cache-Control"] = "public, max-age=2592000, immutable"
+    # Images cache for a year (their names are SHA-256 hashes); other media for 30 days. Browser and Cloudflare.
+    response["Cache-Control"] = media_cache_control(path)
     return response
 
 # Serve Media Files (User Uploads) manually since we don't have Nginx

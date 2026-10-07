@@ -19,7 +19,9 @@
         "categories:best-practices": ["warn", { "minScore": 0.9 }],
         "categories:seo": ["warn", { "minScore": 0.9 }],
         "largest-contentful-paint": ["warn", { "maxNumericValue": 2500 }],
-        "cumulative-layout-shift": ["warn", { "maxNumericValue": 0.1 }]
+        "cumulative-layout-shift": ["warn", { "maxNumericValue": 0.1 }],
+        "color-contrast": ["warn", { "minScore": 1 }],
+        "meta-description": ["warn", { "minScore": 1 }]
       }
     },
     "upload": { "target": "filesystem", "outputDir": ".lighthouseci" }

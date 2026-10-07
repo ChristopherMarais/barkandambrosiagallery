@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "build:css": "tailwindcss -i ./beetlesgallery/static/css/input.css -o ./beetlesgallery/static/css/style.css --watch"
+    "build:css": "tailwindcss -i ./beetlesgallery/static/css/input.css -o ./beetlesgallery/static/css/style.css --minify --watch"
   },
   "dependencies": {
     "@tailwindcss/cli": "~4.3.3",
