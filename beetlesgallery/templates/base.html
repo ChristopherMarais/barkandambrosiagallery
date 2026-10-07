@@ -229,7 +229,8 @@
     }
   </style>
 
-  <script src="{% static 'js/digit_groups.js' %}" defer></script>
+  {# Not deferred: pages' inline scripts call digitGroupsText() while the page is still parsing (deferring it froze the image browser behind its loading overlay). #}
+  <script src="{% static 'js/digit_groups.js' %}"></script>
   <script src="{% static 'js/progressive_image.js' %}" defer></script>
   <script src="{% static 'js/footer_basehtml.js' %}" defer></script>
   <script src="{% static 'js/copy_id.js' %}" defer></script>
