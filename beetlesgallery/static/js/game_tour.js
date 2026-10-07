@@ -32,7 +32,8 @@
   function visible(el) {
     if (!el) return false;
     const r = el.getBoundingClientRect();
-    return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== "hidden";
+    const style = getComputedStyle(el);   // a grid tile's Flag waits, see-through, for the pointer (r7): not a step
+    return r.width > 0 && r.height > 0 && style.visibility !== "hidden" && style.opacity !== "0";
   }
 
   let steps = [];

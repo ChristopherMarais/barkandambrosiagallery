@@ -28,6 +28,8 @@
   #game[data-mode="classify"] #photos { flex: 0 1 auto; max-height: 45vh; width: 100%; background: none; }
   #game[data-mode="classify"] #photos .cell { flex: 0 1 auto; width: auto; height: auto; max-width: 100%; max-height: 100%;
       aspect-ratio: var(--photo-ar, 4 / 3); }
+  /* ...and centred in the room above the answer panel, the same space above and below it, not pushed to the top (r7) */
+  #game[data-mode="classify"] #photo-area { justify-content: center; }
   /* Lay the tiles (#602): the new beetle's empty tiles go down at once, one after another (--i, --lay-step), and each
      photo lands in its own tile when it is in, so one beetle gives way to the next instead of jumping (#575) */
   #photos .cell.slot:not(.landed) { background: #e5e7eb; }
@@ -126,8 +128,15 @@
      the icon a flex box of its own, so the icon font's line height cannot nudge it off the middle. With a keyboard
      the Esc key widens it into a pill, still centred. */
   #exit { flex-shrink: 0; height: 2.5rem; min-width: 2.5rem; padding: 0 0.5rem; border: 1px solid #d1d5db; border-radius: 9999px; font-size: 0.9375rem; font-weight: 600; line-height: 1; color: #111827; background: #fff; }
-  #exit > i { display: flex; align-items: center; justify-content: center; width: 1.25rem; height: 1.25rem; line-height: 1; }
+  #exit > i { display: flex; align-items: center; justify-content: center; width: 1.125rem; height: 1.125rem; line-height: 1; }
   #exit > i::before { display: block; line-height: 1; }
+  /* With the Esc key cap (r7, owner: the pill looked heavier on one side): the cross's ink fills only the middle half
+     of its 18px box, so its side of the pill gets less padding (0.375rem plus the glyph's own ~0.28rem, against the
+     key cap's 0.625rem) and the same gap to the key cap. Cross and cap then sit evenly, edge to edge. */
+  @media (pointer: fine) {
+    #game.has-kbd #exit { gap: 0.375rem; padding: 0 0.625rem 0 0.375rem; }
+    #game.has-kbd #exit .kbd { margin-left: 0; }
+  }
   #exit:hover { border-color: #6b7280; }
   /* Rounder photos */
   #photos .cell { border-radius: 1rem; }
@@ -192,13 +201,24 @@
   .tap-mark { position: absolute; left: 0.375rem; top: 0.375rem; z-index: 3; display: none; align-items: center; justify-content: center;
               width: 1.5rem; height: 1.5rem; border-radius: 9999px; background: #374151; color: #fff; font-size: 0.75rem; pointer-events: none; }
   .cell.tapped .tap-mark { display: inline-flex; }
-  /* A grid tile carries one faint button, the whole photo (top right), where the Flag and the beetle's other photos
-     are: clear while the pointer is on the tile, on the tile last tapped (for a moment), or with the keys. Smaller
-     in grids of 16 and 25, so the beetle stays in view. */
+  /* A grid tile carries one faint button, the whole photo (top right): clear while the pointer is on the tile, on the
+     tile last tapped (for a moment), or with the keys. Smaller in grids of 16 and 25, so the beetle stays in view. */
   #game:is([data-mode="odd"], [data-mode="select"]) #photos .zoom-chip { opacity: 0.5; transition: opacity .2s; }
   @media (hover: hover) { #game:is([data-mode="odd"], [data-mode="select"]) #photos .cell:hover .zoom-chip { opacity: 1; } }
   #game #photos .cell:is(.chips-on, .key-cursor) .zoom-chip, #game #photos .zoom-chip:focus-visible { opacity: 1; }
   #photos:is([data-size="16"], [data-size="25"]) .zoom-chip { width: 1.5rem; height: 1.5rem; top: 0.25rem; right: 0.25rem; }
+  /* Grid tiles (r7): the Flag (bottom left) and the beetle's other photos (bottom right, "+2") show while the pointer
+     is on the tile, as in the photo games; on a touch screen on the tile last tapped. Hidden, they take no taps. */
+  #game:is([data-mode="odd"], [data-mode="select"]) #photos .cell > :is(.report-chip, .more-chip) { opacity: 0; pointer-events: none; transition: opacity .15s; }
+  @media (hover: hover) { #game:is([data-mode="odd"], [data-mode="select"]) #photos .cell:hover > :is(.report-chip, .more-chip) { opacity: 1; pointer-events: auto; } }
+  #game:is([data-mode="odd"], [data-mode="select"]) #photos .cell:is(.chips-on, .key-cursor) > :is(.report-chip, .more-chip),
+  #game:is([data-mode="odd"], [data-mode="select"]) #photos .cell > :is(.report-chip, .more-chip):focus-visible { opacity: 1; pointer-events: auto; }
+  #game:is([data-mode="odd"], [data-mode="select"]) #photos .more-chip { top: auto; right: 0.375rem; bottom: 0.375rem; }
+  #game:is([data-mode="odd"], [data-mode="select"]) #photos .more-chip .more-word { display: none; }
+  #game:is([data-mode="odd"], [data-mode="select"]) #photos .report-chip { width: 2rem; height: 2rem; font-size: 0.875rem; }
+  #game #photos:is([data-size="16"], [data-size="25"]) .report-chip { width: 1.5rem; height: 1.5rem; left: 0.25rem; bottom: 0.25rem; font-size: 0.6875rem; }
+  #game #photos:is([data-size="16"], [data-size="25"]) .more-chip { right: 0.25rem; bottom: 0.25rem; padding: 0.125rem 0.375rem; font-size: 0.625rem; }
+  #photos.revealing .more-chip, #photos .cell.flagged .more-chip { visibility: hidden; }
   #photos[data-size="16"] .tap-mark { width: 1.25rem; height: 1.25rem; }
   #photos[data-size="25"] .tap-mark { width: 1.125rem; height: 1.125rem; left: 0.25rem; top: 0.25rem; font-size: 0.625rem; }
   /* A photo flagged in a grid: greyed out with a "Flagged" badge, and out of play; the rest of the grid carries on */
@@ -488,6 +508,13 @@
   #lb-count { position: absolute; top: 1rem; left: 50%; transform: translateX(-50%); padding: 0.25rem 0.75rem; border-radius: 9999px;
               background: rgba(0,0,0,.6); color: #fff; font-size: 0.75rem; font-weight: 600; }
   #lb-prev.hidden, #lb-next.hidden, #lb-count.hidden { display: none; }
+  /* Every icon dead centre in its pill or round button (r7, owner): an icon font's glyph sits on the text's baseline,
+     in a line box taller than the glyph, so it drifts off the middle. Each icon is a box of its own, exactly its
+     glyph's height (line-height 1), and the pills centre their content both ways. Hidden icons stay hidden. */
+  :is(#game, #lightbox, #recap, #toasts, .level-pop) .fi:not(.hidden) { display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+  :is(#game, #lightbox, #recap, #toasts, .level-pop) .fi::before { display: block; line-height: 1; }
+  #light-btn, .more-chip, #chip, #combo, #level-chip, #focus-btn, #lb-light, .flag-badge, .rv-seen { justify-content: center; }
+  #lightbox > button[aria-label="Close"], .lb-nav { display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
 </style>
 {% endblock %}
 
@@ -612,8 +639,8 @@
 
       <p id="submit-hint" class="hidden text-center text-xs text-gray-500 mt-1" data-testid="submit-hint"></p>
       <div id="actions">
-        <button type="button" id="skip"><span id="skip-text">Skip</span><kbd class="kbd">Del</kbd></button>
-        <button type="button" id="back" aria-disabled="true" title="Your last beetle">Back<kbd class="kbd">&#9003;</kbd></button>
+        <button type="button" id="skip"><span id="skip-text">Skip</span><kbd class="kbd" title="Backspace">&#9003;</kbd></button>
+        <button type="button" id="back" aria-disabled="true" title="Your last beetle">Back<kbd class="kbd">Tab</kbd></button>
         <button type="button" id="submit" disabled><span id="submit-text">Submit</span><i id="submit-spin" class="fi fi-rr-spinner hidden" aria-hidden="true"></i><kbd class="kbd">Enter</kbd></button>
       </div>
     </div>
@@ -713,7 +740,7 @@
     <div class="flex flex-col gap-3">
       <button type="button" id="recap-more" class="btn-main px-6 py-3.5 text-base">Keep playing</button>
       <a href="{% url 'game_report' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl" data-testid="recap-learn"><i class="fi fi-rr-bulb"></i> Where I lost points</a>
-      <a href="{% url 'game_home' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl" data-testid="recap-home">{{ game_name }}</a>
+      <a href="{% url 'game_home' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl" data-testid="recap-home">{{ game_name }} home</a>
     </div>
     <a href="{{ discussions }}" target="_blank" rel="noopener" class="mt-6 inline-block text-sm text-gray-500 underline hover:text-gray-800" data-testid="discussions-link">Bug or idea? Tell us on GitHub Discussions</a>
   </div>
@@ -728,7 +755,7 @@
     <div id="lb-frame" class="relative block overflow-hidden rounded-lg" title="Scroll, pinch or double-click to zoom">
       <div id="lb-zoom" class="relative">
         <img id="lightbox-img" alt="Whole image" draggable="false" class="block max-w-[94vw] max-h-[85vh] object-contain">
-        <span id="lb-primary" class="hidden" title="The photo to name" aria-label="The photo to name" data-testid="primary-photo"><i class="fi fi-rr-bullseye"></i></span>
+        <span id="lb-primary" class="hidden" title="The photo to name" aria-label="The photo to name" data-testid="primary-photo"><i class="fi fi-rr-location-crosshairs"></i></span>
         <div id="lightbox-box" class="absolute pointer-events-none"></div>
       </div>
     </div>
@@ -1763,7 +1790,7 @@
         makeZoomable(frame, canvas, () => openLightbox(im.url, im.box, i));
       }
       cell.appendChild(frame);
-      if (im.more && !grid) {   // a grid tile's other photos are in its whole-photo view (openTile)
+      if (im.more) {   // on a grid tile it shows while the pointer is on the tile, or on the tile last tapped (r7)
         // Other photos of exactly this beetle: open them, or (still locked) say which level opens them
         const chip = document.createElement("button");
         chip.type = "button";
@@ -1791,9 +1818,9 @@
       peers.textContent = "Named by " + item.others + (item.others === 1 ? " other" : " others");
       holder.appendChild(peers);
     }
-    // A Flag on each photo (bottom left): opens that photo with the reasons ready to pick, at the same corner. Not on
-    // grid tiles: there it is in the whole photo, so nothing piles up on a small tile (openTile)
-    if (!grid) holder.querySelectorAll(".cell").forEach((cell, i) => {
+    // A Flag on each photo (bottom left): opens that photo with the reasons ready to pick, at the same corner. On a
+    // grid tile it shows while the pointer is on the tile, or on the tile last tapped, so a small tile stays clear (r7)
+    holder.querySelectorAll(".cell").forEach((cell, i) => {
       const im = item.images[i];
       const report = document.createElement("button");
       report.type = "button";
@@ -2935,9 +2962,11 @@
   //   arrows                     WASD
   //   Up/Down: rank or line      W/S: rank or line
   //   Left/Right: change it      A/D: change it
-  //   Enter or Space: Submit, then Next (on the review)    Delete or End (or X): Skip    Backspace (or Z): Back, your last beetle
+  //   Enter or Space: Submit, then Next (on the review)    Backspace (or Delete, End, X): Skip    Tab (or Z): Back, your last beetle
   //   Home (or Q, V): whole photo    Page Up (or E, L): Lighting    Page Down (or R): Flag    Esc: close, or exit
-  // A letter typed on a focused list still searches it (the lists keep their own keys).
+  // A letter typed on a focused list still searches it (the lists keep their own keys). Tab and Backspace are the
+  // game's only away from the form fields: in a search box, on a list, and with Shift (Shift+Tab) they do what they
+  // always do, so Tab still moves between the fields and Backspace still deletes a letter (r7).
   function isTyping(el) { return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable); }
   let cursorRank = 0;
   function openRows() { return RANKS.filter((r) => selects[r] && !selects[r].disabled && !$("pick-" + r).closest(".rank-row").classList.contains("locked")); }
@@ -2958,7 +2987,7 @@
   }
   const KEYS = {
     up: ["ArrowUp", "w"], down: ["ArrowDown", "s"], left: ["ArrowLeft", "a"], right: ["ArrowRight", "d"],
-    next: ["Enter", " "], skip: ["Delete", "End", "x"], back: ["Backspace", "z"],
+    next: ["Enter", " "], skip: ["Backspace", "Delete", "End", "x"], back: ["Tab", "z"],
     photo: ["Home", "q", "v"], light: ["PageUp", "e", "l"], report: ["PageDown", "r"],
   };
   const is = (name, key) => KEYS[name].includes(key);
@@ -2974,13 +3003,15 @@
     const t = e.target;
     if (isTyping(t)) return;
     if (t && t.tagName === "OPTION") return;   // choosing in an open list
+    // Tab and Backspace keep their own jobs on a list (and Shift+Tab everywhere): focus moves on, a search is corrected
+    if ((e.key === "Tab" || e.key === "Backspace") && (e.shiftKey || (t && t.tagName === "SELECT"))) return;
     if (!$("recap").classList.contains("hidden")) {
       if (e.key === "Enter") { e.preventDefault(); $("recap-more").click(); }
       return;
     }
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
     if (!$("previous").classList.contains("hidden")) {
-      if (is("back", key) || is("next", key)) { e.preventDefault(); hidePrevious(); }
+      if (is("back", key) || is("next", key)) { e.preventDefault(); if (!e.repeat) hidePrevious(); }
       return;
     }
     if (!$("lightbox").classList.contains("hidden")) {
@@ -2998,7 +3029,7 @@
     const pressed = Object.keys(KEYS).find((name) => is(name, key));
     if (!pressed) return;
     e.preventDefault();   // also keeps a focused list from opening, and Space from scrolling
-    if ((pressed === "next" || pressed === "skip") && e.repeat) return;   // a held key is not a burst of answers
+    if ((pressed === "next" || pressed === "skip" || pressed === "back") && e.repeat) return;   // a held key is not a burst of answers
     // Select all, and Odd One Out with several odd ones: Space taps the beetle the arrows are on (Enter is Submit); on
     // the review it is Next, as everywhere
     if (multiPick() && key === " " && !busy) {

@@ -92,7 +92,8 @@ class FlagTests(ZoomFlagCase):
 
     def test_grid_tiles_have_their_flag_in_the_whole_photo(self):
         page = self.page()
-        self.assertIn("if (!grid) holder.querySelectorAll(\".cell\").forEach((cell, i) => {", page)   # no Flag on a tile
+        # the Flag is in the whole photo, and on the tile under the pointer or after a tap (r7: test_r7_play)
+        self.assertIn("    holder.querySelectorAll(\".cell\").forEach((cell, i) => {", page)
         self.assertIn("zoom.addEventListener(\"click\", (e) => { e.stopPropagation(); openTile(i); });", page)
 
     def test_the_whole_photo_has_its_flag_on_the_photo_with_the_reasons_above(self):
