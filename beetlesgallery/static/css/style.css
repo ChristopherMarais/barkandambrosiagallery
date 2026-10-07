@@ -3556,6 +3556,48 @@
   background-color: var(--color-green-700);
   color: #fff;
 }
+.rv-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #111827;
+}
+.rv-verdict {
+  flex: none;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 9999px;
+  background: #9ca3af;
+}
+.rv-verdict.wrong {
+  background: #ef4444;
+}
+.rv-verdict.partly {
+  background: #f97316;
+}
+.rv-verdict.right {
+  background: #22c55e;
+}
+.rv-pill {
+  margin-left: auto;
+  padding: 0.0625rem 0.5rem;
+  border-radius: 9999px;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.rv-line {
+  margin-top: 0.25rem;
+  font-size: 0.8125rem;
+  color: #374151;
+}
+.rv-line .fi {
+  vertical-align: -0.125em;
+}
 @property --tw-translate-x {
   syntax: "*";
   inherits: false;
