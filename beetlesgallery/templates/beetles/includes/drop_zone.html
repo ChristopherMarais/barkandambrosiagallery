@@ -1,0 +1,15 @@
+{% comment %}
+One upload component (site-upload, #618), styled like IBBI-AI's existing drop zone: shows the accepted type and
+size limit inside the box. Needs static/js/drop_zone.js (loaded site-wide in base.html).
+Usage: {% include "beetles/includes/drop_zone.html" with input_id="fileInput" accept="image/*" hint="PNG or JPG, up to 25 MB" %}
+title/subtitle/hint are optional; accept and multiple are passed straight through to the file input.
+{% endcomment %}
+<div class="drop-zone bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 shadow-xs p-8 text-center cursor-pointer transition-all hover:border-gray-400 hover:bg-gray-100"
+  data-drop-zone data-for="{{ input_id }}" tabindex="0" role="button"
+  aria-label="{{ title|default:"Upload a file" }}">
+  <i class="fi fi-rr-upload text-3xl text-gray-400" aria-hidden="true"></i>
+  <h3 class="text-base font-bold text-gray-800 mt-3">{{ title|default:"Upload a file" }}</h3>
+  <p class="text-sm text-gray-500 mt-1">{{ subtitle|default:"Click to browse or drag & drop a file here" }}</p>
+  {% if hint %}<p class="text-xs text-gray-400 mt-2">{{ hint }}</p>{% endif %}
+  <input id="{{ input_id }}" type="file" class="hidden" {% if accept %}accept="{{ accept }}"{% endif %} {% if multiple %}multiple{% endif %}>
+</div>

@@ -1,6 +1,9 @@
-"""Issue #500: the sidebar's game entry always shows the game controller, and a signed-in player's level badge, level
+"""Issue #500: the sidebar's game entry always shows its icon, and a signed-in player's level badge, level
 and points sit on a line under the game's name. The closed sidebar's icons sit in the middle of their shading, and the
-staging bar is red."""
+staging bar is red.
+
+The icon is the play icon, not the gamepad (nav-play-icon, #618): the game itself already uses a play button, so the
+sidebar and home card match it."""
 import re
 
 from django.conf import settings
@@ -12,7 +15,7 @@ from beetlesgallery.beetles_app.templatetags.beetle_tags import digit_groups_tex
 from beetlesgallery.beetles_app.testing import PageBehaviourCase
 
 BASE = settings.BASE_DIR / "beetlesgallery" / "templates" / "base.html"
-GAMEPAD = '<i class="fi fi-rr-gamepad text-xl text-gray-700 w-8 text-center"></i>'
+PLAY_ICON = '<i class="fi fi-rr-play text-xl text-gray-700 w-8 text-center"></i>'
 
 
 def game_entries(page):
@@ -31,12 +34,12 @@ class GameEntryTests(PageBehaviourCase):
         PlayerScore.objects.create(player=self.user, score=score, rating=rating)
         self.client.force_login(self.user)
 
-    def assert_gamepad_first(self, entry):
-        self.assertTrue(entry[entry.index(">") + 1:].lstrip().startswith(GAMEPAD), entry)
+    def assert_play_icon_first(self, entry):
+        self.assertTrue(entry[entry.index(">") + 1:].lstrip().startswith(PLAY_ICON), entry)
 
-    def test_signed_out_it_is_the_game_controller_and_the_games_name(self):
+    def test_signed_out_it_is_the_play_icon_and_the_games_name(self):
         for entry in self.entries():
-            self.assert_gamepad_first(entry)
+            self.assert_play_icon_first(entry)
             self.assertIn("Ambrosia Archive", entry)
             self.assertNotIn('data-testid="level-badge"', entry)
             self.assertNotIn('data-testid="sidebar-player"', entry)
@@ -45,7 +48,7 @@ class GameEntryTests(PageBehaviourCase):
         self.sign_in(1234, 0.65)   # level 5, Tunnel master
         phone, desktop = self.entries()
         for entry in (phone, desktop):
-            self.assert_gamepad_first(entry)   # the badge is no longer the icon
+            self.assert_play_icon_first(entry)   # the badge is no longer the icon
             name = entry.index("Ambrosia Archive")
             badge = entry.index('data-testid="level-badge"')
             level = entry.index(">Tunnel master</span>")
@@ -89,8 +92,10 @@ class ClosedSidebarTests(SimpleTestCase):
         self.css = " ".join(BASE.read_text().split())
 
     def test_rows_are_padded_so_the_icon_is_centred_and_the_padding_is_the_same_open(self):
-        self.assertIn("#sideItems > a:not(#sidenav-logo), #sideItems > form > button, #sidenav-footer > div { "
-                      "padding-inline: calc((5rem - 1px - 2 * 0.5rem - 2rem) / 2); }", self.css)
+        # #sidenav-footer > a joined the list when Account was pinned to the footer (nav-drawer-account, #618):
+        # its row is padded the same as every other closed-rail row.
+        self.assertIn("#sideItems > a:not(#sidenav-logo), #sideItems > form > button, #sidenav-footer > div, "
+                      "#sidenav-footer > a { padding-inline: calc((5rem - 1px - 2 * 0.5rem - 2rem) / 2); }", self.css)
         self.assertIn("#sidenav i.fi { flex-shrink: 0; }", self.css)
 
     def test_the_padding_is_worked_out_from_the_rails_sizes(self):
@@ -104,10 +109,14 @@ class ClosedSidebarTests(SimpleTestCase):
         self.assertTrue(all(" w-8 " in icon for icon in icons), icons)
 
     def test_no_scrollbar_narrows_the_closed_rows(self):
-        self.assertIn("#sidenav:not(:hover) #sideItems { scrollbar-width: none; }", self.css)
-        self.assertIn("#sidenav:not(:hover) #sideItems::-webkit-scrollbar { display: none; }", self.css)
+        # :not(:focus-within) joined :not(:hover) (nav-focus, #618): a keyboard user tabbing the rail open gets the
+        # same scrollbar treatment a mouse hovering it would.
+        self.assertIn("#sidenav:not(:hover):not(:focus-within) #sideItems { scrollbar-width: none; }", self.css)
+        self.assertIn("#sidenav:not(:hover):not(:focus-within) #sideItems::-webkit-scrollbar { display: none; }",
+                      self.css)
 
     def test_only_the_labels_are_indented_not_the_spans_inside_them(self):
-        self.assertIn("#sidenav:hover span:not(span span) { opacity: 1; width: auto; margin-left: 0.75rem;", self.css)
+        self.assertIn("#sidenav:hover span:not(span span), #sidenav:focus-within span:not(span span) { "
+                      "opacity: 1; width: auto; margin-left: 0.75rem;", self.css)
         self.assertNotIn("#sidenav:hover span {", self.css)
         self.assertNotIn("sidebar-icon", self.css)   # the level badge left the icon column, and its special case with it

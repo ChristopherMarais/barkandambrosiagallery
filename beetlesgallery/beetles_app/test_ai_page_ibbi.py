@@ -69,7 +69,7 @@ class AiPageTests(PageBehaviourCase):
 
     def test_it_is_called_ibbi_ai_not_the_classifier(self):
         page = self.page()
-        self.assertIn('<h1 class="page-title">IBBI-AI: Intelligent Bark Beetle Identifier</h1>', page)
+        self.assertIn('<h1 class="page-title">IBBI-AI: intelligent bark beetle identifier</h1>', page)
         self.assertIn("Before you use IBBI-AI", page)
         self.assertIn("IBBI-AI is a screening tool", page)
         self.assertIn("so you can try IBBI-AI", page)

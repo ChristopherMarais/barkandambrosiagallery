@@ -191,3 +191,60 @@ def streak_scale(days):
     """A day streak's step on the scale: {{ 10|streak_scale }} -> "decent"."""
     from beetlesgallery.beetles_app.game_scale import streak_step
     return streak_step(days)
+
+
+@register.filter
+def dash(value):
+    """
+    The site's one "no value" mark (site-dash, #618): an em dash for a cell that must show something, rather than
+    an en dash, a hyphen or "No ID". Prefer leaving the field out entirely where that is possible instead of
+    reaching for this filter. {{ obj.note|dash }} -> "—" when note is empty, else the note unchanged.
+    """
+    if value is None or value == "" or value == "None":
+        return "—"
+    return value
+
+
+# The site's sections and their nav prefix, home excepted (it is "/", which would match everything): shared by
+# nav_active (which nav item is current) and nav_section_title (the mobile top bar's section name), so a sub-page
+# added under one of these prefixes is picked up by both without template changes (nav-active, nav-mobile-title,
+# #618).
+def _nav_sections(context):
+    """Not a template tag: a plain helper for nav_section_title below."""
+    game_name = context.get("game_name") or "Ambrosia Archive"
+    return (
+        ("/beetles/", "Image Browser"),
+        ("/taxonomy/", "Taxonomy Browser"),
+        ("/interactions/", "Interactions"),
+        ("/tools/classify/", "AI Identification"),
+        ("/tools/annotate/", "Image Annotation"),
+        ("/game/", game_name),
+        ("/my-uploads/", "Data Management"),
+        ("/accounts/me/", "Account & settings"),
+        ("/accounts/login/", "Login"),
+    )
+
+
+@register.simple_tag(takes_context=True)
+def nav_active(context, prefix):
+    """
+    The classes for a nav item, current or not (nav-active, #618): matched by URL prefix (e.g. "/game/"), not an
+    exact page name, so every sub-page of a section (Leaderboard, Unlocks, ... under "/game/") marks its parent nav
+    item too. Not for the home link, whose own prefix ("/") would match every page.
+    """
+    request = context.get("request")
+    path = getattr(request, "path", "") or ""
+    return "bg-gray-200 font-semibold" if path.startswith(prefix) else "hover:bg-gray-200"
+
+
+@register.simple_tag(takes_context=True)
+def nav_section_title(context):
+    """The current section's short name for the mobile top bar, next to the menu button (nav-mobile-title, #618)."""
+    request = context.get("request")
+    path = getattr(request, "path", "") or ""
+    if path == "/":
+        return "Bark and Ambrosia Gallery"
+    for prefix, label in _nav_sections(context):
+        if path.startswith(prefix):
+            return label
+    return "Bark and Ambrosia Gallery"
