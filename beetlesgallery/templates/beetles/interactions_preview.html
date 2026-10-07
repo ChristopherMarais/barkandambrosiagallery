@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block meta_description %}Beetle-pathogen interaction records: which bark and ambrosia beetles host which fungi, nematodes and other associates, with their sources.{% endblock %}
 {% load beetle_tags %}
 {% load static humanize %}
 
@@ -288,16 +289,16 @@
       About
     </button>
     <button type="button" id="tab-btn-browse" class="nav-tab-btn py-3 px-2 sm:px-3">
-      Browse Dataset <span class="text-[11px] text-gray-400 font-normal">({{ stats.records|digit_groups }})</span>
+      Browse Dataset <span class="text-[11px] text-gray-600 font-normal">({{ stats.records|digit_groups }})</span>
     </button>
     <button type="button" id="tab-btn-hosts" class="nav-tab-btn py-3 px-2 sm:px-3">
-      Beetle Hosts <span class="text-[11px] text-gray-400 font-normal">({{ stats.hosts|digit_groups }})</span>
+      Beetle Hosts <span class="text-[11px] text-gray-600 font-normal">({{ stats.hosts|digit_groups }})</span>
     </button>
     <button type="button" id="tab-btn-groups" class="nav-tab-btn py-3 px-2 sm:px-3">
-      Pathogen Groups <span class="text-[11px] text-gray-400 font-normal">({{ stats.groups|digit_groups }})</span>
+      Pathogen Groups <span class="text-[11px] text-gray-600 font-normal">({{ stats.groups|digit_groups }})</span>
     </button>
     <button type="button" id="tab-btn-refs" class="nav-tab-btn py-3 px-2 sm:px-3">
-      References <span class="text-[11px] text-gray-400 font-normal">({{ stats.sources|digit_groups }})</span>
+      References <span class="text-[11px] text-gray-600 font-normal">({{ stats.sources|digit_groups }})</span>
     </button>
   </div>
 
@@ -333,35 +334,35 @@
         <span class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Total Records</span>
         <div class="mt-2 flex items-baseline gap-2">
           <span class="text-2xl font-bold text-gray-900 leading-none">{{ stats.records|digit_groups }}</span>
-          <span class="text-[11px] text-gray-400 font-mono">{% if stats.first_year %}{{ stats.first_year }}–{{ stats.last_year }}{% endif %}</span>
+          <span class="text-[11px] text-gray-600 font-mono">{% if stats.first_year %}{{ stats.first_year }}–{{ stats.last_year }}{% endif %}</span>
         </div>
       </div>
       <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-xs flex flex-col justify-between">
         <span class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Beetle Species</span>
         <div class="mt-2 flex items-baseline gap-2">
           <span class="text-2xl font-bold text-gray-900 leading-none">{{ stats.hosts|digit_groups }}</span>
-          <span class="text-[11px] text-gray-400 font-mono">{{ stats.genera|digit_groups }} genera</span>
+          <span class="text-[11px] text-gray-600 font-mono">{{ stats.genera|digit_groups }} genera</span>
         </div>
       </div>
       <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-xs flex flex-col justify-between">
         <span class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Candidate Taxa</span>
         <div class="mt-2 flex items-baseline gap-2">
           <span class="text-2xl font-bold text-gray-900 leading-none">{{ stats.taxa|digit_groups }}</span>
-          <span class="text-[11px] text-gray-400 font-mono">taxa</span>
+          <span class="text-[11px] text-gray-600 font-mono">taxa</span>
         </div>
       </div>
       <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-xs flex flex-col justify-between">
         <span class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Publications</span>
         <div class="mt-2 flex items-baseline gap-2">
           <span class="text-2xl font-bold text-gray-900 leading-none">{{ stats.sources|digit_groups }}</span>
-          <span class="text-[11px] text-gray-400 font-mono">primary refs</span>
+          <span class="text-[11px] text-gray-600 font-mono">primary refs</span>
         </div>
       </div>
       <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-xs flex flex-col justify-between">
         <span class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Validated Tests</span>
         <div class="mt-2 flex items-baseline gap-2">
           <span class="text-2xl font-bold text-gray-900 leading-none">{{ stats.validated|digit_groups }}</span>
-          <span class="text-[11px] text-gray-400 font-mono">{{ stats.validated_pct|floatformat:1 }}% verified</span>
+          <span class="text-[11px] text-gray-600 font-mono">{{ stats.validated_pct|floatformat:1 }}% verified</span>
         </div>
       </div>
     </div>
@@ -372,9 +373,9 @@
         <div>
           <div class="flex items-center justify-between">
             <span class="font-semibold text-gray-900 text-sm group-hover:text-gray-600 transition">Browse Dataset</span>
-            <span class="text-xs text-gray-400 font-mono">&rarr;</span>
+            <span class="text-xs text-gray-600 font-mono">&rarr;</span>
           </div>
-          <div class="text-[11px] text-gray-400 font-mono mt-0.5">{{ stats.records|digit_groups }} records</div>
+          <div class="text-[11px] text-gray-600 font-mono mt-0.5">{{ stats.records|digit_groups }} records</div>
           <p class="text-xs text-gray-500 mt-2 leading-relaxed">Explore all reported beetle-pathogen associations with filtering and details.</p>
         </div>
       </button>
@@ -383,9 +384,9 @@
         <div>
           <div class="flex items-center justify-between">
             <span class="font-semibold text-gray-900 text-sm group-hover:text-gray-600 transition">Beetle Hosts</span>
-            <span class="text-xs text-gray-400 font-mono">&rarr;</span>
+            <span class="text-xs text-gray-600 font-mono">&rarr;</span>
           </div>
-          <div class="text-[11px] text-gray-400 font-mono mt-0.5">{{ stats.hosts|digit_groups }} species</div>
+          <div class="text-[11px] text-gray-600 font-mono mt-0.5">{{ stats.hosts|digit_groups }} species</div>
           <p class="text-xs text-gray-500 mt-2 leading-relaxed">Summary of all {{ stats.hosts|digit_groups }} Scolytinae species and reported pathogen spectrum.</p>
         </div>
       </button>
@@ -394,9 +395,9 @@
         <div>
           <div class="flex items-center justify-between">
             <span class="font-semibold text-gray-900 text-sm group-hover:text-gray-600 transition">Pathogen Groups</span>
-            <span class="text-xs text-gray-400 font-mono">&rarr;</span>
+            <span class="text-xs text-gray-600 font-mono">&rarr;</span>
           </div>
-          <div class="text-[11px] text-gray-400 font-mono mt-0.5">{{ stats.groups|digit_groups }} groups</div>
+          <div class="text-[11px] text-gray-600 font-mono mt-0.5">{{ stats.groups|digit_groups }} groups</div>
           <p class="text-xs text-gray-500 mt-2 leading-relaxed">Fungi, Nematodes, Microsporidia, Protists, Bacteria, and Viruses.</p>
         </div>
       </button>
@@ -405,9 +406,9 @@
         <div>
           <div class="flex items-center justify-between">
             <span class="font-semibold text-gray-900 text-sm group-hover:text-gray-600 transition">References</span>
-            <span class="text-xs text-gray-400 font-mono">&rarr;</span>
+            <span class="text-xs text-gray-600 font-mono">&rarr;</span>
           </div>
-          <div class="text-[11px] text-gray-400 font-mono mt-0.5">{{ stats.sources|digit_groups }} publications</div>
+          <div class="text-[11px] text-gray-600 font-mono mt-0.5">{{ stats.sources|digit_groups }} publications</div>
           <p class="text-xs text-gray-500 mt-2 leading-relaxed">Complete primary literature bibliography from 1914 to 2026.</p>
         </div>
       </button>
@@ -1188,7 +1189,7 @@ Dong Y. 2026. A global dataset of reported pathogens and parasites associated wi
       <!-- Status Bar -->
       <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
         <div id="record-count-display">Loading master records…</div>
-        <div class="text-[11px] text-gray-400 hidden sm:block">Click any row to inspect complete literature extraction details</div>
+        <div class="text-[11px] text-gray-600 hidden sm:block">Click any row to inspect complete literature extraction details</div>
       </div>
     </div>
 
