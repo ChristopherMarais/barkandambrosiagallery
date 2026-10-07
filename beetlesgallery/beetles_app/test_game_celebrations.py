@@ -41,7 +41,7 @@ class CelebrationKindTests(GameCase):
         self.client.force_login(self.user)
         page = self.client.get(reverse("game_play", args=["classify"])).content.decode()
         self.assertIn("js/beetle_confetti.js", page)
-        self.assertIn('window.beetleConfetti($("confetti"), kind || "validated", size)', page)
+        self.assertIn('window.beetleConfetti($("confetti"), kind || "validated", size, null, colour)', page)
 
 
 class StrongAnswerTests(GameCase):

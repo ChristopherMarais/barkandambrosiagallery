@@ -61,6 +61,7 @@ class PageTests(ReviewCase):
     def test_each_seen_tile_gets_its_mark(self):
         self.client.force_login(self.user)
         page = self.client.get(reverse("game_play", args=["mixed"])).content.decode()
-        self.assertIn("if ((g.seen || []).includes(i)) {", page)
-        self.assertIn('seen.dataset.testid = "tile-seen";', page)
+        self.assertIn('if ((g.seen || []).includes(i)) cellEl.appendChild(seenMark("tile-seen"));', page)
+        self.assertIn("function seenMark(testid)", page)
+        self.assertIn("seen.dataset.testid = testid;", page)
         self.assertIn('[data-size="25"] .rv-seen {', page)

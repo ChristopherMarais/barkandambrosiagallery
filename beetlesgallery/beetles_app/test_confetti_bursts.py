@@ -19,7 +19,7 @@ def body(name):
 class ConcurrentBurstTests(SimpleTestCase):
     def test_the_public_call_is_unchanged(self):
         # (canvas, kind, size) as before; a level-up adds its colour on the scale (#572)
-        self.assertIn("window.beetleConfetti = function (canvas, kind, size, accent)", JS)
+        self.assertIn("window.beetleConfetti = function (canvas, kind, size, accent, colour)", JS)
 
     def test_a_new_burst_never_resets_the_canvas(self):
         # setting canvas.width clears what other bursts drew: only fit() does it, and only when the window changed
@@ -86,6 +86,6 @@ class ReducedMotionAndWrapperTests(SimpleTestCase):
         self.assertIn('matchMedia("(prefers-reduced-motion: reduce)").matches) return;', call.split("\n", 2)[1])
 
     def test_the_page_wrapper_keeps_its_signature(self):
-        self.assertIn("function confetti(kind, size) {", PLAY)
-        self.assertIn('window.beetleConfetti($("confetti"), kind || "validated", size);', PLAY)
+        self.assertIn("function confetti(kind, size, colour) {", PLAY)
+        self.assertIn('window.beetleConfetti($("confetti"), kind || "validated", size, null, colour);', PLAY)
         self.assertIn("if (reduceMotion || !window.beetleConfetti) return;", PLAY)

@@ -34,6 +34,8 @@ BASIS = {AnswerPoints.Basis.TRUTH: "truth", AnswerPoints.Basis.CONSENSUS: "agree
 RUNG = dict(GameAnswer.PairAnswer.choices)                                        # "genus" -> "Same genus"
 DEPTH_RUNG = {depth: RUNG[key] for key, depth in game.PAIR_DEPTH.items()}         # 2 -> "Same genus"
 TRUTH_DEPTH = {name: depth for depth, name in game_scoring.DEPTH_NAME.items()}   # "same genus" (in the points) -> 2
+# The ID type a name is shown with on the review card (#615): the colour says where it comes from
+ID_LABEL = {"truth": "Validated ID", "ai": "AI ID", "players": "Player ID"}
 VERDICT_LEAD = {"right": "Correct", "partly": "Partly correct", "wrong": "Not quite"}
 JUDGED = ("right", "wrong", "missed", "clear")   # the Select all tiles scored against a validated name
 SMALLEST_BURST = 0.2
@@ -51,7 +53,7 @@ def review(answer, item):
     losses = game_feedback.answer_losses(answer, row) if row is not None and basis == "truth" else None
     out = {
         "mode": answer.mode, "skipped": skipped, "reported": answer.skipped and answer.score_hold, "held": held,
-        # "Seen before" on the headline, for one photo or a pair; a grid marks the tiles (grid "seen", #600)
+        # "Seen before": on each photo it applies to (seen, per photo in the order shown; a grid marks its tiles, #600)
         "again": (answer.is_retry or answer.seen_before) and answer.mode not in ("odd", "select"),
         "images": _images(answer, item), "verdict": None,
         "points": _points(row, basis, losses),
@@ -63,10 +65,14 @@ def review(answer, item):
         body, facts = BODIES[answer.mode](answer, item, basis, row, losses, opinions)
         out.update(body)
         out["beetles"] = _beetles(answer, shown, opinions)
+        seen = game.seen_recently_ids(answer.player, [t.id for t in shown if t is not None],
+                                      now=answer.answered_at, exclude=answer.pk)
         if answer.mode in ("odd", "select"):   # which tiles the player had seen before, each marked (#600)
-            seen = game.seen_recently_ids(answer.player, [t.id for t in shown if t is not None],
-                                          now=answer.answered_at, exclude=answer.pk)
             out["grid"]["seen"] = [i for i, t in enumerate(shown) if t is not None and t.id in seen]
+        else:   # one photo, or each photo of a pair, marked on its own photo (#615): "seen" in the order shown
+            # a retry is the answered beetle's own second go; the answer's seen_before covers the whole answer, not a photo
+            out["seen"] = [t is not None and (t.id in seen or (bool(answer.is_retry) and t.id == answer.roi_id))
+                           for t in shown]
         facts.update(_agreed(answer, row, basis, facts))
     out["headline"] = _headline(out)
     out["celebrate"] = _celebrate(out, facts)
@@ -309,14 +315,10 @@ def _part(name, rank):
 # ---------------------------------------------------------------------------
 def _beetles(answer, shown, opinions):
     """
-    For each photo in the order shown (None for one gone since or flagged): {"validated", "tier", "ranks"}, ranks
-    being [{"rank", "name", "source", "sure", "votes", "expert"}] for all four ranks. A validated beetle gives its true
-    names (source "truth"); one nobody has validated the most likely name at each rank, from the other players
-    ("players", with how many named it, and "expert" when a proven Naming expert backs it, game_trust) or
-    IBBI-AI ("ai"), whichever is surer (the players on a tie); "" where nobody says. When the other source says the
-    same name at a rank, "also" carries its confidence too, so the photo shows both (#600).
-    Each photo has one "source" (and "expert"), the source of its deepest name: the page marks it with a single
-    coloured dot (#569, #600).
+    For each photo in the order shown (None for one gone since or flagged): {"validated", "tier", "source", "expert",
+    "columns", "ranks"}. "ranks" is [_likeliest] for all four ranks: each taxon level has its own dots, ID type label
+    and confidence columns (#615). "columns" lists the confidence columns the photo has ("ai", "players"), so the page
+    heads only those. "source" and "expert" are those of the photo's deepest name, as before.
     """
     flagged = set(answer.flagged or []) if answer.mode in ("odd", "select") else set()
     out = []
@@ -326,31 +328,52 @@ def _beetles(answer, shown, opinions):
         elif game_scoring.is_truth(roi):
             label = game_feedback._label(roi.taxon)
             out.append({"validated": True, "tier": roi.get_label_source_display() or "Verified", "source": "truth",
-                        "expert": False, "ranks": [{"rank": r, "name": label[r], "source": "truth"} for r in RANKS]})
+                        "expert": False, "columns": [], "ranks": [_validated(r, label[r]) for r in RANKS]})
         else:
             said = (opinions.said(roi.id) or {}).get("ranks") or {}
             tips = opinions.tips(roi.id)
             ranks = [_likeliest(r, said.get(r), tips.get(r)) for r in RANKS]
             deepest = next((r for r in reversed(ranks) if r["name"]), None)
+            columns = [c for c in ("ai", "players") if any(r["columns"][c] for r in ranks)]
             out.append({"validated": False, "tier": None, "source": deepest["source"] if deepest else "",
-                        "expert": bool(deepest and deepest.get("expert")), "ranks": ranks})
+                        "expert": bool(deepest and deepest.get("expert")), "columns": columns, "ranks": ranks})
     return out
 
 
+def _validated(rank, name):
+    """A validated beetle's name at one rank: its ID type is "Validated ID" (green), no confidence columns."""
+    return {"rank": rank, "name": name, "source": "truth", "sure": None, "expert": False, "dots": ["truth"],
+            "label": ID_LABEL["truth"], "columns": {"ai": None, "players": None}}
+
+
 def _likeliest(rank, vote, tip):
-    """The surer of the other players' name (a consensus rank) and IBBI-AI's best guess at one rank."""
-    players = ((vote["support"], 1, {"name": vote["value"], "source": "players", "votes": vote["votes"],
-                                     "expert": bool(vote.get("trusted"))})
-               if vote else None)
-    ai = (tip["confidence"], 0, {"name": tip["value"], "source": "ai"}) if tip else None
-    best = max((c for c in (players, ai) if c), key=lambda c: c[:2], default=None)
-    if best is None:
-        return {"rank": rank, "name": "", "source": "", "sure": None}
-    out = dict(best[2], rank=rank, sure=round(best[0] * 100))
-    other = ai if best is players else players
-    if other and game._norm(other[2]["name"]) == game._norm(best[2]["name"]):   # both say it: both confidences (#600)
-        out["also"] = dict(other[2], sure=round(other[0] * 100))
-        out["also"].pop("name")
+    """
+    The likeliest name at one rank: the surer of the other players' name (a consensus rank) and IBBI-AI's best guess,
+    the players on a tie; "" with no sources. "dots" are the sources that name it, in colour order: "ai" (blue), and
+    "players" (purple), or "expert" (glowing purple) when a proven Naming expert backs the players. "label" says their
+    ID types ("AI ID · Player ID"). "columns" has each source's own name and how sure, so the page can show the two
+    confidences side by side; a source that names something else keeps its own name (#615).
+    """
+    players = ({"name": vote["value"], "sure": round(vote["support"] * 100), "votes": vote["votes"],
+                "experts": vote.get("trusted_votes", 0) if vote.get("trusted") else 0} if vote else None)
+    ai = {"name": tip["value"], "sure": round(tip["confidence"] * 100)} if tip else None
+    cands = [(share, prio, src) for share, prio, src, view in
+             ((vote["support"] if vote else 0, 1, "players", players), (tip["confidence"] if tip else 0, 0, "ai", ai))
+             if view]
+    if not cands:
+        return {"rank": rank, "name": "", "source": "", "sure": None, "expert": False, "dots": [], "label": "",
+                "columns": {"ai": None, "players": None}}
+    src = max(cands, key=lambda c: c[:2])[2]
+    best = players if src == "players" else ai
+    agree = [(s, view) for s, view in (("ai", ai), ("players", players))
+             if view and game._norm(view["name"]) == game._norm(best["name"])]
+    out = {"rank": rank, "name": best["name"], "source": src, "sure": best["sure"],
+           "expert": src == "players" and bool(players["experts"])}
+    if src == "players":
+        out["votes"] = players["votes"]
+    out.update(dots=["expert" if s == "players" and view["experts"] else s for s, view in agree],
+               label=" · ".join(ID_LABEL[s] for s, _ in agree),
+               columns={"ai": ai, "players": players})
     return out
 
 
@@ -668,7 +691,9 @@ POP_SIZE = 0.3   # at or under this size (very few points), a partly correct or 
 
 def _celebrate(out, facts):
     """
-    The confetti for this answer, which follows its points ({"kind", "size"}, or None). On a validated beetle:
+    The confetti for this answer, which follows its points ({"kind", "size", "colour"}, or None). The colour is the ID
+    type that gave the points (#615): green "validated" for a validated beetle, blue "ai" for IBBI-AI, purple for the
+    players (and a proven expert's glow). On a validated beetle:
     "validated" (green beetles) for a fully correct answer (the species, the true rung, the odd one, a perfect grid),
     "validated_agreed" when IBBI-AI and the other players had said the same, "partial" (grey) for points from a partly
     correct one. On a beetle nobody has validated, by who it agrees with: "expert" (a Naming expert's name), "ai_players",
@@ -693,7 +718,7 @@ def _celebrate(out, facts):
         kind = "ai_players" if ai and players else "ai" if ai else "players"
     else:   # points on a beetle nobody has validated come from the players' vote
         kind = "pop" if size <= POP_SIZE else "players"
-    return {"kind": kind, "size": size}
+    return {"kind": kind, "size": size, "colour": "green" if basis == "truth" else "blue" if kind == "ai" else "purple"}
 
 
 def _agreed(answer, row, basis, facts):

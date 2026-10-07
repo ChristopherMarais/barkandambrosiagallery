@@ -23,15 +23,17 @@ class OneSourcePerPhotoTests(ReviewCase):
         self.assertEqual(beetle["source"], "players")
         species = beetle["ranks"][3]
         self.assertEqual((species["source"], species["sure"]), ("players", 100))
-        self.assertEqual((species["also"]["source"], species["also"]["sure"]), ("ai", 64))
-        self.assertNotIn("name", species["also"])
+        self.assertEqual((species["columns"]["ai"]["sure"], species["columns"]["players"]["sure"]), (64, 100))
+        self.assertEqual(species["dots"], ["ai", "players"])   # both name it: both dots (#615)
 
-    def test_no_second_confidence_when_they_name_different_beetles(self):
+    def test_one_dot_when_they_name_different_beetles(self):
         roi = self.roi(self.t_affinis, validated=False)
         self.other("a", roi, AFFINIS)
         self.predict(roi, self.t_plat, 0.9)
         beetle, = self.classify(roi, AFFINIS)["beetles"]
-        self.assertTrue(all("also" not in r for r in beetle["ranks"]))
+        species = beetle["ranks"][3]
+        self.assertEqual(species["dots"], ["players"])
+        self.assertNotEqual(species["columns"]["ai"]["name"], species["name"])
 
     def test_ibbi_ai_alone_is_the_photo_s_source(self):
         roi = self.roi(self.t_affinis, validated=False)
@@ -82,12 +84,11 @@ class PageTests(ReviewCase):
     def test_one_dot_without_a_rim(self):
         page = self.page()
         self.assertNotIn("box-shadow: 0 0 0 1px rgba(255,255,255,.85)", page)
-        self.assertIn("function photoDot(b)", page)
-        self.assertIn("if (name) dot = null;", page)
+        self.assertIn("const dots = name ? (r.dots || []).map(sourceDot) : [];", page)
 
     def test_both_confidences_and_the_shared_rank(self):
         page = self.page()
-        self.assertIn('also ? node("span", "also", "· ", ...also[0]) : null', page)
+        self.assertIn("const cells = cols.map((k) => columnCell(k, (r.columns || {})[k], r.name));", page)
         self.assertIn(":is(.rv-names, .lb-names) .nm.shared { text-decoration: underline;", page)
         self.assertIn("function sharedRank(review)", page)
 
