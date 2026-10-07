@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="max-w-5xl mx-auto">
-  <a href="{% url 'game_settings' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Game settings</a>
+  {% url 'game_settings' as back_url %}{% include "beetles/includes/back_link.html" with url=back_url label="Game settings" %}
   <h1 class="page-title">How scoring works</h1>
   <p class="text-gray-600 mb-6 max-w-3xl">
     Superusers only. Everything a player gains or loses, why, and the numbers in use right now. The aim: the most
@@ -385,7 +385,7 @@ gain × m,   loss (skips too) × (2 − m)                       the point for t
 
     <form method="post" action="{% url 'game_scoring_rescore' %}" class="mt-4" onsubmit="return confirm('Re-score every answer of every player with the current numbers? It runs in the background.');">
       {% csrf_token %}
-      <button type="submit" class="px-4 py-2 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50" data-testid="rescore">Re-score everyone now</button>
+      <button type="submit" class="btn-secondary" data-testid="rescore">Re-score everyone now</button>
     </form>
   </section>
 

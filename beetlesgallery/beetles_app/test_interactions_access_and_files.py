@@ -101,7 +101,7 @@ class AccessTests(PageBehaviourCase):
         from django.conf import settings
         for template in ("interaction_review", "upload_interaction_proposals", "upload_interactions"):
             source = (settings.BASE_DIR / "beetlesgallery" / "templates" / "beetles" / f"{template}.html").read_text()
-            self.assertIn("{% url 'interactions_preview' %}", source, template)
+            self.assertIn("{% url 'interactions_preview' as back_url %}", source, template)   # site-back, #618
             self.assertNotIn("&larr; Data Management", source, template)
 
     def test_changing_the_data_needs_staff(self):

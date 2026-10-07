@@ -221,10 +221,10 @@
         </div>
 
         <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
-          <button type="button" onclick="closeModal('modal-password')" class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-xs hover:bg-red-50 focus:outline-hidden sm:text-sm">
+          <button type="button" onclick="closeModal('modal-password')" class="btn-secondary">
             Cancel
           </button>
-          <button type="submit" class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-xs hover:bg-gray-50 focus:outline-hidden sm:text-sm">
+          <button type="submit" class="btn-primary">
             Save Password
           </button>
         </div>
@@ -274,10 +274,10 @@
         </div>
 
         <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
-          <button type="button" onclick="closeModal('modal-create-user')" class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-xs hover:bg-red-50 focus:outline-hidden sm:text-sm">
+          <button type="button" onclick="closeModal('modal-create-user')" class="btn-secondary">
             Cancel
           </button>
-          <button type="submit" class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-xs hover:bg-gray-50 focus:outline-hidden sm:text-sm">
+          <button type="submit" class="btn-primary">
             Create user
           </button>
         </div>
@@ -311,7 +311,7 @@
                         <span class="text-xs text-gray-500">Uncheck to disable login (Deactivate).</span>
                     </div>
                     <div class="flex items-center">
-                        <input type="checkbox" name="is_active" id="edit-is-active" class="h-5 w-5 rounded-sm border-gray-300 text-gray-600 focus:ring-gray-500">
+                        <input type="checkbox" name="is_active" id="edit-is-active" class="h-5 w-5 rounded-sm border-gray-300 text-gray-600">
                     </div>
                 </div>
 
@@ -319,13 +319,13 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Username</label>
                     <input type="text" name="username" id="edit-username" required
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-xs focus:border-gray-500 focus:ring-gray-500 sm:text-sm border p-2">
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-xs focus:border-gray-500 sm:text-sm border p-2">
                 </div>
 
                 {# 3. Role Dropdown #}
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Role</label>
-                    <select name="role" id="edit-role" class="mt-1 block w-full rounded-md border-gray-300 shadow-xs focus:border-gray-500 focus:ring-gray-500 sm:text-sm border p-2 bg-white">
+                    <select name="role" id="edit-role" class="mt-1 block w-full rounded-md border-gray-300 shadow-xs focus:border-gray-500 sm:text-sm border p-2 bg-white">
                         <option value="standard">Standard</option>
                         <option value="staff">Staff</option>
                         <option value="superuser">Superuser (everything)</option>
@@ -357,7 +357,7 @@
                 <div class="border-t border-gray-200 pt-4 mt-2">
                     <label class="block text-sm font-medium text-gray-700">Set New Password (Optional)</label>
                     <input type="text" name="new_password" placeholder="Leave blank to keep current password"
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-xs focus:border-gray-500 focus:ring-gray-500 sm:text-sm border p-2">
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-xs focus:border-gray-500 sm:text-sm border p-2">
                     <p class="text-xs text-gray-500 mt-1">Existing passwords cannot be viewed, only overwritten.</p>
                 </div>
 
@@ -365,10 +365,10 @@
         </div>
 
         <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
-          <button type="button" onclick="closeModal('modal-edit-user')" class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-xs hover:bg-gray-50 focus:outline-hidden sm:text-sm">
+          <button type="button" onclick="closeModal('modal-edit-user')" class="btn-secondary">
             Cancel
           </button>
-          <button type="submit" class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-xs hover:bg-gray-50 focus:outline-hidden sm:text-sm">
+          <button type="submit" class="btn-primary">
             Save Changes
           </button>
         </div>

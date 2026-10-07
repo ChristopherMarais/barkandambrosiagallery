@@ -105,7 +105,7 @@
     <div class="mb-4 max-w-xs">
       <label for="taxonomy-selector" class="block text-sm font-semibold text-gray-700 mb-2">Table</label>
       <select id="taxonomy-selector"
-        class="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 focus:outline-hidden focus:ring-2 focus:ring-gray-400">
+        class="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700">
         <option value="valid_species">Accepted species</option>
         <option value="described_names">Synonyms and old names</option>
       </select>
@@ -299,7 +299,7 @@
                   </span>
                   {% if job.error_message %}
                   <button onclick="viewText('{{ job.error_message|escapejs }}', 'Download Error')"
-                    class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
+                    class="ml-2 text-xs text-red-600 underline hover:no-underline hit-area">Details</button>
                   {% endif %}
                   {% elif job.status == 'expired' %}
                   <span
@@ -347,19 +347,9 @@
                   {% endif %}
                 </td>
 
-                {# --- UPDATED ID COLUMN --- #}
+                {# An id in passing (site-uuid, #618): 8 characters and a copy button #}
                 <td class="px-4 py-3 whitespace-nowrap">
-                  <div class="flex items-center gap-2">
-                    <span class="font-mono text-xs text-gray-500 select-all">{{ job.id|stringformat:"s" }}</span>
-                    <button type="button" class="copy-uuid shrink-0 text-gray-400 hover:text-gray-800 transition"
-                      data-uuid="{{ job.id }}" title="Copy Download ID">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
-                        </path>
-                      </svg>
-                    </button>
-                  </div>
+                  {% include "beetles/includes/short_id.html" with value=job.id %}
                 </td>
 
               </tr>
@@ -424,7 +414,7 @@
                     </span>
                     {% if b.error_report_file %}
                       <button onclick="viewLog('{{ b.error_report_file.url }}', 'Details')"
-                        class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
+                        class="ml-2 text-xs text-red-600 underline hover:no-underline hit-area">Details</button>
                     {% endif %}
                   {% else %}
                     <span class="inline-flex items-center justify-center w-28 rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-700 animate-pulse">
@@ -433,19 +423,9 @@
                   {% endif %}
                 </td>
 
-                {# --- UPDATED ID COLUMN --- #}
+                {# An id in passing (site-uuid, #618): 8 characters and a copy button #}
                 <td class="px-4 py-3 whitespace-nowrap">
-                  <div class="flex items-center gap-2">
-                    <span class="font-mono text-xs text-gray-500 select-all">{{ b.id|stringformat:"s" }}</span>
-                    <button type="button" class="copy-uuid shrink-0 text-gray-400 hover:text-gray-800 transition"
-                      data-uuid="{{ b.id }}" title="Copy Upload ID">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
-                        </path>
-                      </svg>
-                    </button>
-                  </div>
+                  {% include "beetles/includes/short_id.html" with value=b.id %}
                 </td>
               </tr>
               {% empty %}
@@ -503,10 +483,10 @@
                     </span>
                     {% if u.report_file %}
                       <button onclick="viewLog('{{ u.report_file.url }}', 'Details')"
-                        class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
+                        class="ml-2 text-xs text-red-600 underline hover:no-underline hit-area">Details</button>
                     {% elif u.error_message %}
                       <button onclick="viewText('{{ u.error_message|escapejs }}', 'Details')"
-                        class="ml-2 text-xs text-red-600 underline hover:no-underline">Details</button>
+                        class="ml-2 text-xs text-red-600 underline hover:no-underline hit-area">Details</button>
                     {% endif %}
                   {% else %}
                     <span class="inline-flex items-center justify-center w-28 rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-700 animate-pulse">
@@ -516,17 +496,7 @@
                 </td>
 
                 <td class="px-4 py-3 whitespace-nowrap">
-                  <div class="flex items-center gap-2">
-                    <span class="font-mono text-xs text-gray-500 select-all">{{ u.id|stringformat:"s" }}</span>
-                    <button type="button" class="copy-uuid shrink-0 text-gray-400 hover:text-gray-800 transition"
-                      data-uuid="{{ u.id }}" title="Copy Update ID">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
-                        </path>
-                      </svg>
-                    </button>
-                  </div>
+                  {% include "beetles/includes/short_id.html" with value=u.id %}
                 </td>
               </tr>
               {% empty %}
@@ -595,16 +565,11 @@
                 </div>
 
                 <div class="mb-4 text-left">
-                  <label class="block mb-1 font-semibold text-gray-700">Metadata (.csv)</label>
-                  <input type="file" name="csv_file" accept=".csv" required
-                    class="block w-full text-sm text-gray-500 file:mr-4 file:px-5 file:py-2.5 file:rounded-full file:border file:border-solid file:border-gray-300 file:text-sm file:font-semibold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-gray-600 hover:file:border-gray-300 transition" />
+                  {% include "beetles/includes/drop_zone.html" with input_id="new-csv-file" name="csv_file" label="Metadata" hint=".csv; with the ZIP, under 2 GB" accept=".csv" required=True small=True %}
                 </div>
 
-                {# --- UPDATED FILE INPUT --- #}
                 <div class="mb-2 text-left">
-                  <label class="block mb-1 font-semibold text-gray-700">Images (.zip)</label>
-                  <input type="file" name="zip" accept=".zip" required
-                    class="block w-full text-sm text-gray-500 file:mr-4 file:px-5 file:py-2.5 file:rounded-full file:border file:border-solid file:border-gray-300 file:text-sm file:font-semibold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-gray-600 hover:file:border-gray-300 transition" />
+                  {% include "beetles/includes/drop_zone.html" with input_id="new-zip-file" name="zip" label="Images" hint=".zip; with the CSV, under 2 GB" accept=".zip" required=True small=True %}
                 </div>
 
                 {# --- PROGRESS BAR --- #}
@@ -622,12 +587,12 @@
         </div>
         <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
           <button type="button" onclick="closeModal('modal-upload-new')"
-            class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-xs hover:bg-red-50 focus:outline-hidden sm:text-sm">
+            class="btn-secondary">
             Cancel
           </button>
 
           <button type="submit" id="btn-submit-new"
-            class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-xs hover:bg-gray-50 focus:outline-hidden sm:text-sm">
+            class="btn-primary">
             Submit Upload
           </button>
         </div>
@@ -678,11 +643,8 @@
                   </button>
                 </div>
 
-                {# --- UPDATED FILE INPUT --- #}
                 <div class="mb-4 text-left">
-                  <label class="block mb-1 font-semibold text-gray-700">Update File (.csv)</label>
-                  <input type="file" name="csv_file" accept=".csv" required
-                    class="block w-full text-sm text-gray-500 file:mr-4 file:px-5 file:py-2.5 file:rounded-full file:border file:border-solid file:border-gray-300 file:text-sm file:font-semibold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-gray-600 hover:file:border-gray-300 transition" />
+                  {% include "beetles/includes/drop_zone.html" with input_id="update-csv-file" name="csv_file" label="Update file" type_label=".csv" max_mb=10 accept=".csv" required=True small=True %}
                 </div>
 
                 {# --- PROGRESS BAR --- #}
@@ -700,12 +662,12 @@
         </div>
         <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
           <button type="button" onclick="closeModal('modal-update-existing')"
-            class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-xs hover:bg-red-50 focus:outline-hidden sm:text-sm">
+            class="btn-secondary">
             Cancel
           </button>
 
           <button type="submit" id="btn-submit-update"
-            class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-xs hover:bg-gray-50 focus:outline-hidden sm:text-sm">
+            class="btn-primary">
             Submit Update
           </button>
         </div>
@@ -748,9 +710,7 @@
               </div>
 
               <div class="mb-4 text-left">
-                <label class="block mb-1 font-semibold text-gray-700" for="predictions-file">Predictions File (.csv)</label>
-                <input type="file" id="predictions-file" name="csv_file" accept=".csv" required
-                  class="block w-full text-sm text-gray-500 file:mr-4 file:px-5 file:py-2.5 file:rounded-full file:border file:border-solid file:border-gray-300 file:text-sm file:font-semibold file:bg-white file:text-gray-700 hover:file:bg-gray-50 transition" />
+                {% include "beetles/includes/drop_zone.html" with input_id="predictions-file" name="csv_file" label="Predictions file" type_label=".csv" max_mb=predictions_max_mb accept=".csv" required=True small=True %}
               </div>
               <div class="mb-4 grid grid-cols-2 gap-3 text-left">
                 <label class="block"><span class="block mb-1 font-semibold text-gray-700">Model name</span>
@@ -774,11 +734,11 @@
         </div>
         <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
           <button type="button" onclick="closeModal('modal-predictions')"
-            class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-xs hover:bg-red-50 focus:outline-hidden sm:text-sm">
+            class="btn-secondary">
             Cancel
           </button>
           <button type="submit" id="btn-submit-predictions"
-            class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-xs hover:bg-gray-50 focus:outline-hidden sm:text-sm">
+            class="btn-primary">
             Upload Predictions
           </button>
         </div>
@@ -899,15 +859,13 @@
                 <p class="mb-3 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800"><strong>Size limit:</strong> the CSV must be less than 100 MB.</p>
 
                 <div class="mb-4 text-left">
-                  <label class="block mb-1 font-semibold text-gray-700">CSV File</label>
-                  <input type="file" name="csv_file" accept=".csv" required
-                    class="block w-full text-sm text-gray-500 file:mr-4 file:px-5 file:py-2.5 file:rounded-full file:border file:border-solid file:border-gray-300 file:text-sm file:font-semibold file:bg-white file:text-gray-700 hover:file:bg-gray-50 hover:file:text-gray-600 hover:file:border-gray-300 transition" />
+                  {% include "beetles/includes/drop_zone.html" with input_id="taxonomy-csv-file" name="csv_file" label="CSV file" type_label=".csv" max_mb=100 accept=".csv" required=True small=True %}
                 </div>
 
                 <div class="mb-4 text-left">
                   <label class="block mb-1 font-semibold text-gray-700">Version Label (Optional)</label>
                   <input type="text" name="label" placeholder="e.g., 2025-01-27 update"
-                    class="block w-full text-sm px-4 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-gray-400" />
+                    class="block w-full text-sm px-4 py-2 border border-gray-300 rounded-lg" />
                   <p class="text-xs text-gray-500 mt-1">Leave blank to use current timestamp</p>
                 </div>
 
@@ -925,12 +883,12 @@
         </div>
         <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
           <button type="button" onclick="closeModal('modal-upload-taxonomy')"
-            class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-xs hover:bg-red-50 focus:outline-hidden sm:text-sm">
+            class="btn-secondary">
             Cancel
           </button>
 
           <button type="submit" id="btn-submit-taxonomy"
-            class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-xs hover:bg-gray-50 focus:outline-hidden sm:text-sm">
+            class="btn-primary">
             Upload Reference
           </button>
         </div>
@@ -1118,7 +1076,7 @@
       {# Modal Footer #}
       <div class="px-6 py-3 border-t border-gray-200 bg-gray-50 flex justify-end shrink-0">
         <button type="button" onclick="closeModal('modal-field-definitions')"
-          class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-xs hover:bg-gray-50 focus:outline-hidden sm:text-sm">
+          class="btn-secondary">
           Close
         </button>
       </div>
@@ -1237,19 +1195,7 @@
     }
   });
 
-  // Updated Copy Logic with Icon Feedback
-  document.addEventListener('click', async (e) => {
-    const btn = e.target.closest('.copy-uuid');
-    if (!btn) return;
-    e.preventDefault(); e.stopPropagation();
-    const uuid = btn.getAttribute('data-uuid');
-    try {
-      await navigator.clipboard.writeText(uuid);
-      const originalHTML = btn.innerHTML;
-      btn.innerHTML = `<svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
-      setTimeout(() => { btn.innerHTML = originalHTML; }, 1500);
-    } catch (err) { console.error(err); }
-  });
+  // Copying an id: includes/short_id.html's button, handled by static/js/copy_id.js
 </script>
 
 <style>
@@ -1736,11 +1682,11 @@
 
     // 1. Try File URL first
     if (fileUrl) {
-      html += `<button onclick="viewLog('${inlineJsArg(fileUrl)}', '${linkText}')" class="ml-2 text-xs ${linkClass} underline hover:no-underline">${linkText}</button>`;
+      html += `<button onclick="viewLog('${inlineJsArg(fileUrl)}', '${linkText}')" class="ml-2 text-xs ${linkClass} underline hover:no-underline hit-area">${linkText}</button>`;
     }
     // 2. Fallback to Text Error
     else if (errorMessage) {
-      html += `<button onclick="viewText('${inlineJsArg(errorMessage)}', '${linkText}')" class="ml-2 text-xs ${linkClass} underline hover:no-underline">${linkText}</button>`;
+      html += `<button onclick="viewText('${inlineJsArg(errorMessage)}', '${linkText}')" class="ml-2 text-xs ${linkClass} underline hover:no-underline hit-area">${linkText}</button>`;
     }
 
     // Only update DOM if it actually changed to prevent flickering

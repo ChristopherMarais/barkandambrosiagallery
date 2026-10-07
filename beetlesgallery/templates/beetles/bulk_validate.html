@@ -5,7 +5,7 @@
 
 {% block content %}
 <section>
-  <a href="{% url 'data_management' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Data Management</a>
+  {% url 'data_management' as back_url %}{% include "beetles/includes/back_link.html" with url=back_url label="Data Management" %}
   <h1 class="page-title">Bulk validation</h1>
   <p class="text-gray-600 mb-6 max-w-3xl">
     Unvalidated images that have boxes. Check the boxes and names, tick the images that are right and validate them
@@ -58,7 +58,7 @@
             <input type="checkbox" name="image" value="{{ image.pk }}" class="bulk-pick h-4 w-4 rounded-sm border-gray-300">
             <span class="truncate">{{ image.image_institution|default:"" }}</span>
           </span>
-          <a href="{% url 'tool_annotate' %}?image={{ image.pk }}" target="_blank" rel="noopener" class="shrink-0 underline hover:text-gray-900">Open</a>
+          <a href="{% url 'tool_annotate' %}?image={{ image.pk }}" target="_blank" rel="noopener" class="shrink-0 underline hover:text-gray-900 hit-area">Open</a>
         </div>
       </label>
       {% endfor %}

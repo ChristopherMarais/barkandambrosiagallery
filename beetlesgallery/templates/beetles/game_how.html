@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="max-w-3xl mx-auto">
-  <a href="{% url 'game_home' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; {{ game_name }}</a>
+  {% url 'game_home' as back_url %}{% include "beetles/includes/back_link.html" with url=back_url label=game_name %}
   <h1 class="page-title">How the game works</h1>
   <a href="{% url 'game_play' 'mixed' %}?tour=1" class="inline-flex items-center gap-2 mt-1 px-4 py-2 text-sm font-semibold text-gray-800 border border-gray-300 rounded-xl hover:bg-gray-50" data-testid="tour-link">
     <i class="fi fi-rr-route"></i> Show me around the game

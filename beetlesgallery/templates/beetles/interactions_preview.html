@@ -1103,7 +1103,7 @@ Dong Y. 2026. A global dataset of reported pathogens and parasites associated wi
           </div>
           <input id="global-search" type="text"
             placeholder="Search by beetle host, pathogen taxon, country, author, or keyword…"
-            class="w-full h-9 pl-9 pr-8 border border-gray-300 rounded-md text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-hidden focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition" />
+            class="w-full h-9 pl-9 pr-8 border border-gray-300 rounded-md text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:border-gray-400 transition" />
           <button id="clear-search" type="button" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -1118,7 +1118,7 @@ Dong Y. 2026. A global dataset of reported pathogens and parasites associated wi
           <div class="flex items-center gap-1.5">
             <label for="category-filter" class="text-xs font-medium text-gray-600">Category:</label>
             <select id="category-filter"
-              class="h-9 text-xs border border-gray-300 rounded-md px-2.5 bg-white text-gray-800 focus:outline-hidden focus:ring-1 focus:ring-gray-400 transition">
+              class="h-9 text-xs border border-gray-300 rounded-md px-2.5 bg-white text-gray-800 transition">
               <option value="">All Categories ({{ stats.records|digit_groups_text }})</option>
               {% for value, label, records, taxa in groups %}
               <option value="{{ value }}">{{ label }} ({{ records|digit_groups_text }} records / {{ taxa|digit_groups_text }} taxa)</option>
@@ -1130,7 +1130,7 @@ Dong Y. 2026. A global dataset of reported pathogens and parasites associated wi
           <div class="flex items-center gap-1.5">
             <label for="validation-filter" class="text-xs font-medium text-gray-600">Evidence:</label>
             <select id="validation-filter"
-              class="h-9 text-xs border border-gray-300 rounded-md px-2.5 bg-white text-gray-800 focus:outline-hidden focus:ring-1 focus:ring-gray-400 transition">
+              class="h-9 text-xs border border-gray-300 rounded-md px-2.5 bg-white text-gray-800 transition">
               <option value="">All Evidence Types</option>
               <option value="validated">Experimental Validation ({{ stats.validated|digit_groups_text }})</option>
               <option value="pathogenicity test">Pathogenicity Test</option>
@@ -1197,7 +1197,7 @@ Dong Y. 2026. A global dataset of reported pathogens and parasites associated wi
       <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
         <div class="relative flex-1 w-full max-w-md">
           <input id="hosts-search" type="text" placeholder="Search beetle species (e.g., Ips typographus, Dendroctonus)…"
-            class="w-full h-9 pl-3 pr-3 border border-gray-300 rounded-md text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-hidden focus:ring-1 focus:ring-gray-400 transition" />
+            class="w-full h-9 pl-3 pr-3 border border-gray-300 rounded-md text-xs sm:text-sm text-gray-800 placeholder-gray-400 transition" />
         </div>
         <div class="flex items-center gap-2">
           {% include "beetles/includes/interaction_download.html" with name="hosts" ext="csv" label="Download Hosts CSV" title="Download beetle hosts summary as CSV" %}
@@ -1408,7 +1408,7 @@ Dong Y. 2026. A global dataset of reported pathogens and parasites associated wi
       <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
         <div class="relative flex-1 w-full max-w-md">
           <input id="refs-search" type="text" placeholder="Search publications by author, title, or year (1914–2026)…"
-            class="w-full h-9 pl-3 pr-3 border border-gray-300 rounded-md text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-hidden focus:ring-1 focus:ring-gray-400 transition" />
+            class="w-full h-9 pl-3 pr-3 border border-gray-300 rounded-md text-xs sm:text-sm text-gray-800 placeholder-gray-400 transition" />
         </div>
         <div class="flex items-center gap-2">
           {% include "beetles/includes/interaction_download.html" with name="references" ext="csv" label="Download References CSV" title="Download references bibliography as CSV" %}
@@ -1442,7 +1442,7 @@ Dong Y. 2026. A global dataset of reported pathogens and parasites associated wi
           <h3 class="text-base font-semibold text-gray-900" id="modal-title">Record Details</h3>
           <span id="modal-record-id" class="font-mono text-xs text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded-sm">ID #—</span>
         </div>
-        <button id="close-modal-btn" type="button" class="text-gray-400 hover:text-gray-600 focus:outline-hidden">
+        <button id="close-modal-btn" type="button" class="text-gray-400 hover:text-gray-600">
           <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>

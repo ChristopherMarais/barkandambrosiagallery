@@ -1,7 +1,5 @@
 {% comment %}
-One back-link pattern (site-back, #618): a small text link above a sub-page's title, never a bare chevron.
-Usage: {% include "beetles/includes/back_link.html" with url=some_url label="Data management" %}
-{% endcomment %}
-<a href="{{ url }}" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-2 py-2 -my-2">
-  <span aria-hidden="true">&larr;</span> {{ label }}
-</a>
+One back-link pattern (site-back, #618): a small "&larr; Parent page" text link above a sub-page's title, never a bare
+chevron beside it. .hit-area gives it a 44px tap target on touch screens (site-targets) while the text stays small.
+Usage: {% url 'data_management' as back_url %}{% include "beetles/includes/back_link.html" with url=back_url label="Data management" %}
+{% endcomment %}<a href="{{ url }}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800 hit-area">&larr; {{ label }}</a>

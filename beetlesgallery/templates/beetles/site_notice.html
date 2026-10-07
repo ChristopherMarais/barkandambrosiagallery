@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="max-w-2xl">
-  <a href="{% url 'my_account' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Account</a>
+  {% url 'my_account' as back_url %}{% include "beetles/includes/back_link.html" with url=back_url label="Account" %}
   <h1 class="page-title">Site notice</h1>
   <p class="text-gray-500 mb-5">One line at the top of every page while it is on. Players see it within a minute.</p>
   <form method="post" class="space-y-4 p-5 bg-gray-50 border border-gray-200 rounded-2xl">

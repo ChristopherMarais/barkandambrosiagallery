@@ -52,7 +52,7 @@
     <nav class="inline-flex h-9 items-center gap-0.5 self-start rounded-lg border border-gray-300 bg-white px-1 shrink-0 md:self-center"
          aria-label="Specimen pager" data-testid="specimen-pager">
       {% if prev_sibling %}
-        <a href="{% url 'beetle_detail' beetle_id=prev_sibling.id %}" class="flex h-7 w-7 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-black transition" title="Previous ROI" aria-label="Previous ROI">
+        <a href="{% url 'beetle_detail' beetle_id=prev_sibling.id %}" class="flex h-7 w-7 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-black transition hit-area" title="Previous ROI" aria-label="Previous ROI">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
         </a>
       {% else %}
@@ -62,7 +62,7 @@
       {% endif %}
       <span class="px-1 text-sm font-semibold text-gray-700 tabular-nums">{{ current_sibling_index|digit_groups }} / {{ total_siblings|digit_groups }}</span>
       {% if next_sibling %}
-        <a href="{% url 'beetle_detail' beetle_id=next_sibling.id %}" class="flex h-7 w-7 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-black transition" title="Next ROI" aria-label="Next ROI">
+        <a href="{% url 'beetle_detail' beetle_id=next_sibling.id %}" class="flex h-7 w-7 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-black transition hit-area" title="Next ROI" aria-label="Next ROI">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
         </a>
       {% else %}
@@ -158,21 +158,21 @@
             <div class="flex items-center gap-1">
               {% if current_sibling_index %}
                 {% if prev_sibling %}
-                  <a href="{% url 'beetle_detail' beetle_id=prev_sibling.id %}" class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" title="Previous ROI" aria-label="Previous ROI" data-testid="roi-pager-prev">
+                  <a href="{% url 'beetle_detail' beetle_id=prev_sibling.id %}" class="flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" title="Previous ROI" aria-label="Previous ROI" data-testid="roi-pager-prev">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                   </a>
                 {% else %}
-                  <span class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-300" aria-hidden="true">
+                  <span class="flex h-11 w-11 items-center justify-center rounded-lg text-gray-300" aria-hidden="true">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                   </span>
                 {% endif %}
                 <span class="px-1 text-sm text-gray-600 tabular-nums">ROI {{ current_sibling_index|digit_groups }} of {{ total_siblings|digit_groups }}</span>
                 {% if next_sibling %}
-                  <a href="{% url 'beetle_detail' beetle_id=next_sibling.id %}" class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" title="Next ROI" aria-label="Next ROI" data-testid="roi-pager-next">
+                  <a href="{% url 'beetle_detail' beetle_id=next_sibling.id %}" class="flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" title="Next ROI" aria-label="Next ROI" data-testid="roi-pager-next">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                   </a>
                 {% else %}
-                  <span class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-300" aria-hidden="true">
+                  <span class="flex h-11 w-11 items-center justify-center rounded-lg text-gray-300" aria-hidden="true">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                   </span>
                 {% endif %}
@@ -181,12 +181,12 @@
             <div class="flex items-center gap-1">
               {% if photo_boxes %}
                 {# BOXES SWITCH: shows or hides the boxes and the haze, as a click outside the boxes does; for the keyboard and for those who don't know that click. #}
-                <button type="button" id="roi-boxes-btn" class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" aria-pressed="true" aria-label="Hide the boxes" title="Hide the boxes">
+                <button type="button" id="roi-boxes-btn" class="flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" aria-pressed="true" aria-label="Hide the boxes" title="Hide the boxes">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="11" height="9" rx="1.5"/><rect x="10" y="10" width="11" height="9" rx="1.5"/><path class="boxes-off" stroke-linecap="round" d="M3 3l18 18"/></svg>
                 </button>
               {% endif %}
               {% if beetle.image_asset %}
-                <a href="{{ beetle.display_url }}" target="_blank" rel="noopener" class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" title="View full size" aria-label="View full size" data-testid="roi-fullsize">
+                <a href="{{ beetle.display_url }}" target="_blank" rel="noopener" class="flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" title="View full size" aria-label="View full size" data-testid="roi-fullsize">
                   <i class="fi fi-rr-expand" aria-hidden="true"></i>
                 </a>
               {% endif %}

@@ -8,7 +8,7 @@ The team, the contributing institutions and the GitHub Discussions link, moved o
 one screen (#618 home-team: a compact "Who built this" link on the home page, the full list here).
 {% endcomment %}
 <div class="max-w-5xl mx-auto">
-  <a href="{% url 'image_browser' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Home</a>
+  {% url 'image_browser' as back_url %}{% include "beetles/includes/back_link.html" with url=back_url label="Home" %}
   <h1 class="page-title">Team and partners</h1>
 
   <section id="team-section" class="mt-6">

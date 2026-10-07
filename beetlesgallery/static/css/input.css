@@ -251,7 +251,12 @@
        .btn-primary    dark grey, white text (the annotation page's Save): Save, Apply filters, Generate and
                        other work in tools and forms.
        .btn-secondary  white with a grey outline: the quieter choice next to those, such as Undo.
-     No black buttons.
+     Pick by role, not by look (site-buttons, #618): btn-main is the page's one purpose (at most one per page),
+     btn-primary commits a form or dialog, btn-secondary is everything else (Cancel, Close, Download ...), and a
+     plain text link only navigates. No black buttons.
+   - One of each shared piece: includes/drop_zone.html for every file input, includes/back_link.html above a
+     sub-page's title, includes/short_id.html for an id shown in passing, .hit-area on a small link or icon button,
+     and the :focus-visible ring above (never outline-hidden or a focus:ring of a page's own).
    - Ticked boxes and radio buttons are dark grey (see above).
    - Numbers of four digits or more are grouped in threes (12 345): the |digit_groups filter in templates,
      digitGroups() / digitGroupsText() in scripts (static/js/digit_groups.js).
@@ -298,6 +303,23 @@
        the .scale-fill-<step> classes below for its fill instead of .progress-bar-fill. */
     .progress-bar { @apply w-full h-2 rounded-full bg-gray-200 overflow-hidden; }
     .progress-bar-fill { @apply h-full rounded-full bg-gray-700; }
+
+    /* A 44x44px tap target (site-targets, #618) for a small link or icon button whose look stays small ("All",
+       "Open", "Details", a copy icon): on a touch screen an invisible box, centred on it and at least 44px each way,
+       takes the tap. Nothing changes with a mouse. In the components layer so a utility such as absolute still
+       wins over its position: relative. */
+    .hit-area { position: relative; }
+    @media (pointer: coarse) {
+        .hit-area::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: max(100%, 44px);
+            height: max(100%, 44px);
+            transform: translate(-50%, -50%);
+        }
+    }
 }
 
 /* A wide table that truly cannot be trimmed to its priority columns or turned into cards on a phone (site-tables,

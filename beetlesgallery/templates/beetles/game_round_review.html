@@ -16,11 +16,9 @@
 {% block content %}
 <div id="review" class="max-w-2xl mx-auto" data-report-url="{% url 'game_report_roi' %}" data-round="{{ round.id }}">
 
-  <div class="flex items-center gap-3 mb-4">
-    <a href="{% url 'game_home' %}" class="p-2 -ml-2 rounded-lg text-gray-500 hover:bg-gray-100" aria-label="Back to game home">
-      <i class="fi fi-rr-angle-left text-lg"></i>
-    </a>
-    <div class="flex-1">
+  {% url 'game_home' as back_url %}{% include "beetles/includes/back_link.html" with url=back_url label=game_name %}
+  <div class="mb-4">
+    <div>
       <h1 class="page-title">Your answers</h1>
       <p class="text-sm text-gray-500">{% if round.mode == 'classify' %}Naming{% elif round.mode == 'pair' %}Similarity{% elif round.mode == 'odd' %}Odd One Out{% elif round.mode == 'select' %}Find Them All{% else %}{{ game_name }}{% endif %} · {{ round.finished_at|date:"M j, Y H:i" }}</p>
     </div>
@@ -74,7 +72,7 @@
     <p id="sheet-error" class="hidden text-sm text-red-700"></p>
     <div class="flex gap-3 pt-1">
       <button type="button" id="sheet-cancel" class="px-4 py-3 text-base text-gray-600 border border-gray-200 rounded-xl">Cancel</button>
-      <button type="submit" class="btn-main flex-1 px-4 py-3 text-base">Send report</button>
+      <button type="submit" class="btn-primary flex-1 px-4 py-3 text-base">Send report</button>
     </div>
   </form>
 </div>
