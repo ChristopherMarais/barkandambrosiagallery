@@ -28,6 +28,8 @@
   #game[data-mode="classify"] #photos { flex: 0 1 auto; max-height: 45vh; width: 100%; background: none; }
   #game[data-mode="classify"] #photos .cell { flex: 0 1 auto; width: auto; height: auto; max-width: 100%; max-height: 100%;
       aspect-ratio: var(--photo-ar, 4 / 3); }
+  /* ...and centred in the room above the answer panel, the same space above and below it, not pushed to the top (r7) */
+  #game[data-mode="classify"] #photo-area { justify-content: center; }
   /* Lay the tiles (#602): the new beetle's empty tiles go down at once, one after another (--i, --lay-step), and each
      photo lands in its own tile when it is in, so one beetle gives way to the next instead of jumping (#575) */
   #photos .cell.slot:not(.landed) { background: #e5e7eb; }
@@ -126,8 +128,15 @@
      the icon a flex box of its own, so the icon font's line height cannot nudge it off the middle. With a keyboard
      the Esc key widens it into a pill, still centred. */
   #exit { flex-shrink: 0; height: 2.5rem; min-width: 2.5rem; padding: 0 0.5rem; border: 1px solid #d1d5db; border-radius: 9999px; font-size: 0.9375rem; font-weight: 600; line-height: 1; color: #111827; background: #fff; }
-  #exit > i { display: flex; align-items: center; justify-content: center; width: 1.25rem; height: 1.25rem; line-height: 1; }
+  #exit > i { display: flex; align-items: center; justify-content: center; width: 1.125rem; height: 1.125rem; line-height: 1; }
   #exit > i::before { display: block; line-height: 1; }
+  /* With the Esc key cap (r7, owner: the pill looked heavier on one side): the cross's ink fills only the middle half
+     of its 18px box, so its side of the pill gets less padding (0.375rem plus the glyph's own ~0.28rem, against the
+     key cap's 0.625rem) and the same gap to the key cap. Cross and cap then sit evenly, edge to edge. */
+  @media (pointer: fine) {
+    #game.has-kbd #exit { gap: 0.375rem; padding: 0 0.625rem 0 0.375rem; }
+    #game.has-kbd #exit .kbd { margin-left: 0; }
+  }
   #exit:hover { border-color: #6b7280; }
   /* Rounder photos */
   #photos .cell { border-radius: 1rem; }
@@ -163,9 +172,10 @@
   /* The rings round the grid photos are drawn on top of the photo, so they show on a grid of 16 too (#541):
      dark for your pick or tap. After answering, one system in both grid games (#569): a solid ring on the photos you
      chose, green correct, red not correct, grey not checked yet; a fainter dashed ring on the ones you left, coloured
-     by what choosing it would have been: green (one you missed), red (rightly left), grey (not checked yet). */
+     by what choosing it would have been: green (one you missed), red (rightly left), grey (not checked yet).
+     A little thicker since round 7 (owner: easier to see), on the play grid and Back's alike. */
   #photos .cell::after, #previous-photos .cell::after { content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none;
-      border-radius: inherit; border: 3px solid var(--ring, transparent); box-shadow: var(--cursor, none); }
+      border-radius: inherit; border: 4px solid var(--ring, transparent); box-shadow: var(--cursor, none); }
   #photos .cell.picked, #photos .cell.tapped { --ring: #374151; }
   .cell.ring-right, .cell.ring-missed { --ring: #16a34a; }
   .cell.ring-wrong, .cell.ring-avoided { --ring: #dc2626; }
@@ -175,7 +185,7 @@
   .cell:is(.ring-open, .ring-unknown).by-ai { --ring: #2563eb; }
   .cell:is(.ring-open, .ring-unknown).by-players { --ring: #9333ea; }
   .cell.ring-partly { --ring: #f97316; }
-  :is(#photos, #previous-photos) .cell:is(.ring-missed, .ring-avoided, .ring-unknown)::after { border-style: dashed; border-width: 2px; opacity: 0.7; }
+  :is(#photos, #previous-photos) .cell:is(.ring-missed, .ring-avoided, .ring-unknown)::after { border-style: dashed; border-width: 3px; opacity: 0.7; }
   :is(#photos, #previous-photos) .cell.ring-avoided::after { opacity: 0.4; }
   #photos .cell.key-cursor { --cursor: inset 0 0 0 2px #9ca3af; }
   /* top right: the Flag has the bottom left of each photo, Lighting the bottom right of the photo area. 8px in from
@@ -192,13 +202,24 @@
   .tap-mark { position: absolute; left: 0.375rem; top: 0.375rem; z-index: 3; display: none; align-items: center; justify-content: center;
               width: 1.5rem; height: 1.5rem; border-radius: 9999px; background: #374151; color: #fff; font-size: 0.75rem; pointer-events: none; }
   .cell.tapped .tap-mark { display: inline-flex; }
-  /* A grid tile carries one faint button, the whole photo (top right), where the Flag and the beetle's other photos
-     are: clear while the pointer is on the tile, on the tile last tapped (for a moment), or with the keys. Smaller
-     in grids of 16 and 25, so the beetle stays in view. */
+  /* A grid tile carries one faint button, the whole photo (top right): clear while the pointer is on the tile, on the
+     tile last tapped (for a moment), or with the keys. Smaller in grids of 16 and 25, so the beetle stays in view. */
   #game:is([data-mode="odd"], [data-mode="select"]) #photos .zoom-chip { opacity: 0.5; transition: opacity .2s; }
   @media (hover: hover) { #game:is([data-mode="odd"], [data-mode="select"]) #photos .cell:hover .zoom-chip { opacity: 1; } }
   #game #photos .cell:is(.chips-on, .key-cursor) .zoom-chip, #game #photos .zoom-chip:focus-visible { opacity: 1; }
   #photos:is([data-size="16"], [data-size="25"]) .zoom-chip { width: 1.5rem; height: 1.5rem; top: 0.25rem; right: 0.25rem; }
+  /* Grid tiles (r7): the Flag (bottom left) and the beetle's other photos (bottom right, "+2") show while the pointer
+     is on the tile, as in the photo games; on a touch screen on the tile last tapped. Hidden, they take no taps. */
+  #game:is([data-mode="odd"], [data-mode="select"]) #photos .cell > :is(.report-chip, .more-chip) { opacity: 0; pointer-events: none; transition: opacity .15s; }
+  @media (hover: hover) { #game:is([data-mode="odd"], [data-mode="select"]) #photos .cell:hover > :is(.report-chip, .more-chip) { opacity: 1; pointer-events: auto; } }
+  #game:is([data-mode="odd"], [data-mode="select"]) #photos .cell:is(.chips-on, .key-cursor) > :is(.report-chip, .more-chip),
+  #game:is([data-mode="odd"], [data-mode="select"]) #photos .cell > :is(.report-chip, .more-chip):focus-visible { opacity: 1; pointer-events: auto; }
+  #game:is([data-mode="odd"], [data-mode="select"]) #photos .more-chip { top: auto; right: 0.375rem; bottom: 0.375rem; }
+  #game:is([data-mode="odd"], [data-mode="select"]) #photos .more-chip .more-word { display: none; }
+  #game:is([data-mode="odd"], [data-mode="select"]) #photos .report-chip { width: 2rem; height: 2rem; font-size: 0.875rem; }
+  #game #photos:is([data-size="16"], [data-size="25"]) .report-chip { width: 1.5rem; height: 1.5rem; left: 0.25rem; bottom: 0.25rem; font-size: 0.6875rem; }
+  #game #photos:is([data-size="16"], [data-size="25"]) .more-chip { right: 0.25rem; bottom: 0.25rem; padding: 0.125rem 0.375rem; font-size: 0.625rem; }
+  #photos.revealing .more-chip, #photos .cell.flagged .more-chip { visibility: hidden; }
   #photos[data-size="16"] .tap-mark { width: 1.25rem; height: 1.25rem; }
   #photos[data-size="25"] .tap-mark { width: 1.125rem; height: 1.125rem; left: 0.25rem; top: 0.25rem; font-size: 0.625rem; }
   /* A photo flagged in a grid: greyed out with a "Flagged" badge, and out of play; the rest of the grid carries on */
@@ -235,7 +256,8 @@
   #previous.hidden { display: none; }
   /* Next while the next beetle (or the review) is on its way: still there, still tappable, a grey sheen and a spinner */
   #submit.next-busy { background: linear-gradient(90deg, #6b7280 0%, #9ca3af 50%, #6b7280 100%); background-size: 200% 100%; }
-  #submit #submit-spin { margin-left: 0.4rem; font-size: 0.875rem; }
+  /* inline-block: an inline icon cannot rotate, so the spinner stood still (E13) */
+  #submit #submit-spin { display: inline-block; margin-left: 0.4rem; font-size: 0.875rem; }
   #submit #submit-spin.hidden { display: none; }
   /* Always moving (round 5): the loading screen's thin bar, the tiles' pulse while photos come in, the checking dot.
      One message only (not a short line and a fact stacked, side by side, fighting for attention): the short lines
@@ -249,6 +271,9 @@
   @media (prefers-reduced-motion: reduce) {
     #stage #photo-area { transition: none; }
     #loading-bar span { animation: none; left: 0; width: 100%; opacity: 0.5; }
+    /* still moving, gently: a slow fade instead of a turn (E13) */
+    #submit #submit-spin { animation: spin-calm 2s ease-in-out infinite; }
+    @keyframes spin-calm { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
   }
   @media (prefers-reduced-motion: no-preference) {
     #submit.next-busy { animation: next-sheen 1.2s linear infinite; }
@@ -350,7 +375,7 @@
               padding: 2.25rem 1rem 2.25rem; pointer-events: none; background: rgba(107,114,128,.8); color: #fff;
               font-size: 1.125rem; line-height: 1.25; text-shadow: 0 1px 1px rgba(17,24,39,.25); transition: opacity .15s; }
   .rv-names > span { display: flex; align-items: center; gap: 0.5rem; min-width: 0; width: 100%; max-width: 24rem; align-self: center; }
-  .rv-names .nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+  .rv-names .nm { font-weight: 600; }
   .rv-names .none { color: #e5e7eb; font-weight: 400; }
   /* each taxon level's dots sit in a slot of their own before its name, so the names stay in line (#615) */
   :is(.rv-names, .lb-names) .lead { flex: none; display: inline-flex; align-items: center; gap: 0.125rem; width: 1.125rem; }
@@ -364,17 +389,32 @@
   :is(.rv-names, .lb-names) .c .alt { opacity: 0.85; }
   :is(.rv-names, .lb-names) .hdr { font-size: 0.6875em; font-weight: 600; opacity: 0.95; }
   :is(.rv-names, .lb-names) .hdr .spacer { flex: 1 1 auto; }
+  /* Round 7 (owner): every name in full, never cut short ("Crossotar…") or its genus cut to a letter; a long one
+     wraps. The main name (the true or likeliest one) keeps at least 8rem of the row: the two columns sit in a group
+     of their own that moves to the line under it, on the right, when the row is too narrow for both. */
+  :is(.rv-names, .lb-names) > span { flex-wrap: wrap; row-gap: 0; }
+  :is(.rv-names, .lb-names) .nm { flex: 1 1 0; min-width: min(8rem, 100% - 3.5rem); white-space: normal; overflow-wrap: break-word; }
+  :is(.rv-names, .lb-names) .cols { flex: none; display: flex; align-items: baseline; gap: 0.5rem; margin-left: auto; max-width: 100%; }
+  :is(.rv-names, .lb-names) .hdr .cols { align-items: center; }
+  /* a name IBBI-AI or the players give instead of the row's: on its own line in the column, in their colour (blue
+     IBBI-AI, purple the players): a light tint with a solid underline, readable on the grey and the black */
+  :is(.rv-names, .lb-names) .c .alt { display: block; max-width: 10rem; margin-left: auto; white-space: normal; overflow-wrap: break-word;
+      text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 2px; }
+  :is(.rv-names, .lb-names) .c.ai .alt { color: #bfdbfe; text-decoration-color: #3b82f6; }
+  :is(.rv-names, .lb-names) .c.players .alt { color: #e9d5ff; text-decoration-color: #a855f7; }
   /* Similarity: the rank the two share (the answer, or probably), underlined on both photos (#600) */
   :is(.rv-names, .lb-names) .nm.shared { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
   /* the whole photo opens from its own button on a reviewed photo, bottom left; a tap on the photo turns its names off (#600) */
   .cell > .rv-whole { top: auto; right: auto; left: 0.375rem; bottom: 0.375rem; z-index: 5; }
   @media (hover: hover) and (pointer: fine) { .cell > .rv-whole { display: none; } }
+  /* its icon dead centre on the round button (round 7): no line box under the glyph */
+  .cell > .rv-whole > i { display: flex; line-height: 1; }
   /* the whole photo opened from a review: its names under it, every rank in full (#600) */
   #lb-names.hidden { display: none; }
   .lb-names { display: flex; flex-direction: column; gap: 0.125rem; width: min(94vw, 26rem); margin: 0.5rem auto 0; color: #fff; font-size: 0.9375rem; line-height: 1.3; }
   .lb-names > span { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
   .lb-names .rk { flex: 0 0 5rem; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #6b7280; }
-  .lb-names .nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+  .lb-names .nm { font-weight: 600; }
   .lb-names .none { color: #6b7280; font-weight: 400; }
   #lightbox.with-names #lightbox-img { max-height: calc(85vh - 7rem); }
   /* grids: smaller tiles, smaller text and corners; the text keeps clear of the rounded corners and the marks above */
@@ -408,15 +448,14 @@
   }
   /* on the review a tap turns the names off and on (a click with a mouse opens the whole photo): no text selection or menu */
   .cell.has-names { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; cursor: zoom-in; }
-  /* In a grid of 25 four lines of names would hide most of a tile: they show on a tap (or while the pointer is on
-     it), the other way round; the card above lists every tile's name at the grid's rank. Only the names and dots. */
-  :is(#photos, #previous-photos)[data-size="25"] .cell > .rv-names { font-size: 0.5625rem; line-height: 1.15; gap: 0; padding: 1.25rem 0.1875rem 0.125rem; opacity: 0; }
+  /* A grid of 25: only the names and dots, small. They show from the start and a hover or a tap clears them, as on
+     every other photo (round 7: they used to start hidden here and show on hover, the other way round, which read
+     as a fault). */
+  :is(#photos, #previous-photos)[data-size="25"] .cell > .rv-names { font-size: 0.5625rem; line-height: 1.15; gap: 0; padding: 1.25rem 0.1875rem 0.125rem; }
   :is(#photos, #previous-photos)[data-size="25"] .rv-names > span { gap: 0.2rem; }
   :is(#photos, #previous-photos)[data-size="25"] .rv-names :is(.idl, .c, .hdr) { display: none; }
   :is(#photos, #previous-photos)[data-size="25"] .rv-names .rv-dot { width: 0.3125rem; height: 0.3125rem; margin-right: 0.125rem; }
   :is(#photos, #previous-photos)[data-size="25"] .rv-names .lead { width: 0.75rem; }
-  :is(#photos, #previous-photos)[data-size="25"] .cell.names-off .rv-names { opacity: 1; }
-  @media (hover: hover) { :is(#photos, #previous-photos)[data-size="25"] .cell:hover .rv-names { opacity: 1; } }
   /* a grid tile seen before (#600): bottom right, the eye alone on the small tiles of 16 and 25 */
   .rv-seen { position: absolute; right: 0.375rem; bottom: 0.375rem; z-index: 5; display: inline-flex; align-items: center; gap: 0.25rem; height: 1.375rem;
              padding: 0 0.45rem; border-radius: 9999px; background: rgba(255,255,255,.92); border: 1px solid #d1d5db; color: #374151;
@@ -458,7 +497,12 @@
                      grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); }
   #previous-photos[data-size="25"] { gap: 0.125rem; padding: 0.25rem 0; }
   #previous-photos .cell { position: relative; min-width: 0; min-height: 0; overflow: hidden; border-radius: 1rem; display: flex; align-items: center; justify-content: center; }
-  #previous-photos canvas { display: block; width: 100%; height: 100%; object-fit: contain; }
+  #previous-photos canvas { display: block; width: 100%; height: 100%; object-fit: contain; transform-origin: 0 0; filter: var(--photo-filter, none); }
+  /* each photo in a frame that zooms (scroll, pinch, double-click, drag), as on the review after the answer (round 7) */
+  #previous-photos button.frame { position: relative; width: 100%; height: 100%; display: block; padding: 0; border: 0; background: none; }
+  #previous-photos .frame { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  #previous-photos .frame.zoomed { cursor: grab; }
+  #previous-photos .frame.dragging { cursor: grabbing; }
   /* After a long session: a gentle, dismissible suggestion to take a break */
   #break-nudge { margin-bottom: 0.5rem; padding: 0.625rem 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.75rem; background: #f9fafb; color: #374151; font-size: 0.8125rem; }
   #break-nudge.hidden { display: none; }
@@ -477,6 +521,12 @@
   #lightbox-box.hidden { display: none; }
   /* the photo before stays, faded, until the next one is on screen (#601) */
   #lb-photo.loading #lightbox-img { opacity: 0.4; }
+  /* Round 7: the whole photo opens at its full size at once (its thumbnail stretched to it, with its box), and the
+     sharp photo comes into focus in place: a blurred copy of the thumbnail on top fades away. No size change. */
+  #lb-soft { position: absolute; inset: 0; overflow: hidden; pointer-events: none; filter: blur(6px); opacity: 0; transition: opacity 0.35s ease-out; }
+  #lb-soft img { display: block; width: 100%; height: 100%; filter: var(--photo-filter, none); }
+  #lb-photo.soft #lb-soft { opacity: 1; transition: none; }
+  @media (prefers-reduced-motion: reduce) { #lb-soft { transition: none; } }
   #lightbox-box { border-radius: 0.5rem; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.7), inset 0 0 0 1px rgba(0,0,0,.7), 0 0 0 9999px rgba(0,0,0,.35); }
   .more-chip { position: absolute; right: 0.375rem; top: 0.375rem; z-index: 2; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem;
                border-radius: 9999px; background: rgba(17,24,39,.78); color: #fff; font-size: 0.75rem; font-weight: 600; }
@@ -488,6 +538,13 @@
   #lb-count { position: absolute; top: 1rem; left: 50%; transform: translateX(-50%); padding: 0.25rem 0.75rem; border-radius: 9999px;
               background: rgba(0,0,0,.6); color: #fff; font-size: 0.75rem; font-weight: 600; }
   #lb-prev.hidden, #lb-next.hidden, #lb-count.hidden { display: none; }
+  /* Every icon dead centre in its pill or round button (r7, owner): an icon font's glyph sits on the text's baseline,
+     in a line box taller than the glyph, so it drifts off the middle. Each icon is a box of its own, exactly its
+     glyph's height (line-height 1), and the pills centre their content both ways. Hidden icons stay hidden. */
+  :is(#game, #lightbox, #recap, #toasts, .level-pop) .fi:not(.hidden) { display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+  :is(#game, #lightbox, #recap, #toasts, .level-pop) .fi::before { display: block; line-height: 1; }
+  #light-btn, .more-chip, #chip, #combo, #level-chip, #focus-btn, #lb-light, .flag-badge, .rv-seen { justify-content: center; }
+  #lightbox > button[aria-label="Close"], .lb-nav { display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
 </style>
 {% endblock %}
 
@@ -612,8 +669,8 @@
 
       <p id="submit-hint" class="hidden text-center text-xs text-gray-500 mt-1" data-testid="submit-hint"></p>
       <div id="actions">
-        <button type="button" id="skip"><span id="skip-text">Skip</span><kbd class="kbd">Del</kbd></button>
-        <button type="button" id="back" aria-disabled="true" title="Your last beetle">Back<kbd class="kbd">&#9003;</kbd></button>
+        <button type="button" id="skip"><span id="skip-text">Skip</span><kbd class="kbd" title="Backspace">&#9003;</kbd></button>
+        <button type="button" id="back" aria-disabled="true" title="Your last beetle">Back<kbd class="kbd">Ctrl</kbd></button>
         <button type="button" id="submit" disabled><span id="submit-text">Submit</span><i id="submit-spin" class="fi fi-rr-spinner hidden" aria-hidden="true"></i><kbd class="kbd">Enter</kbd></button>
       </div>
     </div>
@@ -713,7 +770,7 @@
     <div class="flex flex-col gap-3">
       <button type="button" id="recap-more" class="btn-main px-6 py-3.5 text-base">Keep playing</button>
       <a href="{% url 'game_report' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl" data-testid="recap-learn"><i class="fi fi-rr-bulb"></i> Where I lost points</a>
-      <a href="{% url 'game_home' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl" data-testid="recap-home">{{ game_name }}</a>
+      <a href="{% url 'game_home' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl" data-testid="recap-home">{{ game_name }} home</a>
     </div>
     <a href="{{ discussions }}" target="_blank" rel="noopener" class="mt-6 inline-block text-sm text-gray-500 underline hover:text-gray-800" data-testid="discussions-link">Bug or idea? Tell us on GitHub Discussions</a>
   </div>
@@ -728,7 +785,8 @@
     <div id="lb-frame" class="relative block overflow-hidden rounded-lg" title="Scroll, pinch or double-click to zoom">
       <div id="lb-zoom" class="relative">
         <img id="lightbox-img" alt="Whole image" draggable="false" class="block max-w-[94vw] max-h-[85vh] object-contain">
-        <span id="lb-primary" class="hidden" title="The photo to name" aria-label="The photo to name" data-testid="primary-photo"><i class="fi fi-rr-bullseye"></i></span>
+        <span id="lb-soft" aria-hidden="true"><img id="lb-soft-img" alt="" draggable="false"></span>
+        <span id="lb-primary" class="hidden" title="The photo to name" aria-label="The photo to name" data-testid="primary-photo"><i class="fi fi-rr-location-crosshairs"></i></span>
         <div id="lightbox-box" class="absolute pointer-events-none"></div>
       </div>
     </div>
@@ -1104,31 +1162,59 @@
   function galleryOf(im) {
     return im && im.photos ? [{ url: im.url, box: im.box, thumb: im.thumb }].concat(im.photos) : [];
   }
-  // One whole photo (#601): its thumbnail at once, the full photo swapped in when it arrives; its box only once a
-  // picture of that photo is on screen, so the next photo's box never shows over the one before. The photo before
-  // stays, faded, until then.
+  // One whole photo (#601): its box only once a picture of that photo is on screen, so the next photo's box never
+  // shows over the one before; the photo before stays, faded, until then. Round 7 (owner): the photo takes its full
+  // size at once, from the first picture of it that arrives (the thumbnail, stretched), and keeps it: the sharp photo
+  // comes into focus in place under a blurred copy of the thumbnail that fades away, never growing from small.
+  let lbAspect = 0;   // the open photo's width / height
+  function fitLightbox(w, h) {
+    if (w && h) lbAspect = w / h;
+    if (!lbAspect) return;
+    const img = $("lightbox-img"), rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const maxW = window.innerWidth * 0.94;
+    const maxH = window.innerHeight * 0.85 - ($("lightbox").classList.contains("with-names") ? 7 * rem : 0);
+    const width = Math.max(1, Math.min(maxW, maxH * lbAspect));
+    img.style.width = Math.round(width) + "px";
+    img.style.height = Math.round(width / lbAspect) + "px";
+  }
+  window.addEventListener("resize", () => { if (!$("lightbox").classList.contains("hidden")) fitLightbox(); });
   function showPhoto(p) {
     lbZoom.reset();
-    const token = ++photoShown, img = $("lightbox-img"), b = $("lightbox-box");
+    const token = ++photoShown, img = $("lightbox-img"), b = $("lightbox-box"), photo = $("lb-photo");
     b.classList.add("hidden");
     b.style.left = p.box[0] * 100 + "%";
     b.style.top = p.box[1] * 100 + "%";
     b.style.width = p.box[2] * 100 + "%";
     b.style.height = p.box[3] * 100 + "%";
-    $("lb-photo").classList.add("loading");
+    photo.classList.add("loading");
+    photo.classList.remove("soft");
     let sharp = false;
-    const put = (url, full) => {
-      if (token !== photoShown || sharp) return;   // moved on, or the full photo is already up
-      sharp = full;
+    const onScreen = () => { b.classList.remove("hidden"); photo.classList.remove("loading"); };
+    // the thumbnail first, already at the photo's full size, its box drawn, a blurred copy over it
+    const soft = (pic) => {
+      if (token !== photoShown || sharp) return;
+      fitLightbox(pic.naturalWidth, pic.naturalHeight);
+      $("lb-soft-img").src = p.thumb;
+      img.src = p.thumb;
+      photo.classList.add("soft");
+      onScreen();
+    };
+    // then the sharp photo in the same place; the blurred copy fades off it
+    const focus = (pic) => {
+      if (token !== photoShown) return;
+      sharp = true;
+      if (pic) fitLightbox(pic.naturalWidth, pic.naturalHeight);
+      const url = p.url;
       $("lightbox-img").src = url;
       (img.decode ? img.decode() : Promise.resolve()).catch(() => {}).then(() => {
         if (token !== photoShown || img.getAttribute("src") !== url) return;
-        b.classList.remove("hidden");
-        $("lb-photo").classList.remove("loading");
+        if (!pic) fitLightbox(img.naturalWidth, img.naturalHeight);
+        onScreen();
+        photo.classList.remove("soft");
       });
     };
-    if (p.thumb) loadImage(p.thumb).then(() => put(p.thumb, false), () => {});
-    loadImage(p.url).then(() => put(p.url, true), () => put(p.url, true));
+    if (p.thumb) loadImage(p.thumb).then(soft, () => {});
+    loadImage(p.url).then(focus, () => focus(null));
   }
   function showCount() {
     const p = gallery[galleryAt] || {};
@@ -1157,14 +1243,17 @@
     $("report-menu").classList.add("hidden");
     $("report-cog").classList.remove("hidden");
     $("lightbox-img").removeAttribute("src");   // never the last beetle's photo while this one loads
-    showPhoto(gallery[0] || { url, box, thumb: own ? own.thumb : "" });
-    gallery.forEach((p) => { if (p.thumb) loadImage(p.thumb).catch(() => {}); });   // the others' thumbnails, ready
-    $("lb-primary").classList.toggle("hidden", gallery.length < 2);
-    // from a review: the beetle's names under the photo, every rank in full (#600); the same specimen in every photo
+    $("lb-soft-img").removeAttribute("src");
+    // from a review: the beetle's names under the photo, every rank in full (#600); the same specimen in every photo.
+    // Set before the photo, whose size leaves room for them.
     const names = lightboxReview && previous && (previous.beetles || [])[lightboxImage];
     $("lb-names").replaceChildren(...(names ? [namesLabel(names, previous, true)] : []));
     $("lb-names").classList.toggle("hidden", !names);
     $("lightbox").classList.toggle("with-names", !!names);
+    lbAspect = 0;
+    showPhoto(gallery[0] || { url, box, thumb: own ? own.thumb : "" });
+    gallery.forEach((p) => { if (p.thumb) loadImage(p.thumb).catch(() => {}); });   // the others' thumbnails, ready
+    $("lb-primary").classList.toggle("hidden", gallery.length < 2);
     ["lb-prev", "lb-next", "lb-count"].forEach((id) => $(id).classList.toggle("hidden", gallery.length < 2));
     if (gallery.length > 1) showCount();
     else if (own && own.more && !own.photos && item && item.more_level) {   // still locked: which level opens them
@@ -1763,7 +1852,7 @@
         makeZoomable(frame, canvas, () => openLightbox(im.url, im.box, i));
       }
       cell.appendChild(frame);
-      if (im.more && !grid) {   // a grid tile's other photos are in its whole-photo view (openTile)
+      if (im.more) {   // on a grid tile it shows while the pointer is on the tile, or on the tile last tapped (r7)
         // Other photos of exactly this beetle: open them, or (still locked) say which level opens them
         const chip = document.createElement("button");
         chip.type = "button";
@@ -1791,9 +1880,9 @@
       peers.textContent = "Named by " + item.others + (item.others === 1 ? " other" : " others");
       holder.appendChild(peers);
     }
-    // A Flag on each photo (bottom left): opens that photo with the reasons ready to pick, at the same corner. Not on
-    // grid tiles: there it is in the whole photo, so nothing piles up on a small tile (openTile)
-    if (!grid) holder.querySelectorAll(".cell").forEach((cell, i) => {
+    // A Flag on each photo (bottom left): opens that photo with the reasons ready to pick, at the same corner. On a
+    // grid tile it shows while the pointer is on the tile, or on the tile last tapped, so a small tile stays clear (r7)
+    holder.querySelectorAll(".cell").forEach((cell, i) => {
       const im = item.images[i];
       const report = document.createElement("button");
       report.type = "button";
@@ -2216,8 +2305,8 @@
     if (performance.getEntriesByName(mark).length) performance.measure(name, mark);
   }
 
-  // Every beetle's names on its photo, in every game (#541): one line per taxon level, subfamily to species (the genus
-  // cut to its letter in the species). Each line has its own dots (green validated, blue IBBI-AI, purple the players,
+  // Every beetle's names on its photo, in every game (#541): one line per taxon level, subfamily to species, every
+  // name in full (round 7: no "X." for the genus, nothing cut short; a long name wraps). Each line has its own dots (green validated, blue IBBI-AI, purple the players,
   // glowing when a proven expert backs them), its ID type after the name ("Validated ID", "AI ID", "Player ID"), and,
   // where IBBI-AI and the players give a confidence, the two columns under their headings (#615). Under those
   // headings the rows do not say "AI ID" or "Player ID" again (owner, on a phone): the heading already says it.
@@ -2232,7 +2321,7 @@
     if (kind === "players") cell.append(view.votes + " · ", view.sure + "%",
                                         view.experts ? " · " + view.experts + (view.experts === 1 ? " expert" : " experts") : "");
     else cell.append(view.sure + "%");
-    if ((view.name || "").trim().toLowerCase() !== (rowName || "").trim().toLowerCase()) cell.prepend(node("span", "alt", view.name + " "));
+    if ((view.name || "").trim().toLowerCase() !== (rowName || "").trim().toLowerCase()) cell.prepend(node("span", "alt", view.name));
     return cell;
   }
   // The rank a Similarity pair shares, when it is the answer or probably is (#600): underlined on both photos, only
@@ -2253,13 +2342,10 @@
       return box;
     }
     const cols = b.columns || [];
-    if (cols.length) box.append(node("span", "hdr", node("span", "spacer"), ...cols.map((k) => node("span", "c " + k, sourceDot(k), ID_COLUMN[k]))));
+    if (cols.length) box.append(node("span", "hdr", node("span", "spacer"), node("span", "cols", ...cols.map((k) => node("span", "c " + k, sourceDot(k), ID_COLUMN[k])))));
     const shared = sharedRank(review);
-    let genus = "";
     b.ranks.forEach((r) => {
-      let name = r.name;
-      if (r.rank === "genus") genus = name;
-      if (!full && r.rank === "species" && genus && name.startsWith(genus + " ")) name = genus[0] + ". " + name.slice(genus.length + 1);
+      const name = r.name;   // in full, the species with its whole genus (round 7)
       const nm = name ? node("span", "nm" + (r.rank === shared ? " shared" : ""), taxonName(name, r.rank)) : node("span", "nm none", "—");
       nm.title = r.rank + ": " + (r.name || "not known") + (r.label ? " (" + r.label + ")" : "");
       const dots = name ? (r.dots || []).map(sourceDot) : [];
@@ -2267,7 +2353,8 @@
       const cells = cols.map((k) => columnCell(k, (r.columns || {})[k], r.name));
       const rk = full ? node("span", "rk", r.rank) : node("span", "rka", RANK_ABBR[r.rank] || "");
       if (!full) { rk.title = r.rank; rk.setAttribute("aria-label", r.rank); }
-      box.append(node("span", "", node("span", "lead", ...dots), rk, nm, idType, ...cells));
+      // the columns as one group, which moves under the name when the row is narrow (round 7)
+      box.append(node("span", "", node("span", "lead", ...dots), rk, nm, idType, cells.length ? node("span", "cols", ...cells) : null));
     });
     return box;
   }
@@ -2277,6 +2364,8 @@
   function nameTile(c, i, review) {   // one photo's names (#541), with its whole-photo button
     const b = (review.beetles || [])[i];
     if (!b || !c || c.classList.contains("flagged")) return;
+    c.querySelectorAll(":scope > .rv-names").forEach((old) => old.remove());   // one set of names, never two
+    c.classList.remove("names-off");   // names always start on view; a hover or a tap clears them (round 7)
     c.appendChild(namesLabel(b, review));
     if (review.seen && review.seen[i]) c.appendChild(seenMark("photo-seen"));   // a photo seen before (#615)
     c.classList.add("has-names");
@@ -2351,20 +2440,32 @@
     const box = $("previous-photos"), n = previous.images.length;
     box.style.setProperty("--cols", n > 2 ? Math.ceil(Math.sqrt(n)) : n);
     box.dataset.size = String(n);
-    const cells = previous.images.map((im, i) => {
-      const c = node("div", "cell");
-      const canvas = document.createElement("canvas");
-      c.appendChild(canvas);
-      if (n === 2) c.appendChild(node("span", "rv-num", i === 0 ? "A" : "B"));
-      if (im) loadImage(im.url).then((img) => drawCrop(canvas, img, im.box)).catch(() => {});
-      return c;
-    });
+    const cells = previous.images.map((im, i) => reviewCell(im, i, n));
     box.replaceChildren(...cells);
     markTiles(cells, previous);
     nameTiles(cells, previous);
     renderReview(previous, $("previous-review"));
     $("previous").classList.remove("hidden");
     return true;
+  }
+  // One of Back's photos (round 7): built as the review's own, in a frame that zooms (scroll, pinch, double-click,
+  // drag), the small crop first and the sharp one after it; the names, marks, hover and whole photo are the review's
+  function reviewCell(im, i, n) {
+    const c = node("div", "cell");
+    const frame = node("button", "frame");
+    frame.type = "button";
+    frame.setAttribute("aria-label", "See the whole image");
+    const canvas = document.createElement("canvas");
+    frame.appendChild(canvas);
+    c.appendChild(frame);
+    makeZoomable(frame, canvas, () => openReviewPhoto(c));
+    if (n === 2) c.appendChild(node("span", "rv-num", i === 0 ? "A" : "B"));
+    if (im) loadCrop(im).then((got) => {
+      if (!canvas.isConnected) return;   // Back closed, or another beetle's
+      drawCrop(canvas, got.img, im.box, got.cut);
+      if (got.cut && im.large) loadImage(im.large).then((big) => drawCrop(canvas, big, im.box, true)).catch(() => {});
+    }).catch(() => {});
+    return c;
   }
   function hidePrevious() {
     const open = !$("previous").classList.contains("hidden");
@@ -2935,9 +3036,12 @@
   //   arrows                     WASD
   //   Up/Down: rank or line      W/S: rank or line
   //   Left/Right: change it      A/D: change it
-  //   Enter or Space: Submit, then Next (on the review)    Delete or End (or X): Skip    Backspace (or Z): Back, your last beetle
+  //   Enter or Space: Submit, then Next (on the review)    Backspace (or Delete, End, X): Skip    Ctrl (or B, Z): Back, your last beetle
   //   Home (or Q, V): whole photo    Page Up (or E, L): Lighting    Page Down (or R): Flag    Esc: close, or exit
-  // A letter typed on a focused list still searches it (the lists keep their own keys).
+  // A letter typed on a focused list still searches it (the lists keep their own keys). Backspace is the game's only
+  // away from the form fields: in a search box and on a list it still deletes a letter. Tab is never the game's: it
+  // always moves between the buttons (owner), so Back is a tap of Ctrl (owner's choice), or B or Z. Ctrl counts only
+  // when it is let go with no other key pressed meanwhile, so Ctrl+C and the other shortcuts are untouched.
   function isTyping(el) { return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable); }
   let cursorRank = 0;
   function openRows() { return RANKS.filter((r) => selects[r] && !selects[r].disabled && !$("pick-" + r).closest(".rank-row").classList.contains("locked")); }
@@ -2958,10 +3062,23 @@
   }
   const KEYS = {
     up: ["ArrowUp", "w"], down: ["ArrowDown", "s"], left: ["ArrowLeft", "a"], right: ["ArrowRight", "d"],
-    next: ["Enter", " "], skip: ["Delete", "End", "x"], back: ["Backspace", "z"],
+    next: ["Enter", " "], skip: ["Backspace", "Delete", "End", "x"], back: ["b", "z"],
     photo: ["Home", "q", "v"], light: ["PageUp", "e", "l"], report: ["PageDown", "r"],
   };
   const is = (name, key) => KEYS[name].includes(key);
+  // Ctrl on its own, tapped and let go: Back (or close Back again), as B and Z do
+  let ctrlAlone = false;
+  document.addEventListener("keydown", (e) => { ctrlAlone = e.key === "Control" && !e.repeat ? true : (e.key === "Control" && ctrlAlone); }, true);
+  document.addEventListener("keyup", (e) => {
+    if (e.key !== "Control" || !ctrlAlone) return;
+    ctrlAlone = false;
+    if (isTyping(e.target) || !$("recap").classList.contains("hidden") || !$("lightbox").classList.contains("hidden")) return;
+    if (!$("previous").classList.contains("hidden")) { hidePrevious(); return; }
+    if (document.querySelector("[data-overlay-open]") || $("stage").classList.contains("hidden")) return;
+    if ($("focus-sheet") && $("focus-sheet").classList.contains("flex")) return;
+    if (!$("back").disabled) showPrevious();
+  });
+  window.addEventListener("blur", () => { ctrlAlone = false; });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       if (!$("recap").classList.contains("hidden")) return;
@@ -2974,13 +3091,15 @@
     const t = e.target;
     if (isTyping(t)) return;
     if (t && t.tagName === "OPTION") return;   // choosing in an open list
+    // Backspace keeps its own job on a list (and with Shift): a search is corrected
+    if (e.key === "Backspace" && (e.shiftKey || (t && t.tagName === "SELECT"))) return;
     if (!$("recap").classList.contains("hidden")) {
       if (e.key === "Enter") { e.preventDefault(); $("recap-more").click(); }
       return;
     }
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
     if (!$("previous").classList.contains("hidden")) {
-      if (is("back", key) || is("next", key)) { e.preventDefault(); hidePrevious(); }
+      if (is("back", key) || is("next", key)) { e.preventDefault(); if (!e.repeat) hidePrevious(); }
       return;
     }
     if (!$("lightbox").classList.contains("hidden")) {
@@ -2998,7 +3117,7 @@
     const pressed = Object.keys(KEYS).find((name) => is(name, key));
     if (!pressed) return;
     e.preventDefault();   // also keeps a focused list from opening, and Space from scrolling
-    if ((pressed === "next" || pressed === "skip") && e.repeat) return;   // a held key is not a burst of answers
+    if ((pressed === "next" || pressed === "skip" || pressed === "back") && e.repeat) return;   // a held key is not a burst of answers
     // Select all, and Odd One Out with several odd ones: Space taps the beetle the arrows are on (Enter is Submit); on
     // the review it is Next, as everywhere
     if (multiPick() && key === " " && !busy) {

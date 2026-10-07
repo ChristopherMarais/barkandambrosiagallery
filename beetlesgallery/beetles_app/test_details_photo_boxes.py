@@ -80,7 +80,7 @@ class DetailsPhotoBoxesTests(PageBehaviourCase):
         self.assertEqual(haze.count('fill="black"'), 3)   # a hole for each box
         self.assertIn(f'<rect x="{self.corner.bbox_x:f}" y="{self.corner.bbox_y:f}" '
                       f'width="{self.corner.bbox_width:f}" height="{self.corner.bbox_height:f}" fill="black"/>', haze)
-        self.assertNotIn("9999px", page)   # the old one-box haze would cover the other boxes
+        self.assertNotIn("0 0 0 9999px", page)   # the old one-box haze (a huge box-shadow) would cover the other boxes
 
     def test_a_switch_and_a_click_outside_the_boxes_hide_and_show_them(self):
         page = self.page(self.small)

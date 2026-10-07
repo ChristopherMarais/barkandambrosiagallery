@@ -73,5 +73,5 @@ class NotSureSearchesTests(SimpleTestCase):
 class NoRepeatedIdLabelTests(SimpleTestCase):
     def test_the_headings_stay_and_the_rows_do_not_repeat_them(self):
         self.assertIn('const ID_COLUMN = { ai: "AI ID", players: "Player ID" };', PAGE)
-        self.assertIn('node("span", "hdr", node("span", "spacer"), ...cols.map((k) => node("span", "c " + k, sourceDot(k), ID_COLUMN[k])))', PAGE)
+        self.assertIn('node("span", "hdr", node("span", "spacer"), node("span", "cols", ...cols.map((k) => node("span", "c " + k, sourceDot(k), ID_COLUMN[k]))))', PAGE)
         self.assertIn('const idType = name && r.label && !cols.length ? node("span", "idl", r.label) : null;', PAGE)

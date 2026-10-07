@@ -105,7 +105,7 @@ class KeyAndIntroTests(PlainWordsCase):
             self.assertNotIn(gone, text)
         key = text_of(page[page.index('data-testid="expertise-legend"'):page.index('id="tree"')])
         self.assertIn("naming telling apart", key)   # the one-line summary (#618 exp-legend)
-        self.assertIn("Key", key)   # opens the full legend
+        self.assertNotIn("<details", page[page.index('data-testid="expertise-legend"'):page.index('id="tree"')])   # always shown (r7 D3)
         self.assertIn("Not yet: fewer than 5 answers Fair under 50%", key)   # words of the scale (#572)
         self.assertNotIn(".", key)   # labels only, no sentences
         self.assertIn('data-testid="legend-expert"><span class="tree-dot mark-expert"></span>'

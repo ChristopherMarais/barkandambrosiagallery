@@ -103,8 +103,9 @@ class IdentificationWeightTests(ScoringCase):
     def test_the_explanation_shows_the_weighted_points(self):
         self.client.force_login(self.user)
         page = self.client.get("/game/how-it-works/").content.decode()
-        self.assertIn("worth 3&times; the points", page)
-        self.assertIn("the exact species earns 45", page)
+        # players get the short version (#618 how-dup): Naming pays the most, without the point tables
+        self.assertIn("Naming pays the most", page)
+        self.assertNotIn("the exact species earns 45", page)
 
 
 class PairPointsTests(ScoringCase):
@@ -298,7 +299,7 @@ class PagesTests(ScoringCase):
     def test_the_how_it_works_page_explains_it(self):
         self.client.force_login(self.user)
         page = self.client.get("/game/how-it-works/").content.decode()
-        for text in ("How the game works", ">species<", "Same genus", "agreeing with strong players", "60%", "never drops below zero"):
+        for text in ("How the game works", "Naming pays the most", "agreeing with strong players", "never drops below zero"):
             self.assertIn(text, page)
 
     def test_the_game_home_shows_the_score_and_links_the_explanation(self):

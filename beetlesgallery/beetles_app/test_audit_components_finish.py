@@ -102,7 +102,7 @@ class ButtonRoleTests(SimpleTestCase):
                 self.assertEqual(template(name).count("btn-main"), 1)
 
     def test_account_forms_use_the_house_buttons(self):
-        self.assertIn("btn-primary", opening_tag(template("accounts/signin.html"), 'value="Sign In"'))
+        self.assertIn("btn-primary", opening_tag(template("accounts/signin.html"), 'value="Sign in"'))
         self.assertIn("btn-secondary", opening_tag(template("accounts/signin.html"), 'data-testid="request-access"'))
         self.assertNotIn("inline-flex w-auto justify-center rounded-md", template("accounts/my_account.html"))
 

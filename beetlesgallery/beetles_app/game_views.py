@@ -20,7 +20,8 @@ from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
-from django.db.models import Max
+from django.db.models import F, Max
+from django.db.models.functions import Lower
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse, QueryDict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -221,10 +222,12 @@ def _unlocks_context(request):
     page = Paginator(users.distinct().order_by("username"), UNLOCKS_PER_PAGE).get_page(request.GET.get("unlocks_page"))
     people = list(page.object_list)
     grants = dict(GamePreference.objects.filter(player__in=people).values_list("player_id", "granted_perks"))
+    # one query for the page's scores, not one per player (r7 D2)
+    scores = {pid: (score, rating) for pid, score, rating in
+              PlayerScore.objects.filter(player__in=people).values_list("player_id", "score", "rating")}
     rows = []
     for u in people:
-        info = game_levels.describe(*(
-            PlayerScore.objects.filter(player=u).values_list("score", "rating").first() or (0.0, 0.0)))
+        info = game_levels.describe(*scores.get(u.id, (0.0, 0.0)))
         mine = grants.get(u.id) or []
         rows.append({"user": u, "level": info["level"], "name": info["name"], "all": "all" in mine,
                      "perks": [{"key": k, "title": t, "level": game_levels.perk_level(k), "on": "all" in mine or k in mine,
@@ -1648,6 +1651,20 @@ def _sort_rows(request, rows, param, keys, default=""):
     return present + missing, raw
 
 
+def _sort_queryset(request, qs, param, keys, default):
+    """
+    _sort_rows for a queryset: the database sorts (``keys`` maps column names to expressions), rows without a value
+    last either way, with the id as a tie-break so pages never overlap. Nothing is loaded; Paginator fetches one page.
+    """
+    raw = request.GET.get(param) or default
+    name = raw.lstrip("-")
+    if name not in keys:
+        raw, name = default, default.lstrip("-")
+    expr = keys[name]
+    order = expr.desc(nulls_last=True) if raw.startswith("-") else expr.asc(nulls_last=True)
+    return qs.order_by(order, "pk"), raw
+
+
 def _cell_accuracy(cell):
     return cell["accuracy"] if cell.get("n") else None
 
@@ -1684,12 +1701,12 @@ def _review_context(request):
         """One page of a table; each table has its own page number, so paging one keeps your place in the others."""
         return Paginator(items, REVIEW_PER_PAGE).get_page(request.GET.get(param))
 
-    reports, reports_sort = _sort_rows(
+    # open reports can run to thousands: sorted and paged by the database, only one page is ever loaded (r7 D2)
+    reports, reports_sort = _sort_queryset(
         request, GameReport.objects.filter(status=GameReport.Status.OPEN).select_related("reporter", "roi__taxon"),
         "reports_sort", {
-            "roi": lambda r: str(r.roi_id), "label": lambda r: r.roi.taxon.scientific_name if r.roi.taxon else None,
-            "reason": lambda r: r.get_reason_display(), "reporter": lambda r: r.reporter.username,
-            "date": lambda r: r.created_at,
+            "roi": F("roi_id"), "label": Lower("roi__taxon__scientific_name"), "reason": F("reason"),
+            "reporter": Lower("reporter__username"), "date": F("created_at"),
         }, default="date")
     player_keys = {"player": lambda r: r["username"], "labelled": lambda r: r["labelled"], "expert": lambda r: len(r["proven"])}
     for i, rank in enumerate(game.RANKS):

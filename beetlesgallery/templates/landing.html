@@ -3,6 +3,11 @@
 {% load static beetle_tags %}
 
 {% block content %}
+{# On large screens the page fills the screen and the funders' footer (mt-auto) sits at its bottom (r7 D5). #}
+<style>
+  /* 100vh less base.html's main padding (py-8, 4rem) and the site footer below it (about 3.25rem) */
+  @media (min-width: 1024px) { #landing-section { min-height: calc(100vh - 7.25rem); } }
+</style>
 <section id="landing-section" class="relative flex flex-col w-full bg-white">
 
   <div class="flex flex-col w-full max-w-7xl mx-auto">
@@ -19,10 +24,10 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-16 items-center px-4 pb-10">
 
       <div class="lg:col-span-7 flex justify-center">
-        <div class="relative w-full max-w-md lg:max-w-full flex items-center justify-center">
+        <div class="group relative w-full max-w-md lg:max-w-full flex items-center justify-center">
           <img src="{% static 'img/IMG_5557.PNG' %}"
               alt="Beetles DB specimen"
-              class="relative w-auto h-auto max-h-[200px] sm:max-h-[320px] lg:max-h-[440px] object-contain [filter:drop-shadow(0_20px_13px_rgb(0_0_0/0.03))_drop-shadow(0_8px_5px_rgb(0_0_0/0.08))]" />
+              class="relative w-auto h-auto max-h-[200px] sm:max-h-[320px] lg:max-h-[440px] object-contain [filter:drop-shadow(0_20px_13px_rgb(0_0_0/0.03))_drop-shadow(0_8px_5px_rgb(0_0_0/0.08))] group-hover:scale-105 transition-transform duration-500" data-testid="home-beetle" />
         </div>
       </div>
 
@@ -94,7 +99,7 @@
   </div>
 
   {# Image Attribution and "Maintained by" live in the footer, out of the way of the three actions (#618 home-actions) #}
-  <footer class="py-6 flex flex-col items-center justify-center gap-4 border-t border-gray-200 px-4">
+  <footer class="mt-auto py-6 flex flex-col items-center justify-center gap-4 border-t border-gray-200 px-4" data-testid="home-sponsors">
     <div class="max-w-2xl mx-auto text-center text-xs text-gray-600 space-y-2">
       <p>
         <span class="font-semibold">Image Attribution.</span>

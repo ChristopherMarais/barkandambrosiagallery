@@ -1,12 +1,84 @@
 {% extends "base.html" %}
-{% load beetle_tags %}
+{% load beetle_tags static %}
 
 {% block extra_css %}
 <style>
-  /* The flag, in the toolbar under the photo (#618 detail-toolbar): never while the whole photo shows, since only the
-     beetle in its box is flagged here. */
+  /* The flag hovers on the top right corner of this beetle's box (owner, round 7: back on the photo, out of the
+     toolbar), kept inside the photo. Shown while the pointer is on the photo or the keyboard is in it, always on touch
+     screens (they can't hover), and never while the whole photo shows, since only the beetle in its box is flagged. */
   .roi-figure:has(#roi-photo[data-box="hidden"]) #report-roi-wrap { display: none; }
-  #report-roi-btn:disabled { cursor: default; opacity: 0.5; }
+  #roi-photo[data-box="hidden"] #report-roi-wrap { display: none; }
+  #report-roi-wrap { position: absolute; z-index: 20; width: 2.5rem; height: 2.5rem; }
+  .roi-flag-btn { display: flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; padding: 0;
+                  border-radius: 9999px; background: #fff; border: 1px solid #d1d5db; color: #374151; line-height: 1;
+                  box-shadow: 0 1px 4px rgb(0 0 0 / 0.25); transition: opacity .15s; }
+  /* Round buttons and pills: the icon dead centre (flex centring, no padding, line-height 1 on the icon and its glyph) */
+  .roi-flag-btn i, .pv-btn i, .pv-pill i,
+  .roi-flag-btn i::before, .pv-btn i::before, .pv-pill i::before { display: block; line-height: 1; }
+  .roi-flag-btn:hover { border-color: #6b7280; color: #111827; }
+  #report-roi-btn { opacity: 0; }
+  #roi-photo:hover #report-roi-btn, #roi-photo:focus-within #report-roi-btn, #report-roi-btn[aria-expanded="true"] { opacity: 1; }
+  @media (hover: none) { #report-roi-btn { opacity: 1; } }
+  #report-roi-btn:disabled, #pv-flag-btn:disabled { cursor: default; opacity: 0.5; }
+  .roi-flag-menu { position: absolute; top: calc(100% + 0.25rem); right: 0; z-index: 30; }
+  .roi-flag-menu.open-right { right: auto; left: 0; }
+
+  /* Hover zoom (round 7): on a computer, a round lens follows the pointer over the photo and shows it magnified.
+     Not on touch screens: they open the whole photo instead. */
+  #roi-lens { display: none; position: absolute; z-index: 15; width: 11rem; height: 11rem; border-radius: 9999px;
+              pointer-events: none; background-repeat: no-repeat; background-color: #fff;
+              border: 2px solid #fff; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.4), 0 6px 20px rgb(0 0 0 / 0.3); }
+  @media (hover: hover) and (pointer: fine) { #roi-lens.on { display: block; } }
+
+  /* Desktop (lg and up): the other images of this specimen sit in the left column right under the photo, the details
+     on the right; on a phone they come last, after the details (one copy, placed by the grid). The second row takes
+     what the details need beyond the first, so nothing opens a gap under the photo. */
+  @media (min-width: 1024px) {
+    #detail-grid { grid-template-rows: auto 1fr; }
+    #detail-grid > .roi-left-column { grid-column: 1 / span 8; grid-row: 1; }
+    #detail-grid > #detail-aside { grid-column: 9 / span 4; grid-row: 1 / span 2; }
+    #detail-grid > #related-specimens { grid-column: 1 / span 8; grid-row: 2; align-self: start; }
+  }
+
+  /* The whole photo (round 7), over the page like the game's photo viewer: zoom (buttons, wheel, pinch, double
+     click; drag when zoomed), lighting and the flag. Esc, the cross or a click outside the photo closes it. */
+  #photo-viewer { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center;
+                  justify-content: center; gap: 0.75rem; padding: 3.5rem 0.75rem 0.75rem; background: rgb(0 0 0 / 0.9);
+                  touch-action: none; }
+  #photo-viewer.hidden { display: none; }
+  #pv-photo { position: relative; }
+  #pv-frame { position: relative; display: block; overflow: hidden; border-radius: 0.5rem; touch-action: none;
+              user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  #pv-frame.zoomed { cursor: grab; }
+  #pv-frame.dragging { cursor: grabbing; }
+  #pv-zoom { position: relative; transform-origin: 0 0; }
+  #pv-img { display: block; max-width: calc(100vw - 1.5rem); max-height: calc(100vh - 10rem); object-fit: contain;
+            filter: var(--pv-filter, none); }
+  #pv-boxes { position: absolute; inset: 0; pointer-events: none; }
+  #photo-viewer[data-box="hidden"] #pv-boxes { display: none; }
+  #pv-bar { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0.5rem; }
+  .pv-btn { display: flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; padding: 0;
+            border-radius: 9999px; background: #fff; color: #111827; font-size: 1.125rem; line-height: 1;
+            box-shadow: 0 2px 8px rgb(0 0 0 / 0.3); }
+  .pv-btn:disabled { color: #9ca3af; cursor: default; }
+  .pv-pill { display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; height: 2.75rem;
+             padding: 0 1rem; border-radius: 9999px; background: #fff; color: #111827; font-size: 0.875rem;
+             font-weight: 600; line-height: 1; box-shadow: 0 2px 8px rgb(0 0 0 / 0.3); }
+  .pv-pill[aria-expanded="true"], .pv-btn[aria-expanded="true"] { box-shadow: 0 0 0 2px #9ca3af, 0 2px 8px rgb(0 0 0 / 0.3); }
+  #pv-zoom-level { min-width: 3.5rem; height: 2.75rem; display: flex; align-items: center; justify-content: center;
+                   color: #fff; font-size: 0.875rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+  #pv-close { position: absolute; top: 0.5rem; right: 0.5rem; }
+  #pv-light-panel { position: absolute; right: 0.75rem; bottom: 4.25rem; z-index: 2; width: min(18rem, calc(100% - 1.5rem));
+                    padding: 0.75rem; background: #fff; border: 1px solid #d1d5db; border-radius: 0.75rem;
+                    box-shadow: 0 8px 24px rgb(0 0 0 / 0.15); }
+  #pv-light-panel.hidden { display: none; }
+  #pv-light-panel label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; font-weight: 600; color: #4b5563; }
+  #pv-light-panel label + label { margin-top: 0.5rem; }
+  #pv-light-panel label span { flex: 0 0 4.5rem; }
+  #pv-light-panel input[type=range] { flex: 1 1 auto; accent-color: #4b5563; }
+  #pv-flag-wrap { position: relative; }
+  #pv-flag-menu { position: absolute; bottom: calc(100% + 0.5rem); right: 0; z-index: 3; }
+  #pv-flag-status { min-height: 1.25rem; color: #e5e7eb; font-size: 0.875rem; text-align: center; }
 
   /* Every beetle's box on the photo (#536): a white line with a darker outline; this page's beetle the other way
      round, a dark line with a white outline. The other boxes are links to their beetles' pages; a click on this one
@@ -38,12 +110,8 @@
   {# --- HEADER & SPECIMEN PAGER --- #}
   <header class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
     <div>
-      {# Same title as the gallery card: the linked taxon's name, or "Unidentified" (#112) #}
-      {# #618 detail-ids-first: name and authority first, the authority smaller and grey beside the name (under it when the line is full). #}
-      <h1 class="page-title">
-        {{ ref_species.scientificName|default:"Unidentified" }}{% if ref_species.scientificName and ref_species.authority %}
-        <span class="ml-1 text-base font-normal text-gray-500" data-testid="detail-authority">{{ ref_species.authority }}</span>{% endif %}
-      </h1>
+      {# Same title as the gallery card: the linked taxon's name, or "Unidentified" (#112). The name only: the authority is in the Taxonomy card (owner, round 7). #}
+      <h1 class="page-title">{{ ref_species.scientificName|default:"Unidentified" }}</h1>
     </div>
 
     {# #618 detail-prevnext: one small bordered pager, right of the header row, aligned to the title's centre. #}
@@ -73,17 +141,17 @@
     {% endif %}
   </header>
 
-  <div class="grid gap-6 lg:grid-cols-12 mb-8">
+  <div id="detail-grid" class="grid gap-6 lg:grid-cols-12 mb-8">
 
-    {# --- LEFT COLUMN: IMAGE & RELATED --- #}
+    {# --- LEFT COLUMN: IMAGE AND ACTIONS (the other images join it on desktop, see the CSS) --- #}
     <div class="roi-left-column lg:col-span-8 flex flex-col gap-6">
 
       {# MAIN IMAGE #}
       {% if beetle.image_asset and beetle.image_asset.image_file %}
         <figure class="roi-figure rounded-xl bg-primary2 p-3 ring-1 ring-text/10 flex flex-col items-center">
 
-          {# THE PHOTO, clipped so the boxes' haze stays inside it. #}
-          <div id="roi-photo" class="relative max-w-full w-full min-w-0"{% if photo_boxes %} data-box="shown"{% endif %}>
+          {# THE PHOTO, as wide as the image itself so the boxes, the flag and the lens line up with it. Not clipped (the frame inside is), so the flag's menu can reach past the photo. #}
+          <div id="roi-photo" class="relative max-w-full min-w-0" data-zoom-src="{{ beetle.display_url }}"{% if photo_boxes %} data-box="shown"{% endif %}>
             {# IMAGE WRAPPER (Hooks absolute positioning to the actual image bounds). A click outside every box hides the boxes, the next one shows them again. #}
             <div id="roi-frame" class="relative block max-h-[70vh] max-w-full overflow-hidden rounded-lg{% if photo_boxes %} cursor-pointer{% endif %}">
               {% with asset=beetle.image_asset %}
@@ -136,9 +204,27 @@
               {% endif %}
             </div>
 
+            {# HOVER ZOOM: a lens that follows the pointer on a computer (photo_viewer.js). #}
+            <div id="roi-lens" aria-hidden="true" data-testid="roi-lens"></div>
+
+            {% if beetle.bbox_x is not None %}
+              {% comment %} FLAG on the top right corner of this beetle's box (straddling it, kept inside the photo): sends the
+                 beetle to the curators, as Report does in the game. Shown on hover and focus, always on touch screens,
+                 only with the boxes (see the CSS). {% endcomment %}
+              <div id="report-roi-wrap" data-testid="roi-flag-anchor"
+                   style="left: clamp(0px, calc(({{ beetle.bbox_x|stringformat:'f' }} + {{ beetle.bbox_width|stringformat:'f' }}) * 100% - 1.25rem), calc(100% - 2.5rem)); top: clamp(0px, calc({{ beetle.bbox_y|stringformat:'f' }} * 100% - 1.25rem), calc(100% - 2.5rem));">
+                <button type="button" id="report-roi-btn" class="roi-flag-btn" aria-haspopup="menu" aria-expanded="false" aria-label="Flag this" title="Flag this" data-testid="report-roi"><i class="fi fi-rr-flag" aria-hidden="true"></i></button>
+                <div id="report-roi-menu" class="roi-flag-menu hidden scroll-mt-24 p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Flag this" data-url="{% url 'report_roi' beetle.id %}">
+                  <div class="px-2 py-1 text-xs font-semibold text-gray-500">Flag this</div>
+                  {% for value, label in report_reasons %}
+                  <button type="button" class="report-roi-reason block w-full text-left px-2 py-2 rounded-lg hover:bg-gray-100" data-reason="{{ value }}" role="menuitem">{{ label }}</button>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
           </div>
 
-          {# #618 detail-toolbar / detail-roi-pager: a toolbar on the photo's bottom edge, ROI pager left; boxes toggle, full size and flag right. Nothing sits on the photo itself. #}
+          {# #618 detail-toolbar / detail-roi-pager: a toolbar on the photo's bottom edge, ROI pager left; boxes toggle and full size right. The flag is on the box itself (round 7). #}
           {% if photo_boxes or beetle.image_asset %}
           <div id="roi-toolbar" class="mt-2 w-full flex items-center justify-between gap-2 border-t border-text/10 pt-2" data-testid="roi-toolbar">
             <div class="flex items-center gap-1">
@@ -172,21 +258,10 @@
                 </button>
               {% endif %}
               {% if beetle.image_asset %}
-                <a href="{{ beetle.display_url }}" target="_blank" rel="noopener" class="flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" title="View full size" aria-label="View full size" data-testid="roi-fullsize">
-                  <i class="fi fi-rr-expand" aria-hidden="true"></i>
+                {# FULL SIZE: opens the whole photo over this page (photo_viewer.js); the link itself is the fallback without scripts. #}
+                <a href="{{ beetle.display_url }}" id="roi-fullsize" class="flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" title="View full size" aria-label="View full size" aria-haspopup="dialog" aria-controls="photo-viewer" data-testid="roi-fullsize">
+                  <i class="fi fi-rr-expand leading-none" aria-hidden="true"></i>
                 </a>
-              {% endif %}
-              {% if beetle.bbox_x is not None %}
-                {# FLAG: sends this beetle to the curators, as Report does in the game; only while its box shows (see the CSS). Its menu opens upward, over the photo. #}
-                <div id="report-roi-wrap" class="relative">
-                  <button type="button" id="report-roi-btn" class="flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" aria-haspopup="menu" aria-expanded="false" aria-label="Flag this" title="Flag this" data-testid="report-roi"><i class="fi fi-rr-flag" aria-hidden="true"></i></button>
-                  <div id="report-roi-menu" class="hidden absolute bottom-12 right-0 z-20 scroll-mt-24 p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Flag this" data-url="{% url 'report_roi' beetle.id %}">
-                    <div class="px-2 py-1 text-xs font-semibold text-gray-500">Flag this</div>
-                    {% for value, label in report_reasons %}
-                    <button type="button" class="report-roi-reason block w-full text-left px-2 py-2 rounded-lg hover:bg-gray-100" data-reason="{{ value }}" role="menuitem">{{ label }}</button>
-                    {% endfor %}
-                  </div>
-                </div>
               {% endif %}
             </div>
           </div>
@@ -200,10 +275,10 @@
         <div class="rounded-xl bg-primary2 p-6 text-text/70 ring-1 ring-text/10">No image found.</div>
       {% endif %}
 
-      {# #618 detail-actions: Download and Edit, shown whenever there's an image record to act on, even one whose file didn't display above (areas.boxes/image_file independently gate each button). #}
+      {# #618 detail-actions: Download and Edit, shown whenever there's an image record to act on, even one whose file didn't display above (can_annotate, the annotation page's own check, and image_file independently gate each button). #}
       {% if beetle.image_asset %}
       <div class="w-full grid grid-cols-2 gap-2" data-testid="detail-actions">
-        {% if areas.boxes %}
+        {% if can_annotate %}
           <a href="{% url 'tool_annotate' %}?image={{ beetle.image_asset.id }}&roi={{ beetle.id }}"
              class="btn-secondary h-12 justify-center {% if not beetle.image_asset.image_file %}col-span-2{% endif %}" data-testid="open-annotation"
              title="Open in the annotation page" aria-label="Open in the annotation page">
@@ -212,7 +287,7 @@
           </a>
         {% endif %}
         {% if beetle.image_asset.image_file %}
-          <a href="{{ beetle.image_asset.image_file.url }}" download class="btn-primary h-12 justify-center {% if not areas.boxes %}col-span-2{% endif %}">
+          <a href="{{ beetle.image_asset.image_file.url }}" download class="btn-primary h-12 justify-center {% if not can_annotate %}col-span-2{% endif %}">
             Download
           </a>
         {% endif %}
@@ -221,7 +296,7 @@
     </div>
 
     {# --- RIGHT COLUMN: DETAILS --- #}
-    <aside class="lg:col-span-4">
+    <aside id="detail-aside" class="lg:col-span-4">
 
         <div class="rounded-xl bg-primary2 p-4 ring-1 ring-text/10 sticky top-4">
 
@@ -432,12 +507,12 @@
 
         </div>
     </aside>
-  </div>
 
-  {% comment %} OTHER IMAGES OF THIS SPECIMEN (#618 detail-more), last on the page, below every detail card: a specimen can
-     have very many images (mobile review round 6). {% endcomment %}
+  {% comment %} OTHER IMAGES OF THIS SPECIMEN (#618 detail-more). One copy, placed by the grid: on a phone it comes last,
+     below every detail card (a specimen can have very many images, mobile review round 6); on desktop (lg and up) it
+     sits in the left column right under the photo, the details beside it (owner, round 7; see the CSS). {% endcomment %}
   {% if related_specimens %}
-    <section data-testid="related-specimens">
+    <section id="related-specimens" data-testid="related-specimens">
       <h2 class="text-lg font-bold text-text mb-3 text-text/80 tracking-wide">
           Other images of this specimen ({{ related_specimens|length }})
       </h2>
@@ -456,7 +531,54 @@
       </div>
     </section>
   {% endif %}
+  </div>
 </section>
+
+{% if beetle.image_asset and beetle.image_asset.image_file %}
+{% comment %} THE WHOLE PHOTO, over the page (owner, round 7), like the game's photo viewer: every box on it, zoom (the
+   buttons, the wheel, a pinch or a double click; drag when zoomed), lighting and the flag. Esc, the cross or a click
+   outside the photo closes it. photo_viewer.js runs it. {% endcomment %}
+<div id="photo-viewer" class="hidden" role="dialog" aria-modal="true" aria-label="Whole photo" data-testid="photo-viewer" data-src="{{ beetle.display_url }}">
+  <button type="button" id="pv-close" class="pv-btn" aria-label="Close" title="Close (Esc)"><i class="fi fi-rr-cross" aria-hidden="true"></i></button>
+  <div id="pv-photo">
+    <div id="pv-frame" title="Scroll, pinch or double-click to zoom">
+      <div id="pv-zoom">
+        <img id="pv-img" alt="Specimen image, whole photo" draggable="false">
+        {% if photo_boxes %}
+        <div id="pv-boxes">
+          {% for box in photo_boxes %}
+            <div class="roi-box{% if box.current %} roi-box-current{% endif %}" style="left: calc({{ box.roi.bbox_x|stringformat:'f' }} * 100%); top: calc({{ box.roi.bbox_y|stringformat:'f' }} * 100%); width: calc({{ box.roi.bbox_width|stringformat:'f' }} * 100%); height: calc({{ box.roi.bbox_height|stringformat:'f' }} * 100%);"></div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div id="pv-bar" data-testid="photo-viewer-bar">
+    <button type="button" id="pv-zoom-out" class="pv-btn" aria-label="Zoom out" title="Zoom out (-)"><i class="fi fi-rr-zoom-out" aria-hidden="true"></i></button>
+    <span id="pv-zoom-level" aria-live="polite">100%</span>
+    <button type="button" id="pv-zoom-in" class="pv-btn" aria-label="Zoom in" title="Zoom in (+)"><i class="fi fi-rr-zoom-in" aria-hidden="true"></i></button>
+    <button type="button" id="pv-light-btn" class="pv-pill" aria-expanded="false" aria-controls="pv-light-panel" title="Make the photo brighter or sharper"><i class="fi fi-rr-brightness" aria-hidden="true"></i><span>Lighting</span></button>
+    {% if beetle.bbox_x is not None %}
+    <div id="pv-flag-wrap">
+      <button type="button" id="pv-flag-btn" class="pv-btn" aria-haspopup="menu" aria-expanded="false" aria-label="Flag this" title="Flag this" data-testid="photo-viewer-flag"><i class="fi fi-rr-flag" aria-hidden="true"></i></button>
+      <div id="pv-flag-menu" class="hidden p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Flag this">
+        <div class="px-2 py-1 text-xs font-semibold text-gray-500">Flag this</div>
+        {% for value, label in report_reasons %}
+        <button type="button" class="report-roi-reason block w-full text-left px-2 py-2 rounded-lg hover:bg-gray-100" data-reason="{{ value }}" role="menuitem">{{ label }}</button>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% if beetle.bbox_x is not None %}<p id="pv-flag-status" role="status"></p>{% endif %}
+  <div id="pv-light-panel" class="hidden" role="group" aria-label="Photo brightness and contrast" data-testid="photo-viewer-lighting">
+    <label><span>Brightness</span><input type="range" id="pv-brightness" min="50" max="250" step="5" value="100" aria-label="Brightness"></label>
+    <label><span>Contrast</span><input type="range" id="pv-contrast" min="50" max="200" step="5" value="100" aria-label="Contrast"></label>
+    <button type="button" id="pv-light-reset" class="btn-secondary mt-3 w-full">Reset</button>
+  </div>
+</div>
+{% endif %}
 
 <script>
   // Copy any identifier to the clipboard: icon swaps to a tick and a short "Copied" note shows beside it (#618
@@ -493,8 +615,8 @@
   });
 
   // The photo: every beetle's box, the other beetles' boxes linking to their pages. A click outside every box (or the
-  // switch in the toolbar) hides the boxes and the haze, the next one shows them again. The flag in the
-  // toolbar sends this beetle to the curators; it shows only with the boxes (the CSS reads data-box).
+  // switch in the toolbar) hides the boxes and the haze, the next one shows them again. The flag on this beetle's box
+  // (and the one in the whole-photo view) sends it to the curators; it shows only with the boxes (the CSS reads data-box).
   (function () {
     const photo = document.getElementById('roi-photo');
     const frame = document.getElementById('roi-frame');
@@ -503,14 +625,28 @@
     const flag = document.getElementById('report-roi-btn');
     const menu = document.getElementById('report-roi-menu');
     const status = document.getElementById('report-roi-status');
+    const viewerFlag = document.getElementById('pv-flag-btn');
+    const viewerMenu = document.getElementById('pv-flag-menu');
+    const viewerStatus = document.getElementById('pv-flag-status');
     if (!photo || !boxes) return;   // no photo, or no box on it
 
     const menuOpen = () => !!menu && !menu.classList.contains('hidden');
+    const viewerMenuOpen = () => !!viewerMenu && !viewerMenu.classList.contains('hidden');
     function setMenu(open) {
       if (!menu) return;   // this beetle has no box to flag
       menu.classList.toggle('hidden', !open);
       flag.setAttribute('aria-expanded', String(open));
-      if (open) menu.scrollIntoView({ block: 'nearest' });   // it opens upwards: a short photo high on a phone's screen
+      if (open) {
+        // it opens under the flag, towards the middle of the photo: rightwards from a box on the photo's left half
+        const p = photo.getBoundingClientRect(), f = flag.getBoundingClientRect();
+        menu.classList.toggle('open-right', f.left + f.width / 2 - p.left < p.width / 2);
+        menu.scrollIntoView({ block: 'nearest' });
+      }
+    }
+    function setViewerMenu(open) {
+      if (!viewerMenu) return;
+      viewerMenu.classList.toggle('hidden', !open);
+      viewerFlag.setAttribute('aria-expanded', String(open));
     }
 
     function toggleBoxes() {
@@ -539,25 +675,42 @@
       e.stopPropagation();
       setMenu(!menuOpen());
     });
-    document.addEventListener('click', () => setMenu(false));
+    if (viewerFlag) {
+      viewerFlag.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setViewerMenu(!viewerMenuOpen());
+      });
+    }
+    document.addEventListener('click', () => { setMenu(false); setViewerMenu(false); });
+    // Esc closes an open menu first, and only that: the whole-photo view stays open (photo_viewer.js listens later)
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && menuOpen()) { setMenu(false); flag.focus(); }
+      if (e.key !== 'Escape') return;
+      if (viewerMenuOpen()) { setViewerMenu(false); viewerFlag.focus(); e.stopImmediatePropagation(); }
+      else if (menuOpen()) { setMenu(false); flag.focus(); e.stopImmediatePropagation(); }
     });
-    menu.querySelectorAll('.report-roi-reason').forEach((choice) => choice.addEventListener('click', async (e) => {
+    document.querySelectorAll('.report-roi-reason').forEach((choice) => choice.addEventListener('click', async (e) => {
       e.stopPropagation();
+      const inViewer = !!choice.closest('#photo-viewer');
       setMenu(false);
-      flag.focus();
+      setViewerMenu(false);
+      (inViewer ? viewerFlag : flag).focus();
+      const say = (text) => [status, viewerStatus].forEach((line) => { if (line) line.textContent = text; });
       try {
         const res = await fetch(menu.dataset.url, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf},
                                                    body: JSON.stringify({reason: choice.dataset.reason})});
         const data = await res.json().catch(() => ({}));
         if (!res.ok || !data.status) throw new Error(data.error || 'Could not send.');
-        status.textContent = data.already ? 'Already flagged. Thanks!' : 'Thanks! Sent to the curators to check.';
+        say(data.already ? 'Already flagged. Thanks!' : 'Thanks! Sent to the curators to check.');
         flag.disabled = true;
+        if (viewerFlag) viewerFlag.disabled = true;
       } catch (err) {
-        status.textContent = err.message;
+        say(err.message);
       }
     }));
   })();
 </script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/photo_viewer.js' %}" defer></script>
 {% endblock %}

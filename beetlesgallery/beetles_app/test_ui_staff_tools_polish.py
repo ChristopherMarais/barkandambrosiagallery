@@ -67,39 +67,46 @@ class DataManagementActionsTests(PageBehaviourCase):
 
 
 class ToolClassifyLayoutTests(PageBehaviourCase):
-    """IBBI-AI: a one-line title, the drop zone first, the consent checkbox under it, small example thumbnails."""
+    """IBBI-AI: a one-line title, Options (model, consent checkbox, small example thumbnails), Classify, the photo."""
 
     def page(self):
         return self.client.get(reverse("tool_classify")).content.decode()
 
-    def test_the_title_is_one_line_with_an_eyebrow_above_it(self):
+    def test_the_title_is_one_line_with_a_subtitle_under_it(self):
+        # round 8: the subtitle moved from above the title to below it
         page = self.page()
         self.assertIn('<h1 class="page-title">IBBI-AI</h1>', page)
-        eyebrow = page[:page.index('<h1 class="page-title">IBBI-AI</h1>')]
-        self.assertIn("Intelligent Bark Beetle Identifier", eyebrow[-400:])
+        title = page.index('<h1 class="page-title">IBBI-AI</h1>')
+        self.assertNotIn("Intelligent Bark Beetle Identifier", page[title - 400:title])
+        self.assertIn("Intelligent Bark Beetle Identifier", page[title:title + 300])
 
-    def test_the_model_picker_comes_first_then_the_drop_zone_the_consent_checkbox_and_examples(self):
-        # The picker moved to the top of the page in the owner's phone review (round 6); the rest keep their order.
+    def test_the_options_come_first_then_classify_then_the_drop_zone(self):
+        # The picker moved to the top in round 6; in round 8 the checkbox and the examples joined it in Options.
         page = self.page()
         order = [page.index(marker) for marker in (
-            'id="modelSelect"', 'id="canvasContainer"', 'id="dontKeep"', 'class="example-btn')]
+            'id="modelSelect"', 'id="dontKeep"', 'class="example-btn', 'id="classifyForm"', 'id="canvasContainer"')]
         self.assertEqual(order, sorted(order))
 
     def test_examples_are_small_thumbnails_in_one_row(self):
         page = self.page()
-        self.assertIn("Or try an example", page)
-        block = page[page.index("Or try an example"):page.index("Or try an example") + 1500]
+        self.assertIn("Try an example", page)
+        block = page[page.index("Try an example"):page.index("Try an example") + 1500]
         self.assertIn("w-16", block)
         self.assertNotIn("grid-cols-2", block)
 
-    def test_photo_credits_are_12px_gray_500_one_line_each(self):
+    def test_photo_credits_are_each_examples_tooltip_not_a_list(self):
+        # round 8: the credits list under the examples is gone; each thumbnail's title and alt carry its credit
         page = self.page()
-        self.assertIn('class="text-xs text-gray-500 mt-1 space-y-0.5"', page)
+        self.assertNotIn('class="text-xs text-gray-500 mt-1 space-y-0.5"', page)
         self.assertNotIn("text-[10px] text-gray-400", page)
+        button = page[page.index('class="example-btn'):]
+        button = button[:button.index("</button>")]
+        self.assertIn("SL Wood, Brigham Young University", button)
+        self.assertIn("CC-BY-NC 4.0", button)
 
     def test_the_model_is_behind_a_disclosure(self):
         page = self.page()
-        details = page[page.index('<details class="group rounded-lg border'):]
+        details = page[page.index('<details id="optionsPanel"'):]
         details = details[:details.index('</details>')]
         self.assertIn('id="modelSelect"', details)
         self.assertIn('data-testid="ibbi-link"', details)
@@ -179,15 +186,16 @@ class AnnotationTemplateTests(SimpleTestCase):
         self.assertIn("fi-rr-expand", fit)
         self.assertNotIn("fi-rr-search", fit)
 
-    def test_human_drawn_boxes_are_gray_900_not_blue(self):
-        self.assertNotIn("#3b82f6", self.page)
+    def test_the_selected_box_is_blue(self):
+        # the owner undid ann-blue (r7 E3): selected blue, validated green, not yet amber
         fn = self.page[self.page.index("function drawCanvas"):self.page.index("function fitToScreen")]
-        self.assertIn("#111827", fn)
+        self.assertIn("BOX_SELECTED = '#3b82f6'", fn)
+        self.assertNotIn("#111827", fn)
 
-    def test_handles_are_28px_on_a_coarse_pointer_and_delete_moves_to_the_toolbar(self):
+    def test_handles_are_28px_on_a_coarse_pointer_and_delete_floats_on_the_box(self):
         self.assertIn("pointer: coarse", self.page)
         self.assertIn("coarse ? 14 : 9", self.page)   # the drawn badge radius (28px/18px diameter)
-        self.assertNotIn("delete_x", self.page)       # no more on-canvas red "X" to hit-test or draw
+        self.assertIn("handle: 'delete_x'", self.page)   # the floating red "X" is back (r7 E5)
         self.assertIn('id="btn-delete-box"', self.page)
         self.assertIn("function deleteSelectedBox", self.page)
 

@@ -73,8 +73,11 @@ class DetailsPhotoControlsTests(PageBehaviourCase):
                          ">Validate</button>", ">Unvalidate</button>"):
                 self.assertNotIn(gone, page)
             content = page[page.index("<main"):]
-            for field in ("<form", "<input", "<textarea", "<select"):
+            for field in ("<form", "<textarea", "<select"):
                 self.assertNotIn(field, content)
+            # the only inputs are the full-size viewer's lighting sliders (owner, round 7), never edit fields
+            for tag in re.findall(r"<input[^>]*>", content):
+                self.assertIn('type="range"', tag)
             self.assertNotIn("{#", content)   # a template comment over two lines shows on the page as text
             for shown in ("Specimen ID", "SP-7", "Country", "Peru", "Specimen notes", "Under bark",
                           "Multiple individuals", "This ROI", "Not validated", "Download"):
@@ -141,21 +144,23 @@ class DetailsPhotoControlsTests(PageBehaviourCase):
 
     # --- the flag -----------------------------------------------------------------------------------------------------
 
-    def test_the_flag_is_an_icon_in_the_toolbar_and_its_menu_is_not_clipped(self):
+    def test_the_flag_is_an_icon_on_the_box_and_its_menu_is_not_clipped(self):
         page = self.page(self.user)
         elements = Outline(page).elements
         flag, menu = elements["report-roi-btn"], elements["report-roi-menu"]
         self.assertEqual((flag["aria-label"], flag["title"]), ("Flag this",) * 2)
-        self.assertLessEqual({"h-11", "w-11", "rounded-lg"}, set(flag["class"].split()))   # like the toolbar's others
+        self.assertIn("roi-flag-btn", flag["class"].split())   # a round button (round 7)
         start = page.index('id="report-roi-btn"')
         inside = page[page.index(">", start) + 1:page.index("</button>", start)]
         self.assertIn('class="fi fi-rr-flag"', inside)
         self.assertEqual(re.sub(r"<[^>]+>", "", inside).strip(), "")   # the icon only, no word
-        # In the toolbar under the photo (#618 detail-toolbar), not on the photo: nothing covers the specimen, and the
-        # photo clips (for the box's shading) where the menu must not be.
-        self.assertIn("roi-toolbar", flag["inside"])
-        self.assertIn("roi-toolbar", menu["inside"])
-        self.assertNotIn("roi-photo", flag["inside"])
+        # On the photo at the corner of this beetle's box (the owner reversed detail-toolbar for the flag, round 7),
+        # outside the frame: the frame clips (for the box's shading) where the menu must not be.
+        self.assertNotIn("roi-toolbar", flag["inside"])
+        self.assertIn("roi-photo", flag["inside"])
+        self.assertIn("roi-photo", menu["inside"])
+        self.assertNotIn("roi-frame", flag["inside"])
+        self.assertNotIn("roi-frame", menu["inside"])
         self.assertIn("overflow-hidden", elements["roi-frame"]["class"].split())
         self.assertNotIn("overflow-hidden", elements["roi-photo"]["class"].split())
         self.assertNotIn("roi-photo", elements["report-roi-status"]["inside"])   # thanks under the photo, always seen

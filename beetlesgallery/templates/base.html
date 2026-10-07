@@ -286,13 +286,6 @@
               <span class="font-medium text-gray-700 ml-1">Taxonomy Browser</span>
             </a>
 
-            <a href="{% url 'interactions_preview' %}"
-              class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% nav_active '/interactions/' %}">
-              <i class="fi fi-rr-diagram-project text-xl text-gray-700 w-8 text-center"></i>
-              <span class="font-medium text-gray-700 ml-1">Interactions</span>
-              <span class="ml-auto text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-sm bg-amber-100 text-amber-800 border border-amber-200">Preview</span>
-            </a>
-
             <a href="{% url 'tool_classify' %}"
               class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% nav_active '/tools/classify/' %}">
               <i class="fi fi-rr-sparkles text-xl text-gray-700 w-8 text-center"></i>
@@ -320,6 +313,13 @@
               class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% nav_active '/my-uploads/' %}">
               <i class="fi fi-rr-folder text-xl text-gray-700 w-8 text-center"></i>
               <span class="font-medium text-gray-700 ml-1">Data Management</span>
+            </a>
+
+            <a href="{% url 'interactions_preview' %}"
+              class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% nav_active '/interactions/' %}">
+              <i class="fi fi-rr-diagram-project text-xl text-gray-700 w-8 text-center"></i>
+              <span class="font-medium text-gray-700 ml-1">Interactions</span>
+              <span class="ml-auto inline-flex items-center justify-center leading-none text-center text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-sm bg-amber-100 text-amber-800 border border-amber-200">Preview</span>
             </a>
 
             {# Signed in, Log out sits in the footer under Account (mobile review round 6); signed out, Login stays here. #}
@@ -395,16 +395,6 @@
             </span>
           </a>
 
-          <a href="{% url 'interactions_preview' %}"
-            class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% nav_active '/interactions/' %}"
-            title="Ecological Interactions">
-            <i class="fi fi-rr-diagram-project text-xl text-gray-700 w-8 text-center"></i>
-            <span class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 font-medium text-gray-700 flex items-center gap-2">
-              Interactions
-              <span class="text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-sm bg-amber-100 text-amber-800 border border-amber-200">Preview</span>
-            </span>
-          </a>
-
           <a href="{% url 'tool_classify' %}"
             class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% nav_active '/tools/classify/' %}">
             <i class="fi fi-rr-sparkles text-xl text-gray-700 w-8 text-center"></i>
@@ -437,6 +427,16 @@
             <i class="fi fi-rr-folder text-xl text-gray-700 w-8 text-center"></i>
             <span class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
               Data Management
+            </span>
+          </a>
+
+          <a href="{% url 'interactions_preview' %}"
+            class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% nav_active '/interactions/' %}"
+            title="Ecological Interactions">
+            <i class="fi fi-rr-diagram-project text-xl text-gray-700 w-8 text-center"></i>
+            <span class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 font-medium text-gray-700 flex items-center gap-2">
+              Interactions
+              <span class="inline-flex items-center justify-center leading-none text-center text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-sm bg-amber-100 text-amber-800 border border-amber-200">Preview</span>
             </span>
           </a>
 

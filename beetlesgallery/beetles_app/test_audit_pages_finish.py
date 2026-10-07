@@ -1,6 +1,7 @@
 """
-The UI audit's (#618) remaining page fixes: one number one colour for accuracy (site-meaning-85), name and authority
-first on a specimen (detail-ids-first), the flag in the photo's toolbar (detail-toolbar), a one-sentence Data
+The UI audit's (#618) remaining page fixes: one number one colour for accuracy (site-meaning-85), the name first on a
+specimen (detail-ids-first; the owner later took the authority out of the title and the flag out of the toolbar, round
+7: test_r7_detail.py), a one-sentence Data
 management intro with the Image Browser link (data-actions, data-browse), grey boxes in the annotation tool
 (ann-blue), grey role pills (acct-roles), the tick on the play header's daily chip (gh-today), a 14px Focus button
 (play-modes), a short scoring section for players (how-dup) and the beetle mark in the admin (adm-theme).
@@ -59,15 +60,15 @@ class DetailHeaderAndToolbarTests(PageBehaviourCase):
         self.client.force_login(self.user)
         return self.client.get(reverse("beetle_detail", args=[self.roi.id])).content.decode()
 
-    def test_the_title_shows_the_name_and_a_smaller_grey_authority(self):
+    def test_the_title_shows_the_name_only(self):
+        # The owner (round 7) took the authority back out of the title: it stays in the Taxonomy card.
         page = self.page()
         start = page.index('<h1 class="page-title">')
         h1 = page[start:page.index("</h1>", start)]
         self.assertIn("Ips typographus", h1)
-        authority = re.search(r'<span[^>]*data-testid="detail-authority"[^>]*>([^<]*)<', h1)
-        self.assertEqual(authority.group(1), "Linnaeus")
-        self.assertIn("text-gray-500", authority.group(0))
-        self.assertIn("font-normal", authority.group(0))
+        self.assertNotIn("Linnaeus", h1)
+        self.assertNotIn('data-testid="detail-authority"', page)
+        self.assertIn("Linnaeus", page[page.index(">Taxonomy<"):])
 
     def test_no_authority_without_a_name(self):
         bare = make_beetle(image=make_image(image_file="tests/photo.jpg"), bbox="unvalidated")
@@ -75,13 +76,12 @@ class DetailHeaderAndToolbarTests(PageBehaviourCase):
         page = self.client.get(reverse("beetle_detail", args=[bare.id])).content.decode()
         self.assertNotIn('data-testid="detail-authority"', page)
 
-    def test_the_flag_sits_in_the_toolbar_right_beside_full_size(self):
+    def test_the_flag_is_back_on_the_box_not_in_the_toolbar(self):
+        # The owner reversed detail-toolbar for the flag (round 7): it hovers on the corner of this beetle's box.
         page = self.page()
         elements = Outline(page).elements
-        self.assertIn("roi-toolbar", elements["report-roi-btn"]["inside"])
-        self.assertNotIn("roi-photo", elements["report-roi-btn"]["inside"])
-        self.assertNotIn("absolute", elements["report-roi-btn"]["class"].split())
-        self.assertLess(page.index('data-testid="roi-fullsize"'), page.index('id="report-roi-btn"'))
+        self.assertNotIn("roi-toolbar", elements["report-roi-btn"]["inside"])
+        self.assertIn("roi-photo", elements["report-roi-btn"]["inside"])
         # its behaviour is kept: the menu, the post and hiding with the box
         self.assertEqual(elements["report-roi-menu"]["data-url"], reverse("report_roi", args=[self.roi.id]))
         self.assertIn("flag.addEventListener('click'", page)
@@ -103,15 +103,17 @@ class DataManagementIntroTests(PageBehaviourCase):
 
 
 class AnnotationBoxColourTests(PageBehaviourCase):
-    def test_boxes_are_gray_900_and_their_line_shows_validation(self):
+    def test_boxes_are_green_amber_and_the_selected_one_blue(self):
+        # ann-blue was undone by the owner (r7 E3): the colours from before the audit are back
         source = (TEMPLATES / "beetles" / "tool_annotate.html").read_text(encoding="utf-8")
         fn = source[source.index("function drawCanvas"):source.index("function fitToScreen")]
-        self.assertIn("const BOX_INK = '#111827';", fn)
-        self.assertIn("const boxColor = BOX_INK;", fn)
-        for gone in ("#10b981", "#f59e0b", "#3b82f6"):
-            self.assertNotIn(gone, fn)
-        self.assertIn("ctx.setLineDash(validated ? [] : [6/state.zoom, 4/state.zoom]);", fn)
-        self.assertIn('data-testid="box-key">Solid box: validated &middot; dashed: not yet<', source)
+        self.assertIn("const BOX_VALIDATED = '#10b981', BOX_UNVALIDATED = '#f59e0b', BOX_SELECTED = '#3b82f6';", fn)
+        self.assertIn("const boxColor = isSel ? BOX_SELECTED : (validated ? BOX_VALIDATED : BOX_UNVALIDATED);", fn)
+        self.assertNotIn("BOX_INK", fn)
+        key = source[source.index('data-testid="box-key"'):]
+        key = key[:key.index("</span></span>\n")]
+        for word in ("validated", "not yet", "selected"):
+            self.assertIn(word, key)
 
 
 class RolePillTests(PageBehaviourCase):

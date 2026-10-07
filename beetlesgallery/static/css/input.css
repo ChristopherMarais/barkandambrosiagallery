@@ -187,6 +187,15 @@
         outline: 2px solid var(--color-gray-600);
         outline-offset: 2px;
     }
+
+    /* Icons sit dead-centre in their pills and round buttons (owner): each glyph is its own line-height-1 box,
+       centred both ways, so no margin nudges. Utilities (hidden, block, flex...) still win, being a later layer. */
+    .fi {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+    }
 }
 
 @layer base {
@@ -308,6 +317,11 @@
        "Open", "Details", a copy icon): on a touch screen an invisible box, centred on it and at least 44px each way,
        takes the tap. Nothing changes with a mouse. In the components layer so a utility such as absolute still
        wins over its position: relative. */
+    /* Every loading spinner turns (E13): an icon (<i>) or <span> is inline, and an inline box cannot rotate, so
+       animate-spin on one did nothing. Only those two tags, so a <div> spinner keeps its own display; a utility next
+       to it (hidden, block) still wins. */
+    :where(i, span).animate-spin { display: inline-block; }
+
     .hit-area { position: relative; }
     @media (pointer: coarse) {
         .hit-area::after {
@@ -512,6 +526,13 @@
 .rv-verdict.wrong { background: #ef4444; }
 .rv-verdict.partly { background: #f97316; }
 .rv-verdict.right { background: #22c55e; }
-.rv-pill { margin-left: auto; padding: 0.0625rem 0.5rem; border-radius: 9999px; background: #f3f4f6; color: #374151; font-size: 0.6875rem; font-weight: 600; white-space: nowrap; }
+.rv-pill { display: inline-flex; align-items: center; justify-content: center; line-height: 1.25; margin-left: auto; padding: 0.125rem 0.5rem; border-radius: 9999px; background: #f3f4f6; color: #374151; font-size: 0.6875rem; font-weight: 600; white-space: nowrap; }
 .rv-line { margin-top: 0.25rem; font-size: 0.8125rem; color: #374151; }
 .rv-line .fi { vertical-align: -0.125em; }
+
+/* Reduced motion (E13): the loading spinners keep moving, gently, as a slow fade instead of a turn, so they still
+   read as working. Outside the layers, so it wins over Tailwind's animate-spin and animate-pulse is left alone. */
+@media (prefers-reduced-motion: reduce) {
+    .animate-spin { animation: spin-calm 2s ease-in-out infinite; }
+}
+@keyframes spin-calm { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }

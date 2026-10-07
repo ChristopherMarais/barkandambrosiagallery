@@ -300,7 +300,7 @@ class ClassifierPageSavesImagesTests(PageBehaviourCase):
         from pathlib import Path
         from beetlesgallery.beetles_app.views import CLASSIFIER_EXAMPLES
         page = self.client.get("/tools/classify/").content.decode()
-        for needle in ('id="dontKeep"', 'id="termsModal"', "Examples are never added to the gallery"):
+        for needle in ('id="dontKeep"', 'id="termsModal"'):   # the examples caption went (owner, round 8)
             self.assertIn(needle, page)
         self.assertEqual(page.count('class="example-btn'), len(CLASSIFIER_EXAMPLES))
         for ex in CLASSIFIER_EXAMPLES:

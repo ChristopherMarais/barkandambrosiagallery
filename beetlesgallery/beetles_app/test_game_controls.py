@@ -19,15 +19,15 @@ class GameControlsTests(GameCase):
         page = self.page()
         actions = page[page.index('<div id="actions">'):page.index('id="submit"')]
         self.assertLess(actions.index('id="skip"'), actions.index('id="back"'))   # Skip, then Back, then Next
-        self.assertIn("<kbd class=\"kbd\">Del</kbd>", page)
+        self.assertIn('<kbd class="kbd" title="Backspace">&#9003;</kbd>', page)   # Skip: Backspace (r7)
         self.assertNotIn("Not sure</strong>", page)
         # equal gaps, 1fr/1fr/2fr (#play-buttons: three different widths and an uneven gap before)
         self.assertIn("grid-template-columns: 1fr 1fr 2fr", page)
 
     def test_keys_for_both_hands_and_no_number_keys(self):
         page = self.page()
-        for keys in ('up: ["ArrowUp", "w"]', 'down: ["ArrowDown", "s"]', 'next: ["Enter", " "]', 'skip: ["Delete", "End", "x"]',
-                     'back: ["Backspace", "z"]', 'photo: ["Home", "q", "v"]', 'light: ["PageUp", "e", "l"]'):
+        for keys in ('up: ["ArrowUp", "w"]', 'down: ["ArrowDown", "s"]', 'next: ["Enter", " "]', 'skip: ["Backspace", "Delete", "End", "x"]',
+                     'back: ["b", "z"]', 'photo: ["Home", "q", "v"]', 'light: ["PageUp", "e", "l"]'):
             self.assertIn(keys, page)
         self.assertNotIn("/^[1-9]$/.test(key)", page)
         self.assertNotIn('<kbd class="kbd">{{ forloop.counter }}</kbd>', page)

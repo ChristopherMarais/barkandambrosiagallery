@@ -4,45 +4,63 @@
 {% block content %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
 
+{% comment %}
+Round buttons and pills on this page keep their text and icon dead centre (owner, round 8): each is a flex box with
+equal padding, and its icon is a flex box of its own, so the icon font's line height cannot nudge it off the middle
+(as #exit on the game page). The hover lens is the photo under the mouse at 2.5x, the game's zoom step.
+{% endcomment %}
+<style>
+  /* In the components layer, so a utility next to them (hidden, h-10, px-5) still wins */
+  @layer components {
+    .cls-icon { display: flex; align-items: center; justify-content: center; width: 1em; height: 1em; line-height: 1; flex-shrink: 0; }
+    .cls-icon::before { display: block; line-height: 1; }
+    .cls-pill { display: flex; align-items: center; justify-content: center; gap: 0.375rem; height: 2.25rem; padding: 0 0.875rem; border-radius: 9999px; line-height: 1; white-space: nowrap; }
+    .cls-subtitle { margin-top: -0.75rem; }   /* right under the title, which keeps its own spacing */
+    .cls-round { display: flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; padding: 0; border-radius: 9999px; line-height: 1; }
+  }
+  #zoomLens { position: absolute; z-index: 15; width: 160px; height: 160px; border-radius: 9999px; pointer-events: none;
+              border: 2px solid #fff; box-shadow: 0 0 0 1px #d1d5db, 0 8px 20px rgba(17, 24, 39, .3); background: #f9fafb; }
+  #optionsPanel > summary::-webkit-details-marker { display: none; }
+</style>
+
 <section class="relative z-0">
     <div class="pt-8">
-        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 flex items-center gap-1.5">
-            <i class="fi fi-rr-sparkles text-gray-700"></i>
-            Intelligent Bark Beetle Identifier
-        </p>
         <h1 class="page-title">IBBI-AI</h1>
+        <p class="cls-subtitle text-sm font-medium text-gray-500" data-testid="ibbi-subtitle">Intelligent Bark Beetle Identifier</p>
     </div>
 </section>
 
-{# On phones the Classify button floats at the bottom of the screen: the space below the page keeps it off the text #}
-<div class="pt-8 pb-28 lg:pb-8" data-testid="ai-page">
+<div class="pt-6 pb-8" data-testid="ai-page">
 
-    <div class="pb-6 flex items-start justify-between gap-4">
-        <p class="page-intro max-w-2xl">Upload a photo and IBBI-AI finds and names the bark or ambrosia beetles in it.</p>
+    <div class="max-w-4xl flex flex-col gap-6">
 
-        <div id="globalStatus" class="hidden flex items-center gap-2 text-sm font-medium text-gray-800 bg-gray-300 px-3 py-1 rounded-full whitespace-nowrap self-start">
-            <span class="relative flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
-            </span>
-            Processing...
+        <div class="flex items-start justify-between gap-4">
+            <p class="page-intro">Upload a photo and IBBI-AI finds and names the bark or ambrosia beetles in it.</p>
+
+            <div id="globalStatus" class="hidden flex items-center gap-2 text-sm font-medium text-gray-800 bg-gray-300 px-3 py-1 rounded-full whitespace-nowrap self-start">
+                <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                </span>
+                Processing...
+            </div>
         </div>
-    </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-        <div class="lg:col-span-8 flex flex-col gap-6">
-
-            {% comment %} The model picker on top, under the intro and before the drop zone (mobile review round 6). It sits outside
-               the form, so form="classifyForm" keeps it in what Classify sends. {% endcomment %}
-            <details class="group rounded-lg border border-gray-200 bg-white shadow-xs">
-                <summary class="flex items-center justify-between gap-2 cursor-pointer list-none px-4 py-3">
-                    <span class="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                        <i class="fi fi-rr-settings-sliders text-gray-400"></i> Model
-                    </span>
-                    <i class="fi fi-rr-angle-small-down text-gray-400 transition-transform group-open:rotate-180"></i>
-                </summary>
-                <div class="px-4 pb-4 pt-1 border-t border-gray-100">
+        {% comment %} Options: the model, the "don't keep my image" choice and the examples, folded away (owner, round 8). The
+           picker and the checkbox sit outside the form, so form="classifyForm" keeps them in what Classify sends. The
+           summary line says which model is picked and whether the image is kept, so nothing is hidden by surprise. {% endcomment %}
+        <details id="optionsPanel" class="group rounded-lg border border-gray-200 bg-white shadow-xs" data-testid="classify-options">
+            <summary class="flex items-center justify-between gap-3 cursor-pointer list-none px-4 py-3">
+                <span class="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                    <i class="fi fi-rr-settings-sliders cls-icon text-gray-500"></i> Options
+                </span>
+                <span class="flex items-center gap-2 min-w-0">
+                    <span id="optionsSummary" class="truncate text-xs text-gray-500" data-testid="options-summary"></span>
+                    <i class="fi fi-rr-angle-small-down cls-icon text-gray-500 transition-transform group-open:rotate-180"></i>
+                </span>
+            </summary>
+            <div class="px-4 pb-4 border-t border-gray-100 flex flex-col gap-4">
+                <div>
                     <div class="flex items-center justify-between gap-2 mt-3 mb-1">
                         <label for="modelSelect" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Model</label>
                         <a href="{{ ibbi_docs_url }}" target="_blank" rel="noopener" class="text-sm text-gray-600 hover:text-gray-800 underline" data-testid="ibbi-link">Compare models</a>
@@ -57,141 +75,141 @@
                     </div>
                     <p class="text-xs text-gray-500 mt-2" data-testid="model-help">All models find and name bark beetles.</p>
                 </div>
-            </details>
 
-            {# What went wrong, or that IBBI-AI is waking up: short and plain, never a raw error #}
-            <p id="classifyMessage" class="hidden rounded-lg border px-4 py-3 text-sm" role="alert" data-testid="classify-message"></p>
-
-            <div class="bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 shadow-xs overflow-hidden relative min-h-[280px] lg:min-h-[420px] flex items-center justify-center group hover:border-gray-400 hover:bg-gray-100 transition-all cursor-pointer" id="canvasContainer">
-
-                <div id="placeholderState" class="text-center p-8 w-full h-full flex flex-col items-center justify-center transition-opacity duration-300">
-                    <div class="bg-white w-24 h-24 rounded-full flex items-center justify-center mb-4 shadow-xs group-hover:scale-110 group-hover:shadow-md transition-all duration-300">
-                        <i class="fi fi-rr-picture text-4xl text-gray-500"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-800 mb-2">Upload image to classify</h3>
-                    <p class="text-sm text-gray-500 mb-6">Click to browse or drag & drop a file here</p>
-
-                    <button type="button" id="cameraBtn" class="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-300 rounded-full shadow-xs text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-600 hover:border-gray-300 transition-all z-10">
-                        <i class="fi fi-rr-camera"></i> Use camera
-                    </button>
-                </div>
-
-                <div id="cameraInterface" class="hidden absolute inset-0 bg-black flex flex-col items-center justify-center z-20 cursor-default">
-                    <video id="cameraStream" autoplay playsinline class="w-full h-full object-contain"></video>
-                    <div class="absolute bottom-8 flex gap-6 z-30">
-                        <button type="button" id="cancelCameraBtn" class="px-6 py-2 bg-gray-800/80 text-white rounded-full text-sm font-medium hover:bg-gray-700 backdrop-blur-xs transition-colors border border-gray-600">
-                            Cancel
-                        </button>
-                        <button type="button" id="captureBtn" class="w-16 h-16 bg-white rounded-full border-4 border-gray-300 hover:border-gray-500 flex items-center justify-center shadow-lg transition-colors ring-4 ring-black/20">
-                            <div class="w-12 h-12 bg-gray-900 rounded-full"></div>
-                        </button>
-                    </div>
-                </div>
-
-                <div id="imageWrapper" class="relative hidden inline-block cursor-default" style="line-height: 0;">
-                    <img id="previewImage" class="max-w-full max-h-[75vh] object-contain block opacity-0 transition-opacity duration-300" alt="Preview">
-                    <canvas id="detectionCanvas" class="absolute inset-0 cursor-crosshair touch-none w-full h-full"></canvas>
-
-                    <button type="button" id="clearBtn" class="absolute top-4 right-4 bg-white/90 p-2 rounded-full hover:bg-red-50 hover:text-red-600 text-gray-600 shadow-md z-10 transition-all border border-gray-200" title="Clear image">
-                        <i class="fi fi-rr-cross-small text-xl leading-none"></i>
-                    </button>
-                </div>
-            </div>
-            <input id="fileInput" name="image" type="file" class="hidden" accept="image/*">
-
-            {# A muted line under the drop zone; the same line becomes the loading message while IBBI-AI wakes up #}
-            <p id="serverNote" class="text-xs text-gray-500" data-testid="server-info">
-                <i class="fi fi-rr-info text-sm align-middle mr-1"></i>
-                The analysis server sleeps when idle, so the first photo may take a moment to wake it.
-            </p>
-
-            {# "Don't keep my image": right with the upload, not buried in the model card #}
-            <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
                 <label class="flex items-start gap-2 text-xs text-gray-700 cursor-pointer">
-                    <input type="checkbox" id="dontKeep" class="mt-0.5 h-4 w-4 rounded-sm border-gray-300 accent-gray-600">
+                    <input type="checkbox" id="dontKeep" name="keep_image" value="0" form="classifyForm" class="mt-0.5 h-4 w-4 rounded-sm border-gray-300 accent-gray-600">
                     <span><span class="font-semibold">Don't keep my image.</span>
                     Unless you tick this, an image with a bark or ambrosia beetle in it is added to the gallery as an unvalidated image for experts to check (location data removed).
                     <a href="#" id="showTerms" class="underline hover:text-black">Details</a></span>
                 </label>
+
+                {% if examples %}
+                <div>
+                    <div class="card-label mb-2">Try an example</div>
+                    {# Each photo's credit and licence is its tooltip (CC-BY: the attribution stays with the photo) #}
+                    <div class="flex flex-wrap gap-2">
+                        {% for ex in examples %}
+                        <button type="button" class="example-btn group text-left rounded-lg border border-gray-200 overflow-hidden hover:border-gray-500 transition w-16 shrink-0"
+                            data-src="{{ ex.src }}" data-name="{{ ex.file }}" title="{{ ex.title }}{% if ex.credit %} &middot; {{ ex.credit }}{% endif %}{% if ex.licence %} &middot; {{ ex.licence }}{% endif %}">
+                            <img src="{{ ex.src }}" alt="{{ ex.title }}{% if ex.credit %}, photo: {{ ex.credit }}{% endif %}{% if ex.licence %} ({{ ex.licence }}){% endif %}" class="block w-full h-16 object-cover bg-gray-100" loading="lazy" decoding="async">
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
             </div>
+        </details>
 
-            {% if examples %}
-            <div>
-                <div class="card-label mb-2">Or try an example</div>
-                <div class="flex flex-wrap gap-2">
-                    {% for ex in examples %}
-                    <button type="button" class="example-btn group text-left rounded-lg border border-gray-200 overflow-hidden hover:border-gray-500 transition w-16 shrink-0"
-                        data-src="{{ ex.src }}" data-name="{{ ex.file }}" title="{{ ex.title }}{% if ex.credit %} &middot; {{ ex.credit }}{% endif %}{% if ex.licence %} &middot; {{ ex.licence }}{% endif %}">
-                        <img src="{{ ex.src }}" alt="{{ ex.title }}" class="block w-full h-16 object-cover bg-gray-100" loading="lazy" decoding="async">
-                    </button>
-                    {% endfor %}
-                </div>
-                <p class="text-xs text-gray-500 mt-2">Loads a photo so you can try IBBI-AI. Examples are never added to the gallery.</p>
-                <div class="text-xs text-gray-500 mt-1 space-y-0.5">
-                    {% for ex in examples %}{% if ex.credit %}
-                    <p>{{ ex.credit }}{% if ex.licence %} ({{ ex.licence }}){% endif %}</p>
-                    {% endif %}{% endfor %}
-                </div>
-            </div>
-            {% endif %}
-
-            <div id="confidenceBar" class="hidden bg-white px-4 py-3 rounded-xl border border-gray-200 shadow-xs" data-testid="confidence-bar">
-                {# On phones the slider gets a row of its own, so it is wide enough for a thumb #}
-                <div class="flex flex-wrap sm:flex-nowrap items-center gap-x-3">
-                    <label for="confRange" class="shrink-0 text-xs font-bold text-gray-500 uppercase tracking-wide">Confidence</label>
-                    <input type="range" id="confRange" min="{{ lowest_threshold|stringformat:'s' }}" max="0.99" step="0.01" value="{{ keep_threshold|stringformat:'s' }}"
-                        aria-describedby="confCount" data-testid="confidence-slider"
-                        class="order-last sm:order-none w-full sm:w-auto sm:flex-1 min-w-0 h-8 cursor-pointer accent-gray-600 rounded-sm">
-                    <span id="confValue" class="ml-auto sm:ml-0 w-10 shrink-0 text-right text-sm font-mono tabular-nums text-gray-700" aria-hidden="true">{% widthratio keep_threshold 1 100 %}%</span>
-                </div>
-                <p id="confCount" class="text-xs text-gray-600" role="status" aria-live="polite" data-testid="confidence-count"></p>
-                <p id="keepHint" class="hidden mt-0.5 text-xs text-gray-500" data-testid="keep-hint">Boxes under {% widthratio keep_threshold 1 100 %}% are not kept in the gallery.</p>
-            </div>
-
-            <div id="analysisDetails" class="hidden bg-white p-6 rounded-xl border border-gray-200 shadow-xs transition-all">
-                <div class="flex items-center justify-between mb-4 border-b border-gray-100 pb-2">
-                    <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Identification</h3>
-                    <span id="chartLabel" class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-sm">Select a detection</span>
-                </div>
-
-                {# What happened to the photo (the "saved" answer), one line #}
-                <p id="savedNote" class="hidden mb-4 text-xs text-gray-600" role="status" data-testid="saved-note"></p>
-
-                <div id="ranksPanel" class="hidden mb-4 divide-y divide-gray-100 text-sm" data-testid="ranks-panel"></div>
-
-                <div class="relative w-full" id="chartWrapper" style="height: 400px;">
-                    <canvas id="probsChart"></canvas>
-                </div>
-
-                <div id="tagsContainer" class="mt-4 flex flex-wrap gap-2 pt-4 border-t border-gray-100"></div>
-            </div>
-
-        </div>
-
-        <div class="lg:col-span-4 flex flex-col gap-6">
-
-            <form id="classifyForm" class="space-y-5">
+        <div class="flex flex-col gap-2">
+            {# Classify sits between the options and the photo (owner, round 8); it waits, greyed, until there is a photo #}
+            <form id="classifyForm" style="scroll-margin-top: 5rem;">
                 {% csrf_token %}
-
-                {# On phones the button floats at the bottom of the screen, since the image is below this form #}
-                <button type="submit" id="submitBtn" disabled data-testid="classify-button"
-                    style="bottom: max(1rem, env(safe-area-inset-bottom));"
-                    class="btn-main hidden flex fixed bottom-4 inset-x-4 z-30 lg:static lg:inset-auto lg:z-auto lg:w-full px-6 py-4 lg:py-5 text-base lg:text-lg shadow-lg">
-                    <i class="fi fi-rr-sparkles text-xl lg:text-2xl"></i>
-                    <span>Classify Image</span>
+                <button type="submit" id="submitBtn" disabled data-testid="classify-button" class="btn-main w-full px-6 py-4 text-base lg:text-lg">
+                    <i class="fi fi-rr-sparkles cls-icon text-xl"></i>
+                    <span id="submitLabel">Classify image</span>
                 </button>
             </form>
+            {# A muted line under Classify; the same line becomes the loading message while IBBI-AI wakes up #}
+            <p id="serverNote" class="text-xs text-gray-500" data-testid="server-info">
+                <i class="fi fi-rr-info text-sm align-middle mr-1"></i>
+                The first photo may take a moment while IBBI-AI wakes up.
+            </p>
+        </div>
 
-            <div id="loadingContainer" class="hidden p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div class="flex justify-between text-xs font-semibold text-gray-600 mb-1">
-                    <span id="loadingStatus">Initializing...</span>
-                    <span id="loadingPercent">0%</span>
-                </div>
-                <div class="progress-bar h-1.5">
-                    <div id="progressBar" class="progress-bar-fill transition-all duration-300" style="width: 0%"></div>
-                </div>
+        <div id="loadingContainer" class="hidden p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div class="flex justify-between text-xs font-semibold text-gray-600 mb-1">
+                <span id="loadingStatus">Initializing...</span>
+                <span id="loadingPercent">0%</span>
+            </div>
+            <div class="progress-bar h-1.5">
+                <div id="progressBar" class="progress-bar-fill transition-all duration-300" style="width: 0%"></div>
             </div>
         </div>
+
+        {# What went wrong, or that IBBI-AI is waking up: short and plain, never a raw error #}
+        <p id="classifyMessage" class="hidden rounded-lg border px-4 py-3 text-sm" role="alert" data-testid="classify-message"></p>
+
+        <div class="bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 shadow-xs overflow-hidden relative min-h-[280px] lg:min-h-[420px] flex items-center justify-center group hover:border-gray-400 hover:bg-gray-100 transition-all cursor-pointer" id="canvasContainer">
+
+            <div id="placeholderState" class="text-center p-8 w-full h-full flex flex-col items-center justify-center transition-opacity duration-300">
+                <div class="bg-white w-24 h-24 rounded-full flex items-center justify-center mb-4 shadow-xs group-hover:scale-110 group-hover:shadow-md transition-all duration-300">
+                    <i class="fi fi-rr-picture cls-icon text-4xl text-gray-500"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Upload image to classify</h3>
+                <p class="text-sm text-gray-500 mb-6">Click to browse or drag & drop a file here</p>
+
+                <button type="button" id="cameraBtn" class="cls-pill h-10 px-5 bg-white border border-gray-300 shadow-xs text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-600 hover:border-gray-300 transition-all z-10">
+                    <i class="fi fi-rr-camera cls-icon"></i> Use camera
+                </button>
+            </div>
+
+            <div id="cameraInterface" class="hidden absolute inset-0 bg-black flex flex-col items-center justify-center z-20 cursor-default">
+                <video id="cameraStream" autoplay playsinline class="w-full h-full object-contain"></video>
+                <div class="absolute bottom-8 flex items-center gap-6 z-30">
+                    <button type="button" id="cancelCameraBtn" class="cls-pill h-10 px-6 bg-gray-800/80 text-white text-sm font-medium hover:bg-gray-700 backdrop-blur-xs transition-colors border border-gray-600">
+                        Cancel
+                    </button>
+                    <button type="button" id="captureBtn" aria-label="Take the photo" class="w-16 h-16 bg-white rounded-full border-4 border-gray-300 hover:border-gray-500 flex items-center justify-center shadow-lg transition-colors ring-4 ring-black/20">
+                        <div class="w-12 h-12 bg-gray-900 rounded-full"></div>
+                    </button>
+                </div>
+            </div>
+
+            <div id="imageWrapper" class="relative hidden inline-block cursor-default" style="line-height: 0;">
+                <img id="previewImage" class="max-w-full max-h-[75vh] object-contain block opacity-0 transition-opacity duration-300" alt="Preview">
+                <canvas id="detectionCanvas" class="absolute inset-0 cursor-crosshair w-full h-full"></canvas>
+                {# The hover zoom: drawn from the photo and its boxes, so the lens shows both #}
+                <canvas id="zoomLens" class="hidden" aria-hidden="true" data-testid="zoom-lens"></canvas>
+
+                {# Crop: drag a rectangle to classify only that part; the same button goes back to the whole photo #}
+                <button type="button" id="cropBtn" aria-pressed="false" data-testid="crop-button"
+                    class="hidden cls-pill absolute top-3 left-3 z-10 bg-white/90 border border-gray-200 shadow-md text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:text-black transition-colors">
+                    <i id="cropIcon" class="fi fi-rr-crop-alt cls-icon"></i><span id="cropLabel">Crop</span>
+                </button>
+                <div id="cropHint" class="hidden absolute inset-x-0 bottom-3 z-10 flex justify-center pointer-events-none" data-testid="crop-hint">
+                    <span class="cls-pill h-8 bg-white/90 border border-gray-200 shadow-md text-xs font-semibold text-gray-700">Drag over the part to classify</span>
+                </div>
+
+                <button type="button" id="clearBtn" class="cls-round absolute top-3 right-3 z-10 bg-white/90 hover:bg-red-50 hover:text-red-600 text-gray-600 shadow-md transition-all border border-gray-200" title="Clear image" aria-label="Clear image">
+                    <i class="fi fi-rr-cross-small cls-icon text-xl"></i>
+                </button>
+            </div>
+        </div>
+        <input id="fileInput" name="image" type="file" class="hidden" accept="image/*">
+
+        {# After a result only the confidence bar sits between the photo and the plot (owner, round 8) #}
+        <div id="confidenceBar" class="hidden bg-white px-4 py-3 rounded-xl border border-gray-200 shadow-xs" data-testid="confidence-bar">
+            {# On phones the slider gets a row of its own, so it is wide enough for a thumb #}
+            <div class="flex flex-wrap sm:flex-nowrap items-center gap-x-3">
+                <label for="confRange" class="shrink-0 text-xs font-bold text-gray-500 uppercase tracking-wide">Confidence</label>
+                <input type="range" id="confRange" min="{{ lowest_threshold|stringformat:'s' }}" max="0.99" step="0.01" value="{{ keep_threshold|stringformat:'s' }}"
+                    aria-describedby="confCount" data-testid="confidence-slider"
+                    class="order-last sm:order-none w-full sm:w-auto sm:flex-1 min-w-0 h-8 cursor-pointer accent-gray-600 rounded-sm">
+                <span id="confValue" class="ml-auto sm:ml-0 w-10 shrink-0 text-right text-sm font-mono tabular-nums text-gray-700" aria-hidden="true">{% widthratio keep_threshold 1 100 %}%</span>
+            </div>
+            <p id="confCount" class="text-xs text-gray-600" role="status" aria-live="polite" data-testid="confidence-count"></p>
+            <p id="keepHint" class="hidden mt-0.5 text-xs text-gray-500" data-testid="keep-hint">Boxes under {% widthratio keep_threshold 1 100 %}% are not kept in the gallery.</p>
+        </div>
+
+        <div id="analysisDetails" class="hidden bg-white p-6 rounded-xl border border-gray-200 shadow-xs transition-all">
+            <div class="flex items-center justify-between mb-4 border-b border-gray-100 pb-2">
+                <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Identification</h3>
+                <span id="chartLabel" class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-sm">Select a detection</span>
+            </div>
+
+            {# The plot first, right under the slider; the ranks, the list and what happened to the photo follow it #}
+            <div class="relative w-full" id="chartWrapper" style="height: 400px;">
+                <canvas id="probsChart"></canvas>
+            </div>
+
+            <div id="ranksPanel" class="hidden mt-4 divide-y divide-gray-100 text-sm" data-testid="ranks-panel"></div>
+
+            <div id="tagsContainer" class="mt-4 flex flex-wrap gap-2 pt-4 border-t border-gray-100"></div>
+
+            {# What happened to the photo (the "saved" answer), one line #}
+            <p id="savedNote" class="hidden mt-4 text-xs text-gray-600" role="status" data-testid="saved-note"></p>
+        </div>
+
     </div>
 
     {# About IBBI-AI, under the tool #}
@@ -215,7 +233,7 @@
     <div class="space-y-3 text-sm text-gray-700">
       <p>IBBI-AI is a screening tool and its answers can be wrong.</p>
       <p><strong>What we keep.</strong> If IBBI-AI finds a bark or ambrosia beetle in an image you submit, we add that image to the Bark &amp; Ambrosia Beetle Gallery as an <em>unvalidated</em> image, with the proposed labels, so experts can check it. We remove GPS location data from the copy we keep. We do not keep images where no beetle is found, and we do not keep an image we already have.</p>
-      <p><strong>Your choice.</strong> Tick &ldquo;Don't keep my image&rdquo; on the page at any time and we will not keep what you submit. You can change your mind for each image. Only submit images you have the right to share, and no images of people.</p>
+      <p><strong>Your choice.</strong> Tick &ldquo;Don't keep my image&rdquo; under Options at any time and we will not keep what you submit. You can change your mind for each image. Only submit images you have the right to share, and no images of people.</p>
       <p class="text-xs text-gray-500">Kept images may be shown in the gallery and used for research on bark and ambrosia beetles. To have one removed, contact the gallery team.</p>
     </div>
     <label class="mt-4 flex items-center gap-2 text-sm text-gray-800">
@@ -241,6 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
         imageWrapper: document.getElementById('imageWrapper'),
         placeholder: document.getElementById('placeholderState'),
         submitBtn: document.getElementById('submitBtn'),
+        submitLabel: document.getElementById('submitLabel'),
         form: document.getElementById('classifyForm'),
         loadingContainer: document.getElementById('loadingContainer'),
         progressBar: document.getElementById('progressBar'),
@@ -248,6 +267,11 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingPercent: document.getElementById('loadingPercent'),
         globalStatus: document.getElementById('globalStatus'),
         canvas: document.getElementById('detectionCanvas'),
+        lens: document.getElementById('zoomLens'),
+        cropBtn: document.getElementById('cropBtn'),
+        cropIcon: document.getElementById('cropIcon'),
+        cropLabel: document.getElementById('cropLabel'),
+        cropHint: document.getElementById('cropHint'),
         analysisDetails: document.getElementById('analysisDetails'),
         tagsContainer: document.getElementById('tagsContainer'),
         chartCanvas: document.getElementById('probsChart'),
@@ -265,10 +289,13 @@ document.addEventListener('DOMContentLoaded', () => {
         confCount: document.getElementById('confCount'),
         keepHint: document.getElementById('keepHint'),
         ranksPanel: document.getElementById('ranksPanel'),
-        serverNote: document.getElementById('serverNote')
+        serverNote: document.getElementById('serverNote'),
+        modelSelect: document.getElementById('modelSelect'),
+        dontKeep: document.getElementById('dontKeep'),
+        optionsSummary: document.getElementById('optionsSummary')
     };
 
-    // The server note under the drop zone doubles as the "waking up" message; remember its resting text
+    // The server note under Classify doubles as the "waking up" message; remember its resting text
     const defaultServerNote = ui.serverNote ? ui.serverNote.innerHTML : '';
     function setServerNote(text) {
         if (!ui.serverNote) return;
@@ -276,6 +303,15 @@ document.addEventListener('DOMContentLoaded', () => {
             ? '<i class="fi fi-rr-info text-sm align-middle mr-1"></i>' + text
             : defaultServerNote;
     }
+
+    // --- Options: the folded summary says which model is picked and whether the image is kept ---
+    function updateOptionsSummary() {
+        const option = ui.modelSelect.options[ui.modelSelect.selectedIndex];
+        const model = option ? option.textContent.replace(/\s*\(recommended\)\s*$/, '').trim() : '';
+        ui.optionsSummary.textContent = model + (ui.dontKeep.checked ? ' · image not kept' : '');
+    }
+    ui.modelSelect.addEventListener('change', updateOptionsSummary);
+    ui.dontKeep.addEventListener('change', updateOptionsSummary);
 
     // --- State ---
     let state = {
@@ -286,7 +322,11 @@ document.addEventListener('DOMContentLoaded', () => {
         hoveredIndex: -1,
         selectedIndex: -1,
         chart: null,
-        currentFile: null, // Tracks the actual file object to upload
+        currentFile: null, // the file that is shown and sent: the whole photo, or the part cropped from it
+        fullFile: null,    // the whole photo, to go back to after a crop
+        cropMode: false,   // dragging on the photo draws the part to classify
+        crop: null,        // that part, in the shown photo's pixels: {x, y, w, h}
+        showingCrop: false, // the preview (and the last answer) is the cropped part
         assetId: null, // A gallery photo: the server classifies its own copy (no upload)
         cameraStreamObj: null
     };
@@ -471,12 +511,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
         ctx.clearRect(0, 0, ui.canvas.width, ui.canvas.height);
 
-        if (!state.detections.length) return;
-
         // 2. Scale Factor
         const refSize = 1000;
         const scale = Math.max(Math.max(imgW, imgH) / refSize, 0.5);
 
+        if (state.cropMode) drawCrop(ctx, imgW, imgH, scale);
+        else if (state.detections.length) drawBoxes(ctx, imgW, scale);
+        drawLens();
+    }
+
+    // The part being cropped: the rest of the photo is dimmed, the part keeps a dashed white edge
+    function drawCrop(ctx, imgW, imgH, scale) {
+        const r = state.crop;
+        ctx.save();
+        ctx.fillStyle = 'rgba(17, 24, 39, 0.5)';
+        ctx.beginPath();
+        ctx.rect(0, 0, imgW, imgH);
+        if (r) ctx.rect(r.x, r.y, r.w, r.h);
+        ctx.fill('evenodd');
+        if (r) {
+            ctx.lineWidth = 2 * scale;
+            ctx.setLineDash([8 * scale, 6 * scale]);
+            ctx.strokeStyle = '#ffffff';
+            ctx.strokeRect(r.x, r.y, r.w, r.h);
+        }
+        ctx.restore();
+    }
+
+    function drawBoxes(ctx, imgW, scale) {
         // --- UPDATE: THINNER LINES ---
         // Reduced from 4/7 to 2/4 for precision
         const baseLineWidth = 2 * scale;
@@ -517,20 +579,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const bgW = textMetrics.width + (padding * 2);
                 const bgH = fontSize + padding;
 
-                // --- UPDATE: SMART LABEL POSITIONING ---
-
-                // 1. Horizontal Clamp (Right Edge)
-                // Default to x1. If label extends past image width, pull it left.
+                // The label sits above the box, pulled left at the right edge and inside the box at the top edge
                 let lx = x1;
                 if (lx + bgW > imgW) {
                     lx = imgW - bgW;
                 }
-                // Safety: Don't let it go off the left edge
                 if (lx < 0) lx = 0;
 
-                // 2. Vertical Clamp (Top Edge)
-                // Default to above box (y1 - bgH). If that goes off top ( < 0 ),
-                // move it "inside" the box (y1).
                 let ly = y1 - bgH;
                 if (ly < 0) {
                     ly = y1;
@@ -542,14 +597,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Draw Text
                 ctx.fillStyle = "#ffffff";
-                // Text aligns relative to lx/ly
                 ctx.fillText(label, lx + padding, ly + fontSize - (padding * 0.2));
             }
         });
     }
 
+    // --- Hover zoom: a round lens over the photo at 2.5x (the game's zoom step), with the boxes or the crop on it ---
+    // Only with a mouse: a touch screen has no hover.
+    const ZOOM = 2.5, LENS = 160;
+    const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    let lensAt = null;   // where the mouse is (client pixels), or null when it is off the photo
+    function drawLens() {
+        const img = ui.previewImage;
+        if (!canHover || !lensAt || ui.imageWrapper.classList.contains('hidden') || !img.naturalWidth) {
+            ui.lens.classList.add('hidden');
+            return;
+        }
+        const rect = ui.canvas.getBoundingClientRect();
+        const x = lensAt.x - rect.left, y = lensAt.y - rect.top;
+        if (x < 0 || y < 0 || x > rect.width || y > rect.height) { ui.lens.classList.add('hidden'); return; }
+        const dpr = window.devicePixelRatio || 1;
+        const side = Math.round(LENS * dpr);
+        if (ui.lens.width !== side) { ui.lens.width = side; ui.lens.height = side; }
+        const perPx = img.naturalWidth / rect.width;     // photo pixels per screen pixel
+        const span = LENS / ZOOM * perPx;                // photo pixels across the lens
+        const sx = x * perPx - span / 2, sy = y * (img.naturalHeight / rect.height) - span / 2;
+        const ctx = ui.lens.getContext('2d');
+        ctx.fillStyle = '#f9fafb';
+        ctx.fillRect(0, 0, side, side);
+        ctx.drawImage(img, sx, sy, span, span, 0, 0, side, side);
+        if (ui.canvas.width) ctx.drawImage(ui.canvas, sx, sy, span, span, 0, 0, side, side);
+        ui.lens.style.left = `${x - LENS / 2}px`;
+        ui.lens.style.top = `${y - LENS / 2}px`;
+        ui.lens.classList.remove('hidden');
+    }
+    ui.canvas.addEventListener('pointermove', (e) => {
+        if (e.pointerType !== 'mouse') return;
+        lensAt = { x: e.clientX, y: e.clientY };
+        drawLens();
+    });
+    ui.canvas.addEventListener('pointerleave', () => { lensAt = null; drawLens(); });
+
     // Hit Testing
     ui.canvas.addEventListener('mousemove', (e) => {
+        if (state.cropMode) return;
         const coords = getNaturalCoords(e.clientX, e.clientY);
         const mouseX = coords.x;
         const mouseY = coords.y;
@@ -572,12 +663,130 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     ui.canvas.addEventListener('click', () => {
+        if (state.cropMode) return;
         if (state.hoveredIndex !== -1) {
             state.selectedIndex = state.hoveredIndex;
             updateChartData(state.selectedIndex);
             requestAnimationFrame(draw);
         }
     });
+
+    // --- Crop: drag a rectangle on the photo to classify only that part ---
+    // The browser cuts it out (a canvas) and sends it in place of the photo, under the same name and type, so the
+    // server and IBBI-AI see an ordinary photo. Not for a gallery photo: that one is classified from the server's copy.
+    const MIN_CROP = 16;   // photo pixels: anything smaller is a tap, not a crop
+    let dragFrom = null;
+
+    function clearResults() {
+        state.detections = [];
+        state.selectedIndex = -1;
+        state.hoveredIndex = -1;
+        ui.analysisDetails.classList.add('hidden');
+        ui.confidenceBar.classList.add('hidden');
+    }
+
+    function updateCropUi() {
+        const back = state.cropMode || state.showingCrop;
+        ui.cropLabel.textContent = back ? 'Use whole photo' : 'Crop';
+        ui.cropIcon.className = `fi ${back ? 'fi-rr-expand' : 'fi-rr-crop-alt'} cls-icon`;
+        ui.cropBtn.setAttribute('aria-pressed', state.cropMode ? 'true' : 'false');
+        ui.cropBtn.classList.toggle('hidden', !state.currentFile || !!state.assetId);
+        ui.cropHint.classList.toggle('hidden', !state.cropMode || !!state.crop);
+        ui.submitLabel.textContent = state.cropMode && state.crop ? 'Classify the cropped part' : 'Classify image';
+        ui.canvas.style.cursor = state.cropMode ? 'crosshair' : '';
+        // Only a crop takes the finger: otherwise a phone still scrolls over the photo
+        ui.canvas.style.touchAction = state.cropMode ? 'none' : 'manipulation';
+    }
+
+    async function showPhoto(file) {
+        ui.previewImage.src = await readAsUrl(file);
+        try { await ui.previewImage.decode(); } catch (e) { /* onerror says so */ }
+    }
+
+    async function useWholePhoto() {
+        state.cropMode = false;
+        state.crop = null;
+        if (state.showingCrop && state.fullFile) {
+            state.showingCrop = false;
+            state.currentFile = state.fullFile;
+            clearResults();
+            await showPhoto(state.fullFile);
+        }
+        updateCropUi();
+        requestAnimationFrame(draw);
+    }
+
+    ui.cropBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (state.cropMode || state.showingCrop) { useWholePhoto(); return; }
+        state.cropMode = true;
+        state.crop = null;
+        clearResults();
+        clearMessage();
+        updateCropUi();
+        requestAnimationFrame(draw);
+    });
+
+    function clampToPhoto(p) {
+        return {
+            x: Math.min(Math.max(p.x, 0), ui.previewImage.naturalWidth),
+            y: Math.min(Math.max(p.y, 0), ui.previewImage.naturalHeight)
+        };
+    }
+
+    ui.canvas.addEventListener('pointerdown', (e) => {
+        if (!state.cropMode) return;
+        e.preventDefault();
+        try { ui.canvas.setPointerCapture(e.pointerId); } catch (err) { /* nothing to capture */ }
+        dragFrom = clampToPhoto(getNaturalCoords(e.clientX, e.clientY));
+        state.crop = null;
+        requestAnimationFrame(draw);
+    });
+    ui.canvas.addEventListener('pointermove', (e) => {
+        if (!dragFrom) return;
+        const to = clampToPhoto(getNaturalCoords(e.clientX, e.clientY));
+        state.crop = {
+            x: Math.min(dragFrom.x, to.x), y: Math.min(dragFrom.y, to.y),
+            w: Math.abs(to.x - dragFrom.x), h: Math.abs(to.y - dragFrom.y)
+        };
+        requestAnimationFrame(draw);
+    });
+    function endDrag() {
+        if (!dragFrom) return;
+        dragFrom = null;
+        if (state.crop && (state.crop.w < MIN_CROP || state.crop.h < MIN_CROP)) state.crop = null;
+        updateCropUi();
+        requestAnimationFrame(draw);
+    }
+    ui.canvas.addEventListener('pointerup', endDrag);
+    ui.canvas.addEventListener('pointercancel', endDrag);
+
+    // The part as a file of its own: the same name and, where the browser can write it, the same type
+    async function cropFile(file, r) {
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(r.w));
+        canvas.height = Math.max(1, Math.round(r.h));
+        canvas.getContext('2d').drawImage(ui.previewImage, r.x, r.y, r.w, r.h, 0, 0, canvas.width, canvas.height);
+        const type = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type) ? file.type : 'image/jpeg';
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, type, 0.92));
+        if (!blob) return null;
+        let name = file.name || 'photo.jpg';
+        if (blob.type !== file.type) name = name.replace(/\.[^.]*$/, '') + (blob.type === 'image/png' ? '.png' : '.jpg');
+        return new File([blob], name, { type: blob.type || type });
+    }
+
+    // Classify with a crop drawn: the preview becomes the part, so IBBI-AI's boxes land where they belong on it
+    async function applyCrop() {
+        const part = state.crop && await cropFile(state.currentFile, state.crop);
+        state.cropMode = false;
+        state.crop = null;
+        if (part) {
+            state.currentFile = part;
+            state.showingCrop = true;
+            await showPhoto(part);
+        }
+        updateCropUi();
+    }
 
     // --- File Handling (Drag & Drop + Input) ---
 
@@ -681,6 +890,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // shrunk first, which also keeps its preview small enough for a phone.
         const file = options && options.asset ? original : await shrink(original);
         state.currentFile = file;
+        state.fullFile = file;
+        state.cropMode = false;
+        state.crop = null;
+        state.showingCrop = false;
         state.isExample = !!(options && options.example);
         state.assetId = (options && options.asset) || null;
 
@@ -688,7 +901,8 @@ document.addEventListener('DOMContentLoaded', () => {
             state.currentFile = null;
             ui.imageWrapper.classList.add('hidden');
             ui.placeholder.classList.remove('hidden');
-            ui.submitBtn.classList.add('hidden');
+            ui.submitBtn.disabled = true;
+            updateCropUi();
             showMessage(MESSAGES.unreadable);
         };
         ui.previewImage.src = await readAsUrl(file);
@@ -698,22 +912,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Reset state
-        state.detections = [];
-        state.selectedIndex = -1;
-        state.hoveredIndex = -1;
+        clearResults();
 
         // Toggle UI elements
         ui.placeholder.classList.add('hidden');
         ui.imageWrapper.classList.remove('hidden');
         ui.previewImage.classList.remove('opacity-0');
-        ui.analysisDetails.classList.add('hidden');
-        ui.confidenceBar.classList.add('hidden');
+        updateCropUi();
 
-        // Show the button
+        // Classify is ready; on phones bring it and the photo under it into view
         ui.submitBtn.disabled = false;
-        ui.submitBtn.classList.remove('hidden');
-        // On phones the image is below the settings: bring it into view, with the button floating under it
-        if (window.innerWidth < 1024) ui.canvasContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (window.innerWidth < 1024) ui.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
         // Clear canvas
         setTimeout(() => {
@@ -769,7 +978,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     (function keepChoice() {
         const modal = document.getElementById('termsModal');
-        const box = document.getElementById('dontKeep');
+        const box = ui.dontKeep;
         const modalBox = document.getElementById('termsDontKeep');
         let stored = null, choice = null;
         try { stored = localStorage.getItem('classifierTerms'); choice = localStorage.getItem('classifierDontKeep'); } catch (e) {}
@@ -786,6 +995,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         if (stored !== '1') open();
     })();
+    updateOptionsSummary();
 
     // --- Camera Logic ---
 
@@ -811,13 +1021,7 @@ document.addEventListener('DOMContentLoaded', () => {
             state.cameraStreamObj = null;
         }
         ui.cameraInterface.classList.add('hidden');
-        if (!state.currentFile) {
-            ui.placeholder.classList.remove('hidden');
-        } else {
-            // If we had an image loaded before, show it again?
-            // Simplified: just show placeholder if canceling
-            ui.placeholder.classList.remove('hidden');
-        }
+        ui.placeholder.classList.remove('hidden');
     }
 
     ui.cancelCameraBtn.addEventListener('click', (e) => {
@@ -850,19 +1054,23 @@ document.addEventListener('DOMContentLoaded', () => {
     ui.clearBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         state.currentFile = null;
+        state.fullFile = null;
+        state.cropMode = false;
+        state.crop = null;
+        state.showingCrop = false;
         state.assetId = null;
-        state.detections = [];
         ui.fileInput.value = '';
         clearMessage();
+        clearResults();
 
         ui.imageWrapper.classList.add('hidden');
         ui.placeholder.classList.remove('hidden');
-        ui.analysisDetails.classList.add('hidden');
-        ui.confidenceBar.classList.add('hidden');
+        lensAt = null;
+        drawLens();
 
-        // --- NEW LOGIC: HIDE BUTTON ---
-        ui.submitBtn.classList.add('hidden'); // Hide the button
-        // -----------------------------
+        // Nothing to classify until there is a photo again
+        ui.submitBtn.disabled = true;
+        updateCropUi();
     });
 
     // --- Submission ---
@@ -888,11 +1096,13 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.globalStatus.classList.remove('hidden');
             ui.submitBtn.disabled = true;
             ui.submitBtn.classList.add('opacity-75', 'cursor-wait');
+            ui.cropBtn.disabled = true;
         } else {
             ui.loadingContainer.classList.add('hidden');
             ui.globalStatus.classList.add('hidden');
-            ui.submitBtn.disabled = false;
+            ui.submitBtn.disabled = !state.currentFile;
             ui.submitBtn.classList.remove('opacity-75', 'cursor-wait');
+            ui.cropBtn.disabled = false;
             setServerNote('');   // back to the resting note once loading (or waking) is over
         }
     }
@@ -913,6 +1123,11 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
 
         if (!state.currentFile) return;
+        // A crop drawn: send that part in place of the photo. Crop mode without one: the whole photo.
+        if (state.cropMode) {
+            await applyCrop();
+            requestAnimationFrame(draw);
+        }
 
         // Construct FormData manually to include the correct file (drag/cam/input)
         const formData = new FormData(ui.form);
@@ -923,7 +1138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             formData.set('image', state.currentFile);
             // Examples are never kept, and neither is an image the person asked us not to keep.
-            if (state.isExample || document.getElementById('dontKeep').checked) formData.set('keep_image', '0');
+            if (state.isExample || ui.dontKeep.checked) formData.set('keep_image', '0');
         }
 
         clearMessage();
@@ -961,15 +1176,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 ui.analysisDetails.classList.remove('hidden');
                 initChart();
 
-                // Tags (the slider hides those below it)
+                // Tags (the slider hides those below it): pills with their dot and text centred
                 ui.tagsContainer.innerHTML = '';
                 state.detections.forEach((det, i) => {
                     const btn = document.createElement('button');
                     btn.type = 'button';
                     btn.dataset.index = i;
-                    btn.className = "flex items-center gap-2 px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-medium transition-colors border border-transparent focus:border-gray-500 ";
+                    btn.className = "cls-pill h-8 px-3 gap-2 bg-gray-100 hover:bg-gray-200 text-xs font-medium transition-colors border border-transparent focus:border-gray-500";
                     const color = getBoxColor(i);
-                    btn.innerHTML = `<span class="w-2.5 h-2.5 rounded-full" style="background-color:${color}"></span> ${det.label} <span class="text-gray-500">${Math.round(confidenceOf(det)*100)}%</span>`;
+                    btn.innerHTML = `<span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color:${color}"></span><span>${det.label}</span><span class="text-gray-500">${Math.round(confidenceOf(det)*100)}%</span>`;
                     btn.onclick = () => {
                         select(i);
                         draw();
@@ -1027,11 +1242,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function warmUp() {
         const body = new FormData();
         body.set('csrfmiddlewaretoken', ui.form.querySelector('[name=csrfmiddlewaretoken]').value);
-        body.set('architecture', document.getElementById('modelSelect').value);
+        body.set('architecture', ui.modelSelect.value);
         fetch("{% url 'tool_classify_warm' %}", { method: 'POST', body, keepalive: true }).catch(() => {});
     }
     warmUp();
-    document.getElementById('modelSelect').addEventListener('change', warmUp);
+    ui.modelSelect.addEventListener('change', warmUp);
 });
 </script>
 {% endblock %}
