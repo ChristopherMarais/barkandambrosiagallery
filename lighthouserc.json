@@ -3,8 +3,9 @@
     "collect": {
       "url": [
         "http://localhost:8000/",
-        "http://localhost:8000/taxonomy/",
+        "http://localhost:8000/beetles/",
         "http://localhost:8000/interactions/",
+        "http://localhost:8000/tools/classify/",
         "http://localhost:8000/accounts/login/",
         "http://localhost:8000/accounts/signup/"
       ],
