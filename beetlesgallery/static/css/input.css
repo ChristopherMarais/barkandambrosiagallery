@@ -143,9 +143,9 @@
     *, ::after, ::before, ::backdrop, ::file-selector-button {
         border-color: var(--color-gray-200, currentcolor);
     }
-    /* Placeholders are mid grey (Tailwind 4: the text colour at half strength). */
+    /* Placeholders are gray-500, the lightest text colour on the site (site-contrast, #618). */
     input::placeholder, textarea::placeholder {
-        color: var(--color-gray-400);
+        color: var(--color-gray-500);
     }
     /* Buttons show the hand pointer (Tailwind 4: the arrow), anything switched off the plain arrow. */
     button:not(:disabled), [role="button"]:not(:disabled) {

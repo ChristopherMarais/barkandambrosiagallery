@@ -157,7 +157,7 @@ class DetailUiPolishTests(PageBehaviourCase):
 
     def test_cards_are_ordered_taxonomy_then_specimen_then_attribution_then_validation_then_technical_then_identifiers(self):
         page = self.page()
-        order = [">Taxonomy<", ">Specimen and Collection<", ">Attribution<", ">Validation<", ">Technical<", ">Identifiers<"]
+        order = [">Taxonomy<", ">Specimen and collection<", ">Attribution<", ">Validation<", ">Technical<", ">Identifiers<"]
         positions = [page.index(tag) for tag in order]
         self.assertEqual(positions, sorted(positions))
         self.assertNotIn(">Identity<", page)

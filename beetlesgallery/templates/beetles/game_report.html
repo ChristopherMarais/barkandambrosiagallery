@@ -19,21 +19,21 @@
   <!-- Headline numbers -->
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
     <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-      <div class="text-xs uppercase tracking-wider text-gray-500 font-semibold">Labelled</div>
+      <div class="card-label">Labelled</div>
       <div class="mt-1 text-2xl font-semibold text-gray-900 tabular-nums">{{ report.summary.labelled }}</div>
     </div>
     <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-      <div class="text-xs uppercase tracking-wider text-gray-500 font-semibold">Accuracy</div>
+      <div class="card-label">Accuracy</div>
       <div class="mt-1 text-2xl font-semibold tabular-nums scale-{{ report.summary.accuracy|scale }}" data-testid="report-accuracy">
-        {% if report.summary.accuracy is not None %}{% widthratio report.summary.accuracy 1 100 %}%{% else %}<span class="text-gray-400">&ndash;</span>{% endif %}
+        {% if report.summary.accuracy is not None %}{% widthratio report.summary.accuracy 1 100 %}%{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}
       </div>
     </div>
     <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-      <div class="text-xs uppercase tracking-wider text-gray-500 font-semibold">Sessions</div>
+      <div class="card-label">Sessions</div>
       <div class="mt-1 text-2xl font-semibold text-gray-900 tabular-nums">{{ report.rounds|digit_groups }}</div>
     </div>
     <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-      <div class="text-xs uppercase tracking-wider text-gray-500 font-semibold">ID expert areas</div>
+      <div class="card-label">ID expert areas</div>
       <div class="mt-1 text-2xl font-semibold text-gray-900 tabular-nums">{{ report.proven|length }}</div>
     </div>
   </div>
@@ -105,7 +105,7 @@
       <li>
         <a href="{% url 'game_round_review' r.id %}" class="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
           <span class="text-sm text-gray-900">{% if r.mode == "classify" %}Naming{% elif r.mode == "pair" %}Similarity{% elif r.mode == "odd" %}Odd One Out{% elif r.mode == "select" %}Find Them All{% else %}All modes{% endif %}
-            <span class="text-gray-400">· {{ r.labelled }} labelled</span></span>
+            <span class="text-gray-500">· {{ r.labelled }} labelled</span></span>
           <span class="text-xs text-gray-500">{{ r.finished_at|date:"M j" }} <i class="fi fi-rr-angle-right ml-1"></i></span>
         </a>
       </li>
@@ -133,11 +133,11 @@
           <tr class="border-t border-gray-100">
             <td class="py-2.5 pl-4 pr-2 text-gray-900">{{ row.rank|capfirst }}</td>
             <td class="py-2.5 px-2 text-right tabular-nums">
-              {% if row.naming.n %}{% widthratio row.naming.accuracy 1 100 %}% <span class="text-xs text-gray-400">of {{ row.naming.n|digit_groups }}</span>{% else %}<span class="text-gray-300">&ndash;</span>{% endif %}
+              {% if row.naming.n %}{% widthratio row.naming.accuracy 1 100 %}% <span class="text-xs text-gray-500">of {{ row.naming.n|digit_groups }}</span>{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}
             </td>
             {% if report.by_rank_has_distinction %}
             <td class="py-2.5 pl-2 pr-4 text-right tabular-nums">
-              {% if row.distinction.n %}{% widthratio row.distinction.accuracy 1 100 %}% <span class="text-xs text-gray-400">of {{ row.distinction.n|digit_groups }}</span>{% else %}<span class="text-gray-300">&ndash;</span>{% endif %}
+              {% if row.distinction.n %}{% widthratio row.distinction.accuracy 1 100 %}% <span class="text-xs text-gray-500">of {{ row.distinction.n|digit_groups }}</span>{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}
             </td>
             {% endif %}
           </tr>
@@ -173,7 +173,7 @@
                 </div>
                 <span class="text-xs text-gray-600 tabular-nums w-9 text-right">{% widthratio m.accuracy 1 100 %}%</span>
               </div>
-              {% else %}<span class="text-gray-300">&ndash;</span>{% endif %}
+              {% else %}<span class="text-gray-500">&mdash;</span>{% endif %}
             </td>
           </tr>
           {% endfor %}

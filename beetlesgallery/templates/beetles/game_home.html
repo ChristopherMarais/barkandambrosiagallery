@@ -18,7 +18,7 @@
     <p class="mt-1 text-sm text-gray-500">{{ r.labelled|digit_groups }} beetle{{ r.labelled|pluralize }} labelled. Level {{ r.level }}, {{ r.level_name }}. {{ r.today }} of {{ r.goal }} beetles today.</p>
     <div class="grid grid-cols-2 gap-2 mt-3">
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" data-testid="last-session-points">{% if r.points > 0 %}+{% endif %}{{ r.points|digit_groups }}</div><div class="text-xs text-gray-500">points &middot; <a href="{% url 'game_how' %}#scoring" class="underline hover:text-gray-800">why?</a></div></div>
-      <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold scale-{{ r.accuracy_tier }}">{% if r.scored %}{{ r.right|digit_groups }}/{{ r.scored|digit_groups }}{% else %}&ndash;{% endif %}</div><div class="text-xs text-gray-500">known beetles correct</div></div>
+      <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold scale-{{ r.accuracy_tier }}">{% if r.scored %}{{ r.right|digit_groups }}/{{ r.scored|digit_groups }}{% else %}&mdash;{% endif %}</div><div class="text-xs text-gray-500">known beetles correct</div></div>
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold scale-{{ r.challenge_tier }}">{{ r.challenge }}/100</div><div class="text-xs text-gray-500">challenge</div></div>
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900">{{ r.streak }}</div><div class="text-xs text-gray-500">day streak</div></div>
     </div>
@@ -74,7 +74,7 @@
   <!-- Beetles checked by a curator since last time: what you said, what it is -->
   <section class="mb-5" data-testid="checked-recap">
     <div class="flex items-baseline justify-between mb-2">
-      <h2 class="text-lg font-semibold text-gray-900">Reviewed by curators{% if checked_new > checked|length %} <span class="text-sm font-normal text-gray-400">({{ checked_new }})</span>{% endif %}</h2>
+      <h2 class="text-lg font-semibold text-gray-900">Reviewed by curators{% if checked_new > checked|length %} <span class="text-sm font-normal text-gray-500">({{ checked_new }})</span>{% endif %}</h2>
       <a href="{% url 'game_history' %}?tab=checked" class="text-sm underline text-gray-600 hover:text-gray-900">All</a>
     </div>
     <p class="mb-2 text-sm text-gray-600" data-testid="checked-since">Since your last visit: {{ checked_new|digit_groups }} answer{{ checked_new|pluralize }} checked, {% if checked_change > 0 %}+{% endif %}{{ checked_change|floatformat:"-1" }} point{{ checked_change|pluralize }}.</p>
@@ -117,7 +117,7 @@
     <h2 class="text-lg font-semibold text-gray-900">Play with a friend</h2>
     <p class="text-sm text-gray-500 mb-4">Let them scan this to join.</p>
     <div id="share-qr" class="inline-block p-3 bg-white rounded-xl border border-gray-100" data-url="{{ share_url }}" style="width: 272px; height: 272px"></div>
-    <p class="mt-3 text-xs text-gray-400 break-all">{{ share_url }}</p>
+    <p class="mt-3 text-xs text-gray-500 break-all">{{ share_url }}</p>
   </section>
   {# qrcodejs 1.0.0 (MIT, davidshimjs), served from our own static files #}
   <script src="{% static 'js/vendor/qrcode.min.js' %}"></script>

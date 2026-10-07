@@ -33,7 +33,7 @@
   {% endif %}
   <ol class="border border-gray-200 rounded-2xl divide-y divide-gray-100 mb-5">
     {% for row in ladder %}
-    <li class="px-4 py-3 flex items-center gap-3 {% if row.level == info.level %}bg-gray-100{% endif %} {% if row.level > info.level %}text-gray-400{% endif %}">
+    <li class="px-4 py-3 flex items-center gap-3 {% if row.level == info.level %}bg-gray-100{% endif %} {% if row.level > info.level %}text-gray-500{% endif %}">
       {% if row.level > info.level %}{% include "beetles/includes/game_level_badge.html" with level=row.level name=row.name locked=True size="lg" %}{% else %}{% include "beetles/includes/game_level_badge.html" with level=row.level name=row.name size="lg" %}{% endif %}
       <div class="flex-1 min-w-0">
         <div class="font-semibold {% if row.level <= info.level %}text-gray-900{% endif %}">{{ row.name }}</div>

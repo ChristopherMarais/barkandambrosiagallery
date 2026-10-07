@@ -79,7 +79,7 @@ class PageFromTheDatabaseTests(PageBehaviourCase):
         self.assertIn("Showing", page)
         self.assertNotIn("1,015 records</div>", page)
         self.assertIn("1970–2013", page)
-        self.assertIn("All Categories (2)", page)
+        self.assertIn("All categories (2)", page)
         self.assertIn('<option value="Fungi">Fungi (2 records / 2 taxa)</option>', page)
         self.assertIn("50.0% verified", page)
 

@@ -5,7 +5,7 @@
 
 {% block content %}
 <section>
-  <a href="{% url 'data_management' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Data Management</a>
+  <a href="{% url 'data_management' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Data management</a>
   <h1 class="page-title">Bulk validation</h1>
   <p class="text-gray-600 mb-6 max-w-3xl">
     Unvalidated images that have boxes. Check the boxes and names, tick the images that are right and validate them
@@ -46,7 +46,7 @@
         </div>
         <ul class="mt-2 space-y-0.5 text-xs text-gray-700">
           {% for roi in image.active_rois %}
-          <li class="truncate">{% if roi.taxon %}<i>{{ roi.taxon.scientific_name }}</i>{% else %}<span class="text-gray-400">No name</span>{% endif %}{% if roi.bbox_x is None %} <span class="text-gray-400">(no box)</span>{% endif %}{% if roi.label_source %} <span class="text-gray-400">· {{ roi.get_label_source_display }}</span>{% endif %}</li>
+          <li class="truncate">{% if roi.taxon %}<i>{{ roi.taxon.scientific_name }}</i>{% else %}<span class="text-gray-500">No name</span>{% endif %}{% if roi.bbox_x is None %} <span class="text-gray-500">(no box)</span>{% endif %}{% if roi.label_source %} <span class="text-gray-500">· {{ roi.get_label_source_display }}</span>{% endif %}</li>
           {% endfor %}
         </ul>
         {# Caption: what is being validated (bulk-boxes, #618): the shared name (if any), box count and naming status. #}

@@ -8,7 +8,7 @@
     <div class="flex-1 min-w-0 text-sm">
       <div class="flex items-baseline justify-between gap-2">
         <span class="font-semibold {% if c.change >= 0 %}text-green-700{% else %}text-red-700{% endif %} tabular-nums">{% if c.change >= 0 %}+{% endif %}{{ c.change|floatformat:1 }} pts</span>
-        {% if c.validated_at %}<span class="text-xs text-gray-400">checked {{ c.validated_at|date:"M j" }}</span>{% endif %}
+        {% if c.validated_at %}<span class="text-xs text-gray-500">checked {{ c.validated_at|date:"M j" }}</span>{% endif %}
       </div>
       <div class="text-gray-700 truncate">You: <em>{{ c.said }}</em></div>
       <div class="text-gray-900 truncate">It's <em class="font-semibold">{{ c.truth }}</em>{% if c.partner %} &middot; B: <em>{{ c.partner }}</em>{% endif %}</div>

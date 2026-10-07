@@ -10,6 +10,6 @@ title/subtitle/hint are optional; accept and multiple are passed straight throug
   <i class="fi fi-rr-upload text-3xl text-gray-400" aria-hidden="true"></i>
   <h3 class="text-base font-bold text-gray-800 mt-3">{{ title|default:"Upload a file" }}</h3>
   <p class="text-sm text-gray-500 mt-1">{{ subtitle|default:"Click to browse or drag & drop a file here" }}</p>
-  {% if hint %}<p class="text-xs text-gray-400 mt-2">{{ hint }}</p>{% endif %}
+  {% if hint %}<p class="text-xs text-gray-500 mt-2">{{ hint }}</p>{% endif %}
   <input id="{{ input_id }}" type="file" class="hidden" {% if accept %}accept="{{ accept }}"{% endif %} {% if multiple %}multiple{% endif %}>
 </div>

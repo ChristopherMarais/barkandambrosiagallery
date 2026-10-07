@@ -193,7 +193,8 @@ class TreeTests(ExpertCase):
 
     def test_a_new_players_profile_has_neither_yet(self):
         page = self.client.get(reverse("game_profile", args=[self.user.id])).content.decode()
-        self.assertEqual(page.count("None yet."), 2)
+        self.assertIn("Not a naming expert in any group yet.", page)
+        self.assertIn("Not a distinction expert in any group yet.", page)
         self.assertNotIn("proven expert", page)
 
 

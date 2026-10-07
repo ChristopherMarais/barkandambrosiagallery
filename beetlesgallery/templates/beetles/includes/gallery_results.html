@@ -17,11 +17,11 @@
          <div class="flex flex-wrap items-center gap-4">
              {# View Toggle #}
              <div class="flex items-center gap-1 border border-gray-300 rounded-lg overflow-hidden">
-               <button type="button" id="view-toggle-card" class="view-toggle-btn active px-3 py-1.5 text-sm hover:bg-gray-100 transition flex items-center gap-1.5" title="Card View">
+               <button type="button" id="view-toggle-card" class="view-toggle-btn active px-3 py-1.5 text-sm hover:bg-gray-100 transition flex items-center gap-1.5" title="Card view">
                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
                  <span class="hidden sm:inline">Cards</span>
                </button>
-               <button type="button" id="view-toggle-gallery" class="view-toggle-btn px-3 py-1.5 text-sm hover:bg-gray-100 transition flex items-center gap-1.5" title="Gallery View">
+               <button type="button" id="view-toggle-gallery" class="view-toggle-btn px-3 py-1.5 text-sm hover:bg-gray-100 transition flex items-center gap-1.5" title="Gallery view">
                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg>
                  <span class="hidden sm:inline">Gallery</span>
                </button>
@@ -101,7 +101,7 @@
                 {% endif %}
 
                 {% if b.image_asset.image_has_multiple_individuals is not None %}
-                  <dt class="col-span-1 text-text/60">Multiple Individuals</dt>
+                  <dt class="col-span-1 text-text/60">Multiple individuals</dt>
                   <dd class="col-span-2 text-text/80">{% if b.image_asset.image_has_multiple_individuals %}Yes{% else %}No{% endif %}</dd>
                 {% endif %}
 
@@ -164,7 +164,7 @@
                 {% endif %}
 
                 {% if b.specimen_type_status %}
-                  <dt class="col-span-1 text-text/60">Type Status</dt>
+                  <dt class="col-span-1 text-text/60">Type status</dt>
                   <dd class="col-span-2 text-text/80">{{ b.specimen_type_status }}</dd>
                 {% endif %}
              </dl>
@@ -175,9 +175,7 @@
            </div>
        </div>
       {% empty %}
-         <div class="py-12 text-center text-gray-600 border-2 border-dashed border-text/10 rounded-xl">
-            <p>No specimens found matching your search.</p>
-         </div>
+         {% include "beetles/includes/empty_state.html" with icon="fi-rr-search" text="No specimens found matching your search. Clear a filter or try other words, and matching images will appear here." %}
       {% endfor %}
     </div>
 
@@ -212,9 +210,7 @@
           </div>
         </div>
       {% empty %}
-        <div class="col-span-full py-12 text-center text-gray-600 border-2 border-dashed border-text/10 rounded-xl">
-          <p>No specimens found matching your search.</p>
-        </div>
+        <div class="col-span-full">{% include "beetles/includes/empty_state.html" with icon="fi-rr-search" text="No specimens found matching your search. Clear a filter or try other words, and matching images will appear here." %}</div>
       {% endfor %}
     </div>
 

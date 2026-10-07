@@ -4,20 +4,20 @@
 {% block content %}
 <div class="max-w-3xl mx-auto">
   <a href="{% url 'game_home' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; {{ game_name }}</a>
-  <h1 class="page-title"><span class="inline-flex items-center gap-2">{% include "beetles/includes/game_level_badge.html" with level=p.level.level name=p.level.name %}{{ player.username }}{% if p.discoveries %}<i class="fi fi-rr-sparkles text-amber-600 text-xl" title="New species finder"></i>{% endif %}</span>{% if is_self %} <span class="text-base font-normal text-gray-400">(you)</span>{% endif %}</h1>
+  <h1 class="page-title"><span class="inline-flex items-center gap-2">{% include "beetles/includes/game_level_badge.html" with level=p.level.level name=p.level.name %}{{ player.username }}{% if p.discoveries %}<i class="fi fi-rr-sparkles text-amber-600 text-xl" title="New species finder"></i>{% endif %}</span>{% if is_self %} <span class="text-base font-normal text-gray-500">(you)</span>{% endif %}</h1>
 
   <div class="grid grid-cols-3 gap-3 mb-6">
     <div class="p-4 bg-gray-50 border border-gray-100 rounded-2xl">
-      <div class="text-xs uppercase tracking-wider text-gray-500 font-semibold">Level</div>
+      <div class="card-label">Level</div>
       <div class="mt-1 text-lg font-bold text-gray-900 tabular-nums">{{ p.level.level }}</div>
       <div class="text-xs text-gray-500 truncate">{{ p.level.name }}</div>
     </div>
     <div class="p-4 bg-gray-50 border border-gray-100 rounded-2xl">
-      <div class="text-xs uppercase tracking-wider text-gray-500 font-semibold">Score</div>
+      <div class="card-label">Score</div>
       <div class="mt-1 text-lg font-bold text-gray-900 tabular-nums">{{ p.score.score|digit_groups }}</div>
     </div>
     <div class="p-4 bg-gray-50 border border-gray-100 rounded-2xl">
-      <div class="text-xs uppercase tracking-wider text-gray-500 font-semibold">Beetles seen</div>
+      <div class="card-label">Beetles seen</div>
       <div class="mt-1 text-lg font-bold text-gray-900 tabular-nums">{{ p.score.viewed|digit_groups }}</div>
     </div>
   </div>
@@ -38,7 +38,7 @@
     {% for e in p.expert_in %}<li class="px-3 py-1 rounded-full border border-green-200 bg-green-50 text-sm text-green-800"><i class="fi fi-rr-shield-check"></i> {{ e.what }}{% if e.branch %} <em>{{ e.branch }}</em>{% endif %}</li>{% endfor %}
   </ul>
   {% else %}
-  <p class="text-sm text-gray-500 mb-2">None yet.</p>
+  {% include "beetles/includes/empty_state.html" with icon="fi-rr-shield-check" text="Not a naming expert in any group yet. Groups appear here once enough names in them are right." compact=True %}
   {% endif %}
   <h2 class="text-lg font-semibold text-gray-900 mt-4 mb-2">Distinction expert in</h2>
   {% if p.distinction_in %}
@@ -46,7 +46,7 @@
     {% for e in p.distinction_in %}<li class="px-3 py-1 rounded-full border border-gray-300 bg-white text-sm text-gray-800"><span class="inline-block w-2.5 h-2.5 bg-green-700" style="clip-path: polygon(50% 0, 100% 100%, 0 100%)" aria-hidden="true"></span> {{ e.what }}{% if e.branch %} <em>{{ e.branch }}</em>{% endif %}</li>{% endfor %}
   </ul>
   {% else %}
-  <p class="text-sm text-gray-500 mb-2">None yet.</p>
+  {% include "beetles/includes/empty_state.html" with icon="fi-rr-shield-check" text="Not a distinction expert in any group yet. Groups appear here once enough Similarity answers in them are right." compact=True %}
   {% endif %}
   <a href="{% url 'game_player_expertise' player.id %}" class="inline-block mb-8 text-sm underline text-gray-600 hover:text-gray-900">See the whole expertise tree</a>
 

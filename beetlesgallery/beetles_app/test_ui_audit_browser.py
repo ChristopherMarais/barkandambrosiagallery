@@ -62,7 +62,7 @@ class TruncateAndDensityTests(BrowserTestCase):
         self.assertIn('<dt class="col-span-1 text-text/60">Institution</dt>', html)
         self.assertIn("University of Florida Forest Entomology Lab", html)
         self.assertIn('<dt class="col-span-1 text-text/60">Aspect</dt>', html)
-        self.assertIn('<dt class="col-span-1 text-text/60">Type Status</dt>', html)
+        self.assertIn('<dt class="col-span-1 text-text/60">Type status</dt>', html)
         self.assertIn("Holotype", html)
         self.assertIn('<dt class="col-span-1 text-text/60">Specimen ID</dt>', html)
         self.assertIn('<dt class="col-span-1 text-text/60">Sex</dt>', html)

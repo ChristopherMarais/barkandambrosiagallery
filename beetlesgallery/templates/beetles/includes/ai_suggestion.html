@@ -4,7 +4,7 @@ A suggestion only: it never sets the label. ✓ / ≠ compare it with the curren
 {% endcomment %}
 {% if suggestions %}
 <div class="group-section mt-4" data-testid="ai-suggestion">
-  <h3 class="mb-1 text-md font-semibold tracking-wide text-text/70 uppercase">AI suggestion</h3>
+  <h3 class="section-heading">AI suggestion</h3>
   <p class="mb-2 text-xs text-text/60">From an AI model, not checked by a person. The percentages are the model's confidence.</p>
   {% for s in suggestions %}
   <div class="rounded-lg border border-gray-200 bg-white p-3 {% if not forloop.last %}mb-2{% endif %}">
