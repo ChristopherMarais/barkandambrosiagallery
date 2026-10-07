@@ -1,6 +1,8 @@
-// Google Analytics (GA4). Loads only after the visitor clicks Accept in the cookie notice (Google Consent Mode v2:
-// analytics storage is denied until then). The choice is kept in a first-party cookie for a year.
-// base.html renders the script tag (with data-ga-id and data-ga-page) only when GA_MEASUREMENT_ID is set.
+// Google Analytics (GA4) and the choice about it. Nothing non-essential runs before the visitor chooses:
+// the analytics script is downloaded only after Accept (Google Consent Mode v2: storage denied until then).
+// Reject, or changing the choice from "Cookie settings", withdraws consent as easily as giving it and clears the
+// Google Analytics cookies. The choice itself is stored in one essential cookie for a year, and only once chosen.
+// base.html renders this script (with data-ga-id and data-ga-page) only when GA_MEASUREMENT_ID is set.
 // See docs/analytics.md.
 (function () {
     "use strict";
@@ -32,12 +34,12 @@
         ad_personalization: "denied"
     });
 
-    var started = false;
+    var loaded = false;   // gtag.js has been requested
 
     function allow() {
         gtag("consent", "update", { analytics_storage: "granted" });
-        if (started) return;
-        started = true;
+        if (loaded) return;
+        loaded = true;
 
         var referrer = "";
         try { referrer = document.referrer ? new URL(document.referrer).origin : ""; } catch (e) { referrer = ""; }
@@ -60,8 +62,19 @@
         document.head.appendChild(s);
     }
 
+    // Withdrawal: stop storage, and remove the Google Analytics cookies that are already in the browser.
+    function withdraw() {
+        if (loaded) gtag("consent", "update", { analytics_storage: "denied" });
+        try {
+            document.cookie.split(";").forEach(function (part) {
+                var name = part.split("=")[0].trim();
+                if (/^_ga(_|$)/.test(name)) document.cookie = name + "=; Max-Age=0; Path=/";
+            });
+        } catch (e) { /* cookies blocked: nothing was stored */ }
+    }
+
     function track(name, params) {
-        if (!started || !Object.prototype.hasOwnProperty.call(EVENTS, name)) return;
+        if (!loaded || !Object.prototype.hasOwnProperty.call(EVENTS, name)) return;
         var clean = {};
         EVENTS[name].forEach(function (key) {
             var value = params ? params[key] : undefined;
@@ -74,12 +87,13 @@
     // Scripts on the pages call this: gaTrack("game_start", { game: "odd" }). Absent when analytics is off.
     window.gaTrack = track;
 
-    // Choice from the cookie notice
-    var choice = "";
-    try {
-        var m = document.cookie.match(/(?:^|;\s*)ga_consent=(granted|denied)/);
-        choice = m ? m[1] : "";
-    } catch (e) { choice = ""; }
+    // The choice from the notice ("" until the visitor has chosen)
+    function readChoice() {
+        try {
+            var m = document.cookie.match(/(?:^|;\s*)ga_consent=(granted|denied)/);
+            return m ? m[1] : "";
+        } catch (e) { return ""; }
+    }
 
     function saveChoice(value) {
         try {
@@ -88,20 +102,46 @@
         } catch (e) { /* cookies blocked: the notice simply shows again next time */ }
     }
 
+    // The notice. While it is open the game screen stops above it (base.html), so its buttons stay usable.
     var banner = document.getElementById("consent-banner");
-    if (choice === "granted") {
-        allow();
-    } else if (!choice && banner) {
+
+    function setHeight() {
+        document.documentElement.style.setProperty("--consent-h", (banner.offsetHeight + 16) + "px");
+    }
+    function showBanner() {
+        if (!banner) return;
         banner.hidden = false;
+        document.body.classList.add("consent-showing");
+        setHeight();
+    }
+    function hideBanner() {
+        if (!banner) return;
+        banner.hidden = true;
+        document.body.classList.remove("consent-showing");
+    }
+    window.addEventListener("resize", function () {
+        if (banner && !banner.hidden) setHeight();
+    });
+
+    function choose(value) {
+        saveChoice(value);
+        hideBanner();
+        if (value === "granted") allow();
+        else withdraw();
     }
 
+    var choice = readChoice();
+    if (choice === "granted") allow();
+    else if (choice !== "denied") showBanner();
+
+    // Accept and Reject; "Cookie settings" in the footer reopens the notice at any time
     document.querySelectorAll("[data-consent]").forEach(function (button) {
         button.addEventListener("click", function () {
-            var value = button.getAttribute("data-consent") === "granted" ? "granted" : "denied";
-            saveChoice(value);
-            if (banner) banner.hidden = true;
-            if (value === "granted") allow();
+            choose(button.getAttribute("data-consent") === "granted" ? "granted" : "denied");
         });
+    });
+    document.querySelectorAll("[data-open-consent]").forEach(function (button) {
+        button.addEventListener("click", showBanner);
     });
 
     // Page events declared in the markup: <section data-ga-event="sign_up_done">

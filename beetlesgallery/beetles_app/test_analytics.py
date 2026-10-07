@@ -57,7 +57,7 @@ class AnalyticsOnTests(TestCase):
             self.assertIn('data-consent="granted"', html, url)
             self.assertIn('data-consent="denied"', html, url)
             self.assertIn(">Accept<", html, url)
-            self.assertIn(">No thanks<", html, url)
+            self.assertIn(">Reject<", html, url)
 
     def test_nothing_personal_is_rendered_for_analytics(self):
         user = get_user_model().objects.create_user(

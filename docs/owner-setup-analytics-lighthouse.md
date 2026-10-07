@@ -34,9 +34,16 @@ Never put the Measurement ID in git. It goes only in the server's `.env.prod`.
 ## C. Approve the cookie wording
 
 15. Read the notice (it appears at the bottom of the site in a private window):
-    > Can we use Google Analytics to count page visits? We never send it your name or your account.
-    > Your choice is remembered for a year.
-    Buttons: **Accept** and **No thanks**. If you want different words, tell Claude the new text. Nothing else changes.
+    > **May we count your visits?** We would like to set an analytics cookie from Google Analytics, which Google runs
+    > for us. It counts page visits and which games are played, so we can see what to improve. It is set only if you
+    > accept. Your choice is kept in an essential cookie for a year. You can change it at any time with Cookie settings
+    > at the bottom of a page.
+    Buttons: **Accept** and **Reject** (same size and style, on purpose). If you want different words, tell Claude the
+    new text. The exact wording is also in `docs/analytics.md` under "Consent".
+15a. Check the privacy notice at `/privacy/`: the controller is named as "The Forest Entomology Lab, University of
+    Florida". Add `PRIVACY_CONTACT_EMAIL=you@example.org` to `.env.prod` (same way as step 11) so the contact line
+    appears, then restart the web container (step 13).
+15b. Done: GA4 event data retention is set to 14 months, matching the privacy notice.
 
 ## D. Check that the numbers arrive
 
@@ -68,5 +75,5 @@ Never put the Measurement ID in git. It goes only in the server's `.env.prod`.
 
 ## Notes
 
-- Visitors who click **No thanks** are not counted; the choice is kept on their computer for a year.
+- Visitors who click **Reject** are not counted; the choice is kept on their computer for a year.
 - To stop analytics, delete the `GA_MEASUREMENT_ID` line from `.env.prod` and restart the web container (step 13).

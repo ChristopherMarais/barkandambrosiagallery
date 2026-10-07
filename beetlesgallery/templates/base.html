@@ -485,25 +485,38 @@
 
         {% block content %}{% endblock %}
       </main>
+      <footer class="max-w-7xl mx-auto px-6 pb-8 flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-500" data-testid="site-footer">
+        <a href="{% url 'privacy' %}" class="underline hover:text-gray-800">Privacy notice</a>
+        {% if ga_measurement_id %}<button type="button" class="underline hover:text-gray-800 bg-transparent p-0" data-open-consent>Cookie settings</button>{% endif %}
+      </footer>
     </div>
   </div>
   {% block extra_js %}{% endblock %}
   {% if ga_measurement_id %}
-  {# The cookie notice for Google Analytics: shown once, until the visitor picks Accept or No thanks (analytics.js) #}
+  {# The cookie choice for Google Analytics. Shown until the visitor picks Accept or Reject, and again from "Cookie settings" #}
   <style>
-    #consent-banner { position: fixed; left: 1rem; right: 1rem; bottom: 1rem; z-index: 60; max-width: 36rem; margin: 0 auto;
-                      padding: 1rem 1.25rem; border: 1px solid #d1d5db; border-radius: 0.75rem; background: #fff;
-                      color: #1f2937; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); font-size: 0.95rem; line-height: 1.5; }
+    #consent-banner { position: fixed; left: 0.5rem; right: 0.5rem; bottom: 0.5rem; z-index: 90; margin: 0 auto; max-width: 56rem;
+                      box-sizing: border-box; padding: 1rem 1.25rem; background: #fff; color: #111827;
+                      border: 1px solid #9ca3af; border-radius: 0.75rem;
+                      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18); font-size: 0.95rem; line-height: 1.5; }
     #consent-banner[hidden] { display: none; }
-    #consent-banner p { margin: 0; }
-    #consent-banner .consent-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+    #consent-banner h2 { margin: 0 0 0.5rem; font-size: 1.05rem; font-weight: 700; }
+    #consent-banner p { margin: 0 0 0.5rem; }
+    #consent-banner .consent-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem; }
+    #consent-banner .consent-actions button { width: 100%; min-height: 2.75rem; font-size: 1rem; }
+    @media (min-width: 640px) { #consent-banner .consent-actions { max-width: 24rem; } }
+    /* The game is a fixed screen: while the choice is open it stops above the panel, so its buttons stay usable */
+    body.consent-showing #game { bottom: var(--consent-h, 0px); }
   </style>
-  <div id="consent-banner" role="region" aria-label="Cookies" hidden>
-    <p>Can we use Google Analytics to count page visits? We never send it your name or your account.
-      Your choice is remembered for a year.</p>
+  <div id="consent-banner" role="region" aria-labelledby="consent-title" hidden>
+    <h2 id="consent-title">May we count your visits?</h2>
+    <p>We would like to set an analytics cookie from Google Analytics, which Google runs for us. It counts page
+      visits and which games are played, so we can see what to improve. It is set only if you accept.</p>
+    <p>Your choice is kept in an essential cookie for a year. You can change it at any time with
+      <strong>Cookie settings</strong> at the bottom of a page. <a href="{% url 'privacy' %}" class="underline">Privacy notice</a></p>
     <div class="consent-actions">
       <button type="button" class="btn-secondary" data-consent="granted">Accept</button>
-      <button type="button" class="btn-secondary" data-consent="denied">No thanks</button>
+      <button type="button" class="btn-secondary" data-consent="denied">Reject</button>
     </div>
   </div>
   {% endif %}

@@ -200,7 +200,8 @@ class RecapTests(RewardsCase):
 
 
 class FeedAndHomeTests(RewardsCase):
-    # the clock is fixed at midday (local): "Night owl" is for the hours after midnight, so the test never depends on when it runs
+    # the clock is fixed at midday (local): "Night owl"/"Early bird" are for specific hours, so the
+    # test never depends on when it runs
     @mock.patch("django.utils.timezone.now", return_value=datetime(2026, 10, 6, 16, 0, tzinfo=dt_timezone.utc))
     @override_settings(GAME_ROUND_SIZE=3)
     def test_the_feed_gets_a_chip_and_events_but_no_accuracy(self, _now):

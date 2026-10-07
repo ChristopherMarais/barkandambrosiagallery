@@ -207,6 +207,8 @@ SITE_URL = os.environ.get("SITE_URL", "https://barkandambrosiagallery.org")
 # Google Analytics (GA4) Measurement ID, e.g. G-XXXXXXXXXX. Only the live server sets it (in .env.prod). When it is
 # empty (local, staging, tests) no analytics code and no cookie notice are rendered. See docs/analytics.md.
 GA_MEASUREMENT_ID = os.environ.get("GA_MEASUREMENT_ID", "").strip()
+# Who to write to about personal data, shown on /privacy/ (set in .env.prod). Empty: the page shows no contact line.
+PRIVACY_CONTACT_EMAIL = os.environ.get("PRIVACY_CONTACT_EMAIL", "").strip()
 PASSWORD_RESET_TIMEOUT = 7 * 24 * 60 * 60  # the "set your password" link in an approval email lasts a week
 
 # Email. Set EMAIL_HOST (and the rest) in the server's .env to send real mail; without EMAIL_HOST,
