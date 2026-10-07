@@ -41,8 +41,17 @@ class KeyTests(SimpleTestCase):   # C3
     def test_the_buttons_show_the_new_keys(self):
         actions = between('<div id="actions">', 'id="submit"')
         self.assertIn('<span id="skip-text">Skip</span><kbd class="kbd" title="Backspace">&#9003;</kbd>', actions)
-        self.assertIn('Back<kbd class="kbd">B</kbd>', actions)
+        self.assertIn('Back<kbd class="kbd">Ctrl</kbd>', actions)
         self.assertNotIn(">Del</kbd>", PAGE)
+
+    def test_a_lone_ctrl_tap_is_back_and_shortcuts_are_untouched(self):
+        # owner: Ctrl for Back. It counts only when let go with no other key pressed meanwhile (Ctrl+C still copies)
+        self.assertIn('ctrlAlone = e.key === "Control" && !e.repeat ? true : (e.key === "Control" && ctrlAlone);', PAGE)
+        self.assertIn('if (e.key !== "Control" || !ctrlAlone) return;', PAGE)
+        keyup = between('document.addEventListener("keyup", (e) => {', "});")
+        self.assertIn("showPrevious()", keyup)
+        self.assertIn("hidePrevious()", keyup)
+        self.assertIn("isTyping(e.target)", keyup)
 
     def test_tab_and_form_fields_keep_their_own_jobs(self):
         handler = between('document.addEventListener("keydown", (e) => {\n    if (e.key === "Escape")', "// the game page opened")
