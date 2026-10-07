@@ -518,7 +518,7 @@
       <div id="focus-line" class="hidden text-[11px] text-gray-500 truncate"></div>
     </div>
     <span id="chip" class="hidden items-center gap-1 px-2.5 h-8 rounded-full bg-gray-100 text-xs font-semibold text-gray-600 tabular-nums" title="Today's beetles and your daily goal">
-      <i class="fi fi-rr-flame" id="chip-flame"></i><span id="chip-text"></span>
+      <i class="fi fi-rr-flame" id="chip-flame"></i><span id="chip-text"></span><i class="fi fi-rr-check hidden" id="chip-check" aria-hidden="true" data-testid="chip-check"></i>
     </span>
     <button type="button" id="progress-btn" class="hidden icon-btn" aria-haspopup="true" aria-expanded="false" aria-controls="progress-pop" title="Your streak and level" data-testid="progress-btn">
       <i class="fi fi-rr-stats text-lg"></i>
@@ -546,7 +546,8 @@
         <button type="button" role="radio" data-play="classify" data-short="Name" data-long="Naming" class="play-opt shrink-0 h-8 px-3 rounded-md whitespace-nowrap">Naming</button>
       </div>
     </div>
-    <button type="button" id="focus-btn" class="inline-flex items-center gap-1 h-9 px-3 max-w-[45%] rounded-lg border border-gray-300 text-xs font-semibold text-gray-700">
+    {# Focus at the mode tabs' 14px, with a 44px touch target (#play-modes) #}
+    <button type="button" id="focus-btn" class="inline-flex items-center gap-1 h-11 px-3 max-w-[45%] rounded-lg border border-gray-300 text-sm font-semibold text-gray-700">
       <i class="fi fi-rr-bullseye" id="focus-icon"></i><span id="focus-label" class="truncate">Focus</span>
     </button>
   </div>
@@ -1300,6 +1301,9 @@
     const lit = chip.goal > 0 && chip.today >= chip.goal;
     if (lit && !el.classList.contains("lit") && el.dataset.seen) { el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); }
     el.classList.toggle("lit", lit);
+    // the goal met: a tick after it, as on the game home ("79 today · goal 20 ✓", #gh-today); in the chip's own ink,
+    // since a lit chip takes the streak's colour
+    $("chip-check").classList.toggle("hidden", !lit);
     el.dataset.seen = "1";
     // the flame takes the streak's colour on the scale (the same as on the game home); lit, the whole chip does
     const step = streakStep(chip.streak || 0);

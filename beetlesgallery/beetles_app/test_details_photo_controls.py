@@ -141,34 +141,30 @@ class DetailsPhotoControlsTests(PageBehaviourCase):
 
     # --- the flag -----------------------------------------------------------------------------------------------------
 
-    def test_the_flag_is_a_round_icon_on_the_photo_and_its_menu_is_not_clipped(self):
+    def test_the_flag_is_an_icon_in_the_toolbar_and_its_menu_is_not_clipped(self):
         page = self.page(self.user)
         elements = Outline(page).elements
         flag, menu = elements["report-roi-btn"], elements["report-roi-menu"]
         self.assertEqual((flag["aria-label"], flag["title"]), ("Flag this",) * 2)
-        self.assertLessEqual({"btn-secondary", "rounded-full", "absolute", "bottom-2", "right-2"}, set(flag["class"].split()))
+        self.assertLessEqual({"h-10", "w-10", "rounded-lg"}, set(flag["class"].split()))   # like the toolbar's others
         start = page.index('id="report-roi-btn"')
         inside = page[page.index(">", start) + 1:page.index("</button>", start)]
         self.assertIn('class="fi fi-rr-flag"', inside)
         self.assertEqual(re.sub(r"<[^>]+>", "", inside).strip(), "")   # the icon only, no word
-        # On the photo, but next to the clickable photo rather than in it: a click on the flag doesn't toggle the box,
-        # and the photo clips (for the box's shading) where the menu must not be.
-        self.assertEqual(flag["inside"][0], "roi-photo")
-        self.assertEqual(menu["inside"][0], "roi-photo")
+        # In the toolbar under the photo (#618 detail-toolbar), not on the photo: nothing covers the specimen, and the
+        # photo clips (for the box's shading) where the menu must not be.
+        self.assertIn("roi-toolbar", flag["inside"])
+        self.assertIn("roi-toolbar", menu["inside"])
+        self.assertNotIn("roi-photo", flag["inside"])
         self.assertIn("overflow-hidden", elements["roi-frame"]["class"].split())
         self.assertNotIn("overflow-hidden", elements["roi-photo"]["class"].split())
         self.assertNotIn("roi-photo", elements["report-roi-status"]["inside"])   # thanks under the photo, always seen
         for word in ("Report this beetle", "<span>Report</span>", "Already reported"):
             self.assertNotIn(word, page)
 
-    def test_the_flag_shows_on_hover_or_focus_always_on_touch_screens_and_never_with_the_whole_photo(self):
+    def test_the_flag_never_shows_with_the_whole_photo(self):
         page = self.page(self.user)
-        for rule in ("#report-roi-btn { opacity: 0; }",
-                     '#roi-photo:hover #report-roi-btn, #roi-photo:focus-within #report-roi-btn, '
-                     '#report-roi-btn[aria-expanded="true"] { opacity: 1; }',
-                     "@media (hover: none) { #report-roi-btn { opacity: 1; } }",
-                     '#roi-photo[data-box="hidden"] #report-roi-btn { display: none; }'):
-            self.assertIn(rule, page)
+        self.assertIn('.roi-figure:has(#roi-photo[data-box="hidden"]) #report-roi-wrap { display: none; }', page)
         self.assertEqual(Outline(page).elements["roi-photo"]["data-box"], "shown")
         self.assertIn("photo.dataset.box = show ? 'shown' : 'hidden';", page)
         self.assertIn("if (!menuOpen()) toggleBoxes();", page)   # with the menu open, a click on the photo only closes it

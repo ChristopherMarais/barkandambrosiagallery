@@ -3,13 +3,10 @@
 
 {% block extra_css %}
 <style>
-  /* The flag on the photo: shown while the pointer is on the photo or the keyboard is in it, always on touch screens
-     (they can't hover), and never while the whole photo shows, since only the beetle in its box is flagged here. */
-  #report-roi-btn { opacity: 0; }
-  #roi-photo:hover #report-roi-btn, #roi-photo:focus-within #report-roi-btn, #report-roi-btn[aria-expanded="true"] { opacity: 1; }
-  @media (hover: none) { #report-roi-btn { opacity: 1; } }
-  #roi-photo[data-box="hidden"] #report-roi-btn { display: none; }
-  #report-roi-btn:disabled { cursor: default; }
+  /* The flag, in the toolbar under the photo (#618 detail-toolbar): never while the whole photo shows, since only the
+     beetle in its box is flagged here. */
+  .roi-figure:has(#roi-photo[data-box="hidden"]) #report-roi-wrap { display: none; }
+  #report-roi-btn:disabled { cursor: default; opacity: 0.5; }
 
   /* Every beetle's box on the photo (#536): a white line with a darker outline; this page's beetle the other way
      round, a dark line with a white outline. The other boxes are links to their beetles' pages; a click on this one
@@ -42,8 +39,10 @@
   <header class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
     <div>
       {# Same title as the gallery card: the linked taxon's name, or "Unidentified" (#112) #}
+      {# #618 detail-ids-first: name and authority first, the authority smaller and grey beside the name (under it when the line is full). #}
       <h1 class="page-title">
-        {{ ref_species.scientificName|default:"Unidentified" }}
+        {{ ref_species.scientificName|default:"Unidentified" }}{% if ref_species.scientificName and ref_species.authority %}
+        <span class="ml-1 text-base font-normal text-gray-500" data-testid="detail-authority">{{ ref_species.authority }}</span>{% endif %}
       </h1>
     </div>
 
@@ -137,22 +136,9 @@
               {% endif %}
             </div>
 
-            {% if beetle.bbox_x is not None %}
-              {# FLAG: sends this beetle to the curators, as Report does in the game. Shown on hover and focus, always on touch screens, only with the box (see the CSS). Its menu opens upward, over the toolbar below. #}
-              <button type="button" id="report-roi-btn" class="btn-secondary absolute bottom-2 right-2 h-9 w-9 p-0 rounded-full text-base shadow-md" aria-haspopup="menu" aria-expanded="false" aria-label="Flag this" title="Flag this" data-testid="report-roi"><i class="fi fi-rr-flag" aria-hidden="true"></i></button>
-              <div id="report-roi-menu" class="hidden absolute bottom-12 right-2 z-20 scroll-mt-24 p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Flag this" data-url="{% url 'report_roi' beetle.id %}">
-                <div class="px-2 py-1 text-xs font-semibold text-gray-500">Flag this</div>
-                {% for value, label in report_reasons %}
-                <button type="button" class="report-roi-reason block w-full text-left px-2 py-2 rounded-lg hover:bg-gray-100" data-reason="{{ value }}" role="menuitem">{{ label }}</button>
-                {% endfor %}
-              </div>
-            {% endif %}
           </div>
-          {% if beetle.bbox_x is not None %}
-            <p id="report-roi-status" class="mt-2 empty:mt-0 text-sm text-gray-600" role="status"></p>
-          {% endif %}
 
-          {# #618 detail-toolbar / detail-roi-pager: a toolbar on the photo's bottom edge, ROI pager left, boxes toggle and full size right. The flag stays on the photo itself, above (it marks this beetle, not the whole photo). #}
+          {# #618 detail-toolbar / detail-roi-pager: a toolbar on the photo's bottom edge, ROI pager left; boxes toggle, full size and flag right. Nothing sits on the photo itself. #}
           {% if photo_boxes or beetle.image_asset %}
           <div id="roi-toolbar" class="mt-2 w-full flex items-center justify-between gap-2 border-t border-text/10 pt-2" data-testid="roi-toolbar">
             <div class="flex items-center gap-1">
@@ -190,8 +176,23 @@
                   <i class="fi fi-rr-expand" aria-hidden="true"></i>
                 </a>
               {% endif %}
+              {% if beetle.bbox_x is not None %}
+                {# FLAG: sends this beetle to the curators, as Report does in the game; only while its box shows (see the CSS). Its menu opens upward, over the photo. #}
+                <div id="report-roi-wrap" class="relative">
+                  <button type="button" id="report-roi-btn" class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" aria-haspopup="menu" aria-expanded="false" aria-label="Flag this" title="Flag this" data-testid="report-roi"><i class="fi fi-rr-flag" aria-hidden="true"></i></button>
+                  <div id="report-roi-menu" class="hidden absolute bottom-12 right-0 z-20 scroll-mt-24 p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Flag this" data-url="{% url 'report_roi' beetle.id %}">
+                    <div class="px-2 py-1 text-xs font-semibold text-gray-500">Flag this</div>
+                    {% for value, label in report_reasons %}
+                    <button type="button" class="report-roi-reason block w-full text-left px-2 py-2 rounded-lg hover:bg-gray-100" data-reason="{{ value }}" role="menuitem">{{ label }}</button>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endif %}
             </div>
           </div>
+          {% endif %}
+          {% if beetle.bbox_x is not None %}
+            <p id="report-roi-status" class="mt-2 empty:mt-0 w-full text-right text-sm text-gray-600" role="status"></p>
           {% endif %}
 
         </figure>
@@ -492,8 +493,8 @@
   });
 
   // The photo: every beetle's box, the other beetles' boxes linking to their pages. A click outside every box (or the
-  // switch in the toolbar) hides the boxes and the haze, the next one shows them again. The flag on the photo's
-  // corner sends this beetle to the curators; it shows only with the boxes (the CSS reads data-box).
+  // switch in the toolbar) hides the boxes and the haze, the next one shows them again. The flag in the
+  // toolbar sends this beetle to the curators; it shows only with the boxes (the CSS reads data-box).
   (function () {
     const photo = document.getElementById('roi-photo');
     const frame = document.getElementById('roi-frame');

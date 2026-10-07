@@ -93,7 +93,7 @@ class HomeAccuracyChartTests(GameCase):
         # a dashed line and an orange bar with no legend (#gh-chart); now both are labelled
         from django.template.loader import render_to_string
         standing = {"players": 3, "bins": [{"count": 1, "height": 50}] * 5, "average": 0.6,
-                    "me": {"accuracy": 0.8, "percentile": 80, "tier": "great", "tier_name": "Great", "bin": 4}}
+                    "me": {"accuracy": 0.8, "percentile": 80, "rank": "Top 20%", "step": "great", "bin": 4}}
         html = render_to_string("beetles/includes/game_accuracy.html", {"standing": standing})
         self.assertIn("average 60%", html)
         self.assertIn('data-testid="accuracy-you-label">You<', html)

@@ -43,12 +43,14 @@ class DataManagementActionsTests(PageBehaviourCase):
         self.assertIn("fi-rr-angle-small-right", page)
         self.assertIn("openModal('modal-upload-new')", page)
 
-    def test_browse_gallery_is_a_text_link_under_the_intro_not_an_action_button(self):
+    def test_downloading_is_a_link_in_the_intro_not_an_action(self):
+        # #618 data-browse: "To download images, use the Image Browser." with the name linked
         page = self.page()
         self.assertNotIn("Browse Gallery to Download", page)
-        self.assertIn("Browse gallery to download", page)
-        link = page[page.index("Browse gallery to download") - 400:page.index("Browse gallery to download")]
-        self.assertIn('<a href="', link)
+        self.assertNotIn("Browse gallery to download", page)
+        intro = page[page.index('data-testid="data-actions-intro"'):page.index('data-testid="data-actions-intro"') + 600]
+        self.assertIn("To download images, use the", intro)
+        self.assertIn(f'<a href="{reverse("beetles_image_browser")}"', intro)
 
     def test_field_definitions_is_a_text_link_after_the_intro_sentence(self):
         page = self.page()

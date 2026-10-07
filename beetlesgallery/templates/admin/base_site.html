@@ -1,5 +1,5 @@
 {% extends "admin/base_site.html" %}
-{% load static %}
+{% load i18n static %}
 
 {# Same timezone cookie as base.html so admin pages also show local time #}
 {% block extrahead %}{{ block.super }}<script src="{% static 'js/timezone_cookie.js' %}"></script>
@@ -31,5 +31,16 @@
   .button:hover, input[type=submit]:hover, input[type=button]:hover {
     background: #111827;
   }
+  /* The beetle mark beside the site name, the same logo as the sidebar in base.html (#618 adm-theme) */
+  #site-name a { display: inline-flex; align-items: center; gap: 0.5rem; }
+  #site-name .site-mark { height: 1.75rem; width: 1.75rem; object-fit: contain; background: #fff; border-radius: 0.375rem; padding: 1px; }   /* a black drawing on white: a white tile on the dark header */
 </style>
+{% endblock %}
+
+{# Django's own branding block (admin/base_site.html, Django 5.2), with the gallery's beetle mark before the name #}
+{% block branding %}
+<div id="site-name"><a href="{% url 'admin:index' %}"><img class="site-mark" src="{% static 'img/IMG_5557.PNG' %}" alt="" data-testid="admin-beetle-mark">{{ site_header|default:_('Django administration') }}</a></div>
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
 {% endblock %}

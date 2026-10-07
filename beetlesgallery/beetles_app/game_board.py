@@ -15,7 +15,7 @@ from django.db.models.functions import TruncWeek
 from django.utils import timezone
 
 from . import game, game_levels, game_rewards, game_trust
-from .game_scale import WORDS
+from .game_scale import value_step
 from .models import AnswerPoints, GameAnswer, PlayerScore, PlayerSkill, SpeciesDiscovery
 
 SORTS = {"score": "Score", "identification": "Naming accuracy", "similarity": "Similarity accuracy",
@@ -244,16 +244,13 @@ def _player_weeks(player_id):
     return {"wins": sum(1 for w in weeks if w["place"] == 1), "podiums": len(weeks), "weeks": weeks[:10]}
 
 
-# Accuracy tiers by percentile among rated players, on the site's one scale (game_scale.py, includes/game_accuracy.html)
-ACCURACY_TIERS = [   # (lowest percentile, step, word)
-    (lo, step, WORDS[step]) for lo, step in ((0, "fair"), (25, "decent"), (50, "good"), (75, "great"), (90, "excellent"))
-]
-
-
 def accuracy_standing(player, bins=10):
     """
     Where a player's accuracy sits among everyone's: a histogram of players' accuracy (players with enough judged
-    answers only), the average, the player's percentile and their tier. ``me`` is None until they have enough.
+    answers only), the average, the player's percentile and their rank. ``me`` is None until they have enough.
+    One number, one colour (#site-meaning-85): ``step`` is the accuracy's own step on the site's scale
+    (game_scale.value_step), the colour it has everywhere else; the comparison with other players is only a grey
+    rank ("Top 20%"), never a colour.
     """
     min_judged = game.game_setting("GAME_MIN_JUDGED_FOR_ACCURACY", 10)
     rows = list(PlayerScore.objects.filter(judged__gte=min_judged, accuracy__isnull=False).values_list("player_id", "accuracy"))
@@ -269,10 +266,11 @@ def accuracy_standing(player, bins=10):
     if mine is not None and len(rows) >= 2:
         below = sum(1 for _, a in rows if a < mine) + 0.5 * (sum(1 for _, a in rows if a == mine) - 1)
         pct = round(100 * below / (len(rows) - 1))
-        key, name = next((k, n) for lo, k, n in reversed(ACCURACY_TIERS) if pct >= lo)
-        out["me"] = {"accuracy": mine, "percentile": pct, "tier": key, "tier_name": name, "bin": min(bins - 1, int(mine * bins))}
+        out["me"] = {"accuracy": mine, "percentile": pct, "rank": f"Top {max(1, 100 - pct)}%", "step": value_step(mine),
+                     "bin": min(bins - 1, int(mine * bins))}
     elif mine is not None:
-        out["me"] = {"accuracy": mine, "percentile": None, "tier": "none", "tier_name": WORDS["none"], "bin": min(bins - 1, int(mine * bins))}
+        out["me"] = {"accuracy": mine, "percentile": None, "rank": None, "step": value_step(mine),
+                     "bin": min(bins - 1, int(mine * bins))}
     else:
         judged = PlayerScore.objects.filter(player=player).values_list("judged", flat=True).first() or 0
         out["needed"] = max(0, min_judged - judged)
