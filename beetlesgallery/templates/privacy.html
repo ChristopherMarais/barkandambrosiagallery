@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Privacy notice | Bark & Ambrosia Beetle Gallery{% endblock %}
+
+{% block content %}
+<section class="max-w-2xl space-y-6" data-testid="privacy-notice">
+  <h1 class="page-title">Privacy notice</h1>
+
+  <div class="space-y-2">
+    <h2 class="font-bold">Who we are</h2>
+    <p>The Bark and Ambrosia Gallery is the owner of this website. It is responsible for your personal data here (the
+      "controller").{% if privacy_contact_email %} To ask about your data, write to
+      <a class="underline" href="mailto:{{ privacy_contact_email }}">{{ privacy_contact_email }}</a>.{% endif %}</p>
+  </div>
+
+  <div class="space-y-2">
+    <h2 class="font-bold">What we collect</h2>
+    <ul class="list-disc pl-5 space-y-1">
+      <li><strong>Accounts:</strong> the username, email address and password you give when you sign up, and what you do
+        in the gallery and the game under your account. This stays on our server. We do not send it to Google.</li>
+      <li><strong>Analytics, only if you accept:</strong> the pages you visit (without any IDs or search words), when a game
+        starts, how many answers a round had, and the steps of signing up. Google Analytics also records your IP address,
+        browser and device, and an approximate location.</li>
+      <li><strong>Your cookie choice:</strong> one essential cookie that remembers Accept or Reject for a year.</li>
+    </ul>
+  </div>
+
+  <div class="space-y-2">
+    <h2 class="font-bold">Google Analytics</h2>
+    <p>Google Analytics is run by Google. It sets cookies named <code>_ga</code> and <code>_ga_</code> followed by an ID, so
+      it can tell visits apart. Google processes the analytics data for us as our processor, under Google's data processing
+      terms. Google may process it in other countries, including the United States, with the safeguards those terms provide.
+      Google does not get your name, your account or anything you type into the site from us.</p>
+  </div>
+
+  <div class="space-y-2">
+    <h2 class="font-bold">How long we keep it</h2>
+    <ul class="list-disc pl-5 space-y-1">
+      <li>Analytics data: 14 months in Google Analytics.</li>
+      <li>Your cookie choice: one year, then you are asked again.</li>
+      <li>Accounts: while the account exists. Ask us to delete it.</li>
+    </ul>
+  </div>
+
+  <div class="space-y-2">
+    <h2 class="font-bold">Your choice, and how to change it</h2>
+    <p>We set the analytics cookie only if you click <strong>Accept</strong>. You can click <strong>Reject</strong> instead,
+      and you can change your mind at any time: use <strong>Cookie settings</strong> at the bottom of any page. Rejecting
+      stops analytics straight away and removes the Google Analytics cookies from your browser.</p>
+  </div>
+
+  <div class="space-y-2">
+    <h2 class="font-bold">Your rights</h2>
+    <p>You can ask us for a copy of your data, to correct it, to delete it, or to limit how we use it. You can object to
+      analytics, and withdraw your consent, at any time, as described above.</p>
+    <p>If you are not happy with how we handle your data, you can complain to your national data protection authority. In
+      the UK that is the Information Commissioner's Office (ico.org.uk).</p>
+  </div>
+</section>
+{% endblock %}

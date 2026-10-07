@@ -19,6 +19,7 @@ from beetlesgallery.beetles_app import interaction_proposals_views
 from beetlesgallery.beetles_app import interaction_upload_views
 from beetlesgallery.beetles_app import interaction_downloads
 from beetlesgallery.beetles_app import access_views
+from beetlesgallery.beetles_app import privacy_views
 from beetlesgallery.beetles_app.views import LoginViewWithRedirectMessage, PostOnlyLogoutView
 
 urlpatterns = [
@@ -43,6 +44,7 @@ urlpatterns = [
 
     # --- Pages ---
     # 1. Root URL -> Landing View (Sidebar "image_browser" links here)
+    path('privacy/', privacy_views.privacy, name='privacy'),
     path('', beetles_views.landing, name='image_browser'),
     
     # 2. /beetles/ -> Gallery View (Sidebar "Beetles" links here)

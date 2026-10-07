@@ -36,7 +36,13 @@ Never put the Measurement ID in git. It goes only in the server's `.env.prod`.
 15. Read the notice (it appears at the bottom of the site in a private window):
     > Can we use Google Analytics to count page visits? We never send it your name or your account.
     > Your choice is remembered for a year.
-    Buttons: **Accept** and **No thanks**. If you want different words, tell Claude the new text. Nothing else changes.
+    Buttons: **Accept** and **Reject** (same size and style, on purpose). If you want different words, tell Claude the new text.
+    The exact text is in `docs/analytics.md` under "Consent".
+15a. Check the privacy notice at `/privacy/` and fill in the two facts only you know: the legal name of the controller
+    (it says "The Bark and Ambrosia Gallery") and, in `.env.prod`, add `PRIVACY_CONTACT_EMAIL=you@example.org` (same
+    way as step 11). Restart the web container (step 13) so the contact line appears.
+15b. In GA4, **Admin > Data collection > Data retention**, set **Event data retention** to **14 months**. The privacy
+    notice says 14 months. Then click **Save**.
 
 ## D. Check that the numbers arrive
 
@@ -68,5 +74,5 @@ Never put the Measurement ID in git. It goes only in the server's `.env.prod`.
 
 ## Notes
 
-- Visitors who click **No thanks** are not counted; the choice is kept on their computer for a year.
+- Visitors who click **Reject** are not counted; the choice is kept on their computer for a year.
 - To stop analytics, delete the `GA_MEASUREMENT_ID` line from `.env.prod` and restart the web container (step 13).

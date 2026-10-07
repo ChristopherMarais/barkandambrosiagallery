@@ -14,16 +14,32 @@ Owner steps (create the account, put the ID on the server): `docs/owner-setup-an
 - Code: `beetlesgallery/beetles_app/analytics.py` (the context processor), `templates/base.html` (the loader tag and the
   notice), `static/js/analytics.js` (consent, the page view and the named events).
 
-## Consent (Consent Mode v2)
+## Consent (EU: ePrivacy/PECR and GDPR)
 
-- Before anything else, the script sets `analytics_storage`, `ad_storage`, `ad_user_data` and `ad_personalization` to
-  **denied**. gtag.js is not even downloaded until the visitor accepts.
-- The notice shows once: on the first visit, until **Accept** or **No thanks**. The choice is kept in the first-party cookie
-  `ga_consent` for 365 days (`granted` or `denied`). Changing it means clearing that cookie.
+Nothing non-essential runs before a clear choice.
+
+- **Default is denied.** Before anything else, the script sets `analytics_storage`, `ad_storage`, `ad_user_data` and
+  `ad_personalization` to denied (Consent Mode v2). The Google script (gtag.js) is not downloaded until **Accept**.
+- **The notice** (`templates/base.html`, `#consent-banner`) shows on public pages until the visitor chooses. It is a solid
+  white panel with a grey border, pinned to the bottom above the content. **Accept** and **Reject** are the same size and
+  style (both `btn-secondary`, one grid cell each), and no box is pre-ticked. On the game page the game screen stops above
+  the panel (`--consent-h`), so its buttons stay usable on a phone.
+- **Withdrawing** is as easy as giving: **Cookie settings** in the footer (every page) reopens the notice. **Reject**
+  stops analytics straight away (consent updated to denied) and deletes the `_ga` cookies from the browser.
+- **The choice** is stored in `ga_consent` (`granted` or `denied`) for 365 days, and only once the visitor has chosen.
+  It is an essential cookie: it only remembers the choice; nothing tracks with it.
+- **Do Not Track is not used.** The notice asks, so the choice stays the visitor's. Honouring a browser flag would skip
+  the question silently, and would not replace consent under the EU rules.
+- **Privacy notice** at `/privacy/` (`templates/privacy.html`), linked from the notice and the footer. It names the
+  controller, what is collected, Google as processor, retention, rights and how to withdraw. The contact address comes
+  from `PRIVACY_CONTACT_EMAIL` (set in `.env.prod`); the line is left out when it is empty.
 - Current wording (for the owner to approve):
-  > Can we use Google Analytics to count page visits? We never send it your name or your account.
-  > Your choice is remembered for a year.
-  Buttons: **Accept**, **No thanks** (both the quiet `btn-secondary` style, so neither looks like the default).
+  > **May we count your visits?**
+  > We would like to set an analytics cookie from Google Analytics, which Google runs for us. It counts page visits and
+  > which games are played, so we can see what to improve. It is set only if you accept.
+  > Your choice is kept in an essential cookie for a year. You can change it at any time with **Cookie settings** at the
+  > bottom of a page. Privacy notice
+  Buttons: **Accept**, **Reject**.
 
 ## What is sent to Google
 
