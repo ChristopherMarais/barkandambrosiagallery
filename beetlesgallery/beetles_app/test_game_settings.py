@@ -121,4 +121,5 @@ class OneLinkTests(GameCase):
                 self.assertNotIn("'game_staff_unlocks'", source)
 
     def test_the_scoring_page_goes_back_to_the_settings(self):
-        self.assertIn("{% url 'game_settings' %}", template("game_scoring.html"))
+        # the shared back link (site-back, #618): {% url 'game_settings' as back_url %} + back_link.html
+        self.assertIn("{% url 'game_settings' as back_url %}", template("game_scoring.html"))

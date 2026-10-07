@@ -48,7 +48,7 @@
                         <a href="{{ ibbi_docs_url }}" target="_blank" rel="noopener" class="text-sm text-gray-600 hover:text-gray-800 underline" data-testid="ibbi-link">Compare models</a>
                     </div>
                     <div class="relative">
-                        <select name="architecture" id="modelSelect" form="classifyForm" class="block w-full pl-3 pr-8 py-2.5 text-sm border-gray-300 focus:outline-hidden focus:ring-gray-500 focus:border-gray-500 rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer appearance-none" data-testid="model-select">
+                        <select name="architecture" id="modelSelect" form="classifyForm" class="block w-full pl-3 pr-8 py-2.5 text-sm border-gray-300 focus:border-gray-500 rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer appearance-none" data-testid="model-select">
                             {% ibbi_model_options %}
                         </select>
                         <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
@@ -141,7 +141,7 @@
                     <label for="confRange" class="shrink-0 text-xs font-bold text-gray-500 uppercase tracking-wide">Confidence</label>
                     <input type="range" id="confRange" min="{{ lowest_threshold|stringformat:'s' }}" max="0.99" step="0.01" value="{{ keep_threshold|stringformat:'s' }}"
                         aria-describedby="confCount" data-testid="confidence-slider"
-                        class="order-last sm:order-none w-full sm:w-auto sm:flex-1 min-w-0 h-8 cursor-pointer accent-gray-600 rounded-sm focus:outline-hidden focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2">
+                        class="order-last sm:order-none w-full sm:w-auto sm:flex-1 min-w-0 h-8 cursor-pointer accent-gray-600 rounded-sm">
                     <span id="confValue" class="ml-auto sm:ml-0 w-10 shrink-0 text-right text-sm font-mono tabular-nums text-gray-700" aria-hidden="true">{% widthratio keep_threshold 1 100 %}%</span>
                 </div>
                 <p id="confCount" class="text-xs text-gray-600" role="status" aria-live="polite" data-testid="confidence-count"></p>
@@ -967,7 +967,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const btn = document.createElement('button');
                     btn.type = 'button';
                     btn.dataset.index = i;
-                    btn.className = "flex items-center gap-2 px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-medium transition-colors border border-transparent focus:border-gray-500 focus:ring-1 focus:ring-gray-500";
+                    btn.className = "flex items-center gap-2 px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-medium transition-colors border border-transparent focus:border-gray-500 ";
                     const color = getBoxColor(i);
                     btn.innerHTML = `<span class="w-2.5 h-2.5 rounded-full" style="background-color:${color}"></span> ${det.label} <span class="text-gray-400">${Math.round(confidenceOf(det)*100)}%</span>`;
                     btn.onclick = () => {

@@ -7,7 +7,7 @@
 
   <div class="flex items-center justify-between gap-3 mb-5">
     <h1 class="page-title"><span class="inline-flex items-center gap-2">{{ game_name }}</span></h1>
-    <a href="{% url 'game_how' %}" class="text-sm text-gray-500 underline hover:text-gray-900">How it works</a>
+    <a href="{% url 'game_how' %}" class="text-sm text-gray-500 underline hover:text-gray-900 hit-area">How it works</a>
   </div>
 
   {% if last_session %}
@@ -57,10 +57,10 @@
 
   <!-- Each opens History for those days (#574) -->
   <div class="grid grid-cols-2 gap-3 mb-5">
-    <a href="{% url 'game_history' %}?day=streak" class="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex items-center gap-2 text-sm hover:border-gray-300 hover:bg-gray-100 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900" data-testid="streak-card">
+    <a href="{% url 'game_history' %}?day=streak" class="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex items-center gap-2 text-sm hover:border-gray-300 hover:bg-gray-100" data-testid="streak-card">
       {% include "beetles/includes/game_streak.html" with days=rewards.streak alive=rewards.goal_met %}
     </a>
-    <a href="{% url 'game_history' %}?day=today" class="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex items-center gap-2 hover:border-gray-300 hover:bg-gray-100 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900" title="Your daily goal adapts to how much you play, like a step goal: it rises when you beat it and eases when you don't (never below {{ goal_floor }})." data-testid="daily-goal">
+    <a href="{% url 'game_history' %}?day=today" class="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex items-center gap-2 hover:border-gray-300 hover:bg-gray-100" title="Your daily goal adapts to how much you play, like a step goal: it rises when you beat it and eases when you don't (never below {{ goal_floor }})." data-testid="daily-goal">
       <i class="fi fi-rr-bullseye-arrow {% if rewards.goal_met %}text-green-600{% else %}text-gray-400{% endif %}"></i>
       {# "79 today · goal 20", not "79/20 today" (reads like a fraction over 100%, #gh-today) #}
       <span class="text-sm font-semibold text-gray-900">{{ rewards.today }} today &middot; goal {{ rewards.goal }}{% if rewards.goal_met %} <i class="fi fi-rr-check text-green-600"></i>{% endif %}</span>
@@ -75,7 +75,7 @@
   <section class="mb-5" data-testid="checked-recap">
     <div class="flex items-baseline justify-between mb-2">
       <h2 class="text-lg font-semibold text-gray-900">Reviewed by curators{% if checked_new > checked|length %} <span class="text-sm font-normal text-gray-400">({{ checked_new }})</span>{% endif %}</h2>
-      <a href="{% url 'game_history' %}?tab=checked" class="text-sm underline text-gray-600 hover:text-gray-900">All</a>
+      <a href="{% url 'game_history' %}?tab=checked" class="text-sm underline text-gray-600 hover:text-gray-900 hit-area">All</a>
     </div>
     <p class="mb-2 text-sm text-gray-600" data-testid="checked-since">Since your last visit: {{ checked_new|digit_groups }} answer{{ checked_new|pluralize }} checked, {% if checked_change > 0 %}+{% endif %}{{ checked_change|floatformat:"-1" }} point{{ checked_change|pluralize }}.</p>
     {% include "beetles/includes/game_checked_list.html" %}
@@ -102,7 +102,7 @@
   <div class="mb-6" data-testid="home-board">
     <div class="flex items-baseline justify-between mb-2">
       <h2 class="text-lg font-semibold text-gray-900">Top players this week</h2>
-      <a href="{% url 'game_leaderboard' %}" class="text-sm underline text-gray-600 hover:text-gray-900">All</a>
+      <a href="{% url 'game_leaderboard' %}" class="text-sm underline text-gray-600 hover:text-gray-900 hit-area">All</a>
     </div>
     {% if board %}
     {% include "beetles/includes/game_board_table.html" with rows=board %}
@@ -140,7 +140,7 @@
       <p class="mt-2 text-sm text-gray-600">A curator confirmed your name for a species the gallery had never seen:</p>
       <ul class="mt-3 space-y-1 text-gray-900">{% for d in discoveries %}<li><em>{{ d.genus }} {{ d.species }}</em></li>{% endfor %}</ul>
       <p class="mt-3 text-xs text-gray-500">New badge: <strong>New species finder</strong></p>
-      <button type="button" onclick="document.getElementById('discovery').remove()" class="btn-main mt-5 w-full px-6 py-3 text-base" autofocus>Brilliant</button>
+      <button type="button" onclick="document.getElementById('discovery').remove()" class="btn-primary mt-5 w-full px-6 py-3 text-base" autofocus>Brilliant</button>
     </div>
   </div>
   {% endif %}

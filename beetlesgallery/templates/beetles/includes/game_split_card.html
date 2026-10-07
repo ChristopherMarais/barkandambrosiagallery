@@ -6,7 +6,7 @@ with ``link`` the whole card opens History for that game (#574). The card is a d
 over it, not an <a>, because the "Play" link inside it can't be nested in another link (browsers split the card).
 {% endcomment %}
 <div class="relative p-3 bg-gray-50 border border-gray-100 rounded-2xl{% if link %} hover:border-gray-300 hover:bg-gray-100{% endif %}"{% if link %} data-testid="game-card-{{ key }}"{% endif %}>
-    {% if link %}<a href="{% url 'game_history' %}?game={{ key }}" class="absolute inset-0 rounded-2xl focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900" aria-label="{{ key|game_label }}: history"></a>{% endif %}
+    {% if link %}<a href="{% url 'game_history' %}?game={{ key }}" class="absolute inset-0 rounded-2xl" aria-label="{{ key|game_label }}: history"></a>{% endif %}
     <div class="flex items-center gap-1.5 text-xs uppercase tracking-wider text-gray-500 font-semibold"><i class="fi {{ icon }} flex"></i>{{ key|game_label }}</div>
     {% if s.locked %}
     <div class="mt-1 flex items-center gap-1 text-sm font-semibold text-gray-500" data-testid="game-card-locked"><i class="fi fi-rr-lock flex"></i>Locked</div>

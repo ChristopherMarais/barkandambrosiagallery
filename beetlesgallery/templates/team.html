@@ -9,7 +9,7 @@ The team, the contributing institutions, the funders and the GitHub Discussions 
 one screen (#618 home-team). Each part is its own section with a heading and one line saying what it is.
 {% endcomment %}
 <div class="max-w-5xl mx-auto">
-  <a href="{% url 'image_browser' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Home</a>
+  {% url 'image_browser' as back_url %}{% include "beetles/includes/back_link.html" with url=back_url label="Home" %}
   <h1 class="page-title">Team and partners</h1>
   <p class="page-intro max-w-2xl">The gallery is built by the University of Florida Forest Entomology Lab, with images from museums and collections around the world.</p>
 

@@ -128,7 +128,8 @@ class CreateUserNamingTests(PageBehaviourCase):
 
     def test_the_focus_ring_is_grey_everywhere_the_shared_input_is_used(self):
         classes = TAILWIND_INPUT.split()
-        self.assertIn("focus:ring-gray-400", classes)
+        # the site-wide :focus-visible ring (site-focus, #618) is the only one: no ring or outline class of its own
+        self.assertFalse([c for c in classes if "ring" in c or "outline" in c], classes)
         for gone in ("focus:ring-amber-500", "focus:ring-orange-500", "focus:border-amber-500", "focus:border-orange-500"):
             self.assertNotIn(gone, classes)
 

@@ -46,7 +46,8 @@ class HomeLinksTests(HistoryFilterCase):
                 self.assertIn(f'href="{reverse("game_history")}?game={key}"', page)
                 self.assertIn(f'data-testid="game-card-{key}"', page)
                 self.assertIn(game_levels.GAME_NAMES[key], page)
-        self.assertIn("focus-visible:outline", page)   # a clear focus ring on the cards
+        # the cards keep the site-wide focus ring (site-focus, #618), not a darker one of their own
+        self.assertNotIn("focus-visible:outline-gray-900", page)
 
     def test_the_streak_and_today_cards_open_their_days(self):
         page = self.client.get(reverse("game_home")).content.decode()

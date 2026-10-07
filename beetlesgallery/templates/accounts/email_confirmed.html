@@ -11,6 +11,6 @@
   <h1 class="page-title">This link has expired</h1>
   <p class="text-gray-600 mb-6">The link is old or was already used for a request that has been decided. You can <a href="{% url 'signup' %}" class="underline hover:text-black">sign up again</a>.</p>
   {% endif %}
-  <a href="{% url 'image_browser' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Back to the gallery</a>
+  {% url 'image_browser' as back_url %}{% include "beetles/includes/back_link.html" with url=back_url label="Back to the gallery" %}
 </section>
 {% endblock %}

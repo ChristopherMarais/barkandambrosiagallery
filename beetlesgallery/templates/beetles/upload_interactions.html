@@ -6,7 +6,7 @@
 
 {% block content %}
 <section class="max-w-3xl">
-  <a href="{% url 'interactions_preview' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Ecological Interactions</a>
+  {% url 'interactions_preview' as back_url %}{% include "beetles/includes/back_link.html" with url=back_url label="Ecological Interactions" %}
   <h1 class="page-title">Upload or update interactions</h1>
   <p class="text-gray-600 mb-6">
     Add interactions, or correct any of them (including the published dataset), with a CSV, the way image metadata is uploaded and updated.
@@ -78,11 +78,7 @@
 
   <form method="post" enctype="multipart/form-data" class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-xs space-y-5">
     {% csrf_token %}
-    <div>
-      <label for="csv_file" class="block text-sm font-semibold text-gray-700 mb-2">Interactions file (.csv, up to {{ max_mb }} MB)</label>
-      <input id="csv_file" name="csv_file" type="file" accept=".csv,text/csv" required
-        class="block w-full text-sm text-gray-700 file:mr-4 file:rounded-lg file:border file:border-gray-300 file:bg-white file:px-4 file:py-2 file:font-semibold hover:file:bg-gray-50">
-    </div>
+    {% include "beetles/includes/drop_zone.html" with input_id="csv_file" label="Interactions file" type_label=".csv" max_mb=max_mb accept=".csv,text/csv" required=True small=True %}
     <label class="flex items-center gap-2 text-sm text-gray-700">
       <input type="checkbox" name="dry_run" class="rounded-sm border-gray-300"> Check the file only, don't save anything
     </label>

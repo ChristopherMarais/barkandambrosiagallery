@@ -13,7 +13,7 @@ The image browser's pager: always shows &lsaquo; and &rsaquo;, disabled (not rem
 
   <div class="flex items-center gap-2 text-sm text-text/70">
     <span>Page</span>
-    <select onchange="goToPage(this.value)" class="page-select rounded-sm border border-text/20 bg-background py-1.5 px-2 text-sm focus:ring-gray-400 cursor-pointer">
+    <select onchange="goToPage(this.value)" class="page-select rounded-sm border border-text/20 bg-background py-1.5 px-2 text-sm cursor-pointer">
       {{ page_options_html }}
     </select>
     <span>of {{ paginator.num_pages|digit_groups_text }}</span>
