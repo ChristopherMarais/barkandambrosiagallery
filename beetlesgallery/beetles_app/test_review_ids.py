@@ -4,6 +4,9 @@ dots (green validated, blue AI ID, purple Player ID, glowing purple when a prove
 ID type after the name; the AI and Player confidences sit in two columns, each only where that source exists; and the
 confetti takes the colour of the ID type that gave the points.
 """
+from pathlib import Path
+
+from django.conf import settings
 from django.urls import reverse
 
 from beetlesgallery.beetles_app import game_answer_review
@@ -123,10 +126,19 @@ class ConfettiColourTests(ReviewCase):
 
     def test_purple_for_player_id_and_the_expert_glow(self):
         self.assertEqual(self.celebrate(players_agree=True)["colour"], "purple")
-        self.assertEqual(self.celebrate(ai_agrees=True, players_agree=True)["colour"], "purple")
         expert = self.celebrate(players_agree=True, expert_agrees=True)
         self.assertEqual((expert["kind"], expert["colour"]), ("expert", "purple"))
         self.assertEqual(self.celebrate(earned=0.3)["colour"], "purple")   # points from the players' vote, very few
+
+    def test_both_colours_when_ibbi_ai_and_the_players_agree_on_an_open_beetle(self):
+        found = self.celebrate(ai_agrees=True, players_agree=True)
+        self.assertEqual((found["kind"], found["colour"]), ("ai_players", "blue purple"))
+        self.assertEqual(self.celebrate(ai_agrees=True, players_agree=True, expert_agrees=True)["colour"], "blue purple")
+        self.assertEqual(self.celebrate("truth", complete=True, ai_agrees=True, players_agree=True)["colour"], "green")
+
+    def test_the_script_mixes_both_colours_in_one_burst(self):
+        js = (Path(settings.BASE_DIR) / "beetlesgallery" / "static" / "js" / "beetle_confetti.js").read_text()
+        self.assertIn('const tint = colour ? String(colour).split(" ").flatMap((c) => COLOURS[c] || []) : [];', js)
 
     def test_the_burst_sizes_are_unchanged(self):
         self.assertEqual(self.celebrate("truth", complete=True)["size"], game_answer_review.confetti_size(10.0))

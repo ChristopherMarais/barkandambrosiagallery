@@ -9,8 +9,8 @@
  *   "ai", "players", "ai_players"  a beetle nobody checked yet: the shape of the points' ID type
  *   "expert"            glowing beetles: a Naming expert among the players said the same
  * The colour comes from the fifth argument, ``colour`` (#615): "green" (Validated ID), "blue" (AI ID) or
- * "purple" (Player ID), the ID type that gave the points (game_answer_review._celebrate). Without one, the kind's own
- * colour is used.
+ * "purple" (Player ID), the ID type that gave the points (game_answer_review._celebrate). "blue purple" mixes both in
+ * one burst, when IBBI-AI and the players agree. Without one, the kind's own colour is used.
  *   "plain"             ordinary paper confetti
  *   "level"             the biggest: gold and brown beetles from both sides and a centre burst with paper; the
  *                       fourth argument, the new level's colour on the scale, adds a sprinkle of beetles in it
@@ -262,7 +262,8 @@
     if (!canvas || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     kind = PALETTES[kind] ? kind : (kind === "beetles" ? "validated" : "plain");
     accent = /^#[0-9a-f]{6}$/i.test(accent || "") ? accent : null;
-    const tint = COLOURS[colour] || null;
+    const tint = colour ? String(colour).split(" ").flatMap((c) => COLOURS[c] || []) : [];
+    const tinted = tint.length ? tint : null;
     size = Math.max(0.2, Math.min(1, Number(size) || 1));
     let scene = scenes.get(canvas);
     if (!scene) {
@@ -272,7 +273,7 @@
     fit(scene);
     const now = performance.now();
     waves(kind, size, accent).forEach(([k, count, from, delay, life]) => {
-      for (let i = 0; i < count; i++) scene.pieces.push(piece(k, size, from, now + delay, life, k === "accent" ? [accent] : k === "plain" ? null : tint));
+      for (let i = 0; i < count; i++) scene.pieces.push(piece(k, size, from, now + delay, life, k === "accent" ? [accent] : k === "plain" ? null : tinted));
     });
     // Over the cap: the oldest pieces (the front of the list) fade out within a quarter second.
     const extra = scene.pieces.length - maxPieces();

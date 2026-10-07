@@ -718,7 +718,14 @@ def _celebrate(out, facts):
         kind = "ai_players" if ai and players else "ai" if ai else "players"
     else:   # points on a beetle nobody has validated come from the players' vote
         kind = "pop" if size <= POP_SIZE else "players"
-    return {"kind": kind, "size": size, "colour": "green" if basis == "truth" else "blue" if kind == "ai" else "purple"}
+    # one colour per ID type that gave the points; IBBI-AI and the players agreeing on an open beetle: both (#615)
+    if basis == "truth":
+        colour = "green"
+    elif ai and players:
+        colour = "blue purple"
+    else:
+        colour = "blue" if kind == "ai" else "purple"
+    return {"kind": kind, "size": size, "colour": colour}
 
 
 def _agreed(answer, row, basis, facts):
