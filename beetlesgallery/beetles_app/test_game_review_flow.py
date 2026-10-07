@@ -74,7 +74,7 @@ class PageTests(GameCase):
         page = self.page()
         self.assertIn('id="review"', page)
         self.assertIn("markTiles(cells, review);", page)   # a grid tile by tile since #602 (test_grid_lay_and_reveal)
-        self.assertIn("confetti(review.celebrate.kind, review.celebrate.size)", page)
+        self.assertIn("confetti(review.celebrate.kind, review.celebrate.size, review.celebrate.colour)", page)   # round 5: colour too
         for gone in ('id="community"', "showCommunity", "Last beetle", "revealOdd", "revealSelect", "celebrate_size"):
             self.assertNotIn(gone, page)
 
