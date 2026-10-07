@@ -15,11 +15,14 @@
     <a href="{% url 'interaction_review' %}" class="underline hover:text-black">review page</a> instead.
   </p>
 
-  <div class="mb-6 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
-    In the database: <strong>{{ counts.dataset|digit_groups }}</strong> from the published dataset,
-    <strong>{{ counts.proposal|digit_groups }}</strong> accepted from proposals, <strong>{{ counts.upload|digit_groups }}</strong> uploaded.
+  <div class="mb-6 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+    <div class="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-sm text-gray-700" data-testid="interaction-counts">
+      <span>Published <strong class="font-semibold text-gray-900">{{ counts.dataset|digit_groups }}</strong></span>
+      <span>Accepted <strong class="font-semibold text-gray-900">{{ counts.proposal|digit_groups }}</strong></span>
+      <span>Uploaded <strong class="font-semibold text-gray-900">{{ counts.upload|digit_groups }}</strong></span>
+    </div>
     {% if not counts.dataset %}
-    <p class="mt-2 text-amber-800">The published dataset is not loaded into the database, so the interactions page is empty of it and the download has none of it.
+    <p class="mt-2 text-sm text-amber-800">The published dataset is not loaded into the database, so the interactions page is empty of it and the download has none of it.
       It is loaded on every deploy; to load it now run <span class="font-mono">manage.py import_pathogen_interactions</span> (safe to run again, it never changes a row that is already there).</p>
     {% endif %}
   </div>
@@ -45,20 +48,32 @@
   </div>
   {% endif %}
 
-  <div class="mb-6 flex flex-wrap gap-3">
-    <a href="{% url 'interactions_export' %}"
-      class="inline-flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-3 text-base font-bold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
-      <i class="fi fi-rr-download"></i><span>Download current interactions (CSV)</span>
-    </a>
-    <a href="{% static 'downloads/interactions_upload_template.csv' %}" download
-      class="inline-flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-3 text-base font-semibold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
-      <i class="fi fi-rr-document"></i><span>Blank template</span>
-    </a>
-    <a href="{% url 'interactions_initial_file' %}"
-      class="inline-flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-3 text-base font-semibold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition"
-      title="The published v1.0 dataset as an upload file, to start an empty database by hand">
-      <i class="fi fi-rr-database"></i><span>Initial file (published v1.0)</span>
-    </a>
+  <div class="mb-6 rounded-xl border border-gray-200 bg-white overflow-hidden">
+    <h2 class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-500">Downloads</h2>
+    <div class="divide-y divide-gray-100">
+      <a href="{% url 'interactions_export' %}" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition">
+        <i class="fi fi-rr-download text-lg text-gray-400 shrink-0"></i>
+        <div>
+          <div class="text-sm font-semibold text-gray-900">Current interactions (CSV)</div>
+          <div class="text-xs text-gray-500">Everything now in the database, ready to edit and upload again.</div>
+        </div>
+      </a>
+      <a href="{% static 'downloads/interactions_upload_template.csv' %}" download class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition">
+        <i class="fi fi-rr-document text-lg text-gray-400 shrink-0"></i>
+        <div>
+          <div class="text-sm font-semibold text-gray-900">Blank template</div>
+          <div class="text-xs text-gray-500">Just the column headers, to fill in from scratch.</div>
+        </div>
+      </a>
+      <a href="{% url 'interactions_initial_file' %}" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition"
+        title="The published v1.0 dataset as an upload file, to start an empty database by hand">
+        <i class="fi fi-rr-database text-lg text-gray-400 shrink-0"></i>
+        <div>
+          <div class="text-sm font-semibold text-gray-900">Initial file (v1.0)</div>
+          <div class="text-xs text-gray-500">The published dataset as an upload file, to start an empty database by hand.</div>
+        </div>
+      </a>
+    </div>
   </div>
 
   <form method="post" enctype="multipart/form-data" class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-xs space-y-5">
@@ -71,8 +86,7 @@
     <label class="flex items-center gap-2 text-sm text-gray-700">
       <input type="checkbox" name="dry_run" class="rounded-sm border-gray-300"> Check the file only, don't save anything
     </label>
-    <button type="submit"
-      class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-3 text-base font-bold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
+    <button type="submit" class="btn-primary px-6 py-3 text-base">
       <i class="fi fi-rr-upload"></i><span>Upload</span>
     </button>
   </form>
@@ -80,13 +94,13 @@
   <h2 class="text-xl font-semibold text-gray-900 mb-3">How rows are read</h2>
   <div class="rounded-xl border border-gray-200 bg-white overflow-x-auto">
     <table class="w-full text-sm">
-      <tbody class="divide-y divide-gray-100">
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">record_id</td><td class="px-4 py-2 text-gray-600"><strong>Blank or NEW</strong> adds an interaction. <strong>An existing record_id</strong> updates it. Required column.</td></tr>
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">records_id</td><td class="px-4 py-2 text-gray-600">Optional, new rows only: the dataset's own number for a record (1&ndash;1015 in the published v1.0). Leave it blank for your own rows. It cannot be changed afterwards.</td></tr>
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">beetle_host / beetle_host_id</td><td class="px-4 py-2 text-gray-600">The beetle, by any name in the species list (a synonym is matched to its valid name) or its valid_species_id. Needed for a new row.</td></tr>
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">pathogen, category</td><td class="px-4 py-2 text-gray-600">The other organism, and Fungi, Nematode, Host plant, Mite ... Needed for a new row.</td></tr>
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">ecological_relationship, source, year, title, doi_or_full_text, country_or_region ...</td><td class="px-4 py-2 text-gray-600">Optional. <span class="font-mono">doi_or_full_text</span> is a DOI or a web link. The year is four digits.</td></tr>
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">origin</td><td class="px-4 py-2 text-gray-600">In the download for information; ignored on upload.</td></tr>
+      <tbody class="block sm:table-row-group divide-y divide-gray-100">
+        <tr class="block sm:table-row"><td class="block sm:table-cell px-4 pt-3 sm:py-2 font-mono text-gray-900 sm:whitespace-nowrap">record_id</td><td class="block sm:table-cell px-4 pb-3 sm:py-2 text-gray-600"><strong>Blank or NEW</strong> adds an interaction. <strong>An existing record_id</strong> updates it. Required column.</td></tr>
+        <tr class="block sm:table-row"><td class="block sm:table-cell px-4 pt-3 sm:py-2 font-mono text-gray-900 sm:whitespace-nowrap">records_id</td><td class="block sm:table-cell px-4 pb-3 sm:py-2 text-gray-600">Optional, new rows only: the dataset's own number for a record (1&ndash;1015 in the published v1.0). Leave it blank for your own rows. It cannot be changed afterwards.</td></tr>
+        <tr class="block sm:table-row"><td class="block sm:table-cell px-4 pt-3 sm:py-2 font-mono text-gray-900 sm:whitespace-nowrap">beetle_host / beetle_host_id</td><td class="block sm:table-cell px-4 pb-3 sm:py-2 text-gray-600">The beetle, by any name in the species list (a synonym is matched to its valid name) or its valid_species_id. Needed for a new row.</td></tr>
+        <tr class="block sm:table-row"><td class="block sm:table-cell px-4 pt-3 sm:py-2 font-mono text-gray-900 sm:whitespace-nowrap">pathogen, category</td><td class="block sm:table-cell px-4 pb-3 sm:py-2 text-gray-600">The other organism, and Fungi, Nematode, Host plant, Mite ... Needed for a new row.</td></tr>
+        <tr class="block sm:table-row"><td class="block sm:table-cell px-4 pt-3 sm:py-2 font-mono text-gray-900 sm:whitespace-nowrap">ecological_relationship, source, year, title, doi_or_full_text, country_or_region ...</td><td class="block sm:table-cell px-4 pb-3 sm:py-2 text-gray-600">Optional. <span class="font-mono">doi_or_full_text</span> is a DOI or a web link. The year is four digits.</td></tr>
+        <tr class="block sm:table-row"><td class="block sm:table-cell px-4 pt-3 sm:py-2 font-mono text-gray-900 sm:whitespace-nowrap">origin</td><td class="block sm:table-cell px-4 pb-3 sm:py-2 text-gray-600">In the download for information; ignored on upload.</td></tr>
       </tbody>
     </table>
   </div>

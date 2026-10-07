@@ -45,11 +45,7 @@
 
   <form method="post" enctype="multipart/form-data" class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-xs space-y-5">
     {% csrf_token %}
-    <div>
-      <label for="csv_file" class="block text-sm font-semibold text-gray-700 mb-2">Proposals file (.csv, up to {{ max_mb }} MB)</label>
-      <input id="csv_file" name="csv_file" type="file" accept=".csv,text/csv" required
-        class="block w-full text-sm text-gray-700 file:mr-4 file:rounded-lg file:border file:border-gray-300 file:bg-white file:px-4 file:py-2 file:font-semibold hover:file:bg-gray-50">
-    </div>
+    {% include "beetles/includes/csv_dropzone.html" with field_id="csv_file" label="Proposals file" max_mb=max_mb submit_id="load-proposals-btn" %}
     <div>
       <label for="collector" class="block text-sm font-semibold text-gray-700 mb-2">Source pipeline name <span class="font-normal text-gray-500">(for rows that have none)</span></label>
       <input id="collector" name="collector" type="text" maxlength="100" placeholder="my-pipeline v1"
@@ -58,8 +54,8 @@
     <label class="flex items-center gap-2 text-sm text-gray-700">
       <input type="checkbox" name="dry_run" class="rounded-sm border-gray-300"> Check the file only, don't save anything
     </label>
-    <button type="submit"
-      class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-3 text-base font-bold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
+    <button type="submit" id="load-proposals-btn" disabled
+      class="btn-primary px-6 py-3 text-base">
       <i class="fi fi-rr-upload"></i><span>Load proposals</span>
     </button>
   </form>
@@ -67,14 +63,14 @@
   <h2 class="text-xl font-semibold text-gray-900 mb-3">Columns</h2>
   <div class="rounded-xl border border-gray-200 bg-white overflow-x-auto">
     <table class="w-full text-sm">
-      <tbody class="divide-y divide-gray-100">
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">beetle_name</td><td class="px-4 py-2 text-gray-600">The beetle, by any name in the species list (a synonym is matched to its valid name). Required, or give <span class="font-mono">beetle_valid_species_id</span>.</td></tr>
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">partner_name</td><td class="px-4 py-2 text-gray-600">The other organism. Required.</td></tr>
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">category, relationship</td><td class="px-4 py-2 text-gray-600">Fungi, Nematode, Host plant, Mite ...; pathogen, parasite, symbiont, host plant ...</td></tr>
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">source_doi, source_url, source_id</td><td class="px-4 py-2 text-gray-600">At least one, so a reviewer can read the source. A URL must start with http:// or https://.</td></tr>
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">source_title, source_authors, source_journal, source_year, source_db, open_access</td><td class="px-4 py-2 text-gray-600">About the source. Used for the citation when a claim is accepted.</td></tr>
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">evidence, evidence_location</td><td class="px-4 py-2 text-gray-600">The sentence that states it, and whether it was in the title or abstract.</td></tr>
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">score, collector</td><td class="px-4 py-2 text-gray-600">0 to 1, and what proposed it.</td></tr>
+      <tbody class="block sm:table-row-group divide-y divide-gray-100">
+        <tr class="block sm:table-row"><td class="block sm:table-cell px-4 pt-3 sm:py-2 font-mono text-gray-900 sm:whitespace-nowrap">beetle_name</td><td class="block sm:table-cell px-4 pb-3 sm:py-2 text-gray-600">The beetle, by any name in the species list (a synonym is matched to its valid name). Required, or give <span class="font-mono">beetle_valid_species_id</span>.</td></tr>
+        <tr class="block sm:table-row"><td class="block sm:table-cell px-4 pt-3 sm:py-2 font-mono text-gray-900 sm:whitespace-nowrap">partner_name</td><td class="block sm:table-cell px-4 pb-3 sm:py-2 text-gray-600">The other organism. Required.</td></tr>
+        <tr class="block sm:table-row"><td class="block sm:table-cell px-4 pt-3 sm:py-2 font-mono text-gray-900 sm:whitespace-nowrap">category, relationship</td><td class="block sm:table-cell px-4 pb-3 sm:py-2 text-gray-600">Fungi, Nematode, Host plant, Mite ...; pathogen, parasite, symbiont, host plant ...</td></tr>
+        <tr class="block sm:table-row"><td class="block sm:table-cell px-4 pt-3 sm:py-2 font-mono text-gray-900 sm:whitespace-nowrap">source_doi, source_url, source_id</td><td class="block sm:table-cell px-4 pb-3 sm:py-2 text-gray-600">At least one, so a reviewer can read the source. A URL must start with http:// or https://.</td></tr>
+        <tr class="block sm:table-row"><td class="block sm:table-cell px-4 pt-3 sm:py-2 font-mono text-gray-900 sm:whitespace-nowrap">source_title, source_authors, source_journal, source_year, source_db, open_access</td><td class="block sm:table-cell px-4 pb-3 sm:py-2 text-gray-600">About the source. Used for the citation when a claim is accepted.</td></tr>
+        <tr class="block sm:table-row"><td class="block sm:table-cell px-4 pt-3 sm:py-2 font-mono text-gray-900 sm:whitespace-nowrap">evidence, evidence_location</td><td class="block sm:table-cell px-4 pb-3 sm:py-2 text-gray-600">The sentence that states it, and whether it was in the title or abstract.</td></tr>
+        <tr class="block sm:table-row"><td class="block sm:table-cell px-4 pt-3 sm:py-2 font-mono text-gray-900 sm:whitespace-nowrap">score, collector</td><td class="block sm:table-cell px-4 pb-3 sm:py-2 text-gray-600">0 to 1, and what proposed it.</td></tr>
       </tbody>
     </table>
   </div>

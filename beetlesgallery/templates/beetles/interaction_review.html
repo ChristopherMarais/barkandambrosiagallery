@@ -14,14 +14,16 @@
     Rejected claims are kept so they are not proposed again.
   </p>
 
-  <div class="flex flex-wrap gap-2 mb-4" role="tablist">
+  <!-- A segmented control, not pills: three parts that always share one line, however narrow the screen. -->
+  <div class="mb-4 flex rounded-lg border border-gray-300 overflow-hidden" role="tablist">
     {% for value, label, count in tabs %}
     <a href="?status={{ value }}" role="tab" aria-selected="{% if filters.status == value %}true{% else %}false{% endif %}"
-      class="px-4 py-2 rounded-lg border text-sm font-semibold {% if filters.status == value %}bg-gray-600 border-gray-600 text-white{% else %}bg-white border-gray-300 text-gray-700 hover:bg-gray-100{% endif %}">
+      class="flex-1 min-w-0 whitespace-nowrap overflow-hidden text-center px-2 sm:px-4 py-2 text-xs sm:text-sm font-semibold {% if not forloop.first %}border-l border-gray-300{% endif %} {% if filters.status == value %}bg-gray-600 text-white{% else %}bg-white text-gray-700 hover:bg-gray-100{% endif %}">
       {{ label }} <span class="{% if filters.status == value %}text-gray-300{% else %}text-gray-400{% endif %}">({{ count|digit_groups }})</span></a>
     {% endfor %}
   </div>
 
+  {% if queue_total %}
   <form method="get" class="mb-6 flex flex-wrap items-end gap-3 bg-gray-50 rounded-xl p-4 border border-gray-200">
     <input type="hidden" name="status" value="{{ filters.status }}">
     <div>
@@ -37,10 +39,13 @@
     </div>
     <div>
       <label for="f-score" class="block text-xs font-semibold text-gray-600 mb-1">Score at least</label>
-      <input id="f-score" name="min_score" type="number" step="0.1" min="0" max="1" value="{{ filters.min_score|default_if_none:'' }}" class="w-24 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm">
+      <input id="f-score" name="min_score" type="number" step="0.1" min="0" max="1" value="{{ filters.min_score|default_if_none:'' }}"
+        aria-describedby="f-score-hint" class="w-24 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm">
+      <p id="f-score-hint" class="mt-1 text-[11px] text-gray-500">0&ndash;1</p>
     </div>
     <button type="submit" class="btn-secondary">Filter</button>
   </form>
+  {% endif %}
 
   {% for claim in claims %}
   <article class="mb-5 bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden" data-testid="claim">
@@ -131,7 +136,19 @@
     {% endif %}
   </article>
   {% empty %}
-  <p class="text-sm text-gray-500 mb-6">Nothing here.</p>
+  {% if queue_total %}
+  <p class="text-sm text-gray-500 mb-6">No claims match these filters.</p>
+  {% else %}
+  <div class="mb-6 rounded-xl border border-gray-200 bg-gray-50 p-5 text-sm text-gray-600">
+    {% if filters.status == "proposed" %}
+    <p>No claims waiting. Proposals appear here after a <a href="{% url 'upload_interaction_proposals' %}" class="underline hover:text-black">proposals file is loaded</a>.</p>
+    {% elif filters.status == "accepted" %}
+    <p>No accepted claims yet. Proposals appear here after a <a href="{% url 'upload_interaction_proposals' %}" class="underline hover:text-black">proposals file is loaded</a>.</p>
+    {% else %}
+    <p>No rejected claims yet. Proposals appear here after a <a href="{% url 'upload_interaction_proposals' %}" class="underline hover:text-black">proposals file is loaded</a>.</p>
+    {% endif %}
+  </div>
+  {% endif %}
   {% endfor %}
 
   <datalist id="category-options">{% for c in categories %}<option value="{{ c }}">{% endfor %}</datalist>
