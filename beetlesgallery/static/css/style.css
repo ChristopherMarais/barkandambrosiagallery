@@ -340,6 +340,9 @@
   .inset-0 {
     inset: 0px;
   }
+  .inset-x-0 {
+    inset-inline: 0px;
+  }
   .inset-x-4 {
     inset-inline: calc(var(--spacing) * 4);
   }
@@ -610,6 +613,9 @@
   .space-y-12 > :not([hidden]) ~ :not([hidden]) {
     margin-top: calc(var(--spacing) * 12);
     margin-bottom: 0;
+  }
+  .-mt-0\.5 {
+    margin-top: calc(var(--spacing) * -0.5);
   }
   .mt-0\.5 {
     margin-top: calc(var(--spacing) * 0.5);
@@ -1417,6 +1423,9 @@
   .border-gray-600 {
     border-color: var(--color-gray-600);
   }
+  .border-gray-700 {
+    border-color: var(--color-gray-700);
+  }
   .border-gray-800 {
     border-color: var(--color-gray-800);
   }
@@ -1870,14 +1879,8 @@
   .align-middle {
     vertical-align: middle;
   }
-  .align-top {
-    vertical-align: top;
-  }
   .font-mono {
     font-family: var(--font-mono);
-  }
-  .font-sans {
-    font-family: var(--font-sans);
   }
   .text-2xl {
     font-size: var(--text-2xl);
@@ -2298,6 +2301,11 @@
   .filter {
     filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
   }
+  .backdrop-blur {
+    --tw-backdrop-blur: blur(8px);
+    -webkit-backdrop-filter: var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);
+    backdrop-filter: var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);
+  }
   .backdrop-blur-xs {
     --tw-backdrop-blur: blur(var(--blur-xs));
     -webkit-backdrop-filter: var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);
@@ -2711,6 +2719,12 @@
     .sm\:col-span-2 {
       grid-column: span 2 / span 2;
     }
+    .sm\:col-span-4 {
+      grid-column: span 4 / span 4;
+    }
+    .sm\:mx-0 {
+      margin-inline: 0px;
+    }
     .sm\:my-6 {
       margin-block: calc(var(--spacing) * 6);
     }
@@ -2723,6 +2737,9 @@
     .sm\:block {
       display: block;
     }
+    .sm\:flex {
+      display: flex;
+    }
     .sm\:hidden {
       display: none;
     }
@@ -2731,6 +2748,9 @@
     }
     .sm\:inline-block {
       display: inline-block;
+    }
+    .sm\:table-cell {
+      display: table-cell;
     }
     .sm\:h-screen {
       height: 100vh;
@@ -2803,6 +2823,9 @@
     }
     .sm\:p-6 {
       padding: calc(var(--spacing) * 6);
+    }
+    .sm\:px-0 {
+      padding-inline: 0px;
     }
     .sm\:px-2 {
       padding-inline: calc(var(--spacing) * 2);
@@ -3332,6 +3355,22 @@
   src: url('/static/fonts/pavelt/Pavelt.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
+}
+.scroll-fade {
+  position: relative;
+}
+.scroll-fade::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 1.5rem;
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--color-gray-50));
+}
+.scroll-fade-white::after {
+  background: linear-gradient(to right, transparent, #fff);
 }
 .select-chevron {
   -webkit-appearance: none;

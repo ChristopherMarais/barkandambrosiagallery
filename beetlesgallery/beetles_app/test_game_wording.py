@@ -77,7 +77,7 @@ class NamesTests(PlayPageCase):
 
     def test_the_profile_counts_beetles_named_and_odd_ones_spotted(self):
         profile = (TEMPLATES / "beetles" / "game_profile.html").read_text(encoding="utf-8")
-        self.assertIn("named &middot;", profile)
+        self.assertIn("named</span>", profile)
         self.assertIn("odd ones spotted", profile)
 
 

@@ -24,6 +24,13 @@
   </div>
 
   <!-- The ladder -->
+  {% if info.next %}
+  <p class="text-sm text-gray-600 mb-2" data-testid="level-next">
+    <i class="fi fi-rr-arrow-small-up text-gray-400"></i> Next: <strong class="text-gray-900">{{ info.next.name }}</strong> &mdash;
+    {% if info.next.points_needed %}{{ info.next.points_needed|digit_groups }} pts{% if next_percent_to_go %} and {% endif %}{% endif %}
+    {% if next_percent_to_go %}{{ next_percent_to_go }}% to go{% endif %}
+  </p>
+  {% endif %}
   <ol class="border border-gray-200 rounded-2xl divide-y divide-gray-100 mb-5">
     {% for row in ladder %}
     <li class="px-4 py-3 flex items-center gap-3 {% if row.level == info.level %}bg-gray-100{% endif %} {% if row.level > info.level %}text-gray-400{% endif %}">
@@ -41,15 +48,21 @@
   <div class="p-4 bg-white border border-gray-200 rounded-2xl mb-5">
     <h2 class="text-base font-semibold text-gray-900 mb-2">Focus</h2>
     {% if error %}<p class="text-sm text-red-700 mb-2" role="alert">{{ error }}</p>{% endif %}
-    <form method="post" class="flex flex-col sm:flex-row gap-2" id="focus-form" data-taxa-url="{% url 'game_taxa' %}">
+    <form method="post" class="flex flex-col sm:flex-row gap-2 sm:items-end" id="focus-form" data-taxa-url="{% url 'game_taxa' %}">
       {% csrf_token %}
-      <select name="focus_rank" id="focus-rank" class="select-chevron h-11 px-3 border border-gray-300 rounded-lg bg-white">
-        <option value="">Everything</option>
-        {% for rank, label, unlocked in focus_ranks %}
-        <option value="{{ rank }}" {% if not unlocked %}disabled{% endif %} {% if pref.focus_rank == rank %}selected{% endif %}>{{ label }}{% if not unlocked %} (locked){% endif %}</option>
-        {% endfor %}
-      </select>
-      <select name="focus_value" id="focus-value" class="select-chevron flex-1 h-11 px-3 border border-gray-300 rounded-lg bg-white" data-current="{{ pref.focus_value }}"></select>
+      <div>
+        <label for="focus-rank" class="block text-xs font-medium text-gray-500 mb-1">Rank</label>
+        <select name="focus_rank" id="focus-rank" class="select-chevron h-11 px-3 border border-gray-300 rounded-lg bg-white">
+          <option value="">Everything</option>
+          {% for rank, label, unlocked in focus_ranks %}
+          <option value="{{ rank }}" {% if not unlocked %}disabled{% endif %} {% if pref.focus_rank == rank %}selected{% endif %}>{{ label }}{% if not unlocked %} (locked){% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex-1">
+        <label for="focus-value" class="block text-xs font-medium text-gray-500 mb-1">Taxon</label>
+        <select name="focus_value" id="focus-value" class="select-chevron w-full h-11 px-3 border border-gray-300 rounded-lg bg-white" data-current="{{ pref.focus_value }}" {% if not pref.focus_rank %}disabled{% endif %}></select>
+      </div>
       <button type="submit" class="btn-primary h-11">Save</button>
     </form>
   </div>

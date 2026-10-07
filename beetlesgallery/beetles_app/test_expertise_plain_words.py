@@ -52,9 +52,9 @@ class CountWordsTests(PlainWordsCase):
         for _ in range(3):
             self.answer(self.p, self.roi(self.t_affinis), wrong)
         text = self.words(self.page())
-        self.assertIn("Xyleborus genus Naming: 7 of 10 correct · covered 1 of 1 species", text)
+        self.assertIn("Xyleborus genus 7/10 correct · 1 of 1 species", text)
         tree = text[text.index("Subfamilies"):]
-        self.assertNotRegex(tree, r"\bnames \d|\bapart \d|\d/\d")   # no more "names 7/10" or "1/1 species"
+        self.assertNotRegex(tree, r"\bnames \d|\bapart \d")   # no more "names 7/10"
 
     def test_it_says_how_many_are_needed_when_not_all_are(self):
         for genus in ("Xylosandrus", "Euwallacea", "Ambrosiodmus"):
@@ -62,7 +62,7 @@ class CountWordsTests(PlainWordsCase):
                                 scientific_name=f"{genus} sp"))
         for _ in range(6):
             self.answer(self.p, self.roi(self.t_affinis), AFFINIS)
-        self.assertIn("covered 1 of 4 genera (3 needed)", self.words(self.page()))
+        self.assertIn("1 of 4 genera (3 needed)", self.words(self.page()))
 
     def test_telling_apart_counts_in_the_same_words(self):
         for _ in range(2):
@@ -70,7 +70,7 @@ class CountWordsTests(PlainWordsCase):
         self.answer(self.p, self.roi(self.t_affinis), mode="pair", roi_b=self.roi(self.t_ferr), pair="species")
         with override_settings(GAME_REPORT_MIN_JUDGED=1):
             text = self.words(self.page())
-        self.assertIn("Xyleborus genus Telling apart: 2 of 3 correct · covered 2 of 2 species", text)
+        self.assertIn("Xyleborus genus 2/3 correct · 2 of 2 species", text)
 
 
 class RuleBoxTests(PlainWordsCase):
@@ -104,7 +104,9 @@ class KeyAndIntroTests(PlainWordsCase):
         for gone in ("Gold: Distinction expert; it unlocks nothing.", "Gold and glowing", "unlocks nothing"):
             self.assertNotIn(gone, text)
         key = text_of(page[page.index('data-testid="expertise-legend"'):page.index('id="tree"')])
-        self.assertIn("naming telling apart Not yet: fewer than 5 answers Fair under 50%", key)   # words of the scale (#572)
+        self.assertIn("naming telling apart", key)   # the one-line summary (#618 exp-legend)
+        self.assertIn("Key", key)   # opens the full legend
+        self.assertIn("Not yet: fewer than 5 answers Fair under 50%", key)   # words of the scale (#572)
         self.assertNotIn(".", key)   # labels only, no sentences
         self.assertIn('data-testid="legend-expert"><span class="tree-dot mark-expert"></span>'
                       '<span class="tree-tri mark-expert"></span>Expert</span>', page)

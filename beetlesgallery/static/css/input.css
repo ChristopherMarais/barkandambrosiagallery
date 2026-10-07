@@ -315,6 +315,16 @@
     font-weight: normal;
     font-style: normal;
 }
+/* A soft fade on the trailing edge of something that scrolls sideways (formula blocks on the Scoring page, #618
+   sco-code): phones don't always show a scrollbar, so this hints there is more to see without JS tracking scroll
+   position. Matches the gray-50 a formula block sits on; .scroll-fade-white is for a white background instead. */
+.scroll-fade { position: relative; }
+.scroll-fade::after {
+    content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 1.5rem; pointer-events: none;
+    background: linear-gradient(to right, transparent, var(--color-gray-50));
+}
+.scroll-fade-white::after { background: linear-gradient(to right, transparent, #fff); }
+
 /* A select whose arrow sits inside the box (the native one can hang over the edge in some browsers) */
 .select-chevron {
   -webkit-appearance: none;

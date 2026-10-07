@@ -18,12 +18,18 @@
       <li>A photo must show a good part of the beetle.</li>
       <li>Tap <strong>Exit</strong> when you're done.</li>
     </ol>
-    <p class="mt-3 text-sm text-gray-600">Your <strong>daily goal</strong> adapts to how much you play, like a step goal on a fitness watch: beat it and tomorrow's goal goes up a little, fall short or take a day off and it eases down. It never drops below {{ goal_floor }} beetles.</p>
-    <p class="mt-3 text-sm text-gray-600">You start with Similarity. Odd One Out, and choosing your game, unlock at level {{ odd_level }}, Find Them All at level {{ select_level }} and Naming at level {{ identify_level }}. New players get more Similarity, higher levels more Naming.</p>
-    <p class="mt-3 text-sm text-gray-600" data-testid="rank-steps">New players start with the big groups: only the subfamily at first. The tribe opens after {{ rank_steps.tribe }} beetles, the genus after {{ rank_steps.genus }} and the species after {{ rank_steps.species }}, in every game. From level {{ ranks_all_level }} every rank is open.</p>
+    <details class="mt-3 text-sm text-gray-600">
+      <summary class="cursor-pointer font-medium text-gray-700 hover:text-gray-900">Your daily goal, and when games unlock</summary>
+      <p class="mt-2">Your <strong>daily goal</strong> adapts to how much you play, like a step goal on a fitness watch: beat it and tomorrow's goal goes up a little, fall short or take a day off and it eases down. It never drops below {{ goal_floor }} beetles.</p>
+      <p class="mt-2">You start with Similarity. Odd One Out, and choosing your game, unlock at level {{ odd_level }}, Find Them All at level {{ select_level }} and Naming at level {{ identify_level }}. New players get more Similarity, higher levels more Naming.</p>
+      <p class="mt-2" data-testid="rank-steps">New players start with the big groups: only the subfamily at first. The tribe opens after {{ rank_steps.tribe }} beetles, the genus after {{ rank_steps.genus }} and the species after {{ rank_steps.species }}, in every game. From level {{ ranks_all_level }} every rank is open.</p>
+    </details>
   </section>
 
-  <h2 class="text-xl font-semibold text-gray-900 mb-3" id="scoring">Scoring</h2>
+  <h2 class="text-xl font-semibold text-gray-900 mb-1" id="scoring">Scoring</h2>
+  {% if request.user.is_superuser %}
+  <p class="text-sm text-gray-500 mb-3"><a href="{% url 'game_scoring' %}" class="underline hover:text-gray-900">See the full numbers, balance checks and settings</a></p>
+  {% endif %}
   <div class="space-y-6">
     <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl">
       <h2 class="text-lg font-semibold text-gray-900 mb-2">1. Beetles we already know</h2>
@@ -52,11 +58,8 @@
       <h2 class="text-lg font-semibold text-gray-900 mb-2">2. Beetles nobody has checked yet</h2>
       <p class="text-sm text-gray-600 mb-2">Here there is no correct answer to compare with yet, so you earn points by <strong>agreeing with strong players</strong>:</p>
       <ul class="text-sm text-gray-600 list-disc pl-5 space-y-1">
-        <li>Only players in the better half on known beetles count as judges, and Naming experts for that part of the tree count the most.</li>
-        <li>Agreeing with players stronger than you earns nearly full credit; agreeing with weaker players earns very little.</li>
-        <li>If a stronger player disagrees with you, agreeing with lots of weaker players does not help.</li>
-        <li>The more strong players agree with you, the more you earn, up to {{ cap }}% of what the same answer would earn on a known beetle. A name strong players disagree with takes points back, but an answer here never costs you points overall.</li>
-        <li>You can also earn that straight away when you match what <strong>Naming experts</strong> said about the beetle, or what the <strong>identification model</strong> says when it is sure and has a good record on that exact group. Naming a rank differently takes points back from the rest of that answer (never below zero), and none of this counts towards your accuracy: only checked beetles do.</li>
+        <li>The more players stronger than you (or <strong>Naming experts</strong>, or a confident <strong>identification model</strong>) agree with you, the more you earn &mdash; up to {{ cap }}% of what the same answer would earn on a known beetle. Agreeing with weaker players earns very little.</li>
+        <li>A name stronger players disagree with takes points back, but an answer here never costs you points overall, and none of it counts towards your accuracy: only checked beetles do.</li>
       </ul>
     </section>
 

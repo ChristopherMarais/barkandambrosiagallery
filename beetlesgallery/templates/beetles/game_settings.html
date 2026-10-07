@@ -5,10 +5,10 @@
 <div class="max-w-6xl mx-auto">
   <a href="{% url 'game_home' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; {{ game_name }}</a>
   <h1 class="page-title">Game settings</h1>
-  <nav class="flex flex-wrap gap-x-4 gap-y-1 mb-8 text-sm" aria-label="Sections" data-testid="settings-nav">
-    <a href="#review" class="text-gray-700 underline hover:text-gray-900">Review game labels</a>
-    <a href="#unlocks" class="text-gray-700 underline hover:text-gray-900">Unlocks</a>
-    <a href="{% url 'game_scoring' %}" class="text-gray-700 underline hover:text-gray-900" data-testid="to-scoring"><i class="fi fi-rr-calculator"></i> Scoring</a>
+  <nav class="flex flex-wrap gap-x-5 gap-y-1 mb-8 text-sm border-b border-gray-200" aria-label="Sections" data-testid="settings-nav">
+    <a href="#review" class="px-1 py-2 text-gray-700 border-b-2 border-gray-700 font-medium hover:text-gray-900">Review game labels</a>
+    <a href="#unlocks" class="px-1 py-2 text-gray-700 border-b-2 border-gray-700 font-medium hover:text-gray-900">Unlocks</a>
+    <a href="{% url 'game_scoring' %}" class="px-1 py-2 text-gray-500 border-b-2 border-transparent hover:text-gray-900 hover:border-gray-300" data-testid="to-scoring"><i class="fi fi-rr-calculator"></i> Scoring</a>
   </nav>
 
   <section id="review" class="mb-12 scroll-mt-4" data-testid="settings-review">
@@ -20,17 +20,22 @@
         players are not told which items those are.
       </p>
     </div>
-    <div class="flex flex-wrap gap-2 text-sm">
+    <div class="text-sm">
       <a href="{% url 'tool_annotate' %}" class="btn-primary px-3" data-testid="to-annotation"><i class="fi fi-rr-edit"></i> Review labels in Image Annotation</a>
-      <a href="{% url 'game_export' 'labels' %}" class="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"><i class="fi fi-rr-download"></i> Label proposals CSV</a>
-      <a href="{% url 'game_export' 'players' %}" class="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"><i class="fi fi-rr-download"></i> Player reliability CSV</a>
-      <a href="{% url 'game_export' 'skills' %}" class="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"><i class="fi fi-rr-download"></i> Expertise CSV</a>
+      <div class="mt-2 text-gray-600">
+        <span class="text-xs uppercase tracking-wider text-gray-400 font-semibold">Downloads</span>
+        <ul class="mt-1 space-y-0.5">
+          <li><a href="{% url 'game_export' 'labels' %}" class="underline hover:text-gray-900"><i class="fi fi-rr-download"></i> Label proposals CSV</a></li>
+          <li><a href="{% url 'game_export' 'players' %}" class="underline hover:text-gray-900"><i class="fi fi-rr-download"></i> Player reliability CSV</a></li>
+          <li><a href="{% url 'game_export' 'skills' %}" class="underline hover:text-gray-900"><i class="fi fi-rr-download"></i> Expertise CSV</a></li>
+        </ul>
+      </div>
     </div>
   </div>
 
-  <div class="mb-8 p-4 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg">
-    <p class="font-semibold text-gray-800 mb-1">How labels become expert-backed</p>
-    <p>
+  <details class="mb-8 p-4 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg" data-testid="expert-backed-help">
+    <summary class="cursor-pointer font-semibold text-gray-800">How labels become expert-backed</summary>
+    <p class="mt-2">
       A player is a Naming expert at a rank within a taxon (species within a genus, genus within a tribe, tribe within a subfamily,
       or subfamily overall) once they have answered {{ per_species }} validated images each of at least {% widthratio children_share 1 100 %}% of its members
       with validated images (its species, genera or tribes; all images of one with fewer; at least 10 answers in total) and got at least 90% correct. Larger taxa need more answers.
@@ -38,7 +43,7 @@
       expert-backed too. Branches with too few validated ROIs to ever test instead accept players proven in two or more related branches
       (e.g. other genera of the same tribe). Accept or reject proposals on the <a class="underline" href="{% url 'tool_annotate' %}">annotation page</a>.
     </p>
-  </div>
+  </details>
 
   <details class="group mb-8" open data-testid="section" id="reports">
   <summary class="cursor-pointer list-none flex items-center gap-2 mb-2"><i class="fi fi-rr-angle-small-right group-open:rotate-90 transition-transform text-gray-400"></i><h3 class="inline text-lg font-semibold text-gray-900">Open player reports <span class="text-sm font-normal text-gray-400">({{ open_reports.paginator.count|digit_groups }})</span></h3></summary>
@@ -46,32 +51,33 @@
     Reported ROIs are not used to score anyone until resolved, and the reporter's answer on them is held.
     Open the image, fix it if needed, then resolve the reports from the ROI panel.
   </p>
-  <div class="overflow-x-auto border border-gray-200 rounded-lg mb-10">
-    <table class="w-full text-sm">
-      <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wider">
-        <tr>
-          <th class="px-3 py-2 text-left">{% sort_link "reports_sort" "roi" "ROI" "reports" %}</th>
-          <th class="px-3 py-2 text-left">{% sort_link "reports_sort" "label" "Current label" "reports" %}</th>
-          <th class="px-3 py-2 text-left">{% sort_link "reports_sort" "reason" "Reason" "reports" %}</th>
-          <th class="px-3 py-2 text-left">{% sort_link "reports_sort" "reporter" "Reported by" "reports" %}</th>
-          <th class="px-3 py-2 text-left">{% sort_link "reports_sort" "date" "Date" "reports" %}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in open_reports %}
-        <tr class="border-t border-gray-100 align-top">
-          <td class="px-3 py-2 font-mono text-xs"><a class="text-gray-900 underline hover:text-gray-600" href="{% url 'tool_annotate' %}?image={{ r.roi.image_asset_id }}&roi={{ r.roi.id }}">{{ r.roi.id|stringformat:"s"|slice:":8" }}</a>
-            {% if r.was_validated %}<div class="text-[10px] text-green-700 font-sans">was validated</div>{% endif %}</td>
-          <td class="px-3 py-2 text-gray-600">{{ r.roi.taxon.scientific_name|default:"—" }}</td>
-          <td class="px-3 py-2">{{ r.get_reason_display }}{% if r.note %}<div class="text-xs text-gray-500">&ldquo;{{ r.note }}&rdquo;</div>{% endif %}</td>
-          <td class="px-3 py-2 text-gray-600 whitespace-nowrap">{{ r.reporter.username }}<div class="text-xs text-gray-400">{{ r.created_at|date:"M j" }}</div></td>
-          <td class="px-3 py-2 whitespace-nowrap"><a class="text-gray-900 underline hover:text-gray-600" href="{% url 'tool_annotate' %}?image={{ r.roi.image_asset_id }}&roi={{ r.roi.id }}">Open in annotator</a></td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="5" class="px-3 py-6 text-center text-gray-400">No open reports.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <!-- A card per report, not a four-column table that forces the reason into a sliver of width on a phone
+       (#618 set-reports): ROI and its label on top, the reason below, who reported it and when in the footer. -->
+  <div class="flex flex-wrap gap-x-4 gap-y-1 mb-2 text-xs text-gray-500" data-testid="reports-sort">
+    <span class="text-gray-400">Sort:</span>
+    {% sort_link "reports_sort" "roi" "ROI" "reports" %}
+    {% sort_link "reports_sort" "label" "Label" "reports" %}
+    {% sort_link "reports_sort" "reason" "Reason" "reports" %}
+    {% sort_link "reports_sort" "reporter" "Reporter" "reports" %}
+    {% sort_link "reports_sort" "date" "Date" "reports" %}
+  </div>
+  <div class="space-y-2 mb-10" data-testid="reports-cards">
+    {% for r in open_reports %}
+    <div class="p-3 border border-gray-200 rounded-lg">
+      <div class="flex items-baseline gap-2">
+        <a class="font-mono text-xs text-gray-900 underline hover:text-gray-600" href="{% url 'tool_annotate' %}?image={{ r.roi.image_asset_id }}&roi={{ r.roi.id }}">{{ r.roi.id|stringformat:"s"|slice:":8" }}</a>
+        <span class="text-sm text-gray-700">{{ r.roi.taxon.scientific_name|default:"—" }}</span>
+      </div>
+      {% if r.was_validated %}<div class="text-[10px] text-green-700">was validated</div>{% endif %}
+      <p class="mt-1.5 text-sm text-gray-800">{{ r.get_reason_display }}{% if r.note %}<span class="block mt-0.5 text-xs text-gray-500">&ldquo;{{ r.note }}&rdquo;</span>{% endif %}</p>
+      <div class="mt-2 pt-2 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+        <span>{{ r.reporter.username }} &middot; {{ r.created_at|date:"M j" }}</span>
+        <a class="text-gray-900 underline hover:text-gray-600" href="{% url 'tool_annotate' %}?image={{ r.roi.image_asset_id }}&roi={{ r.roi.id }}">Open in annotator</a>
+      </div>
+    </div>
+    {% empty %}
+    <p class="p-4 text-center text-gray-400 border border-gray-200 rounded-lg">No open reports.</p>
+    {% endfor %}
   </div>
   {% include "beetles/includes/pager.html" with page=open_reports param="reports_page" anchor="reports" %}
   </details>
