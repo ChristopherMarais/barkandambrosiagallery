@@ -400,7 +400,7 @@
     #photos:has(.cell:hover) > .peers-tag { opacity: 0; }
   }
   /* on the review a tap turns the names off and on (a click with a mouse opens the whole photo): no text selection or menu */
-  .cell.has-names { -webkit-touch-callout: none; user-select: none; cursor: zoom-in; }
+  .cell.has-names { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; cursor: zoom-in; }
   /* In a grid of 25 four lines of names would hide most of a tile: they show on a tap (or while the pointer is on
      it), the other way round; the card above lists every tile's name at the grid's rank. Only the names and dots. */
   :is(#photos, #previous-photos)[data-size="25"] .cell > .rv-names { font-size: 0.5625rem; line-height: 1.15; gap: 0; padding: 1.25rem 0.1875rem 0.125rem; opacity: 0; }
@@ -746,6 +746,7 @@
 {% block extra_js %}
 <script>window.BEETLE_LOGO_URL = "{% static 'img/IMG_5557.PNG' %}";</script>
 <script src="{% static 'js/beetle_confetti.js' %}"></script>
+<script src="{% static 'js/long_press.js' %}"></script>
 <script>
 (function () {
   const root = document.getElementById("game");
@@ -2269,6 +2270,7 @@
   // A finger's tap turns its names off, and on again: they stay that way until the next tap (#600; holding to peek
   // was not discoverable, and the finger covered the photo). The whole photo opens from its own button on the photo.
   // With a mouse, pointing at the photo clears the names and a click opens the whole photo, as before.
+  // Held down (about half a second, finger or mouse) a photo opens the whole photo as well; the tap after it is dropped.
   function openReviewPhoto(c) {
     const i = [...c.parentElement.querySelectorAll(".cell")].indexOf(c), im = previous && (previous.images || [])[i];
     if (im) openLightbox(im.url, im.box, i, null, previous.where);
@@ -2288,6 +2290,7 @@
       if (byMouse) openReviewPhoto(c);
       else c.classList.toggle("names-off");
     }, true);
+    window.onLongPress(box, ".cell.has-names", (c) => { if (previous) openReviewPhoto(c); });
   }
   reviewPhotos($("photos"));
   reviewPhotos($("previous-photos"));
