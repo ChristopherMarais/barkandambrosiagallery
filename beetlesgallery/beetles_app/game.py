@@ -141,6 +141,29 @@ def _seen(player, mode, is_check):
 reveals_memo = contextvars.ContextVar("game_reveals_memo", default=None)
 
 
+HISTORY_CACHE = "game:history:v1:{}:{}:{}"   # kind, player, the player's answers (count and last moment)
+HISTORY_SECONDS = 10 * 60
+
+
+def per_history(player, kind, compute):
+    """
+    compute(player), kept across requests for as long as the player's answers are the same: a new answer changes the
+    count and the last moment, so the next request works it out again. Built on the worker too (the first batch of a
+    game is ready before the player asks for it); a request that finds nothing there works it out. Stays out of the way
+    where the cache is down (it simply computes).
+    """
+    from django.core.cache import cache
+    from django.db.models import Count, Max
+
+    counted = GameAnswer.objects.filter(player=player).aggregate(n=Count("id"), last=Max("answered_at"))
+    key = HISTORY_CACHE.format(kind, player.pk, f"{counted['n']}-{counted['last']}")
+    value = cache.get(key)
+    if value is None:
+        value = compute(player)
+        cache.set(key, value, HISTORY_SECONDS)
+    return value
+
+
 def reveals(player):
     """
     {roi_id: {"at", "modes"}}: the ROIs whose names this player has been shown after an answer, when last and in which
@@ -150,9 +173,9 @@ def reveals(player):
     """
     memo = reveals_memo.get()
     if memo is None:
-        return _reveals(player)
+        return per_history(player, "reveals", _reveals)
     if player.pk not in memo:
-        memo[player.pk] = _reveals(player)
+        memo[player.pk] = per_history(player, "reveals", _reveals)
     return memo[player.pk]
 
 
