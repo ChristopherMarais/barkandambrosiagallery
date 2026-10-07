@@ -491,6 +491,9 @@ def _build_gallery_filter_context(base_search_qs, active_filters):
             options = ["Yes", "No"]
             has_na = ctx_qs.filter(**{f"{cfg['field']}__isnull": True}).exists()
 
+        elif cfg["type"] == "custom_has_type_status":
+            options = ["Yes", "No"]
+
         elif cfg["type"] == "ref":
             field_name = f"taxon__{cfg['field']}"
             raw_options = ctx_qs.exclude(taxon__isnull=True) \
@@ -590,6 +593,14 @@ def gallery(request):
     size_max = request.GET.get("size_max", "").strip()
     res_min = request.GET.get("res_min", "").strip()
     res_max = request.GET.get("res_max", "").strip()
+
+    # How many filters are active, for the "Filters" button's pill (#618 browser-filter). One per
+    # category-checked value, plus one each for the size/resolution ranges when set.
+    active_filter_count = sum(len(v) for v in active_filters.values())
+    if size_min or size_max:
+        active_filter_count += 1
+    if res_min or res_max:
+        active_filter_count += 1
 
     def apply_filters(qs, filters_dict, exclude_param=None):
         return filter_beetles_queryset(qs, filters_dict, size_min, size_max, res_min, res_max, exclude_param)
@@ -699,6 +710,9 @@ def gallery(request):
             if siblings is None:
                 siblings = [s for s in b.image_asset.specimens.all() if not s.is_deleted]
             b.siblings_count = len(siblings)
+            # Only the boxed ROIs are counted ("ROI badge" on the grid tile, #618 browser-roi-badge), same as
+            # the "ROI n of m" count on the detail page: a sibling without a box doesn't make this one a duplicate.
+            b.boxed_count = sum(1 for s in siblings if s.bbox_x is not None)
 
             # Only calculate multiple attributes if there is more than 1 sibling
             if b.siblings_count > 1:
@@ -719,6 +733,7 @@ def gallery(request):
             b.warn_large = (b.image_asset.image_size_bytes or 0) >= WARN_IMAGE_SIZE_BYTES
         else:
             b.siblings_count = 0
+            b.boxed_count = 0
             b.warn_large = False
 
     context = {
@@ -733,6 +748,7 @@ def gallery(request):
         "warn_size_bytes": WARN_IMAGE_SIZE_BYTES,
         "filter_groups": filter_context,
         "selected_filters": active_filters,
+        "active_filter_count": active_filter_count,
         "per_page": page_size,
         "sort": sort,
         "sort_options": [(k, v[0]) for k, v in GALLERY_SORTS.items()],
@@ -1638,13 +1654,27 @@ def taxonomy_browser(request):
     """
     Display the taxonomy browser page dynamically grouped from flat Postgres records.
     """
-    from beetlesgallery.beetles_app.models import Taxon
+    from beetlesgallery.beetles_app.models import Beetles, Taxon
     from django.core.serializers.json import DjangoJSONEncoder
+    from django.db.models import Count
     import json
     from collections import defaultdict
 
     # 1. Fetch all flat taxa from DB
     taxa = Taxon.objects.all()
+
+    # How many images depict each species (#618 tax-counts: species counts already showed on every node; this adds
+    # image counts alongside them, summed up the tree the same way). One image can hold several specimens of the
+    # same species, so distinct image assets are counted, not rows.
+    image_counts = dict(
+        Beetles.objects
+        .filter(is_deleted=False)
+        .exclude(depicts_valid_name_id__isnull=True)
+        .exclude(depicts_valid_name_id="")
+        .values("depicts_valid_name_id")
+        .annotate(n=Count("image_asset_id", distinct=True))
+        .values_list("depicts_valid_name_id", "n")
+    )
 
     # 2. Build nested dictionary: Subfamily -> Tribe -> Genus -> list of Species
     tree_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
@@ -1667,7 +1697,8 @@ def taxonomy_browser(request):
             "level": "species",
             "species_id": t.valid_species_id,
             "scientific_name": t.scientific_name,
-            "subspecies": t.subspecies.strip() if t.subspecies else None
+            "subspecies": t.subspecies.strip() if t.subspecies else None,
+            "imageCount": image_counts.get(t.valid_species_id, 0),
         })
 
         # Pre-fetch for the UI detail pane
@@ -1681,7 +1712,7 @@ def taxonomy_browser(request):
             "subspecies": t.subspecies,
         }
 
-    # 3. Recursively convert nested dicts to arrays with speciesCount
+    # 3. Recursively convert nested dicts to arrays with speciesCount and imageCount
     def dict_to_tree(d, current_level):
         next_level_map = {
             "subfamily": "tribe",
@@ -1699,16 +1730,19 @@ def taxonomy_browser(request):
                     "name": key,
                     "level": "genus",
                     "speciesCount": len(sorted_species),
+                    "imageCount": sum(s.get("imageCount", 0) for s in sorted_species),
                     "children": sorted_species
                 })
             else:
                 # Value is a dictionary of the next level
                 children = dict_to_tree(value, next_level)
                 total_count = sum(c.get("speciesCount", 1) for c in children)
+                total_images = sum(c.get("imageCount", 0) for c in children)
                 result.append({
                     "name": key,
                     "level": current_level,
                     "speciesCount": total_count,
+                    "imageCount": total_images,
                     "children": children
                 })
         return result

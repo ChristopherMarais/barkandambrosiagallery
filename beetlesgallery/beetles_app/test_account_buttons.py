@@ -1,8 +1,8 @@
 """
-The account page and the request-access pages (#501).
+The account page and the request-access pages (#501, #618).
 
-* Superusers find Create New User beside Review Access Requests, in the Access Requests section, each with its own
-  icon. Nobody else sees either button. The page has no stray closing tags.
+* Superusers find Access requests and Users in the account settings list, and Create user beside the User Directory.
+  Nobody else sees any of them. The page has no stray closing tags.
 * The request-access form and the page after sending say what happens: signed out, the account works once the email
   is confirmed (#535: Sign up says nothing about reviews); signed in, the page just takes the request.
   The AI is called IBBI-AI and the game goes by its name. Only people not signed in get the Sign in link at the top of
@@ -21,6 +21,7 @@ from beetlesgallery.beetles_app.models import AccessRequest, AreaGrant
 from beetlesgallery.beetles_app.testing import PageBehaviourCase
 
 OPENS_CREATE_USER = "openModal('modal-create-user')"
+OPENS_PASSWORD = "openModal('modal-password')"
 # Elements that never have a closing tag
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 
@@ -105,31 +106,33 @@ class AccountPageTests(ReadsPages, PageBehaviourCase):
         self.client.force_login(user)
         return self.main("my_account")
 
-    def buttons(self, page):
-        """(Review Access Requests, Create New User), both from the Access Requests section."""
-        section = self.one(page.root, data_testid="access-requests")
-        return self.one(section, "a", href=reverse("access_requests")), self.one(section, "button", onclick=OPENS_CREATE_USER)
-
-    def test_superusers_find_create_user_beside_review_access_requests(self):
+    def test_superusers_find_access_requests_and_users_in_the_settings_list(self):
         page = self.page(self.superuser)
-        review, create = self.buttons(page)
-        self.assertEqual(review.words, "Review Access Requests")
-        self.assertEqual(create.words, "Create New User")
-        self.assertIs(review.parent, create.parent)                       # side by side, in one row
-        self.assertEqual(len(page.root.find_all(onclick=OPENS_CREATE_USER)), 1)   # and nowhere else on the page
+        settings_list = self.one(page.root, data_testid="account-settings")
+        review = self.one(settings_list, "a", href=reverse("access_requests"))
+        self.assertIn("Access requests", review.words)
+        self.assertEqual(len(page.root.find_all(href=reverse("access_requests"))), 1)
 
-    def test_the_two_buttons_have_the_same_look_and_their_own_icons(self):
-        review, create = self.buttons(self.page(self.superuser))
-        self.assertNotEqual(self.one(review, "i").classes, self.one(create, "i").classes)
-        for button in (review, create):
-            self.assertIn("btn-secondary", button.classes)
+    def test_superusers_find_create_user_beside_the_user_directory(self):
+        page = self.page(self.superuser)
+        directory = self.one(page.root, id="user-directory")
+        create = self.one(directory, "button", onclick=OPENS_CREATE_USER)
+        self.assertEqual(create.words, "Create user")
+        self.assertIn("btn-secondary", create.classes)
+        self.assertEqual(len(page.root.find_all(onclick=OPENS_CREATE_USER)), 1)   # nowhere else on the page
 
-    def test_the_waiting_count_stays_on_the_review_button(self):
+    def test_the_waiting_count_pill_shows_just_the_number_and_never_wraps(self):
         AccessRequest.objects.create(name="Ada", email="ada@example.org", email_verified_at=timezone.now())
-        review, _ = self.buttons(self.page(self.superuser))
-        self.assertEqual(self.one(review, data_testid="pending-access-count").words, "1 waiting")
+        page = self.page(self.superuser)
+        pill = self.one(page.root, data_testid="pending-access-count")
+        self.assertEqual(pill.words, "1")
+        self.assertIn("whitespace-nowrap", pill.classes)
 
-    def test_nobody_else_sees_either_button_whatever_they_were_granted(self):
+    def test_the_pill_is_absent_when_nothing_is_waiting(self):
+        page = self.page(self.superuser)
+        self.assertEqual(page.root.find_all(data_testid="pending-access-count"), [])
+
+    def test_nobody_else_sees_access_requests_or_create_user_whatever_they_were_granted(self):
         for area in KEYS:
             AreaGrant.objects.get_or_create(user=self.staff, area=area)
         for user in (self.user, self.staff):
@@ -138,7 +141,20 @@ class AccountPageTests(ReadsPages, PageBehaviourCase):
                 self.assertEqual(page.root.find_all(data_testid="access-requests"), [])
                 self.assertEqual(page.root.find_all(onclick=OPENS_CREATE_USER), [])
                 self.assertEqual(page.root.find_all(href=reverse("access_requests")), [])
-                self.assertIn("Change Password", page.root.words)
+                self.assertEqual(page.root.find_all(id="user-directory"), [])
+                self.assertIn("Change password", page.root.words)
+                self.assertEqual(len(page.root.find_all(onclick=OPENS_PASSWORD)), 1)
+
+    def test_the_account_header_shows_who_you_are(self):
+        header = self.one(self.page(self.staff).root, data_testid="account-header")
+        self.assertIn(self.staff.username, header.words)
+        self.assertIn("Staff", header.words)
+
+    def test_the_superuser_pill_is_grey_not_black(self):
+        self.client.force_login(self.superuser)
+        html = self.client.get(reverse("my_account")).content.decode()
+        self.assertIn("Superuser", html)
+        self.assertNotIn("bg-black", html)
 
     def test_every_tag_on_the_page_is_closed_exactly_once(self):
         for user in (self.superuser, self.user):

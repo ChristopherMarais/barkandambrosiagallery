@@ -182,3 +182,21 @@ class DayFilterTests(HistoryFilterCase):
         res = self.history("?day=today")
         self.assertEqual([r.id for r in res.context["sessions"]], [today.id])
         self.assertNotIn(yesterday.id, [r.id for r in res.context["sessions"]])
+
+
+class HistoryFilterSelectSafetyTests(HistoryFilterCase):
+    """The mobile game/day <select>s navigate via a same-origin-checked helper, not a raw DOM-read value
+    (CodeQL DOM text reinterpreted as HTML / js/xss-through-dom, #618)."""
+
+    def test_the_selects_call_the_safe_nav_helper_not_a_raw_value_assignment(self):
+        page = self.history().content.decode()
+        self.assertIn('onchange="safeFilterNav(this.value)"', page)
+        self.assertNotIn("location.href = this.value", page)
+
+    def test_the_helper_only_navigates_same_origin_http_s(self):
+        page = self.history().content.decode()
+        fn = page[page.index("function safeFilterNav"):]
+        fn = fn[:fn.index("</script>")]
+        self.assertIn("new URL(value, location.href)", fn)
+        self.assertIn("u.origin === location.origin", fn)
+        self.assertIn('u.protocol === "http:"', fn)

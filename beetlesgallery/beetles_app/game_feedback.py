@@ -349,12 +349,13 @@ def loss_summary(answers):
         else:
             pair[loss["state"]]["count"] += 1
             pair[loss["state"]]["lost"] += loss["lost"]
-    rank_rows = sorted((dict(row, lost=round(row["lost"], 1)) for row in ranks.values()
+    # Whole points, not fractions (#618 rep-lost): the per-answer detail already keeps the precise figure.
+    rank_rows = sorted((dict(row, lost=round(row["lost"])) for row in ranks.values()
                         if row["right"] or row["wrong"] or row["stopped"]), key=lambda row: -row["lost"])
-    pair_rows = sorted((dict(row, lost=round(row["lost"], 1)) for k, row in pair.items() if k != "right" and row["count"]),
+    pair_rows = sorted((dict(row, lost=round(row["lost"])) for k, row in pair.items() if k != "right" and row["count"]),
                        key=lambda row: -row["lost"])
-    odd_rows = [dict(row, lost=round(row["lost"], 1)) for row in odd.values() if row["right"] or row["wrong"]]
-    select_rows = [dict(row, lost=round(row["lost"], 1)) for row in select.values()
+    odd_rows = [dict(row, lost=round(row["lost"])) for row in odd.values() if row["right"] or row["wrong"]]
+    select_rows = [dict(row, lost=round(row["lost"])) for row in select.values()
                    if row["right"] or row["wrong"] or row["missed"]]
     tip = None
     worst = next((row for row in rank_rows if row["lost"] > 0), None)
@@ -368,7 +369,7 @@ def loss_summary(answers):
         tip = "In Similarity you often called beetles closer relatives than they are. Pick the lowest line you're sure of."
     return {"answers": seen, "ranks": rank_rows, "pair": pair_rows, "odd": odd_rows, "select": select_rows, "tip": tip,
             "lost": round(sum(r["lost"] for r in rank_rows) + sum(r["lost"] for r in pair_rows)
-                          + sum(r["lost"] for r in odd_rows) + sum(r["lost"] for r in select_rows), 1)}
+                          + sum(r["lost"] for r in odd_rows) + sum(r["lost"] for r in select_rows))}
 
 
 # ---------------------------------------------------------------------------

@@ -10,7 +10,7 @@
     </a>
     <div>
       <h1 class="page-title">
-        {% if is_self %}My performance{% else %}{{ player.username }}{% endif %}
+        {% if is_self %}My performance{% else %}{{ player.username }} &middot; performance{% endif %}
       </h1>
       <p class="text-sm text-gray-500">Updated when you leave a game.</p>
     </div>
@@ -54,10 +54,9 @@
   <div class="mb-8">
     <h2 class="text-lg font-semibold text-gray-900 mb-1">Expertise</h2>
     <p class="text-xs text-gray-500 mb-3">
-      You become a Naming expert in a taxon once you have named {{ report.per_species }} validated images each of at least
-      {% widthratio report.children_share 1 100 %}% of its members (a genus's species, a tribe's genera, a subfamily's tribes) and got at least {% widthratio report.min_accuracy 1 100 %}% correct.
-      A genus with two species needs far fewer answers than one with forty. Naming experts' labels are flagged to our curators as trusted.
-      Telling the members apart just as well makes you a Distinction expert, which unlocks nothing: the <a href="{% url 'game_player_expertise' player.id %}" class="underline hover:text-gray-900">expertise tree</a> shows both.
+      Naming a taxon's beetles reliably makes you a Naming expert there, trusted to label them without review &mdash;
+      see <a href="{% url 'game_how' %}#labels" class="underline hover:text-gray-900">how expertise works</a> and the
+      <a href="{% url 'game_player_expertise' player.id %}" class="underline hover:text-gray-900">expertise tree</a>.
     </p>
 
     {% if report.proven %}
@@ -126,7 +125,7 @@
           <tr>
             <th class="py-2 pl-4 pr-2 text-left">Rank</th>
             <th class="py-2 px-2 text-right">Naming</th>
-            <th class="py-2 pl-2 pr-4 text-right">Distinction</th>
+            {% if report.by_rank_has_distinction %}<th class="py-2 pl-2 pr-4 text-right">Distinction</th>{% endif %}
           </tr>
         </thead>
         <tbody>
@@ -136,9 +135,11 @@
             <td class="py-2.5 px-2 text-right tabular-nums">
               {% if row.naming.n %}{% widthratio row.naming.accuracy 1 100 %}% <span class="text-xs text-gray-400">of {{ row.naming.n|digit_groups }}</span>{% else %}<span class="text-gray-300">&ndash;</span>{% endif %}
             </td>
+            {% if report.by_rank_has_distinction %}
             <td class="py-2.5 pl-2 pr-4 text-right tabular-nums">
               {% if row.distinction.n %}{% widthratio row.distinction.accuracy 1 100 %}% <span class="text-xs text-gray-400">of {{ row.distinction.n|digit_groups }}</span>{% else %}<span class="text-gray-300">&ndash;</span>{% endif %}
             </td>
+            {% endif %}
           </tr>
           {% endfor %}
         </tbody>
@@ -146,10 +147,10 @@
     </div>
   </div>
 
-  <!-- Trend -->
+  <!-- Trend --><!-- a one-row "trend" isn't one, so this waits for a second month of data (#618 rep-months) -->
+  {% if report.monthly|length > 1 %}
   <div class="mb-8">
     <h2 class="text-lg font-semibold text-gray-900 mb-3">Last six months</h2>
-    {% if report.monthly %}
     <div class="border border-gray-200 rounded-lg overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
@@ -179,9 +180,7 @@
         </tbody>
       </table>
     </div>
-    {% else %}
-    <p class="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg">No games played in the last six months.</p>
-    {% endif %}
   </div>
+  {% endif %}
 </div>
 {% endblock %}

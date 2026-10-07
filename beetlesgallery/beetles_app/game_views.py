@@ -85,6 +85,13 @@ def game_home(request):
     # this week's top players (#497); while the week is empty, the home says so and shows last week's top three
     board = game_board.board(limit=5)
     rewards = game_rewards.progress(request.user)
+    # Locked games (not yet unlocked by level) look the same as unplayed ones without this: both show "–"
+    # and "0 pts" (gh-locked). Mark each game's stats so the card can tell the two apart.
+    games_stats = game_board.mode_stats([request.user.id])[request.user.id]
+    unlocked_games = set(game_levels.games(rewards["perks"]))
+    for g in game_levels.GAMES:
+        games_stats[g]["locked"] = g not in unlocked_games
+        games_stats[g]["unlock_level"] = game_levels.game_level(g)
     return render(request, "beetles/game_home.html", {
         "last_session": last_session,
         "checked": checked, "checked_new": checked_new, "checked_change": checked_change,
@@ -95,7 +102,7 @@ def game_home(request):
         "board": board, "last_week": [] if board else game_board.last_week_top(),
         "standing": game_board.accuracy_standing(request.user),
         "goal_floor": game_rewards.daily_goal(),
-        "games": game_board.mode_stats([request.user.id])[request.user.id],
+        "games": games_stats,
         # the public address in production (SITE_URL), this server's own when developing
         "share_url": (request.build_absolute_uri(reverse("game_home")) if settings.DEBUG
                       else settings.SITE_URL.rstrip("/") + reverse("game_home")),
@@ -310,8 +317,18 @@ def game_leaderboard(request):
     q = (request.GET.get("q") or "").strip()[:50]
     branch_rank = request.GET.get("rank") if request.GET.get("rank") in game_board.BRANCH_SKILL else ""
     branch_value = (request.GET.get("branch") or "").strip()[:100]
+    rows = game_board.board(sort=sort, period=period, q=q, limit=100)
+    # One "headline" accuracy per row for the compact phone layout (#618 lb-table): whichever game the board is
+    # currently sorted by, or Naming by default, so the number shown always matches what ordered the list.
+    headline_key = {"identification": "id_accuracy", "similarity": "sim_accuracy",
+                    "odd": "odd_accuracy", "select": "select_accuracy"}.get(sort, "id_accuracy")
+    headline_label = {"id_accuracy": "Naming", "sim_accuracy": "Similarity",
+                       "odd_accuracy": "Odd One Out", "select_accuracy": "Find Them All"}[headline_key]
+    for row in rows:
+        row["headline_accuracy"] = row.get(headline_key)
+        row["headline_label"] = headline_label
     return render(request, "beetles/game_leaderboard.html", {
-        "rows": game_board.board(sort=sort, period=period, q=q, limit=100),
+        "rows": rows,
         "branch_rows": game_board.branch_board(branch_rank, branch_value) if branch_rank and branch_value else None,
         "sort": sort, "period": period, "q": q, "sorts": game_board.SORTS, "periods": game_board.PERIODS,
         "resets_at": game_board.period_end(period),
@@ -358,6 +375,9 @@ def game_unlocks(request):
             return redirect("game_unlocks")
     return render(request, "beetles/game_unlocks.html", {
         "info": info, "ladder": game_levels.table(), "pref": pref, "error": error,
+        # "Next: <level> - N pts and M% to go" above the ladder (#618 unl-next), reusing the progress
+        # already worked out for the level card so the two numbers never disagree.
+        "next_percent_to_go": round((1 - info["progress"]) * 100) if info.get("next") else None,
         "focus_active": game.player_focus(request.user),
         "focus_ranks": [(r, label, game_levels.FOCUS_PERK[r] in info["perks"]) for r, label in
                         (("subfamily", "Subfamily"), ("tribe", "Tribe"), ("genus", "Genus"))],

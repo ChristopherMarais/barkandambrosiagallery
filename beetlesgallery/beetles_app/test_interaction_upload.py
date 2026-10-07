@@ -222,6 +222,37 @@ class PageTests(UploadCase):
         PathogenInteraction.objects.create(beetle_host="x", pathogen="y", category="Fungi", origin="dataset")
         self.assertNotContains(self.client.get(reverse("upload_interactions")), "not loaded into the database")
 
+    def test_the_counts_show_as_three_small_stats(self):
+        self.uploaded()
+        PathogenInteraction.objects.create(beetle_host="x", pathogen="y", category="Fungi", origin="dataset")
+        self.client.force_login(self.staff)
+        page = self.client.get(reverse("upload_interactions")).content.decode()
+        self.assertIn('data-testid="interaction-counts"', page)
+        self.assertIn("Published", page)
+        self.assertIn("Accepted", page)
+        self.assertIn("Uploaded", page)
+
+    def test_the_upload_button_is_primary(self):
+        self.client.force_login(self.staff)
+        page = self.client.get(reverse("upload_interactions")).content.decode()
+        self.assertIn('<button type="submit" class="btn-primary', page)
+
+    def test_downloads_are_a_list_with_a_description_each(self):
+        self.client.force_login(self.staff)
+        page = self.client.get(reverse("upload_interactions")).content.decode()
+        self.assertIn("Downloads", page)
+        self.assertIn("Current interactions (CSV)", page)
+        self.assertIn("Blank template", page)
+        self.assertIn("Initial file (v1.0)", page)
+        self.assertIn("ready to edit and upload again", page)
+
+    def test_the_columns_table_stacks_on_mobile(self):
+        self.client.force_login(self.staff)
+        page = self.client.get(reverse("upload_interactions")).content.decode()
+        self.assertIn('class="block sm:table-row-group divide-y divide-gray-100"', page)
+        self.assertIn('class="block sm:table-row"', page)
+        self.assertIn('class="block sm:table-cell', page)
+
 
 class ExportTests(UploadCase):
     def download(self, user=None):

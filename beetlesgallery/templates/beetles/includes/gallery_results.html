@@ -1,11 +1,20 @@
 {% load beetle_tags %}  <div id="gallery-results-container" class="transition-opacity duration-150">
+
+    {# --- RESULT COUNT + PAGER, one line (#618 browser-found) --- #}
+    <div class="w-full max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4 mb-4">
+         <div class="text-sm text-text/70">
+           {{ total_matches|digit_groups }} image{{ total_matches|pluralize }}{% if is_paginated %} &middot; page {{ page_obj.number|digit_groups_text }} of {{ paginator.num_pages|digit_groups_text }}{% endif %}
+         </div>
+
+         {% if is_paginated %}
+            {% include "beetles/includes/_gallery_pager.html" %}
+          {% endif %}
+    </div>
+
+    {# --- VIEW TOGGLE + DOWNLOAD ACTIONS --- #}
     <div class="w-full max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-text/10">
 
          <div class="flex flex-wrap items-center gap-4">
-             <div class="text-sm text-text/70">
-               Found <span class="font-bold text-text">{{ total_matches|digit_groups }}</span> image{{ total_matches|pluralize }}.
-             </div>
-
              {# View Toggle #}
              <div class="flex items-center gap-1 border border-gray-300 rounded-lg overflow-hidden">
                <button type="button" id="view-toggle-card" class="view-toggle-btn active px-3 py-1.5 text-sm hover:bg-gray-100 transition flex items-center gap-1.5" title="Card View">
@@ -17,127 +26,17 @@
                  <span class="hidden sm:inline">Gallery</span>
                </button>
              </div>
-             
-             <div class="flex items-center gap-4">
-                
-                {# --- 1. DOWNLOAD SELECTED --- #}
-                {% if areas.annotate and areas.download %}
-                    {# STAFF: Dropdown Menu #}
-                    <div class="relative inline-block text-left">
-                        <button type="button" 
-                                onclick="toggleDownloadMenu(this.nextElementSibling)" 
-                                disabled
-                                class="download-selected-btn group inline-flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-black disabled:opacity-50 disabled:cursor-not-allowed">
-                            <span>Download Selected (<span class="selected-count">0</span>)</span>
-                            <svg class="w-4 h-4 text-gray-500 group-hover:text-black transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </button>
 
-                        <div class="hidden absolute right-0 z-50 mt-2 w-64 origin-top-right rounded-lg bg-white shadow-xl ring-1 ring-black/5 focus:outline-hidden flex flex-col py-1 download-menu">
-                            <div class="px-4 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wider">Select Format</div>
-                            
-                            <button type="submit" form="download-selected-form" name="download_type" value="package"
-                                    class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full">
-                                <span class="font-bold block text-gray-900">All Selected Data</span>
-                                <span class="text-xs text-gray-500">Images (.zip) + Metadata (.csv)</span>
-                            </button>
-
-                            <button type="submit" form="download-selected-form" name="download_type" value="metadata_only"
-                                    class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full border-t border-gray-100">
-                                <span class="font-bold block text-gray-900">Metadata Only</span>
-                                <span class="text-xs text-gray-500">Metadata (.csv)</span>
-                            </button>
-                        </div>
-                    </div>
-
-                {% elif areas.download %}
-                    {# NORMAL USER: Single Button (Forces Package) #}
-                    <button type="submit" 
-                            form="download-selected-form" 
-                            name="download_type" 
-                            value="package"
-                            disabled
-                            class="download-selected-btn text-sm font-bold text-gray-700 hover:text-black hover:underline disabled:opacity-50 disabled:cursor-not-allowed">
-                        Download Selected (<span class="selected-count">0</span>)
-                    </button>
-                {% endif %}
-
-                {# Divider #}
+             <div class="flex items-center gap-3">
+                {% include "beetles/includes/_gallery_download_buttons.html" with form_suffix="selected" %}
                 {% if total_matches > 0 and request.user.is_authenticated %}
-                    <div class="h-4 w-px bg-text/20"></div>
+                    {% include "beetles/includes/_gallery_download_buttons.html" with form_suffix="all" %}
                 {% endif %}
-
-                {# --- 2. DOWNLOAD ALL --- #}
-                {% if total_matches > 0 and request.user.is_authenticated %}
-                    {% if areas.annotate and areas.download %}
-                        {# STAFF: Dropdown Menu for ALL #}
-                        <div class="relative inline-block text-left">
-                            <button type="button" 
-                                    onclick="toggleDownloadMenu(this.nextElementSibling)" 
-                                    class="group inline-flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-black">
-                                <span>Download All ({{ total_matches|digit_groups }})</span>
-                                <svg class="w-4 h-4 text-gray-500 group-hover:text-black transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                            </button>
-
-                            <div class="hidden absolute right-0 z-50 mt-2 w-64 origin-top-right rounded-lg bg-white shadow-xl ring-1 ring-black/5 focus:outline-hidden flex flex-col py-1 download-menu">
-                                <div class="px-4 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wider">Select Format</div>
-                                
-                                <button type="submit" form="download-all-form" name="download_type" value="package"
-                                        class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full">
-                                    <span class="font-bold block text-gray-900">All Selected Data</span>
-                                    <span class="text-xs text-gray-500">Images (.zip) + Metadata (.csv)</span>
-                                </button>
-
-                                <button type="submit" form="download-all-form" name="download_type" value="metadata_only"
-                                        class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full border-t border-gray-100">
-                                    <span class="font-bold block text-gray-900">Metadata Only</span>
-                                    <span class="text-xs text-gray-500">Metadata (.csv)</span>
-                                </button>
-                            </div>
-                        </div>
-
-                    {% elif areas.download %}
-                        {# NORMAL USER: Single Button for ALL #}
-                        <button type="submit" 
-                                form="download-all-form" 
-                                name="download_type" 
-                                value="package"
-                                class="text-sm font-bold text-gray-700 hover:text-black hover:underline">
-                            Download All ({{ total_matches|digit_groups }})
-                        </button>
-                    {% endif %}
-                {% endif %}
-
              </div>
              <button type="button" id="clear-selection-btn" class="hidden text-sm text-gray-600 hover:underline">
-                 × Deselect all (<span id="global-selection-count">0</span>)
+                 &times; Deselect all (<span id="global-selection-count">0</span>)
              </button>
          </div>
-
-         {% if is_paginated %}
-            <nav class="flex items-center gap-2 pagination-nav">
-              {% if page_obj.has_previous %}
-                <button type="button" onclick="goToPage('{{ page_obj.previous_page_number }}')"
-                   class="rounded-sm border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30 transition">
-                  Previous
-                </button>
-              {% endif %}
-
-              <div class="flex items-center gap-2 text-sm text-text/70">
-                <span>Page</span>
-                <select onchange="goToPage(this.value)" class="page-select rounded-sm border border-text/20 bg-background py-1.5 px-2 text-sm focus:ring-gray-400 cursor-pointer">
-                  {{ page_options_html }}
-                </select>
-                <span>of {{ paginator.num_pages|digit_groups_text }}</span>
-              </div>
-
-              {% if page_obj.has_next %}
-                <button type="button" onclick="goToPage('{{ page_obj.next_page_number }}')"
-                   class="rounded-sm border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30 transition">
-                  Next
-                </button>
-              {% endif %}
-            </nav>
-          {% endif %}
     </div>
 
   {# --- RESULTS SECTION --- #}
@@ -146,30 +45,34 @@
     {# Card View #}
     <div id="card-view" class="flex flex-col gap-4">
       {% for b in beetles %}
-       <div class="group relative flex flex-row rounded-lg border border-text/10 bg-primary2 overflow-hidden hover:shadow-md transition h-auto min-h-40">
-           
-            <div class="w-32 sm:w-36 shrink-0 flex flex-col justify-center p-3">
-              <a {% if areas.details or not user.is_authenticated %}href="{% url 'beetle_detail' beetle_id=b.id %}"{% endif %} 
+       <div class="group relative flex flex-row rounded-lg border border-text/10 bg-primary2 overflow-hidden hover:shadow-md transition">
+
+            {# Small side thumbnail (browser-thumb skipped by the owner, #618) #}
+            <div class="w-32 sm:w-36 shrink-0 flex items-center justify-center p-3">
+              <a {% if areas.details or not user.is_authenticated %}href="{% url 'beetle_detail' beetle_id=b.id %}"{% endif %}
                 class="flex items-center justify-center w-full h-32 bg-black/5 rounded-xl overflow-hidden border border-black/5 shadow-xs">
-                {% if b.image_asset and b.image_asset.thumb_small %}
-                  <img src="{{ b.image_asset.thumb_small.url }}" alt="{{ b.ref_scientificName }}" {% thumb_size b.image_asset %} loading="lazy" decoding="async" class="w-full h-full object-contain" />
-                {% else %}
-                  <div class="text-gray-600 text-xs text-center">No Image</div>
-                {% endif %}
+                <div class="thumb-wrap relative flex items-center justify-center w-full h-full" data-src="{% if b.image_asset and b.image_asset.thumb_small %}{{ b.image_asset.thumb_small.url }}{% endif %}" data-alt="{{ b.ref_scientificName|default:'Unidentified' }}" data-img-class="thumb-img w-full h-full object-contain">
+                  {% if b.image_asset and b.image_asset.thumb_small %}
+                    <img src="{{ b.image_asset.thumb_small.url }}" alt="{{ b.ref_scientificName|default:'Unidentified' }}" {% thumb_size b.image_asset %} loading="lazy" decoding="async" class="thumb-img w-full h-full object-contain" onerror="handleThumbError(this)" />
+                  {% else %}
+                    {% include "beetles/includes/_no_preview.html" %}
+                  {% endif %}
+                </div>
               </a>
             </div>
 
-           <div class="flex-1 p-3 sm:p-4 overflow-y-auto scrollbar-thin">
+           <div class="flex-1 p-3 sm:p-4 min-w-0 overflow-y-auto scrollbar-thin">
              <div class="flex justify-between items-start gap-2 mb-2">
                <div class="min-w-0 flex-1">
-                 <h3 class="font-bold text-base text-text leading-tight truncate">
+                 {# Never truncate the name: let it wrap to two lines instead (#618 browser-truncate) #}
+                 <h3 class="font-bold text-base text-text leading-tight line-clamp-2">
                    <a {% if areas.details or not user.is_authenticated %}href="{% url 'beetle_detail' beetle_id=b.id %}"{% endif %} class="hover:text-gray-600 hover:underline">
                      {{ b.ref_scientificName|default:"Unidentified" }}
                    </a>
                  </h3>
-                 <div class="flex items-center gap-2 mt-1">
-                     <span class="font-bold text-xs text-gray-600 mr-1">Record ID:</span>
-                     <span class="font-mono text-xs text-text/70 break-all select-all">{{ b.id|stringformat:"s" }}</span>
+                 <div class="flex items-center gap-2 mt-1 min-w-0">
+                     <span class="font-semibold text-gray-600 shrink-0">Record ID:</span>
+                     <span class="font-mono text-xs text-text/70 truncate select-all" title="{{ b.id }}">{{ b.id|stringformat:"s" }}</span>
                      <button type="button" class="copy-uuid shrink-0 text-gray-500 hover:text-black transition" data-uuid="{{ b.id }}" title="Copy Full Record ID">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                      </button>
@@ -181,125 +84,94 @@
                   </label>
                </div>
              </div>
-             
-             <div class="text-xs text-text/80 mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-                <div class="space-y-1">
-                  
-                  {# --- SPECIMEN ID (Always specific) --- #}
-                  {% if b.depicts_specimen %}
-                    <div class="truncate"><span class="font-semibold text-gray-600">Specimen ID:</span> <span class="ml-1">{{ b.depicts_specimen }}</span></div>
-                  {% endif %}
 
-                  {# --- ASPECT --- #}
-                  {% if b.has_multiple_aspect %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Aspect:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
-                  {% elif b.aspect %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Aspect:</span> <span class="ml-1">{{ b.aspect }}</span></div>
-                  {% endif %}
+             {# --- All fields (browser-density skipped, #618); same label/value style as browser-pairs (kept). --- #}
+             <dl class="grid grid-cols-3 gap-x-3 gap-y-1.5 text-sm items-baseline mt-3">
+                {% if b.depicts_specimen %}
+                  <dt class="col-span-1 text-text/60">Specimen ID</dt>
+                  <dd class="col-span-2 text-text/80 truncate">{{ b.depicts_specimen }}</dd>
+                {% endif %}
 
-                  {# --- MULTIPLE INDIVIDUALS --- #}
-                  {% if b.image_asset.image_has_multiple_individuals is not None %}
-                    <div class="truncate"><span class="font-semibold text-gray-600">Multiple Individuals:</span> <span class="ml-1">{% if b.image_asset.image_has_multiple_individuals %}Yes{% else %}No{% endif %}</span></div>
-                  {% endif %}
-                  
-                  {# --- COUNTRY --- #}
-                  {% if b.has_multiple_country %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Country:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
-                  {% elif b.collection_country %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Country:</span> <span class="ml-1">{{ b.collection_country }}</span></div>
-                  {% endif %}
+                {% if b.has_multiple_aspect %}
+                  <dt class="col-span-1 text-text/60">Aspect</dt>
+                  <dd class="col-span-2 text-text/80 italic">Multiple</dd>
+                {% elif b.aspect %}
+                  <dt class="col-span-1 text-text/60">Aspect</dt>
+                  <dd class="col-span-2 text-text/80">{{ b.aspect }}</dd>
+                {% endif %}
 
-                  {# --- SEX --- #}
-                  {% if b.has_multiple_sex %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Sex:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
-                  {% elif b.specimen_sex %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Sex:</span> <span class="ml-1">{{ b.specimen_sex|lower }}</span></div>
-                  {% endif %}
+                {% if b.image_asset.image_has_multiple_individuals is not None %}
+                  <dt class="col-span-1 text-text/60">Multiple Individuals</dt>
+                  <dd class="col-span-2 text-text/80">{% if b.image_asset.image_has_multiple_individuals %}Yes{% else %}No{% endif %}</dd>
+                {% endif %}
 
-                  {# --- INSTITUTION --- #}
-                  {% if b.image_asset.image_institution %}
-                    <div class="text-text/80 wrap-break-word">
-                      <span class="font-semibold text-gray-600">Institution:</span>
-                      <span class="ml-1">{{ b.image_asset.image_institution }}</span>
-                    </div>
-                  {% endif %}
+                {% if b.has_multiple_country %}
+                  <dt class="col-span-1 text-text/60">Country</dt>
+                  <dd class="col-span-2 text-text/80 italic">Multiple</dd>
+                {% elif b.collection_country %}
+                  <dt class="col-span-1 text-text/60">Country</dt>
+                  <dd class="col-span-2 text-text/80">{{ b.collection_country }}</dd>
+                {% endif %}
 
-                  {# --- PHOTOGRAPHER --- #}
-                  {% if b.image_asset.photographer %}
-                    <div class="text-text/80 wrap-break-word">
-                      <span class="font-semibold text-gray-600">Photographer:</span>
-                      <span class="ml-1">{{ b.image_asset.photographer }}</span>
-                    </div>
-                  {% endif %}
+                {% if b.has_multiple_sex %}
+                  <dt class="col-span-1 text-text/60">Sex</dt>
+                  <dd class="col-span-2 text-text/80 italic">Multiple</dd>
+                {% elif b.specimen_sex %}
+                  <dt class="col-span-1 text-text/60">Sex</dt>
+                  <dd class="col-span-2 text-text/80">{{ b.specimen_sex|lower }}</dd>
+                {% endif %}
 
-                </div>
+                {% if b.image_asset.image_institution %}
+                  <dt class="col-span-1 text-text/60">Institution</dt>
+                  <dd class="col-span-2 text-text/80 truncate">{{ b.image_asset.image_institution }}</dd>
+                {% endif %}
 
-                <div class="space-y-1">
-                  {# --- TAXONOMY AGGREGATION --- #}
-                  
-                  {# SUBFAMILY #}
-                  {% if b.has_multiple_subfamily %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Subfamily:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
-                  {% elif b.ref_subfamily %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Subfamily:</span> <a href="{% taxon_url b.ref_subfamily %}" class="ml-1 hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_subfamily }}</a></div>
-                  {% elif not b.depicts_valid_name_id %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Subfamily:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
-                  {% endif %}
+                {% if b.image_asset.photographer %}
+                  <dt class="col-span-1 text-text/60">Photographer</dt>
+                  <dd class="col-span-2 text-text/80 truncate">{{ b.image_asset.photographer }}</dd>
+                {% endif %}
 
-                  {# TRIBE #}
-                  {% if b.has_multiple_tribe %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Tribe:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
-                  {% elif b.ref_tribe %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Tribe:</span> <a href="{% taxon_url b.ref_subfamily b.ref_tribe %}" class="ml-1 hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_tribe }}</a></div>
-                  {% elif not b.depicts_valid_name_id %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Tribe:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
-                  {% endif %}
+                {% if b.has_multiple_subfamily %}
+                  <dt class="col-span-1 text-text/60">Subfamily</dt>
+                  <dd class="col-span-2 text-text/80 italic">Multiple</dd>
+                {% elif b.ref_subfamily %}
+                  <dt class="col-span-1 text-text/60">Subfamily</dt>
+                  <dd class="col-span-2 text-text/80"><a href="{% taxon_url b.ref_subfamily %}" class="hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_subfamily }}</a></dd>
+                {% endif %}
 
-                  {# SUBTRIBE #}
-                  {% if b.has_multiple_subtribe %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Subtribe:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
-                  {% elif b.ref_subtribe %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Subtribe:</span> <a href="{% taxon_url b.ref_subfamily b.ref_tribe %}" class="ml-1 hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_subtribe }}</a></div>
-                  {% elif not b.depicts_valid_name_id %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Subtribe:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
-                  {% endif %}
+                {% if b.has_multiple_tribe %}
+                  <dt class="col-span-1 text-text/60">Tribe</dt>
+                  <dd class="col-span-2 text-text/80 italic">Multiple</dd>
+                {% elif b.ref_tribe %}
+                  <dt class="col-span-1 text-text/60">Tribe</dt>
+                  <dd class="col-span-2 text-text/80"><a href="{% taxon_url b.ref_subfamily b.ref_tribe %}" class="hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_tribe }}</a></dd>
+                {% endif %}
 
-                  {# GENUS #}
-                  {% if b.has_multiple_genus %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Genus:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
-                  {% elif b.ref_genus %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Genus:</span> <a href="{% taxon_url b.ref_subfamily b.ref_tribe b.ref_genus %}" class="ml-1 italic hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_genus }}</a></div>
-                  {% elif not b.depicts_valid_name_id %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Genus:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
-                  {% endif %}
+                {% if b.has_multiple_genus %}
+                  <dt class="col-span-1 text-text/60">Genus</dt>
+                  <dd class="col-span-2 text-text/80 italic">Multiple</dd>
+                {% elif b.ref_genus %}
+                  <dt class="col-span-1 text-text/60">Genus</dt>
+                  <dd class="col-span-2 text-text/80 italic"><a href="{% taxon_url b.ref_subfamily b.ref_tribe b.ref_genus %}" class="hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_genus }}</a></dd>
+                {% endif %}
 
-                  {# SPECIES #}
-                  {% if b.has_multiple_species %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Species:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
-                  {% elif b.ref_species %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Species:</span> <a href="{% url 'taxonomy_browser' %}?species={{ b.depicts_valid_name_id|urlencode }}" class="ml-1 italic hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_species }}</a></div>
-                  {% elif not b.depicts_valid_name_id %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Species:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
-                  {% endif %}
+                {% if b.has_multiple_species %}
+                  <dt class="col-span-1 text-text/60">Species</dt>
+                  <dd class="col-span-2 text-text/80 italic">Multiple</dd>
+                {% elif b.ref_species %}
+                  <dt class="col-span-1 text-text/60">Species</dt>
+                  <dd class="col-span-2 text-text/80 italic"><a href="{% url 'taxonomy_browser' %}?species={{ b.depicts_valid_name_id|urlencode }}" class="hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_species }}</a></dd>
+                {% endif %}
 
-                  {# SUBSPECIES #}
-                  {% if b.has_multiple_subspecies %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Subspecies:</span> <span class="ml-1 italic text-gray-700">Multiple</span></div>
-                  {% elif b.ref_subspecies %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Subspecies:</span> <a href="{% url 'taxonomy_browser' %}?species={{ b.depicts_valid_name_id|urlencode }}" class="ml-1 italic hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_subspecies }}</a></div>
-                  {% elif not b.depicts_valid_name_id %}
-                      <div class="truncate"><span class="font-semibold text-gray-600">Subspecies:</span> <span class="ml-1 italic text-text/60">unidentified</span></div>
-                  {% endif %}
+                {% if b.specimen_type_status %}
+                  <dt class="col-span-1 text-text/60">Type Status</dt>
+                  <dd class="col-span-2 text-text/80">{{ b.specimen_type_status }}</dd>
+                {% endif %}
+             </dl>
 
-                  {# TYPE STATUS (Hide if empty) #}
-                  {% if b.specimen_type_status %}
-                    <div class="text-text/80 wrap-break-word mt-1">
-                      <span class="font-semibold text-gray-600">Type Status:</span>
-                      <span class="ml-1">{{ b.specimen_type_status }}</span>
-                    </div>
-                  {% endif %}
-                </div>
-             </div>
+             {% if b.boxed_count > 1 %}
+               <p class="mt-2 text-xs text-gray-600">{{ b.boxed_count }} specimens shown on this photo &mdash; see the detail page for each one.</p>
+             {% endif %}
            </div>
        </div>
       {% empty %}
@@ -315,12 +187,20 @@
         <div class="gallery-item group relative">
           <a {% if areas.details or not user.is_authenticated %}href="{% url 'beetle_detail' beetle_id=b.id %}"{% endif %} class="block aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200 hover:border-gray-500 hover:shadow-lg transition-all">
             {% if b.image_asset and b.image_asset.thumb_small %}
-              <img src="{{ b.image_asset.thumb_small.url }}" alt="{{ b.ref_scientificName|default:'Unidentified' }}" {% thumb_size b.image_asset %} loading="lazy" decoding="async" class="w-full h-full object-cover" />
+              <div class="thumb-wrap w-full h-full" data-src="{{ b.image_asset.thumb_small.url }}" data-alt="{{ b.ref_scientificName|default:'Unidentified' }}" data-img-class="thumb-img w-full h-full object-cover">
+                <img src="{{ b.image_asset.thumb_small.url }}" alt="{{ b.ref_scientificName|default:'Unidentified' }}" {% thumb_size b.image_asset %} loading="lazy" decoding="async" class="thumb-img w-full h-full object-cover" onerror="handleThumbError(this)" />
+              </div>
             {% else %}
-              <div class="w-full h-full flex items-center justify-center text-gray-600 text-xs">No Image</div>
+              <div class="thumb-wrap w-full h-full">{% include "beetles/includes/_no_preview.html" %}</div>
             {% endif %}
-            {# Checkbox overlay in top-right corner #}
-            <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+
+            {# One tile already stands for every ROI on this photo; say so instead of looking like a duplicate (#618 browser-roi-badge) #}
+            {% if b.boxed_count > 1 %}
+              <span class="absolute top-2 right-2 rounded-full bg-gray-900/70 text-white text-[10px] font-semibold px-2 py-0.5 leading-4">{{ b.boxed_count }} ROIs</span>
+            {% endif %}
+
+            {# Checkbox in the top-left corner: shown on hover for a mouse, always shown for touch (#618 browser-grid-select) #}
+            <div class="grid-select-overlay absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <label class="flex items-center cursor-pointer" onclick="event.preventDefault(); event.stopPropagation();">
                 <input type="checkbox" class="row-select h-5 w-5 rounded-sm border-gray-300 bg-white shadow-xs text-gray-800 accent-gray-500 focus:ring-gray-400 cursor-pointer" value="{{ b.id }}" onclick="event.stopPropagation();">
               </label>
@@ -343,128 +223,22 @@
   {# --- BOTTOM CONTROLS (Duplicate of Top) --- #}
   {% if total_matches is not None %}
     <div class="w-full max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4 mt-8 pt-4 border-t border-text/10">
-         
+
          <div class="flex flex-wrap items-center gap-4">
              <div class="text-sm text-text/70">
-               Found <span class="font-bold text-text">{{ total_matches|digit_groups }}</span> image{{ total_matches|pluralize }}.
+               {{ total_matches|digit_groups }} image{{ total_matches|pluralize }}{% if is_paginated %} &middot; page {{ page_obj.number|digit_groups_text }} of {{ paginator.num_pages|digit_groups_text }}{% endif %}
              </div>
-             
-             <div class="flex items-center gap-4">
-                
-                {# --- 1. DOWNLOAD SELECTED --- #}
-                {% if areas.annotate and areas.download %}
-                    {# STAFF: Dropdown Menu #}
-                    <div class="relative inline-block text-left">
-                        <button type="button" 
-                                onclick="toggleDownloadMenu(this.nextElementSibling)" 
-                                disabled
-                                class="download-selected-btn group inline-flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-black disabled:opacity-50 disabled:cursor-not-allowed">
-                            <span>Download Selected (<span class="selected-count">0</span>)</span>
-                            <svg class="w-4 h-4 text-gray-500 group-hover:text-black transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </button>
 
-                        <div class="hidden absolute bottom-full mb-2 right-0 z-50 w-64 origin-bottom-right rounded-lg bg-white shadow-xl ring-1 ring-black/5 focus:outline-hidden flex flex-col py-1 download-menu">
-                            <div class="px-4 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wider">Select Format</div>
-                            
-                            <button type="submit" form="download-selected-form" name="download_type" value="package"
-                                    class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full">
-                                <span class="font-bold block text-gray-900">All Selected Data</span>
-                                <span class="text-xs text-gray-500">Images (.zip) + Metadata (.csv)</span>
-                            </button>
-
-                            <button type="submit" form="download-selected-form" name="download_type" value="metadata_only"
-                                    class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full border-t border-gray-100">
-                                <span class="font-bold block text-gray-900">Metadata Only</span>
-                                <span class="text-xs text-gray-500">Metadata (.csv)</span>
-                            </button>
-                        </div>
-                    </div>
-
-                {% elif areas.download %}
-                    {# NORMAL USER: Single Button (Forces Package) #}
-                    <button type="submit" 
-                            form="download-selected-form" 
-                            name="download_type" 
-                            value="package"
-                            disabled
-                            class="download-selected-btn text-sm font-bold text-gray-700 hover:text-black hover:underline disabled:opacity-50 disabled:cursor-not-allowed">
-                        Download Selected (<span class="selected-count">0</span>)
-                    </button>
-                {% endif %}
-
-                {# Divider #}
+             <div class="flex items-center gap-3">
+                {% include "beetles/includes/_gallery_download_buttons.html" with form_suffix="selected" menu_up=True %}
                 {% if total_matches > 0 and request.user.is_authenticated %}
-                    <div class="h-4 w-px bg-text/20"></div>
+                    {% include "beetles/includes/_gallery_download_buttons.html" with form_suffix="all" menu_up=True %}
                 {% endif %}
-
-                {# --- 2. DOWNLOAD ALL --- #}
-                {% if total_matches > 0 and request.user.is_authenticated %}
-                    {% if areas.annotate and areas.download %}
-                        {# STAFF: Dropdown Menu for ALL #}
-                        <div class="relative inline-block text-left">
-                            <button type="button" 
-                                    onclick="toggleDownloadMenu(this.nextElementSibling)" 
-                                    class="group inline-flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-black">
-                                <span>Download All ({{ total_matches|digit_groups }})</span>
-                                <svg class="w-4 h-4 text-gray-500 group-hover:text-black transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                            </button>
-
-                            <div class="hidden absolute bottom-full mb-2 right-0 z-50 w-64 origin-bottom-right rounded-lg bg-white shadow-xl ring-1 ring-black/5 focus:outline-hidden flex flex-col py-1 download-menu">
-                                <div class="px-4 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wider">Select Format</div>
-                                
-                                <button type="submit" form="download-all-form" name="download_type" value="package"
-                                        class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full">
-                                    <span class="font-bold block text-gray-900">All Selected Data</span>
-                                    <span class="text-xs text-gray-500">Images (.zip) + Metadata (.csv)</span>
-                                </button>
-
-                                <button type="submit" form="download-all-form" name="download_type" value="metadata_only"
-                                        class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full border-t border-gray-100">
-                                    <span class="font-bold block text-gray-900">Metadata Only</span>
-                                    <span class="text-xs text-gray-500">Metadata (.csv)</span>
-                                </button>
-                            </div>
-                        </div>
-
-                    {% elif areas.download %}
-                        {# NORMAL USER: Single Button for ALL #}
-                        <button type="submit" 
-                                form="download-all-form" 
-                                name="download_type" 
-                                value="package"
-                                class="text-sm font-bold text-gray-700 hover:text-black hover:underline">
-                            Download All ({{ total_matches|digit_groups }})
-                        </button>
-                    {% endif %}
-                {% endif %}
-
              </div>
-             </div>
+         </div>
 
          {% if is_paginated %}
-            <nav class="flex items-center gap-2 pagination-nav">
-              {% if page_obj.has_previous %}
-                <button type="button" onclick="goToPage('{{ page_obj.previous_page_number }}')"
-                   class="rounded-sm border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30 transition">
-                  Previous
-                </button>
-              {% endif %}
-
-              <div class="flex items-center gap-2 text-sm text-text/70">
-                <span>Page</span>
-                <select onchange="goToPage(this.value)" class="page-select rounded-sm border border-text/20 bg-background py-1.5 px-2 text-sm focus:ring-gray-400 cursor-pointer">
-                  {{ page_options_html }}
-                </select>
-                <span>of {{ paginator.num_pages|digit_groups_text }}</span>
-              </div>
-
-              {% if page_obj.has_next %}
-                <button type="button" onclick="goToPage('{{ page_obj.next_page_number }}')"
-                   class="rounded-sm border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30 transition">
-                  Next
-                </button>
-              {% endif %}
-            </nav>
+            {% include "beetles/includes/_gallery_pager.html" %}
           {% endif %}
     </div>
   {% endif %}

@@ -2,4 +2,34 @@
 {% load static %}
 
 {# Same timezone cookie as base.html so admin pages also show local time #}
-{% block extrahead %}{{ block.super }}<script src="{% static 'js/timezone_cookie.js' %}"></script>{% endblock %}
+{% block extrahead %}{{ block.super }}<script src="{% static 'js/timezone_cookie.js' %}"></script>
+<style>
+  /* The house style is grey/white/black, colour only where it carries meaning (blue = IBBI-AI, purple = players'
+     consensus, #618 adm-theme). Django's admin theme defaults to blue and yellow, which reads as IBBI-AI in this
+     gallery, so it's overridden here with the site's own greys instead of touching django.contrib.admin's CSS. */
+  :root {
+    --primary: #1f2937;            /* gray-800: header and primary buttons */
+    --primary-fg: #fff;
+    --body-quiet-color: #4b5563;   /* gray-600 */
+    --secondary: #374151;          /* gray-700 */
+    --accent: #4b5563;             /* gray-600 */
+    --link-fg: #1f2937;
+    --link-hover-color: #111827;
+    --link-selected-fg: #1f2937;
+    --header-color: #fff;
+    --object-tools-bg: #4b5563;
+    --object-tools-hover-bg: #374151;
+  }
+  #header { background: #1f2937; color: #fff; }
+  .module h2, .module caption, .inline-group h2 { background: #f3f4f6; color: #1f2937; }   /* gray-100 module bars */
+  div.breadcrumbs { background: #374151; color: #e5e7eb; }
+  .button, input[type=submit], input[type=button], .submit-row input, a.button {
+    background: #1f2937;
+  }
+  .button:active, input[type=submit]:active, input[type=button]:active,
+  .button:focus, input[type=submit]:focus, input[type=button]:focus,
+  .button:hover, input[type=submit]:hover, input[type=button]:hover {
+    background: #111827;
+  }
+</style>
+{% endblock %}

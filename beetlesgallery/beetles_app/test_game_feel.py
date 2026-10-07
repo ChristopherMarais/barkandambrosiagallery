@@ -108,7 +108,8 @@ class WatchdogTests(SimpleTestCase):
 
 
 class LoadingTests(SimpleTestCase):
-    """The loading screen: light lines, no word about speed, and facts from a fixed list with no server calls."""
+    """The loading screen: one message at a time (not a short line and a beetle fact stacked and both animating at
+    once, #play-loading-double), light, no word about speed, and facts from a fixed list with no server calls."""
 
     def loading_block(self):   # the constants and loadingLines(); warmOthers() after them does call the server
         return between("const LOADING_LINES", "// ---------- the feed")
@@ -133,15 +134,21 @@ class LoadingTests(SimpleTestCase):
         self.assertTrue(facts[0].startswith("In a Colorado study, forests killed by spruce beetles had 62% more flowers"))
         self.assertIn("Ambrosia beetles grow their own fungus inside the wood, and they eat it.", facts)
         self.assertNotIn("preprint", facts[5].lower())   # labelled in the code comment only, not on the page
-        self.assertIn('fact.textContent = LOADING_FACTS[0];', PAGE)
-        self.assertIn("LOADING_FACTS[(turn / 2) % LOADING_FACTS.length]", PAGE)
+        self.assertIn("LOADING_FACTS[(turn / 2 - 1) % LOADING_FACTS.length]", PAGE)
+
+    def test_the_lines_and_facts_share_one_slot(self):
+        # one element, not a separate #loading-fact stacked underneath it (the regression the owner flagged)
+        self.assertNotIn('id="loading-fact"', PAGE)
+        self.assertNotIn('data-testid="loading-fact"', PAGE)
+        self.assertIn('line.textContent = LOADING_LINES[0];', PAGE)
+        self.assertIn('turn % 2 === 1 ? LOADING_LINES[((turn - 1) / 2) % LOADING_LINES.length]', PAGE)
 
     def test_the_facts_and_lines_do_not_call_the_server(self):
         self.assertNotIn("api(", self.loading_block())
         self.assertNotIn("fetch(", self.loading_block())
 
     def test_reduced_motion_keeps_the_first_line_and_fact(self):
-        self.assertIn("if (still) return;   // reduced motion: the first line and fact stay put", PAGE)
+        self.assertIn("if (still) return;   // reduced motion: the first line stays put", PAGE)
 
 
 class SwitchTests(SimpleTestCase):
@@ -162,7 +169,7 @@ class MotionTests(SimpleTestCase):
 
     def test_the_moving_effects_sit_under_no_preference(self):
         block = between("@media (prefers-reduced-motion: no-preference) {\n    #submit.next-busy", "@keyframes next-sheen")
-        self.assertIn("#loading-fact.new", block)
+        self.assertIn("#loading-line.new", block)
         self.assertIn("tile-wait", block)
         self.assertIn("rv-pulse", PAGE)
         self.assertIn("@keyframes tile-wait", PAGE)
@@ -176,7 +183,8 @@ class RenderedPageTests(GameCase):
     def test_the_play_page_carries_the_new_parts(self):
         self.client.force_login(self.user)
         page = self.client.get(reverse("game_play", args=["mixed"])).content.decode()
-        self.assertIn('data-testid="loading-fact"', page)
+        self.assertIn('data-testid="loading-line"', page)
+        self.assertNotIn('id="loading-fact"', page)   # one message, not two stacked (#play-loading-double)
         self.assertIn('id="loading-bar"', page)
         self.assertIn('id="submit-spin"', page)
         self.assertIn('id="back" aria-disabled="true"', page)

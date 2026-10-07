@@ -35,16 +35,16 @@ class BoxedCountTests(PageBehaviourCase):
         boxed = sorted([self.first, self.second], key=lambda roi: str(roi.id))
         html = self.page(boxed[0])
         self.assertEqual(COUNT.findall(plain(html)), [("1", "2")])               # "ROI 1 of 2", not "of 3"
-        next_link = re.search(r'href="([^"]+)" class="p-1[^"]*"[^>]*title="Next Individual"', html)
+        next_link = re.search(r'href="([^"]+)"[^>]*data-testid="roi-pager-next"', html)
         self.assertEqual(next_link.group(1), reverse("beetle_detail", args=[boxed[1].id]))
         self.assertNotIn(reverse("beetle_detail", args=[self.unboxed.id]), html)   # no arrow to the unboxed ROI
 
     def test_a_beetle_without_a_box_has_no_count_and_no_arrows(self):
         html = self.page(self.unboxed)
         self.assertEqual(COUNT.findall(plain(html)), [])
-        self.assertNotIn('title="Next Individual"', html)
-        self.assertNotIn('title="Previous Individual"', html)
-        self.assertIn("Image Details", html)                              # its information is still shown
+        self.assertNotIn('title="Next ROI"', html)
+        self.assertNotIn('title="Previous ROI"', html)
+        self.assertIn("Technical", html)                                  # its information is still shown
 
     def test_an_image_with_no_boxes_shows_its_information_without_a_count(self):
         bare = make_image(image_file="tests/bare.jpg")
@@ -52,5 +52,5 @@ class BoxedCountTests(PageBehaviourCase):
         make_beetle(image=bare)
         html = self.page(roi)
         self.assertEqual(COUNT.findall(plain(html)), [])
-        self.assertIn("Image Details", html)
+        self.assertIn("Technical", html)
         self.assertNotIn("Show ROI", html)                                # no boxes drawn either

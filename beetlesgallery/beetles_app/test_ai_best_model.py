@@ -166,8 +166,13 @@ class PageTextTests(ClassifyCase):
         help_text = page[page.index('data-testid="model-help"'):]
         help_text = help_text[:help_text.index("</p>")]
         self.assertIn("All models find and name bark beetles.", help_text)
-        self.assertIn("Find out more about the performance of each model.</a>", help_text)
         self.assertNotIn("is recommended", help_text)
+        # the link sits next to the select as "Compare models" (14px), not buried in the tiny help line (#618)
+        marker = page.index('data-testid="ibbi-link"')
+        tag_start = page.rfind("<a", 0, marker)
+        link = page[tag_start:page.index("</a>", marker)]
+        self.assertIn("Compare models", link)
+        self.assertIn("text-sm", link)
 
     def test_the_chart_has_a_title_and_axis_titles(self):
         page = self.page()

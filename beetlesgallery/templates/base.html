@@ -64,6 +64,8 @@
       .tree-toggle { justify-content: flex-start; }
       /* the species and taxonomy links in the gallery cards */
       #gallery-results-container .truncate a { display: inline-block; padding: 0.3rem 0; }
+      /* the grid view's selection checkbox has no hover on a touch screen, so always show it (#618 browser-grid-select) */
+      #gallery-view .grid-select-overlay { opacity: 1; }
     }
     @media (pointer: coarse) and (max-width: 767px) {
       select, textarea, input[type="text"], input[type="search"], input[type="email"], input[type="password"],
@@ -182,13 +184,17 @@
         width: 5rem;
       }
 
-      #sidenav:hover {
+      /* :focus-within too (nav-focus, #618): a keyboard user tabbing into the rail opens it the same way a mouse
+         hovering it would, so the labels are there to read before the icon gets focus. */
+      #sidenav:hover,
+      #sidenav:focus-within {
         width: 16rem;
       }
 
       /* The labels show beside their icons. Only the outer spans are labels: the spans inside them (the game's level
          line, the Preview tag) must not be indented a second time. */
-      #sidenav:hover span:not(span span) {
+      #sidenav:hover span:not(span span),
+      #sidenav:focus-within span:not(span span) {
         opacity: 1;
         width: auto;
         margin-left: 0.75rem;
@@ -200,22 +206,24 @@
          icons stay put. */
       #sideItems > a:not(#sidenav-logo),
       #sideItems > form > button,
-      #sidenav-footer > div {
+      #sidenav-footer > div,
+      #sidenav-footer > a {
         padding-inline: calc((5rem - 1px - 2 * 0.5rem - 2rem) / 2);
       }
 
       /* A scrollbar would narrow the closed rail's rows and push their shading off the icons: show it only while the
          rail is open. The list still scrolls without it. */
-      #sidenav:not(:hover) #sideItems {
+      #sidenav:not(:hover):not(:focus-within) #sideItems {
         scrollbar-width: none;
       }
-      #sidenav:not(:hover) #sideItems::-webkit-scrollbar {
+      #sidenav:not(:hover):not(:focus-within) #sideItems::-webkit-scrollbar {
         display: none;
       }
 
       /* Rotate 90deg and scale so the beetle spans the expanded sidebar
          (6rem x 2.5 = 15rem = 16rem panel minus its padding) */
-      #sidenav:hover #image_browser-icon {
+      #sidenav:hover #image_browser-icon,
+      #sidenav:focus-within #image_browser-icon {
         transform: translate(-50%, -50%) rotate(90deg) scale(2.5);
       }
     }
@@ -224,6 +232,9 @@
   <script src="{% static 'js/digit_groups.js' %}" defer></script>
   <script src="{% static 'js/progressive_image.js' %}" defer></script>
   <script src="{% static 'js/footer_basehtml.js' %}" defer></script>
+  <script src="{% static 'js/copy_id.js' %}" defer></script>
+  <script src="{% static 'js/drop_zone.js' %}" defer></script>
+  <script src="{% static 'js/jump_to.js' %}" defer></script>
   {% if ga_measurement_id %}{# Google Analytics: only on the live site (GA_MEASUREMENT_ID); see docs/analytics.md #}
   <script src="{% static 'js/analytics.js' %}" defer data-ga-id="{{ ga_measurement_id }}" data-ga-page="{{ ga_page }}"></script>
   {% endif %}
@@ -238,10 +249,12 @@
       class="block sticky left-0 top-0 z-40 w-full h-auto lg:h-screen lg:w-20 lg:shrink-0 bg-gray-50 border-b lg:border-b-0 lg:border-r border-gray-200">
 
       <div id="mobileMenuWrap">
-        <div class="lg:hidden flex items-center justify-between px-4 py-3 border-b">
-          <button onclick="menuToggle()" class="p-4 rounded-sm focus:bg-gray-200">
-            <i class="fi fi-rr-menu-burger text-2xl"></i>
+        <div class="lg:hidden flex items-center gap-3 h-14 px-4 border-b">
+          <button onclick="menuToggle()" class="flex items-center justify-center h-11 w-11 -ml-2 rounded-sm focus:bg-gray-200"
+            aria-label="Open menu">
+            <i class="fi fi-rr-menu-burger text-xl"></i>
           </button>
+          <span class="font-medium text-gray-700 text-sm truncate" data-testid="mobile-nav-title">{% nav_section_title %}</span>
         </div>
 
         <div id="mobile-menu"
@@ -259,33 +272,33 @@
             <div class="h-px bg-gray-300 my-1 mx-2"></div>
 
             <a href="{% url 'beetles_image_browser' %}"
-              class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'beetles_image_browser' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
-              <i class="fi fi-rr-bug text-xl text-gray-700 w-8 text-center"></i>
+              class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% nav_active '/beetles/' %}">
+              <i class="fi fi-rr-picture text-xl text-gray-700 w-8 text-center"></i>
               <span class="font-medium text-gray-700 ml-1">Image Browser</span>
             </a>
 
             <a href="{% url 'taxonomy_browser' %}"
-              class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'taxonomy_browser' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+              class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% nav_active '/taxonomy/' %}">
               <i class="fi fi-rr-chart-tree text-xl text-gray-700 w-8 text-center"></i>
               <span class="font-medium text-gray-700 ml-1">Taxonomy Browser</span>
             </a>
 
             <a href="{% url 'interactions_preview' %}"
-              class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'interactions_preview' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+              class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% nav_active '/interactions/' %}">
               <i class="fi fi-rr-diagram-project text-xl text-gray-700 w-8 text-center"></i>
               <span class="font-medium text-gray-700 ml-1">Interactions</span>
               <span class="ml-auto text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-sm bg-amber-100 text-amber-800 border border-amber-200">Preview</span>
             </a>
 
             <a href="{% url 'tool_classify' %}"
-              class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'tool_classify' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+              class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% nav_active '/tools/classify/' %}">
               <i class="fi fi-rr-sparkles text-xl text-gray-700 w-8 text-center"></i>
               <span class="font-medium text-gray-700 ml-1">AI Identification</span>
             </a>
 
             <a href="{% url 'game_home' %}"
-              class="flex items-center w-full min-h-14 rounded-lg pl-5 pr-2 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'game_home' or request.resolver_match.url_name == 'game_play' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
-              <i class="fi fi-rr-gamepad text-xl text-gray-700 w-8 text-center"></i>
+              class="flex items-center w-full min-h-14 rounded-lg pl-5 pr-2 transition-all whitespace-nowrap {% nav_active '/game/' %}">
+              <i class="fi fi-rr-play text-xl text-gray-700 w-8 text-center"></i>
               <span class="ml-1 flex-1 min-w-0 leading-tight">
                 <span class="block font-medium text-gray-700">{{ game_name }}</span>
                 {% if game_player %}<span class="flex items-center gap-1.5 mt-0.5">{% include "beetles/includes/game_level_badge.html" with level=game_player.level name=game_player.name %}<span class="flex min-w-0 text-xs text-gray-500" data-testid="sidebar-player"><span class="truncate">{{ game_player.name }}</span><span class="shrink-0">&nbsp;&middot; {{ game_player.score|digit_groups }} pts</span></span></span>{% endif %}
@@ -294,27 +307,21 @@
 
             {% if areas.annotate %}
             <a href="{% url 'tool_annotate' %}"
-              class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'tool_annotate' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+              class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% nav_active '/tools/annotate/' %}">
               <i class="fi fi-rr-edit text-xl text-gray-700 w-8 text-center"></i>
               <span class="font-medium text-gray-700 ml-1">Image Annotation</span>
             </a>
             {% endif %}
 
             <a href="{% url 'data_management' %}"
-              class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'data_management' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+              class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% nav_active '/my-uploads/' %}">
               <i class="fi fi-rr-folder text-xl text-gray-700 w-8 text-center"></i>
               <span class="font-medium text-gray-700 ml-1">Data Management</span>
             </a>
 
-            {% if user.is_authenticated %}
-            <a href="{% url 'my_account' %}"
-              class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'my_account' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
-              <i class="fi fi-rr-user text-xl text-gray-700 w-8 text-center"></i>
-              <span class="font-medium text-gray-700 ml-1">Account Management</span>
-            </a>
-
             <div class="h-px bg-gray-300 my-1 mx-2"></div>
 
+            {% if user.is_authenticated %}
             <form action="{% url 'logout' %}" method="post" class="w-full"
               onsubmit="return confirm('Are you sure you want to log out?');">
               {% csrf_token %}
@@ -327,7 +334,7 @@
 
             {% else %}
             <a href="{% url 'login' %}"
-              class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'login' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+              class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% nav_active '/accounts/login/' %}">
               <i class="fi fi-rr-sign-in-alt text-xl text-gray-700 w-8 text-center"></i>
               <span class="font-medium text-gray-700 ml-1">Login</span>
             </a>
@@ -335,9 +342,22 @@
 
           </div>
           <div id="mobile-menu-footer" class="px-2 pb-2">
+          {% if user.is_authenticated %}
+          {# Account pinned to the bottom of the drawer, with the signed-in name (nav-drawer-account, #618) #}
+          <a href="{% url 'my_account' %}"
+            class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% nav_active '/accounts/me/' %}">
+            <i class="fi fi-rr-user text-xl text-gray-700 w-8 text-center"></i>
+            <span class="ml-1 min-w-0 leading-tight">
+              <span class="block font-medium text-gray-700 truncate">{{ user.username }}</span>
+              <span class="block text-xs text-gray-500">Account &amp; settings</span>
+            </span>
+          </a>
+          <div class="h-px bg-gray-300 my-1 mx-2"></div>
+          {% endif %}
           <div class="flex items-center gap-1 px-5 py-3 border-t border-gray-200 text-[10px] font-mono text-gray-600">
+            {# relative + an invisible oversized ::before (site-targets, #618): a 44x44 hit area around the icon #}
             <a href="https://github.com/ChristopherMarais/barkandambrosiagallery" target="_blank" rel="noopener noreferrer"
-              class="w-8 shrink-0 flex justify-center text-gray-400 hover:text-gray-700 transition-colors" title="View source on GitHub" aria-label="View source on GitHub">
+              class="relative w-8 shrink-0 flex justify-center text-gray-400 hover:text-gray-700 transition-colors before:absolute before:-inset-3.5 before:content-['']" title="View source on GitHub" aria-label="View source on GitHub">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
             </a>
             <span>{% if debug %}<strong class="font-normal text-yellow-600/70">DEV:</strong> {% endif %}{{ app_version }}</span>
@@ -357,43 +377,43 @@
           <div class="h-px bg-gray-300 my-2 mx-2"></div>
 
           <a href="{% url 'beetles_image_browser' %}"
-            class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'beetles_image_browser' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
-            <i class="fi fi-rr-bug text-xl text-gray-700 w-8 text-center"></i>
-            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
+            class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% nav_active '/beetles/' %}">
+            <i class="fi fi-rr-picture text-xl text-gray-700 w-8 text-center"></i>
+            <span class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
               Image Browser
             </span>
           </a>
 
           <a href="{% url 'taxonomy_browser' %}"
-            class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'taxonomy_browser' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+            class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% nav_active '/taxonomy/' %}">
             <i class="fi fi-rr-chart-tree text-xl text-gray-700 w-8 text-center"></i>
-            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
+            <span class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
               Taxonomy Browser
             </span>
           </a>
 
           <a href="{% url 'interactions_preview' %}"
-            class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'interactions_preview' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}"
+            class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% nav_active '/interactions/' %}"
             title="Ecological Interactions">
             <i class="fi fi-rr-diagram-project text-xl text-gray-700 w-8 text-center"></i>
-            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700 flex items-center gap-2">
+            <span class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 font-medium text-gray-700 flex items-center gap-2">
               Interactions
               <span class="text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-sm bg-amber-100 text-amber-800 border border-amber-200">Preview</span>
             </span>
           </a>
 
           <a href="{% url 'tool_classify' %}"
-            class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'tool_classify' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+            class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% nav_active '/tools/classify/' %}">
             <i class="fi fi-rr-sparkles text-xl text-gray-700 w-8 text-center"></i>
-            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
+            <span class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
               AI Identification
             </span>
           </a>
 
           <a href="{% url 'game_home' %}"{% if game_player %} title="{{ game_name }}: {{ user.username }}, level {{ game_player.level }} ({{ game_player.name }}), {{ game_player.score|digit_groups_text }} pts"{% endif %}
-            class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'game_home' or request.resolver_match.url_name == 'game_play' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
-            <i class="fi fi-rr-gamepad text-xl text-gray-700 w-8 text-center"></i>
-            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 min-w-0 leading-tight">
+            class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% nav_active '/game/' %}">
+            <i class="fi fi-rr-play text-xl text-gray-700 w-8 text-center"></i>
+            <span class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 min-w-0 leading-tight">
               <span class="block font-medium text-gray-700">{{ game_name }}</span>
               {% if game_player %}<span class="flex items-center gap-1.5 mt-0.5">{% include "beetles/includes/game_level_badge.html" with level=game_player.level name=game_player.name %}<span class="flex min-w-0 text-xs text-gray-500" data-testid="sidebar-player"><span class="truncate">{{ game_player.name }}</span><span class="shrink-0">&nbsp;&middot; {{ game_player.score|digit_groups_text }} pts</span></span></span>{% endif %}
             </span>
@@ -401,49 +421,41 @@
 
           {% if areas.annotate %}
           <a href="{% url 'tool_annotate' %}"
-            class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'tool_annotate' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+            class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% nav_active '/tools/annotate/' %}">
             <i class="fi fi-rr-edit text-xl text-gray-700 w-8 text-center"></i>
-            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
+            <span class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
               Image Annotation
             </span>
           </a>
           {% endif %}
 
           <a href="{% url 'data_management' %}"
-            class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'data_management' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+            class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% nav_active '/my-uploads/' %}">
             <i class="fi fi-rr-folder text-xl text-gray-700 w-8 text-center"></i>
-            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
+            <span class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
               Data Management
-            </span>
-          </a>
-
-          {% if user.is_authenticated %}
-          <a href="{% url 'my_account' %}"
-            class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'my_account' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
-            <i class="fi fi-rr-user text-xl text-gray-700 w-8 text-center"></i>
-            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
-              Account Management
             </span>
           </a>
 
           <div class="h-px bg-gray-300 my-2 mx-2"></div>
 
+          {% if user.is_authenticated %}
           <form action="{% url 'logout' %}" method="post" class="w-full"
             onsubmit="return confirm('Are you sure you want to log out?');">
             {% csrf_token %}
             <button type="submit"
               class="flex items-center w-full min-h-14 rounded-lg hover:bg-gray-200 group overflow-hidden whitespace-nowrap px-5 transition-all">
               <i class="fi fi-rr-sign-out-alt text-xl text-gray-400 w-8 text-center"></i>
-              <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-600">
+              <span class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 font-medium text-gray-600">
                 Logout
               </span>
             </button>
           </form>
           {% else %}
           <a href="{% url 'login' %}"
-            class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% if request.resolver_match.url_name == 'login' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+            class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% nav_active '/accounts/login/' %}">
             <i class="fi fi-rr-sign-in-alt text-xl text-gray-700 w-8 text-center"></i>
-            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
+            <span class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 font-medium text-gray-700">
               Sign In
             </span>
           </a>
@@ -451,12 +463,25 @@
         </div>
 
         <div id="sidenav-footer" class="shrink-0 border-t border-gray-200 px-2 py-2">
+          {% if user.is_authenticated %}
+          {# Account pinned to the rail footer, with the signed-in name (nav-drawer-account, #618) #}
+          <a href="{% url 'my_account' %}" title="{{ user.username }}: Account &amp; settings"
+            class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% nav_active '/accounts/me/' %}">
+            <i class="fi fi-rr-user text-xl text-gray-700 w-8 text-center"></i>
+            <span class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 min-w-0 leading-tight">
+              <span class="block font-medium text-gray-700 truncate">{{ user.username }}</span>
+              <span class="block text-xs text-gray-500">Account &amp; settings</span>
+            </span>
+          </a>
+          <div class="h-px bg-gray-300 my-2 mx-2"></div>
+          {% endif %}
           <div class="flex items-center h-8 px-5 whitespace-nowrap overflow-hidden">
+            {# relative + an invisible oversized ::before (site-targets, #618): a 44x44 hit area around the icon #}
             <a href="https://github.com/ChristopherMarais/barkandambrosiagallery" target="_blank" rel="noopener noreferrer"
-              class="w-8 shrink-0 flex justify-center" title="View source on GitHub" aria-label="View source on GitHub">
+              class="relative w-8 shrink-0 flex justify-center before:absolute before:-inset-3.5 before:content-['']" title="View source on GitHub" aria-label="View source on GitHub">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
             </a>
-            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-[10px] font-mono text-gray-600">
+            <span class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 text-[10px] font-mono text-gray-600">
               {% if debug %}<strong class="font-normal text-yellow-600/70">DEV:</strong> {% endif %}{{ app_version }}
             </span>
           </div>
@@ -486,8 +511,9 @@
         {% block content %}{% endblock %}
       </main>
       <footer class="max-w-7xl mx-auto px-6 pb-8 flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-500" data-testid="site-footer">
-        <a href="{% url 'privacy' %}" class="underline hover:text-gray-800">Privacy notice</a>
-        {% if ga_measurement_id %}<button type="button" class="underline hover:text-gray-800 bg-transparent p-0" data-open-consent>Cookie settings</button>{% endif %}
+        {# site-targets, #618: py-3 -my-3 gives each small text link a 44px-tall hit area without moving it #}
+        <a href="{% url 'privacy' %}" class="underline hover:text-gray-800 py-3 -my-3">Privacy notice</a>
+        {% if ga_measurement_id %}<button type="button" class="underline hover:text-gray-800 bg-transparent p-0 py-3 -my-3" data-open-consent>Cookie settings</button>{% endif %}
       </footer>
     </div>
   </div>
@@ -515,6 +541,8 @@
     <p>Your choice is kept in an essential cookie for a year. You can change it at any time with
       <strong>Cookie settings</strong> at the bottom of a page. <a href="{% url 'privacy' %}" class="underline">Privacy notice</a></p>
     <div class="consent-actions">
+      {# Accept and Reject must share one class and look identical: the consent banner's equal-prominence
+         requirement (#613, GDPR) overrides the general site-buttons role rule (#618) for this one pair. #}
       <button type="button" class="btn-secondary" data-consent="granted">Accept</button>
       <button type="button" class="btn-secondary" data-consent="denied">Reject</button>
     </div>

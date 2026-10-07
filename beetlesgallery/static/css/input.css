@@ -180,6 +180,13 @@
     dialog, option {
         padding: revert;
     }
+
+    /* A focus ring you can see on every surface (site-focus, #618): 2px gray-600 with a 2px white offset, so it
+       shows up on white, gray-50 and gray-200 alike. Mouse/touch focus is left alone (:focus-visible only). */
+    :focus-visible {
+        outline: 2px solid var(--color-gray-600);
+        outline-offset: 2px;
+    }
 }
 
 @layer base {
@@ -252,7 +259,7 @@
    They stay in the components layer, so a utility next to them (w-full, text-2xl, py-6) always wins. */
 @layer components {
     .btn-main {
-        @apply inline-flex items-center justify-center gap-3 rounded-xl bg-gray-200 border border-gray-300 px-8 py-3 text-lg font-bold tracking-wide text-gray-800 shadow-xs transition hover:bg-gray-300 hover:text-black active:scale-[0.99] focus:outline-hidden focus-visible:ring-4 focus-visible:ring-gray-300 disabled:opacity-60 disabled:cursor-not-allowed;
+        @apply inline-flex items-center justify-center gap-3 rounded-xl bg-gray-200 border border-gray-300 px-8 py-3 text-lg font-bold tracking-wide text-gray-800 shadow-xs transition hover:bg-gray-300 hover:text-black active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed;
     }
 
     .page-title {
@@ -262,11 +269,59 @@
     .page-intro { @apply text-sm sm:text-base text-gray-500; }
 
     .btn-primary {
-        @apply inline-flex items-center justify-center gap-2 rounded-lg bg-gray-500 border border-gray-500 px-4 py-2 text-sm font-semibold text-white shadow-xs transition hover:bg-gray-600 hover:border-gray-600 focus:outline-hidden focus-visible:ring-4 focus-visible:ring-gray-300 disabled:bg-gray-300 disabled:border-gray-300 disabled:cursor-not-allowed;
+        @apply inline-flex items-center justify-center gap-2 rounded-lg bg-gray-500 border border-gray-500 px-4 py-2 text-sm font-semibold text-white shadow-xs transition hover:bg-gray-600 hover:border-gray-600 disabled:bg-gray-300 disabled:border-gray-300 disabled:cursor-not-allowed;
     }
     .btn-secondary {
-        @apply inline-flex items-center justify-center gap-2 rounded-lg bg-white border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 shadow-xs transition hover:bg-gray-50 hover:text-black focus:outline-hidden focus-visible:ring-4 focus-visible:ring-gray-300 disabled:opacity-60 disabled:cursor-not-allowed;
+        @apply inline-flex items-center justify-center gap-2 rounded-lg bg-white border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 shadow-xs transition hover:bg-gray-50 hover:text-black disabled:opacity-60 disabled:cursor-not-allowed;
     }
+
+    /* Page sections (site-sections, #618): a bold sentence heading with normal spacing, not a bordered card.
+       Small-caps grey (.card-label) is only for a short label inside a card. */
+    .section-heading { @apply text-lg font-bold text-gray-900 mb-3; }
+    .card-label { @apply text-xs font-semibold uppercase tracking-wider text-gray-500; }
+
+    /* A card (site-cards, #618): for something actionable or repeating in a list (a badge, a form, a list row
+       presented as a tile), never just to separate a page's own sections (use .section-heading + spacing instead). */
+    .card { @apply bg-white rounded-xl border border-gray-200 shadow-xs p-4; }
+
+    /* One control per kind of switch (site-tabs, #618): a segmented control for 2-4 views of one page. The pieces
+       that take a wrapper (.tab-segmented-group) and the pieces inside it (.tab-segment, plus whichever of
+       .tab-segment-active / .tab-segment-inactive applies). Pills (rounded-full, each toggled on its own) and
+       underline tabs (border-b-2, for long page sections) are plain utilities already and need no shared class. */
+    .tab-segmented-group { @apply inline-flex items-center gap-1 bg-gray-100 rounded-lg p-1; }
+    .tab-segment { @apply flex-1 text-center px-3 py-1.5 text-sm font-semibold rounded-md transition; }
+    .tab-segment-active { @apply bg-white text-gray-900 shadow-xs; }
+    .tab-segment-inactive { @apply text-gray-500 hover:text-gray-800; }
+
+    /* A progress bar that is not itself a rating (site-progress, #618): gray-700 on gray-200, the neutral default
+       for things like "60% uploaded". A bar that does show a rating (a level, an accuracy score, ...) uses one of
+       the .scale-fill-<step> classes below for its fill instead of .progress-bar-fill. */
+    .progress-bar { @apply w-full h-2 rounded-full bg-gray-200 overflow-hidden; }
+    .progress-bar-fill { @apply h-full rounded-full bg-gray-700; }
+}
+
+/* A wide table that truly cannot be trimmed to its priority columns or turned into cards on a phone (site-tables,
+   #618): wrap it in a .table-scroll div as the last resort. A fade over the trailing edge hints that more of the
+   table is there; scrolling it all the way to the end runs past the fade, which is the point. */
+.table-scroll {
+    position: relative;
+    overflow-x: auto;
+}
+.table-scroll::after {
+    content: "";
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 1.5rem;
+    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.9));
+    pointer-events: none;
+}
+
+/* A sticky table of contents alongside a very long page (site-long, #618), paired with a "Jump to" <select
+   data-jump-to> on mobile (static/js/jump_to.js scrolls to the chosen section's id). */
+.toc-sticky {
+    position: sticky;
+    top: 1.5rem;
+    align-self: flex-start;
 }
 
 /* space-y-* and divide-y as in Tailwind 3: the space (or line) goes above every child but the first and wins over the
@@ -315,6 +370,16 @@
     font-weight: normal;
     font-style: normal;
 }
+/* A soft fade on the trailing edge of something that scrolls sideways (formula blocks on the Scoring page, #618
+   sco-code): phones don't always show a scrollbar, so this hints there is more to see without JS tracking scroll
+   position. Matches the gray-50 a formula block sits on; .scroll-fade-white is for a white background instead. */
+.scroll-fade { position: relative; }
+.scroll-fade::after {
+    content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 1.5rem; pointer-events: none;
+    background: linear-gradient(to right, transparent, var(--color-gray-50));
+}
+.scroll-fade-white::after { background: linear-gradient(to right, transparent, #fff); }
+
 /* A select whose arrow sits inside the box (the native one can hang over the edge in some browsers) */
 .select-chevron {
   -webkit-appearance: none;

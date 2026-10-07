@@ -79,7 +79,9 @@ class FlagTests(ZoomFlagCase):
     def test_the_flag_sits_bottom_left_and_says_flag(self):
         page = self.page()
         self.assertIn(".report-chip { position: absolute; left: 0.375rem; bottom: 0.375rem;", page)
-        self.assertIn('report.innerHTML = \'<i class="fi fi-rr-flag"></i><span>Flag</span>\';', page)
+        # icon-only, the detail page's Flag style (#play-flag); its name is still there for a screen reader
+        self.assertIn('report.innerHTML = \'<i class="fi fi-rr-flag"></i><span class="sr-only">Flag</span>\';', page)
+        self.assertIn('aria-label="Flag this photo"', page)
         self.assertNotIn("<span>Report</span>", page)
         self.assertNotIn("Report this", page)
 
@@ -110,7 +112,7 @@ class FlagTests(ZoomFlagCase):
         self.assertIn("#light-btn { position: absolute; right: 0.375rem; bottom: 0.375rem;", page)
         self.assertIn("#light-panel { position: absolute; right: 0.375rem; bottom: 2.75rem;", page)
         self.assertIn(".more-chip { position: absolute; right: 0.375rem; top: 0.375rem;", page)
-        self.assertIn(".zoom-chip { position: absolute; right: 0.375rem; top: 0.375rem;", page)
+        self.assertIn(".zoom-chip { position: absolute; right: 0.5rem; top: 0.5rem;", page)   # 8px in, inside the tile (#play-expand)
         # Similarity: A's letter keeps its top right (its other-photos chip moves to the top left); on a phone it
         # drops to A's bottom right, clear of the Flag
         self.assertIn('#game[data-mode="pair"] #photos .cell:nth-child(1) .more-chip { right: auto; left: 0.375rem; }', page)

@@ -252,54 +252,61 @@
           {{ page_title }}
         </h1>
         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-900 border border-amber-300">
-          Under Construction
+          Under construction &middot; v1.0, last search 24 July 2026
         </span>
       </div>
       <p class="text-sm text-gray-600 max-w-4xl leading-relaxed">
         A literature-derived resource compiling reported pathogens and parasites associated with bark and ambrosia beetles (Scolytinae). Version 1.0 contains 1,015 records extracted from 281 primary publications published between 1914 and 2026, representing 108 beetle species in 28 genera and 274 unique candidate pathogen or parasite taxa.
       </p>
     </div>
-  </div>
 
-  {% if areas.interactions %}
-  <!-- Staff and superusers: review, upload and update -->
-  <div class="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3" data-testid="interaction-staff-tools">
-    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Staff tools</span>
-    <a href="{% url 'interaction_review' %}" class="inline-flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
-      <i class="fi fi-rr-microscope"></i>
-      <span>Review Proposed Interactions</span>
-      {% if waiting_interaction_proposals %}<span class="rounded-full bg-gray-200 border border-gray-300 px-2 py-0.5 text-xs text-gray-800" data-testid="waiting-interaction-count">{{ waiting_interaction_proposals }} waiting</span>{% endif %}
-    </a>
-    <a href="{% url 'upload_interactions' %}" class="inline-flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
-      <i class="fi fi-rr-upload"></i>
-      <span>Upload or Update Interactions</span>
-    </a>
-    {% if user.is_superuser %}
-    <a href="{% url 'upload_interaction_proposals' %}" class="inline-flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
-      <i class="fi fi-rr-upload"></i>
-      <span>Submit Proposed Interactions</span>
-    </a>
+    {% if areas.interactions %}
+    <!-- Staff and superusers: review, upload and update, tucked into one menu so it doesn't push the tabs down -->
+    <details class="relative shrink-0 self-start" data-testid="interaction-staff-tools">
+      <summary class="flex list-none items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-xs cursor-pointer select-none transition hover:bg-gray-50 hover:text-black [&::-webkit-details-marker]:hidden">
+        <i class="fi fi-rr-settings"></i>
+        <span>Staff tools</span>
+        {% if waiting_interaction_proposals %}<span class="rounded-full bg-gray-200 border border-gray-300 px-2 py-0.5 text-xs text-gray-800" data-testid="waiting-interaction-count">{{ waiting_interaction_proposals }} waiting</span>{% endif %}
+        <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </summary>
+      <div class="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-gray-200 bg-white p-2 shadow-lg">
+        <a href="{% url 'interaction_review' %}" class="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-black">
+          <span class="inline-flex items-center gap-2"><i class="fi fi-rr-microscope"></i>Review Proposed Interactions</span>
+        </a>
+        <a href="{% url 'upload_interactions' %}" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-black">
+          <i class="fi fi-rr-upload"></i>Upload or Update Interactions
+        </a>
+        {% if user.is_superuser %}
+        <a href="{% url 'upload_interaction_proposals' %}" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-black">
+          <i class="fi fi-rr-upload"></i>Submit Proposed Interactions
+        </a>
+        {% endif %}
+      </div>
+    </details>
     {% endif %}
   </div>
-  {% endif %}
 
-  <!-- Top Navigation Menu Bar (Home & About merged into About) -->
-  <div class="flex items-center gap-1 sm:gap-4 border-b border-gray-200 mb-6 overflow-x-auto text-xs sm:text-sm font-medium whitespace-nowrap scrollbar-none">
-    <button type="button" id="tab-btn-about" class="nav-tab-btn active py-3 px-2 sm:px-3">
-      About
-    </button>
-    <button type="button" id="tab-btn-browse" class="nav-tab-btn py-3 px-2 sm:px-3">
-      Browse Dataset <span class="text-[11px] text-gray-600 font-normal">({{ stats.records|digit_groups }})</span>
-    </button>
-    <button type="button" id="tab-btn-hosts" class="nav-tab-btn py-3 px-2 sm:px-3">
-      Beetle Hosts <span class="text-[11px] text-gray-600 font-normal">({{ stats.hosts|digit_groups }})</span>
-    </button>
-    <button type="button" id="tab-btn-groups" class="nav-tab-btn py-3 px-2 sm:px-3">
-      Pathogen Groups <span class="text-[11px] text-gray-600 font-normal">({{ stats.groups|digit_groups }})</span>
-    </button>
-    <button type="button" id="tab-btn-refs" class="nav-tab-btn py-3 px-2 sm:px-3">
-      References <span class="text-[11px] text-gray-600 font-normal">({{ stats.sources|digit_groups }})</span>
-    </button>
+  <!-- Top Navigation Menu Bar (Home & About merged into About): a scrollable row right under the title, with a
+       fade on the right edge as a scroll cue so a cut-off tab doesn't look like the end of the list. -->
+  <div class="relative mb-6 border-b border-gray-200">
+    <div class="flex items-center gap-1 sm:gap-4 overflow-x-auto text-xs sm:text-sm font-medium whitespace-nowrap scrollbar-none" role="tablist">
+      <button type="button" id="tab-btn-about" class="nav-tab-btn active py-3 px-2 sm:px-3">
+        About
+      </button>
+      <button type="button" id="tab-btn-browse" class="nav-tab-btn py-3 px-2 sm:px-3">
+        Browse Dataset <span class="text-[11px] text-gray-600 font-normal">({{ stats.records|digit_groups }})</span>
+      </button>
+      <button type="button" id="tab-btn-hosts" class="nav-tab-btn py-3 px-2 sm:px-3">
+        Beetle Hosts <span class="text-[11px] text-gray-600 font-normal">({{ stats.hosts|digit_groups }})</span>
+      </button>
+      <button type="button" id="tab-btn-groups" class="nav-tab-btn py-3 px-2 sm:px-3">
+        Pathogen Groups <span class="text-[11px] text-gray-600 font-normal">({{ stats.groups|digit_groups }})</span>
+      </button>
+      <button type="button" id="tab-btn-refs" class="nav-tab-btn py-3 px-2 sm:px-3">
+        References <span class="text-[11px] text-gray-600 font-normal">({{ stats.sources|digit_groups }})</span>
+      </button>
+    </div>
+    <div class="pointer-events-none absolute right-0 top-0 bottom-px w-10 bg-gradient-to-l from-white to-transparent" aria-hidden="true"></div>
   </div>
 
   <!-- ============================================================== -->
@@ -310,15 +317,10 @@
     <!-- About the Dataset & Literature Scope Banner -->
     <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-xs">
       <div class="space-y-3">
-        <div>
-          <h2 class="text-base font-bold text-gray-900 flex items-center gap-consistent">
-            <i class="fi fi-rr-diagram-project text-xl text-gray-700"></i>
-            <span>About the dataset</span>
-          </h2>
-          <p class="text-sm text-gray-700 leading-relaxed mt-2">
-            The Bark and Ambrosia Beetle Pathogen Dataset is a literature-derived resource compiling reported pathogens and parasites associated with bark and ambrosia beetles (Scolytinae). Version 1.0 contains 1,015 records extracted from 281 primary publications published between 1914 and 2026, representing 108 beetle species in 28 genera and 274 unique candidate pathogen or parasite taxa.
-          </p>
-        </div>
+        <h2 class="text-base font-bold text-gray-900 flex items-center gap-consistent">
+          <i class="fi fi-rr-diagram-project text-xl text-gray-700"></i>
+          <span>About the dataset</span>
+        </h2>
         <p class="text-sm text-gray-700 leading-relaxed">
           The dataset includes fungi, bacteria, viruses, nematodes, protists, and microsporidia, together with information on beetle hosts, geographic locations, infection sites, organism sources, identification methods, reported ecological relationships, experimental conditions, and evidence of infection, pathogenicity, or virulence.
         </p>
@@ -334,84 +336,64 @@
         <span class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Total Records</span>
         <div class="mt-2 flex items-baseline gap-2">
           <span class="text-2xl font-bold text-gray-900 leading-none">{{ stats.records|digit_groups }}</span>
-          <span class="text-[11px] text-gray-600 font-mono">{% if stats.first_year %}{{ stats.first_year }}–{{ stats.last_year }}{% endif %}</span>
+          <span class="text-[11px] text-gray-500">{% if stats.first_year %}{{ stats.first_year }}–{{ stats.last_year }}{% endif %}</span>
         </div>
       </div>
       <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-xs flex flex-col justify-between">
         <span class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Beetle Species</span>
         <div class="mt-2 flex items-baseline gap-2">
           <span class="text-2xl font-bold text-gray-900 leading-none">{{ stats.hosts|digit_groups }}</span>
-          <span class="text-[11px] text-gray-600 font-mono">{{ stats.genera|digit_groups }} genera</span>
+          <span class="text-[11px] text-gray-500">{{ stats.genera|digit_groups }} genera</span>
         </div>
       </div>
       <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-xs flex flex-col justify-between">
         <span class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Candidate Taxa</span>
         <div class="mt-2 flex items-baseline gap-2">
           <span class="text-2xl font-bold text-gray-900 leading-none">{{ stats.taxa|digit_groups }}</span>
-          <span class="text-[11px] text-gray-600 font-mono">taxa</span>
+          <span class="text-[11px] text-gray-500">taxa</span>
         </div>
       </div>
       <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-xs flex flex-col justify-between">
         <span class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Publications</span>
         <div class="mt-2 flex items-baseline gap-2">
           <span class="text-2xl font-bold text-gray-900 leading-none">{{ stats.sources|digit_groups }}</span>
-          <span class="text-[11px] text-gray-600 font-mono">primary refs</span>
+          <span class="text-[11px] text-gray-500">primary refs</span>
         </div>
       </div>
       <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-xs flex flex-col justify-between">
         <span class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Validated Tests</span>
         <div class="mt-2 flex items-baseline gap-2">
           <span class="text-2xl font-bold text-gray-900 leading-none">{{ stats.validated|digit_groups }}</span>
-          <span class="text-[11px] text-gray-600 font-mono">{{ stats.validated_pct|floatformat:1 }}% verified</span>
+          <span class="text-[11px] text-gray-500">{{ stats.validated_pct|floatformat:1 }}% verified</span>
         </div>
       </div>
     </div>
 
-    <!-- Quick Navigation Jump Cards (4 Columns) -->
+    <!-- Dataset Sections Summary (4 Columns): what the tabs above hold, not another way to navigate to them -->
     <div class="grid-4-cols">
-      <button type="button" onclick="window.switchPathogenTab('browse')" class="text-left group p-4 bg-white border border-gray-200 rounded-lg shadow-xs hover:border-gray-400 hover:shadow-sm transition flex flex-col justify-between">
-        <div>
-          <div class="flex items-center justify-between">
-            <span class="font-semibold text-gray-900 text-sm group-hover:text-gray-600 transition">Browse Dataset</span>
-            <span class="text-xs text-gray-600 font-mono">&rarr;</span>
-          </div>
-          <div class="text-[11px] text-gray-600 font-mono mt-0.5">{{ stats.records|digit_groups }} records</div>
-          <p class="text-xs text-gray-500 mt-2 leading-relaxed">Explore all reported beetle-pathogen associations with filtering and details.</p>
-        </div>
-      </button>
+      <div class="p-4 bg-white border border-gray-200 rounded-lg shadow-xs">
+        <span class="font-semibold text-gray-900 text-sm">Browse Dataset</span>
+        <div class="text-[11px] text-gray-500 mt-0.5">{{ stats.records|digit_groups }} records</div>
+        <p class="text-xs text-gray-500 mt-2 leading-relaxed">Explore all reported beetle-pathogen associations with filtering and details.</p>
+      </div>
 
-      <button type="button" onclick="window.switchPathogenTab('hosts')" class="text-left group p-4 bg-white border border-gray-200 rounded-lg shadow-xs hover:border-gray-400 hover:shadow-sm transition flex flex-col justify-between">
-        <div>
-          <div class="flex items-center justify-between">
-            <span class="font-semibold text-gray-900 text-sm group-hover:text-gray-600 transition">Beetle Hosts</span>
-            <span class="text-xs text-gray-600 font-mono">&rarr;</span>
-          </div>
-          <div class="text-[11px] text-gray-600 font-mono mt-0.5">{{ stats.hosts|digit_groups }} species</div>
-          <p class="text-xs text-gray-500 mt-2 leading-relaxed">Summary of all {{ stats.hosts|digit_groups }} Scolytinae species and reported pathogen spectrum.</p>
-        </div>
-      </button>
+      <div class="p-4 bg-white border border-gray-200 rounded-lg shadow-xs">
+        <span class="font-semibold text-gray-900 text-sm">Beetle Hosts</span>
+        <div class="text-[11px] text-gray-500 mt-0.5">{{ stats.hosts|digit_groups }} species</div>
+        <p class="text-xs text-gray-500 mt-2 leading-relaxed">Summary of all {{ stats.hosts|digit_groups }} Scolytinae species and reported pathogen spectrum.</p>
+      </div>
 
-      <button type="button" onclick="window.switchPathogenTab('groups')" class="text-left group p-4 bg-white border border-gray-200 rounded-lg shadow-xs hover:border-gray-400 hover:shadow-sm transition flex flex-col justify-between">
-        <div>
-          <div class="flex items-center justify-between">
-            <span class="font-semibold text-gray-900 text-sm group-hover:text-gray-600 transition">Pathogen Groups</span>
-            <span class="text-xs text-gray-600 font-mono">&rarr;</span>
-          </div>
-          <div class="text-[11px] text-gray-600 font-mono mt-0.5">{{ stats.groups|digit_groups }} groups</div>
-          <p class="text-xs text-gray-500 mt-2 leading-relaxed">Fungi, Nematodes, Microsporidia, Protists, Bacteria, and Viruses.</p>
-        </div>
-      </button>
+      <div class="p-4 bg-white border border-gray-200 rounded-lg shadow-xs">
+        <span class="font-semibold text-gray-900 text-sm">Pathogen Groups</span>
+        <div class="text-[11px] text-gray-500 mt-0.5">{{ stats.groups|digit_groups }} groups</div>
+        <p class="text-xs text-gray-500 mt-2 leading-relaxed">Fungi, Nematodes, Microsporidia, Protists, Bacteria, and Viruses.</p>
+      </div>
 
-      <button type="button" onclick="window.switchPathogenTab('refs')" class="text-left group p-4 bg-white border border-gray-200 rounded-lg shadow-xs hover:border-gray-400 hover:shadow-sm transition flex flex-col justify-between">
-        <div>
-          <div class="flex items-center justify-between">
-            <span class="font-semibold text-gray-900 text-sm group-hover:text-gray-600 transition">References</span>
-            <span class="text-xs text-gray-600 font-mono">&rarr;</span>
-          </div>
-          <div class="text-[11px] text-gray-600 font-mono mt-0.5">{{ stats.sources|digit_groups }} publications</div>
-          <p class="text-xs text-gray-500 mt-2 leading-relaxed">Complete primary literature bibliography from 1914 to 2026.</p>
-        </div>
-      </button>
+      <div class="p-4 bg-white border border-gray-200 rounded-lg shadow-xs">
+        <span class="font-semibold text-gray-900 text-sm">References</span>
+        <div class="text-[11px] text-gray-500 mt-0.5">{{ stats.sources|digit_groups }} publications</div>
+        <p class="text-xs text-gray-500 mt-2 leading-relaxed">Complete primary literature bibliography from 1914 to 2026.</p>
+      </div>
     </div>
 
     <!-- Scope and Interpretation Card -->
@@ -423,9 +405,9 @@
       <p class="text-sm text-gray-700 leading-relaxed">
         Importantly, inclusion in the dataset does not necessarily indicate experimentally demonstrated pathogenicity. Some records document organisms reported as pathogens or parasites by the original authors, whereas others are supported by experimental infection, pathogenicity, or virulence tests. Evidence type and validation information are retained separately to allow users to distinguish reported associations from experimentally supported interactions.
       </p>
-      <p class="text-sm text-gray-600 italic leading-relaxed pt-1">
+      <div class="mt-1 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700 leading-relaxed">
         Taxonomic names were reconciled to current accepted nomenclature where possible. Such standardization represents nomenclatural reconciliation rather than re-identification of the original biological material.
-      </p>
+      </div>
     </div>
 
     <!-- Dataset Overview & Figures Section -->

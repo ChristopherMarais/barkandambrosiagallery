@@ -526,11 +526,15 @@ def player_report(player):
         accuracy, judged = game._accuracy(row)
         monthly.append({"month": row["month"], "labelled": row["labelled"], "accuracy": accuracy, "judged": judged})
 
+    by_rank = accuracy_by_rank(skills, apart_counts(player))
     return {
         "summary": game.player_summary(player),
         "rounds": player.game_rounds.filter(finished_at__isnull=False).count(),
         "challenge": game.target_difficulty(player),
-        "by_rank": accuracy_by_rank(skills, apart_counts(player)),
+        "by_rank": by_rank,
+        # hide the Distinction column when nobody has told these beetles apart yet (#618 rep-empty-col), rather
+        # than a table of nothing but dashes
+        "by_rank_has_distinction": any(row["distinction"]["n"] for row in by_rank),
         "proven": proven,
         "progressing": progressing[:12],
         "monthly": monthly,

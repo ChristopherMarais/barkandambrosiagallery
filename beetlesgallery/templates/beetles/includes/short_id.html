@@ -1,0 +1,14 @@
+{% comment %}
+One way to show a long id (site-uuid, #618): the first 8 characters in mono plus a copy button for the full
+value, wherever an id appears in passing. For a dedicated Identifiers block, pass full=True to show the whole
+value instead (still with its own copy button). Needs static/js/copy_id.js (loaded site-wide in base.html).
+Usage: {% include "beetles/includes/short_id.html" with value=obj.id %}
+       {% include "beetles/includes/short_id.html" with value=obj.id full=True %}
+{% endcomment %}
+<span class="inline-flex items-center gap-1 font-mono text-xs text-gray-500">
+  {% if full %}{{ value }}{% else %}{{ value|stringformat:"s"|slice:":8" }}{% endif %}
+  <button type="button" class="copy-id shrink-0 text-gray-400 hover:text-gray-800 transition p-1.5 -m-1.5"
+    data-copy-id="{{ value }}" title="Copy full ID" aria-label="Copy full ID">
+    <i class="fi fi-rr-copy" data-copy-id-icon aria-hidden="true"></i>
+  </button>
+</span>

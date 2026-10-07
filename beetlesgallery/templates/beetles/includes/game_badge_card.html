@@ -1,5 +1,5 @@
 <div class="p-3 rounded-2xl border text-center {{ ring }}{% if b.earned and b.tier == 'excellent' %} scale-glow{% endif %}" title="{{ b.how }}" data-earned="{{ b.earned|yesno:'1,0' }}" data-badge="{{ b.key }}">
   <i class="fi {{ b.icon }} text-2xl {{ ink }}"></i>
   <div class="mt-1 text-xs font-semibold {% if b.earned %}text-gray-900{% else %}text-gray-400{% endif %}">{{ b.name }}</div>
-  <div class="text-[10px] leading-tight text-gray-400">{{ b.how }}</div>
+  <div class="text-xs leading-tight text-gray-600">{{ b.how }}</div>
 </div>

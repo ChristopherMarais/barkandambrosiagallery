@@ -1,5 +1,5 @@
 """
-A superuser who makes an account on Create User (#567) ends on the confirmation only: "Username <name> created
+A superuser who makes an account on Create user (#567) ends on the confirmation only: "Username <name> created
 successfully." and a "Create another account" button, no username or password boxes. It is reached by a redirect
 (post, redirect, get), so refreshing never makes the account twice, and the page is never cached, so Back fetches
 a blank form. Mistakes still show on the form. The Username box has a visible border like the password boxes.
@@ -22,7 +22,7 @@ TEMPLATES = Path(__file__).resolve().parent.parent / "templates" / "accounts"
 def content_of(response):
     """What the page shows: after the site's sidebar (the sign-out form lives there), before the page's script."""
     html = response.content.decode()
-    shown = html[html.index("Create User</h2>"):]
+    shown = html[html.index("Create user</h1>"):]
     return shown[:shown.index("<script")]
 
 
@@ -115,7 +115,7 @@ class OnlySuperusersCreateAccountsTests(PageBehaviourCase):
 
 
 class MyAccountCreateUserTests(PageBehaviourCase):
-    """The Create New User window on My Account already redirects after a success; Back now starts it empty and shut."""
+    """The Create user window on Account already redirects after a success; Back now starts it empty and shut."""
 
     def setUp(self):
         super().setUp()

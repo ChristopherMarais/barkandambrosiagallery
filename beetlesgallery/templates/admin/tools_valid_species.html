@@ -2,9 +2,21 @@
 {% load static %}
 {% block title %}Valid species • Tools{% endblock %}
 
+{% block extrahead %}{{ block.super }}
+<style>
+  /* #618 adm-mobile: these tool forms render far wider than a phone on the live site. Let the fields stack
+     instead of forcing a wide layout. */
+  #content.content { max-width: 100%; }
+  #content.content form table, #content.content form td, #content.content form th { max-width: 100%; }
+  #content.content form input, #content.content form select, #content.content form textarea { max-width: 100%; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div id="content" class="content">
   <h1>Tools: valid_species.csv</h1>
+
+  <p class="help" data-testid="best-on-computer">Best on a computer: this form is easier to use on a wider screen.</p>
 
   <div class="module">
     <h2>Current status</h2>
@@ -22,9 +34,21 @@
       <table>
         {{ form.as_table }}
       </table>
-      <p class="help">The CSV must contain headers:
-        <code>valid_species_id, scientificName, scientificNameAuthority, subfamily, tribe, subtribe, genus, species, subspecies, authority, authorityYear, originalGenus</code>.
-      </p>
+      <p class="help">The CSV must contain these headers:</p>
+      <ul class="help" data-testid="required-headers">
+        <li><code>valid_species_id</code></li>
+        <li><code>scientificName</code></li>
+        <li><code>scientificNameAuthority</code></li>
+        <li><code>subfamily</code></li>
+        <li><code>tribe</code></li>
+        <li><code>subtribe</code></li>
+        <li><code>genus</code></li>
+        <li><code>species</code></li>
+        <li><code>subspecies</code></li>
+        <li><code>authority</code></li>
+        <li><code>authorityYear</code></li>
+        <li><code>originalGenus</code></li>
+      </ul>
       <input type="submit" class="default" value="Publish">
     </form>
   </div>

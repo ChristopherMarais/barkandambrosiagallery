@@ -121,15 +121,21 @@
 
   // Points for a checked beetle: what it earned, and where the rest went
   const fmt = (n) => (n > 0 ? "+" : n < 0 ? "\u2212" : "") + Math.abs(n).toFixed(1).replace(/\.0$/, "");
-  function pointsChip(item) {
+  function pointsLine(item) {
+    const l = item.losses;
+    return l ? `<span class="text-sm font-semibold tabular-nums text-gray-900" data-testid="item-points">${fmt(l.earned)} pts</span>` : "";
+  }
+  function pointsSub(item) {
     const l = item.losses;
     if (!l) return "";
-    const lost = l.lost > 0 ? ` <span class="text-red-700">(${fmt(-l.lost)} missed)</span>` : "";
+    const lost = l.lost > 0 ? `${fmt(-l.lost)} missed` : "";
     // how hard the beetle was (#492): a gain × m, a loss × (2 − m)
     const m = l.multiplier ? (l.earned < 0 ? 2 - l.multiplier : l.multiplier) : 1;
-    const hard = Math.abs(m - 1) >= 0.01
-      ? ` <span class="font-normal text-gray-500" data-testid="item-multiplier" title="Harder beetles are worth more, and a miss on one costs less">×${m.toFixed(2)} ${l.multiplier > 1 ? "harder" : "easier"} beetle</span>` : "";
-    return `<span class="text-xs font-semibold tabular-nums text-gray-700" data-testid="item-points">${fmt(l.earned)} pts${lost}${hard}</span>`;
+    const hard = Math.abs(m - 1) >= 0.01 ? `×${m.toFixed(2)} ${l.multiplier > 1 ? "harder" : "easier"} beetle` : "";
+    const parts = [lost, hard].filter(Boolean);
+    return parts.length
+      ? `<p class="mt-0.5 text-right text-xs text-gray-500" data-testid="item-sub" title="Harder beetles are worth more, and a miss on one costs less">${parts.join(" · ")}</p>`
+      : "";
   }
   const STATE_NOTE = { wrong: "wrong", after: "wrong above", stopped: "left blank" };
   function rankPoints(item, r) {
@@ -164,20 +170,28 @@
       : '<span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-sm bg-gray-100 text-gray-600 border border-gray-200">Unverified</span>';
     return v;
   }
+  // Naming has one name to check: its verification status sits once in the card header, not inside a table's
+  // column header (#rev-verified: a VERIFIED pill used to live in the DATABASE <th>, which could wrap awkwardly).
+  // The other modes already show it beside each beetle's own name.
+  function headerBadge(item) {
+    return item.mode === "classify" && item.sides[0] ? sideStatus(item.sides[0]) : "";
+  }
 
-  // Curators: a verified name that looks wrong can be un-validated or corrected on the annotation page
+  // Curators: a verified name that looks wrong can be un-validated or corrected on the annotation page. Two small
+  // secondary buttons with icons (#rev-links: "Report a problem"/"Open in annotator" used to be small links
+  // squeezed at the right), not underlined text.
   function curatorLink(side) {
     if (!CAN_REVOKE || !side.verified || !side.image_id) return "";
-    return ` <a href="${ANNOTATE_URL}?image=${encodeURIComponent(side.image_id)}&roi=${encodeURIComponent(side.roi_id)}" target="_blank" rel="noopener"
-              class="text-xs text-gray-500 underline underline-offset-2 hover:text-gray-900" data-testid="open-in-annotator"
-              title="Un-validate or correct it on the annotation page">Open in annotator</a>`;
+    return `<a href="${ANNOTATE_URL}?image=${encodeURIComponent(side.image_id)}&roi=${encodeURIComponent(side.roi_id)}" target="_blank" rel="noopener"
+              class="btn-secondary h-8 px-2.5 gap-1.5 text-xs" data-testid="open-in-annotator"
+              title="Un-validate or correct it on the annotation page"><i class="fi fi-rr-edit" aria-hidden="true"></i> Open in annotator</a>`;
   }
 
   function reportControl(item, side) {
     const link = curatorLink(side);
     if (!link) return reportOnly(item, side);
-    // two controls: stacked on a phone, side by side on a wider screen
-    return `<span class="flex flex-col items-end gap-0.5 whitespace-nowrap sm:flex-row sm:items-center sm:gap-3">${reportOnly(item, side)}${link}</span>`;
+    // two buttons: stacked on a phone, side by side on a wider screen
+    return `<span class="flex flex-col items-end gap-1.5 sm:flex-row sm:items-center">${reportOnly(item, side)}${link}</span>`;
   }
 
   function reportOnly(item, side) {
@@ -188,8 +202,8 @@
     }
     const safeIndex = esc(item.index);
     const safeRoiId = esc(side.roi_id);
-    return `<button type="button" class="text-xs text-gray-500 underline underline-offset-2 hover:text-gray-900"
-              data-report="${safeIndex}" data-roi="${safeRoiId}"><i class="fi fi-rr-flag"></i> Report a problem</button>`;
+    return `<button type="button" class="btn-secondary h-8 px-2.5 gap-1.5 text-xs"
+              data-report="${safeIndex}" data-roi="${safeRoiId}"><i class="fi fi-rr-flag" aria-hidden="true"></i> Report a problem</button>`;
   }
 
   function classifyBody(item) {
@@ -212,7 +226,7 @@
         <thead><tr class="text-[11px] text-gray-400 uppercase tracking-wider">
           <th class="text-left font-semibold pb-1"></th>
           <th class="text-left font-semibold pb-1 px-2">You said</th>
-          <th class="text-left font-semibold pb-1 px-2">Database ${sideStatus(side)}</th>
+          <th class="text-left font-semibold pb-1 px-2">Database</th>
           <th></th>
           <th class="text-right font-semibold pb-1 pl-2">${item.losses ? "Pts" : ""}</th>
         </tr></thead>
@@ -292,16 +306,42 @@
     canvas.getContext("2d").drawImage(img, x0 * W, y0 * H, sw, sh, 0, 0, canvas.width, canvas.height);
   }
 
+  // A fully correct answer needs no second look: one line, not a whole card with its photos and table (#rev-collapse:
+  // every answer used to be a full card, ~33 screens for a round of beetles). Anything wrong, partly right, reported,
+  // skipped or not verified yet stays a full card, so the mistakes are what you actually see.
+  function isCorrect(item) {
+    return item.verdict === "right" && !item.held;
+  }
+
   function render() {
     const list = $("items");
     list.innerHTML = "";
     items.forEach((item, n) => {
       const li = document.createElement("li");
+      if (isCorrect(item)) {
+        li.className = "flex items-center justify-between gap-3 px-4 py-2 border border-gray-200 rounded-lg bg-white";
+        li.dataset.testid = "item-row-correct";
+        li.innerHTML = `
+          <span class="flex items-center gap-2 min-w-0">
+            <span class="text-xs font-semibold text-gray-400">#${n + 1}</span>
+            ${chip(item)}
+          </span>
+          ${pointsLine(item)}`;
+        list.appendChild(li);
+        return;
+      }
       li.className = "p-4 border border-gray-200 rounded-lg bg-white";
+      li.dataset.testid = "item-card";
       li.innerHTML = `
-        <div class="flex items-center justify-between mb-3">
-          <span class="text-xs font-semibold text-gray-400">#${n + 1}</span>
-          <span class="flex items-center gap-2">${pointsChip(item)}${chip(item)}</span>
+        <div class="mb-3">
+          <div class="flex items-center justify-between gap-2">
+            <span class="flex items-center gap-2 min-w-0">
+              <span class="text-xs font-semibold text-gray-400">#${n + 1}</span>
+              ${headerBadge(item)}
+            </span>
+            <span class="flex items-center gap-2 shrink-0">${chip(item)}${pointsLine(item)}</span>
+          </div>
+          ${pointsSub(item)}
         </div>
         <div class="${item.mode === "select" || item.mode === "odd" ? (item.sides.length > 16 ? "grid grid-cols-5 gap-1 items-center" : item.sides.length > 9 ? "grid grid-cols-4 gap-2 items-center" : item.sides.length > 4 ? "grid grid-cols-3 gap-2 items-center" : "grid grid-cols-2 gap-2 items-center") : item.sides.length > 1 ? "grid grid-cols-2 gap-2 items-center" : ""}" data-images></div>
         ${item.mode === "classify" ? classifyBody(item) : item.mode === "odd" ? oddBody(item) : item.mode === "select" ? selectBody(item) : pairBody(item)}`;

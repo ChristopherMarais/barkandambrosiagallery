@@ -14,23 +14,26 @@
     </div>
   </div>
 
-  <h1 class="page-title">Beetle Image Browser</h1>
+  <h1 class="page-title">Beetle image browser</h1>
 
   <form method="get" id="main-form" class="w-full max-w-7xl mx-auto mb-8">
     <div class="flex flex-col gap-4">
       
       {# 1. Search Bar #}
       <div class="relative w-full">
-        <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Search by ROI ID, Image ID (UUID), or Metadata..." class="w-full rounded-lg border border-text/10 bg-background px-6 py-4 text-md text-text shadow-md focus:ring-2 focus:ring-gray-400 outline-hidden transition" />
+        <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Search names or IDs" class="w-full rounded-lg border border-text/10 bg-background px-6 py-4 text-md text-text shadow-md focus:ring-2 focus:ring-gray-400 outline-hidden transition" />
+        <p class="mt-2 px-2 text-xs text-gray-600">
+          Searches scientific name, genus, species, Record ID, Image ID (UUID), specimen ID, institution, photographer, country and type status.
+        </p>
       </div>
 
       {# 2. Controls #}
       <div class="flex flex-wrap items-center justify-between gap-4">
           <button type="submit" class="btn-main px-12">Search</button>
 
-          <button type="button" id="toggle-filters-btn" class="group flex items-center gap-2 text-sm text-gray-500 hover:underline hover:text-text" aria-expanded="false">
-            <span>Filter</span>
-            <svg id="chevron-icon" class="w-4 h-4 text-text/50 transition-transform duration-200 group-hover:text-text" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          <button type="button" id="toggle-filters-btn" class="btn-secondary" aria-expanded="false">
+            <span>Filters{% if active_filter_count %} &middot; {{ active_filter_count }}{% endif %}</span>
+            <svg id="chevron-icon" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
           </button>
       </div>
 
@@ -542,6 +545,47 @@
       btn.innerHTML = `<svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
       setTimeout(() => { btn.innerHTML = originalHTML; }, 1500);
     } catch (err) { console.error(err); }
+  });
+
+  // --- 5b. Broken thumbnail: swap in the "No preview" placeholder, with a Retry (#618 browser-empty-thumb) ---
+  const NO_PREVIEW_HTML = `
+    <div class="no-preview flex flex-col items-center justify-center gap-1 w-full h-full text-gray-600">
+      <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7a2 2 0 012-2h3l1.5-2h5L16 5h3a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"></path>
+        <circle cx="12" cy="13" r="3" stroke-width="1.5"></circle>
+      </svg>
+      <span class="text-xs">No preview</span>
+      <button type="button" class="thumb-retry-btn text-xs text-gray-700 underline">Retry</button>
+    </div>`;
+
+  window.handleThumbError = function(img) {
+    const wrap = img.closest('.thumb-wrap');
+    if (!wrap) return;
+    wrap.innerHTML = NO_PREVIEW_HTML;
+  };
+
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.thumb-retry-btn');
+    if (!btn) return;
+    e.preventDefault(); e.stopPropagation();
+    const wrap = btn.closest('.thumb-wrap');
+    const src = wrap && wrap.getAttribute('data-src');
+    if (!wrap || !src) return;
+    // Thumbnails only ever come from our own storage (a relative path or an http(s) URL, #618). Parse with the
+    // URL constructor and only ever build img.src from a same-origin http(s) result: the pattern CodeQL's
+    // DOM-XSS dataflow models recognise as a real barrier, unlike a plain regex/string check (js/xss-through-dom).
+    let parsed;
+    try { parsed = new URL(src, location.href); } catch (e) { return; }
+    if (parsed.origin !== location.origin || (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')) return;
+    const img = document.createElement('img');
+    img.src = parsed.href + (parsed.href.includes('?') ? '&' : '?') + 'retry=' + Date.now();
+    img.alt = wrap.getAttribute('data-alt') || '';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.className = wrap.getAttribute('data-img-class') || 'thumb-img w-full h-full object-contain';
+    img.onerror = function() { handleThumbError(img); };
+    wrap.innerHTML = '';
+    wrap.appendChild(img);
   });
 
   // --- 6. Download Dropdown Logic (New) ---

@@ -65,9 +65,12 @@ class ThemeTests(SimpleTestCase):
                 self.assertIn('class="page-title"', tag, f"{path.name}: {tag}")
 
     def test_the_annotation_page_is_called_image_annotation(self):
-        self.assertIn("Image Annotation", read("beetles", "tool_annotate.html"))
+        # The page's own <h1> is sentence case (site-casing, #618); the nav item that links to it keeps its own
+        # case in base.html, checked separately below.
+        self.assertIn("Image annotation", read("beetles", "tool_annotate.html"))
         self.assertNotIn("Data Curation", read("beetles", "tool_annotate.html"))
         self.assertNotIn("Data Annotation", read("base.html"))
+        self.assertIn("Image Annotation", read("base.html"))
 
     def test_solid_buttons_use_the_house_grey(self):
         for name in ("game_home.html", "game_play.html", "access_requests.html", "interaction_review.html"):

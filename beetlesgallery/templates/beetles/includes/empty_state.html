@@ -1,0 +1,11 @@
+{% comment %}
+The standard empty-list state (site-empty, #618): a muted icon, one sentence saying what will appear, and the
+action that makes it appear.
+Usage: {% include "beetles/includes/empty_state.html" with icon="fi-rr-folder" text="No uploads yet. Files you add will appear here." action_url=some_url action_label="Upload a file" %}
+icon defaults to a plain folder; action_url/action_label are optional (omit both if there is no action yet).
+{% endcomment %}
+<div class="flex flex-col items-center text-center gap-3 py-10 px-4 text-gray-500">
+  <i class="fi {{ icon|default:"fi-rr-folder" }} text-3xl text-gray-300" aria-hidden="true"></i>
+  <p class="text-sm max-w-sm">{{ text }}</p>
+  {% if action_url %}<a href="{{ action_url }}" class="btn-secondary">{{ action_label }}</a>{% endif %}
+</div>

@@ -18,82 +18,88 @@
 <section class="relative z-0">
 
   {# --- Page Header --- #}
-  <h1 class="page-title">Data Management</h1>
+  <h1 class="page-title">Data management</h1>
 
   {# --- SECTION 1: DATA ACTIONS --- #}
   <div class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-xs">
-  
-    {# Header with "Help" Link #}
-    <div class="flex justify-between items-start mb-6">
-      <div>
-        <h2 class="text-2xl font-bold text-gray-800">Data Actions</h2>
-        <p class="text-sm text-gray-600 mt-1 max-w-2xl" data-testid="data-actions-intro">
-          {% if areas.upload %}<strong>Upload New Data</strong> adds new images and their details. <strong>Update Metadata</strong> changes records that are already here.
-          {% endif %}To download, find the images in the gallery and use its download buttons.
-        </p>
-      </div>
-      
-      {% if areas.upload or areas.update %}
-      <button onclick="openModal('modal-field-definitions')" 
-              class="group flex items-center gap-1.5 text-sm font-medium text-gray-400 hover:text-gray-600 transition">
-        <i class="fi fi-rr-info text-base"></i>
-        <span>Field Definitions</span>
-      </button>
-      {% endif %}
-    </div>
 
-    <div class="flex flex-wrap gap-4">
+    <h2 class="text-lg font-semibold text-gray-800">Data Actions</h2>
+    <p class="text-sm text-gray-600 mt-1 max-w-2xl" data-testid="data-actions-intro">
+      {% if areas.upload %}<strong>Upload New Data</strong> adds new images and their details. <strong>Update Metadata</strong> changes records that are already here.
+      {% endif %}To download, find the images in the gallery and use its download buttons.
+      {% if areas.upload or areas.update %}<button type="button" onclick="openModal('modal-field-definitions')"
+        class="text-gray-500 underline hover:text-gray-800">Field definitions</button>.{% endif %}
+    </p>
 
-      {# Staff Only: Upload & Update Buttons #}
+    {% if areas.upload or areas.update or areas.predictions or areas.bulk_validate %}
+    <div class="mt-5 divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white overflow-hidden">
+
+      {# Staff Only: Upload & Update rows #}
       {% if areas.upload %}
-      <button onclick="openModal('modal-upload-new')"
-        class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
-        <i class="fi fi-rr-upload"></i>
-        <span>Upload New Data</span>
+      <button type="button" onclick="openModal('modal-upload-new')"
+        class="w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-gray-50 transition">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-600"><i class="fi fi-rr-upload"></i></span>
+        <span class="flex-1 min-w-0">
+          <span class="block text-sm font-semibold text-gray-900">Upload New Data</span>
+          <span class="block text-xs text-gray-500">Add new images and their details.</span>
+        </span>
+        <i class="fi fi-rr-angle-small-right text-gray-400 shrink-0"></i>
       </button>
       {% endif %}
 
       {% if areas.update %}
-      <button onclick="openModal('modal-update-existing')"
-        class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
-        <i class="fi fi-rr-refresh"></i>
-        <span>Update Metadata</span>
+      <button type="button" onclick="openModal('modal-update-existing')"
+        class="w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-gray-50 transition">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-600"><i class="fi fi-rr-refresh"></i></span>
+        <span class="flex-1 min-w-0">
+          <span class="block text-sm font-semibold text-gray-900">Update Metadata</span>
+          <span class="block text-xs text-gray-500">Change records that are already here.</span>
+        </span>
+        <i class="fi fi-rr-angle-small-right text-gray-400 shrink-0"></i>
       </button>
       {% endif %}
 
       {% if areas.predictions %}
-      <button onclick="openModal('modal-predictions')" data-testid="open-predictions"
-        class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
-        <i class="fi fi-rr-sparkles"></i>
-        <span>Upload Model Predictions</span>
+      <button type="button" onclick="openModal('modal-predictions')" data-testid="open-predictions"
+        class="w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-gray-50 transition">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-600"><i class="fi fi-rr-sparkles"></i></span>
+        <span class="flex-1 min-w-0">
+          <span class="block text-sm font-semibold text-gray-900">Upload Model Predictions</span>
+          <span class="block text-xs text-gray-500">Add an AI model's species guesses for ROIs.</span>
+        </span>
+        <i class="fi fi-rr-angle-small-right text-gray-400 shrink-0"></i>
       </button>
       {% endif %}
 
       {% if areas.bulk_validate %}
       <a href="{% url 'bulk_validate' %}" data-testid="open-bulk-validate"
-        class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
-        <i class="fi fi-rr-list-check"></i>
-        <span>Bulk Validation</span>
+        class="w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-gray-50 transition">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-600"><i class="fi fi-rr-list-check"></i></span>
+        <span class="flex-1 min-w-0">
+          <span class="block text-sm font-semibold text-gray-900">Bulk Validation</span>
+          <span class="block text-xs text-gray-500">Review and validate records in bulk.</span>
+        </span>
+        <i class="fi fi-rr-angle-small-right text-gray-400 shrink-0"></i>
       </a>
       {% endif %}
-
-      {# All Users: Download Link #}
-      <a href="{% url 'beetles_image_browser' %}"
-        class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-4 text-base font-bold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
-        <i class="fi fi-rr-search-alt"></i>
-        <span>Browse Gallery to Download</span>
-      </a>
     </div>
+    {% endif %}
+
+    {# All Users: Download Link #}
+    <a href="{% url 'beetles_image_browser' %}"
+      class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-600 hover:text-gray-900">
+      <span>Browse gallery to download</span>
+      <i class="fi fi-rr-angle-small-right text-xs"></i>
+    </a>
   </div>
 
   {# --- SECTION: TAXONOMY REFERENCE MANAGEMENT (Admin/Superusers Only) --- #}
   {# The ground-truth species tables: their own permission (areas.SPECIES) #}
   {% if areas.species_tables %}
   <div class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-xs">
-    <h2 class="text-2xl font-bold mb-2 text-gray-800">Species Tables</h2>
-    <p class="text-sm text-gray-600 mb-6 max-w-3xl">
+    <h2 class="text-lg font-semibold mb-2 text-gray-800">Species Tables</h2>
+    <p class="text-sm text-gray-600 mb-4 max-w-3xl">
       The two tables every name on the site comes from: labels, the game's name lists, uploads and the AI's answers.
-      Uploading a new version replaces the current one (the old one stays in the version history) and re-links every beetle to it.
     </p>
 
     <div class="mb-4 max-w-xs">
@@ -105,15 +111,20 @@
       </select>
     </div>
 
-    <div class="mb-4 max-w-3xl text-sm text-gray-600" data-testid="species-table-help">
-      <p data-table="valid_species"><strong>Accepted species:</strong> every species the gallery accepts, each with its ID
-        (<code>valid_species_id</code>) and its place in the taxonomy (subfamily, tribe, genus, species). This is the gallery's
-        ground truth: a beetle's name is one of these IDs.</p>
-      <p data-table="described_names" class="hidden"><strong>Synonyms and old names:</strong> every name a species has been
-        described or recorded under (synonyms, earlier genus combinations, spelling variants), each pointing to its accepted
-        species (<code>name_valid_species_id</code>). Used to turn the name on a vial label, in an upload or from a model into
-        the accepted species.</p>
-    </div>
+    <details class="mb-4 max-w-3xl text-sm text-gray-600" data-testid="species-table-help">
+      <summary class="cursor-pointer font-semibold text-gray-700 hover:text-gray-900">What are these tables?</summary>
+      <div class="mt-2 space-y-2">
+        <p data-table="valid_species"><strong>Accepted species:</strong> every species the gallery accepts, each with its ID
+          (<code>valid_species_id</code>) and its place in the taxonomy (subfamily, tribe, genus, species). This is the gallery's
+          ground truth: a beetle's name is one of these IDs.</p>
+        <p data-table="described_names" class="hidden"><strong>Synonyms and old names:</strong> every name a species has been
+          described or recorded under (synonyms, earlier genus combinations, spelling variants), each pointing to its accepted
+          species (<code>name_valid_species_id</code>). Used to turn the name on a vial label, in an upload or from a model into
+          the accepted species.</p>
+        <p>Uploading a new version replaces the current one (the old one stays in the version history) and re-links every
+          beetle to it.</p>
+      </div>
+    </details>
 
     <div id="version-info" class="mb-4">
       <p class="text-sm text-gray-600">
@@ -224,7 +235,7 @@
   <div class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-xs">
 
     <div class="mb-8 border-b border-gray-200 pb-4">
-      <h2 class="text-2xl font-bold mb-2 text-gray-800">Activity Logs</h2>
+      <h2 class="text-lg font-semibold mb-2 text-gray-800">Activity Logs</h2>
     </div>
 
     <div class="space-y-12">

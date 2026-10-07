@@ -1493,6 +1493,8 @@ class AnswerPoints(models.Model):
 
     class Meta:
         db_table = "game_answer_points"
+        verbose_name = "Answer Points"
+        verbose_name_plural = "Answer Points"
 
 
 class PlayerScore(models.Model):
@@ -1629,6 +1631,8 @@ class SpeciesDiscovery(models.Model):
     class Meta:
         db_table = "game_species_discovery"
         ordering = ["-created_at"]
+        verbose_name = "Species Discovery"
+        verbose_name_plural = "Species Discoveries"
         constraints = [
             models.UniqueConstraint(fields=["player", "roi"], name="game_discovery_uniq"),
         ]
@@ -1732,6 +1736,8 @@ class RoiDifficulty(models.Model):
 
     class Meta:
         db_table = "game_roi_difficulty"
+        verbose_name = "ROI Difficulty"
+        verbose_name_plural = "ROI Difficulties"
 
     @property
     def value(self):

@@ -1,0 +1,7 @@
+{% comment %}
+One back-link pattern (site-back, #618): a small text link above a sub-page's title, never a bare chevron.
+Usage: {% include "beetles/includes/back_link.html" with url=some_url label="Data management" %}
+{% endcomment %}
+<a href="{{ url }}" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-2 py-2 -my-2">
+  <span aria-hidden="true">&larr;</span> {{ label }}
+</a>

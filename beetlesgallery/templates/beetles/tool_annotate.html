@@ -137,7 +137,7 @@
 <div class="h-full flex flex-col">
   <div class="flex items-center justify-between mb-4 shrink-0">
     <div>
-      <h1 class="page-title" style="margin-bottom: 0.25rem">Image Annotation</h1>
+      <h1 class="page-title" style="margin-bottom: 0.25rem">Image annotation</h1>
       <p class="text-xs text-gray-500 mt-1 hidden md:block">
         <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded-sm text-[10px]">W/S or Up/Down</kbd> Prev/Next Image
         <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded-sm text-[10px] ml-2">D</kbd> Switch Tab
@@ -155,40 +155,45 @@
         <div id="browser-card-header" class="p-4 border-b border-gray-200 shrink-0">
           <h2 class="text-lg font-semibold text-gray-900">Image Browser</h2>
           
-          <div id="filter-stats" class="mt-2 hidden flex-col gap-3 text-[11px] bg-gray-50 px-3 py-2.5 rounded-sm border border-gray-200">
+          <div id="filter-stats" class="mt-2 hidden flex-col gap-3 text-[13px] bg-gray-50 px-3 py-2.5 rounded-sm border border-gray-200">
             <div class="space-y-1.5">
               <div class="font-bold text-gray-700 tracking-wider uppercase text-[10px]">Images</div>
-              <div class="flex flex-wrap gap-x-5 gap-y-2">
-                <div title="Validated" class="flex items-center">
+              <div class="flex flex-wrap gap-x-2 gap-y-2">
+                <button type="button" title="Filter: Validated images" onclick="setAdvancedFilter('image_validated', 'Yes')"
+                  class="flex items-center rounded-sm px-1.5 py-0.5 -mx-1.5 hover:bg-gray-200 transition">
                   <span class="text-gray-600 mr-2">Validated:</span>
                   <span class="w-2 h-2 rounded-full bg-green-500 shrink-0 mr-1.5"></span>
                   <span id="stat-img-val" class="text-gray-900 font-bold truncate">0</span>
-                </div>
-                <div title="Not Validated" class="flex items-center">
+                </button>
+                <button type="button" title="Filter: Not validated images" onclick="setAdvancedFilter('image_validated', 'No')"
+                  class="flex items-center rounded-sm px-1.5 py-0.5 -mx-1.5 hover:bg-gray-200 transition">
                   <span class="text-gray-600 mr-2">Not Validated:</span>
                   <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0 mr-1.5"></span>
                   <span id="stat-img-unval" class="text-gray-900 font-bold truncate">0</span>
-                </div>
-                <div title="No Bounding Boxes" class="flex items-center">
+                </button>
+                <button type="button" title="Filter: Images with no bounding box" onclick="setAdvancedFilter('has_rois', 'No')"
+                  class="flex items-center rounded-sm px-1.5 py-0.5 -mx-1.5 hover:bg-gray-200 transition">
                   <span class="text-gray-600 mr-2">No Bounding Box:</span>
                   <span class="w-2 h-2 rounded-full bg-gray-300 shrink-0 mr-1.5"></span>
                   <span id="stat-img-empty" class="text-gray-900 font-bold truncate">0</span>
-                </div>
+                </button>
               </div>
             </div>
             <div class="space-y-1.5 border-t border-gray-200 pt-2">
               <div class="font-bold text-gray-700 tracking-wider text-[10px]">ROIs</div>
-              <div class="flex flex-wrap gap-x-5 gap-y-2">
-                <div title="Validated ROIs" class="flex items-center">
+              <div class="flex flex-wrap gap-x-2 gap-y-2">
+                <button type="button" title="Filter: Images with every ROI validated" onclick="setAdvancedFilter('all_rois_val', 'Yes')"
+                  class="flex items-center rounded-sm px-1.5 py-0.5 -mx-1.5 hover:bg-gray-200 transition">
                   <span class="text-gray-600 mr-2">Validated:</span>
                   <span class="w-2 h-2 rounded-full bg-green-500 shrink-0 mr-1.5"></span>
                   <span id="stat-roi-val" class="text-gray-900 font-bold truncate">0</span>
-                </div>
-                <div title="Not Validated ROIs" class="flex items-center">
+                </button>
+                <button type="button" title="Filter: Images with an ROI not yet validated" onclick="setAdvancedFilter('all_rois_val', 'No')"
+                  class="flex items-center rounded-sm px-1.5 py-0.5 -mx-1.5 hover:bg-gray-200 transition">
                   <span class="text-gray-600 mr-2">Not Validated:</span>
                   <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0 mr-1.5"></span>
                   <span id="stat-roi-unval" class="text-gray-900 font-bold truncate">0</span>
-                </div>
+                </button>
               </div>
             </div>
           </div>
@@ -307,20 +312,24 @@
       <div class="hidden bg-gray-300 bg-amber-500 bg-green-500 bg-blue-500"></div>
       
       <div class="border-b border-gray-200 p-3 flex items-center justify-between bg-gray-50 shrink-0">
-        <div class="flex items-center gap-3">
-          <div id="main-status-indicator" class="w-3 h-3 rounded-full hidden"></div>
-          <div>
-            <h3 class="text-base font-semibold text-gray-900 flex items-center gap-2" id="canvas-title">Annotation Canvas</h3>
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="min-w-0">
+            {# ann-title skipped (#618): the title stays the full image id, as before. #}
+            <h3 class="text-base font-semibold text-gray-900 truncate" id="canvas-title">Annotation Canvas</h3>
             <p class="text-xs text-gray-500" id="canvas-subtitle">Please select an image to begin annotating</p>
+            <div id="canvas-meta" class="hidden mt-0.5 flex items-center gap-2">
+              <span id="canvas-status-pill" class="hidden inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"></span>
+            </div>
           </div>
         </div>
-        
+
         <div class="flex items-center gap-3">
             <div id="normal-mode-actions" class="flex gap-1 hidden">
               <button type="button" onclick="zoomIn()" class="px-2 py-1 text-sm border border-gray-300 rounded-sm hover:bg-gray-200" title="Zoom In"><i class="fi fi-rr-zoom-in"></i></button>
               <span id="footer-zoom" class="px-2 py-1 text-xs text-gray-600 font-mono self-center">100%</span>
               <button type="button" onclick="zoomOut()" class="px-2 py-1 text-sm border border-gray-300 rounded-sm hover:bg-gray-200" title="Zoom Out"><i class="fi fi-rr-zoom-out"></i></button>
-              <button type="button" onclick="fitToScreen()" class="px-2 py-1 text-sm border border-gray-300 rounded-sm hover:bg-gray-200 ml-2" title="Fit to Screen"><i class="fi fi-rr-search"></i> Fit</button>
+              <button type="button" onclick="fitToScreen()" class="px-2 py-1 text-sm border border-gray-300 rounded-sm hover:bg-gray-200 ml-2" title="Fit to Screen"><i class="fi fi-rr-expand"></i> Fit</button>
+              <button type="button" id="btn-delete-box" onclick="deleteSelectedBox()" class="hidden px-2 py-1 text-sm border border-gray-300 rounded-sm hover:bg-red-50 hover:text-red-600 text-gray-500 ml-2" title="Delete selected box"><i class="fi fi-rr-trash"></i></button>
             </div>
         </div>
       </div>
@@ -550,6 +559,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.head.appendChild(style);
   }
 });
+
 let searchDebounceTimer = null;
 
 // ---------------------------------------------------------
@@ -886,6 +896,40 @@ function updateButtonLabel(container) {
     }
 }
 
+// Each count in the stats panel is a filter button (#618 ann-stats): set the one matching advanced filter to this
+// value (clicking the same value again clears it), keep its dropdown in sync, and reload the list.
+function setAdvancedFilter(param, value) {
+    const select = document.querySelector(`select.advanced-filter[name="${param}"]`);
+    if (!select) return;
+    const already = Array.from(select.selectedOptions).map(o => o.value);
+    const turningOff = already.length === 1 && already[0] === value;
+
+    Array.from(select.options).forEach(opt => { opt.selected = !turningOff && opt.value === value; });
+
+    const container = select.closest('.group-filter');
+    if (container) {
+        container.querySelectorAll('.filter-option').forEach(div => {
+            const isNow = !turningOff && div.dataset.value === value;
+            const icon = div.querySelector('.check-icon');
+            const box = icon ? icon.parentElement : null;
+            div.classList.toggle('bg-gray-100', isNow);
+            div.classList.toggle('text-gray-900', isNow);
+            div.classList.toggle('font-semibold', isNow);
+            div.classList.toggle('text-gray-700', !isNow);
+            if (icon) icon.classList.toggle('hidden', !isNow);
+            if (box) {
+                box.classList.toggle('bg-gray-500', isNow);
+                box.classList.toggle('border-gray-500', isNow);
+                box.classList.toggle('text-white', isNow);
+                box.classList.toggle('border-gray-300', !isNow);
+                box.classList.toggle('bg-white', !isNow);
+            }
+        });
+        updateButtonLabel(container);
+    }
+    closeAndApplyFilters();
+}
+
 // ---------------------------------------------------------
 // LEFT PANEL: IMAGE BROWSER
 // ---------------------------------------------------------
@@ -1054,42 +1098,43 @@ function syncMultipleIndividualsCheckbox() {
 }
 
 // ---------------------------------------------------------
-// UPDATE MAIN WINDOW STATUS INDICATOR
+// UPDATE MAIN WINDOW STATUS: a "Validated" pill (colour + word), not a lone dot (#618 ann-dot)
 // ---------------------------------------------------------
 function updateMainStatusIndicator() {
-    const indicator = document.getElementById('main-status-indicator');
-    if (!indicator) return; // Fail gracefully if the DOM element isn't found
-    
+    const pill = document.getElementById('canvas-status-pill');
+    if (!pill) return; // Fail gracefully if the DOM element isn't found
+
     if (!state.selectedImageId) {
-        indicator.classList.add('hidden');
+        pill.classList.add('hidden');
         return;
     }
-    
+
     const currentIndex = state.images.findIndex(i => i.image_asset_id === state.selectedImageId);
     if (currentIndex === -1) {
-        indicator.classList.add('hidden');
+        pill.classList.add('hidden');
         return;
     }
-    
-    indicator.classList.remove('hidden', 'bg-gray-300', 'bg-green-500', 'bg-amber-500', 'bg-blue-500');
+
+    pill.classList.remove('hidden', 'bg-gray-100', 'text-gray-600', 'bg-green-100', 'text-green-800',
+        'bg-orange-100', 'text-orange-800', 'bg-amber-100', 'text-amber-800');
 
     // Evaluate based on the live UI state rather than the lagging imgData
     if (state.bboxes.length === 0) {
-        indicator.classList.add('bg-gray-300'); // No boxes
-        indicator.title = "No Bounding Boxes";
+        pill.classList.add('bg-gray-100', 'text-gray-600');
+        pill.textContent = 'No Bounding Boxes';
     } else {
         const validatedCount = state.bboxes.filter(b => b.bbox_is_validated).length;
-        
+
         // If the number of validated boxes matches the total boxes
         if (validatedCount === state.bboxes.length) {
-            indicator.classList.add('bg-green-500'); // Image fully validated
-            indicator.title = "Fully Validated";
+            pill.classList.add('bg-green-100', 'text-green-800');
+            pill.textContent = 'Validated';
         } else if (validatedCount > 0) {
-            indicator.classList.add('bg-blue-500'); // Partially validated
-            indicator.title = "Partially Validated";
+            pill.classList.add('bg-orange-100', 'text-orange-800');
+            pill.textContent = 'Partially Validated';
         } else {
-            indicator.classList.add('bg-amber-500'); // Not validated
-            indicator.title = "Not Validated";
+            pill.classList.add('bg-amber-100', 'text-amber-800');
+            pill.textContent = 'Not Validated';
         }
     }
 }
@@ -1104,6 +1149,7 @@ async function selectImage(img) {
     document.getElementById('normal-mode-actions').classList.add('hidden');
     document.getElementById('canvas-title').textContent = 'Annotation Canvas';
     document.getElementById('canvas-subtitle').textContent = 'Select an image to begin';
+    document.getElementById('canvas-meta').classList.add('hidden');
     state.selectedImageId = null;
     updateMainStatusIndicator();
     return;
@@ -1115,6 +1161,7 @@ async function selectImage(img) {
 
   document.getElementById('canvas-title').textContent = img.image_asset_id;
   document.getElementById('canvas-subtitle').textContent = '';   // "Select an image" no longer applies
+  document.getElementById('canvas-meta').classList.remove('hidden');
   document.getElementById('canvas-empty').classList.add('hidden');
   document.getElementById('canvas-wrapper').classList.add('hidden');
   document.getElementById('canvas-loading').classList.remove('hidden');
@@ -1957,10 +2004,15 @@ function updateAccordionSelection() {
 }
 
 function selectBox(idx) {
-  if (state.selectedBoxIndex === idx) return; 
+  if (state.selectedBoxIndex === idx) return;
   state.selectedBoxIndex = idx;
   drawCanvas();
   updateAccordionSelection();
+}
+
+// Deletes the selected box from the canvas toolbar (#618 ann-handles: no more on-canvas red "X" to tap)
+function deleteSelectedBox() {
+  if (state.selectedBoxIndex >= 0 && !state.isLockedByOther) deleteBoxUi(state.selectedBoxIndex);
 }
 
 // Ensure DOM inputs sync instantly when moving/resizing on canvas
@@ -2315,17 +2367,6 @@ function hitTest(x, y) {
     const bw = b.bbox_width * W;
     const bh = b.bbox_height * H;
     
-    if (i === state.selectedBoxIndex && !state.isLockedByOther) {
-        const deleteR = 9 / state.zoom;
-        const offset = 12 / state.zoom; 
-        const delX = bx + bw + offset;
-        const delY = by - offset;
-        
-        if (Math.hypot(x - delX, y - delY) <= deleteR * 1.5) {
-            return {idx: i, handle: 'delete_x'};
-        }
-    }
-
     if (Math.abs(x - bx) < handleSize && Math.abs(y - by) < handleSize) return {idx: i, handle: 'nw'};
     if (Math.abs(x - (bx+bw)) < handleSize && Math.abs(y - by) < handleSize) return {idx: i, handle: 'ne'};
     if (Math.abs(x - bx) < handleSize && Math.abs(y - (by+bh)) < handleSize) return {idx: i, handle: 'sw'};
@@ -2366,11 +2407,7 @@ function updateCursor(e) {
     canvas.style.cursor = 'crosshair';
     return;
   }
-  if (hit.handle === 'delete_x') {
-      canvas.style.cursor = 'pointer';
-      return;
-  }
-  
+
   const cursors = {
     'move': 'move', 'nw': 'nwse-resize', 'se': 'nwse-resize',
     'ne': 'nesw-resize', 'sw': 'nesw-resize', 'n': 'ns-resize',
@@ -2393,10 +2430,6 @@ function onMouseDown(e) {
         return; 
     }
 
-    if (hit.handle === 'delete_x') {
-        deleteBoxUi(hit.idx); 
-        return;
-    }
     selectBox(hit.idx);
     const b = state.bboxes[hit.idx];
     state.startBoxState = { x: b.bbox_x, y: b.bbox_y, w: b.bbox_width, h: b.bbox_height };
@@ -2570,6 +2603,9 @@ function drawCanvas() {
 
   const W = canvas.width;
   const H = canvas.height;
+  // A finger needs a bigger handle to tap than a mouse pointer does (#618 ann-handles: 28px on touch)
+  const coarse = window.matchMedia('(pointer: coarse)').matches;
+  const badgeR = (coarse ? 14 : 9) / state.zoom;
 
   // Draw unselected boxes first, then draw the selected box last so it sits on top
   const boxIndices = state.bboxes.map((_, i) => i);
@@ -2583,17 +2619,19 @@ function drawCanvas() {
     const b = state.bboxes[i];
     const isSel = (i === state.selectedBoxIndex);
     const isSyncing = b.is_syncing === true;
-    
-    // Set colors: Syncing = Blue, Selected = Blue, Validated = Green, Unvalidated = Amber
-    const boxColor = isSyncing ? '#3b82f6' : (isSel ? '#3b82f6' : (b.bbox_is_validated ? '#10b981' : '#f59e0b'));    
+
+    // Colour tells you who drew it: blue is IBBI-AI's colour everywhere else on the site, so a box someone is
+    // drawing or has selected here (always a person, on this page) is gray-900, not blue (#618 ann-blue).
+    // Validated = Green, Unvalidated = Amber.
+    const boxColor = (isSyncing || isSel) ? '#111827' : (b.bbox_is_validated ? '#10b981' : '#f59e0b');
     const bx = b.bbox_x * W;
     const by = b.bbox_y * H;
     const bw = b.bbox_width * W;
     const bh = b.bbox_height * H;
 
     ctx.strokeStyle = boxColor;
-    ctx.lineWidth = 2 / state.zoom; 
-    
+    ctx.lineWidth = 2 / state.zoom;
+
     // Apply dashed line and partial transparency if waiting on network
     if (isSyncing) {
         ctx.setLineDash([4/state.zoom, 4/state.zoom]);
@@ -2604,20 +2642,19 @@ function drawCanvas() {
     }
 
     ctx.strokeRect(bx, by, bw, bh);
-    
+
     ctx.fillStyle = boxColor + '20';
     ctx.fillRect(bx, by, bw, bh);
 
     // Number Pill
-    const badgeR = 9 / state.zoom;
-    ctx.fillStyle = boxColor; 
+    ctx.fillStyle = boxColor;
     ctx.beginPath();
     ctx.arc(bx + badgeR, by - badgeR - (2/state.zoom), badgeR, 0, 2*Math.PI);
     ctx.fill();
     ctx.fillStyle = '#fff';
     ctx.font = `bold ${10/state.zoom}px Arial`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    
+
     // Show dots if syncing, else show number
     if (isSyncing) {
         ctx.fillText(`...`, bx + badgeR, by - badgeR - (1/state.zoom));
@@ -2625,37 +2662,23 @@ function drawCanvas() {
         ctx.fillText(`${i+1}`, bx + badgeR, by - badgeR - (1/state.zoom));
     }
 
-    // Reset alpha and dash for the Delete 'X' Pill and subsequent boxes
+    // Reset alpha and dash for subsequent boxes (deleting now goes through the toolbar button, not an on-canvas "X")
     ctx.globalAlpha = 1.0;
     ctx.setLineDash([]);
-
-    if (isSel && !state.isLockedByOther && !isSyncing) {
-      // Draw the Delete 'X' Pill
-      const deleteR = 9 / state.zoom;
-      const offset = 12 / state.zoom; // Shift outward offset
-      const delX = bx + bw + offset;
-      const delY = by - offset;
-
-      ctx.fillStyle = '#ef4444'; // Always Red
-      ctx.beginPath();
-      ctx.arc(delX, delY, deleteR, 0, 2*Math.PI);
-      ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.font = `bold ${11/state.zoom}px Arial`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('X', delX, delY + (1/state.zoom));
-    }
   });
 
   if (state.interactionMode === 'drawing') {
-    ctx.strokeStyle = '#3b82f6'; // Blue while drawing
+    ctx.strokeStyle = '#111827'; // gray-900 while drawing: a person is drawing it
     ctx.lineWidth = 2 / state.zoom;
     ctx.setLineDash([6/state.zoom, 4/state.zoom]); // Keep it dashed
     ctx.strokeRect(state.startX, state.startY, state.startBoxState.w, state.startBoxState.h);
-    ctx.fillStyle = '#3b82f630'; // Blue fill
+    ctx.fillStyle = '#11182730';
     ctx.fillRect(state.startX, state.startY, state.startBoxState.w, state.startBoxState.h);
     ctx.setLineDash([]);
   }
+
+  const delBtn = document.getElementById('btn-delete-box');
+  if (delBtn) delBtn.classList.toggle('hidden', state.selectedBoxIndex < 0 || state.isLockedByOther);
 }
 
 // ---------------------------------------------------------

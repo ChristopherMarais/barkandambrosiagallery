@@ -23,6 +23,11 @@
   #photos .frame.dragging, #lb-frame.dragging { cursor: grabbing; }
   #photos.fade canvas { opacity: 0; }
   #photos canvas { transition: opacity 0.15s ease; }
+  /* Naming shows one photo: size the image area to it, not a tall grey band of empty space (#play-space). The cell
+     takes the photo's own aspect ratio (--photo-ar, set once it loads), capped at 45% of the screen's height. */
+  #game[data-mode="classify"] #photos { flex: 0 1 auto; max-height: 45vh; width: 100%; background: none; }
+  #game[data-mode="classify"] #photos .cell { flex: 0 1 auto; width: auto; height: auto; max-width: 100%; max-height: 100%;
+      aspect-ratio: var(--photo-ar, 4 / 3); }
   /* Lay the tiles (#602): the new beetle's empty tiles go down at once, one after another (--i, --lay-step), and each
      photo lands in its own tile when it is in, so one beetle gives way to the next instead of jumping (#575) */
   #photos .cell.slot:not(.landed) { background: #e5e7eb; }
@@ -96,7 +101,7 @@
   #ladder { position: relative; display: flex; flex-direction: column; gap: 0.25rem; touch-action: none; user-select: none; -webkit-user-select: none; }
   .rung { position: relative; display: flex; align-items: center; height: 2.5rem; padding: 0 0.875rem 0 2.75rem; border: 1px solid #d1d5db; border-radius: 0.75rem; background: #fff;
           font-size: 0.9375rem; font-weight: 500; color: #111827; text-align: left; width: 100%; }
-  .rung small { margin-left: auto; padding-left: 0.5rem; font-size: 0.6875rem; font-weight: 500; color: #9ca3af; }
+  .rung small { margin-left: auto; padding-left: 0.5rem; font-size: 0.6875rem; font-weight: 500; color: #6b7280; }   /* gray-500, not gray-400 (#play-hints) */
   .rung::before { content: ""; position: absolute; left: 1.0625rem; top: 50%; width: 0.75rem; height: 0.75rem; margin-top: -0.375rem; border-radius: 9999px; background: #fff; border: 2px solid #9ca3af; z-index: 1; }
   .rung.filled::before { background: #6b7280; border-color: #6b7280; }
   .rung::after { content: ""; position: absolute; left: 1.375rem; top: -0.3125rem; width: 2px; height: calc(100% + 0.3125rem); background: #e5e7eb; }
@@ -106,14 +111,16 @@
   .rung.selected small { color: #d1d5db; }
   .rung.selected::before { background: #fff; border-color: #fff; }
 
-  #actions { position: sticky; bottom: 0; z-index: 2; display: flex; gap: 0.5rem; margin-top: 0.5rem; padding: 0 0 calc(0.625rem + env(safe-area-inset-bottom)); background: #fff; }
+  /* Skip, Back and Submit in one grid, 1fr/1fr/2fr, the same gap between each pair (#play-buttons: they used to be
+     three different widths with an uneven gap) */
+  #actions { position: sticky; bottom: 0; z-index: 2; display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 0.5rem; margin-top: 0.5rem; padding: 0 0 calc(0.625rem + env(safe-area-inset-bottom)); background: #fff; }
   #actions button { height: 3rem; border-radius: 0.75rem; font-size: 1rem; }
-  /* Skip on its own at the left, away from Next; Back sits next to Next */
-  #skip { flex: 0 0 24%; font-weight: 500; color: #4b5563; border: 1px solid #d1d5db; background: #fff; }
-  #actions .gap { flex: 1 1 auto; min-width: 0.5rem; }
-  #back { flex: 0 0 22%; font-weight: 500; color: #374151; border: 1px solid #d1d5db; background: #fff; }
+  #skip { font-weight: 500; color: #4b5563; border: 1px solid #d1d5db; background: #fff; }
+  #back { font-weight: 500; color: #374151; border: 1px solid #d1d5db; background: #fff; }
   #back[aria-disabled="true"] { color: #d1d5db; border-color: #e5e7eb; }
-  #submit { flex: 0 0 42%; font-weight: 600; color: #fff; background: #6b7280; }
+  #submit { font-weight: 600; color: #fff; background: #6b7280; }
+  /* Disabled: readable grey-on-grey, not near-invisible white-on-light-grey (#play-submit, ~1.5:1 before) */
+  #submit:disabled { background: #e5e7eb; color: #6b7280; }
   /* Exit: big and plain, top left */
   #exit { height: 2.5rem; padding: 0 1rem 0 0.75rem; gap: 0.375rem; border: 1px solid #d1d5db; border-radius: 9999px; font-size: 0.9375rem; font-weight: 600; color: #111827; background: #fff; }
   #exit:hover { border-color: #6b7280; }
@@ -132,13 +139,15 @@
   }
   /* The grid games: 2×2 up to 5×5 beetles (--grid-cols, set for each grid), growing as the player gets better.
      The tiles are square and as big as the photo area allows: its width on a phone, its height on a wide screen,
-     less a strip at the bottom that keeps the Lighting button clear of the last row (--light).
+     less a strip at the bottom that keeps the Lighting button clear of the last row (--light), and a band at the
+     top that keeps the question clear of the first row (--prompt): "Which one..." used to sit below the grid,
+     easy to miss (#play-prompt); now it is read before the photos, not after them.
      Odd One Out: tap one to pick it; your pick gets a dark ring, and after answering the odd one a green one. */
   #photo-area { container-type: size; }
-  #game[data-mode="odd"] #photos, #game[data-mode="select"] #photos { --gap: 0.375rem; --pad: 0.5rem; --light: 2.375rem;
-      --tile: calc((min(100cqw, 100cqh - var(--light)) - 2 * var(--pad) - (var(--grid-cols, 2) - 1) * var(--gap)) / var(--grid-cols, 2));
+  #game[data-mode="odd"] #photos, #game[data-mode="select"] #photos { --gap: 0.375rem; --pad: 0.5rem; --light: 2.375rem; --prompt: 2.25rem;
+      --tile: calc((min(100cqw, 100cqh - var(--light) - var(--prompt)) - 2 * var(--pad) - (var(--grid-cols, 2) - 1) * var(--gap)) / var(--grid-cols, 2));
       display: grid; grid-template-columns: repeat(var(--grid-cols, 2), minmax(0, var(--tile))); grid-auto-rows: var(--tile);
-      justify-content: center; align-content: center; gap: var(--gap); padding: var(--pad) var(--pad) calc(var(--pad) + var(--light)); }
+      justify-content: center; align-content: center; gap: var(--gap); padding: calc(var(--pad) + var(--prompt)) var(--pad) calc(var(--pad) + var(--light)); }
   #game #photos[data-size="16"] { --gap: 0.25rem; --pad: 0.25rem; }
   /* 25 (5×5), the biggest: the whole width of a phone, no side padding, hairline gaps, smaller corners */
   #game #photos[data-size="25"] { --gap: 0.125rem; --pad: 0px; }
@@ -164,10 +173,17 @@
   :is(#photos, #previous-photos) .cell:is(.ring-missed, .ring-avoided, .ring-unknown)::after { border-style: dashed; border-width: 2px; opacity: 0.7; }
   :is(#photos, #previous-photos) .cell.ring-avoided::after { opacity: 0.4; }
   #photos .cell.key-cursor { --cursor: inset 0 0 0 2px #9ca3af; }
-  /* top right: the Flag has the bottom left of each photo, Lighting the bottom right of the photo area */
-  .zoom-chip { position: absolute; right: 0.375rem; top: 0.375rem; z-index: 3; display: inline-flex; align-items: center; justify-content: center;
+  /* top right: the Flag has the bottom left of each photo, Lighting the bottom right of the photo area. 8px in from
+     the corner, clearly inside the tile on its white circle (#play-expand: it used to read as floating above the
+     corner, outside the tile). */
+  .zoom-chip { position: absolute; right: 0.5rem; top: 0.5rem; z-index: 3; display: inline-flex; align-items: center; justify-content: center;
                width: 1.875rem; height: 1.875rem; border-radius: 9999px; background: #fff; border: 1px solid #d1d5db; box-shadow: 0 1px 3px rgba(0,0,0,.15); color: #374151; font-size: 0.75rem; }
   #odd.hidden, #select.hidden { display: none; }
+  /* The question in a band above the images, not a line below the grid (#play-prompt) */
+  #odd, #select { position: absolute; left: 0; right: 0; top: 0; z-index: 2; display: flex; align-items: center;
+                  justify-content: center; height: 2.25rem; padding: 0 2.25rem; background: rgba(255,255,255,.92);
+                  border-bottom: 1px solid #e5e7eb; }
+  #odd p, #select p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
   .tap-mark { position: absolute; left: 0.375rem; top: 0.375rem; z-index: 3; display: none; align-items: center; justify-content: center;
               width: 1.5rem; height: 1.5rem; border-radius: 9999px; background: #374151; color: #fff; font-size: 0.75rem; pointer-events: none; }
   .cell.tapped .tap-mark { display: inline-flex; }
@@ -212,13 +228,14 @@
   @media (prefers-reduced-motion: reduce) { .swipe-hint { transition: none; transform: translate(-50%, 0); } }
   /* Your last beetle (Back) */
   #previous.hidden { display: none; }
-  #submit:disabled { background: #d1d5db; }
   /* Next while the next beetle (or the review) is on its way: still there, still tappable, a grey sheen and a spinner */
   #submit.next-busy { background: linear-gradient(90deg, #6b7280 0%, #9ca3af 50%, #6b7280 100%); background-size: 200% 100%; }
   #submit #submit-spin { margin-left: 0.4rem; font-size: 0.875rem; }
   #submit #submit-spin.hidden { display: none; }
-  /* Always moving (round 5): the loading screen's thin bar, the tiles' pulse while photos come in, the checking dot */
-  #loading-fact { min-height: 2.5rem; max-width: 20rem; padding: 0 1rem; text-align: center; font-size: 0.8125rem; color: #6b7280; }
+  /* Always moving (round 5): the loading screen's thin bar, the tiles' pulse while photos come in, the checking dot.
+     One message only (not a short line and a fact stacked, side by side, fighting for attention): the short lines
+     and the beetle facts take turns in this one slot (#play-loading-double). */
+  #loading-line { min-height: 2.5rem; max-width: 20rem; padding: 0 1rem; text-align: center; font-size: 0.8125rem; color: #6b7280; }
   #loading-bar { position: relative; width: 10rem; height: 3px; margin-top: 1rem; overflow: hidden; border-radius: 9999px; background: #e5e7eb; }
   #loading-bar.hidden { display: none; }
   #loading-bar span { position: absolute; top: 0; bottom: 0; left: -35%; width: 35%; background: #4b5563; animation: wait-slide 1.1s ease-in-out infinite; }
@@ -231,7 +248,7 @@
   @media (prefers-reduced-motion: no-preference) {
     #submit.next-busy { animation: next-sheen 1.2s linear infinite; }
     #submit #submit-spin { animation: btn-spin 1s linear infinite; }
-    #loading-fact.new { animation: fact-in 0.4s ease-out; }
+    #loading-line.new { animation: fact-in 0.4s ease-out; }
     #photos.laying .cell.slot:not(.landed)::before { content: ""; position: absolute; inset: 0; border-radius: inherit;
         background: #9ca3af; animation: tile-wait 1.1s ease-in-out infinite; }
     .rv-verdict.pending { animation: rv-pulse 0.9s ease-in-out infinite; }
@@ -247,15 +264,20 @@
   :is(#game, #lightbox, #recap) :is(button:not(:disabled), .rank-row):active, :is(#game, #lightbox, #recap) :is(button, .rank-row).pressed { filter: brightness(0.9); }
   .icon-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 2.75rem; height: 2.75rem; border-radius: 0.75rem; color: #374151; }
   .icon-btn:active { background: #f3f4f6; }
-  /* Flag a bad photo: always on the photo itself, bottom left, so nobody has to hunt for it */
-  .report-chip { position: absolute; left: 0.375rem; bottom: 0.375rem; z-index: 3; display: inline-flex; align-items: center; gap: 0.3rem;
-                 height: 1.875rem; padding: 0 0.7rem; border-radius: 9999px; background: #fff; border: 1px solid #d1d5db;
-                 box-shadow: 0 1px 3px rgba(0,0,0,.15); color: #374151; font-size: 0.75rem; font-weight: 600; }
+  /* Flag a bad photo: always on the photo itself, bottom left, so nobody has to hunt for it. The same icon-button
+     look as the detail page's Flag (#play-flag: it used to be a pale pill with small text, easy to miss on the
+     photo): a solid 40px circle, gray-700 icon, no label (its name is in the aria-label and title). */
+  .report-chip { position: absolute; left: 0.375rem; bottom: 0.375rem; z-index: 3; display: inline-flex; align-items: center; justify-content: center;
+                 width: 2.5rem; height: 2.5rem; border-radius: 9999px; background: #fff; border: 1px solid #d1d5db;
+                 box-shadow: 0 1px 4px rgba(0,0,0,.2); color: #374151; font-size: 1.0625rem; }
   .report-chip:hover { border-color: #6b7280; color: #111827; }
   /* Keyboard hints: only on a computer (see HAS_KEYBOARD) */
   .kbd { display: none; align-items: center; justify-content: center; min-width: 1.25rem; height: 1.25rem; padding: 0 0.3rem; margin-left: 0.4rem; border: 1px solid currentColor; border-radius: 0.3rem;
          font-size: 0.625rem; font-weight: 600; line-height: 1; opacity: 0.55; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   #game.has-kbd .kbd { display: inline-flex; }
+  /* A touch screen has no keyboard, whatever has-kbd thinks it detected: the key caps never belong on a phone's
+     buttons (#play-kbd). A mouse or trackpad (pointer: fine) keeps them. */
+  @media (pointer: coarse) { #game.has-kbd .kbd { display: none; } }
   .rung .kbd { margin-left: 0.5rem; }
   /* The beetles-in-a-row chip: grey at 2, then up the site's one scale (.scale-chip-*, game_scale.py) as it grows:
      red, orange, yellow, green, and deep green and glowing at 20 */
@@ -277,7 +299,7 @@
   @keyframes chip-pop { 40% { transform: scale(1.18); } }
   /* The review after an answer (#488): it takes the answer's place in the panel until Next; the photos get marks */
   #review.hidden { display: none; }
-  #panel.reviewing :is(#ranks, #ladder, #odd, #select, #rank-lock) { display: none; }
+  #panel.reviewing :is(#ranks, #ladder, #rank-lock) { display: none; }
   .rv-head { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9375rem; font-weight: 600; color: #111827; }
   /* the headline's dot (#569), on the site's scale: red not correct, orange partly, green correct, grey not known yet */
   .rv-verdict { flex: none; width: 0.625rem; height: 0.625rem; border-radius: 9999px; background: #9ca3af; }
@@ -479,36 +501,44 @@
   data-report-url="{% url 'game_report_item' %}"
   data-last-review-url="{{ last_review }}">
 
-  <!-- Header: leave any time; your score is on the game home, not here -->
-  <header class="flex items-center gap-1 px-2 h-14 border-b border-gray-200 bg-white">
+  <!-- Header: leave any time; your score is on the game home, not here. Exit is icon-only, the mode name keeps the
+       room it needs, and the combo/level details that used to crowd this row now live behind one tap-to-open chip
+       (#play-header), so they never squeeze the mode name down to a single letter. -->
+  <header class="relative flex items-center gap-1 px-2 h-14 border-b border-gray-200 bg-white">
     <button type="button" id="exit" class="inline-flex items-center" aria-label="Exit the game">
-      <i class="fi fi-rr-cross-small text-lg"></i><span>Exit</span><kbd class="kbd">Esc</kbd>
+      <i class="fi fi-rr-cross-small text-lg"></i><span class="sr-only">Exit</span><kbd class="kbd">Esc</kbd>
     </button>
     <div class="flex-1 min-w-0 text-center leading-tight">
       <h1 id="game-title" class="font-semibold text-gray-900 text-base tracking-tight truncate">{{ mode_label }}</h1>
       <div id="focus-line" class="hidden text-[11px] text-gray-500 truncate"></div>
     </div>
-    <span id="combo" class="hidden items-center gap-1 px-2 h-8 rounded-full text-xs font-semibold tabular-nums" title="Beetles answered in a row without skipping" data-testid="combo"><i class="fi fi-rr-bolt"></i><span id="combo-text"></span></span>
     <span id="chip" class="hidden items-center gap-1 px-2.5 h-8 rounded-full bg-gray-100 text-xs font-semibold text-gray-600 tabular-nums" title="Today's beetles and your daily goal">
       <i class="fi fi-rr-flame" id="chip-flame"></i><span id="chip-text"></span>
     </span>
-    <span id="level-chip" class="hidden items-center gap-1 px-2 h-8 rounded-full bg-gray-100 text-xs font-semibold text-gray-700 tabular-nums" title="Points to the next level" data-testid="level-chip"></span>
+    <button type="button" id="progress-btn" class="hidden icon-btn" aria-haspopup="true" aria-expanded="false" aria-controls="progress-pop" title="Your streak and level" data-testid="progress-btn">
+      <i class="fi fi-rr-stats text-lg"></i>
+    </button>
     <button type="button" id="open-help" class="icon-btn" aria-label="How to play" title="How to play" data-testid="open-help"><i class="fi fi-rr-interrogation text-lg"></i></button>
   </header>
+  <div id="progress-pop" class="hidden absolute right-2 top-14 z-10 flex flex-col gap-1.5 p-2.5 rounded-xl border border-gray-200 bg-white shadow-lg" role="group" aria-label="Your streak and level" data-testid="progress-pop">
+    <span id="combo" class="hidden items-center gap-1 px-2 h-8 rounded-full text-xs font-semibold tabular-nums" title="Beetles answered in a row without skipping" data-testid="combo"><i class="fi fi-rr-bolt"></i><span id="combo-text"></span></span>
+    <span id="level-chip" class="hidden items-center gap-1 px-2 h-8 rounded-full bg-gray-100 text-xs font-semibold text-gray-700 tabular-nums" title="Points to the next level" data-testid="level-chip"></span>
+  </div>
   <!-- progress to the next level, right under the top bar -->
-  <div class="h-1 bg-gray-100"><div id="level-bar" class="h-full bg-green-600 transition-all duration-500" style="width:0%"></div></div>
+  {# gray-700, not green (#play-progress): green means done or correct on this site, not "how far" #}
+  <div class="h-1 bg-gray-100"><div id="level-bar" class="h-full bg-gray-700 transition-all duration-500" style="width:0%"></div></div>
 
   {% if mode == 'mixed' %}
   <!-- Your unlocks, right where you play: which game, and a focus. Locked ones say the level that opens them. -->
   <div id="toolbar" class="hidden items-center gap-2 px-2 py-1.5 border-b border-gray-200 bg-white">
-    <div class="flex flex-1 min-w-0 items-center gap-1.5 text-[11px] sm:text-xs font-semibold" role="radiogroup" aria-label="Which game">
-      {# Short names on a phone, so all five fit. All modes mixes the others, so it sits apart: its own dashed pill. #}
-      <button type="button" role="radio" data-play="both" data-short="All" data-long="All modes" class="play-opt play-all shrink-0 h-8 px-2 rounded-lg border border-dashed border-gray-400">All modes</button>
-      <div class="flex flex-1 min-w-0 p-0.5 bg-gray-100 rounded-lg">
-        <button type="button" role="radio" data-play="pair" data-short="Similar" data-long="Similarity" class="play-opt flex-1 h-8 rounded-md">Similarity</button>
-        <button type="button" role="radio" data-play="odd" data-short="Odd one" data-long="Odd One Out" class="play-opt flex-1 h-8 rounded-md">Odd One Out</button>
-        <button type="button" role="radio" data-play="select" data-short="Find all" data-long="Find Them All" class="play-opt flex-1 h-8 rounded-md">Find Them All</button>
-        <button type="button" role="radio" data-play="classify" data-short="Name" data-long="Naming" class="play-opt flex-1 h-8 rounded-md">Naming</button>
+    {# A 14px segmented control that scrolls sideways if it must, not ~11px text squeezed to fit (#play-modes) #}
+    <div class="flex flex-1 min-w-0 items-center gap-1.5 overflow-x-auto text-sm font-semibold" role="radiogroup" aria-label="Which game">
+      <button type="button" role="radio" data-play="both" data-short="All" data-long="All modes" class="play-opt play-all shrink-0 h-8 px-2.5 rounded-lg border border-dashed border-gray-400 whitespace-nowrap">All modes</button>
+      <div class="flex shrink-0 gap-1 p-0.5 bg-gray-100 rounded-lg">
+        <button type="button" role="radio" data-play="pair" data-short="Similar" data-long="Similarity" class="play-opt shrink-0 h-8 px-3 rounded-md whitespace-nowrap">Similarity</button>
+        <button type="button" role="radio" data-play="odd" data-short="Odd one" data-long="Odd One Out" class="play-opt shrink-0 h-8 px-3 rounded-md whitespace-nowrap">Odd One Out</button>
+        <button type="button" role="radio" data-play="select" data-short="Find all" data-long="Find Them All" class="play-opt shrink-0 h-8 px-3 rounded-md whitespace-nowrap">Find Them All</button>
+        <button type="button" role="radio" data-play="classify" data-short="Name" data-long="Naming" class="play-opt shrink-0 h-8 px-3 rounded-md whitespace-nowrap">Naming</button>
       </div>
     </div>
     <button type="button" id="focus-btn" class="inline-flex items-center gap-1 h-9 px-3 max-w-[45%] rounded-lg border border-gray-300 text-xs font-semibold text-gray-700">
@@ -519,17 +549,23 @@
 
   <div id="error" class="hidden mx-3 mt-2 p-2.5 rounded-lg border bg-red-50 border-red-200 text-red-700 text-sm"></div>
 
-  <!-- Loading -->
+  <!-- Loading: one rotating message under the spinner, not two fighting for attention (#play-loading-double) -->
   <div id="loading" class="flex-1 flex flex-col items-center justify-center text-gray-400">
     <i class="fi fi-rr-spinner animate-spin inline-block text-3xl"></i>
-    <p id="loading-line" class="mt-2 text-sm" data-testid="loading-line">Finding beetles&hellip;</p>
-    <p id="loading-fact" data-testid="loading-fact" aria-live="off"></p>
+    <p id="loading-line" class="mt-2" data-testid="loading-line" aria-live="off">Finding beetles&hellip;</p>
     <div id="loading-bar" class="hidden" aria-hidden="true" data-testid="loading-bar"><span></span></div>
   </div>
 
   <!-- The feed -->
   <div id="stage" class="hidden flex-1 min-h-0 flex flex-col">
     <div id="photo-area" class="relative flex-1 min-h-0 flex flex-col">
+      <!-- The question, in a band above the images (#play-prompt), not a line below the grid -->
+      <div id="odd" class="hidden" data-testid="odd-panel">
+        <p id="odd-prompt" class="text-base font-semibold text-gray-900"></p>
+      </div>
+      <div id="select" class="hidden" data-testid="select-panel">
+        <p id="select-prompt" class="text-base font-semibold text-gray-900"></p>
+      </div>
       <div id="photos"></div>
       <button type="button" id="light-btn" class="hidden" aria-expanded="false" aria-controls="light-panel" title="Make the photo brighter or sharper (E)"><i class="fi fi-rr-brightness"></i><span>Lighting</span></button>
       <div id="light-panel" class="hidden" role="group" aria-label="Photo brightness and contrast">
@@ -564,17 +600,11 @@
         <button type="button" role="radio" aria-checked="false" data-choice="{{ value }}" class="rung">{{ label }}<small>{{ hint }}</small></button>
         {% endfor %}
       </div>
-      <div id="odd" class="hidden text-center" data-testid="odd-panel">
-        <p id="odd-prompt" class="text-base font-semibold text-gray-900"></p>
-      </div>
-      <div id="select" class="hidden text-center" data-testid="select-panel">
-        <p id="select-prompt" class="text-base font-semibold text-gray-900"></p>
-      </div>
       <p id="rank-lock" class="rank-lock hidden" data-testid="rank-lock"><i class="fi fi-rr-lock"></i><span id="rank-lock-text"></span></p>
 
+      <p id="submit-hint" class="hidden text-center text-xs text-gray-500 mt-1" data-testid="submit-hint"></p>
       <div id="actions">
         <button type="button" id="skip"><span id="skip-text">Skip</span><kbd class="kbd">Del</kbd></button>
-        <span class="gap"></span>
         <button type="button" id="back" aria-disabled="true" title="Your last beetle">Back<kbd class="kbd">&#9003;</kbd></button>
         <button type="button" id="submit" disabled><span id="submit-text">Submit</span><i id="submit-spin" class="fi fi-rr-spinner hidden" aria-hidden="true"></i><kbd class="kbd">Enter</kbd></button>
       </div>
@@ -695,7 +725,7 @@
       </div>
     </div>
     <!-- Flag a photo that looks wrong: bottom left of the photo, the same corner as on the photos in play -->
-    <button type="button" id="report-cog" class="report-chip" aria-label="Flag this photo" title="Flag a bad photo"><i class="fi fi-rr-flag"></i><span>Flag</span></button>
+    <button type="button" id="report-cog" class="report-chip" aria-label="Flag this photo" title="Flag a bad photo"><i class="fi fi-rr-flag"></i><span class="sr-only">Flag</span></button>
     <div id="report-menu" class="hidden absolute p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Flag this photo">
       <div class="px-2 py-1 text-xs font-semibold text-gray-500">Flag this photo</div>
       {% for value, label, hint in report_reasons %}
@@ -1258,7 +1288,8 @@
     const el = $("chip");
     el.classList.remove("hidden");
     el.classList.add("inline-flex");
-    $("chip-text").textContent = chip.today + "/" + chip.goal;
+    // "79 today · goal 20", not "79/20" (reads like a fraction over 100%, #gh-today, same fix as the game home)
+    $("chip-text").textContent = chip.today + " today · goal " + chip.goal;
     // today's goal reached: the chip lights up (with a little pop the moment it happens)
     const lit = chip.goal > 0 && chip.today >= chip.goal;
     if (lit && !el.classList.contains("lit") && el.dataset.seen) { el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); }
@@ -1281,6 +1312,7 @@
       lc.title = chip.next_at ? digitGroupsText(chip.next_at - chip.score) + " points to level " + (chip.level + 1) : "Top level";
       $("level-bar").style.width = Math.round((chip.next_at ? chip.level_progress : 1) * 100) + "%";
     }
+    syncProgressBtn();
   }
 
   // A pop-up in the middle of the screen, over gold and brown beetles with a sprinkle of its colour: a new level, with
@@ -1394,6 +1426,7 @@
     el.title = combo >= COMBO_PERFECT ? combo + " in a row: perfect!" : combo + " in a row without skipping. " + COMBO_PERFECT + " is perfect.";
     if (combo === COMBO_PERFECT) toast({ kind: "combo", title: "Perfect streak!", text: COMBO_PERFECT + " in a row. Keep it going." });
     else if ([10, 50, 100].includes(combo)) toast({ kind: "combo", title: combo + " in a row!", text: "No skips. Keep it going." });
+    syncProgressBtn();
   }
 
   // ---------- which game is on screen ----------
@@ -1435,18 +1468,14 @@
       const on = b.dataset.play === p.play_mode;
       const why = lockReason(p, b.dataset.play);
       const all = b.dataset.play === "both";   // All modes: its own pill, dashed until chosen
+      // Full words always, at a readable size, in a row that scrolls sideways if it must (#play-modes)
       b.className = all
-        ? "play-opt play-all shrink-0 inline-flex items-center gap-1 h-8 px-2 rounded-lg border " + (on ? "border-gray-600 bg-white text-gray-900 shadow-xs" : why ? "border-dashed border-gray-300 text-gray-400" : "border-dashed border-gray-400 text-gray-600")
-        : "play-opt flex-1 min-w-0 h-8 px-1 rounded-md truncate " + (on ? "bg-white text-gray-900 shadow-xs" : why ? "text-gray-400" : "text-gray-600");
-      const short = document.createElement("span"), long = document.createElement("span");
-      short.className = "sm:hidden";
-      long.className = "hidden sm:inline";
-      short.textContent = b.dataset.short;
-      long.textContent = b.dataset.long;
+        ? "play-opt play-all shrink-0 whitespace-nowrap inline-flex items-center gap-1 h-8 px-2.5 rounded-lg border " + (on ? "border-gray-600 bg-white text-gray-900 shadow-xs" : why ? "border-dashed border-gray-300 text-gray-400" : "border-dashed border-gray-400 text-gray-600")
+        : "play-opt shrink-0 whitespace-nowrap h-8 px-3 rounded-md " + (on ? "bg-white text-gray-900 shadow-xs" : why ? "text-gray-400" : "text-gray-600");
       b.replaceChildren();
       if (why) { const lock = document.createElement("i"); lock.className = "fi fi-rr-lock text-[10px] mr-0.5"; b.append(lock); }
       else if (all) { const mixIcon = document.createElement("i"); mixIcon.className = "fi fi-rr-shuffle text-[11px]"; mixIcon.setAttribute("aria-hidden", "true"); b.append(mixIcon); }
-      b.append(short, long);
+      b.append(document.createTextNode(b.dataset.long));
       b.title = why;
       b.setAttribute("aria-checked", on ? "true" : "false");
     });
@@ -1566,8 +1595,10 @@
     return n > 1 ? "Which " + n + " are a different " + rank + "?" : "Which one is a different " + rank + "?";
   }
 
-  // While the feed loads: short, light lines in turn (never about speed), and a beetle fact from a fixed list that
-  // changes every few seconds. Nothing here calls the server. With reduced motion nothing swaps: the first line and fact.
+  // While the feed loads: one message at a time, under the spinner (#play-loading-double: a short line and a
+  // separate beetle fact used to run side by side, two things fighting for attention). The short, light lines
+  // (never about speed) and the owner's beetle facts take turns in the same slot, swapping every couple of
+  // seconds. Nothing here calls the server. With reduced motion nothing swaps: the first line stays put.
   const LOADING_LINES = ["Finding beetles…", "Building your gallery…", "Turning over the bark…", "Counting the antennae…"];
   // The owner's facts, in this order, the Colorado one first so it stands out. Fact 5 is from a preprint (not yet
   // peer-reviewed): its label is here, not on the page.
@@ -1584,11 +1615,10 @@
   let loadingTimer = null;
   function loadingLines() {
     clearInterval(loadingTimer);
-    const line = $("loading-line"), fact = $("loading-fact");
+    const line = $("loading-line");
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let turn = 0;
     line.textContent = LOADING_LINES[0];
-    fact.textContent = LOADING_FACTS[0];
     loadingTimer = setInterval(() => {
       if ($("loading").classList.contains("hidden")) {
         clearInterval(loadingTimer);
@@ -1596,14 +1626,13 @@
         return;
       }
       turn += 1;
-      if (still) return;   // reduced motion: the first line and fact stay put
-      line.textContent = LOADING_LINES[turn % LOADING_LINES.length];
-      if (turn % 2 === 0) {   // a new fact every two turns (about 5 s), fading in
-        fact.textContent = LOADING_FACTS[(turn / 2) % LOADING_FACTS.length];
-        fact.classList.remove("new");
-        void fact.offsetWidth;
-        fact.classList.add("new");
-      }
+      if (still) return;   // reduced motion: the first line stays put
+      // odd turns: the next short line; even turns: the next beetle fact. One slot, taking turns.
+      line.textContent = turn % 2 === 1 ? LOADING_LINES[((turn - 1) / 2) % LOADING_LINES.length]
+                                         : LOADING_FACTS[(turn / 2 - 1) % LOADING_FACTS.length];
+      line.classList.remove("new");
+      void line.offsetWidth;
+      line.classList.add("new");
     }, LOADING_LINE_MS);
   }
 
@@ -1677,6 +1706,8 @@
       loads[i].then((got) => {   // the photo lands in its tile (if this beetle is still on screen), then the sharp one
         if (!got || !canvas.isConnected) return;
         drawCrop(canvas, got.img, im.box, got.cut);
+        // Naming: size the tile to this photo's own shape, not a fixed box (#play-space)
+        if (MODE === "classify") cell.style.setProperty("--photo-ar", canvas.width + " / " + canvas.height);
         cell.classList.add("landed");
         moved();
         if (got.cut && im.large) {
@@ -1752,7 +1783,7 @@
       report.dataset.testid = "report-chip";
       report.setAttribute("aria-label", "Flag this photo");
       report.title = "Flag a bad photo";
-      report.innerHTML = '<i class="fi fi-rr-flag"></i><span>Flag</span>';
+      report.innerHTML = '<i class="fi fi-rr-flag"></i><span class="sr-only">Flag</span>';
       report.addEventListener("click", (e) => {
         e.stopPropagation();
         openLightbox(im.url, im.box, i);
@@ -2477,6 +2508,21 @@
     $("close-help").addEventListener("click", () => { $("help-sheet").classList.add("hidden"); $("help-sheet").classList.remove("flex"); });
   }
 
+  // Your combo and level used to crowd the header on their own; now they sit behind one tap-to-open chip (#play-header)
+  function toggleProgress(open) {
+    const pop = $("progress-pop");
+    const show = open === undefined ? pop.classList.contains("hidden") : open;
+    pop.classList.toggle("hidden", !show);
+    $("progress-btn").setAttribute("aria-expanded", String(show));
+  }
+  function syncProgressBtn() {
+    const show = !$("combo").classList.contains("hidden") || !$("level-chip").classList.contains("hidden");
+    $("progress-btn").classList.toggle("hidden", !show);
+  }
+  $("progress-btn").addEventListener("click", () => toggleProgress());
+  $("progress-pop").addEventListener("click", (e) => e.stopPropagation());
+  document.addEventListener("game:close-overlays", () => toggleProgress(false));
+
   // ---------- Name That Beetle: four stacked lists, broad to specific ----------
   const selects = {};
   document.querySelectorAll("select[data-rank]").forEach((s) => { selects[s.dataset.rank] = s; });
@@ -2762,6 +2808,15 @@
     return MODE === "classify" ? Object.assign({}, pick) : { pair_answer: pairChoice };
   }
 
+  // Why Submit is still off (#play-submit): a disabled button with no reason given is a dead end
+  function submitHint() {
+    if (MODE === "classify") return "Pick a subfamily first";
+    if (MODE === "pair") return "Choose how closely related they are";
+    if (MODE === "odd") return oddWant > 1 ? "Pick the odd ones out" : "Pick the odd one out";
+    if (MODE === "select") return "Select at least one";
+    return "";
+  }
+
   // Submit while answering (once there is an answer), Next on the review (off while the next beetle loads)
   // Next is there from the moment of Submit (the review is on its way), and stays there while the next beetle loads:
   // then it is busy (a sheen and a spinner), never gone and never silent to a tap (round 5)
@@ -2776,6 +2831,9 @@
     $("submit").classList.toggle("next-busy", waitingNext);
     $("submit").setAttribute("aria-busy", waitingNext ? "true" : "false");
     $("submit-spin").classList.toggle("hidden", !waitingNext);
+    const hint = !onReview && !busy && !ready ? submitHint() : "";
+    $("submit-hint").textContent = hint;
+    $("submit-hint").classList.toggle("hidden", !hint);
   }
 
   function resetAnswer() {
@@ -2819,6 +2877,7 @@
     if (!$("recap").classList.contains("hidden")) { location.href = root.dataset.homeUrl; return; }
     catchBack();
     if (!$("light-panel").classList.contains("hidden")) { toggleLight(false); return; }
+    if (!$("progress-pop").classList.contains("hidden")) { toggleProgress(false); return; }
     if (closeOverlays()) return;   // your last beetle's review, the whole photo, a sheet
     $("exit").click();
   });
@@ -2858,6 +2917,7 @@
     if (e.key === "Escape") {
       if (!$("recap").classList.contains("hidden")) return;
       if (!$("light-panel").classList.contains("hidden")) { toggleLight(false); return; }
+      if (!$("progress-pop").classList.contains("hidden")) { toggleProgress(false); return; }
       if (!closeOverlays()) $("exit").click();   // nothing open: Esc leaves
       return;
     }

@@ -2,7 +2,8 @@
 {% block content %}
 <div>
   <div class="mx-auto max-w-(--breakpoint-2xl) p-4 md:p-6 2xl:p-10">
-    <h2 class="text-title-md2 font-bold text-black mb-6">Create User</h2>
+    <a href="{% url 'my_account' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Account</a>
+    <h1 class="page-title">Create user</h1>
 
     {% if created_username %}
     {# Reached by a redirect after an account is made, so a refresh never makes it twice: the message only, no form. #}
@@ -13,6 +14,9 @@
       <a href="{% url 'create_account' %}" class="btn-secondary" data-testid="create-account-again"><i class="fi fi-rr-user-add"></i><span>Create another account</span></a>
     </div>
     {% else %}
+    <p class="page-intro mb-6 max-w-2xl" data-testid="create-account-intro">
+      Use this form to create new accounts for users requesting access.
+    </p>
     <div class="rounded-xs border border-gray-200 bg-white shadow-default">
       <div class="w-full p-4">
         <form method="post" action="" data-testid="create-account-form">
@@ -63,14 +67,7 @@
           </div>
 
           <div class="mb-5">
-            <input type="submit" value="Create account"
-              class="w-full cursor-pointer rounded-lg border border-gray-900 bg-white p-4 font-medium text-black transition hover:bg-gray-50" />
-          </div>
-
-          <div class="mt-6 text-center">
-            <p class="font-medium text-gray-500">
-              Use this form to create new accounts for users requesting access.
-            </p>
+            <input type="submit" value="Create user" class="btn-primary w-full p-4 text-base" />
           </div>
 
         </form>

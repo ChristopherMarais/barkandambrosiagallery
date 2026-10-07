@@ -191,7 +191,7 @@ class RangeFilterTests(FilterFixtureMixin, TestCase):
 class FiltersConfigTests(TestCase):
     """FILTERS_CONFIG drives both the dropdowns and the queries; keep it consistent."""
 
-    KNOWN_TYPES = {"db", "bool", "ref", "custom_has_rois", "custom_all_rois_val"}
+    KNOWN_TYPES = {"db", "bool", "ref", "custom_has_rois", "custom_all_rois_val", "custom_has_type_status"}
 
     def test_each_entry_has_the_keys_the_views_read(self):
         for cfg in FILTERS_CONFIG:
