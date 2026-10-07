@@ -179,15 +179,16 @@ class AnnotationTemplateTests(SimpleTestCase):
         self.assertIn("fi-rr-expand", fit)
         self.assertNotIn("fi-rr-search", fit)
 
-    def test_human_drawn_boxes_are_gray_900_not_blue(self):
-        self.assertNotIn("#3b82f6", self.page)
+    def test_the_selected_box_is_blue(self):
+        # the owner undid ann-blue (r7 E3): selected blue, validated green, not yet amber
         fn = self.page[self.page.index("function drawCanvas"):self.page.index("function fitToScreen")]
-        self.assertIn("#111827", fn)
+        self.assertIn("BOX_SELECTED = '#3b82f6'", fn)
+        self.assertNotIn("#111827", fn)
 
-    def test_handles_are_28px_on_a_coarse_pointer_and_delete_moves_to_the_toolbar(self):
+    def test_handles_are_28px_on_a_coarse_pointer_and_delete_floats_on_the_box(self):
         self.assertIn("pointer: coarse", self.page)
         self.assertIn("coarse ? 14 : 9", self.page)   # the drawn badge radius (28px/18px diameter)
-        self.assertNotIn("delete_x", self.page)       # no more on-canvas red "X" to hit-test or draw
+        self.assertIn("handle: 'delete_x'", self.page)   # the floating red "X" is back (r7 E5)
         self.assertIn('id="btn-delete-box"', self.page)
         self.assertIn("function deleteSelectedBox", self.page)
 

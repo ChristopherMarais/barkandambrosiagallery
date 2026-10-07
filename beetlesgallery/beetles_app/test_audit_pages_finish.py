@@ -103,15 +103,17 @@ class DataManagementIntroTests(PageBehaviourCase):
 
 
 class AnnotationBoxColourTests(PageBehaviourCase):
-    def test_boxes_are_gray_900_and_their_line_shows_validation(self):
+    def test_boxes_are_green_amber_and_the_selected_one_blue(self):
+        # ann-blue was undone by the owner (r7 E3): the colours from before the audit are back
         source = (TEMPLATES / "beetles" / "tool_annotate.html").read_text(encoding="utf-8")
         fn = source[source.index("function drawCanvas"):source.index("function fitToScreen")]
-        self.assertIn("const BOX_INK = '#111827';", fn)
-        self.assertIn("const boxColor = BOX_INK;", fn)
-        for gone in ("#10b981", "#f59e0b", "#3b82f6"):
-            self.assertNotIn(gone, fn)
-        self.assertIn("ctx.setLineDash(validated ? [] : [6/state.zoom, 4/state.zoom]);", fn)
-        self.assertIn('data-testid="box-key">Solid box: validated &middot; dashed: not yet<', source)
+        self.assertIn("const BOX_VALIDATED = '#10b981', BOX_UNVALIDATED = '#f59e0b', BOX_SELECTED = '#3b82f6';", fn)
+        self.assertIn("const boxColor = isSel ? BOX_SELECTED : (validated ? BOX_VALIDATED : BOX_UNVALIDATED);", fn)
+        self.assertNotIn("BOX_INK", fn)
+        key = source[source.index('data-testid="box-key"'):]
+        key = key[:key.index("</span></span>\n")]
+        for word in ("validated", "not yet", "selected"):
+            self.assertIn(word, key)
 
 
 class RolePillTests(PageBehaviourCase):

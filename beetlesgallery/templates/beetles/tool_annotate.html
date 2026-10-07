@@ -318,9 +318,9 @@
             <h3 class="text-base font-semibold text-gray-900 truncate" id="canvas-title">Annotation canvas</h3>
             <p class="text-xs text-gray-500" id="canvas-subtitle">Please select an image to begin annotating</p>
             <div id="canvas-meta" class="hidden mt-0.5 flex items-center gap-2">
-              <span id="canvas-status-pill" class="hidden inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"></span>
-              {# #618 ann-blue: every box is dark grey (people draw them); its line says whether it is validated. #}
-              <span class="text-[11px] text-gray-500" data-testid="box-key">Solid box: validated &middot; dashed: not yet</span>
+              <span id="canvas-status-pill" class="hidden inline-flex items-center justify-center text-center leading-none gap-1 rounded-full px-2 py-1 text-[11px] font-semibold"></span>
+              {# Box colours as before the #618 audit (r7 E3): green validated, amber not yet, blue the selected one. #}
+              <span class="flex flex-wrap items-center gap-x-2 text-[11px] text-gray-500" data-testid="box-key"><span class="inline-flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-sm border-2" style="border-color: #10b981"></span>validated</span><span class="inline-flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-sm border-2" style="border-color: #f59e0b"></span>not yet</span><span class="inline-flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-sm border-2" style="border-color: #3b82f6"></span>selected</span></span>
             </div>
           </div>
         </div>
@@ -1731,11 +1731,11 @@ function renderRoiAccordions() {
 
     let badgeHtml = '';
     if (isSyncing) {
-        badgeHtml = `<span class="bg-gray-100 text-gray-500 border border-gray-200 px-2 py-0.5 rounded-sm text-[10px] font-bold tracking-wide uppercase ml-2"><i class="fi fi-rr-spinner animate-spin"></i> Saving</span>`;
+        badgeHtml = `<span class="inline-flex items-center justify-center gap-1 text-center leading-none bg-gray-100 text-gray-500 border border-gray-200 px-2 py-1 rounded-sm text-[10px] font-bold tracking-wide uppercase ml-2"><i class="fi fi-rr-spinner animate-spin"></i> Saving</span>`;
     } else {
         badgeHtml = b.bbox_is_validated 
-            ? `<span class="bg-green-100 text-green-800 border border-green-200 px-2 py-0.5 rounded-sm text-[10px] font-bold tracking-wide uppercase ml-2">Validated</span>`
-            : `<span class="bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-sm text-[10px] font-bold tracking-wide uppercase ml-2">Unvalidated</span>`;
+            ? `<span class="inline-flex items-center justify-center gap-1 text-center leading-none bg-green-100 text-green-800 border border-green-200 px-2 py-1 rounded-sm text-[10px] font-bold tracking-wide uppercase ml-2">Validated</span>`
+            : `<span class="inline-flex items-center justify-center gap-1 text-center leading-none bg-amber-100 text-amber-800 border border-amber-200 px-2 py-1 rounded-sm text-[10px] font-bold tracking-wide uppercase ml-2">Unvalidated</span>`;
     }
 
     // 1. Determine the correct ID safely
@@ -2012,7 +2012,7 @@ function selectBox(idx) {
   updateAccordionSelection();
 }
 
-// Deletes the selected box from the canvas toolbar (#618 ann-handles: no more on-canvas red "X" to tap)
+// Deletes the selected box from the canvas toolbar; the red "X" on the box does the same (r7 E5)
 function deleteSelectedBox() {
   if (state.selectedBoxIndex >= 0 && !state.isLockedByOther) deleteBoxUi(state.selectedBoxIndex);
 }
@@ -2368,7 +2368,12 @@ function hitTest(x, y) {
     const by = b.bbox_y * H;
     const bw = b.bbox_width * W;
     const bh = b.bbox_height * H;
-    
+
+    if (i === state.selectedBoxIndex && !state.isLockedByOther && !b.is_syncing) {
+        const del = deleteButtonAt(bx, by, bw);
+        if (Math.hypot(x - del.x, y - del.y) <= del.r * 1.5) return {idx: i, handle: 'delete_x'};
+    }
+
     if (Math.abs(x - bx) < handleSize && Math.abs(y - by) < handleSize) return {idx: i, handle: 'nw'};
     if (Math.abs(x - (bx+bw)) < handleSize && Math.abs(y - by) < handleSize) return {idx: i, handle: 'ne'};
     if (Math.abs(x - bx) < handleSize && Math.abs(y - (by+bh)) < handleSize) return {idx: i, handle: 'sw'};
@@ -2409,6 +2414,10 @@ function updateCursor(e) {
     canvas.style.cursor = 'crosshair';
     return;
   }
+  if (hit.handle === 'delete_x') {
+    canvas.style.cursor = 'pointer';
+    return;
+  }
 
   const cursors = {
     'move': 'move', 'nw': 'nwse-resize', 'se': 'nwse-resize',
@@ -2429,9 +2438,13 @@ function onMouseDown(e) {
   if (hit) {
     // HARD LOCK: Prevent any interaction with a box currently in network transit
     if (state.bboxes[hit.idx].is_syncing) {
-        return; 
+        return;
     }
 
+    if (hit.handle === 'delete_x') {
+        deleteBoxUi(hit.idx);
+        return;
+    }
     selectBox(hit.idx);
     const b = state.bboxes[hit.idx];
     state.startBoxState = { x: b.bbox_x, y: b.bbox_y, w: b.bbox_width, h: b.bbox_height };
@@ -2600,7 +2613,8 @@ async function saveBoxGeometryAPI(idx) {
 
 function drawCanvas() {
   if (!state.currentImageObj || !ctx) return;
-  const BOX_INK = '#111827';   // gray-900: people's boxes (#618 ann-blue)
+  // The box colours as before the #618 audit (r7 E3): validated green, not yet amber, the selected box blue.
+  const BOX_VALIDATED = '#10b981', BOX_UNVALIDATED = '#f59e0b', BOX_SELECTED = '#3b82f6';
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(state.currentImageObj, 0, 0, canvas.width, canvas.height);
 
@@ -2623,13 +2637,10 @@ function drawCanvas() {
     const isSel = (i === state.selectedBoxIndex);
     const isSyncing = b.is_syncing === true;
 
-    // Colour tells you who drew it (#618 ann-blue): blue is IBBI-AI's colour, so every box here is gray-900, in
-    // every state. The ROI records don't say whether a box came from IBBI-AI or a person (bbox_created_by is the
-    // person either way), so none is drawn blue. Whether it is validated shows in the line instead: solid when
-    // validated, dashed when not yet, and in the number badge: filled when validated, an outline when not yet.
-    // The selected box has a thicker line; one still saving is faded, with "..." in its badge.
-    const boxColor = BOX_INK;
+    // Selected = blue, validated = green, not yet validated = amber; one still saving is faded and dashed,
+    // with "..." in its number badge.
     const validated = !!b.bbox_is_validated;
+    const boxColor = isSel ? BOX_SELECTED : (validated ? BOX_VALIDATED : BOX_UNVALIDATED);
     const bx = b.bbox_x * W;
     const by = b.bbox_y * H;
     const bw = b.bbox_width * W;
@@ -2637,25 +2648,21 @@ function drawCanvas() {
 
     ctx.strokeStyle = boxColor;
     ctx.lineWidth = (isSel ? 3 : 2) / state.zoom;
-    ctx.setLineDash(validated ? [] : [6/state.zoom, 4/state.zoom]);
+    ctx.setLineDash(isSyncing ? [4/state.zoom, 4/state.zoom] : []);
     ctx.globalAlpha = isSyncing ? 0.6 : 1.0;   // partial transparency while waiting on the network
 
     ctx.strokeRect(bx, by, bw, bh);
 
-    ctx.fillStyle = boxColor + (isSel ? '30' : '18');
+    ctx.fillStyle = boxColor + (isSel ? '30' : '20');
     ctx.fillRect(bx, by, bw, bh);
 
-    // Number badge: filled when validated, a white disc with a dark ring when not yet
+    // Number badge in the box's colour
     ctx.setLineDash([]);
     ctx.beginPath();
     ctx.arc(bx + badgeR, by - badgeR - (2/state.zoom), badgeR, 0, 2*Math.PI);
-    ctx.fillStyle = validated ? boxColor : '#fff';
+    ctx.fillStyle = boxColor;
     ctx.fill();
-    if (!validated) {
-        ctx.lineWidth = 1.5 / state.zoom;
-        ctx.stroke();
-    }
-    ctx.fillStyle = validated ? '#fff' : boxColor;
+    ctx.fillStyle = '#fff';
     ctx.font = `bold ${10/state.zoom}px Arial`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
@@ -2666,23 +2673,45 @@ function drawCanvas() {
         ctx.fillText(`${i+1}`, bx + badgeR, by - badgeR - (1/state.zoom));
     }
 
-    // Reset alpha and dash for subsequent boxes (deleting now goes through the toolbar button, not an on-canvas "X")
+    // Reset alpha and dash for the delete button and subsequent boxes
     ctx.globalAlpha = 1.0;
     ctx.setLineDash([]);
+
+    // The floating delete button on the selected box's top-right corner (r7 E5), as before the audit
+    if (isSel && !state.isLockedByOther && !isSyncing) {
+      const del = deleteButtonAt(bx, by, bw);
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(del.x, del.y, del.r, 0, 2*Math.PI);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `bold ${(coarse ? 15 : 11)/state.zoom}px Arial`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('X', del.x, del.y + (1/state.zoom));
+    }
   });
 
   if (state.interactionMode === 'drawing') {
-    ctx.strokeStyle = BOX_INK; // gray-900 while drawing: a person is drawing it
+    ctx.strokeStyle = BOX_SELECTED; // blue while drawing: the new box is the selected one
     ctx.lineWidth = 2 / state.zoom;
     ctx.setLineDash([6/state.zoom, 4/state.zoom]); // Keep it dashed
     ctx.strokeRect(state.startX, state.startY, state.startBoxState.w, state.startBoxState.h);
-    ctx.fillStyle = '#11182730';
+    ctx.fillStyle = BOX_SELECTED + '30';
     ctx.fillRect(state.startX, state.startY, state.startBoxState.w, state.startBoxState.h);
     ctx.setLineDash([]);
   }
 
   const delBtn = document.getElementById('btn-delete-box');
   if (delBtn) delBtn.classList.toggle('hidden', state.selectedBoxIndex < 0 || state.isLockedByOther);
+}
+
+// Where the selected box's floating delete button sits (canvas units): just outside its top-right corner,
+// 18px across with a mouse and 28px on touch (#618 ann-handles).
+function deleteButtonAt(bx, by, bw) {
+  const coarse = window.matchMedia('(pointer: coarse)').matches;
+  const r = (coarse ? 14 : 9) / state.zoom;
+  const offset = (coarse ? 18 : 12) / state.zoom;
+  return { x: bx + bw + offset, y: by - offset, r: r };
 }
 
 // ---------------------------------------------------------
