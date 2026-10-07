@@ -299,7 +299,7 @@
               <button type="button" class="show-all-fields mt-2 text-xs text-gray-500 underline hover:text-gray-700">Show all 11 fields</button>
           </div>
 
-          {% if not beetle.depicts_valid_name_id and beetle.image_asset %}
+          {% if not beetle.depicts_valid_name_id and beetle.image_asset and beetle.image_asset.image_file %}
           <div class="group-section mt-4">
               <a href="{% url 'tool_classify' %}?asset={{ beetle.image_asset_id }}"
                  class="btn-main w-full px-4 py-3 text-sm"

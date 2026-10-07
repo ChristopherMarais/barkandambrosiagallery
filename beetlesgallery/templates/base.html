@@ -542,7 +542,9 @@
       <strong>Cookie settings</strong> at the bottom of a page. <a href="{% url 'privacy' %}" class="underline">Privacy notice</a></p>
     {# Accept commits the choice (site-buttons, #618: btn-primary), Reject is the quieter alternative next to it #}
     <div class="consent-actions">
-      <button type="button" class="btn-primary" data-consent="granted">Accept</button>
+      {# Accept and Reject must share one class and look identical: the consent banner's equal-prominence
+         requirement (#613, GDPR) overrides the general site-buttons role rule (#618) for this one pair. #}
+      <button type="button" class="btn-secondary" data-consent="granted">Accept</button>
       <button type="button" class="btn-secondary" data-consent="denied">Reject</button>
     </div>
   </div>

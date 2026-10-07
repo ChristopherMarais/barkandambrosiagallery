@@ -570,7 +570,9 @@
     e.preventDefault(); e.stopPropagation();
     const wrap = btn.closest('.thumb-wrap');
     const src = wrap && wrap.getAttribute('data-src');
-    if (!wrap || !src) return;
+    // Thumbnails only ever come from our own storage (a relative path or an http(s) URL, #618); reject
+    // anything else (e.g. a javascript: URI) before it reaches img.src (CodeQL js/xss-through-dom).
+    if (!wrap || !src || !/^(https?:)?\//.test(src)) return;
     const img = document.createElement('img');
     img.src = src + (src.includes('?') ? '&' : '?') + 'retry=' + Date.now();
     img.alt = wrap.getAttribute('data-alt') || '';

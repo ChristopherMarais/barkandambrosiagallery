@@ -15,12 +15,15 @@
 
   {% if tab == 'sessions' %}
   <!-- Narrow to one game and/or a day (#574); the game home's cards open these. On a phone, two selects side by
-       side, not pills that wrap to three lines (#his-filters); from a tablet up, the pills. -->
+       side, not pills that wrap to three lines (#his-filters); from a tablet up, the pills.
+       The onchange navigates to the chosen option's value, which `choices()` always builds as "?...", so the
+       '?' check is a belt-and-braces guard against a non-query (e.g. javascript:) value ever reaching
+       location.href (CodeQL js/xss-through-dom). -->
   <div class="sm:hidden flex gap-2 mb-4">
-    <select class="select-chevron flex-1 min-w-0 h-10 px-3 border border-gray-300 rounded-lg bg-white text-sm" aria-label="Game" data-testid="game-filter-select" onchange="if (this.value) location.href = this.value">
+    <select class="select-chevron flex-1 min-w-0 h-10 px-3 border border-gray-300 rounded-lg bg-white text-sm" aria-label="Game" data-testid="game-filter-select" onchange="if (this.value.charAt(0) === '?') location.href = this.value">
       {% for c in game_chips %}<option value="{{ c.url }}" {% if c.active %}selected{% endif %}>{{ c.label }}</option>{% endfor %}
     </select>
-    <select class="select-chevron flex-1 min-w-0 h-10 px-3 border border-gray-300 rounded-lg bg-white text-sm" aria-label="Day" data-testid="day-filter-select" onchange="if (this.value) location.href = this.value">
+    <select class="select-chevron flex-1 min-w-0 h-10 px-3 border border-gray-300 rounded-lg bg-white text-sm" aria-label="Day" data-testid="day-filter-select" onchange="if (this.value.charAt(0) === '?') location.href = this.value">
       {% for c in day_chips %}<option value="{{ c.url }}" {% if c.active %}selected{% endif %}>{{ c.label }}</option>{% endfor %}
     </select>
   </div>
