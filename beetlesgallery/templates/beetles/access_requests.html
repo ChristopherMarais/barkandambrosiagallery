@@ -12,7 +12,7 @@
     for is ticked already) and save, or deny to leave them on Basic. Each area can be changed later per person under Account.
   </p>
 
-  <h2 class="text-xl font-semibold text-gray-900 mb-3">Waiting <span class="text-gray-400 font-normal">({{ pending|length }})</span></h2>
+  <h2 class="text-xl font-semibold text-gray-900 mb-3">Waiting <span class="text-gray-500 font-normal">({{ pending|length }})</span></h2>
   {% for r in pending %}
   <form method="post" class="mb-4 bg-gray-50 rounded-xl p-5 border border-gray-200 shadow-xs">
     {% csrf_token %}
@@ -30,14 +30,14 @@
       Granting adds to that account; it never takes anything away.
     </p>
     {% endif %}
-    <p class="mt-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Why</p>
+    <p class="card-label mt-3">Why</p>
     <p class="text-sm text-gray-800 whitespace-pre-line">{{ r.reason|default:"(no reason given)" }}</p>
     <fieldset class="mt-3" data-testid="grant-areas">
-      <legend class="text-xs font-bold text-gray-500 uppercase tracking-wide">Grant</legend>
+      <legend class="card-label">Grant</legend>
       <div class="mt-2 grid sm:grid-cols-3 gap-4">
         {% for group in r.area_groups %}
         <div data-testid="grant-group">
-          <p class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">{{ group.group }}</p>
+          <p class="card-label mb-1">{{ group.group }}</p>
           <div class="space-y-1">
             {% for area in group.areas %}
             <label class="flex items-start gap-2 text-sm text-gray-800" title="{{ area.description }}">
@@ -54,8 +54,8 @@
     <p class="mt-3 text-xs text-red-700">The approvers' email could not be sent ({{ r.notify_error }}), so this request only shows here.</p>
     {% endif %}
 
-    <label for="note-{{ r.id }}" class="block mt-4 text-xs font-bold text-gray-500 uppercase tracking-wide">Note <span class="font-normal normal-case">(optional)</span></label>
-    <p class="text-xs text-gray-400">Included in the email.</p>
+    <label for="note-{{ r.id }}" class="card-label block mt-4">Note <span class="font-normal normal-case">(optional)</span></label>
+    <p class="text-xs text-gray-500">Included in the email.</p>
     <textarea id="note-{{ r.id }}" name="note" rows="2" maxlength="1000"
       class="mt-1 w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-700"></textarea>
 
@@ -70,7 +70,7 @@
     </div>
   </form>
   {% empty %}
-  <p class="mb-6 text-sm text-gray-500">Nothing is waiting.</p>
+  <div class="mb-6">{% include "beetles/includes/empty_state.html" with icon="fi-rr-inbox" text="Nothing is waiting. New access requests will appear here." compact=True %}</div>
   {% endfor %}
 
   {% if decided %}
@@ -85,7 +85,7 @@
         <tr>
           <td class="px-4 py-2"><span class="font-semibold text-gray-900">{{ r.name }}</span><br><span class="text-xs text-gray-500">{{ r.email }}</span></td>
           <td class="px-4 py-2">{% if r.status == "approved" %}{% if r.granted_role == "basic" %}Basic{% if not r.decided_by %} (automatic){% endif %}{% elif r.granted_role == "areas" %}Granted {{ r.granted_areas|join:", " }}{% else %}Approved as {{ r.granted_role|title }}{% endif %}{% if r.user %} ({{ r.user.username }}){% endif %}{% else %}Denied{% endif %}</td>
-          <td class="px-4 py-2 text-gray-600">{{ r.decided_by.username|default:"-" }}</td>
+          <td class="px-4 py-2 text-gray-600">{{ r.decided_by.username|default:"—" }}</td>
           <td class="px-4 py-2 text-gray-600 whitespace-nowrap">{{ r.decided_at|date:"j M Y H:i" }}</td>
         </tr>
         {% endfor %}

@@ -25,18 +25,18 @@ class DataManagementActionsTests(PageBehaviourCase):
     def test_card_headings_are_not_as_big_as_the_page_title(self):
         page = self.page()
         self.assertIn('<h1 class="page-title">Data management</h1>', page)
-        for heading in ("Data Actions", "Species Tables", "Activity Logs"):
+        for heading in ("Data actions", "Species tables", "Activity logs"):   # page sections: .section-heading (site-sections)
             with self.subTest(heading=heading):
                 idx = page.index(heading)
-                self.assertIn("text-lg font-semibold", page[max(0, idx - 80):idx])
+                self.assertIn("section-heading", page[max(0, idx - 80):idx])
         self.assertNotIn("text-2xl font-bold", page)
 
     def test_the_actions_are_a_menu_list_with_icon_title_description_and_chevron(self):
         page = self.page()
-        for title, desc in (("Upload New Data", "Add new images and their details."),
-                            ("Update Metadata", "Change records that are already here."),
-                            ("Upload Model Predictions", "Add an AI model's species guesses for ROIs."),
-                            ("Bulk Validation", "Review and validate records in bulk.")):
+        for title, desc in (("Upload new data", "Add new images and their details."),
+                            ("Update metadata", "Change records that are already here."),
+                            ("Upload model predictions", "Add an AI model's species guesses for ROIs."),
+                            ("Bulk validation", "Review and validate records in bulk.")):
             with self.subTest(title=title):
                 self.assertIn(title, page)
                 self.assertIn(desc, page)
@@ -113,7 +113,7 @@ class UploadPredictionsPageTests(PageBehaviourCase):
     def test_the_intro_starts_with_what_the_page_does_not_how_you_got_here(self):
         page = self.page()
         intro_start = page.index("Upload an AI model's species guesses for ROIs")
-        usual_way = page.index("Upload Model Predictions action on")
+        usual_way = page.index("Upload model predictions action on")
         self.assertLess(intro_start, page.index('<form method="post"'))
         self.assertGreater(usual_way, intro_start)   # the circular "how you got here" note now comes second
 
@@ -171,11 +171,11 @@ class AnnotationTemplateTests(SimpleTestCase):
         fn = self.page[self.page.index("function updateMainStatusIndicator"):]
         fn = fn[:fn.index("\n}\n")]
         self.assertIn("canvas-status-pill", fn)
-        for word in ("Validated", "Not Validated", "No Bounding Boxes"):
+        for word in ("Validated", "Not validated", "No bounding boxes"):
             self.assertIn(word, fn)
 
     def test_the_fit_button_uses_the_expand_icon_not_the_search_icon(self):
-        fit = self.page[self.page.index('title="Fit to Screen"') - 20:self.page.index('title="Fit to Screen"') + 120]
+        fit = self.page[self.page.index('title="Fit to screen"') - 20:self.page.index('title="Fit to screen"') + 120]
         self.assertIn("fi-rr-expand", fit)
         self.assertNotIn("fi-rr-search", fit)
 

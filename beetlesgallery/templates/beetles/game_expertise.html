@@ -58,12 +58,12 @@
     <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
       <span class="flex items-center gap-1" data-testid="legend-naming"><span class="tree-dot mark-shape"></span>naming</span>
       <span class="flex items-center gap-1" data-testid="legend-apart"><span class="tree-tri mark-shape"></span>telling apart</span>
-      <span class="text-gray-400">&middot; colour = accuracy</span>
+      <span class="text-gray-500">&middot; colour = accuracy</span>
       <details class="ml-auto">
         <summary class="cursor-pointer text-gray-500 underline">Key</summary>
         <div class="mt-1 flex flex-wrap gap-x-4 gap-y-1">
           <span class="flex items-center gap-1"><span class="tree-dot mark-unknown"></span><span class="tree-tri mark-unknown"></span>Not yet: fewer than {{ tree.min_shown }} answers</span>
-          {% for status, word, range in tree.legend %}<span class="flex items-center gap-1" data-testid="legend-{{ status }}"><span class="tree-dot mark-{{ status }}"></span><span class="tree-tri mark-{{ status }}"></span>{{ word }} <span class="text-gray-400">{{ range }}</span></span>{% endfor %}
+          {% for status, word, range in tree.legend %}<span class="flex items-center gap-1" data-testid="legend-{{ status }}"><span class="tree-dot mark-{{ status }}"></span><span class="tree-tri mark-{{ status }}"></span>{{ word }} <span class="text-gray-500">{{ range }}</span></span>{% endfor %}
           <span class="flex items-center gap-1" data-testid="legend-expert"><span class="tree-dot mark-expert"></span><span class="tree-tri mark-expert"></span>Expert</span>
         </div>
       </details>
@@ -80,7 +80,7 @@
     <details class="border border-gray-200 rounded-xl bg-white" {% if sub.tribes %}open{% endif %}>
       <summary class="flex flex-wrap items-center gap-2 p-3">
         {% include "beetles/includes/expertise_marks.html" with n=sub %}<span class="tree-name {% if sub.status == 'expert' %}font-bold {% endif %}text-gray-900">{{ sub.name }}</span>
-        <span class="text-xs text-gray-400">subfamily</span>
+        <span class="text-xs text-gray-500">subfamily</span>
         {% include "beetles/includes/expertise_counts.html" with n=sub %}
       </summary>
       <div class="pl-6 pr-3 pb-3 space-y-1">
@@ -88,26 +88,26 @@
         <details {% if t.genera %}open{% endif %}>
           <summary class="flex flex-wrap items-center gap-2 py-1.5">
             {% include "beetles/includes/expertise_marks.html" with n=t %}<span class="tree-name {% if t.status == 'expert' %}font-bold {% endif %}text-gray-800">{{ t.name }}</span>
-            <span class="text-xs text-gray-400">tribe</span>
+            <span class="text-xs text-gray-500">tribe</span>
             {% include "beetles/includes/expertise_counts.html" with n=t %}
           </summary>
           <div class="pl-6 space-y-0.5">
             {% for g in t.genera %}
             <div class="flex flex-wrap items-center gap-2 py-1">
               {% include "beetles/includes/expertise_marks.html" with n=g %}<span class="tree-name italic {% if g.status == 'expert' %}font-bold {% endif %}text-gray-800">{{ g.name }}</span>
-              <span class="text-xs text-gray-400">genus</span>
+              <span class="text-xs text-gray-500">genus</span>
               {% include "beetles/includes/expertise_counts.html" with n=g %}
             </div>
             {% endfor %}
-            {% if t.hidden %}<div class="text-xs text-gray-400 py-1">{{ t.hidden }} more genera not played yet</div>{% endif %}
+            {% if t.hidden %}<div class="text-xs text-gray-500 py-1">{{ t.hidden }} more genera not played yet</div>{% endif %}
           </div>
         </details>
         {% endfor %}
-        {% if sub.hidden %}<div class="text-xs text-gray-400 py-1">{{ sub.hidden }} tribe{{ sub.hidden|pluralize }} not played yet</div>{% endif %}
+        {% if sub.hidden %}<div class="text-xs text-gray-500 py-1">{{ sub.hidden }} tribe{{ sub.hidden|pluralize }} not played yet</div>{% endif %}
       </div>
     </details>
     {% empty %}
-    <p class="text-sm text-gray-500 p-4 bg-gray-50 rounded-2xl">The species list has not been loaded yet.</p>
+    {% include "beetles/includes/empty_state.html" with icon="fi-rr-sitemap" text="The species list has not been loaded yet. The expertise tree appears here once it is." compact=True %}
     {% endfor %}
   </div>
   <p class="mt-6 text-sm text-gray-600"><a href="{% url 'game_how' %}#labels" class="underline hover:text-gray-900" data-testid="expertise-why">What being a Naming expert means</a></p>

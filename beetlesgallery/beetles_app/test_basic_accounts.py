@@ -61,11 +61,11 @@ class GranularStaffTests(PageTestCase):
     def test_the_species_tables_are_their_own_permission(self):
         self.client.force_login(self.staff)   # a curator with every other area
         self.assertEqual(self.client.get(reverse("admin_valid_species")).status_code, 403)
-        self.assertNotContains(self.client.get(reverse("data_management")), "Species Tables")
+        self.assertNotContains(self.client.get(reverse("data_management")), "Species tables")
         AreaGrant.objects.create(user=self.staff, area=areas.SPECIES)
         self.client.force_login(self.staff)
         self.assertEqual(self.client.get(reverse("admin_valid_species")).status_code, 200)
-        self.assertContains(self.client.get(reverse("data_management")), "Species Tables")
+        self.assertContains(self.client.get(reverse("data_management")), "Species tables")
 
     def test_superusers_have_everything(self):
         for key in areas.KEYS:

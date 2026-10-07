@@ -140,10 +140,10 @@
       <h1 class="page-title" style="margin-bottom: 0.25rem">Image annotation</h1>
       <p class="text-xs text-gray-500 mt-1 hidden md:block">
         <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded-sm text-[10px]">W/S or Up/Down</kbd> Prev/Next Image
-        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded-sm text-[10px] ml-2">D</kbd> Switch Tab
-        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded-sm text-[10px] ml-2">A</kbd> Save Target
+        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded-sm text-[10px] ml-2">D</kbd> Switch tab
+        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded-sm text-[10px] ml-2">A</kbd> Save target
         <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded-sm text-[10px] ml-2">F</kbd> Validate ROI
-        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded-sm text-[10px] ml-2">Space</kbd> Validate All & Next
+        <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded-sm text-[10px] ml-2">Space</kbd> Validate all & next
       </p>
     </div>
   </div>
@@ -167,13 +167,13 @@
                 </button>
                 <button type="button" title="Filter: Not validated images" onclick="setAdvancedFilter('image_validated', 'No')"
                   class="flex items-center rounded-sm px-1.5 py-0.5 -mx-1.5 hover:bg-gray-200 transition">
-                  <span class="text-gray-600 mr-2">Not Validated:</span>
+                  <span class="text-gray-600 mr-2">Not validated:</span>
                   <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0 mr-1.5"></span>
                   <span id="stat-img-unval" class="text-gray-900 font-bold truncate">0</span>
                 </button>
                 <button type="button" title="Filter: Images with no bounding box" onclick="setAdvancedFilter('has_rois', 'No')"
                   class="flex items-center rounded-sm px-1.5 py-0.5 -mx-1.5 hover:bg-gray-200 transition">
-                  <span class="text-gray-600 mr-2">No Bounding Box:</span>
+                  <span class="text-gray-600 mr-2">No bounding box:</span>
                   <span class="w-2 h-2 rounded-full bg-gray-300 shrink-0 mr-1.5"></span>
                   <span id="stat-img-empty" class="text-gray-900 font-bold truncate">0</span>
                 </button>
@@ -190,7 +190,7 @@
                 </button>
                 <button type="button" title="Filter: Images with an ROI not yet validated" onclick="setAdvancedFilter('all_rois_val', 'No')"
                   class="flex items-center rounded-sm px-1.5 py-0.5 -mx-1.5 hover:bg-gray-200 transition">
-                  <span class="text-gray-600 mr-2">Not Validated:</span>
+                  <span class="text-gray-600 mr-2">Not validated:</span>
                   <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0 mr-1.5"></span>
                   <span id="stat-roi-unval" class="text-gray-900 font-bold truncate">0</span>
                 </button>
@@ -200,7 +200,7 @@
           
           <details id="advanced-filters-details" class="mt-4 group border border-gray-200 rounded-lg relative">
             <summary class="cursor-pointer px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-700 hover:bg-gray-100 flex items-center justify-between">
-              <span>Advanced Filters</span>
+              <span>Advanced filters</span>
               <i class="fi fi-rr-angle-small-down group-open:rotate-180 transition-transform"></i>
             </summary>
             <div class="p-3 space-y-4 border-t border-gray-200" style="overflow: visible;">
@@ -227,11 +227,11 @@
                   <option value="disputed">Disputed validated labels</option>
                   <option value="applied">Applied from the game</option>
                 </select>
-                <p class="text-[10px] text-gray-400">Accepted or rejected proposals come back when new answers arrive; disputed labels come from the automatic label check.</p>
+                <p class="text-[10px] text-gray-500">Accepted or rejected proposals come back when new answers arrive; disputed labels come from the automatic label check.</p>
               </div>
               {% if filter_groups %}
                 <button type="button" onclick="closeAndApplyFilters()" class="btn-primary flex w-full mb-2">
-                  <i class="text-xs"></i> Apply Filters
+                  <i class="text-xs"></i> Apply filters
                 </button>
                 {% for category_name, filters_list in filter_groups %}
                   <div class="space-y-2">
@@ -253,7 +253,7 @@
                               <input type="text" placeholder="Search..." class="w-full rounded-sm border border-gray-300 px-2 py-1 text-xs" onkeyup="filterDropdownOptions(this)">
                               <div class="flex justify-between border-b border-gray-100 pb-1">
                                   <button type="button" class="text-[10px] font-bold text-gray-600 hover:underline" onclick="selectVisibleOptions(this)">Select All</button>
-                                  <button type="button" class="text-[10px] font-bold text-gray-500 hover:underline" onclick="clearFilterSelection(this)">Clear All</button>
+                                  <button type="button" class="text-[10px] font-bold text-gray-500 hover:underline" onclick="clearFilterSelection(this)">Clear all</button>
                               </div>
                               <div class="max-h-40 overflow-y-auto flex flex-col gap-0.5">
                                   {% for opt in f.options %}
@@ -264,7 +264,7 @@
                                           </div>
                                       </div>
                                   {% endfor %}
-                                  <div class="no-results hidden px-2 py-2 text-center text-xs text-gray-400 italic">No matches</div>
+                                  <div class="no-results hidden px-2 py-2 text-center text-xs text-gray-500 italic">No matches</div>
                               </div>
                           </div>
                       </div>
@@ -272,10 +272,10 @@
                   </div>
                 {% endfor %}
                 <button type="button" onclick="closeAndApplyFilters()" class="btn-primary flex w-full mt-4">
-                  <i class="text-xs"></i> Apply Filters
+                  <i class="text-xs"></i> Apply filters
                 </button>
               {% else %}
-                <div class="text-xs text-gray-400 italic">Filters unavailable.</div>
+                <div class="text-xs text-gray-500 italic">Filters unavailable.</div>
               {% endif %}
             </div>
           </details>
@@ -303,7 +303,7 @@
     </div>
     <div class="resizer" id="resizer-left">
       <div class="resizer-line"></div>
-      <div class="resizer-btn" onclick="toggleLeftPanel()" title="Toggle Image Browser">
+      <div class="resizer-btn" onclick="toggleLeftPanel()" title="Toggle image browser">
         <i class="fi fi-rr-angle-double-left text-[10px]" id="icon-toggle-left"></i>
       </div>
     </div>
@@ -315,7 +315,7 @@
         <div class="flex items-center gap-3 min-w-0">
           <div class="min-w-0">
             {# ann-title skipped (#618): the title stays the full image id, as before. #}
-            <h3 class="text-base font-semibold text-gray-900 truncate" id="canvas-title">Annotation Canvas</h3>
+            <h3 class="text-base font-semibold text-gray-900 truncate" id="canvas-title">Annotation canvas</h3>
             <p class="text-xs text-gray-500" id="canvas-subtitle">Please select an image to begin annotating</p>
             <div id="canvas-meta" class="hidden mt-0.5 flex items-center gap-2">
               <span id="canvas-status-pill" class="hidden inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"></span>
@@ -327,20 +327,20 @@
 
         <div class="flex items-center gap-3">
             <div id="normal-mode-actions" class="flex gap-1 hidden">
-              <button type="button" onclick="zoomIn()" class="px-2 py-1 text-sm border border-gray-300 rounded-sm hover:bg-gray-200" title="Zoom In"><i class="fi fi-rr-zoom-in"></i></button>
+              <button type="button" onclick="zoomIn()" class="px-2 py-1 text-sm border border-gray-300 rounded-sm hover:bg-gray-200" title="Zoom in"><i class="fi fi-rr-zoom-in"></i></button>
               <span id="footer-zoom" class="px-2 py-1 text-xs text-gray-600 font-mono self-center">100%</span>
-              <button type="button" onclick="zoomOut()" class="px-2 py-1 text-sm border border-gray-300 rounded-sm hover:bg-gray-200" title="Zoom Out"><i class="fi fi-rr-zoom-out"></i></button>
-              <button type="button" onclick="fitToScreen()" class="px-2 py-1 text-sm border border-gray-300 rounded-sm hover:bg-gray-200 ml-2" title="Fit to Screen"><i class="fi fi-rr-expand"></i> Fit</button>
+              <button type="button" onclick="zoomOut()" class="px-2 py-1 text-sm border border-gray-300 rounded-sm hover:bg-gray-200" title="Zoom out"><i class="fi fi-rr-zoom-out"></i></button>
+              <button type="button" onclick="fitToScreen()" class="px-2 py-1 text-sm border border-gray-300 rounded-sm hover:bg-gray-200 ml-2" title="Fit to screen"><i class="fi fi-rr-expand"></i> Fit</button>
               <button type="button" id="btn-delete-box" onclick="deleteSelectedBox()" class="hidden px-2 py-1 text-sm border border-gray-300 rounded-sm hover:bg-red-50 hover:text-red-600 text-gray-500 ml-2" title="Delete selected box"><i class="fi fi-rr-trash"></i></button>
             </div>
         </div>
       </div>
 
       <div class="flex-1 relative overflow-hidden bg-gray-200" id="canvas-container">
-        <div id="canvas-empty" class="w-full h-full flex items-center justify-center text-gray-400">
+        <div id="canvas-empty" class="w-full h-full flex items-center justify-center text-gray-500">
           <div class="text-center">
             <i class="fi fi-rr-picture text-6xl mb-4"></i>
-            <p class="text-lg font-medium">No Image Selected</p>
+            <p class="text-lg font-medium">No image selected</p>
           </div>
         </div>
         <div id="canvas-loading" class="hidden w-full h-full flex items-center justify-center">
@@ -356,7 +356,7 @@
     </div>
     <div class="resizer" id="resizer-right">
       <div class="resizer-line"></div>
-      <div class="resizer-btn" onclick="toggleRightPanel()" title="Toggle Data Panel">
+      <div class="resizer-btn" onclick="toggleRightPanel()" title="Toggle data panel">
         <i class="fi fi-rr-angle-double-right text-[10px]" id="icon-toggle-right"></i>
       </div>
     </div>
@@ -364,10 +364,10 @@
     <div id="panel-right" class="bg-white border border-gray-200 rounded-lg shadow-xs overflow-hidden flex flex-col panel-transition" style="width: 25%; min-width: 320px; height: 100%; flex-shrink: 0;">      
       <div class="flex border-b border-gray-200 shrink-0 bg-gray-50">
         <button id="tab-btn-image" onclick="switchRightTab('image')" class="flex-1 py-3 text-sm tab-inactive transition-colors">
-          Image Details
+          Image details
         </button>
         <button id="tab-btn-bbox" onclick="switchRightTab('bbox')" class="flex-1 py-3 text-sm tab-active transition-colors">
-          Regions of Interest <span id="tab-bbox-count" class="bg-gray-200 text-gray-700 rounded-full px-2 py-0.5 text-xs ml-1">0</span>
+          Regions of interest <span id="tab-bbox-count" class="bg-gray-200 text-gray-700 rounded-full px-2 py-0.5 text-xs ml-1">0</span>
         </button>
       </div>
 
@@ -404,16 +404,16 @@
                   <input type="text" name="photographer" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm">
                 </div>
                 <div>
-                  <label class="block text-xs text-gray-600 mb-1">Date Taken</label>
+                  <label class="block text-xs text-gray-600 mb-1">Date taken</label>
                   <input type="date" name="image_date_taken" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm text-gray-700">
                 </div>
               </div>
               <div>
-                <label class="block text-xs text-gray-600 mb-1">Contact Email</label>
+                <label class="block text-xs text-gray-600 mb-1">Contact email</label>
                 <input type="email" name="image_email" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm">
               </div>
               <div>
-                <label class="block text-xs text-gray-600 mb-1">Usage Statement (License)</label>
+                <label class="block text-xs text-gray-600 mb-1">Usage statement (license)</label>
                 <input type="text" name="photo_usage_statement" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm">
               </div>
             </div>
@@ -427,24 +427,24 @@
                 <label for="image_has_multiple_individuals" class="text-xs text-gray-700 font-medium cursor-pointer">Image has multiple individuals</label>
               </div>
               <div>
-                <label class="block text-xs text-gray-600 mb-1">Resolution (Pixels per mm)</label>
+                <label class="block text-xs text-gray-600 mb-1">Resolution (pixels per mm)</label>
                 <input type="number" step="0.0001" name="resolution_in_ppmm" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm">
               </div>
               <div>
-                <label class="block text-xs text-gray-600 mb-1">Image Notes</label>
+                <label class="block text-xs text-gray-600 mb-1">Image notes</label>
                 <textarea name="image_notes" rows="3" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm"></textarea>
               </div>
             </div>
           </div>
           
           <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
-            <label class="block text-[11px] font-bold text-gray-500 mb-2 uppercase tracking-wide">Read-Only File Data</label>
+            <label class="block text-[11px] font-bold text-gray-500 mb-2 uppercase tracking-wide">Read-only file data</label>
             <div class="grid grid-cols-2 gap-y-2 text-[11px] text-gray-600">
-              <div><span class="font-semibold text-gray-700">Width:</span> <span id="lbl-img-w">-</span> px</div>
-              <div><span class="font-semibold text-gray-700">Height:</span> <span id="lbl-img-h">-</span> px</div>
-              <div><span class="font-semibold text-gray-700">Size:</span> <span id="lbl-img-size">-</span> bytes</div>
-              <div class="col-span-2 truncate"><span class="font-semibold text-gray-700">SHA256:</span> <span id="lbl-img-sha">-</span></div>
-              <div class="col-span-2 break-all"><span class="font-semibold text-gray-700">Import Path:</span> <span id="lbl-img-path">-</span></div>
+              <div><span class="font-semibold text-gray-700">Width:</span> <span id="lbl-img-w">&mdash;</span> px</div>
+              <div><span class="font-semibold text-gray-700">Height:</span> <span id="lbl-img-h">&mdash;</span> px</div>
+              <div><span class="font-semibold text-gray-700">Size:</span> <span id="lbl-img-size">&mdash;</span> bytes</div>
+              <div class="col-span-2 truncate"><span class="font-semibold text-gray-700">SHA256:</span> <span id="lbl-img-sha">&mdash;</span></div>
+              <div class="col-span-2 break-all"><span class="font-semibold text-gray-700">Import path:</span> <span id="lbl-img-path">&mdash;</span></div>
             </div>
           </div>
 
@@ -473,9 +473,9 @@
       </div>
 
       <div id="tab-content-bbox" class="flex-1 overflow-y-auto p-4 flex flex-col bg-gray-50">
-        <div id="bbox-editor-empty" class="hidden flex flex-col items-center justify-center text-gray-400 p-6 text-center mt-10">
+        <div id="bbox-editor-empty" class="hidden flex flex-col items-center justify-center text-gray-500 p-6 text-center mt-10">
           <i class="fi fi-rr-vector text-4xl mb-3"></i>
-          <p class="text-sm font-medium text-gray-700">No Annotations</p>
+          <p class="text-sm font-medium text-gray-700">No annotations</p>
           <p class="text-xs mt-1">Draw a bounding box on the canvas to add a Region of Interest.</p>
         </div>
         
@@ -1069,7 +1069,7 @@ function renderImageList(imagesToRender, append = false) {
       </div>
       <div class="flex-1 min-w-0 text-left">
         <p class="text-sm font-medium text-gray-900 truncate" title="${img.image_asset_id}">${img.image_asset_id}</p>
-        <p class="text-xs text-gray-500 mt-0.5 truncate flex items-center gap-1.5">${img.is_validated ? 'Validated' : 'Not Validated'} ${gameBadgeHtml(img.game)}</p>
+        <p class="text-xs text-gray-500 mt-0.5 truncate flex items-center gap-1.5">${img.is_validated ? 'Validated' : 'Not validated'} ${gameBadgeHtml(img.game)}</p>
       </div>
       <div class="shrink-0">
         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${img.annotation_count === 0 ? 'bg-gray-100 text-gray-600 border border-gray-200' : (img.has_unvalidated_boxes ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-green-100 text-green-800 border border-green-200')} shadow-xs" title="ROIs">
@@ -1123,7 +1123,7 @@ function updateMainStatusIndicator() {
     // Evaluate based on the live UI state rather than the lagging imgData
     if (state.bboxes.length === 0) {
         pill.classList.add('bg-gray-100', 'text-gray-600');
-        pill.textContent = 'No Bounding Boxes';
+        pill.textContent = 'No bounding boxes';
     } else {
         const validatedCount = state.bboxes.filter(b => b.bbox_is_validated).length;
 
@@ -1133,10 +1133,10 @@ function updateMainStatusIndicator() {
             pill.textContent = 'Validated';
         } else if (validatedCount > 0) {
             pill.classList.add('bg-orange-100', 'text-orange-800');
-            pill.textContent = 'Partially Validated';
+            pill.textContent = 'Partially validated';
         } else {
             pill.classList.add('bg-amber-100', 'text-amber-800');
-            pill.textContent = 'Not Validated';
+            pill.textContent = 'Not validated';
         }
     }
 }
@@ -1149,7 +1149,7 @@ async function selectImage(img) {
     document.getElementById('canvas-empty').classList.remove('hidden');
     document.getElementById('canvas-wrapper').classList.add('hidden');
     document.getElementById('normal-mode-actions').classList.add('hidden');
-    document.getElementById('canvas-title').textContent = 'Annotation Canvas';
+    document.getElementById('canvas-title').textContent = 'Annotation canvas';
     document.getElementById('canvas-subtitle').textContent = 'Select an image to begin';
     document.getElementById('canvas-meta').classList.add('hidden');
     state.selectedImageId = null;
@@ -1337,11 +1337,11 @@ function populateImageForm() {
     f.elements['image_notes'].value = state.currentImageDetails.image_notes || '';
     
     // Populate Read-Only Labels
-    document.getElementById('lbl-img-w').textContent = state.currentImageDetails.image_width || '-';
-    document.getElementById('lbl-img-h').textContent = state.currentImageDetails.image_height || '-';
-    document.getElementById('lbl-img-size').textContent = state.currentImageDetails.image_size_bytes || '-';
-    document.getElementById('lbl-img-sha').textContent = state.currentImageDetails.image_sha256 || '-';
-    document.getElementById('lbl-img-path').textContent = state.currentImageDetails.full_path_at_import || '-';
+    document.getElementById('lbl-img-w').textContent = state.currentImageDetails.image_width || '—';
+    document.getElementById('lbl-img-h').textContent = state.currentImageDetails.image_height || '—';
+    document.getElementById('lbl-img-size').textContent = state.currentImageDetails.image_size_bytes || '—';
+    document.getElementById('lbl-img-sha').textContent = state.currentImageDetails.image_sha256 || '—';
+    document.getElementById('lbl-img-path').textContent = state.currentImageDetails.full_path_at_import || '—';
 }
 
 function cancelImageChanges() { populateImageForm(); }
@@ -1467,7 +1467,7 @@ function gameReportsHtml(b) {
   const locked = state.isLockedByOther ? 'disabled' : '';
   const list = reports.map(r => `
     <li class="text-xs text-gray-700"><span class="font-semibold">${escHtml(r.reason)}</span>
-      <span class="text-gray-400">· ${escHtml(r.reporter)}</span>${r.note ? `<div class="text-gray-600 mt-0.5">&ldquo;${escHtml(r.note)}&rdquo;</div>` : ''}</li>`).join('');
+      <span class="text-gray-500">· ${escHtml(r.reporter)}</span>${r.note ? `<div class="text-gray-600 mt-0.5">&ldquo;${escHtml(r.note)}&rdquo;</div>` : ''}</li>`).join('');
   return `
     <div class="rounded-lg border border-red-200 bg-red-50/60 p-3">
       <div class="text-[11px] font-bold text-red-800 uppercase tracking-wide mb-2"><i class="fi fi-rr-flag"></i> ${reports.length} player report${reports.length > 1 ? 's' : ''}</div>
@@ -1509,12 +1509,12 @@ function gameTipText(t) {
   const name = t.rank === 'species' || t.rank === 'genus' ? `<i>${escHtml(t.value)}</i>` : escHtml(t.value);
   if (t.kind === 'not') {
     const who = t.experts ? 'Naming experts and players are' : 'Players are';
-    return `${who} confident it is <b>not</b> in ${t.rank} ${name} <span class="text-gray-400">(${digitGroupsText(t.count)} said so${t.against ? `, ${digitGroupsText(t.against)} disagreed` : ''})</span>`;
+    return `${who} confident it is <b>not</b> in ${t.rank} ${name} <span class="text-gray-500">(${digitGroupsText(t.count)} said so${t.against ? `, ${digitGroupsText(t.against)} disagreed` : ''})</span>`;
   }
   const who = t.kind === 'expert' ? (t.count > 1 ? 'Naming experts say' : 'A Naming expert says')
     : `${digitGroupsText(t.count)} reliable players say`;
   const clash = t.conflicts ? ` <span class="text-amber-800">· the current label says ${escHtml(t.current)}</span>` : '';
-  return `${who} ${t.rank} <b>${name}</b> <span class="text-gray-400">(${Math.round(t.support * 100)}%)</span>${clash}`;
+  return `${who} ${t.rank} <b>${name}</b> <span class="text-gray-500">(${Math.round(t.support * 100)}%)</span>${clash}`;
 }
 
 function gameTipsHtml(b) {
@@ -1567,7 +1567,7 @@ function aiSuggestionHtml(b) {
           <i class="fi fi-rr-check"></i> Use <i>${escHtml(top.name)}</i> (${pct(top.confidence)})</button>`;
     }
     return `<table class="w-full text-xs">${rows}</table>${runners}
-      <div class="text-[10px] text-gray-400 mt-1 break-all">${escHtml(s.model_name)}${s.model_version ? ' · ' + escHtml(s.model_version) : ''}</div>${use}`;
+      <div class="text-[10px] text-gray-500 mt-1 break-all">${escHtml(s.model_name)}${s.model_version ? ' · ' + escHtml(s.model_version) : ''}</div>${use}`;
   }).join('<hr class="my-2 border-gray-200">');
   return `
     <div class="rounded-lg border border-gray-200 bg-white p-3" data-testid="ai-suggestion">
@@ -1643,10 +1643,10 @@ function gameProposalHtml(b, i) {
   const ranks = ['subfamily', 'tribe', 'genus', 'species'];
   const cells = ranks.map(r => {
     const v = p.ranks[r];
-    if (!v) return `<span class="text-gray-300">—</span>`;
+    if (!v) return `<span class="text-gray-500">—</span>`;
     const tick = v.trusted ? `<i class="fi fi-rr-shield-check text-green-600" title="Backed by ${v.trusted_votes} Naming expert(s)"></i>` : '';
     return `<span class="${r === 'species' ? 'italic' : ''} ${v.trusted ? 'font-semibold text-gray-900' : 'text-gray-700'}">${escHtml(v.value)}</span>
-            <span class="text-[10px] text-gray-400">${Math.round(v.support * 100)}%·${v.votes}</span> ${tick}`;
+            <span class="text-[10px] text-gray-500">${Math.round(v.support * 100)}%·${v.votes}</span> ${tick}`;
   }).join('<span class="text-gray-300 mx-1">›</span>');
 
   const trusted = p.trusted_rank
@@ -1673,7 +1673,7 @@ function gameProposalHtml(b, i) {
         ${trusted}
       </div>
       <div class="text-xs leading-relaxed flex flex-wrap items-center gap-x-0.5">${cells}</div>
-      <div class="text-[10px] text-gray-400 mt-1">${p.answers} answer(s) from ${p.players} player(s). % = reliability-weighted support · votes.</div>
+      <div class="text-[10px] text-gray-500 mt-1">${p.answers} answer(s) from ${p.players} player(s). % = reliability-weighted support · votes.</div>
       ${reviewed}
       <div class="flex items-center gap-2 mt-3">
         ${acceptBtn}
@@ -1806,11 +1806,11 @@ function renderRoiAccordions() {
               </div>
               <div class="grid grid-cols-2 gap-3 mt-3">
                 <div>
-                  <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-wide">Described Name ID</label>
+                  <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-wide">Described name ID</label>
                   <input type="text" name="depicts_described_name_id" value="${b.depicts_described_name_id || ''}" class="w-full rounded-sm border border-gray-300 px-2 py-1.5 text-xs" ${disabledAttr}>
                 </div>
                 <div>
-                  <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-wide">Name Verbatim</label>
+                  <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-wide">Name verbatim</label>
                   <input type="text" name="depicts_name_verbatim" value="${b.depicts_name_verbatim || ''}" class="w-full rounded-sm border border-gray-300 px-2 py-1.5 text-xs" ${disabledAttr}>
                 </div>
               </div>
@@ -1818,7 +1818,7 @@ function renderRoiAccordions() {
             ${labelHistoryHtml(b)}
 
             <div>
-              <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase tracking-wide">Identity & Details</label>
+              <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase tracking-wide">Identity & details</label>
               <div class="space-y-3">
                 <div class="grid grid-cols-2 gap-3">
                   <div>
@@ -1840,7 +1840,7 @@ function renderRoiAccordions() {
                     <input type="text" name="specimen_sex" value="${b.specimen_sex || ''}" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm" ${disabledAttr}>
                   </div>
                   <div>
-                    <label class="block text-xs text-gray-600 mb-1">Type Status</label>
+                    <label class="block text-xs text-gray-600 mb-1">Type status</label>
                     <input type="text" name="specimen_type_status" value="${b.specimen_type_status || ''}" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm" ${disabledAttr}>
                   </div>
                 </div>
@@ -1850,23 +1850,23 @@ function renderRoiAccordions() {
                     <input type="text" name="collection_country" value="${b.collection_country || ''}" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm" ${disabledAttr}>
                   </div>
                   <div>
-                    <label class="block text-xs text-gray-600 mb-1">State/Province</label>
+                    <label class="block text-xs text-gray-600 mb-1">State/province</label>
                     <input type="text" name="collection_stateProvince" value="${b.collection_stateProvince || ''}" class="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm" ${disabledAttr}>
                   </div>
                 </div>
                 <div>
-                  <label class="block text-xs text-gray-600 mb-1">Specimen Notes</label>
+                  <label class="block text-xs text-gray-600 mb-1">Specimen notes</label>
                   <textarea name="specimen_notes" rows="1" class="w-full rounded-sm border border-gray-300 px-3 py-1.5 text-sm" ${disabledAttr}>${b.specimen_notes || ''}</textarea>
                 </div>
                 <div>
-                  <label class="block text-xs text-gray-600 mb-1">Update Notes</label>
+                  <label class="block text-xs text-gray-600 mb-1">Update notes</label>
                   <textarea name="update_notes" rows="1" class="w-full rounded-sm border border-gray-300 px-3 py-1.5 text-sm" ${disabledAttr}>${b.update_notes || ''}</textarea>
                 </div>
               </div>
             </div>
 
             <div class="">
-              <label class="block text-[10px] font-bold text-gray-600 mb-1 uppercase tracking-wide">Bounding Box</label>
+              <label class="block text-[10px] font-bold text-gray-600 mb-1 uppercase tracking-wide">Bounding box</label>
               <div class="grid grid-cols-4 gap-2">
                 <div>
                   <label class="block text-[9px] text-gray-500 uppercase font-semibold">X</label>
@@ -1906,7 +1906,7 @@ function renderRoiAccordions() {
                 </button>
               `}
               <button type="button" onclick="deleteBoxUi(${i})" class="w-full bg-white hover:bg-red-50 border border-red-200 text-red-600 font-medium py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2 mt-1" ${(state.isLockedByOther || isSyncing || (!CAN_EDIT_RECORDS && (b.depicts_valid_name_id || b.bbox_is_validated))) ? 'disabled' : ''}>
-                <i class="fi fi-rr-trash"></i> Delete Box
+                <i class="fi fi-rr-trash"></i> Delete box
               </button>
             </div>
 
@@ -1966,7 +1966,7 @@ function labelHistoryLine(e) {
   if (e.name) parts.push(`<i>${escHtml(e.name)}</i>`);
   if (e.tier) parts.push(escHtml(e.tier));
   if (e.by) parts.push(`by ${escHtml(e.by)}`);
-  const detail = e.detail ? ` <span class="text-gray-400">· ${escHtml(e.detail)}</span>` : '';
+  const detail = e.detail ? ` <span class="text-gray-500">· ${escHtml(e.detail)}</span>` : '';
   return `<li class="wrap-break-word" data-kind="${escHtml(e.kind)}" title="${escHtml(when.toLocaleString())}${e.detail ? ' · ' + escHtml(e.detail) : ''}">${parts.join(' · ')}${detail}</li>`;
 }
 
@@ -1976,15 +1976,15 @@ async function toggleLabelHistory(el) {
   if (!el.open) { state.labelHistoryOpen.delete(roiId); return; }
   state.labelHistoryOpen.add(roiId);
   const list = el.querySelector('[data-role="list"]');
-  list.innerHTML = '<li class="text-gray-400">Loading…</li>';
+  list.innerHTML = '<li class="text-gray-500">Loading…</li>';
   try {
     const res = await fetch(`/api/v1/beetles/${encodeURIComponent(roiId)}/label-history/`, { headers: { 'X-CSRFToken': csrftoken } });
     if (!res.ok) throw new Error();
     const data = await res.json();
     setLabelHistoryCount(el, data.total);
     const more = data.total > data.events.length
-      ? `<li class="text-gray-400">Showing the newest ${digitGroupsText(data.events.length)} of ${digitGroupsText(data.total)}.</li>` : '';
-    list.innerHTML = data.events.length ? data.events.map(labelHistoryLine).join('') + more : '<li class="text-gray-400">No history yet.</li>';
+      ? `<li class="text-gray-500">Showing the newest ${digitGroupsText(data.events.length)} of ${digitGroupsText(data.total)}.</li>` : '';
+    list.innerHTML = data.events.length ? data.events.map(labelHistoryLine).join('') + more : '<li class="text-gray-500">No history yet.</li>';
   } catch (e) {
     list.innerHTML = '<li class="text-red-700">Could not load the history.</li>';
   }
@@ -2221,7 +2221,7 @@ function filterTaxonomyDropdown(idx, query) {
                                     const displayStr = `${t.subfamily || 'Unknown'} > ${t.tribe || 'Unknown'} > ${t.genus} ${t.species} [${t.valid_species_id}]`;
                                     const leaf = document.createElement('div');
                                     leaf.className = 'px-3 py-1.5 text-[11px] text-gray-600 hover:bg-gray-50 hover:text-gray-700 cursor-pointer flex justify-between select-none pl-12';
-                                    leaf.innerHTML = `<span><span class="italic">${t.genus}</span> <span class="font-bold italic">${t.species}</span></span><span class="text-gray-400 ml-2">[${t.valid_species_id}]</span>`;
+                                    leaf.innerHTML = `<span><span class="italic">${t.genus}</span> <span class="font-bold italic">${t.species}</span></span><span class="text-gray-500 ml-2">[${t.valid_species_id}]</span>`;
                                     leaf.onmousedown = (e) => {
                                         e.preventDefault();
                                         // Passed as a plain JS value (no HTML or code involved), so no escaping.
@@ -2287,7 +2287,7 @@ function filterTaxonomyDropdown(idx, query) {
                     const displayStr = `${t.subfamily || 'Unknown'} > ${t.tribe || 'Unknown'} > ${t.genus} ${t.species} [${t.valid_species_id}]`;
                     const leaf = document.createElement('div');
                     leaf.className = 'px-3 py-1.5 text-[11px] text-gray-700 hover:bg-gray-50 hover:text-gray-700 cursor-pointer border-b border-gray-50 pl-12 flex justify-between select-none';
-                    leaf.innerHTML = `<span class="italic">${t.genus} <span class="font-bold">${t.species}</span></span> <span class="text-gray-400 ml-2 shrink-0">[${t.valid_species_id}]</span>`;
+                    leaf.innerHTML = `<span class="italic">${t.genus} <span class="font-bold">${t.species}</span></span> <span class="text-gray-500 ml-2 shrink-0">[${t.valid_species_id}]</span>`;
                     leaf.onmousedown = (e) => {
                         e.preventDefault();
                         selectTaxonomy(idx, t.valid_species_id, displayStr);

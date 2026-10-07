@@ -5,7 +5,7 @@ than plain text, and "Download Selected" is disabled until something is ticked (
 {% endcomment %}
 {% load beetle_tags %}
 {% if form_suffix == "selected" %}
-  {% with form_id="download-selected-form" label="Download Selected" count_html='(<span class="selected-count">0</span>)' disabled_attr="disabled" %}
+  {% with form_id="download-selected-form" label="Download selected" count_html='(<span class="selected-count">0</span>)' disabled_attr="disabled" %}
     {% if areas.annotate and areas.download %}
       <div class="relative inline-block text-left">
         <button type="button" onclick="toggleDownloadMenu(this.nextElementSibling)" {{ disabled_attr }}
@@ -15,15 +15,15 @@ than plain text, and "Download Selected" is disabled until something is ticked (
           <svg class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
         </button>
         <div class="hidden absolute {% if menu_up %}bottom-full mb-2{% else %}mt-2{% endif %} right-0 z-50 w-64 origin-top-right rounded-lg bg-white shadow-xl ring-1 ring-black/5 flex flex-col py-1 download-menu">
-          <div class="px-4 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wider">Select Format</div>
+          <div class="px-4 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wider">Select format</div>
           <button type="submit" form="{{ form_id }}" name="download_type" value="package"
                   class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full">
-            <span class="font-bold block text-gray-900">All Selected Data</span>
-            <span class="text-xs text-gray-500">Images (.zip) + Metadata (.csv)</span>
+            <span class="font-bold block text-gray-900">All selected data</span>
+            <span class="text-xs text-gray-500">Images (.zip) + metadata (.csv)</span>
           </button>
           <button type="submit" form="{{ form_id }}" name="download_type" value="metadata_only"
                   class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full border-t border-gray-100">
-            <span class="font-bold block text-gray-900">Metadata Only</span>
+            <span class="font-bold block text-gray-900">Metadata only</span>
             <span class="text-xs text-gray-500">Metadata (.csv)</span>
           </button>
         </div>
@@ -46,15 +46,15 @@ than plain text, and "Download Selected" is disabled until something is ticked (
           <svg class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
         </button>
         <div class="hidden absolute {% if menu_up %}bottom-full mb-2{% else %}mt-2{% endif %} right-0 z-50 w-64 origin-top-right rounded-lg bg-white shadow-xl ring-1 ring-black/5 flex flex-col py-1 download-menu">
-          <div class="px-4 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wider">Select Format</div>
+          <div class="px-4 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wider">Select format</div>
           <button type="submit" form="{{ form_id }}" name="download_type" value="package"
                   class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full">
-            <span class="font-bold block text-gray-900">All Selected Data</span>
-            <span class="text-xs text-gray-500">Images (.zip) + Metadata (.csv)</span>
+            <span class="font-bold block text-gray-900">All selected data</span>
+            <span class="text-xs text-gray-500">Images (.zip) + metadata (.csv)</span>
           </button>
           <button type="submit" form="{{ form_id }}" name="download_type" value="metadata_only"
                   class="text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full border-t border-gray-100">
-            <span class="font-bold block text-gray-900">Metadata Only</span>
+            <span class="font-bold block text-gray-900">Metadata only</span>
             <span class="text-xs text-gray-500">Metadata (.csv)</span>
           </button>
         </div>

@@ -68,11 +68,11 @@
                     <div class="bg-white w-24 h-24 rounded-full flex items-center justify-center mb-4 shadow-xs group-hover:scale-110 group-hover:shadow-md transition-all duration-300">
                         <i class="fi fi-rr-picture text-4xl text-gray-500"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-gray-800 mb-2">Upload Image to Classify</h3>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Upload image to classify</h3>
                     <p class="text-sm text-gray-500 mb-6">Click to browse or drag & drop a file here</p>
 
                     <button type="button" id="cameraBtn" class="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-300 rounded-full shadow-xs text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-600 hover:border-gray-300 transition-all z-10">
-                        <i class="fi fi-rr-camera"></i> Use Camera
+                        <i class="fi fi-rr-camera"></i> Use camera
                     </button>
                 </div>
 
@@ -92,7 +92,7 @@
                     <img id="previewImage" class="max-w-full max-h-[75vh] object-contain block opacity-0 transition-opacity duration-300" alt="Preview">
                     <canvas id="detectionCanvas" class="absolute inset-0 cursor-crosshair touch-none w-full h-full"></canvas>
 
-                    <button type="button" id="clearBtn" class="absolute top-4 right-4 bg-white/90 p-2 rounded-full hover:bg-red-50 hover:text-red-600 text-gray-600 shadow-md z-10 transition-all border border-gray-200" title="Clear Image">
+                    <button type="button" id="clearBtn" class="absolute top-4 right-4 bg-white/90 p-2 rounded-full hover:bg-red-50 hover:text-red-600 text-gray-600 shadow-md z-10 transition-all border border-gray-200" title="Clear image">
                         <i class="fi fi-rr-cross-small text-xl leading-none"></i>
                     </button>
                 </div>
@@ -117,7 +117,7 @@
 
             {% if examples %}
             <div>
-                <div class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Or try an example</div>
+                <div class="card-label mb-2">Or try an example</div>
                 <div class="flex flex-wrap gap-2">
                     {% for ex in examples %}
                     <button type="button" class="example-btn group text-left rounded-lg border border-gray-200 overflow-hidden hover:border-gray-500 transition w-16 shrink-0"
@@ -196,7 +196,7 @@
 
     {# About IBBI-AI, under the tool #}
     <section class="max-w-3xl mx-auto mt-12 text-center text-md text-gray-600 space-y-2" data-testid="ibbi-about">
-        <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wide">About IBBI-AI</h2>
+        <h2 class="section-heading">About IBBI-AI</h2>
         <p>
             IBBI-AI is our Intelligent Bark Beetle Identifier. Its models come from <a href="{{ ibbi_docs_url }}" target="_blank" rel="noopener" class="text-gray-600 hover:text-gray-800 underline">IBBI</a>, our open-source package for detecting and identifying bark and ambrosia beetles
             (<a href="https://joss.theoj.org/papers/10.21105/joss.08796" target="_blank" rel="noopener" class="text-gray-600 hover:text-gray-800 underline">paper</a>,
@@ -424,7 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const level = det.levels[rank];
             if (!level) return;
             const row = document.createElement('div');
-            row.className = 'flex items-baseline justify-between gap-3 py-1.5' + (level.known ? '' : ' text-gray-400');
+            row.className = 'flex items-baseline justify-between gap-3 py-1.5' + (level.known ? '' : ' text-gray-500');
             const name = document.createElement('span');
             name.innerHTML = `<span class="text-[10px] uppercase tracking-wide text-gray-500 mr-2">${rank}</span>`;
             const taxon = document.createElement('span');
@@ -969,7 +969,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     btn.dataset.index = i;
                     btn.className = "flex items-center gap-2 px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-medium transition-colors border border-transparent focus:border-gray-500 ";
                     const color = getBoxColor(i);
-                    btn.innerHTML = `<span class="w-2.5 h-2.5 rounded-full" style="background-color:${color}"></span> ${det.label} <span class="text-gray-400">${Math.round(confidenceOf(det)*100)}%</span>`;
+                    btn.innerHTML = `<span class="w-2.5 h-2.5 rounded-full" style="background-color:${color}"></span> ${det.label} <span class="text-gray-500">${Math.round(confidenceOf(det)*100)}%</span>`;
                     btn.onclick = () => {
                         select(i);
                         draw();

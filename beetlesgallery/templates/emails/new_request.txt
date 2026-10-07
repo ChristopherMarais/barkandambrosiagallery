@@ -4,14 +4,14 @@
 
   Name:         {{ name }}
   Email:        {{ email }}
-  Affiliation:  {{ affiliation|default:"-" }}
+  Affiliation:  {{ affiliation|default:"—" }}
 
 Would like to use:
 {% for label in areas %}  - {{ label }}
 {% empty %}  (nothing selected)
 {% endfor %}
 In their own words:
-{{ reason|default:"-" }}
+{{ reason|default:"—" }}
 
 Approve them as a Member or a Curator, or decline the request, here (superuser sign-in needed):
 {{ review_url }}

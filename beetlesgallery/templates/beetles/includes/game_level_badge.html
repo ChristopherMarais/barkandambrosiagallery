@@ -1,5 +1,5 @@
 {% load beetle_tags %}{# A player's level as a badge: an icon for the level and its number, each level its own light colour (game_scale.level_classes, #606): grey at 1, then red through orange, yellow and green, and only 10 filled, solid green and glowing. Needs ``level``; optional ``name``, ``locked`` (grey: not reached yet) and ``size`` ("lg"). #}
 <span class="inline-flex items-center justify-center shrink-0 font-bold leading-none tabular-nums align-middle {% if size == 'lg' %}gap-1 px-2 rounded-lg text-sm{% else %}gap-0.5 h-5 min-w-5 px-1 rounded-md text-[10px]{% endif %}
-  {% if locked %}bg-gray-100 text-gray-400 ring-1 ring-gray-200{% else %}{{ level|level_scale }}{% endif %}"
+  {% if locked %}bg-gray-100 text-gray-500 ring-1 ring-gray-200{% else %}{{ level|level_scale }}{% endif %}"
   {% if size == 'lg' %}style="height: 1.75rem; min-width: 2.25rem;"{% endif %}
   title="Level {{ level }}{% if name %}: {{ name }}{% endif %}{% if locked %} (not reached yet){% endif %}" data-testid="level-badge"><i class="fi {{ level|level_icon }} {% if size == 'lg' %}text-sm{% else %}text-[10px]{% endif %} leading-none" aria-hidden="true"></i>{{ level }}</span>

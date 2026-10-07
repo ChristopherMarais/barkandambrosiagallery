@@ -30,8 +30,8 @@ class HeaderAndTabsTests(PageBehaviourCase):
         page = self.get()
         self.assertIn("Staff tools", page)
         self.assertIn("<details", page)
-        self.assertIn("Review Proposed Interactions", page)
-        self.assertIn("Upload or Update Interactions", page)
+        self.assertIn("Review proposed interactions", page)
+        self.assertIn("Upload or update interactions", page)
 
     def test_anonymous_visitors_get_no_staff_menu(self):
         page = self.get()
@@ -63,4 +63,4 @@ class AboutTabTests(PageBehaviourCase):
         cards = page[page.index("Dataset Sections Summary"):page.index("Scope and interpretation")]
         self.assertNotIn("&rarr;", cards)
         self.assertNotIn("onclick=\"window.switchPathogenTab", cards)
-        self.assertIn("Browse Dataset", cards)
+        self.assertIn("Browse dataset", cards)

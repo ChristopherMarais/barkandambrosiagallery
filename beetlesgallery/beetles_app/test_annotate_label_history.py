@@ -168,7 +168,7 @@ class LabelHistoryPageTests(GameCase):
         hook = page.index("${labelHistoryHtml(b)}", start)
         self.assertEqual(page.count("${labelHistoryHtml(b)}"), 1)
         self.assertLess(page.index('data-testid="label-source"', start), hook)
-        self.assertLess(hook, page.index("Identity & Details", start))
+        self.assertLess(hook, page.index("Identity & details", start))
         # the section stays closed unless it was open before a re-render, and loads only when opened
         self.assertIn("ontoggle=\"toggleLabelHistory(this)\"", page)
         self.assertIn("if (!el.open)", page)

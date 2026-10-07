@@ -92,7 +92,7 @@
               <img
                 src="{{ asset.thumb_small.url }}"
                 data-full-src="{{ beetle.display_url }}" data-thumb
-                alt="Specimen Image"
+                alt="Specimen image"
                 style="aspect-ratio: {{ asset.image_width }} / {{ asset.image_height }}; width: min({{ asset.image_width }}px, calc(70vh * {{ asset.image_width }} / {{ asset.image_height }}));"
                 class="block max-h-[70vh] max-w-full h-auto rounded-lg object-contain"
                 decoding="async"
@@ -101,7 +101,7 @@
               {% else %}
               <img
                 src="{{ beetle.display_url }}"
-                alt="Specimen Image"
+                alt="Specimen image"
                 {% if asset.image_width %}
                   style="aspect-ratio: {{ asset.image_width }}/{{ asset.image_height }};"
                 {% endif %}
@@ -227,7 +227,7 @@
 
           {# --- TAXONOMY (Reference Read-Only), first: what people look for (#618 detail-order) --- #}
           <div class="group-section">
-              <h3 class="mt-2 mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Taxonomy</h3>
+              <h3 class="section-heading mt-2">Taxonomy</h3>
               {% with verbatim=beetle.depicts_name_verbatim scientific=ref_species.scientificName %}
               {% if verbatim and verbatim != scientific %}
               <p class="mb-2 text-xs text-text/60" title="As written on the specimen's own label, which may differ from the accepted name below">
@@ -236,7 +236,7 @@
               {% endif %}
               {% endwith %}
               <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
-                <dt class="col-span-1 text-text/60 {% if not ref_species.scientificName %}hidden field-hidden{% endif %}">Scientific Name</dt>
+                <dt class="col-span-1 text-text/60 {% if not ref_species.scientificName %}hidden field-hidden{% endif %}">Scientific name</dt>
                 <dd class="col-span-2 text-text/80 {% if not ref_species.scientificName %}hidden field-hidden{% endif %}">{% if beetle.depicts_valid_name_id and ref_species.scientificName %}<a href="{% url 'taxonomy_browser' %}?species={{ beetle.depicts_valid_name_id|urlencode }}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.scientificName }}</a>{% else %}{{ ref_species.scientificName|default:"—" }}{% endif %}</dd>
 
                 <dt class="col-span-1 text-text/60 {% if not ref_species.authority %}hidden field-hidden{% endif %}">Authority</dt>
@@ -266,10 +266,10 @@
                     <ul class="mt-1 space-y-0.5">{% for n in other_names %}<li><i>{{ n.taxon.scientific_name|default:n.valid_species_id }}</i> &middot; {{ n.get_tier_display|default:"No ID" }}{% if n.detail %} &middot; {{ n.detail }}{% endif %} &middot; {{ n.created_at|date:"M j, Y" }}</li>{% endfor %}</ul>
                   </details>{% endif %}</dd>
 
-                <dt class="col-span-1 text-text/60 {% if not ref_species.authorityYear %}hidden field-hidden{% endif %}">Authority Year</dt>
+                <dt class="col-span-1 text-text/60 {% if not ref_species.authorityYear %}hidden field-hidden{% endif %}">Authority year</dt>
                 <dd class="col-span-2 text-text/80 {% if not ref_species.authorityYear %}hidden field-hidden{% endif %}">{{ ref_species.authorityYear|default:"—" }}</dd>
 
-                <dt class="col-span-1 text-text/60 {% if not ref_species.originalGenus %}hidden field-hidden{% endif %}">Original Genus</dt>
+                <dt class="col-span-1 text-text/60 {% if not ref_species.originalGenus %}hidden field-hidden{% endif %}">Original genus</dt>
                 <dd class="col-span-2 text-text/80 italic {% if not ref_species.originalGenus %}hidden field-hidden{% endif %}">{{ ref_species.originalGenus|default:"—" }}</dd>
               </dl>
               <button type="button" class="show-all-fields mt-2 text-xs text-gray-500 underline hover:text-gray-700">Show all 11 fields</button>
@@ -289,19 +289,19 @@
 
           {# --- SPECIMEN AND COLLECTION --- #}
           <div class="group-section mt-4">
-              <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Specimen and Collection</h3>
+              <h3 class="section-heading">Specimen and collection</h3>
               <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
                 <dt class="col-span-1 text-text/60 {% if not beetle.collection_country %}hidden field-hidden{% endif %}">Country</dt>
                 <dd class="col-span-2 {% if not beetle.collection_country %}hidden field-hidden{% endif %}">{{ beetle.collection_country|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60 {% if not beetle.collection_stateProvince %}hidden field-hidden{% endif %}">State/Province</dt>
+                <dt class="col-span-1 text-text/60 {% if not beetle.collection_stateProvince %}hidden field-hidden{% endif %}">State/province</dt>
                 <dd class="col-span-2 {% if not beetle.collection_stateProvince %}hidden field-hidden{% endif %}">{{ beetle.collection_stateProvince|default:"—" }}</dd>
                 <dt class="col-span-1 text-text/60 {% if not beetle.specimen_sex %}hidden field-hidden{% endif %}">Sex</dt>
                 <dd class="col-span-2 {% if not beetle.specimen_sex %}hidden field-hidden{% endif %}">{{ beetle.specimen_sex|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60 {% if not beetle.specimen_type_status %}hidden field-hidden{% endif %}">Type Status</dt>
+                <dt class="col-span-1 text-text/60 {% if not beetle.specimen_type_status %}hidden field-hidden{% endif %}">Type status</dt>
                 <dd class="col-span-2 {% if not beetle.specimen_type_status %}hidden field-hidden{% endif %}">{{ beetle.specimen_type_status|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.image_notes %}hidden field-hidden{% endif %}">Image Notes</dt>
+                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.image_notes %}hidden field-hidden{% endif %}">Image notes</dt>
                 <dd class="col-span-2 note-box whitespace-pre-wrap {% if not beetle.image_asset.image_notes %}hidden field-hidden{% endif %}">{{ beetle.image_asset.image_notes|default:"—"|linkify }}</dd>
-                <dt class="col-span-1 text-text/60 {% if not beetle.specimen_notes %}hidden field-hidden{% endif %}">Specimen Notes</dt>
+                <dt class="col-span-1 text-text/60 {% if not beetle.specimen_notes %}hidden field-hidden{% endif %}">Specimen notes</dt>
                 <dd class="col-span-2 note-box whitespace-pre-wrap {% if not beetle.specimen_notes %}hidden field-hidden{% endif %}">{{ beetle.specimen_notes|default:"—"|linkify }}</dd>
               </dl>
               <button type="button" class="show-all-fields mt-2 text-xs text-gray-500 underline hover:text-gray-700">Show all 6 fields</button>
@@ -309,15 +309,15 @@
 
           {# --- ATTRIBUTION --- #}
           <div class="group-section mt-4">
-              <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Attribution</h3>
+              <h3 class="section-heading">Attribution</h3>
               <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
                 <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.image_institution %}hidden field-hidden{% endif %}">Institution</dt>
                 <dd class="col-span-2 {% if not beetle.image_asset.image_institution %}hidden field-hidden{% endif %}">{{ beetle.image_asset.image_institution|default:"—" }}</dd>
                 <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.photographer %}hidden field-hidden{% endif %}">Photographer</dt>
                 <dd class="col-span-2 {% if not beetle.image_asset.photographer %}hidden field-hidden{% endif %}">{{ beetle.image_asset.photographer|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.image_email %}hidden field-hidden{% endif %}">Image Email</dt>
+                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.image_email %}hidden field-hidden{% endif %}">Image email</dt>
                 <dd class="col-span-2 {% if not beetle.image_asset.image_email %}hidden field-hidden{% endif %}">{{ beetle.image_asset.image_email|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.photo_usage_statement %}hidden field-hidden{% endif %}">Usage License</dt>
+                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.photo_usage_statement %}hidden field-hidden{% endif %}">Usage license</dt>
                 <dd class="col-span-2 note-box {% if not beetle.image_asset.photo_usage_statement %}hidden field-hidden{% endif %}">{{ beetle.image_asset.photo_usage_statement|default:"—"|linkify }}</dd>
               </dl>
               <button type="button" class="show-all-fields mt-2 text-xs text-gray-500 underline hover:text-gray-700">Show all 4 fields</button>
@@ -325,7 +325,7 @@
 
           {# --- VALIDATION --- #}
           <div class="group-section mt-4">
-              <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Validation</h3>
+              <h3 class="section-heading">Validation</h3>
               <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
                 <dt class="col-span-1 text-text/60">Image</dt>
                 <dd class="col-span-2 flex items-center justify-between gap-2">
@@ -354,7 +354,7 @@
 
           {# --- TECHNICAL (#618 detail-order: technical and identifiers last) --- #}
           <div class="group-section mt-4">
-              <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Technical</h3>
+              <h3 class="section-heading">Technical</h3>
               <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
                 <dt class="col-span-1 text-text/60 {% if not beetle.aspect %}hidden field-hidden{% endif %}">Aspect</dt>
                 <dd class="col-span-2 {% if not beetle.aspect %}hidden field-hidden{% endif %}">{{ beetle.aspect|default:"—" }}</dd>
@@ -362,9 +362,9 @@
                 <dd class="col-span-2 {% if not beetle.image_asset.resolution_in_ppmm %}hidden field-hidden{% endif %}">
                   {% if beetle.image_asset.resolution_in_ppmm %}<span title="{{ beetle.image_asset.resolution_in_ppmm }} px/mm">{{ beetle.image_asset.resolution_in_ppmm|floatformat:2 }} px/mm</span>{% else %}—{% endif %}
                 </dd>
-                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.image_date_taken %}hidden field-hidden{% endif %}">Image Date</dt>
+                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.image_date_taken %}hidden field-hidden{% endif %}">Image date</dt>
                 <dd class="col-span-2 {% if not beetle.image_asset.image_date_taken %}hidden field-hidden{% endif %}">{{ beetle.image_asset.image_date_taken|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60">Multiple Individuals</dt>
+                <dt class="col-span-1 text-text/60">Multiple individuals</dt>
                 <dd class="col-span-2">{% if beetle.image_asset.image_has_multiple_individuals %}Yes{% else %}No{% endif %}</dd>
               </dl>
               <button type="button" class="show-all-fields mt-2 text-xs text-gray-500 underline hover:text-gray-700">Show all 4 fields</button>
@@ -372,7 +372,7 @@
 
           {# --- IDENTIFIERS, last (#618 detail-ids-first / detail-ids-copy): every id in one card, each copyable --- #}
           <div class="group-section mt-4">
-              <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Identifiers</h3>
+              <h3 class="section-heading">Identifiers</h3>
               <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
                 <dt class="col-span-1 text-text/60">ROI ID</dt>
                 <dd class="col-span-2 flex items-center gap-2">
@@ -400,7 +400,7 @@
                 <dt class="col-span-1 text-text/60 {% if not beetle.depicts_specimen %}hidden field-hidden{% endif %}">Specimen ID</dt>
                 <dd class="col-span-2 {% if not beetle.depicts_specimen %}hidden field-hidden{% endif %}" data-testid="specimen-id-value">{{ beetle.depicts_specimen|default:"—" }}</dd>
 
-                <dt class="col-span-1 text-text/60 {% if not beetle.depicts_valid_name_id %}hidden field-hidden{% endif %}">Valid Name ID</dt>
+                <dt class="col-span-1 text-text/60 {% if not beetle.depicts_valid_name_id %}hidden field-hidden{% endif %}">Valid name ID</dt>
                 <dd class="col-span-2 {% if not beetle.depicts_valid_name_id %}hidden field-hidden{% endif %}" data-testid="valid-name-id-value">{{ beetle.depicts_valid_name_id|default:"—" }}</dd>
 
                 <dt class="col-span-1 text-text/60 {% if not beetle.depicts_described_name_id %}hidden field-hidden{% endif %}">Described ID</dt>
