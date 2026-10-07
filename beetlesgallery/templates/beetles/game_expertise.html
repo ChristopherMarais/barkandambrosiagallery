@@ -49,24 +49,17 @@
     <p>Either one, in a taxon: at least {% widthratio tree.min_accuracy 1 100 %}% correct over {{ tree.min_judged|digit_groups }} or more checked answers, covering {% widthratio tree.children_share 1 100 %}% of its members (a tribe&rsquo;s genera, a genus&rsquo;s species) with at least {{ tree.per_species|digit_groups }} answers each.</p>
   </section>
 
-  {% comment %}
-    One line by default (#618 exp-legend): the two shapes, then "Key" opens the full colour bands (worst to best,
-    game_trust.expertise_legend) in a details element. The details' content is still in the markup when closed, so
-    screen readers and anything reading the raw page still see every word; only the visual footprint shrinks.
-  {% endcomment %}
+  {# The key is always shown (r7 D3): the two shapes, then every colour band worst to best (game_trust.expertise_legend). #}
   <div class="mb-6 text-xs text-gray-600" data-testid="expertise-legend">
     <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
       <span class="flex items-center gap-1" data-testid="legend-naming"><span class="tree-dot mark-shape"></span>naming</span>
       <span class="flex items-center gap-1" data-testid="legend-apart"><span class="tree-tri mark-shape"></span>telling apart</span>
       <span class="text-gray-500">&middot; colour = accuracy</span>
-      <details class="ml-auto">
-        <summary class="cursor-pointer text-gray-500 underline">Key</summary>
-        <div class="mt-1 flex flex-wrap gap-x-4 gap-y-1">
-          <span class="flex items-center gap-1"><span class="tree-dot mark-unknown"></span><span class="tree-tri mark-unknown"></span>Not yet: fewer than {{ tree.min_shown }} answers</span>
-          {% for status, word, range in tree.legend %}<span class="flex items-center gap-1" data-testid="legend-{{ status }}"><span class="tree-dot mark-{{ status }}"></span><span class="tree-tri mark-{{ status }}"></span>{{ word }} <span class="text-gray-500">{{ range }}</span></span>{% endfor %}
-          <span class="flex items-center gap-1" data-testid="legend-expert"><span class="tree-dot mark-expert"></span><span class="tree-tri mark-expert"></span>Expert</span>
-        </div>
-      </details>
+    </div>
+    <div class="mt-1 flex flex-wrap gap-x-4 gap-y-1" data-testid="expertise-key">
+      <span class="flex items-center gap-1"><span class="tree-dot mark-unknown"></span><span class="tree-tri mark-unknown"></span>Not yet: fewer than {{ tree.min_shown }} answers</span>
+      {% for status, word, range in tree.legend %}<span class="flex items-center gap-1" data-testid="legend-{{ status }}"><span class="tree-dot mark-{{ status }}"></span><span class="tree-tri mark-{{ status }}"></span>{{ word }} <span class="text-gray-500">{{ range }}</span></span>{% endfor %}
+      <span class="flex items-center gap-1" data-testid="legend-expert"><span class="tree-dot mark-expert"></span><span class="tree-tri mark-expert"></span>Expert</span>
     </div>
   </div>
 

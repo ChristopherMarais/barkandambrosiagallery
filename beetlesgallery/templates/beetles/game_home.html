@@ -113,11 +113,16 @@
   </div>
 
   <!-- Share: anyone can scan this off your screen to join (they sign up or sign in, then land here) -->
-  <section class="mb-6 p-5 bg-white border border-gray-200 rounded-2xl text-center" data-testid="share-qr">
-    <h2 class="text-lg font-semibold text-gray-900">Play with a friend</h2>
-    <p class="text-sm text-gray-500 mb-4">Let them scan this to join.</p>
-    <div id="share-qr" class="inline-block p-3 bg-white rounded-xl border border-gray-100" data-url="{{ share_url }}" style="width: 272px; height: 272px"></div>
-    <p class="mt-3 text-xs text-gray-500 break-all">{{ share_url }}</p>
+  {# The QR code stays folded until the button opens it (r7 D4). #}
+  <section class="mb-6 text-center" data-testid="share-qr">
+    <details class="group" data-testid="share-qr-toggle">
+      <summary class="btn-secondary list-none cursor-pointer"><i class="fi fi-rr-user-add"></i> Invite others to play</summary>
+      <div class="mt-3 p-5 bg-white border border-gray-200 rounded-2xl">
+        <p class="text-sm text-gray-500 mb-4">Let them scan this to join.</p>
+        <div id="share-qr" class="inline-block p-3 bg-white rounded-xl border border-gray-100" data-url="{{ share_url }}" style="width: 272px; height: 272px"></div>
+        <p class="mt-3 text-xs text-gray-500 break-all">{{ share_url }}</p>
+      </div>
+    </details>
   </section>
   {# qrcodejs 1.0.0 (MIT, davidshimjs), served from our own static files #}
   <script src="{% static 'js/vendor/qrcode.min.js' %}"></script>

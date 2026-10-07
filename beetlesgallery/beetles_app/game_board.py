@@ -10,8 +10,8 @@ identify what is in it, which is where people specialise and compete.
 from datetime import datetime, timedelta
 
 from django.contrib.auth import get_user_model
-from django.db.models import Count, Q, Sum
-from django.db.models.functions import TruncWeek
+from django.db.models import Avg, Count, F, Q, Sum
+from django.db.models.functions import Floor, TruncWeek
 from django.utils import timezone
 
 from . import game, game_levels, game_rewards, game_trust
@@ -244,28 +244,33 @@ def _player_weeks(player_id):
     return {"wins": sum(1 for w in weeks if w["place"] == 1), "podiums": len(weeks), "weeks": weeks[:10]}
 
 
-def accuracy_standing(player, bins=10):
+def accuracy_standing(player, bins=20):
     """
     Where a player's accuracy sits among everyone's: a histogram of players' accuracy (players with enough judged
-    answers only), the average, the player's percentile and their rank. ``me`` is None until they have enough.
+    answers only) in ``bins`` steps (20: 5% each), the average, the player's percentile and their rank. ``me`` is None
+    until they have enough. The database counts and averages; nothing per player comes into Python (a few queries).
     One number, one colour (#site-meaning-85): ``step`` is the accuracy's own step on the site's scale
     (game_scale.value_step), the colour it has everywhere else; the comparison with other players is only a grey
     rank ("Top 20%"), never a colour.
     """
     min_judged = game.game_setting("GAME_MIN_JUDGED_FOR_ACCURACY", 10)
-    rows = list(PlayerScore.objects.filter(judged__gte=min_judged, accuracy__isnull=False).values_list("player_id", "accuracy"))
+    rated = PlayerScore.objects.filter(judged__gte=min_judged, accuracy__isnull=False)
     counts = [0] * bins
-    for _, acc in rows:
-        counts[min(bins - 1, int(acc * bins))] += 1
+    per_bin = rated.annotate(b=Floor(F("accuracy") * float(bins))).values("b").annotate(n=Count("pk")).order_by()
+    for row in per_bin:
+        counts[max(0, min(bins - 1, int(row["b"])))] += row["n"]
+    totals = rated.aggregate(players=Count("pk"), average=Avg("accuracy"))
+    players = totals["players"] or 0
     top = max(counts) or 1
-    mine = next((acc for pid, acc in rows if pid == player.id), None)
+    mine = rated.filter(player=player).values_list("accuracy", flat=True).first()
     out = {
-        "players": len(rows), "bins": [{"from": i / bins, "count": c, "height": round(100 * c / top)} for i, c in enumerate(counts)],
-        "average": (sum(a for _, a in rows) / len(rows)) if rows else None, "me": None,
+        "players": players, "bins": [{"from": i / bins, "count": c, "height": round(100 * c / top)} for i, c in enumerate(counts)],
+        "average": totals["average"] if players else None, "me": None,
     }
-    if mine is not None and len(rows) >= 2:
-        below = sum(1 for _, a in rows if a < mine) + 0.5 * (sum(1 for _, a in rows if a == mine) - 1)
-        pct = round(100 * below / (len(rows) - 1))
+    if mine is not None and players >= 2:
+        around = rated.aggregate(lower=Count("pk", filter=Q(accuracy__lt=mine)), same=Count("pk", filter=Q(accuracy=mine)))
+        below = around["lower"] + 0.5 * (around["same"] - 1)
+        pct = round(100 * below / (players - 1))
         out["me"] = {"accuracy": mine, "percentile": pct, "rank": f"Top {max(1, 100 - pct)}%", "step": value_step(mine),
                      "bin": min(bins - 1, int(mine * bins))}
     elif mine is not None:
