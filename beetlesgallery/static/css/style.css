@@ -352,9 +352,6 @@
   .inset-x-0 {
     inset-inline: 0px;
   }
-  .inset-x-4 {
-    inset-inline: calc(var(--spacing) * 4);
-  }
   .inset-y-0 {
     inset-block: 0px;
   }
@@ -376,9 +373,6 @@
   .top-4 {
     top: calc(var(--spacing) * 4);
   }
-  .top-5 {
-    top: calc(var(--spacing) * 5);
-  }
   .top-14 {
     top: calc(var(--spacing) * 14);
   }
@@ -397,9 +391,6 @@
   .right-4 {
     right: calc(var(--spacing) * 4);
   }
-  .-bottom-1 {
-    bottom: calc(var(--spacing) * -1);
-  }
   .bottom-0 {
     bottom: 0px;
   }
@@ -411,9 +402,6 @@
   }
   .bottom-8 {
     bottom: calc(var(--spacing) * 8);
-  }
-  .bottom-12 {
-    bottom: calc(var(--spacing) * 12);
   }
   .bottom-full {
     bottom: 100%;
@@ -1117,9 +1105,6 @@
   .cursor-wait {
     cursor: wait;
   }
-  .touch-none {
-    touch-action: none;
-  }
   .resize {
     resize: both;
   }
@@ -1215,9 +1200,6 @@
   }
   .gap-6 {
     gap: calc(var(--spacing) * 6);
-  }
-  .gap-8 {
-    gap: calc(var(--spacing) * 8);
   }
   :where(.space-y-0\.5 > :not(:last-child)) {
     --tw-space-y-reverse: 0;
@@ -1909,9 +1891,6 @@
   }
   .pb-20 {
     padding-bottom: calc(var(--spacing) * 20);
-  }
-  .pb-28 {
-    padding-bottom: calc(var(--spacing) * 28);
   }
   .pl-1 {
     padding-left: var(--spacing);
@@ -2898,15 +2877,6 @@
     }
   }
   @media (width >= 64rem) {
-    .lg\:static {
-      position: static;
-    }
-    .lg\:inset-auto {
-      inset: auto;
-    }
-    .lg\:z-auto {
-      z-index: auto;
-    }
     .lg\:col-span-4 {
       grid-column: span 4 / span 4;
     }
@@ -2936,9 +2906,6 @@
     }
     .lg\:w-20 {
       width: calc(var(--spacing) * 20);
-    }
-    .lg\:w-full {
-      width: 100%;
     }
     .lg\:max-w-full {
       max-width: 100%;
@@ -2974,16 +2941,6 @@
     .lg\:border-b-0 {
       border-bottom-style: var(--tw-border-style);
       border-bottom-width: 0px;
-    }
-    .lg\:py-5 {
-      padding-block: calc(var(--spacing) * 5);
-    }
-    .lg\:pb-8 {
-      padding-bottom: calc(var(--spacing) * 8);
-    }
-    .lg\:text-2xl {
-      font-size: var(--text-2xl);
-      line-height: var(--tw-leading, var(--text-2xl--line-height));
     }
     .lg\:text-lg {
       font-size: var(--text-lg);
@@ -3316,6 +3273,9 @@
     height: 100%;
     border-radius: calc(infinity * 1px);
     background-color: var(--color-gray-700);
+  }
+  :where(i, span).animate-spin {
+    display: inline-block;
   }
   .hit-area {
     position: relative;
@@ -3663,6 +3623,19 @@
 }
 .rv-line .fi {
   vertical-align: -0.125em;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin {
+    animation: spin-calm 2s ease-in-out infinite;
+  }
+}
+@keyframes spin-calm {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
 }
 @property --tw-translate-x {
   syntax: "*";
