@@ -213,6 +213,9 @@
   <script src="{% static 'js/digit_groups.js' %}"></script>
   <script src="{% static 'js/progressive_image.js' %}" defer></script>
   <script src="{% static 'js/footer_basehtml.js' %}" defer></script>
+  {% if ga_measurement_id %}{# Google Analytics: only on the live site (GA_MEASUREMENT_ID); see docs/analytics.md #}
+  <script src="{% static 'js/analytics.js' %}" defer data-ga-id="{{ ga_measurement_id }}" data-ga-page="{{ ga_page }}"></script>
+  {% endif %}
   {% block extra_css %}{% endblock %}
 </head>
 
@@ -474,6 +477,25 @@
     </div>
   </div>
   {% block extra_js %}{% endblock %}
+  {% if ga_measurement_id %}
+  {# The cookie notice for Google Analytics: shown once, until the visitor picks Accept or No thanks (analytics.js) #}
+  <style>
+    #consent-banner { position: fixed; left: 1rem; right: 1rem; bottom: 1rem; z-index: 60; max-width: 36rem; margin: 0 auto;
+                      padding: 1rem 1.25rem; border: 1px solid #d1d5db; border-radius: 0.75rem; background: #fff;
+                      color: #1f2937; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); font-size: 0.95rem; line-height: 1.5; }
+    #consent-banner[hidden] { display: none; }
+    #consent-banner p { margin: 0; }
+    #consent-banner .consent-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+  </style>
+  <div id="consent-banner" role="region" aria-label="Cookies" hidden>
+    <p>Can we use Google Analytics to count page visits? We never send it your name or your account.
+      Your choice is remembered for a year.</p>
+    <div class="consent-actions">
+      <button type="button" class="btn-secondary" data-consent="granted">Accept</button>
+      <button type="button" class="btn-secondary" data-consent="denied">No thanks</button>
+    </div>
+  </div>
+  {% endif %}
 </body>
 
 </html>

@@ -98,6 +98,7 @@ TEMPLATES = [
                 "beetlesgallery.beetles_app.context_processors.game_player",
                 "beetlesgallery.beetles_app.site_notice.context",
                 "beetlesgallery.beetles_app.staging.context",
+                "beetlesgallery.beetles_app.analytics.context",
             ],
         },
     },
@@ -198,6 +199,9 @@ ACCESS_REQUEST_RECIPIENTS = [
 ]
 # The address people use, for links in emails sent when nobody is making a request (the reminder command)
 SITE_URL = os.environ.get("SITE_URL", "https://barkandambrosiagallery.org")
+# Google Analytics (GA4) Measurement ID, e.g. G-XXXXXXXXXX. Only the live server sets it (in .env.prod). When it is
+# empty (local, staging, tests) no analytics code and no cookie notice are rendered. See docs/analytics.md.
+GA_MEASUREMENT_ID = os.environ.get("GA_MEASUREMENT_ID", "").strip()
 PASSWORD_RESET_TIMEOUT = 7 * 24 * 60 * 60  # the "set your password" link in an approval email lasts a week
 
 # Email. Set EMAIL_HOST (and the rest) in the server's .env to send real mail; without EMAIL_HOST,

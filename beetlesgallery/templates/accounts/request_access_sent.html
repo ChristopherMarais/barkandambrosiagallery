@@ -4,7 +4,7 @@
 
 {% block content %}
 {# Where a sign-up ends, reached by a redirect so a refresh never sends it twice: the message only, never the form. #}
-<section class="max-w-2xl" data-testid="signup-done">
+<section class="max-w-2xl" data-testid="signup-done" data-ga-event="sign_up_done">
   <h1 class="page-title">{% if user.is_authenticated %}Request sent{% else %}Check your email{% endif %}</h1>
   {% if user.is_authenticated %}
   <p class="text-gray-600 mb-6">Thank you. We review your request and email you our decision. You get the access once it is approved.</p>

@@ -1799,6 +1799,7 @@
       $("sum-round").textContent = answered;
       $("sum-total").textContent = data.summary.labelled;
       $("sum-accuracy").textContent = data.summary.accuracy === null ? "–" : Math.round(data.summary.accuracy * 100) + "%";
+      if (window.gaTrack) gaTrack("game_round_done", { answers: answered });
       endReview();
       setPhase("answer");
       show("caughtup");
@@ -2808,6 +2809,8 @@
     }
   });
 
+  // the game page opened: a game started (analytics: the game key only, see static/js/analytics.js)
+  if (window.gaTrack) gaTrack("game_start", { game: PAGE_MODE });
   startFeed();
 })();
 </script>
