@@ -188,5 +188,5 @@ class PageTitleCasingTests(SimpleTestCase):
         for relpath, heading in checks.items():
             with self.subTest(template=relpath):
                 source = (REPO / "beetlesgallery" / "templates" / relpath).read_text(encoding="utf-8")
-                self.assertIn(f'<h1 class="page-title"', source)
+                self.assertIn('<h1 class="page-title"', source)
                 self.assertIn(heading, source)
