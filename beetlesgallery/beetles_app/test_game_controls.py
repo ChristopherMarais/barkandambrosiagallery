@@ -27,7 +27,7 @@ class GameControlsTests(GameCase):
     def test_keys_for_both_hands_and_no_number_keys(self):
         page = self.page()
         for keys in ('up: ["ArrowUp", "w"]', 'down: ["ArrowDown", "s"]', 'next: ["Enter", " "]', 'skip: ["Backspace", "Delete", "End", "x"]',
-                     'back: ["Tab", "z"]', 'photo: ["Home", "q", "v"]', 'light: ["PageUp", "e", "l"]'):
+                     'back: ["b", "z"]', 'photo: ["Home", "q", "v"]', 'light: ["PageUp", "e", "l"]'):
             self.assertIn(keys, page)
         self.assertNotIn("/^[1-9]$/.test(key)", page)
         self.assertNotIn('<kbd class="kbd">{{ forloop.counter }}</kbd>', page)

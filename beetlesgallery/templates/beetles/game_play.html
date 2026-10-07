@@ -670,7 +670,7 @@
       <p id="submit-hint" class="hidden text-center text-xs text-gray-500 mt-1" data-testid="submit-hint"></p>
       <div id="actions">
         <button type="button" id="skip"><span id="skip-text">Skip</span><kbd class="kbd" title="Backspace">&#9003;</kbd></button>
-        <button type="button" id="back" aria-disabled="true" title="Your last beetle">Back<kbd class="kbd">Tab</kbd></button>
+        <button type="button" id="back" aria-disabled="true" title="Your last beetle">Back<kbd class="kbd">B</kbd></button>
         <button type="button" id="submit" disabled><span id="submit-text">Submit</span><i id="submit-spin" class="fi fi-rr-spinner hidden" aria-hidden="true"></i><kbd class="kbd">Enter</kbd></button>
       </div>
     </div>
@@ -3036,11 +3036,11 @@
   //   arrows                     WASD
   //   Up/Down: rank or line      W/S: rank or line
   //   Left/Right: change it      A/D: change it
-  //   Enter or Space: Submit, then Next (on the review)    Backspace (or Delete, End, X): Skip    Tab (or Z): Back, your last beetle
+  //   Enter or Space: Submit, then Next (on the review)    Backspace (or Delete, End, X): Skip    B (or Z): Back, your last beetle
   //   Home (or Q, V): whole photo    Page Up (or E, L): Lighting    Page Down (or R): Flag    Esc: close, or exit
-  // A letter typed on a focused list still searches it (the lists keep their own keys). Tab and Backspace are the
-  // game's only away from the form fields: in a search box, on a list, and with Shift (Shift+Tab) they do what they
-  // always do, so Tab still moves between the fields and Backspace still deletes a letter (r7).
+  // A letter typed on a focused list still searches it (the lists keep their own keys). Backspace is the game's only
+  // away from the form fields: in a search box and on a list it still deletes a letter. Tab is never the game's: it
+  // always moves between the buttons (owner), so Back is B, for Back (or Z).
   function isTyping(el) { return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable); }
   let cursorRank = 0;
   function openRows() { return RANKS.filter((r) => selects[r] && !selects[r].disabled && !$("pick-" + r).closest(".rank-row").classList.contains("locked")); }
@@ -3061,7 +3061,7 @@
   }
   const KEYS = {
     up: ["ArrowUp", "w"], down: ["ArrowDown", "s"], left: ["ArrowLeft", "a"], right: ["ArrowRight", "d"],
-    next: ["Enter", " "], skip: ["Backspace", "Delete", "End", "x"], back: ["Tab", "z"],
+    next: ["Enter", " "], skip: ["Backspace", "Delete", "End", "x"], back: ["b", "z"],
     photo: ["Home", "q", "v"], light: ["PageUp", "e", "l"], report: ["PageDown", "r"],
   };
   const is = (name, key) => KEYS[name].includes(key);
@@ -3077,8 +3077,8 @@
     const t = e.target;
     if (isTyping(t)) return;
     if (t && t.tagName === "OPTION") return;   // choosing in an open list
-    // Tab and Backspace keep their own jobs on a list (and Shift+Tab everywhere): focus moves on, a search is corrected
-    if ((e.key === "Tab" || e.key === "Backspace") && (e.shiftKey || (t && t.tagName === "SELECT"))) return;
+    // Backspace keeps its own job on a list (and with Shift): a search is corrected
+    if (e.key === "Backspace" && (e.shiftKey || (t && t.tagName === "SELECT"))) return;
     if (!$("recap").classList.contains("hidden")) {
       if (e.key === "Enter") { e.preventDefault(); $("recap-more").click(); }
       return;

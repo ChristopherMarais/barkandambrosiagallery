@@ -32,22 +32,26 @@ class NamingPhotoTests(SimpleTestCase):   # C2
 
 
 class KeyTests(SimpleTestCase):   # C3
-    def test_tab_is_back_and_backspace_is_skip(self):
-        self.assertIn('skip: ["Backspace", "Delete", "End", "x"], back: ["Tab", "z"],', PAGE)
+    def test_b_is_back_and_backspace_is_skip(self):
+        # Tab is never the game's: it moves between the buttons (owner), so Back is B (or Z)
+        self.assertIn('skip: ["Backspace", "Delete", "End", "x"], back: ["b", "z"],', PAGE)
+        keys = between("const KEYS = {", "};")
+        self.assertNotIn('"Tab"', keys)
 
     def test_the_buttons_show_the_new_keys(self):
         actions = between('<div id="actions">', 'id="submit"')
         self.assertIn('<span id="skip-text">Skip</span><kbd class="kbd" title="Backspace">&#9003;</kbd>', actions)
-        self.assertIn('Back<kbd class="kbd">Tab</kbd>', actions)
+        self.assertIn('Back<kbd class="kbd">B</kbd>', actions)
         self.assertNotIn(">Del</kbd>", PAGE)
 
-    def test_form_fields_keep_tab_and_backspace(self):
+    def test_tab_and_form_fields_keep_their_own_jobs(self):
         handler = between('document.addEventListener("keydown", (e) => {\n    if (e.key === "Escape")', "// the game page opened")
         self.assertIn("if (isTyping(t)) return;", handler)   # inputs and text areas: typing, Tab between fields
-        self.assertIn('if ((e.key === "Tab" || e.key === "Backspace") && (e.shiftKey || (t && t.tagName === "SELECT"))) return;', handler)
+        self.assertIn('if (e.key === "Backspace" && (e.shiftKey || (t && t.tagName === "SELECT"))) return;', handler)
+        self.assertNotIn('"Tab"', handler)   # Tab moves focus between the buttons, as on any page
         self.assertLess(handler.index("if (isTyping(t)) return;"), handler.index("const pressed"))
 
-    def test_a_held_tab_is_one_press(self):
+    def test_a_held_key_is_one_press(self):
         self.assertIn('(pressed === "next" || pressed === "skip" || pressed === "back") && e.repeat', PAGE)
         self.assertIn("if (!e.repeat) hidePrevious();", PAGE)
 
