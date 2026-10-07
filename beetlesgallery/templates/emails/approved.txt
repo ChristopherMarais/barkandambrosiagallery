@@ -4,7 +4,7 @@ Welcome to the Bark & Ambrosia Beetle Gallery! Your account is ready.
 
 Every account can use {{ summary }}.{% if granted %}
 You also have: {{ granted|join:", " }}.{% endif %}{% if waiting %}
-You also asked for: {{ waiting|join:", " }}. A curator will review that and we will email you.{% endif %}
+You also asked for: {{ waiting|join:", " }}. We have your request and will email you about it.{% endif %}
 {% if note %}
 A note from the reviewer:
 {{ note }}

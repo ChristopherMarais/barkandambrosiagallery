@@ -198,7 +198,7 @@ def _save_unlocks(request):
 
 
 def _unlocks_context(request):
-    """The Unlocks section of the Game settings page: the players found (up to 100) and what each has been given."""
+    """The Unlocks section of the Game settings page: the players found (a page at a time) and what each has been given."""
     from .models import GamePreference
 
     if not request.user.is_superuser:
@@ -210,16 +210,18 @@ def _unlocks_context(request):
     else:   # people with grants first, then the most recent players
         users = users.filter(id__in=GamePreference.objects.exclude(granted_perks=[]).values("player_id")) | users.filter(
             id__in=GameAnswer.objects.values("player_id"))
-    grants = dict(GamePreference.objects.filter(player__in=users).values_list("player_id", "granted_perks"))
+    page = Paginator(users.distinct().order_by("username"), UNLOCKS_PER_PAGE).get_page(request.GET.get("unlocks_page"))
+    people = list(page.object_list)
+    grants = dict(GamePreference.objects.filter(player__in=people).values_list("player_id", "granted_perks"))
     rows = []
-    for u in users.distinct().order_by("username")[:100]:
+    for u in people:
         info = game_levels.describe(*(
             PlayerScore.objects.filter(player=u).values_list("score", "rating").first() or (0.0, 0.0)))
         mine = grants.get(u.id) or []
         rows.append({"user": u, "level": info["level"], "name": info["name"], "all": "all" in mine,
                      "perks": [{"key": k, "title": t, "level": game_levels.perk_level(k), "on": "all" in mine or k in mine,
                                 "earned": k in info["perks"]} for k, (t, _) in game_levels.PERKS.items()]})
-    return {"rows": rows, "q": q}
+    return {"rows": rows, "q": q, "unlocks": page}
 
 
 @login_required
@@ -229,6 +231,7 @@ def game_checked_page(request):
 
 
 HISTORY_PER_PAGE = 20
+UNLOCKS_PER_PAGE = 25
 
 
 @login_required

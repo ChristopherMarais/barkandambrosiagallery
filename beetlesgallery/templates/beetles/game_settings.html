@@ -174,7 +174,7 @@
   <p class="text-sm text-gray-500 mb-4">Give any player any unlock, whatever their level. Earned unlocks (grey ticks) stay either way.</p>
 
   <form method="get" action="#unlocks" class="flex gap-2 mb-4">
-    {% for key, values in request.GET.lists %}{% if key != "q" %}{% for v in values %}<input type="hidden" name="{{ key }}" value="{{ v }}">{% endfor %}{% endif %}{% endfor %}
+    {% for key, values in request.GET.lists %}{% if key != "q" and key != "unlocks_page" %}{% for v in values %}<input type="hidden" name="{{ key }}" value="{{ v }}">{% endfor %}{% endif %}{% endfor %}
     <input type="search" name="q" value="{{ q }}" placeholder="Find a player&hellip;" aria-label="Find a player" class="flex-1 h-10 px-3 border border-gray-300 rounded-lg">
     <button class="btn-primary h-10">Search</button>
   </form>
@@ -207,6 +207,7 @@
     <p class="p-4 text-sm text-gray-500 bg-gray-50 rounded-2xl">No players found.</p>
     {% endfor %}
   </div>
+  {% include "beetles/includes/pager.html" with page=unlocks param="unlocks_page" anchor="unlocks" %}
   </section>
 </div>
 {% endblock %}

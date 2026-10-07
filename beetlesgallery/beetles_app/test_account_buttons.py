@@ -4,7 +4,7 @@ The account page and the request-access pages (#501).
 * Superusers find Create New User beside Review Access Requests, in the Access Requests section, each with its own
   icon. Nobody else sees either button. The page has no stray closing tags.
 * The request-access form and the page after sending say what happens: signed out, the account works once the email
-  is confirmed (#535: Sign up says nothing about reviews); signed in, more access is reviewed and given once approved.
+  is confirmed (#535: Sign up says nothing about reviews); signed in, the page just takes the request.
   The AI is called IBBI-AI and the game goes by its name. Only people not signed in get the Sign in link at the top of
   the form.
 """
@@ -160,14 +160,15 @@ class RequestAccessExplainsTheReviewTests(ReadsPages, PageBehaviourCase):
                 self.assertEqual(response.status_code, 200)
                 yield f"{name}, {'signed in' if user else 'signed out'}", response.content.decode()
 
-    def test_signed_in_they_say_more_access_is_reviewed_and_given_once_approved(self):
+    def test_signed_in_they_ask_for_more_without_talk_of_reviews_or_approval(self):
         self.client.force_login(self.user)
         for name in self.PAGES:
             with self.subTest(page=name):
                 words = self.main(name).root.words
-                self.assertRegex(words, r"\b[Ww]e review\b")
-                self.assertIn("once it is approved", words)
-                self.assertIn("email you our decision", words)
+                for talk in ("review", "approv", "decision", "wait"):
+                    self.assertNotIn(talk, words.lower())
+                self.assertIn("Tick anything else you'd like to help with below.", words)
+                self.assertIn("We have your request.", words)
 
     def test_signed_out_they_say_the_account_works_once_the_email_is_confirmed(self):
         for name in self.PAGES:
