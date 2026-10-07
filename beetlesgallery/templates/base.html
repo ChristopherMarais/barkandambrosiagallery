@@ -13,12 +13,36 @@
 
   <link href="{% static 'css/style.css' %}" rel="stylesheet" />
 
-  <script src="{% static 'js/timezone_cookie.js' %}"></script>
+  <script src="{% static 'js/timezone_cookie.js' %}" defer></script>
 
-  <link rel="stylesheet"
+  <script>
+    // The icon stylesheets do not hold up the page: they load as print styles and switch to screen when they arrive
+    // (onload below). The icons show once both icon fonts are in; a 2.5 s fallback means they never stay hidden.
+    (function () {
+      var root = document.documentElement;
+      var shown = false;
+      var loaded = 0;
+      function show() { if (!shown) { shown = true; root.classList.add("icons-ready"); } }
+      window.uiconsCssLoaded = function () {
+        if (++loaded < 2) return;
+        try {
+          Promise.all([
+            document.fonts.load('1em "uicons-regular-rounded"'),
+            document.fonts.load('1em "uicons-brands"')
+          ]).then(show, show);
+        } catch (e) { show(); }
+      };
+      setTimeout(show, 2500);  // never leave the icons hidden if the CDN is slow or blocked
+    })();
+  </script>
+  <link rel="stylesheet" media="print" onload="this.media='all'; window.uiconsCssLoaded()"
     href="https://cdn-uicons.flaticon.com/2.2.0/uicons-regular-rounded/css/uicons-regular-rounded.css" />
-  <link rel='stylesheet' 
-    href='https://cdn-uicons.flaticon.com/2.1.0/uicons-brands/css/uicons-brands.css'>
+  <link rel="stylesheet" media="print" onload="this.media='all'; window.uiconsCssLoaded()"
+    href="https://cdn-uicons.flaticon.com/2.1.0/uicons-brands/css/uicons-brands.css" />
+  <noscript>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.2.0/uicons-regular-rounded/css/uicons-regular-rounded.css" />
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.1.0/uicons-brands/css/uicons-brands.css" />
+  </noscript>
   <link rel="preconnect" href="https://cdn-uicons.flaticon.com" crossorigin>
   <link rel="preload" as="font" type="font/woff2" crossorigin
     href="https://cdn-uicons.flaticon.com/2.2.0/uicons-regular-rounded/webfonts/uicons-regular-rounded.woff2">
@@ -45,20 +69,6 @@
       input[type="number"], input[type="url"], input[type="tel"] { font-size: 16px; min-height: 2.5rem; }
     }
   </style>
-  <script>
-    (function () {
-      var root = document.documentElement;
-      var shown = false;
-      function show() { if (!shown) { shown = true; root.classList.add("icons-ready"); } }
-      try {
-        Promise.all([
-          document.fonts.load('1em "uicons-regular-rounded"'),
-          document.fonts.load('1em "uicons-brands"')
-        ]).then(show, show);
-      } catch (e) { show(); }
-      setTimeout(show, 2500);  // never leave the icons hidden if the CDN is slow or blocked
-    })();
-  </script>
 
   <script>
     // Big uploads now go through Cloudflare in pieces, so the old direct. address is no longer used:
@@ -210,7 +220,7 @@
     }
   </style>
 
-  <script src="{% static 'js/digit_groups.js' %}"></script>
+  <script src="{% static 'js/digit_groups.js' %}" defer></script>
   <script src="{% static 'js/progressive_image.js' %}" defer></script>
   <script src="{% static 'js/footer_basehtml.js' %}" defer></script>
   {% if ga_measurement_id %}{# Google Analytics: only on the live site (GA_MEASUREMENT_ID); see docs/analytics.md #}
