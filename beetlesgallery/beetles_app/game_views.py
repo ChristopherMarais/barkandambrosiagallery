@@ -917,10 +917,12 @@ def _timed(view):
     def timed(request, *args, **kwargs):
         stats = {"batches": 0, "items": 0, "crops": 0}
         token, rows = game_crops.built.set(stats), _rows.set({})
+        memo = game.reveals_memo.set({})
         started = time.perf_counter()
         try:
             return view(request, *args, **kwargs)
         finally:
+            game.reveals_memo.reset(memo)
             _rows.reset(rows)
             game_crops.built.reset(token)
             logger.info("%s took %d ms: %d new batch(es), %d item(s), %d crop(s) queued", view.__name__,

@@ -136,6 +136,11 @@ def _seen(player, mode, is_check):
     return GameAnswer.objects.filter(player=player, mode=mode, is_check=is_check).values("roi_id")
 
 
+# reveals() of each player, for one timed request (game_views._timed): a batch build asks for it once per game it
+# builds, and the answers don't change within the request. None outside one: nothing is remembered.
+reveals_memo = contextvars.ContextVar("game_reveals_memo", default=None)
+
+
 def reveals(player):
     """
     {roi_id: {"at", "modes"}}: the ROIs whose names this player has been shown after an answer, when last and in which
@@ -143,6 +148,15 @@ def reveals(player):
     at every rank, #541; a grid at species names them in its prompt too, skipped or not), with every other photo of
     the same specimen (#386: once its name was shown, any photo of it tests memory first).
     """
+    memo = reveals_memo.get()
+    if memo is None:
+        return _reveals(player)
+    if player.pk not in memo:
+        memo[player.pk] = _reveals(player)
+    return memo[player.pk]
+
+
+def _reveals(player):
     out = {}
 
     def shown(roi_id, at, mode):

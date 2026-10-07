@@ -147,9 +147,10 @@ class LoadingTests(PlayPageCase):
     def test_the_lines_take_turns_then_say_it_is_slow_and_stop_once_loaded(self):
         page = self.play_page()
         self.assertIn('const LOADING_LINES = ["Finding beetles…", "Building your gallery…"];', page)
-        self.assertIn('const LOADING_SLOW = ["This is taking a while: probably making frass…",\n'
-                      '                        "This is taking a while: waiting for the fungus garden to grow…"];',
+        self.assertIn('const LOADING_SLOW = ["Probably making frass…",\n'
+                      '                        "Waiting for the fungus garden to grow…"];',
                       page.replace("\r\n", "\n"))
+        self.assertNotIn("taking a while", page)
         # each first line three times (about 15 s), then the slow ones in turn (#569)
         self.assertIn("const LOADING_LINE_MS = 2500, LOADING_TURNS = LOADING_LINES.length * 3;", page)
         lines = page[page.index("function loadingLines()"):page.index("async function startFeed")]
