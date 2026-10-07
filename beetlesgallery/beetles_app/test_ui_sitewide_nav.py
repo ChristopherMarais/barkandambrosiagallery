@@ -176,12 +176,14 @@ class PageTitleCasingTests(SimpleTestCase):
 
     def test_the_title_case_headings_found_by_the_audit_are_now_sentence_case(self):
         checks = {
-            "accounts/my_account.html": "Account management",
+            # my_account.html and tool_classify.html later got their own restructure (acct-who/cre-title and
+            # cls-title, #618) that replaced the casing-only fix here with a shorter title; still sentence case.
+            "accounts/my_account.html": "Account",
             "beetles/data_management.html": "Data management",
             "beetles/image_browser.html": "Beetle image browser",
             "beetles/taxonomy_browser.html": "Taxonomy browser",
             "beetles/tool_annotate.html": "Image annotation",
-            "beetles/tool_classify.html": "IBBI-AI: intelligent bark beetle identifier",
+            "beetles/tool_classify.html": "IBBI-AI",
         }
         for relpath, heading in checks.items():
             with self.subTest(template=relpath):

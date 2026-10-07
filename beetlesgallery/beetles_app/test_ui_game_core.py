@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from beetlesgallery.beetles_app import game, game_levels
-from beetlesgallery.beetles_app.models import GameRound, PlayerScore
+from beetlesgallery.beetles_app.models import GameAnswer, GameRound, PlayerScore
 from beetlesgallery.beetles_app.test_game import GameCase
 from beetlesgallery.beetles_app.test_game_scoring import AFFINIS, ScoringCase
 
@@ -71,8 +71,15 @@ class HomeLeaderboardTableTests(GameCase):
         # eight columns ran off the right edge at 390px (#gh-leaderboard); now one Accuracy column, with the
         # per-game breakdown behind a tap (a sibling row, still in the page for anyone who taps)
         PlayerScore.objects.update_or_create(player=self.user, defaults={"score": 10, "viewed": 1})
+        # game_board.board() defaults to period="week" and only counts a player whose GameAnswers fall in that
+        # window (not just PlayerScore.viewed) -- give it one, so the row isn't filtered out.
+        rnd = GameRound.objects.create(player=self.user, mode="classify", items=[])
+        GameAnswer.objects.create(round=rnd, player=self.user, mode="classify", index=0, roi=self.roi(), is_check=True)
         self.client.force_login(self.user)
-        page = self.client.get(reverse("game_leaderboard"), {"period": "all"}).content.decode()
+        # game_board_table.html (board-row/-detail, per-game accuracy testids) is the Home page's leaderboard
+        # widget; the standalone Leaderboard page (game_leaderboard) got its own redesign in #618's reports-meta
+        # batch and no longer uses this shared include.
+        page = self.client.get(reverse("game_home")).content.decode()
         self.assertIn('data-testid="board-row"', page)
         self.assertIn('data-testid="board-row-detail"', page)
         self.assertIn('data-testid="accuracy"', page)
