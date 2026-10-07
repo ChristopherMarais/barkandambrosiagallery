@@ -858,6 +858,8 @@ def beetle_detail(request, beetle_id):
             "photo_boxes": photo_boxes,
             "related_specimens": related_specimens,
             "ai_suggestions": suggestions_for([beetle]).get(beetle.id, []),
+            # Edit opens the annotation page: shown only to those who may open it (tool_annotate's own check)
+            "can_annotate": has_area(request.user, BOXES),
         },
     )
 

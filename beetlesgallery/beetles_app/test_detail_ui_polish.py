@@ -82,13 +82,15 @@ class DetailUiPolishTests(PageBehaviourCase):
         elements = Outline(page).elements
         boxes_btn = elements["roi-boxes-btn"]
         self.assertEqual(boxes_btn["inside"][0], "roi-toolbar")   # beside the pager, not overlaid on the photo
-        self.assertIn("h-10", boxes_btn["class"].split())
-        self.assertIn("w-10", boxes_btn["class"].split())
+        self.assertIn("h-11", boxes_btn["class"].split())   # 44px since site-targets (#618)
+        self.assertIn("w-11", boxes_btn["class"].split())
         full = elements["roi-fullsize"]
         self.assertEqual(full["inside"][0], "roi-toolbar")
-        self.assertIn("h-10", full["class"].split())
-        self.assertEqual(full["href"], self.roi.display_url)
-        self.assertEqual(full["target"], "_blank")
+        self.assertIn("h-11", full["class"].split())
+        self.assertEqual(full["href"], self.roi.display_url)   # the fallback without scripts
+        # round 7: it opens the whole photo over the page, not a new tab
+        self.assertNotIn("target", full)
+        self.assertEqual(full["aria-controls"], "photo-viewer")
 
     def test_the_roi_pager_moved_into_the_toolbar(self):
         # Boxed siblings are ordered by id (not creation order), so this beetle may land either side of the one
@@ -100,7 +102,7 @@ class DetailUiPolishTests(PageBehaviourCase):
         self.assertTrue(found)
         for link in found:
             self.assertEqual(link["inside"][0], "roi-toolbar")
-            self.assertIn("h-10", link["class"].split())
+            self.assertIn("h-11", link["class"].split())
         self.assertIn("ROI", page[page.index('data-testid="roi-toolbar"'):page.index('data-testid="roi-toolbar"') + 600])
 
     # --- detail-actions ------------------------------------------------------------------------------------------
