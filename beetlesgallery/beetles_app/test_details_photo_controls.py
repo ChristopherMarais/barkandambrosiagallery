@@ -146,7 +146,7 @@ class DetailsPhotoControlsTests(PageBehaviourCase):
         elements = Outline(page).elements
         flag, menu = elements["report-roi-btn"], elements["report-roi-menu"]
         self.assertEqual((flag["aria-label"], flag["title"]), ("Flag this",) * 2)
-        self.assertLessEqual({"h-10", "w-10", "rounded-lg"}, set(flag["class"].split()))   # like the toolbar's others
+        self.assertLessEqual({"h-11", "w-11", "rounded-lg"}, set(flag["class"].split()))   # like the toolbar's others
         start = page.index('id="report-roi-btn"')
         inside = page[page.index(">", start) + 1:page.index("</button>", start)]
         self.assertIn('class="fi fi-rr-flag"', inside)

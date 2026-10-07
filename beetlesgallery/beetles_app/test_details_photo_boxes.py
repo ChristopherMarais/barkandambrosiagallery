@@ -88,7 +88,7 @@ class DetailsPhotoBoxesTests(PageBehaviourCase):
         switch = elements["roi-boxes-btn"]
         self.assertEqual((switch["type"], switch["aria-pressed"]), ("button", "true"))
         self.assertEqual((switch["aria-label"], switch["title"]), ("Hide the boxes",) * 2)
-        self.assertLessEqual({"flex", "h-10", "w-10", "rounded-lg"}, set(switch["class"].split()))
+        self.assertLessEqual({"flex", "h-11", "w-11", "rounded-lg"}, set(switch["class"].split()))
         self.assertEqual(switch["inside"][0], "roi-toolbar")   # in the toolbar under the photo, not on it (#618)
         self.assertEqual(elements["roi-photo"]["data-box"], "shown")
         for code in ('#roi-photo[data-box="hidden"] #roi-boxes { display: none; }',

@@ -179,7 +179,7 @@
               {% if beetle.bbox_x is not None %}
                 {# FLAG: sends this beetle to the curators, as Report does in the game; only while its box shows (see the CSS). Its menu opens upward, over the photo. #}
                 <div id="report-roi-wrap" class="relative">
-                  <button type="button" id="report-roi-btn" class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" aria-haspopup="menu" aria-expanded="false" aria-label="Flag this" title="Flag this" data-testid="report-roi"><i class="fi fi-rr-flag" aria-hidden="true"></i></button>
+                  <button type="button" id="report-roi-btn" class="flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" aria-haspopup="menu" aria-expanded="false" aria-label="Flag this" title="Flag this" data-testid="report-roi"><i class="fi fi-rr-flag" aria-hidden="true"></i></button>
                   <div id="report-roi-menu" class="hidden absolute bottom-12 right-0 z-20 scroll-mt-24 p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Flag this" data-url="{% url 'report_roi' beetle.id %}">
                     <div class="px-2 py-1 text-xs font-semibold text-gray-500">Flag this</div>
                     {% for value, label in report_reasons %}
