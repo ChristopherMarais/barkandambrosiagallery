@@ -187,6 +187,15 @@
         outline: 2px solid var(--color-gray-600);
         outline-offset: 2px;
     }
+
+    /* Icons sit dead-centre in their pills and round buttons (owner): each glyph is its own line-height-1 box,
+       centred both ways, so no margin nudges. Utilities (hidden, block, flex...) still win, being a later layer. */
+    .fi {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+    }
 }
 
 @layer base {
@@ -512,6 +521,6 @@
 .rv-verdict.wrong { background: #ef4444; }
 .rv-verdict.partly { background: #f97316; }
 .rv-verdict.right { background: #22c55e; }
-.rv-pill { margin-left: auto; padding: 0.0625rem 0.5rem; border-radius: 9999px; background: #f3f4f6; color: #374151; font-size: 0.6875rem; font-weight: 600; white-space: nowrap; }
+.rv-pill { display: inline-flex; align-items: center; justify-content: center; line-height: 1.25; margin-left: auto; padding: 0.125rem 0.5rem; border-radius: 9999px; background: #f3f4f6; color: #374151; font-size: 0.6875rem; font-weight: 600; white-space: nowrap; }
 .rv-line { margin-top: 0.25rem; font-size: 0.8125rem; color: #374151; }
 .rv-line .fi { vertical-align: -0.125em; }

@@ -3065,6 +3065,12 @@
     outline: 2px solid var(--color-gray-600);
     outline-offset: 2px;
   }
+  .fi {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
   [data-theme="light"] {
     --background: 238, 242, 248;
     --primary: 255, 255, 255;
@@ -3637,8 +3643,12 @@
   background: #22c55e;
 }
 .rv-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.25;
   margin-left: auto;
-  padding: 0.0625rem 0.5rem;
+  padding: 0.125rem 0.5rem;
   border-radius: 9999px;
   background: #f3f4f6;
   color: #374151;
