@@ -284,7 +284,9 @@ class OnboardingTests(GameCase):
         self.assertNotIn("photo-edge", page)                 # past the photo's edge is plain grey: no label needed
 
     def test_the_report_button_is_labelled(self):
-        self.assertIn("<span>Flag</span>", self.page())
+        # icon-only on the photo now (#play-flag), its name still reaches a screen reader
+        self.assertIn('<span class="sr-only">Flag</span>', self.page())
+        self.assertIn('aria-label="Flag this photo"', self.page())
 
     def test_every_photo_has_a_report_button_and_the_help_says_where(self):
         from pathlib import Path

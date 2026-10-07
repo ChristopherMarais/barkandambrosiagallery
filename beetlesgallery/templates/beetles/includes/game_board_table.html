@@ -1,4 +1,6 @@
-{% load beetle_tags %}{# rows from game_board.board: position, username, level, score, each game's accuracy (#543), viewed, is_expert, discoveries. On phones the game columns take short names and less padding, so the table stays one screen wide. #}
+{% load beetle_tags %}{# rows from game_board.board: position, username, level, score, overall accuracy, each game's
+   accuracy (#543), viewed, is_expert, discoveries. Eight columns ran off the right edge on a phone (#gh-leaderboard):
+   now each row shows rank, player, score and overall accuracy only; tap a row to open its per-game breakdown. #}
 <div class="border border-gray-200 rounded-lg overflow-x-auto">
   <table class="w-full text-sm" data-testid="board-table">
     <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
@@ -6,34 +8,40 @@
         <th class="py-2 pl-3 pr-1 text-left w-8 sm:w-10">#</th>
         <th class="py-2 px-1.5 sm:px-2 text-left">Player</th>
         <th class="py-2 px-1.5 sm:px-2 text-right">Score</th>
-        <th class="py-2 px-1.5 sm:px-2 text-right" title="Naming accuracy"><span class="sm:hidden">Name</span><span class="hidden sm:inline">Naming</span></th>
-        <th class="py-2 px-1.5 sm:px-2 text-right" title="Similarity accuracy"><span class="sm:hidden">Sim.</span><span class="hidden sm:inline">Similarity</span></th>
-        <th class="py-2 px-1.5 sm:px-2 text-right" title="Odd One Out accuracy"><span class="sm:hidden">Odd</span><span class="hidden sm:inline">Odd One Out</span></th>
-        <th class="py-2 px-1.5 sm:px-2 text-right" title="Find Them All accuracy: perfect grids"><span class="sm:hidden">Find</span><span class="hidden sm:inline">Find Them All</span></th>
-        <th class="py-2 pl-1 pr-3 text-right whitespace-nowrap"><span class="sm:hidden">Seen</span><span class="hidden sm:inline">Beetles seen</span></th>
+        <th class="py-2 px-1.5 sm:px-2 text-right" title="Accuracy on checked beetles">Accuracy</th>
+        <th class="py-2 pl-1 pr-3 w-8"><span class="sr-only">Per-game breakdown</span></th>
       </tr>
     </thead>
     <tbody>
       {% for row in rows %}
-      <tr class="border-t border-gray-100 {% if row.player_id == user.id %}bg-gray-100 font-semibold{% endif %}">
+      <tr class="border-t border-gray-100 cursor-pointer {% if row.player_id == user.id %}bg-gray-100 font-semibold{% endif %}"
+          data-testid="board-row" onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('.board-row-chev').classList.toggle('fi-rr-angle-small-down'); this.querySelector('.board-row-chev').classList.toggle('fi-rr-angle-small-up')">
         <td class="py-2.5 pl-3 pr-1 text-gray-400 tabular-nums">{{ row.position }}</td>
         <td class="py-2.5 px-1.5 sm:px-2">
           <span class="inline-flex items-center gap-1 flex-wrap">
             {% include "beetles/includes/game_level_badge.html" with level=row.level name=row.level_name %}
-            <a href="{% url 'game_profile' row.player_id %}" class="text-gray-900 underline decoration-gray-300 hover:decoration-gray-900">{{ row.username }}</a>
+            <a href="{% url 'game_profile' row.player_id %}" class="text-gray-900 underline decoration-gray-300 hover:decoration-gray-900" onclick="event.stopPropagation()">{{ row.username }}</a>
             {% if row.is_expert %}<i class="fi fi-rr-shield-check text-green-600" title="Naming expert in a taxon"></i>{% endif %}
             {% if row.discoveries %}<i class="fi fi-rr-sparkles text-amber-600" title="New species finder: {{ row.discoveries }}" data-testid="finder-badge"></i>{% endif %}
           </span>
         </td>
         <td class="py-2.5 px-1.5 sm:px-2 text-right tabular-nums">{{ row.score|digit_groups }}</td>
-        <td class="py-2.5 px-1.5 sm:px-2 text-right tabular-nums" data-testid="id-accuracy">{% if row.id_accuracy is not None %}{% widthratio row.id_accuracy 1 100 %}%{% else %}<span class="text-gray-300">&ndash;</span>{% endif %}</td>
-        <td class="py-2.5 px-1.5 sm:px-2 text-right tabular-nums" data-testid="sim-accuracy">{% if row.sim_accuracy is not None %}{% widthratio row.sim_accuracy 1 100 %}%{% else %}<span class="text-gray-300">&ndash;</span>{% endif %}</td>
-        <td class="py-2.5 px-1.5 sm:px-2 text-right tabular-nums" data-testid="odd-accuracy">{% if row.odd_accuracy is not None %}{% widthratio row.odd_accuracy 1 100 %}%{% else %}<span class="text-gray-300">&ndash;</span>{% endif %}</td>
-        <td class="py-2.5 px-1.5 sm:px-2 text-right tabular-nums" data-testid="select-accuracy">{% if row.select_accuracy is not None %}{% widthratio row.select_accuracy 1 100 %}%{% else %}<span class="text-gray-300">&ndash;</span>{% endif %}</td>
-        <td class="py-2.5 pl-1 pr-3 text-right tabular-nums">{{ row.viewed|digit_groups }}</td>
+        <td class="py-2.5 px-1.5 sm:px-2 text-right tabular-nums" data-testid="accuracy">{% if row.accuracy is not None %}{% widthratio row.accuracy 1 100 %}%{% else %}<span class="text-gray-300">&ndash;</span>{% endif %}</td>
+        <td class="py-2.5 pl-1 pr-3 text-right text-gray-400"><i class="fi fi-rr-angle-small-down board-row-chev" aria-hidden="true"></i></td>
+      </tr>
+      <tr class="hidden border-t border-gray-100 bg-gray-50" data-testid="board-row-detail">
+        <td colspan="5" class="py-2.5 px-3">
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs text-gray-600">
+            <div data-testid="id-accuracy" title="Naming accuracy"><span class="sm:hidden">Name</span><span class="hidden sm:inline">Naming</span>: {% if row.id_accuracy is not None %}{% widthratio row.id_accuracy 1 100 %}%{% else %}&ndash;{% endif %}</div>
+            <div data-testid="sim-accuracy" title="Similarity accuracy"><span class="sm:hidden">Sim.</span><span class="hidden sm:inline">Similarity</span>: {% if row.sim_accuracy is not None %}{% widthratio row.sim_accuracy 1 100 %}%{% else %}&ndash;{% endif %}</div>
+            <div data-testid="odd-accuracy" title="Odd One Out accuracy"><span class="sm:hidden">Odd</span><span class="hidden sm:inline">Odd One Out</span>: {% if row.odd_accuracy is not None %}{% widthratio row.odd_accuracy 1 100 %}%{% else %}&ndash;{% endif %}</div>
+            <div data-testid="select-accuracy" title="Find Them All accuracy: perfect grids"><span class="sm:hidden">Find</span><span class="hidden sm:inline">Find Them All</span>: {% if row.select_accuracy is not None %}{% widthratio row.select_accuracy 1 100 %}%{% else %}&ndash;{% endif %}</div>
+            <div><span class="sm:hidden">Seen</span><span class="hidden sm:inline">Beetles seen</span>: {{ row.viewed|digit_groups }}</div>
+          </div>
+        </td>
       </tr>
       {% empty %}
-      <tr><td colspan="8" class="p-4 text-gray-500">No players to show.</td></tr>
+      <tr><td colspan="5" class="p-4 text-gray-500">No players to show.</td></tr>
       {% endfor %}
     </tbody>
   </table>

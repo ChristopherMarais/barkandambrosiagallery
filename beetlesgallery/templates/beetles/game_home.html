@@ -51,7 +51,7 @@
       <div class="h-full bg-gray-600 rounded-full" style="width: {% widthratio rewards.level_progress 1 100 %}%"></div>
     </div>
     <div class="mt-1.5 text-xs text-gray-500">
-      {% if not rewards.next %}Top level{% else %}Level {{ rewards.next.level }}: {% if rewards.to_next %}{{ rewards.to_next }} pts{% endif %}{% if rewards.to_next and rewards.next.rating_short %} + {% endif %}{% if rewards.next.rating_short %}{% widthratio rewards.next.rating_needed 1 100 %}% reliability{% endif %}{% if not rewards.to_next and not rewards.next.rating_short %}almost there{% endif %}{% if rewards.next.perks %} &middot; unlocks {{ rewards.next.perks|join:", "|lower }}{% endif %}{% endif %}
+      {% if not rewards.next %}Top level{% else %}{% if rewards.to_next %}{{ rewards.to_next|digit_groups }} pts to {{ rewards.next.name }}{% elif rewards.next.rating_short %}{% widthratio rewards.next.rating_needed 1 100 %}% reliability to {{ rewards.next.name }}{% else %}Almost at {{ rewards.next.name }}{% endif %}{% if rewards.next.perks %} &mdash; unlocks {{ rewards.next.perks|join:", "|lower }}{% endif %}{% endif %}
     </div>
   </a>
 
@@ -62,7 +62,8 @@
     </a>
     <a href="{% url 'game_history' %}?day=today" class="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex items-center gap-2 hover:border-gray-300 hover:bg-gray-100 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900" title="Your daily goal adapts to how much you play, like a step goal: it rises when you beat it and eases when you don't (never below {{ goal_floor }})." data-testid="daily-goal">
       <i class="fi fi-rr-bullseye-arrow {% if rewards.goal_met %}text-green-600{% else %}text-gray-400{% endif %}"></i>
-      <span class="text-sm font-semibold text-gray-900">{{ rewards.today }}/{{ rewards.goal }} today</span>
+      {# "79 today · goal 20", not "79/20 today" (reads like a fraction over 100%, #gh-today) #}
+      <span class="text-sm font-semibold text-gray-900">{{ rewards.today }} today &middot; goal {{ rewards.goal }}{% if rewards.goal_met %} <i class="fi fi-rr-check text-green-600"></i>{% endif %}</span>
     </a>
   </div>
 
@@ -87,9 +88,10 @@
   </p>
   {% endif %}
 
-  <!-- Everything else, one tap away -->
-  <nav class="grid gap-2 mb-6 text-center text-xs font-medium text-gray-700" style="grid-template-columns: repeat(5, minmax(0, 1fr))" aria-label="More">
-    <a href="{% url 'game_leaderboard' %}" class="py-3 rounded-2xl border border-gray-200 hover:bg-gray-50"><i class="fi fi-rr-trophy block text-xl text-gray-600"></i>Leader&shy;board</a>
+  <!-- Everything else, one tap away. Two rows of three on a phone (five across breaks "Leaderboard" mid-word,
+       #gh-icons-row); one row of five from a tablet up. -->
+  <nav class="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-6 text-center text-xs font-medium text-gray-700" aria-label="More">
+    <a href="{% url 'game_leaderboard' %}" class="py-3 rounded-2xl border border-gray-200 hover:bg-gray-50"><i class="fi fi-rr-trophy block text-xl text-gray-600"></i>Leaderboard</a>
     <a href="{% url 'game_unlocks' %}" class="py-3 rounded-2xl border border-gray-200 hover:bg-gray-50"><i class="fi fi-rr-unlock block text-xl text-gray-600"></i>Unlocks</a>
     <a href="{% url 'game_expertise' %}" class="py-3 rounded-2xl border border-gray-200 hover:bg-gray-50"><i class="fi fi-rr-sitemap block text-xl text-gray-600"></i>Expertise</a>
     <a href="{% url 'game_profile' user.id %}" class="py-3 rounded-2xl border border-gray-200 hover:bg-gray-50"><i class="fi fi-rr-medal block text-xl text-gray-600"></i>Badges</a>

@@ -85,6 +85,13 @@ def game_home(request):
     # this week's top players (#497); while the week is empty, the home says so and shows last week's top three
     board = game_board.board(limit=5)
     rewards = game_rewards.progress(request.user)
+    # Locked games (not yet unlocked by level) look the same as unplayed ones without this: both show "–"
+    # and "0 pts" (gh-locked). Mark each game's stats so the card can tell the two apart.
+    games_stats = game_board.mode_stats([request.user.id])[request.user.id]
+    unlocked_games = set(game_levels.games(rewards["perks"]))
+    for g in game_levels.GAMES:
+        games_stats[g]["locked"] = g not in unlocked_games
+        games_stats[g]["unlock_level"] = game_levels.game_level(g)
     return render(request, "beetles/game_home.html", {
         "last_session": last_session,
         "checked": checked, "checked_new": checked_new, "checked_change": checked_change,
@@ -95,7 +102,7 @@ def game_home(request):
         "board": board, "last_week": [] if board else game_board.last_week_top(),
         "standing": game_board.accuracy_standing(request.user),
         "goal_floor": game_rewards.daily_goal(),
-        "games": game_board.mode_stats([request.user.id])[request.user.id],
+        "games": games_stats,
         # the public address in production (SITE_URL), this server's own when developing
         "share_url": (request.build_absolute_uri(reverse("game_home")) if settings.DEBUG
                       else settings.SITE_URL.rstrip("/") + reverse("game_home")),

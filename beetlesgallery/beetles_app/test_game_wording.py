@@ -142,7 +142,7 @@ class LoadingTests(PlayPageCase):
     def test_the_loading_screen_starts_with_finding_beetles(self):
         page = self.play_page()
         loading = page[page.index('id="loading"'):page.index("<!-- The feed -->")]
-        self.assertIn('<p id="loading-line" class="mt-2 text-sm" data-testid="loading-line">Finding beetles&hellip;</p>',
+        self.assertIn('<p id="loading-line" class="mt-2" data-testid="loading-line" aria-live="off">Finding beetles&hellip;</p>',
                       loading)
 
     def test_the_lines_take_turns_and_stop_once_loaded(self):

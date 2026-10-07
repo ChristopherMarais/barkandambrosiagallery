@@ -62,7 +62,7 @@ class WeeklyHomeBoardTests(BoardCase):
         self.assertIn('data-testid="last-week"', page)
         self.assertIn(f"({digit_groups(1234)})", page)   # grouped in threes
         self.assertIn(f'href="{reverse("game_profile", args=[self.bob.id])}"', page)
-        self.assertIn("Leader&shy;board</a>", page)   # the way to the full board is always there
+        self.assertIn("Leaderboard</a>", page)   # the way to the full board is always there (a full word, #gh-icons-row)
         self.assertIn('data-testid="podium"', page)   # and last week's podium still pops up
 
     def test_after_a_quiet_week_just_the_line(self):
@@ -72,7 +72,7 @@ class WeeklyHomeBoardTests(BoardCase):
         page = response.content.decode()
         self.assertIn("No scores yet this week.", page)
         self.assertNotIn('data-testid="last-week"', page)
-        self.assertIn("Leader&shy;board</a>", page)
+        self.assertIn("Leaderboard</a>", page)
 
     def test_last_weeks_top_matches_the_weekly_winners(self):
         for player, pts in ((self.cy, 40), (self.bob, 40), (self.ann, 60), (self.dee, -5)):
