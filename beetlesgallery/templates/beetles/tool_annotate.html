@@ -319,6 +319,8 @@
             <p class="text-xs text-gray-500" id="canvas-subtitle">Please select an image to begin annotating</p>
             <div id="canvas-meta" class="hidden mt-0.5 flex items-center gap-2">
               <span id="canvas-status-pill" class="hidden inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"></span>
+              {# #618 ann-blue: every box is dark grey (people draw them); its line says whether it is validated. #}
+              <span class="text-[11px] text-gray-500" data-testid="box-key">Solid box: validated &middot; dashed: not yet</span>
             </div>
           </div>
         </div>
@@ -2598,6 +2600,7 @@ async function saveBoxGeometryAPI(idx) {
 
 function drawCanvas() {
   if (!state.currentImageObj || !ctx) return;
+  const BOX_INK = '#111827';   // gray-900: people's boxes (#618 ann-blue)
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(state.currentImageObj, 0, 0, canvas.width, canvas.height);
 
@@ -2620,38 +2623,39 @@ function drawCanvas() {
     const isSel = (i === state.selectedBoxIndex);
     const isSyncing = b.is_syncing === true;
 
-    // Colour tells you who drew it: blue is IBBI-AI's colour everywhere else on the site, so a box someone is
-    // drawing or has selected here (always a person, on this page) is gray-900, not blue (#618 ann-blue).
-    // Validated = Green, Unvalidated = Amber.
-    const boxColor = (isSyncing || isSel) ? '#111827' : (b.bbox_is_validated ? '#10b981' : '#f59e0b');
+    // Colour tells you who drew it (#618 ann-blue): blue is IBBI-AI's colour, so every box here is gray-900, in
+    // every state. The ROI records don't say whether a box came from IBBI-AI or a person (bbox_created_by is the
+    // person either way), so none is drawn blue. Whether it is validated shows in the line instead: solid when
+    // validated, dashed when not yet, and in the number badge: filled when validated, an outline when not yet.
+    // The selected box has a thicker line; one still saving is faded, with "..." in its badge.
+    const boxColor = BOX_INK;
+    const validated = !!b.bbox_is_validated;
     const bx = b.bbox_x * W;
     const by = b.bbox_y * H;
     const bw = b.bbox_width * W;
     const bh = b.bbox_height * H;
 
     ctx.strokeStyle = boxColor;
-    ctx.lineWidth = 2 / state.zoom;
-
-    // Apply dashed line and partial transparency if waiting on network
-    if (isSyncing) {
-        ctx.setLineDash([4/state.zoom, 4/state.zoom]);
-        ctx.globalAlpha = 0.6;
-    } else {
-        ctx.setLineDash([]);
-        ctx.globalAlpha = 1.0;
-    }
+    ctx.lineWidth = (isSel ? 3 : 2) / state.zoom;
+    ctx.setLineDash(validated ? [] : [6/state.zoom, 4/state.zoom]);
+    ctx.globalAlpha = isSyncing ? 0.6 : 1.0;   // partial transparency while waiting on the network
 
     ctx.strokeRect(bx, by, bw, bh);
 
-    ctx.fillStyle = boxColor + '20';
+    ctx.fillStyle = boxColor + (isSel ? '30' : '18');
     ctx.fillRect(bx, by, bw, bh);
 
-    // Number Pill
-    ctx.fillStyle = boxColor;
+    // Number badge: filled when validated, a white disc with a dark ring when not yet
+    ctx.setLineDash([]);
     ctx.beginPath();
     ctx.arc(bx + badgeR, by - badgeR - (2/state.zoom), badgeR, 0, 2*Math.PI);
+    ctx.fillStyle = validated ? boxColor : '#fff';
     ctx.fill();
-    ctx.fillStyle = '#fff';
+    if (!validated) {
+        ctx.lineWidth = 1.5 / state.zoom;
+        ctx.stroke();
+    }
+    ctx.fillStyle = validated ? '#fff' : boxColor;
     ctx.font = `bold ${10/state.zoom}px Arial`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
@@ -2668,7 +2672,7 @@ function drawCanvas() {
   });
 
   if (state.interactionMode === 'drawing') {
-    ctx.strokeStyle = '#111827'; // gray-900 while drawing: a person is drawing it
+    ctx.strokeStyle = BOX_INK; // gray-900 while drawing: a person is drawing it
     ctx.lineWidth = 2 / state.zoom;
     ctx.setLineDash([6/state.zoom, 4/state.zoom]); // Keep it dashed
     ctx.strokeRect(state.startX, state.startY, state.startBoxState.w, state.startBoxState.h);

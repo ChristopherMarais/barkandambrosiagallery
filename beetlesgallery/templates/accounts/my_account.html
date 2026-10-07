@@ -15,9 +15,9 @@
         {% if request.user.is_superuser %}
           <span class="inline-flex items-center rounded-full bg-gray-700 px-2.5 py-0.5 text-xs font-medium text-white whitespace-nowrap">Superuser</span>
         {% elif request.user.is_staff %}
-          <span class="inline-flex items-center rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium text-gray-800 whitespace-nowrap">Staff</span>
+          <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 whitespace-nowrap">Staff</span>
         {% else %}
-          <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 whitespace-nowrap">Standard</span>
+          <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 whitespace-nowrap">Standard</span>
         {% endif %}
         {% if game_player %}{% include "beetles/includes/game_level_badge.html" with level=game_player.level name=game_player.name %}{% endif %}
       </div>
@@ -93,9 +93,9 @@
           {% if u.is_superuser %}
             <span class="inline-flex items-center rounded-full bg-gray-700 px-2.5 py-0.5 text-xs font-medium text-white whitespace-nowrap">Superuser</span>
           {% elif u.is_staff %}
-            <span class="inline-flex items-center rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium text-gray-800 whitespace-nowrap">Staff</span>
+            <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 whitespace-nowrap">Staff</span>
           {% else %}
-            <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 whitespace-nowrap">Standard</span>
+            <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 whitespace-nowrap">Standard</span>
           {% endif %}
           <i class="fi fi-rr-angle-right text-gray-400"></i>
         </button>
@@ -137,9 +137,9 @@
                     {% if u.is_superuser %}
                       <span class="inline-flex items-center rounded-full bg-gray-700 px-2.5 py-0.5 text-xs font-medium text-white">Superuser</span>
                     {% elif u.is_staff %}
-                      <span class="inline-flex items-center rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium text-gray-800">Staff</span>
+                      <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">Staff</span>
                     {% else %}
-                      <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">Standard</span>
+                      <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">Standard</span>
                     {% endif %}
                     {% if u.granted_areas and not u.is_superuser %}<span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800" title="{{ u.granted_areas }}">+ extra access</span>{% endif %}
                   </div>

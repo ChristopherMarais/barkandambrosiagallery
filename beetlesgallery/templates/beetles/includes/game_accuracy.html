@@ -1,18 +1,22 @@
-{# Accuracy among all players: a histogram, the average, you, your percentile and its word on the site's one scale (game_board.ACCURACY_TIERS). Needs ``standing`` from game_board.accuracy_standing. #}
+{% comment %}
+Accuracy among all players: a histogram, the average, you and your rank. Needs ``standing`` from game_board.accuracy_standing.
+One number, one colour (#site-meaning-85): the accuracy is coloured only by its own step on the site's scale
+(game_scale.value_step); the comparison with other players is a grey rank chip ("Top 20%").
+{% endcomment %}
 {% with me=standing.me %}
 <div class="p-4 bg-gray-50 border border-gray-100 rounded-2xl" data-testid="accuracy-standing">
   <div class="flex items-center gap-2 mb-3">
     <span class="font-semibold text-gray-900">Accuracy</span>
     {% if me %}
-    {% if me.tier != 'none' %}<span class="px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide scale-chip-{{ me.tier }}" data-testid="accuracy-tier">{{ me.tier_name }}</span>{% endif %}
-    <span class="ml-auto text-sm font-semibold text-gray-900 tabular-nums">{% widthratio me.accuracy 1 100 %}%</span>
+    {% if me.rank %}<span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-700 border border-gray-200" title="Better than {{ me.percentile }}% of players" data-testid="accuracy-rank">{{ me.rank }}</span>{% endif %}
+    <span class="ml-auto text-sm font-semibold tabular-nums scale-{{ me.step }}" data-testid="accuracy-value">{% widthratio me.accuracy 1 100 %}%</span>
     {% endif %}
   </div>
   {% if standing.players %}
   <div class="relative h-16 mt-5">
     <div class="absolute inset-0 top-0 flex items-end gap-0.5" aria-hidden="true">
       {% for b in standing.bins %}
-      <div class="flex-1 rounded-t-sm {% if me and forloop.counter0 == me.bin %}{% if me.tier == 'none' %}bg-gray-500{% else %}scale-fill-{{ me.tier }}{% endif %}{% else %}bg-gray-300{% endif %}"
+      <div class="flex-1 rounded-t-sm {% if me and forloop.counter0 == me.bin %}{% if me.step == 'none' %}bg-gray-500{% else %}scale-fill-{{ me.step }}{% endif %}{% else %}bg-gray-300{% endif %}"
         style="height: {{ b.height }}%; min-height: {% if b.count %}3px{% else %}1px{% endif %}"></div>
       {% endfor %}
     </div>

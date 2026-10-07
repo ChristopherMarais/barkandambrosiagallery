@@ -405,18 +405,6 @@ def _weight_label(weight):
     return int(weight) if float(weight).is_integer() else weight
 
 
-def _classify_examples():
-    """The worked examples on the How it works page, with today's settings."""
-    w = game_scoring.classify_weight()
-
-    def points(right, named=4):
-        results = {r: i < right for i, r in enumerate(game.RANKS[:named])}
-        return sum(game_scoring.classify_points(results).values()) * w
-
-    nums = {"overreach": points(3), "genus": points(3, named=3), "species": points(4)}
-    return {k: _weight_label(round(v, 1)) for k, v in nums.items()}
-
-
 @login_required
 def game_how(request):
     """How the game works and how it is scored, in plain words."""
@@ -426,18 +414,13 @@ def game_how(request):
         "min_experts": game.game_setting("GAME_AUTO_APPLY_MIN_EXPERTS", 2),
         "per_species": game_trust.per_species(), "children_share": game_trust.children_share(),
         "trust_accuracy": game_trust.min_accuracy(),
-        "classify_weight": _weight_label(game_scoring.classify_weight()),
-        "rank_points": {r: p * game_scoring.classify_weight() for r, p in game_scoring.RANK_POINTS.items()},
-        "classify_examples": _classify_examples(), "pair_points": [
-            (game_scoring.DEPTH_NAME[d], p) for d, p in sorted(game_scoring.PAIR_POINTS.items())],
+        # the short version for players (#618 how-dup); the point tables are on the Scoring page
         "confidence": round(game_scoring.confidence() * 100),
-        "wrong_cost": _weight_label(round(game_scoring.wrong_cost(), 1)),   # what a wrong claim costs, × its points
         "cap": int(game.game_setting("GAME_POINTS_CONSENSUS_CAP", 0.6) * 100),
         "unsure": game.game_setting("GAME_POINTS_UNSURE", 0.25),
         "rank_steps": game_levels.rank_steps(), "ranks_all_level": game_levels.RANKS_ALL_FROM_LEVEL,
         "odd_level": game_levels.game_level("odd"), "identify_level": game_levels.game_level("classify"),
         "select_level": game_levels.game_level("select"),
-        "odd_weight": _weight_label(game.game_setting("GAME_POINTS_ODD_WEIGHT", 1.5)),
         "odd_skip": game.game_setting("GAME_POINTS_ODD_SKIP", 0.25),
         "difficulty_spread": round(game_scoring.difficulty_spread() * 100),
         "reveal_hours": _weight_label(game.game_setting("GAME_REVEAL_COOLDOWN_HOURS", 2)),

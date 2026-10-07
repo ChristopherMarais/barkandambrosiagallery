@@ -15,7 +15,7 @@ class StandingTests(ScoringCase):
         s = game_board.accuracy_standing(self.user)
         self.assertEqual(s["players"], 6)
         self.assertEqual(s["me"]["percentile"], 100)
-        self.assertEqual((s["me"]["tier"], s["me"]["tier_name"]), ("excellent", "Excellent"))
+        self.assertEqual((s["me"]["step"], s["me"]["rank"]), ("excellent", "Top 1%"))
         self.assertEqual(sum(b["count"] for b in s["bins"]), 6)
         self.assertAlmostEqual(s["average"], (0.3 + 0.5 + 0.6 + 0.7 + 0.9 + 0.95) / 6)
 

@@ -24,9 +24,9 @@
   <div class="mb-10 bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-xs">
 
     <h2 class="text-lg font-semibold text-gray-800">Data Actions</h2>
+    {# #618 data-actions / data-browse: one sentence; each row below says what its action does. Downloading is navigation, a link here rather than a row. #}
     <p class="text-sm text-gray-600 mt-1 max-w-2xl" data-testid="data-actions-intro">
-      {% if areas.upload %}<strong>Upload New Data</strong> adds new images and their details. <strong>Update Metadata</strong> changes records that are already here.
-      {% endif %}To download, find the images in the gallery and use its download buttons.
+      To download images, use the <a href="{% url 'beetles_image_browser' %}" class="font-semibold text-gray-800 underline hover:text-black" data-testid="data-browse-link">Image Browser</a>.
       {% if areas.upload or areas.update %}<button type="button" onclick="openModal('modal-field-definitions')"
         class="text-gray-500 underline hover:text-gray-800">Field definitions</button>.{% endif %}
     </p>
@@ -84,13 +84,6 @@
       {% endif %}
     </div>
     {% endif %}
-
-    {# All Users: Download Link #}
-    <a href="{% url 'beetles_image_browser' %}"
-      class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-600 hover:text-gray-900">
-      <span>Browse gallery to download</span>
-      <i class="fi fi-rr-angle-small-right text-xs"></i>
-    </a>
   </div>
 
   {# --- SECTION: TAXONOMY REFERENCE MANAGEMENT (Admin/Superusers Only) --- #}
