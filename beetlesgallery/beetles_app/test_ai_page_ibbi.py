@@ -67,10 +67,13 @@ class AiPageTests(PageBehaviourCase):
         self.assertLess(marker, page.index('id="modelSelect"'))
 
     def test_the_server_note_is_on_top_and_the_ibbi_text_under_the_tool(self):
+        # round 8: the note is the muted line under Classify, above the photo
         page = self.page()
-        server, tool, results, about = (page.index(marker) for marker in (
-            'data-testid="server-info"', 'id="classifyForm"', 'id="analysisDetails"', 'data-testid="ibbi-about"'))
-        self.assertLess(server, tool)
+        tool, server, photo, results, about = (page.index(marker) for marker in (
+            'id="classifyForm"', 'data-testid="server-info"', 'id="canvasContainer"', 'id="analysisDetails"',
+            'data-testid="ibbi-about"'))
+        self.assertLess(tool, server)
+        self.assertLess(server, photo)
         self.assertLess(results, about)
         for text in ("our open-source package", "Treat the answer as a screening tool"):
             self.assertEqual(page.count(text), 1, text)
@@ -78,19 +81,21 @@ class AiPageTests(PageBehaviourCase):
 
     def test_it_is_called_ibbi_ai_not_the_classifier(self):
         page = self.page()
-        # "IBBI-AI" is the title; "Intelligent Bark Beetle Identifier" is the eyebrow line above it (#618: one line,
-        # not a two-line heading)
+        # "IBBI-AI" is the title; "Intelligent Bark Beetle Identifier" is the subtitle right under it (owner, round 8)
         self.assertIn('<h1 class="page-title">IBBI-AI</h1>', page)
-        self.assertIn("Intelligent Bark Beetle Identifier", page[:page.index('<h1 class="page-title">IBBI-AI</h1>')])
+        title = page.index('<h1 class="page-title">IBBI-AI</h1>')
+        self.assertIn("Intelligent Bark Beetle Identifier", page[title:title + 300])
         self.assertIn("Before you use IBBI-AI", page)
         self.assertIn("IBBI-AI is a screening tool", page)
-        self.assertIn("so you can try IBBI-AI", page)
+        self.assertNotIn("so you can try IBBI-AI", page)   # round 8: less text by the examples
         self.assertNotRegex(page, r"(?i)\bthe classifier\b")
 
     def test_after_a_result_the_page_says_what_happened_to_the_photo(self):
         page = self.page()
         panel = page[page.index('id="analysisDetails"'):]
-        self.assertLess(panel.index('id="savedNote"'), panel.index('id="ranksPanel"'))   # one line by the result
+        # one line by the result, after the plot (round 8: the plot comes first, right under the slider)
+        self.assertLess(panel.index('id="probsChart"'), panel.index('id="ranksPanel"'))
+        self.assertLess(panel.index('id="ranksPanel"'), panel.index('id="savedNote"'))
         script = page[page.index("function showSaved(data)"):]
         script = script[:script.index("\n    }")]
         for status, words in (("saved", "added to the gallery, unchecked"), ("already_on_platform", "already in the gallery"),

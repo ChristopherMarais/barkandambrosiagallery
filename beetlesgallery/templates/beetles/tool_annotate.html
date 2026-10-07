@@ -1976,7 +1976,7 @@ async function toggleLabelHistory(el) {
   if (!el.open) { state.labelHistoryOpen.delete(roiId); return; }
   state.labelHistoryOpen.add(roiId);
   const list = el.querySelector('[data-role="list"]');
-  list.innerHTML = '<li class="text-gray-500">Loading…</li>';
+  list.innerHTML = '<li class="text-gray-500 animate-pulse">Loading…</li>';
   try {
     const res = await fetch(`/api/v1/beetles/${encodeURIComponent(roiId)}/label-history/`, { headers: { 'X-CSRFToken': csrftoken } });
     if (!res.ok) throw new Error();
