@@ -128,7 +128,7 @@ class LoadingTests(SimpleTestCase):
             self.assertLessEqual(len(line), 30, line)
 
     def test_the_facts_are_a_fixed_list_of_beetle_facts(self):
-        facts = re.findall(r'"([^"]+)"', between("const LOADING_FACTS", "const LOADING_LINE_MS"))
+        facts = re.findall(r'"([^"]+)"', between("const LOADING_FACTS", "const LOADING_BASE_MS"))
         self.assertEqual(len(facts), 7)   # the owner's seven, in this order
         self.assertEqual(len(set(facts)), len(facts))
         self.assertTrue(facts[0].startswith("In a Colorado study, forests killed by spruce beetles had 62% more flowers"))

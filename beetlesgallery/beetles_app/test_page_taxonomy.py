@@ -191,10 +191,11 @@ class TaxonomyBrowserPageLoadTests(TaxonomyTestCase):
 
     def test_styles_are_in_the_head_so_the_tree_is_never_painted_unstyled(self):
         # The tree is built by the inline script; if its sizing rules came after it, the small picture icons
-        # beside each name were painted at full width for a moment.
+        # beside each name were painted at full width for a moment. The icon is now the icon font's picture, which
+        # base.html keeps hidden until the font is ready.
         page = self.page()
         self.assertLess(page.index(".tree-browse-icon {"), page.index("<body"))
-        self.assertIn('width="16" height="16"', page)
+        self.assertIn("fi fi-rr-picture tree-browse-icon", page)
 
     def test_expand_all_finds_the_toggle_buttons_where_they_are(self):
         # The toggle sits inside .tree-node-container; looking for it as a direct child opened nothing.

@@ -207,7 +207,8 @@
       #sideItems > a:not(#sidenav-logo),
       #sideItems > form > button,
       #sidenav-footer > div,
-      #sidenav-footer > a {
+      #sidenav-footer > a,
+      #sidenav-footer > form > button {
         padding-inline: calc((5rem - 1px - 2 * 0.5rem - 2rem) / 2);
       }
 
@@ -229,7 +230,8 @@
     }
   </style>
 
-  <script src="{% static 'js/digit_groups.js' %}" defer></script>
+  {# Not deferred: pages' inline scripts call digitGroupsText() while the page is still parsing (deferring it froze the image browser behind its loading overlay). #}
+  <script src="{% static 'js/digit_groups.js' %}"></script>
   <script src="{% static 'js/progressive_image.js' %}" defer></script>
   <script src="{% static 'js/footer_basehtml.js' %}" defer></script>
   <script src="{% static 'js/copy_id.js' %}" defer></script>
@@ -319,20 +321,10 @@
               <span class="font-medium text-gray-700 ml-1">Data Management</span>
             </a>
 
+            {# Signed in, Log out sits in the footer under Account (mobile review round 6); signed out, Login stays here. #}
+            {% if not user.is_authenticated %}
             <div class="h-px bg-gray-300 my-1 mx-2"></div>
 
-            {% if user.is_authenticated %}
-            <form action="{% url 'logout' %}" method="post" class="w-full"
-              onsubmit="return confirm('Are you sure you want to log out?');">
-              {% csrf_token %}
-              <button type="submit"
-                class="flex items-center w-full min-h-14 rounded-lg hover:bg-gray-200 px-5 transition-all whitespace-nowrap group">
-                <i class="fi fi-rr-sign-out-alt text-xl text-gray-400 w-8 text-center"></i>
-                <span class="font-medium text-gray-600 ml-1">Logout</span>
-              </button>
-            </form>
-
-            {% else %}
             <a href="{% url 'login' %}"
               class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% nav_active '/accounts/login/' %}">
               <i class="fi fi-rr-sign-in-alt text-xl text-gray-700 w-8 text-center"></i>
@@ -352,6 +344,16 @@
               <span class="block text-xs text-gray-500">Account &amp; settings</span>
             </span>
           </a>
+          {# Log out under Account, never above it (mobile review round 6) #}
+          <form action="{% url 'logout' %}" method="post" class="w-full" data-testid="drawer-logout"
+            onsubmit="return confirm('Are you sure you want to log out?');">
+            {% csrf_token %}
+            <button type="submit"
+              class="flex items-center w-full min-h-14 rounded-lg hover:bg-gray-200 px-5 transition-all whitespace-nowrap group">
+              <i class="fi fi-rr-sign-out-alt text-xl text-gray-400 w-8 text-center"></i>
+              <span class="font-medium text-gray-600 ml-1">Logout</span>
+            </button>
+          </form>
           <div class="h-px bg-gray-300 my-1 mx-2"></div>
           {% endif %}
           <div class="flex items-center gap-1 px-5 py-3 border-t border-gray-200 text-[10px] font-mono text-gray-600">
@@ -437,21 +439,10 @@
             </span>
           </a>
 
+          {# Signed in, Log out sits in the footer under Account, as in the drawer (mobile review round 6) #}
+          {% if not user.is_authenticated %}
           <div class="h-px bg-gray-300 my-2 mx-2"></div>
 
-          {% if user.is_authenticated %}
-          <form action="{% url 'logout' %}" method="post" class="w-full"
-            onsubmit="return confirm('Are you sure you want to log out?');">
-            {% csrf_token %}
-            <button type="submit"
-              class="flex items-center w-full min-h-14 rounded-lg hover:bg-gray-200 group overflow-hidden whitespace-nowrap px-5 transition-all">
-              <i class="fi fi-rr-sign-out-alt text-xl text-gray-400 w-8 text-center"></i>
-              <span class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 font-medium text-gray-600">
-                Logout
-              </span>
-            </button>
-          </form>
-          {% else %}
           <a href="{% url 'login' %}"
             class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% nav_active '/accounts/login/' %}">
             <i class="fi fi-rr-sign-in-alt text-xl text-gray-700 w-8 text-center"></i>
@@ -473,6 +464,17 @@
               <span class="block text-xs text-gray-500">Account &amp; settings</span>
             </span>
           </a>
+          <form action="{% url 'logout' %}" method="post" class="w-full" data-testid="rail-logout"
+            onsubmit="return confirm('Are you sure you want to log out?');">
+            {% csrf_token %}
+            <button type="submit"
+              class="flex items-center w-full min-h-14 rounded-lg hover:bg-gray-200 group overflow-hidden whitespace-nowrap px-5 transition-all">
+              <i class="fi fi-rr-sign-out-alt text-xl text-gray-400 w-8 text-center"></i>
+              <span class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 font-medium text-gray-600">
+                Logout
+              </span>
+            </button>
+          </form>
           <div class="h-px bg-gray-300 my-2 mx-2"></div>
           {% endif %}
           <div class="flex items-center h-8 px-5 whitespace-nowrap overflow-hidden">
@@ -541,8 +543,8 @@
     <p>Your choice is kept in an essential cookie for a year. You can change it at any time with
       <strong>Cookie settings</strong> at the bottom of a page. <a href="{% url 'privacy' %}" class="underline">Privacy notice</a></p>
     <div class="consent-actions">
-      {# Accept and Reject must share one class and look identical: the consent banner's equal-prominence
-         requirement (#613, GDPR) overrides the general site-buttons role rule (#618) for this one pair. #}
+      {% comment %} Accept and Reject must share one class and look identical: the consent banner's equal-prominence
+         requirement (#613, GDPR) overrides the general site-buttons role rule (#618) for this one pair. {% endcomment %}
       <button type="button" class="btn-secondary" data-consent="granted">Accept</button>
       <button type="button" class="btn-secondary" data-consent="denied">Reject</button>
     </div>

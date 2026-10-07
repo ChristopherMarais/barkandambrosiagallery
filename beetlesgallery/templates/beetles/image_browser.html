@@ -13,6 +13,20 @@
       <p class="text-sm text-gray-500">Please wait while we fetch the data</p>
     </div>
   </div>
+  <script>
+    // On its own, so an error in the page's main script can never leave the overlay up for good.
+    (function () {
+      function hide() {
+        var o = document.getElementById('page-loading-overlay');
+        if (!o) return;
+        o.style.transition = 'opacity 0.3s ease-out';
+        o.style.opacity = '0';
+        setTimeout(function () { o.style.display = 'none'; }, 300);
+      }
+      document.addEventListener('DOMContentLoaded', hide);
+      window.addEventListener('pageshow', function (e) { if (e.persisted) hide(); });
+    })();
+  </script>
 
   <h1 class="page-title">Beetle image browser</h1>
 

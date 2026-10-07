@@ -33,10 +33,13 @@
 
     /* #618 tax-mobile: tapping a species opens its details as a full-screen page over the tree, with a back
        button, instead of a panel below the tree you'd have to scroll down (and back up) to see. */
+    /* tax-mobile-back: z-index above the site's sticky phone header (#sidenavWrap, z-index 50), which used to sit on
+       top of this page and hide its back bar, so there was no visible way back to the tree. */
     .taxonomy-detail-section.mobile-species-open {
-      position: fixed; inset: 0; z-index: 40; height: 100vh; height: 100dvh; width: 100%;
+      position: fixed; inset: 0; z-index: 60; height: 100vh; height: 100dvh; width: 100%;
     }
     .taxonomy-detail-section.mobile-species-open > div { border-radius: 0; border: 0; }
+    #mobile-species-back { min-height: 44px; padding-top: calc(0.625rem + env(safe-area-inset-top, 0px)); }
 
     /* #618 tax-expand: Expand All opens 7800+ species at once on a phone -- too much to open in one tap. */
     #expand-all-btn { display: none; }
@@ -96,33 +99,35 @@
     background-color: #f3f4f6; /* gray-100 */
   }
 
-  /* Browse link styling */
+  /* Browse link: the Image Browser's picture icon and the taxon's image count, in place of the word "images"
+     (tax-image-icon). Always shown, since it carries the count; it used to appear only on hover, which a phone
+     never has. */
   .tree-browse-link {
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 0.3rem;
     color: #6b7280;           /* gray-500 */
+    font-size: 0.85rem;
     text-decoration: none;
-    padding: 0.25rem;
+    padding: 0.25rem 0.4rem;
     border-radius: 0.25rem;
-    transition: color 0.15s, background-color 0.15s, opacity 0.15s;
-    opacity: 0;
-    pointer-events: none;
-  }
-  .tree-node-container:hover .tree-browse-link {
-    opacity: 1;
-    pointer-events: auto;
+    transition: color 0.15s, background-color 0.15s;
   }
   .tree-browse-link:hover {
     color: #1f2937;           /* grey (was blue-700) */
     background-color: #f3f4f6; /* grey (was blue-50) */
   }
+  /* a finger needs a 44x44 px target */
+  @media (pointer: coarse) {
+    .tree-browse-link { min-width: 44px; min-height: 44px; }
+  }
 
-  /* Browse icon */
+  /* Browse icon (the site's fi-rr-picture, as in the menu) */
   .tree-browse-icon {
-    width: 1rem;
-    height: 1rem;
+    font-size: 1rem;
+    line-height: 1;
     display: block;
   }
 
@@ -399,11 +404,12 @@
     <div class="taxonomy-detail-section" id="taxonomy-detail-section">
       <div class="border border-gray-200 rounded-lg bg-white shadow-xs h-full flex flex-col overflow-hidden">
 
-        {# #618 tax-mobile: on a phone this bar only shows once a species is open (see the CSS), to go back to the tree #}
-        <button type="button" id="mobile-species-back"
+        {% comment %} #618 tax-mobile: on a phone this bar only shows once a species is open (see the CSS), to go back to the tree.
+           It sits above the scrolling panel, so it stays at the top however far down the details you read. {% endcomment %}
+        <button type="button" id="mobile-species-back" aria-label="Back to the taxonomy tree"
           class="items-center gap-1.5 border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-semibold text-gray-700 shrink-0">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-          Back to the tree
+          Taxonomy
         </button>
 
         {# placeholder shown until a species is clicked #}
@@ -474,6 +480,30 @@
   const rootEl      = document.getElementById("taxonomy-tree-root");
   const detailPanel = document.getElementById("species-detail-panel");
   const detailPlaceholder = document.getElementById("species-detail-placeholder");
+  const detailSection = document.getElementById("taxonomy-detail-section");
+
+  // ---------- phone: the species page over the tree (#618 tax-mobile, tax-mobile-back) ----------
+  // Opening it adds a history entry, so the phone's Back button returns to the tree rather than leaving the page.
+  function openMobileSpecies(speciesId) {
+    var alreadyOpen = detailSection.classList.contains("mobile-species-open");
+    detailSection.classList.add("mobile-species-open");
+    var state = { taxSpecies: speciesId };
+    if (alreadyOpen || (history.state && history.state.taxSpecies)) {
+      history.replaceState(state, "");
+    } else {
+      history.pushState(state, "");
+    }
+  }
+
+  // Back on the tree, at the species that was tapped: scrolled into view and focused.
+  function closeMobileSpecies() {
+    detailSection.classList.remove("mobile-species-open");
+    var active = rootEl.querySelector(".tree-species-btn--active");
+    if (active) {
+      active.scrollIntoView({ block: "center" });
+      active.focus({ preventScroll: true });
+    }
+  }
 
   // ---------- helpers ----------
 
@@ -509,6 +539,29 @@
   }
 
   /**
+   * tax-image-icon: the link to a taxon's images in the Image Browser, shown as the Image Browser's own picture
+   * icon (fi-rr-picture) with the image count beside it, in place of the word "images". The aria-label and title
+   * say what the icon means.
+   */
+  function browseImagesLink(node, taxonName) {
+    const count = node.imageCount || 0;
+    const link = document.createElement("a");
+    link.href = buildImageBrowserUrl(node);
+    link.className = "tree-browse-link";
+    link.title = "Browse images of " + taxonName;
+    link.setAttribute("aria-label", "Browse " + count + " images of " + taxonName);
+    link.setAttribute("target", "_blank");
+    link.innerHTML = '<i class="fi fi-rr-picture tree-browse-icon" aria-hidden="true"></i>' +
+      '<span class="tree-count" aria-hidden="true">' + groupDigits(count) + '</span>';
+    return link;
+  }
+
+  // Numbers in groups of three ("12 345"), like digit_groups.js, which is deferred and so not loaded yet here.
+  function groupDigits(n) {
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  }
+
+  /**
    * Build a single collapsible <li> for a non-leaf node (subfamily / tribe / genus).
    */
   function buildBranchNode(node) {
@@ -526,23 +579,15 @@
     btn.type = "button";
     btn.className = "tree-toggle";
     btn.setAttribute("aria-expanded", "false");
-    // #618 tax-counts: species counts already showed here; image counts now sit beside them, in the same grey.
+    // #618 tax-counts: the species count shows here; the image count sits beside the picture icon (browseImagesLink).
     btn.innerHTML =
       '<span class="tree-toggle-icon">+</span>' +
       '<span class="tree-label">' +
         escapeHtml(node.name) +
-        ' <span class="tree-count">(' + node.speciesCount + ' species, ' + (node.imageCount || 0) + ' images)</span>' +
+        ' <span class="tree-count">(' + node.speciesCount + ' species)</span>' +
       '</span>';
 
-    // Create "View in Image Browser" icon link
-    const browseLink = document.createElement("a");
-    browseLink.href = buildImageBrowserUrl(node);
-    browseLink.className = "tree-browse-link";
-    browseLink.title = "View images in image browser";
-    // #618 tax-image-icon: the icon alone said nothing to a screen reader; an aria-label names the taxon and count.
-    browseLink.setAttribute("aria-label", "Browse " + (node.imageCount || 0) + " images of " + node.name);
-    browseLink.setAttribute("target", "_blank");
-    browseLink.innerHTML = '<svg class="tree-browse-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
+    const browseLink = browseImagesLink(node, node.name);
     browseLink.addEventListener("click", function(e) {
       e.stopPropagation(); // Prevent triggering the toggle
     });
@@ -592,8 +637,8 @@
     btn.type = "button";
     btn.className = "tree-species-btn";
     btn.dataset.speciesId = node.species_id;
-    // #618 tax-counts: a species shows its own image count too, in the same grey as the branches' counts.
-    btn.innerHTML = escapeHtml(node.name) + ' <span class="tree-count">(' + (node.imageCount || 0) + ' images)</span>';
+    // #618 tax-counts: a species' image count sits beside the picture icon (browseImagesLink), like the branches'.
+    btn.textContent = node.name;
     btn.setAttribute("aria-label", "View details for " + node.scientific_name);
 
     btn.addEventListener("click", function () {
@@ -606,15 +651,7 @@
       showSpeciesDetail(node);
     });
 
-    // Create "View in Image Browser" icon link for species
-    const browseLink = document.createElement("a");
-    browseLink.href = buildImageBrowserUrl(node);
-    browseLink.className = "tree-browse-link";
-    browseLink.title = "View images in image browser";
-    // #618 tax-image-icon: an aria-label so the icon-only link means something to a screen reader.
-    browseLink.setAttribute("aria-label", "Browse " + (node.imageCount || 0) + " images of " + (node.scientific_name || node.name));
-    browseLink.setAttribute("target", "_blank");
-    browseLink.innerHTML = '<svg class="tree-browse-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
+    const browseLink = browseImagesLink(node, node.scientific_name || node.name);
     browseLink.addEventListener("click", function(e) {
       e.stopPropagation();
     });
@@ -638,7 +675,7 @@
     // #618 tax-mobile: on a phone, open the species as its own full-screen page over the tree (CSS:
     // .mobile-species-open), with a back button, instead of a panel below a tall tree you'd have to scroll to see.
     if (window.matchMedia("(max-width: 899px)").matches) {
-      document.getElementById("taxonomy-detail-section").classList.add("mobile-species-open");
+      openMobileSpecies(node.species_id);
     }
 
     // Helper: one label/value row, hidden when value is empty
@@ -1121,9 +1158,14 @@
   var mobileBack = document.getElementById("mobile-species-back");
   if (mobileBack) {
     mobileBack.addEventListener("click", function () {
-      document.getElementById("taxonomy-detail-section").classList.remove("mobile-species-open");
+      // Opened with a history entry: step back through it, so the browser's own Back and this bar agree.
+      if (history.state && history.state.taxSpecies) { history.back(); } else { closeMobileSpecies(); }
     });
   }
+  // tax-mobile-back: the phone's Back button closes the species page too, instead of leaving the taxonomy.
+  window.addEventListener("popstate", function () {
+    if (detailSection.classList.contains("mobile-species-open")) closeMobileSpecies();
+  });
 
   // #618 tax-raw-id: copy the accepted name ID shown in the species panel (delegated: the panel's content is
   // replaced each time a species is picked, so the button itself is never the same element twice).

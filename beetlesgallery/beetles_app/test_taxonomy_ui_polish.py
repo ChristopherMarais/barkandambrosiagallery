@@ -43,7 +43,7 @@ class TaxonomyUiPolishTests(PageBehaviourCase):
         page = self.page()
         self.assertIn("mobile-species-open", page)
         self.assertIn('id="mobile-species-back"', page)
-        self.assertIn("Back to the tree", page)
+        self.assertIn("Back to the taxonomy tree", page)
         self.assertIn('classList.add("mobile-species-open")', page)
         self.assertIn('classList.remove("mobile-species-open")', page)
 
@@ -114,8 +114,10 @@ class TaxonomyUiPolishTests(PageBehaviourCase):
         self.assertEqual(xyl_genus["imageCount"], 0)
 
         page = self.page()
-        self.assertIn("node.speciesCount + ' species, ' + (node.imageCount || 0) + ' images", page)
-        self.assertIn("(node.imageCount || 0) + ' images)", page)
+        # the image count now sits beside the picture icon instead of after the word "images"
+        self.assertIn("node.speciesCount + ' species)", page)
+        self.assertIn("const count = node.imageCount || 0;", page)
+        self.assertNotIn("' images)", page)
 
     def test_images_sharing_one_specimen_photo_are_only_counted_once(self):
         first = make_beetle(taxon=self.ips)

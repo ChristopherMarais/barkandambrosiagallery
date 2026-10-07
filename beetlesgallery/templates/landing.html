@@ -3,276 +3,125 @@
 {% load static beetle_tags %}
 
 {% block content %}
-<div class="h-auto w-full lg:h-screen lg:overflow-y-scroll lg:snap-y lg:snap-mandatory scroll-smooth no-scrollbar">
+<section id="landing-section" class="relative flex flex-col w-full bg-white">
 
-  <section id="landing-section" class="lg:snap-start relative flex flex-col min-h-screen w-full bg-white">
+  <div class="flex flex-col w-full max-w-7xl mx-auto">
+    {# Title, one sentence, then the beetle and the three actions -- nothing else above the fold (#618 home-actions) #}
+    <header class="text-center py-6 md:py-10 space-y-4 px-4">
+      <h1 class="text-3xl md:text-5xl md:leading-none font-black text-gray-900 tracking-tight leading-tight">
+        Bark & Ambrosia Beetle<br class="hidden md:block" /> Gallery
+      </h1>
+      <p class="text-base mt-6 md:text-lg md:leading-7 text-gray-600 max-w-3xl mx-auto leading-relaxed text-balance">
+        The world's largest collection of bark and ambrosia beetle images and specimen data.
+      </p>
+    </header>
 
-    <div class="flex-1 flex flex-col w-full max-w-7xl mx-auto">
-      {# Title, one sentence, then the beetle and the three actions -- nothing else above the fold (#618 home-actions) #}
-      <header class="text-center py-6 md:py-10 space-y-4 px-4">
-        <h1 class="text-3xl md:text-5xl md:leading-none font-black text-gray-900 tracking-tight leading-tight">
-          Bark & Ambrosia Beetle<br class="hidden md:block" /> Gallery
-        </h1>
-        <p class="text-base mt-6 md:text-lg md:leading-7 text-gray-600 max-w-3xl mx-auto leading-relaxed text-balance">
-          The world's largest collection of bark and ambrosia beetle images and specimen data.
-        </p>
-      </header>
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-16 items-center px-4 pb-10">
 
-      <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-16 items-center px-4 pb-12">
+      <div class="lg:col-span-7 flex justify-center">
+        <div class="relative w-full max-w-md lg:max-w-full flex items-center justify-center">
+          <img src="{% static 'img/IMG_5557.PNG' %}"
+              alt="Beetles DB specimen"
+              class="relative w-auto h-auto max-h-[200px] sm:max-h-[320px] lg:max-h-[440px] object-contain [filter:drop-shadow(0_20px_13px_rgb(0_0_0/0.03))_drop-shadow(0_8px_5px_rgb(0_0_0/0.08))]" />
+        </div>
+      </div>
 
-        <div class="lg:col-span-7 flex justify-center order-1 lg:order-1">
-          <div class="relative w-full max-w-md lg:max-w-full aspect-square lg:aspect-video flex items-center justify-center">
-            <div class="absolute inset-0 bg-gray-50 rounded-full blur-3xl opacity-30 animate-pulse"></div>
-            <img src="{% static 'img/IMG_5557.PNG' %}"
-                alt="Beetles DB specimen"
-                class="relative z-10 w-auto h-auto max-h-[400px] lg:max-h-[500px] object-contain [filter:drop-shadow(0_20px_13px_rgb(0_0_0/0.03))_drop-shadow(0_8px_5px_rgb(0_0_0/0.08))] hover:scale-105 transition-transform duration-500" />
+      {% comment %}
+      Three ways in, and only these three (#618 home-dup-buttons). Same names and icons as the sidebar
+      (#618 home-cards-icons, site-icons: picture = Image Browser, sparkles = IBBI-AI, play = the game).
+      {% endcomment %}
+      <div class="lg:col-span-5 flex flex-col gap-4 w-full max-w-md mx-auto">
+
+        <a href="{% url 'beetles_image_browser' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-200 rounded-2xl hover:border-gray-300 hover:bg-gray-50 transition-colors">
+          <div class="flex items-center justify-center w-12 h-12 shrink-0 bg-gray-100 text-gray-700 rounded-xl">
+            <i class="fi fi-rr-picture flex text-xl"></i>
           </div>
-        </div>
-
-        {# Three ways in, and only these three (#618 home-dup-buttons: no separate hero button row duplicates them) #}
-        <div class="lg:col-span-5 flex flex-col gap-4 w-full max-w-md mx-auto order-2 lg:order-2">
-
-          <a href="{% url 'beetles_image_browser' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-xs hover:shadow-md hover:border-gray-100 hover:bg-gray-50/50 transition-all duration-300">
-            <div class="p-3 bg-gray-100 text-gray-600 rounded-xl group-hover:scale-110 transition-transform">
-              <i class="fi fi-rr-bug text-xl"></i>
-            </div>
-            <div>
-              <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-700">Browse Images</h3>
-              <p class="text-sm text-gray-500">Explore the images and specimen data.</p>
-            </div>
-          </a>
-
-          <a href="{% url 'tool_classify' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-xs hover:shadow-md hover:border-gray-100 hover:bg-gray-50/50 transition-all duration-300">
-            <div class="p-3 bg-gray-100 text-gray-600 rounded-xl group-hover:scale-110 transition-transform">
-              <i class="fi fi-rr-sparkles text-xl"></i>
-            </div>
-            <div>
-              <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-700">AI Identification</h3>
-              <p class="text-sm text-gray-500">Identify species using AI.</p>
-            </div>
-          </a>
-
-          <a href="{% url 'game_home' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-xs hover:shadow-md hover:border-gray-100 hover:bg-gray-50/50 transition-all duration-300">
-            <div class="p-3 bg-gray-100 text-gray-600 rounded-xl group-hover:scale-110 transition-transform">
-              <i class="fi fi-rr-gamepad text-xl"></i>
-            </div>
-            <div>
-              <h3 class="font-bold text-gray-900 text-lg group-hover:text-gray-700">{{ game_name }}</h3>
-              <p class="text-sm text-gray-500">Test your eye and help label beetle images.</p>
-            </div>
-          </a>
-        </div>
-      </div>
-    </div>
-
-    {# Each count links to the image browser, filtered to what it counts (#618 home-stats-link) #}
-    <div class="border-t border-b border-gray-100 bg-gray-50/50 py-8 mt-auto w-full">
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 max-w-5xl mx-auto px-4">
-        <a href="{% url 'beetles_image_browser' %}" class="flex flex-col items-center text-center hover:opacity-75 transition-opacity">
-          <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ total_images|default:0|digit_groups }}</span>
-          <span class="text-xs md:text-sm font-bold text-gray-600 uppercase tracking-widest mt-1">Images</span>
+          <div>
+            <h2 class="font-bold text-gray-900 text-lg">Image Browser</h2>
+            <p class="text-sm text-gray-500">Explore the images and specimen data.</p>
+          </div>
         </a>
-        <a href="{% url 'beetles_image_browser' %}?sort=species" class="flex flex-col items-center text-center hover:opacity-75 transition-opacity">
-          <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ total_genera|default:0|digit_groups }}</span>
-          <span class="text-xs md:text-sm font-bold text-gray-600 uppercase tracking-widest mt-1">Genera</span>
+
+        <a href="{% url 'tool_classify' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-200 rounded-2xl hover:border-gray-300 hover:bg-gray-50 transition-colors">
+          <div class="flex items-center justify-center w-12 h-12 shrink-0 bg-gray-100 text-gray-700 rounded-xl">
+            <i class="fi fi-rr-sparkles flex text-xl"></i>
+          </div>
+          <div>
+            <h2 class="font-bold text-gray-900 text-lg">AI Identification</h2>
+            <p class="text-sm text-gray-500">Identify a beetle from a photo with IBBI-AI.</p>
+          </div>
         </a>
-        <a href="{% url 'beetles_image_browser' %}?sort=species" class="flex flex-col items-center text-center hover:opacity-75 transition-opacity">
-          <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ total_species|default:0|digit_groups }}</span>
-          <span class="text-xs md:text-sm font-bold text-gray-600 uppercase tracking-widest mt-1">Species</span>
-        </a>
-        <a href="{% url 'beetles_image_browser' %}?has_type_status=Yes" class="flex flex-col items-center text-center hover:opacity-75 transition-opacity">
-          <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ type_status_count|default:0|digit_groups }}</span>
-          <span class="text-xs md:text-sm font-bold text-gray-600 uppercase tracking-widest mt-1">Type Specimens</span>
+
+        <a href="{% url 'game_home' %}" class="group relative flex items-center gap-4 p-5 bg-white border border-gray-200 rounded-2xl hover:border-gray-300 hover:bg-gray-50 transition-colors">
+          <div class="flex items-center justify-center w-12 h-12 shrink-0 bg-gray-100 text-gray-700 rounded-xl">
+            <i class="fi fi-rr-play flex text-xl"></i>
+          </div>
+          <div>
+            <h2 class="font-bold text-gray-900 text-lg">{{ game_name }}</h2>
+            <p class="text-sm text-gray-500">Test your eye and help label beetle images.</p>
+          </div>
         </a>
       </div>
     </div>
-      <button onclick="document.getElementById('team-section').scrollIntoView({ behavior: 'smooth' });"
-            class="w-full pt-6 pb-2 mt-4 justify-center hidden lg:flex items-center opacity-40 hover:opacity-100 cursor-pointer outline-hidden z-10">
-        <div class="flex flex-col items-center">
-            <span class="text-[16px] text-gray-600 font-bold uppercase tracking-widest mb-1">Team and Sponsors</span>
-            <i class="fi fi-rr-angle-double-small-down text-xl text-gray-600 mb-4"></i>
-        </div>
-    </button>
-  </section>
+  </div>
 
-  <section id="team-section" class="lg:snap-start relative flex flex-col min-h-screen w-full bg-white">
+  {# Each count links to the image browser, filtered to what it counts (#618 home-stats-link) #}
+  <div class="border-t border-b border-gray-100 bg-gray-50/50 py-6 w-full">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 max-w-5xl mx-auto px-4">
+      <a href="{% url 'beetles_image_browser' %}" class="flex flex-col items-center text-center hover:opacity-75 transition-opacity">
+        <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ total_images|default:0|digit_groups }}</span>
+        <span class="text-xs md:text-sm font-bold text-gray-600 uppercase tracking-widest mt-1">Images</span>
+      </a>
+      <a href="{% url 'beetles_image_browser' %}?sort=species" class="flex flex-col items-center text-center hover:opacity-75 transition-opacity">
+        <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ total_genera|default:0|digit_groups }}</span>
+        <span class="text-xs md:text-sm font-bold text-gray-600 uppercase tracking-widest mt-1">Genera</span>
+      </a>
+      <a href="{% url 'beetles_image_browser' %}?sort=species" class="flex flex-col items-center text-center hover:opacity-75 transition-opacity">
+        <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ total_species|default:0|digit_groups }}</span>
+        <span class="text-xs md:text-sm font-bold text-gray-600 uppercase tracking-widest mt-1">Species</span>
+      </a>
+      <a href="{% url 'beetles_image_browser' %}?has_type_status=Yes" class="flex flex-col items-center text-center hover:opacity-75 transition-opacity">
+        <span class="text-2xl md:text-4xl font-black text-gray-800 tracking-widest">{{ type_status_count|default:0|digit_groups }}</span>
+        <span class="text-xs md:text-sm font-bold text-gray-600 uppercase tracking-widest mt-1">Type Specimens</span>
+      </a>
+    </div>
+  </div>
 
-    <button onclick="document.getElementById('landing-section').scrollIntoView({ behavior: 'smooth' });"
-            class="w-full pt-6 pb-2 mt-4 justify-center hidden lg:flex items-center opacity-40 hover:opacity-100 cursor-pointer outline-hidden z-10">
-        <div class="flex flex-col items-center">
-            <i class="fi fi-rr-angle-double-small-up text-xl text-gray-600"></i>
-            <span class="text-[16px] text-gray-600 font-bold uppercase tracking-widest mb-4">Top</span>
-        </div>
-    </button>
+  {# A compact "Who built this" line; the full team and institutions list lives on its own page (#618 home-team) #}
+  <div class="max-w-3xl mx-auto px-4 py-6 text-center" data-testid="who-built-this">
+    <p class="text-gray-600">Built by the UF Forest Entomology Lab and its partners, with images from more than 30 collections.</p>
+    <a href="{% url 'team' %}" class="mt-2 inline-flex items-center gap-1 py-2 text-sm font-semibold text-gray-800 underline hover:text-black">Team and partners <i class="fi fi-rr-angle-small-right flex"></i></a>
+  </div>
 
-    <div class="flex-1 flex flex-col justify-center py-6">
-
-      {# "Team", not "Created by:", and no heavier than the section headings around it (#618 home-created) #}
-      <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-6 tracking-tight text-center leading-tight">
-          Team
-      </h2>
-
-        <div class="max-w-5xl mx-auto px-4 w-full">
-
-        {# A compact people grid: name and role on one line, a small icon row below (#618 home-team) #}
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-y-8 lg:gap-x-6 max-w-5xl mx-auto items-start">
-
-            <div class="flex flex-col gap-3 min-w-0">
-            <h3 class="text-xs font-bold text-gray-600 uppercase tracking-widest border-b border-gray-100 pb-2">
-                Taxonomy Team
-            </h3>
-
-            {% include "beetles/includes/_team_person.html" with name="Andrew Johnson" role="Lead Taxonomist & Data Curator" lab_url="https://pitchtube.org/researchers-lab-andrew/" lab_label="UF Forest Entomology Lab" lab_icon="fi-rr-bugs" %}
-            {% include "beetles/includes/_team_person.html" with name="Jiri Hulcr" role="Principal Investigator" lab_url="https://pitchtube.org/researchers-lab-jiri/" lab_label="UF Forest Entomology Lab" lab_icon="fi-rr-bugs" %}
-            </div>
-
-            <div class="flex flex-col gap-3 min-w-0">
-            <h3 class="text-xs font-bold text-gray-600 uppercase tracking-widest border-b border-gray-100 pb-2">
-                Development Team
-            </h3>
-
-            {% include "beetles/includes/_team_person.html" with name="Christopher Marais" role="Co-Lead Full Stack Developer" github_url="https://github.com/ChristopherMarais" linkedin_url="https://www.linkedin.com/in/christopher-marais/" %}
-            {% include "beetles/includes/_team_person.html" with name="Layla Schuster" role="Co-Lead Full Stack Developer" github_url="https://github.com/laylaaschuster" linkedin_url="https://www.linkedin.com/in/layla-schuster-350712233/" %}
-            {% include "beetles/includes/_team_person.html" with name="Eric Kuo" role="Full Stack Developer" github_url="https://github.com/Ekuo79" linkedin_url="https://www.linkedin.com/in/eric-kuo79/" %}
-            {% include "beetles/includes/_team_person.html" with name="Yiqiao (Emily) Huang" role="Developer" github_url="https://github.com/APCSAemily" linkedin_url="https://www.linkedin.com/in/emily-h-profile/" %}
-            </div>
-
-            <div class="flex flex-col gap-3 min-w-0">
-            <h3 class="text-xs font-bold text-gray-600 uppercase tracking-widest border-b border-gray-100 pb-2">
-                Support Team
-            </h3>
-
-            {% include "beetles/includes/_team_person.html" with name="Raquel Dias" role="Technical Director" github_url="https://github.com/Dias-Lab" lab_url="https://microcell.ufl.edu/people/raquel-dias/" lab_label="Dias Lab" lab_icon="fi-rr-brain-circuit" %}
-            {% include "beetles/includes/_team_person.html" with name="Cleydson Silva" role="Technical Consultant" github_url="https://github.com/jcleydsonsilva" linkedin_url="https://www.linkedin.com/in/jose-cleydson-ferreira-silva-a790b617b/" %}
-            </div>
-        </div>
-        </div>
-
-        {# Left-aligned, two columns on desktop, top 10 then "Show all" (#618 home-institutions) #}
-        <div class="max-w-5xl mx-auto px-4 text-left" style="margin-top: 4rem;">
-          <h3 class="font-bold text-gray-900 text-lg">
-            Contributing Institutions to the Image Database (sorted by volume):
-          </h3>
-          <ul id="institutions-list" class="list-none p-0 m-0 mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1 text-gray-500 text-sm md:text-base leading-relaxed">
-            <li>University of Florida Forest Entomology Lab (UFFE)</li>
-            <li>Biodiversity Center, University of Texas at Austin</li>
-            <li>Centre for Biodiversity Genomics, Guelph, Canada</li>
-            <li>Michigan State University</li>
-            <li>Florida State Collection of Arthropods</li>
-            <li>iNaturalist</li>
-            <li>Brigham Young University</li>
-            <li>Canadian National Collection of Insects, Arachnids and Nematodes, Agriculture and Agri-Food Canada</li>
-            <li>Smithsonian Tropical Research Institute</li>
-            <li>University of Agriculture in Krakow</li>
-            <li class="institution-extra hidden">Institute of Natural Sciences (RISNB), Brussels, Belgium University of Bergen</li>
-            <li class="institution-extra hidden">Zoologisches Forschungsmuseum Alexander Koenig</li>
-            <li class="institution-extra hidden">University of Bergen, Natural History Collections</li>
-            <li class="institution-extra hidden">Canadian National Collection of Insects, Arachnids and Nematodes</li>
-            <li class="institution-extra hidden">Naturalis Biodiversity Center (RMNH)</li>
-            <li class="institution-extra hidden">New Guinea Binatang Research Center</li>
-            <li class="institution-extra hidden">Museum Zoologicum Bogoriense (MZB), BRIN, Indonesia</li>
-            <li class="institution-extra hidden">Oregon Department of Agriculture</li>
-            <li class="institution-extra hidden">Museum Victoria, Melbourne</li>
-            <li class="institution-extra hidden">SNSB, Zoologische Staatssammlung München</li>
-            <li class="institution-extra hidden">The Natural History Museum London, England, United Kingdom</li>
-            <li class="institution-extra hidden">Smithsonian Tropical Research Institute, Center for Tropical Forest Science, Khao Chong, Arthropod Laboratory</li>
-            <li class="institution-extra hidden">NTNU University Museum, Department of Natural History</li>
-            <li class="institution-extra hidden">Colegio de Postgraduados</li>
-            <li class="institution-extra hidden">Field Museum of Natural History</li>
-            <li class="institution-extra hidden">Institute of Forest Science, Russian Academy of Sciences</li>
-            <li class="institution-extra hidden">Bernice P. Bishop Museum (BPBM), Hawaii, USA</li>
-            <li class="institution-extra hidden">Taiwan Encyclopedia of Life</li>
-            <li class="institution-extra hidden">Systematic Entomology Laboratory, USDA</li>
-            <li class="institution-extra hidden">University of Alaska</li>
-            <li class="institution-extra hidden">University of Oulu, Zoological Museum</li>
-            <li class="institution-extra hidden">Museum national d'Histoire naturelle</li>
-            <li class="institution-extra hidden">Universite Claude Bernard Lyon</li>
-            <li class="institution-extra hidden">University of Rouen, ECODIV Laboratory</li>
-          </ul>
-          <button type="button" id="institutions-toggle" aria-expanded="false" aria-controls="institutions-list"
-                  class="mt-3 text-sm font-medium text-gray-700 hover:text-black hover:underline">
-            Show all <span id="institutions-count"></span>
-          </button>
-          <p class="mt-6 text-gray-500 text-sm md:text-base leading-relaxed">Thank you!</p>
-        </div>
-
-        {# GitHub Discussions Link #}
-        <div class="w-full mt-1 max-w-4xl mx-auto my-12"></div>
-        <div class="text-center pt-1 pb-12 max-w-2xl mx-auto">
-        <p class="text-gray-500 mb-1 leading-relaxed">
-            Have a question about the data, a feature request, or want to report a bug?
-            <br />
-            Connect with our team on GitHub.
-        </p>
-        <a href="https://github.com/ChristopherMarais/barkandambrosiagallery/discussions" target="_blank" class="inline-flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 text-gray-600 rounded-full font-medium hover:text-gray-900 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300 shadow-xs hover:shadow-md">
-            <i class="fi fi-brands-github text-lg mt-2"></i>
-            <span>Visit GitHub Discussions</span>
-        </a>
-        </div>
+  {# Image Attribution and "Maintained by" live in the footer, out of the way of the three actions (#618 home-actions) #}
+  <footer class="py-6 flex flex-col items-center justify-center gap-4 border-t border-gray-200 px-4">
+    <div class="max-w-2xl mx-auto text-center text-xs text-gray-600 space-y-2">
+      <p>
+        <span class="font-semibold">Image Attribution.</span>
+        Images in this database were contributed by the global community of entomologists and museum curators.
+        Their names and institutions are listed with each respective file and will be acknowledged in an
+        upcoming publication.
+      </p>
+      <p>
+        {# Underlined, like any other link; the full stop sits outside it (#618 home-lab-link) #}
+        Maintained by the
+        <a href="https://pitchtube.org/" target="_blank" class="underline text-gray-600 hover:text-gray-900">University of Florida Forest Entomology Lab</a>.
+      </p>
     </div>
 
-    {# Image Attribution and "Maintained by" live in the footer, out of the way of the three actions (#618 home-actions) #}
-    <footer class="py-6 flex flex-col items-center justify-center gap-4 border-t border-gray-200 mt-auto px-4">
-      <div class="max-w-2xl mx-auto text-center text-xs text-gray-600 space-y-2">
-        <p>
-          <span class="font-semibold">Image Attribution.</span>
-          Images in this database were contributed by the global community of entomologists and museum curators.
-          Their names and institutions are listed with each respective file and will be acknowledged in an
-          upcoming publication.
-        </p>
-        <p>
-          {# Underlined, like any other link; the full stop sits outside it (#618 home-lab-link) #}
-          Maintained by the
-          <a href="https://pitchtube.org/" target="_blank" class="underline text-gray-600 hover:text-gray-900">University of Florida Forest Entomology Lab</a>.
-        </p>
-      </div>
+    {% comment %} The funders' logos wrap onto more rows rather than run off a phone's edge; none is ever wider than the screen
+       (mobile review round 6). {% endcomment %}
+    <div class="w-full max-w-full min-w-0 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 opacity-70 hover:opacity-100 transition-opacity duration-300">
+      <img src="{% static 'img/NSF_4-Color_bitmap_Logo_RGB.png' %}" class="h-10 md:h-16 w-auto max-w-full object-contain grayscale" alt="NSF" loading="lazy" decoding="async">
+      <img src="{% static 'img/PngItem_2222864.png' %}" class="h-10 md:h-16 w-auto max-w-full object-contain grayscale" alt="USDA" loading="lazy" decoding="async">
+      <img src="{% static 'img/forest-service-usda-logos.png' %}" class="h-10 md:h-16 w-auto max-w-full object-contain grayscale" alt="USDA" loading="lazy" decoding="async">
+      <img src="{% static 'img/Florida-Forest-Service-Logo-Vector.jpg' %}" class="h-10 md:h-16 w-auto max-w-full object-contain grayscale" alt="USDA" loading="lazy" decoding="async">
+    </div>
+    <p class="text-xs text-gray-600 italic text-center">The National Science Foundation (NSF)<br>
+      The United States Department of Agriculture (USDA) Animal and Plant Health Inspection Service (APHIS)<br>
+      The United States Department of Agriculture (USDA) Forest Service<br>
+      The Florida Forest Service</p>
+  </footer>
 
-      <div class="flex gap-6 opacity-70 hover:opacity-100 transition-opacity duration-300">
-        <img src="{% static 'img/NSF_4-Color_bitmap_Logo_RGB.png' %}" class="h-16 w-auto grayscale" alt="NSF" loading="lazy" decoding="async">
-        <img src="{% static 'img/PngItem_2222864.png' %}" class="h-16 w-auto grayscale" alt="USDA" loading="lazy" decoding="async">
-        <img src="{% static 'img/forest-service-usda-logos.png' %}" class="h-16 w-auto grayscale" alt="USDA" loading="lazy" decoding="async">
-        <img src="{% static 'img/Florida-Forest-Service-Logo-Vector.jpg' %}" class="h-16 w-auto grayscale" alt="USDA" loading="lazy" decoding="async">
-      </div>
-      <p class="text-[10px] text-gray-600 italic text-center">The National Science Foundation (NSF)<br>
-        The United States Department of Agriculture (USDA) Animal and Plant Health Inspection Service (APHIS)<br>
-        The United States Department of Agriculture (USDA) Forest Service<br>
-        The Florida Forest Service</p>
-    </footer>
-
-  </section>
-
-</div>
-
-<script>
-  // "Show all N" / "Show fewer" for the contributing institutions list (#618 home-institutions)
-  (function () {
-    var list = document.getElementById('institutions-list');
-    var btn = document.getElementById('institutions-toggle');
-    var countEl = document.getElementById('institutions-count');
-    if (!list || !btn || !countEl) return;
-    countEl.textContent = list.children.length;
-
-    btn.addEventListener('click', function () {
-      var expanded = btn.getAttribute('aria-expanded') === 'true';
-      var extras = list.querySelectorAll('.institution-extra');
-      extras.forEach(function (li) { li.classList.toggle('hidden', expanded); });
-      btn.setAttribute('aria-expanded', String(!expanded));
-      btn.firstChild.textContent = expanded ? 'Show all ' : 'Show fewer ';
-      if (expanded) countEl.style.display = '';
-      else countEl.style.display = 'none';
-    });
-  })();
-</script>
-
-<style>
-  /* Hide scrollbar for Chrome, Safari and Opera */
-  .no-scrollbar::-webkit-scrollbar {
-      display: none;
-  }
-  /* Hide scrollbar for IE, Edge and Firefox */
-  .no-scrollbar {
-      -ms-overflow-style: none;  /* IE and Edge */
-      scrollbar-width: none;  /* Firefox */
-  }
-</style>
+</section>
 {% endblock %}

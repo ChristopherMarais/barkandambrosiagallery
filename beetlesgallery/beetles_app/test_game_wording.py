@@ -150,11 +150,11 @@ class LoadingTests(PlayPageCase):
         # short and light, never about speed (round 5 removed the "taking a while" lines; see test_game_feel.py)
         self.assertIn('const LOADING_LINES = ["Finding beetles…", "Building your gallery…", "Turning over the bark…", '
                       '"Counting the antennae…"];', page)
-        self.assertIn("const LOADING_LINE_MS = 2500;", page)
+        self.assertIn("function loadingMs(text)", page)   # each line's time depends on its length (test_game_play_polish.py)
         lines = page[page.index("function loadingLines()"):page.index("async function startFeed")]
         self.assertIn('window.matchMedia("(prefers-reduced-motion: reduce)").matches', lines)
         self.assertIn('$("loading").classList.contains("hidden")', lines)    # stops once the beetles are in
-        self.assertIn("clearInterval(loadingTimer)", lines)
+        self.assertIn("clearTimeout(loadingTimer)", lines)
         feed = page[page.index("async function startFeed"):]
         self.assertTrue(feed.index('show("loading");') < feed.index("loadingLines();") < feed.index("await api("))
 

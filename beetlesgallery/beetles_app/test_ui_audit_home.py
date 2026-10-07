@@ -19,6 +19,10 @@ class HomeTestCase(PageBehaviourCase):
     def page(self):
         return self.client.get(reverse("image_browser")).content.decode()
 
+    def team_page(self):
+        """The team, institutions and Discussions link moved to their own page (#618 home-team)."""
+        return self.client.get(reverse("team")).content.decode()
+
 
 class AboveTheFoldTests(HomeTestCase):
     """home-actions: title, one sentence, the beetle, then the three cards; attribution moves to the footer."""
@@ -37,7 +41,7 @@ class AboveTheFoldTests(HomeTestCase):
         header_end = page.index("</header>")
         # "AI Identification" is also the sidebar's label elsewhere on the page, so look for the hero's
         # own copy (the first one after the header, not wherever it happens to sit first in the DOM).
-        browse_at = page.index("Browse Images", header_end)
+        browse_at = page.index("Image Browser", header_end)
         ai_at = page.index("AI Identification", header_end)
         self.assertLess(header_end, browse_at)
         self.assertLess(browse_at, ai_at)
@@ -51,7 +55,7 @@ class NoDuplicateButtonsTests(HomeTestCase):
     def test_each_card_appears_once_in_the_hero(self):
         page = self.page()
         hero = page[page.index("<header"):page.index("border-t border-b border-gray-100")]
-        self.assertEqual(hero.count("Browse Images"), 1)
+        self.assertEqual(hero.count("Image Browser"), 1)
         self.assertEqual(hero.count("AI Identification"), 1)
 
 
@@ -118,13 +122,13 @@ class TeamHeadingTests(HomeTestCase):
         return team[start:team.index(">", start) + 1], match.group(1).strip()
 
     def test_the_heading_says_team(self):
-        page = self.page()
+        page = self.team_page()
         _, text = self.heading_tag_and_text(page)
         self.assertEqual(text, "Team")
         self.assertNotIn("Created by", page)
 
     def test_the_heading_is_not_heavier_than_the_rest(self):
-        page = self.page()
+        page = self.team_page()
         tag, _ = self.heading_tag_and_text(page)
         self.assertNotIn("font-black", tag)
 
@@ -133,20 +137,20 @@ class TeamGridTests(HomeTestCase):
     """home-team, home-team-icons: a compact grid, 24px icons in 44px hit areas, no "|" separators, aria-labels."""
 
     def test_name_and_role_sit_on_one_line(self):
-        page = self.page()
+        page = self.team_page()
         self.assertIn("Christopher Marais", page)
         self.assertIn("Co-Lead Full Stack Developer", page)
 
     def test_icons_are_24px_in_a_44px_hit_area_with_no_separators(self):
-        page = self.page()
-        team = page[page.index('id="team-section"'):page.index("Contributing Institutions")]
+        page = self.team_page()
+        team = page[page.index('id="team-section"'):page.index("Contributing institutions")]
         self.assertIn("w-11 h-11", team)   # 2.75rem = 44px
         self.assertIn("text-2xl", team)    # 1.5rem = 24px
         self.assertNotIn('text-gray-300 text-xs">|<', team)
 
     def test_every_icon_link_has_its_own_aria_label(self):
-        page = self.page()
-        team = page[page.index('id="team-section"'):page.index("Contributing Institutions")]
+        page = self.team_page()
+        team = page[page.index('id="team-section"'):page.index("Contributing institutions")]
         # One aria-label per github/linkedin/lab icon link; Andrew + Jiri (lab only) plus the rest (github/linkedin).
         self.assertGreaterEqual(team.count("aria-label="), 10)
 
@@ -155,13 +159,13 @@ class InstitutionsListTests(HomeTestCase):
     """home-institutions: left-aligned, two columns on desktop, top 10 then "Show all"."""
 
     def test_the_list_is_left_aligned_and_two_columns_on_desktop(self):
-        page = self.page()
+        page = self.team_page()
         tag = opening_tag(page, 'id="institutions-list"')
         self.assertIn("sm:grid-cols-2", tag)
-        self.assertIn('<div class="max-w-5xl mx-auto px-4 text-left"', page)
+        self.assertIn('<section class="mt-12 text-left">', page)
 
     def test_only_ten_institutions_show_by_default(self):
-        page = self.page()
+        page = self.team_page()
         list_html = page[page.index('id="institutions-list"'):page.index("</ul>")]
         total = list_html.count("<li>") + list_html.count('<li class="institution-extra hidden">')
         extra = list_html.count('<li class="institution-extra hidden">')
@@ -169,7 +173,50 @@ class InstitutionsListTests(HomeTestCase):
         self.assertGreater(extra, 0)
 
     def test_a_show_all_button_exists_with_a_live_count(self):
-        page = self.page()
+        page = self.team_page()
         self.assertIn('id="institutions-toggle"', page)
         self.assertIn('id="institutions-count"', page)
         self.assertIn("list.children.length", page)
+
+
+class OneScreenHomeTests(HomeTestCase):
+    """home-team: the home page is one screen; a compact "Who built this" line links to Team and partners."""
+
+    def test_the_home_page_links_to_the_team_page_instead_of_listing_everyone(self):
+        page = self.page()
+        self.assertIn('data-testid="who-built-this"', page)
+        self.assertIn(f'href="{reverse("team")}"', page)
+        self.assertNotIn('id="team-section"', page)
+        self.assertNotIn('id="institutions-list"', page)
+        self.assertNotIn("Christopher Marais", page)
+        self.assertNotIn("snap-mandatory", page)
+
+    def test_the_team_page_is_public_and_links_back_home(self):
+        response = self.client.get(reverse("team"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(reverse("team"), "/team/")
+        page = response.content.decode()
+        self.assertIn(f'href="{reverse("image_browser")}"', page)
+        self.assertIn("github.com/ChristopherMarais/barkandambrosiagallery/discussions", page)
+
+
+class HomeCardIconTests(HomeTestCase):
+    """home-cards-icons, site-icons: the three cards use the sidebar's names and icons."""
+
+    def hero(self):
+        page = self.page()
+        return page[page.index("</header>"):page.index("border-t border-b border-gray-100")]
+
+    def test_the_cards_use_the_sidebar_icons(self):
+        hero = self.hero()
+        for icon in ("fi-rr-picture", "fi-rr-sparkles", "fi-rr-play"):
+            with self.subTest(icon=icon):
+                self.assertIn(icon, hero)
+        self.assertNotIn("fi-rr-bug", hero)
+        self.assertNotIn("fi-rr-gamepad", hero)
+
+    def test_the_cards_use_the_sidebar_names(self):
+        hero = self.hero()
+        self.assertIn(">Image Browser</h2>", hero)
+        self.assertIn(">AI Identification</h2>", hero)
+        self.assertNotIn("Browse Images", hero)
