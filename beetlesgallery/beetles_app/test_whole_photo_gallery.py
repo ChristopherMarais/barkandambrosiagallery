@@ -60,5 +60,5 @@ class PageTests(ReviewCase):
         page = self.page()
         self.assertIn('b.classList.add("hidden");', page)
         self.assertIn('b.classList.remove("hidden");', page)
-        self.assertIn("if (p.thumb) loadImage(p.thumb).then(() => put(p.thumb, false), () => {});", page)
+        self.assertIn("if (p.thumb) loadImage(p.thumb).then(soft, () => {});", page)
         self.assertIn("#lightbox-box.hidden { display: none; }", page)
