@@ -116,7 +116,7 @@ class LoadingTests(SimpleTestCase):
     def test_no_line_says_the_game_is_slow(self):
         self.assertNotIn("taking a while", PAGE)
         self.assertNotIn("frass", PAGE)
-        self.assertNotIn("fungus garden", PAGE)
+        self.assertNotIn("waiting for the fungus garden to grow", PAGE)   # the old slow line (fact 2 is about fungus gardens)
         self.assertNotIn("slow", self.loading_block().lower())
 
     def test_the_lines_are_short_and_fun(self):
@@ -128,9 +128,11 @@ class LoadingTests(SimpleTestCase):
 
     def test_the_facts_are_a_fixed_list_of_beetle_facts(self):
         facts = re.findall(r'"([^"]+)"', between("const LOADING_FACTS", "const LOADING_LINE_MS"))
-        self.assertGreaterEqual(len(facts), 5)
+        self.assertEqual(len(facts), 7)   # the owner's seven, in this order
         self.assertEqual(len(set(facts)), len(facts))
-        self.assertIn("Fireflies are beetles too.", facts)
+        self.assertTrue(facts[0].startswith("In a Colorado study, forests killed by spruce beetles had 62% more flowers"))
+        self.assertIn("Ambrosia beetles grow their own fungus inside the wood, and they eat it.", facts)
+        self.assertNotIn("preprint", facts[5].lower())   # labelled in the code comment only, not on the page
         self.assertIn('fact.textContent = LOADING_FACTS[0];', PAGE)
         self.assertIn("LOADING_FACTS[(turn / 2) % LOADING_FACTS.length]", PAGE)
 

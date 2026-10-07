@@ -1558,14 +1558,16 @@
   // While the feed loads: short, light lines in turn (never about speed), and a beetle fact from a fixed list that
   // changes every few seconds. Nothing here calls the server. With reduced motion nothing swaps: the first line and fact.
   const LOADING_LINES = ["Finding beetles…", "Building your gallery…", "Turning over the bark…", "Counting the antennae…"];
+  // The owner's facts, in this order, the Colorado one first so it stands out. Fact 5 is from a preprint (not yet
+  // peer-reviewed): its label is here, not on the page.
   const LOADING_FACTS = [
-    "Beetles are about a quarter of all known animal species.",
-    "Most beetles fly with their back pair of wings. The hard front pair covers them.",
-    "Fireflies are beetles too.",
-    "A dung beetle can pull many times its own weight.",
-    "A bombardier beetle sprays a hot chemical from the end of its abdomen.",
-    "Many bark beetles are smaller than a grain of rice.",
-    "Ladybirds are beetles, too.",
+    "In a Colorado study, forests killed by spruce beetles had 62% more flowers and more bee species than forests that were not.",
+    "Ambrosia beetles grow their own fungus inside the wood, and they eat it.",
+    "Some ambrosia beetles steal fungus gardens from other beetles.",
+    "Fungus farming has evolved independently at least 16 times in ambrosia beetles.",
+    "Ambrosia and bark beetles help break down dead wood in tropical forests.",
+    "One lineage of ambrosia beetles has invaded California, South Africa and Western Australia.",
+    "A spruce bark beetle was found attacking Sitka spruce in Great Britain for the first time.",
   ];
   const LOADING_LINE_MS = 2500;
   let loadingTimer = null;
