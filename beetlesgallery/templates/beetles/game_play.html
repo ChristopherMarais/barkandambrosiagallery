@@ -122,7 +122,12 @@
   /* Disabled: readable grey-on-grey, not near-invisible white-on-light-grey (#play-submit, ~1.5:1 before) */
   #submit:disabled { background: #e5e7eb; color: #6b7280; }
   /* Exit: big and plain, top left */
-  #exit { height: 2.5rem; padding: 0 1rem 0 0.75rem; gap: 0.375rem; border: 1px solid #d1d5db; border-radius: 9999px; font-size: 0.9375rem; font-weight: 600; color: #111827; background: #fff; }
+  /* Centred in its pill (owner, on a phone: the cross sat off-centre): a 2.5rem circle on a phone, even padding, and
+     the icon a flex box of its own, so the icon font's line height cannot nudge it off the middle. With a keyboard
+     the Esc key widens it into a pill, still centred. */
+  #exit { flex-shrink: 0; height: 2.5rem; min-width: 2.5rem; padding: 0 0.5rem; border: 1px solid #d1d5db; border-radius: 9999px; font-size: 0.9375rem; font-weight: 600; line-height: 1; color: #111827; background: #fff; }
+  #exit > i { display: flex; align-items: center; justify-content: center; width: 1.25rem; height: 1.25rem; line-height: 1; }
+  #exit > i::before { display: block; line-height: 1; }
   #exit:hover { border-color: #6b7280; }
   /* Rounder photos */
   #photos .cell { border-radius: 1rem; }
@@ -505,7 +510,7 @@
        room it needs, and the combo/level details that used to crowd this row now live behind one tap-to-open chip
        (#play-header), so they never squeeze the mode name down to a single letter. -->
   <header class="relative flex items-center gap-1 px-2 h-14 border-b border-gray-200 bg-white">
-    <button type="button" id="exit" class="inline-flex items-center" aria-label="Exit the game">
+    <button type="button" id="exit" class="inline-flex items-center justify-center" aria-label="Exit the game">
       <i class="fi fi-rr-cross-small text-lg"></i><span class="sr-only">Exit</span><kbd class="kbd">Esc</kbd>
     </button>
     <div class="flex-1 min-w-0 text-center leading-tight">
@@ -1612,29 +1617,36 @@
     "One lineage of ambrosia beetles has invaded California, South Africa and Western Australia.",
     "A spruce bark beetle was found attacking Sitka spruce in Great Britain for the first time.",
   ];
-  const LOADING_LINE_MS = 2500;
+  // Each line stays long enough to read (owner, on a phone: the facts went by too fast): a base plus a little per
+  // letter, so a short line moves on sooner and a long fact stays up for several seconds, within 3 to 9 seconds.
+  const LOADING_BASE_MS = 2500, LOADING_CHAR_MS = 60, LOADING_MIN_MS = 3000, LOADING_MAX_MS = 9000;
+  function loadingMs(text) {
+    return Math.min(LOADING_MAX_MS, Math.max(LOADING_MIN_MS, LOADING_BASE_MS + LOADING_CHAR_MS * text.length));
+  }
   let loadingTimer = null;
   function loadingLines() {
-    clearInterval(loadingTimer);
+    clearTimeout(loadingTimer);
     const line = $("loading-line");
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let turn = 0;
     line.textContent = LOADING_LINES[0];
-    loadingTimer = setInterval(() => {
+    if (still) return;   // reduced motion: the first line stays put
+    const step = () => {
       if ($("loading").classList.contains("hidden")) {
-        clearInterval(loadingTimer);
+        clearTimeout(loadingTimer);
         loadingTimer = null;
         return;
       }
       turn += 1;
-      if (still) return;   // reduced motion: the first line stays put
       // odd turns: the next short line; even turns: the next beetle fact. One slot, taking turns.
       line.textContent = turn % 2 === 1 ? LOADING_LINES[((turn - 1) / 2) % LOADING_LINES.length]
                                          : LOADING_FACTS[(turn / 2 - 1) % LOADING_FACTS.length];
       line.classList.remove("new");
       void line.offsetWidth;
       line.classList.add("new");
-    }, LOADING_LINE_MS);
+      loadingTimer = setTimeout(step, loadingMs(line.textContent));
+    };
+    loadingTimer = setTimeout(step, loadingMs(line.textContent));
   }
 
   // ---------- the feed ----------
@@ -2201,7 +2213,8 @@
   // Every beetle's names on its photo, in every game (#541): one line per taxon level, subfamily to species (the genus
   // cut to its letter in the species). Each line has its own dots (green validated, blue IBBI-AI, purple the players,
   // glowing when a proven expert backs them), its ID type after the name ("Validated ID", "AI ID", "Player ID"), and,
-  // where IBBI-AI and the players give a confidence, the two columns under their headings (#615).
+  // where IBBI-AI and the players give a confidence, the two columns under their headings (#615). Under those
+  // headings the rows do not say "AI ID" or "Player ID" again (owner, on a phone): the heading already says it.
   const ID_COLUMN = { ai: "AI ID", players: "Player ID" };
   // one column's cell: IBBI-AI's share, or the players' count, share and expert count; a name the other source
   // gives at this level is shown in front of its share
@@ -2242,7 +2255,7 @@
       const nm = name ? node("span", "nm" + (r.rank === shared ? " shared" : ""), taxonName(name, r.rank)) : node("span", "nm none", "—");
       nm.title = r.rank + ": " + (r.name || "not known") + (r.label ? " (" + r.label + ")" : "");
       const dots = name ? (r.dots || []).map(sourceDot) : [];
-      const idType = name && r.label ? node("span", "idl", r.label) : null;
+      const idType = name && r.label && !cols.length ? node("span", "idl", r.label) : null;   // no repeat under the headings
       const cells = cols.map((k) => columnCell(k, (r.columns || {})[k], r.name));
       box.append(node("span", "", node("span", "lead", ...dots), full ? node("span", "rk", r.rank) : null, nm, idType, ...cells));
     });
@@ -2717,6 +2730,29 @@
         e.stopPropagation();
         openFinder(rank, e.key);
       }
+    });
+  });
+  // A list that still says Not sure: a tap means "help me find it" (owner, on a phone), so it opens that list's search
+  // at once, the whole list under the box, instead of the phone's own picker first. A list with a name in it still
+  // opens its picker, to change the pick or go back to Not sure; the keyboard and the search button work as before.
+  function searchFirst(select) {
+    return !busy && !select.value && !select.disabled && select.closest(".rank-row").classList.contains("findable");
+  }
+  Object.entries(selects).forEach(([rank, select]) => {
+    let touchAt = null;
+    select.addEventListener("touchstart", (e) => { touchAt = e.touches.length === 1 ? [e.touches[0].clientX, e.touches[0].clientY] : null; }, { passive: true });
+    select.addEventListener("touchend", (e) => {
+      const t = e.changedTouches[0];
+      const tap = touchAt && t && Math.abs(t.clientX - touchAt[0]) < 10 && Math.abs(t.clientY - touchAt[1]) < 10;   // not a scroll
+      touchAt = null;
+      if (!tap || !searchFirst(select)) return;
+      e.preventDefault();   // no picker, no mouse events after it
+      openFinder(rank);
+    });
+    select.addEventListener("mousedown", (e) => {
+      if (e.button !== 0 || !searchFirst(select)) return;
+      e.preventDefault();
+      openFinder(rank);
     });
   });
 

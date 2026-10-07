@@ -54,7 +54,7 @@ class GameControlsTests(GameCase):
 
     def test_layout_details(self):
         page = self.page()
-        self.assertIn('id="exit" class="inline-flex items-center"', page)
+        self.assertIn('id="exit" class="inline-flex items-center justify-center"', page)
         self.assertIn('#game[data-mode="pair"] #photos .cell:nth-child(1) .ab-tag { top: 0.375rem; right: 0.375rem; }', page)
         self.assertIn("ctx.roundRect", page)
 
