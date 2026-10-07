@@ -77,6 +77,7 @@ def discussions_url():
 # ---------------------------------------------------------------------------
 @login_required
 def game_home(request):
+    game_warm.warm_later(request.user, game_warm.MIXED)   # signed in: the first batches are built while they look around
     left_at = game.close_idle_rounds(request.user)   # anything they left open counts now
     last_session = _pop_last_session(request, left_at)
     game_discoveries.find([request.user.id])
@@ -428,6 +429,7 @@ def game_how(request):
 def game_play(request, mode):
     if mode not in MODES:
         raise Http404("Unknown game mode")
+    game_warm.warm_later(request.user, game_warm.MIXED)   # the first batch is ready by the time the feed starts (#round5)
     return render(request, "beetles/game_play.html", {
         "discussions": discussions_url(),
         # short, one line each, for the little report menu in the full-image view. No "Wrong name" here: that is
@@ -929,10 +931,12 @@ def _timed(view):
     def timed(request, *args, **kwargs):
         stats = {"batches": 0, "items": 0, "crops": 0}
         token, rows = game_crops.built.set(stats), _rows.set({})
+        memo = game.reveals_memo.set({})
         started = time.perf_counter()
         try:
             return view(request, *args, **kwargs)
         finally:
+            game.reveals_memo.reset(memo)
             _rows.reset(rows)
             game_crops.built.reset(token)
             logger.info("%s took %d ms: %d new batch(es), %d item(s), %d crop(s) queued", view.__name__,
@@ -992,7 +996,8 @@ def game_start(request):
             game.finish_round_later(rnd)
         # after a switch of game, the batch the worker built for it while they played (game_warm), if there is one
         # else a new one: its first beetles now, the rest on the worker or as the feed goes (game_grow, #575)
-        rnd = (fresh and game_warm.take(request.user, mode)) or game_grow.start_round(request.user, mode)
+        # a batch the worker built ahead (for the page load, after a round, or the switch): ready at once; else built here
+        rnd = game_warm.take(request.user, mode) or game_grow.start_round(request.user, mode)
         index = _next_index(rnd, 0) if rnd else None
     if index is None:   # nothing in their game: say why (no beetles yet, all seen, their focus, ...)
         # with the toolbar's choices, so the page can offer another game (#604)

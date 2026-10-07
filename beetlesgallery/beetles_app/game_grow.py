@@ -12,7 +12,6 @@ Where game work stays in the request (GAME_RECOMPUTE_IN_BACKGROUND off, as when 
 as before.
 """
 import logging
-import time
 
 from django.core.cache import cache
 from django.db import transaction
@@ -26,7 +25,6 @@ LOCK = "game:growing:{}"       # round: one grower at a time, so two never add t
 KEEP = 60 * 60 * 24
 LOCK_SECONDS = 120
 MISSES = 3                     # tries that add nothing before a batch stops growing
-GROW_WAIT = 5                  # seconds an answer waits for another grower before the batch is taken as ended
 
 
 def _background():
@@ -130,23 +128,20 @@ def grow(rnd, n=None):
         cache.delete(LOCK.format(rnd.id))
 
 
-def grow_or_wait(rnd, n, wait=None):
+def grow_or_wait(rnd, n):
     """
-    The next beetles of a growing batch, for a player waiting on them: grown here, or, when another grower (the worker,
-    or a look-ahead request) is at it this moment, theirs, waited for up to ``wait`` seconds (GROW_WAIT). Without it the
-    batch would seem to end early and the feed would jump to a new one. Returns how many it gained.
+    The next beetles of a growing batch, for a player waiting on them: grown here if nobody else is at it. When the
+    worker (or a look-ahead request) is growing it this moment, this does NOT wait for it: the answer goes on with what
+    is ready (the batch as it stands now, re-read from the database), and the other grower finishes the batch.
+    Never sleeps in a request. Returns how many beetles this call added.
     """
     from .models import GameRound
 
     before = len(rnd.items)
-    if grow(rnd, n):
-        return len(rnd.items) - before
-    deadline = time.monotonic() + (GROW_WAIT if wait is None else wait)
-    while cache.get(LOCK.format(rnd.id)) and time.monotonic() < deadline:
-        time.sleep(0.1)
-    rnd.items = GameRound.objects.filter(id=rnd.id).values_list("items", flat=True).first() or rnd.items
-    if len(rnd.items) == before and wanted(rnd):
-        grow(rnd, n)   # the other grower gave up, or timed out: one more go here
+    grow(rnd, n)   # 0 at once when another grower holds the batch
+    current = GameRound.objects.filter(id=rnd.id).values_list("items", flat=True).first()
+    if current is not None:
+        rnd.items = current   # what the other grower added meanwhile counts too
     return len(rnd.items) - before
 
 
