@@ -1,7 +1,33 @@
+import re
+
 from django import template
-from django.utils.html import format_html
+from django.utils.html import escape, format_html
+from django.utils.safestring import mark_safe
 
 register = template.Library()
+
+# A URL (http/https), a bare "www." address, or a DOI written as "doi.org/..." / "dx.doi.org/..." (#618 detail-doi:
+# notes often paste a protocols.io DOI without a scheme, e.g. "dx.doi.org/10.17504/protocols.io.xyz").
+_LINKABLE_RE = re.compile(r"https?://[^\s<]+|www\.[^\s<]+|(?:dx\.)?doi\.org/[^\s<]+", re.IGNORECASE)
+
+
+@register.filter
+def linkify(text):
+    """Plain text with any URL, "www." address or DOI turned into a clickable link; everything else is escaped, so
+    this is safe to use directly on free-text notes (issue #618, detail-doi)."""
+    if not text:
+        return text
+    text = str(text)
+    pieces = []
+    last = 0
+    for m in _LINKABLE_RE.finditer(text):
+        raw = m.group(0)
+        href = raw if raw.lower().startswith("http") else f"https://{raw}"
+        pieces.append(escape(text[last:m.start()]))
+        pieces.append(f'<a href="{escape(href)}" class="underline" rel="noopener" target="_blank">{escape(raw)}</a>')
+        last = m.end()
+    pieces.append(escape(text[last:]))
+    return mark_safe("".join(pieces))
 
 # The longest side of a stored thumbnail (image_pipeline writes them at this size or smaller)
 THUMB_SIDE = 96

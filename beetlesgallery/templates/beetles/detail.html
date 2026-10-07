@@ -11,65 +11,85 @@
   #roi-photo[data-box="hidden"] #report-roi-btn { display: none; }
   #report-roi-btn:disabled { cursor: default; }
 
-  /* Every beetle's box on the photo (#536): a white line with a darker outline; this page's beetle the other way
-     round, a dark line with a white outline. The other boxes are links to their beetles' pages; a click on this one
-     does nothing (it isn't "outside the boxes"). */
-  .roi-box { position: absolute; border: 2px solid rgb(255 255 255 / 0.9); border-radius: 0.375rem;
-             box-shadow: 0 0 0 1px rgb(0 0 0 / 0.4), inset 0 0 0 1px rgb(0 0 0 / 0.4); }
-  .roi-box-current { cursor: default; border-color: rgb(17 24 39 / 0.9);
+  /* Every beetle's box on the photo (#536, #618 detail-boxes): the other boxes a thin grey line (gray-500); this
+     page's beetle a thick dark one (gray-900) with a small numbered tab, so it stands out on a crowded photo. The
+     other boxes are links to their beetles' pages; a click on this one does nothing (it isn't "outside the boxes"). */
+  .roi-box { position: absolute; border-radius: 0.375rem; border: 1px solid rgb(107 114 128 / 0.95);
+             box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35), inset 0 0 0 1px rgb(0 0 0 / 0.35); }
+  .roi-box-current { cursor: default; border: 2px solid rgb(17 24 39 / 0.95);
                      box-shadow: 0 0 0 1px rgb(255 255 255 / 0.9), inset 0 0 0 1px rgb(255 255 255 / 0.9); }
+  .roi-box-tab { position: absolute; top: -0.7rem; left: -0.1rem; min-width: 1.25rem; height: 1.25rem; padding: 0 0.3rem;
+                 border-radius: 1rem; background: rgb(17 24 39); color: #fff; font-size: 0.65rem; font-weight: 700;
+                 line-height: 1.25rem; text-align: center; box-shadow: 0 1px 2px rgb(0 0 0 / 0.35); }
   a.roi-box:hover { background: rgb(255 255 255 / 0.15); }
   a.roi-box:focus-visible { outline: 3px solid rgb(107 114 128); outline-offset: 1px; }
   #roi-frame { isolation: isolate; }   /* the boxes stack inside the photo, under the switch and the flag */
   #roi-photo[data-box="hidden"] #roi-boxes { display: none; }
   #roi-boxes-btn[aria-pressed="true"] .boxes-off { display: none; }
+
+  /* #618 detail-overflow: the image card never pushes the page wider than the screen. A grid/flex cell's default
+     min-width is its content's own size, which a large photo can exceed; min-width: 0 lets it shrink instead. */
+  .roi-left-column { min-width: 0; }
+  .roi-figure { max-width: 100%; min-width: 0; }
+
+  /* #618 detail-doi: a link inside a note wraps anywhere rather than overflowing its box on a narrow screen. */
+  .note-box a { overflow-wrap: anywhere; }
+
+  /* #618 detail-empty: the "Show all N fields" link only appears once a card actually has something hidden. */
+  .group-section dl:not(:has(.field-hidden)) + .show-all-fields { display: none; }
 </style>
 {% endblock %}
 
 {% block content %}
 <section class="relative z-0">
-  
-  {# --- HEADER & PAGINATION --- #}
+
+  {# --- HEADER & SPECIMEN PAGER --- #}
   <header class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
     <div>
       {# Same title as the gallery card: the linked taxon's name, or "Unidentified" (#112) #}
       <h1 class="page-title">
         {{ ref_species.scientificName|default:"Unidentified" }}
       </h1>
-      {# --- Record ID Row --- #}
-      <div class="flex items-center gap-2 mt-3">
-        <span class="font-bold text-sm text-text/50 mr-1">Region of Interest (ROI) ID:</span>
-        <span class="font-mono text-sm text-text/70 break-all select-all">{{ beetle.id|stringformat:"s" }}</span>
-        <button type="button" class="copy-uuid shrink-0 text-gray-500 hover:text-black transition" data-uuid="{{ beetle.id }}" title="Copy Full Record ID">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-        </button>
-      </div>
-
-      {# --- Image ID Row --- #}
-      {% if beetle.image_asset %}
-      <div class="flex items-center gap-2 mt-1">
-        <span class="font-bold text-sm text-text/50 mr-1">Image ID:</span>
-        <span class="font-mono text-sm text-text/70 break-all select-all">{{ beetle.image_asset.id|stringformat:"s" }}</span>
-        <button type="button" class="copy-uuid shrink-0 text-gray-500 hover:text-black transition" data-uuid="{{ beetle.image_asset.id }}" title="Copy Image ID">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-        </button>
-      </div>
-      {% endif %}
     </div>
 
+    {# #618 detail-prevnext: one small bordered pager, right of the header row, aligned to the title's centre. #}
+    {% if current_sibling_index %}
+    <nav class="inline-flex h-9 items-center gap-0.5 self-start rounded-lg border border-gray-300 bg-white px-1 shrink-0 md:self-center"
+         aria-label="Specimen pager" data-testid="specimen-pager">
+      {% if prev_sibling %}
+        <a href="{% url 'beetle_detail' beetle_id=prev_sibling.id %}" class="flex h-7 w-7 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-black transition" title="Previous ROI" aria-label="Previous ROI">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        </a>
+      {% else %}
+        <span class="flex h-7 w-7 items-center justify-center rounded-md text-gray-300" aria-hidden="true">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        </span>
+      {% endif %}
+      <span class="px-1 text-sm font-semibold text-gray-700 tabular-nums">{{ current_sibling_index|digit_groups }} / {{ total_siblings|digit_groups }}</span>
+      {% if next_sibling %}
+        <a href="{% url 'beetle_detail' beetle_id=next_sibling.id %}" class="flex h-7 w-7 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-black transition" title="Next ROI" aria-label="Next ROI">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </a>
+      {% else %}
+        <span class="flex h-7 w-7 items-center justify-center rounded-md text-gray-300" aria-hidden="true">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </span>
+      {% endif %}
+    </nav>
+    {% endif %}
   </header>
 
   <div class="grid gap-6 lg:grid-cols-12 mb-8">
-    
+
     {# --- LEFT COLUMN: IMAGE & RELATED --- #}
-    <div class="lg:col-span-8 flex flex-col gap-6">
-      
+    <div class="roi-left-column lg:col-span-8 flex flex-col gap-6">
+
       {# MAIN IMAGE #}
       {% if beetle.image_asset and beetle.image_asset.image_file %}
-        <figure class="rounded-xl bg-primary2 p-3 ring-1 ring-text/10 flex flex-col items-center">
+        <figure class="roi-figure rounded-xl bg-primary2 p-3 ring-1 ring-text/10 flex flex-col items-center">
 
-          {# THE PHOTO, with the boxes switch and the flag in its corners. Not clipped itself, so the flag's menu can reach past the photo. #}
-          <div id="roi-photo" class="relative max-w-full"{% if photo_boxes %} data-box="shown"{% endif %}>
+          {# THE PHOTO, clipped so the boxes' haze stays inside it. #}
+          <div id="roi-photo" class="relative max-w-full w-full min-w-0"{% if photo_boxes %} data-box="shown"{% endif %}>
             {# IMAGE WRAPPER (Hooks absolute positioning to the actual image bounds). A click outside every box hides the boxes, the next one shows them again. #}
             <div id="roi-frame" class="relative block max-h-[70vh] max-w-full overflow-hidden rounded-lg{% if photo_boxes %} cursor-pointer{% endif %}">
               {% with asset=beetle.image_asset %}
@@ -91,7 +111,7 @@
                 {% if asset.image_width %}
                   style="aspect-ratio: {{ asset.image_width }}/{{ asset.image_height }};"
                 {% endif %}
-                class="block max-h-[70vh] w-auto rounded-lg object-contain"
+                class="block max-h-[70vh] w-auto max-w-full rounded-lg object-contain"
                 decoding="async"
                 data-testid="roi-photo-img"
               />
@@ -111,7 +131,9 @@
                   {% for box in photo_boxes %}
                     {% if box.current %}
                       <div id="roi-bbox" class="roi-box roi-box-current" data-testid="roi-box-{{ box.number }}"
-                           style="left: calc({{ box.roi.bbox_x|stringformat:'f' }} * 100%); top: calc({{ box.roi.bbox_y|stringformat:'f' }} * 100%); width: calc({{ box.roi.bbox_width|stringformat:'f' }} * 100%); height: calc({{ box.roi.bbox_height|stringformat:'f' }} * 100%);"></div>
+                           style="left: calc({{ box.roi.bbox_x|stringformat:'f' }} * 100%); top: calc({{ box.roi.bbox_y|stringformat:'f' }} * 100%); width: calc({{ box.roi.bbox_width|stringformat:'f' }} * 100%); height: calc({{ box.roi.bbox_height|stringformat:'f' }} * 100%);">
+                        <span class="roi-box-tab" aria-hidden="true">{{ box.number }}</span>
+                      </div>
                     {% else %}
                       <a href="{% url 'beetle_detail' beetle_id=box.roi.id %}" class="roi-box" data-testid="roi-box-{{ box.number }}"
                          title="Show ROI {{ box.number|digit_groups_text }} of {{ total_siblings|digit_groups_text }}" aria-label="Show ROI {{ box.number|digit_groups_text }} of {{ total_siblings|digit_groups_text }}"
@@ -122,15 +144,8 @@
               {% endif %}
             </div>
 
-            {% if photo_boxes %}
-              {# BOXES SWITCH: shows or hides the boxes and the haze, as a click outside the boxes does; for the keyboard and for those who don't know that click. #}
-              <button type="button" id="roi-boxes-btn" class="btn-secondary absolute bottom-2 left-2 h-9 w-9 p-0 rounded-full shadow-md" aria-pressed="true" aria-label="Hide the boxes" title="Hide the boxes">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="11" height="9" rx="1.5"/><rect x="10" y="10" width="11" height="9" rx="1.5"/><path class="boxes-off" stroke-linecap="round" d="M3 3l18 18"/></svg>
-              </button>
-            {% endif %}
-
             {% if beetle.bbox_x is not None %}
-              {# FLAG: sends this beetle to the curators, as Report does in the game. Shown on hover and focus, always on touch screens, only with the box (see the CSS). #}
+              {# FLAG: sends this beetle to the curators, as Report does in the game. Shown on hover and focus, always on touch screens, only with the box (see the CSS). Its menu opens upward, over the toolbar below. #}
               <button type="button" id="report-roi-btn" class="btn-secondary absolute bottom-2 right-2 h-9 w-9 p-0 rounded-full text-base shadow-md" aria-haspopup="menu" aria-expanded="false" aria-label="Flag this" title="Flag this" data-testid="report-roi"><i class="fi fi-rr-flag" aria-hidden="true"></i></button>
               <div id="report-roi-menu" class="hidden absolute bottom-12 right-2 z-20 scroll-mt-24 p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Flag this" data-url="{% url 'report_roi' beetle.id %}">
                 <div class="px-2 py-1 text-xs font-semibold text-gray-500">Flag this</div>
@@ -144,28 +159,77 @@
             <p id="report-roi-status" class="mt-2 empty:mt-0 text-sm text-gray-600" role="status"></p>
           {% endif %}
 
-          <figcaption class="mt-3 w-full flex gap-2">
-            {% if not beetle.depicts_valid_name_id %}
-            <a href="{% url 'tool_classify' %}?asset={{ beetle.image_asset_id }}"
-               class="btn-main flex-1 px-4 py-3 text-sm"
-               title="Ask the AI which species this is">
-              <i class="fi fi-rr-sparkles"></i> Generate AI recommendation
-            </a>
-            {% endif %}
-            <a href="{{ beetle.image_asset.image_file.url }}" download class="btn-main flex-1 px-4 py-3 text-sm">
-              Download Original Image
-            </a>
-          </figcaption>
+          {# #618 detail-toolbar / detail-roi-pager: a toolbar on the photo's bottom edge, ROI pager left, boxes toggle and full size right. The flag stays on the photo itself, above (it marks this beetle, not the whole photo). #}
+          {% if photo_boxes or beetle.image_asset %}
+          <div id="roi-toolbar" class="mt-2 w-full flex items-center justify-between gap-2 border-t border-text/10 pt-2" data-testid="roi-toolbar">
+            <div class="flex items-center gap-1">
+              {% if current_sibling_index %}
+                {% if prev_sibling %}
+                  <a href="{% url 'beetle_detail' beetle_id=prev_sibling.id %}" class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" title="Previous ROI" aria-label="Previous ROI" data-testid="roi-pager-prev">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                  </a>
+                {% else %}
+                  <span class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-300" aria-hidden="true">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                  </span>
+                {% endif %}
+                <span class="px-1 text-sm text-gray-600 tabular-nums">ROI {{ current_sibling_index|digit_groups }} of {{ total_siblings|digit_groups }}</span>
+                {% if next_sibling %}
+                  <a href="{% url 'beetle_detail' beetle_id=next_sibling.id %}" class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" title="Next ROI" aria-label="Next ROI" data-testid="roi-pager-next">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                  </a>
+                {% else %}
+                  <span class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-300" aria-hidden="true">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                  </span>
+                {% endif %}
+              {% endif %}
+            </div>
+            <div class="flex items-center gap-1">
+              {% if photo_boxes %}
+                {# BOXES SWITCH: shows or hides the boxes and the haze, as a click outside the boxes does; for the keyboard and for those who don't know that click. #}
+                <button type="button" id="roi-boxes-btn" class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" aria-pressed="true" aria-label="Hide the boxes" title="Hide the boxes">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="11" height="9" rx="1.5"/><rect x="10" y="10" width="11" height="9" rx="1.5"/><path class="boxes-off" stroke-linecap="round" d="M3 3l18 18"/></svg>
+                </button>
+              {% endif %}
+              {% if beetle.image_asset %}
+                <a href="{{ beetle.display_url }}" target="_blank" rel="noopener" class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" title="View full size" aria-label="View full size" data-testid="roi-fullsize">
+                  <i class="fi fi-rr-expand" aria-hidden="true"></i>
+                </a>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+
         </figure>
       {% else %}
         <div class="rounded-xl bg-primary2 p-6 text-text/70 ring-1 ring-text/10">No image found.</div>
       {% endif %}
 
-      {# MORE IMAGES OF THIS SPECIMEN #}
+      {# #618 detail-actions: Download and Edit, shown whenever there's an image record to act on, even one whose file didn't display above (areas.boxes/image_file independently gate each button). #}
+      {% if beetle.image_asset %}
+      <div class="w-full grid grid-cols-2 gap-2" data-testid="detail-actions">
+        {% if areas.boxes %}
+          <a href="{% url 'tool_annotate' %}?image={{ beetle.image_asset.id }}&roi={{ beetle.id }}"
+             class="btn-secondary h-12 justify-center {% if not beetle.image_asset.image_file %}col-span-2{% endif %}" data-testid="open-annotation"
+             title="Open in the annotation page" aria-label="Open in the annotation page">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+            Edit
+          </a>
+        {% endif %}
+        {% if beetle.image_asset.image_file %}
+          <a href="{{ beetle.image_asset.image_file.url }}" download class="btn-primary h-12 justify-center {% if not areas.boxes %}col-span-2{% endif %}">
+            Download
+          </a>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {# OTHER IMAGES OF THIS SPECIMEN (#618 detail-more) #}
       {% if related_specimens %}
         <section>
           <h2 class="text-lg font-bold text-text mb-3 text-text/80 tracking-wide">
-              More images of the same specimen(s)
+              Other images of this specimen ({{ related_specimens|length }})
           </h2>
           <div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
             {% for rel in related_specimens %}
@@ -186,93 +250,43 @@
 
     {# --- RIGHT COLUMN: DETAILS --- #}
     <aside class="lg:col-span-4">
-      
-      {# PAGINATION HEADER inside card (Redundant but requested context) #}
-      {% if current_sibling_index %}
-      <div class="mb-4 flex items-center justify-between bg-primary2 rounded-xl p-2 border border-text/10 shadow-xs">
-          <div class="text-sm font-bold text-text/50 tracking-wide px-2">
-              ROI {{ current_sibling_index|digit_groups }} of {{ total_siblings|digit_groups }}
-          </div>
-          <div class="flex items-center gap-1">
-              {% if prev_sibling %}
-                  <a href="{% url 'beetle_detail' beetle_id=prev_sibling.id %}" class="p-1 rounded-sm hover:bg-black/5 text-text/70 hover:text-black transition" title="Previous Individual">
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                  </a>
-              {% else %}
-                  <span class="p-1 text-text/20 cursor-not-allowed"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></span>
-              {% endif %}
-
-              {% if next_sibling %}
-                  <a href="{% url 'beetle_detail' beetle_id=next_sibling.id %}" class="p-1 rounded-sm hover:bg-black/5 text-text/70 hover:text-black transition" title="Next Individual">
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                  </a>
-              {% else %}
-                  <span class="p-1 text-text/20 cursor-not-allowed"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></span>
-              {% endif %}
-          </div>
-      </div>
-      {% endif %}
 
         <div class="rounded-xl bg-primary2 p-4 ring-1 ring-text/10 sticky top-4">
 
-          {# TOOLBAR #}
-          <div class="flex items-center justify-between mb-4 h-8 border-b border-text/10 pb-2">
-              <h2 class="text-md font-semibold uppercase tracking-wider text-text/80">Image Details</h2>
-
-              {# PEN: names, boxes, details and validation are changed on the annotation page, opened at this beetle; only for those who may open it #}
-              {% if areas.boxes and beetle.image_asset %}
-                  <a href="{% url 'tool_annotate' %}?image={{ beetle.image_asset.id }}&roi={{ beetle.id }}"
-                     class="text-gray-500 hover:text-gray-600 transition p-1 rounded-sm hover:bg-gray-50"
-                     title="Open in the annotation page" aria-label="Open in the annotation page" data-testid="open-annotation">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                  </a>
-              {% endif %}
-          </div>
-
-          {# --- IDENTITY --- #}
+          {# --- TAXONOMY (Reference Read-Only), first: what people look for (#618 detail-order) --- #}
           <div class="group-section">
-              <h3 class="mt-2 mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Identity</h3>
+              <h3 class="mt-2 mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Taxonomy</h3>
+              {% with verbatim=beetle.depicts_name_verbatim scientific=ref_species.scientificName %}
+              {% if verbatim and verbatim != scientific %}
+              <p class="mb-2 text-xs text-text/60" title="As written on the specimen's own label, which may differ from the accepted name below">
+                <span class="font-semibold text-text/70">As written on the label:</span> {{ verbatim }}
+              </p>
+              {% endif %}
+              {% endwith %}
               <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
-                <dt class="col-span-1 text-text/60">Specimen ID</dt>
-                <dd class="col-span-2">{{ beetle.depicts_specimen|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60">Valid Name ID</dt>
-                <dd class="col-span-2">{{ beetle.depicts_valid_name_id|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60">Described ID</dt>
-                <dd class="col-span-2">{{ beetle.depicts_described_name_id|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60" title="Your own ID for this record, e.g. a catalogue number or file name from your database. Optional; we keep it unchanged and include it in every download so you can link our records back to yours.">Alias ID</dt>
-                <dd class="col-span-2">{{ beetle.alias_id|default:"—" }}</dd>
-              </dl>
-          </div>
+                <dt class="col-span-1 text-text/60 {% if not ref_species.scientificName %}hidden field-hidden{% endif %}">Scientific Name</dt>
+                <dd class="col-span-2 text-text/80 {% if not ref_species.scientificName %}hidden field-hidden{% endif %}">{% if beetle.depicts_valid_name_id and ref_species.scientificName %}<a href="{% url 'taxonomy_browser' %}?species={{ beetle.depicts_valid_name_id|urlencode }}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.scientificName }}</a>{% else %}{{ ref_species.scientificName|default:"—" }}{% endif %}</dd>
 
-          {# --- TAXONOMY (Reference Read-Only) --- #}
-          <div class="group-section mt-4">
-              <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Taxonomy</h3>
-              <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
-                <dt class="col-span-1 text-text/60">Name (verbatim)</dt>
-                <dd class="col-span-2">{{ beetle.depicts_name_verbatim|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60">Scientific Name</dt>
-                <dd class="col-span-2 text-text/80">{% if beetle.depicts_valid_name_id and ref_species.scientificName %}<a href="{% url 'taxonomy_browser' %}?species={{ beetle.depicts_valid_name_id|urlencode }}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.scientificName }}</a>{% else %}{{ ref_species.scientificName|default:"—" }}{% endif %}</dd>
-                
-                <dt class="col-span-1 text-text/60">Authority</dt>
-                <dd class="col-span-2 text-text/80">{% if beetle.depicts_valid_name_id and ref_species.authority %}<a href="{% url 'taxonomy_browser' %}?species={{ beetle.depicts_valid_name_id|urlencode }}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.authority }}</a>{% else %}{{ ref_species.authority|default:"—" }}{% endif %}</dd>
+                <dt class="col-span-1 text-text/60 {% if not ref_species.authority %}hidden field-hidden{% endif %}">Authority</dt>
+                <dd class="col-span-2 text-text/80 {% if not ref_species.authority %}hidden field-hidden{% endif %}">{% if beetle.depicts_valid_name_id and ref_species.authority %}<a href="{% url 'taxonomy_browser' %}?species={{ beetle.depicts_valid_name_id|urlencode }}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.authority }}</a>{% else %}{{ ref_species.authority|default:"—" }}{% endif %}</dd>
 
-                <dt class="col-span-1 text-text/60">Subfamily</dt>
-                <dd class="col-span-2 text-text/80">{% if beetle.depicts_valid_name_id and ref_species.subfamily %}<a href="{% taxon_url ref_species.subfamily %}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.subfamily }}</a>{% else %}{{ ref_species.subfamily|default:"—" }}{% endif %}</dd>
+                <dt class="col-span-1 text-text/60 {% if not ref_species.subfamily %}hidden field-hidden{% endif %}">Subfamily</dt>
+                <dd class="col-span-2 text-text/80 {% if not ref_species.subfamily %}hidden field-hidden{% endif %}">{% if beetle.depicts_valid_name_id and ref_species.subfamily %}<a href="{% taxon_url ref_species.subfamily %}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.subfamily }}</a>{% else %}{{ ref_species.subfamily|default:"—" }}{% endif %}</dd>
 
-                <dt class="col-span-1 text-text/60">Tribe</dt>
-                <dd class="col-span-2 text-text/80">{% if beetle.depicts_valid_name_id and ref_species.tribe %}<a href="{% taxon_url ref_species.subfamily ref_species.tribe %}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.tribe }}</a>{% else %}{{ ref_species.tribe|default:"—" }}{% endif %}</dd>
+                <dt class="col-span-1 text-text/60 {% if not ref_species.tribe %}hidden field-hidden{% endif %}">Tribe</dt>
+                <dd class="col-span-2 text-text/80 {% if not ref_species.tribe %}hidden field-hidden{% endif %}">{% if beetle.depicts_valid_name_id and ref_species.tribe %}<a href="{% taxon_url ref_species.subfamily ref_species.tribe %}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.tribe }}</a>{% else %}{{ ref_species.tribe|default:"—" }}{% endif %}</dd>
 
-                <dt class="col-span-1 text-text/60">Subtribe</dt>
-                <dd class="col-span-2 text-text/80">{% if beetle.depicts_valid_name_id and ref_species.subtribe %}<a href="{% taxon_url ref_species.subfamily ref_species.tribe %}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.subtribe }}</a>{% else %}{{ ref_species.subtribe|default:"—" }}{% endif %}</dd>
+                <dt class="col-span-1 text-text/60 {% if not ref_species.subtribe %}hidden field-hidden{% endif %}">Subtribe</dt>
+                <dd class="col-span-2 text-text/80 {% if not ref_species.subtribe %}hidden field-hidden{% endif %}">{% if beetle.depicts_valid_name_id and ref_species.subtribe %}<a href="{% taxon_url ref_species.subfamily ref_species.tribe %}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.subtribe }}</a>{% else %}{{ ref_species.subtribe|default:"—" }}{% endif %}</dd>
 
-                <dt class="col-span-1 text-text/60">Genus</dt>
-                <dd class="col-span-2 text-text/80 italic">{% if beetle.depicts_valid_name_id and ref_species.genus %}<a href="{% taxon_url ref_species.subfamily ref_species.tribe ref_species.genus %}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.genus }}</a>{% else %}{{ ref_species.genus|default:"—" }}{% endif %}</dd>
+                <dt class="col-span-1 text-text/60 {% if not ref_species.genus %}hidden field-hidden{% endif %}">Genus</dt>
+                <dd class="col-span-2 text-text/80 italic {% if not ref_species.genus %}hidden field-hidden{% endif %}">{% if beetle.depicts_valid_name_id and ref_species.genus %}<a href="{% taxon_url ref_species.subfamily ref_species.tribe ref_species.genus %}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.genus }}</a>{% else %}{{ ref_species.genus|default:"—" }}{% endif %}</dd>
 
-                <dt class="col-span-1 text-text/60">Species</dt>
-                <dd class="col-span-2 text-text/80 italic">{% if beetle.depicts_valid_name_id and ref_species.species %}<a href="{% url 'taxonomy_browser' %}?species={{ beetle.depicts_valid_name_id|urlencode }}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.species }}</a>{% else %}{{ ref_species.species|default:"—" }}{% endif %}</dd>
+                <dt class="col-span-1 text-text/60 {% if not ref_species.species %}hidden field-hidden{% endif %}">Species</dt>
+                <dd class="col-span-2 text-text/80 italic {% if not ref_species.species %}hidden field-hidden{% endif %}">{% if beetle.depicts_valid_name_id and ref_species.species %}<a href="{% url 'taxonomy_browser' %}?species={{ beetle.depicts_valid_name_id|urlencode }}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.species }}</a>{% else %}{{ ref_species.species|default:"—" }}{% endif %}</dd>
 
-                <dt class="col-span-1 text-text/60">Subspecies</dt>
-                <dd class="col-span-2 text-text/80 italic">{% if beetle.depicts_valid_name_id and ref_species.subspecies %}<a href="{% url 'taxonomy_browser' %}?species={{ beetle.depicts_valid_name_id|urlencode }}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.subspecies }}</a>{% else %}{{ ref_species.subspecies|default:"—" }}{% endif %}</dd>
+                <dt class="col-span-1 text-text/60 {% if not ref_species.subspecies %}hidden field-hidden{% endif %}">Subspecies</dt>
+                <dd class="col-span-2 text-text/80 italic {% if not ref_species.subspecies %}hidden field-hidden{% endif %}">{% if beetle.depicts_valid_name_id and ref_species.subspecies %}<a href="{% url 'taxonomy_browser' %}?species={{ beetle.depicts_valid_name_id|urlencode }}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.subspecies }}</a>{% else %}{{ ref_species.subspecies|default:"—" }}{% endif %}</dd>
 
                 <dt class="col-span-1 text-text/60">Identification</dt>
                 <dd class="col-span-2 text-text/80" data-testid="label-source">{% if beetle.label_source %}{{ beetle.get_label_source_display }}{% if beetle.bbox_is_validated %} &middot; validated{% endif %}{% if beetle.label_source_detail %} &middot; {% if beetle.label_source_detail|slice:":4" == "http" %}<a href="{{ beetle.label_source_detail }}" class="underline" rel="noopener" target="_blank">{{ beetle.label_source_detail }}</a>{% else %}{{ beetle.label_source_detail }}{% endif %}{% endif %}{% else %}No ID{% endif %}
@@ -280,59 +294,61 @@
                     <ul class="mt-1 space-y-0.5">{% for n in other_names %}<li><i>{{ n.taxon.scientific_name|default:n.valid_species_id }}</i> &middot; {{ n.get_tier_display|default:"No ID" }}{% if n.detail %} &middot; {{ n.detail }}{% endif %} &middot; {{ n.created_at|date:"M j, Y" }}</li>{% endfor %}</ul>
                   </details>{% endif %}</dd>
 
-                <dt class="col-span-1 text-text/60">Authority Year</dt>
-                <dd class="col-span-2 text-text/80">{{ ref_species.authorityYear|default:"—" }}</dd>
+                <dt class="col-span-1 text-text/60 {% if not ref_species.authorityYear %}hidden field-hidden{% endif %}">Authority Year</dt>
+                <dd class="col-span-2 text-text/80 {% if not ref_species.authorityYear %}hidden field-hidden{% endif %}">{{ ref_species.authorityYear|default:"—" }}</dd>
 
-                <dt class="col-span-1 text-text/60">Original Genus</dt>
-                <dd class="col-span-2 text-text/80 italic">{{ ref_species.originalGenus|default:"—" }}</dd>
+                <dt class="col-span-1 text-text/60 {% if not ref_species.originalGenus %}hidden field-hidden{% endif %}">Original Genus</dt>
+                <dd class="col-span-2 text-text/80 italic {% if not ref_species.originalGenus %}hidden field-hidden{% endif %}">{{ ref_species.originalGenus|default:"—" }}</dd>
               </dl>
+              <button type="button" class="show-all-fields mt-2 text-xs text-gray-500 underline hover:text-gray-700">Show all 11 fields</button>
           </div>
 
+          {% if not beetle.depicts_valid_name_id and beetle.image_asset %}
+          <div class="group-section mt-4">
+              <a href="{% url 'tool_classify' %}?asset={{ beetle.image_asset_id }}"
+                 class="btn-main w-full px-4 py-3 text-sm"
+                 title="Ask the AI which species this is">
+                <i class="fi fi-rr-sparkles"></i> Generate AI recommendation
+              </a>
+          </div>
+          {% endif %}
+
           {% include "beetles/includes/ai_suggestion.html" with suggestions=ai_suggestions %}
+
+          {# --- SPECIMEN AND COLLECTION --- #}
+          <div class="group-section mt-4">
+              <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Specimen and Collection</h3>
+              <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
+                <dt class="col-span-1 text-text/60 {% if not beetle.collection_country %}hidden field-hidden{% endif %}">Country</dt>
+                <dd class="col-span-2 {% if not beetle.collection_country %}hidden field-hidden{% endif %}">{{ beetle.collection_country|default:"—" }}</dd>
+                <dt class="col-span-1 text-text/60 {% if not beetle.collection_stateProvince %}hidden field-hidden{% endif %}">State/Province</dt>
+                <dd class="col-span-2 {% if not beetle.collection_stateProvince %}hidden field-hidden{% endif %}">{{ beetle.collection_stateProvince|default:"—" }}</dd>
+                <dt class="col-span-1 text-text/60 {% if not beetle.specimen_sex %}hidden field-hidden{% endif %}">Sex</dt>
+                <dd class="col-span-2 {% if not beetle.specimen_sex %}hidden field-hidden{% endif %}">{{ beetle.specimen_sex|default:"—" }}</dd>
+                <dt class="col-span-1 text-text/60 {% if not beetle.specimen_type_status %}hidden field-hidden{% endif %}">Type Status</dt>
+                <dd class="col-span-2 {% if not beetle.specimen_type_status %}hidden field-hidden{% endif %}">{{ beetle.specimen_type_status|default:"—" }}</dd>
+                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.image_notes %}hidden field-hidden{% endif %}">Image Notes</dt>
+                <dd class="col-span-2 note-box whitespace-pre-wrap {% if not beetle.image_asset.image_notes %}hidden field-hidden{% endif %}">{{ beetle.image_asset.image_notes|default:"—"|linkify }}</dd>
+                <dt class="col-span-1 text-text/60 {% if not beetle.specimen_notes %}hidden field-hidden{% endif %}">Specimen Notes</dt>
+                <dd class="col-span-2 note-box whitespace-pre-wrap {% if not beetle.specimen_notes %}hidden field-hidden{% endif %}">{{ beetle.specimen_notes|default:"—"|linkify }}</dd>
+              </dl>
+              <button type="button" class="show-all-fields mt-2 text-xs text-gray-500 underline hover:text-gray-700">Show all 6 fields</button>
+          </div>
 
           {# --- ATTRIBUTION --- #}
           <div class="group-section mt-4">
               <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Attribution</h3>
               <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
-                <dt class="col-span-1 text-text/60">Institution</dt>
-                <dd class="col-span-2">{{ beetle.image_asset.image_institution|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60">Photographer</dt>
-                <dd class="col-span-2">{{ beetle.image_asset.photographer|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60">Image Email</dt>
-                <dd class="col-span-2">{{ beetle.image_asset.image_email|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60">Usage License</dt>
-                <dd class="col-span-2">{{ beetle.image_asset.photo_usage_statement|default:"—" }}</dd>
+                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.image_institution %}hidden field-hidden{% endif %}">Institution</dt>
+                <dd class="col-span-2 {% if not beetle.image_asset.image_institution %}hidden field-hidden{% endif %}">{{ beetle.image_asset.image_institution|default:"—" }}</dd>
+                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.photographer %}hidden field-hidden{% endif %}">Photographer</dt>
+                <dd class="col-span-2 {% if not beetle.image_asset.photographer %}hidden field-hidden{% endif %}">{{ beetle.image_asset.photographer|default:"—" }}</dd>
+                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.image_email %}hidden field-hidden{% endif %}">Image Email</dt>
+                <dd class="col-span-2 {% if not beetle.image_asset.image_email %}hidden field-hidden{% endif %}">{{ beetle.image_asset.image_email|default:"—" }}</dd>
+                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.photo_usage_statement %}hidden field-hidden{% endif %}">Usage License</dt>
+                <dd class="col-span-2 note-box {% if not beetle.image_asset.photo_usage_statement %}hidden field-hidden{% endif %}">{{ beetle.image_asset.photo_usage_statement|default:"—"|linkify }}</dd>
               </dl>
-          </div>
-
-          {# --- TECHNICAL --- #}
-          <div class="group-section mt-4">
-              <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Image Technical</h3>
-              <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
-                <dt class="col-span-1 text-text/60">Aspect</dt>
-                <dd class="col-span-2">{{ beetle.aspect|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60">Resolution (px/mm)</dt>
-                <dd class="col-span-2">{{ beetle.image_asset.resolution_in_ppmm|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60">Image Date</dt>
-                <dd class="col-span-2">{{ beetle.image_asset.image_date_taken|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60">Multiple Individuals</dt>
-                <dd class="col-span-2">{% if beetle.image_asset.image_has_multiple_individuals %}Yes{% else %}No{% endif %}</dd>
-              </dl>
-          </div>
-
-          {# --- COLLECTION --- #}
-          <div class="group-section mt-4">
-              <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Collection / Specimen</h3>
-              <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
-                <dt class="col-span-1 text-text/60">Country</dt>
-                <dd class="col-span-2">{{ beetle.collection_country|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60">State/Province</dt>
-                <dd class="col-span-2">{{ beetle.collection_stateProvince|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60">Sex</dt>
-                <dd class="col-span-2">{{ beetle.specimen_sex|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60">Type Status</dt>
-                <dd class="col-span-2">{{ beetle.specimen_type_status|default:"—" }}</dd>
-              </dl>
+              <button type="button" class="show-all-fields mt-2 text-xs text-gray-500 underline hover:text-gray-700">Show all 4 fields</button>
           </div>
 
           {# --- VALIDATION --- #}
@@ -364,16 +380,99 @@
               </dl>
           </div>
 
-          {# --- NOTES --- #}
+          {# --- TECHNICAL (#618 detail-order: technical and identifiers last) --- #}
           <div class="group-section mt-4">
-              <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Notes</h3>
-              <div class="space-y-2">
-                  <div class="text-xs text-text/60">Image Notes</div>
-                  <div class="p-2 bg-black/5 rounded-sm text-sm min-h-8 wrap-break-word whitespace-pre-wrap">{{ beetle.image_asset.image_notes|default:"—" }}</div>
+              <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Technical</h3>
+              <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
+                <dt class="col-span-1 text-text/60 {% if not beetle.aspect %}hidden field-hidden{% endif %}">Aspect</dt>
+                <dd class="col-span-2 {% if not beetle.aspect %}hidden field-hidden{% endif %}">{{ beetle.aspect|default:"—" }}</dd>
+                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.resolution_in_ppmm %}hidden field-hidden{% endif %}">Resolution</dt>
+                <dd class="col-span-2 {% if not beetle.image_asset.resolution_in_ppmm %}hidden field-hidden{% endif %}">
+                  {% if beetle.image_asset.resolution_in_ppmm %}<span title="{{ beetle.image_asset.resolution_in_ppmm }} px/mm">{{ beetle.image_asset.resolution_in_ppmm|floatformat:2 }} px/mm</span>{% else %}—{% endif %}
+                </dd>
+                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.image_date_taken %}hidden field-hidden{% endif %}">Image Date</dt>
+                <dd class="col-span-2 {% if not beetle.image_asset.image_date_taken %}hidden field-hidden{% endif %}">{{ beetle.image_asset.image_date_taken|default:"—" }}</dd>
+                <dt class="col-span-1 text-text/60">Multiple Individuals</dt>
+                <dd class="col-span-2">{% if beetle.image_asset.image_has_multiple_individuals %}Yes{% else %}No{% endif %}</dd>
+              </dl>
+              <button type="button" class="show-all-fields mt-2 text-xs text-gray-500 underline hover:text-gray-700">Show all 4 fields</button>
+          </div>
 
-                  <div class="text-xs text-text/60 mt-2">Specimen Notes</div>
-                  <div class="p-2 bg-black/5 rounded-sm text-sm min-h-8 wrap-break-word whitespace-pre-wrap">{{ beetle.specimen_notes|default:"—" }}</div>
-              </div>
+          {# --- IDENTIFIERS, last (#618 detail-ids-first / detail-ids-copy): every id in one card, each copyable --- #}
+          <div class="group-section mt-4">
+              <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Identifiers</h3>
+              <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
+                <dt class="col-span-1 text-text/60">ROI ID</dt>
+                <dd class="col-span-2 flex items-center gap-2">
+                  <span class="font-mono text-xs text-text/70 break-all select-all" data-testid="roi-id-value">{{ beetle.id }}</span>
+                  <button type="button" class="copy-id-btn shrink-0 text-gray-500 hover:text-black transition" data-value="{{ beetle.id }}" title="Copy ROI ID" aria-label="Copy ROI ID" data-testid="copy-roi-id">
+                    <svg class="copy-id-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    <svg class="copy-id-check hidden w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                  </button>
+                  <span class="copy-id-tick hidden text-xs text-gray-500">Copied</span>
+                </dd>
+
+                {% if beetle.image_asset %}
+                <dt class="col-span-1 text-text/60">Image ID</dt>
+                <dd class="col-span-2 flex items-center gap-2">
+                  <span class="font-mono text-xs text-text/70 break-all select-all" data-testid="image-id-value">{{ beetle.image_asset.id }}</span>
+                  <button type="button" class="copy-id-btn shrink-0 text-gray-500 hover:text-black transition" data-value="{{ beetle.image_asset.id }}" title="Copy Image ID" aria-label="Copy Image ID" data-testid="copy-image-id">
+                    <svg class="copy-id-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    <svg class="copy-id-check hidden w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                  </button>
+                  <span class="copy-id-tick hidden text-xs text-gray-500">Copied</span>
+                </dd>
+                {% endif %}
+
+                <dt class="col-span-1 text-text/60 {% if not beetle.depicts_specimen %}hidden field-hidden{% endif %}">Specimen ID</dt>
+                <dd class="col-span-2 flex items-center gap-2 {% if not beetle.depicts_specimen %}hidden field-hidden{% endif %}">
+                  {% if beetle.depicts_specimen %}
+                  <span class="font-mono text-xs text-text/70 break-all select-all" data-testid="specimen-id-value">{{ beetle.depicts_specimen }}</span>
+                  <button type="button" class="copy-id-btn shrink-0 text-gray-500 hover:text-black transition" data-value="{{ beetle.depicts_specimen }}" title="Copy Specimen ID" aria-label="Copy Specimen ID" data-testid="copy-specimen-id">
+                    <svg class="copy-id-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    <svg class="copy-id-check hidden w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                  </button>
+                  <span class="copy-id-tick hidden text-xs text-gray-500">Copied</span>
+                  {% else %}—{% endif %}
+                </dd>
+
+                <dt class="col-span-1 text-text/60 {% if not beetle.depicts_valid_name_id %}hidden field-hidden{% endif %}">Valid Name ID</dt>
+                <dd class="col-span-2 flex items-center gap-2 {% if not beetle.depicts_valid_name_id %}hidden field-hidden{% endif %}">
+                  {% if beetle.depicts_valid_name_id %}
+                  <span class="font-mono text-xs text-text/70 break-all select-all" data-testid="valid-name-id-value">{{ beetle.depicts_valid_name_id }}</span>
+                  <button type="button" class="copy-id-btn shrink-0 text-gray-500 hover:text-black transition" data-value="{{ beetle.depicts_valid_name_id }}" title="Copy Valid Name ID" aria-label="Copy Valid Name ID" data-testid="copy-valid-name-id">
+                    <svg class="copy-id-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    <svg class="copy-id-check hidden w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                  </button>
+                  <span class="copy-id-tick hidden text-xs text-gray-500">Copied</span>
+                  {% else %}—{% endif %}
+                </dd>
+
+                <dt class="col-span-1 text-text/60 {% if not beetle.depicts_described_name_id %}hidden field-hidden{% endif %}">Described ID</dt>
+                <dd class="col-span-2 flex items-center gap-2 {% if not beetle.depicts_described_name_id %}hidden field-hidden{% endif %}">
+                  {% if beetle.depicts_described_name_id %}
+                  <span class="font-mono text-xs text-text/70 break-all select-all" data-testid="described-id-value">{{ beetle.depicts_described_name_id }}</span>
+                  <button type="button" class="copy-id-btn shrink-0 text-gray-500 hover:text-black transition" data-value="{{ beetle.depicts_described_name_id }}" title="Copy Described ID" aria-label="Copy Described ID" data-testid="copy-described-id">
+                    <svg class="copy-id-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    <svg class="copy-id-check hidden w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                  </button>
+                  <span class="copy-id-tick hidden text-xs text-gray-500">Copied</span>
+                  {% else %}—{% endif %}
+                </dd>
+
+                <dt class="col-span-1 text-text/60 {% if not beetle.alias_id %}hidden field-hidden{% endif %}" title="Your own ID for this record, e.g. a catalogue number or file name from your database.">Alias ID</dt>
+                <dd class="col-span-2 flex items-center gap-2 {% if not beetle.alias_id %}hidden field-hidden{% endif %}">
+                  {% if beetle.alias_id %}
+                  <span class="font-mono text-xs text-text/70 break-all select-all" data-testid="alias-id-value">{{ beetle.alias_id }}</span>
+                  <button type="button" class="copy-id-btn shrink-0 text-gray-500 hover:text-black transition" data-value="{{ beetle.alias_id }}" title="Copy Alias ID" aria-label="Copy Alias ID" data-testid="copy-alias-id">
+                    <svg class="copy-id-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    <svg class="copy-id-check hidden w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                  </button>
+                  <span class="copy-id-tick hidden text-xs text-gray-500">Copied</span>
+                  {% else %}—{% endif %}
+                </dd>
+              </dl>
+              <button type="button" class="show-all-fields mt-2 text-xs text-gray-500 underline hover:text-gray-700">Show all {% if beetle.image_asset %}6{% else %}5{% endif %} fields</button>
           </div>
 
         </div>
@@ -382,23 +481,42 @@
 </section>
 
 <script>
-  // Existing Copy UUID logic
+  // Copy any identifier to the clipboard: icon swaps to a tick and a short "Copied" note shows beside it (#618
+  // detail-ids-copy), then both revert. Used by every button in the Identifiers card.
   document.addEventListener('click', async (e) => {
-    const btn = e.target.closest('.copy-uuid');
+    const btn = e.target.closest('.copy-id-btn');
     if (!btn) return;
     e.preventDefault(); e.stopPropagation();
-    const uuid = btn.getAttribute('data-uuid');
+    const value = btn.getAttribute('data-value');
     try {
-      await navigator.clipboard.writeText(uuid);
-      const originalHTML = btn.innerHTML;
-      btn.innerHTML = `<svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
-      setTimeout(() => { btn.innerHTML = originalHTML; }, 1500);
+      await navigator.clipboard.writeText(value);
+      const icon = btn.querySelector('.copy-id-icon');
+      const check = btn.querySelector('.copy-id-check');
+      const tick = btn.parentElement.querySelector('.copy-id-tick');
+      icon.classList.add('hidden');
+      check.classList.remove('hidden');
+      if (tick) tick.classList.remove('hidden');
+      setTimeout(() => {
+        icon.classList.remove('hidden');
+        check.classList.add('hidden');
+        if (tick) tick.classList.add('hidden');
+      }, 1500);
     } catch (err) { console.error(err); }
   });
 
+  // "Show all N fields" (#618 detail-empty): reveals the empty rows in that card's table and removes itself.
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.show-all-fields');
+    if (!btn) return;
+    const dl = btn.previousElementSibling;
+    if (!dl) return;
+    dl.querySelectorAll('.field-hidden').forEach((el) => el.classList.remove('hidden', 'field-hidden'));
+    btn.remove();
+  });
+
   // The photo: every beetle's box, the other beetles' boxes linking to their pages. A click outside every box (or the
-  // switch in the corner) hides the boxes and the haze, the next one shows them again. The flag in the other corner
-  // sends this beetle to the curators; it shows only with the boxes (the CSS reads data-box).
+  // switch in the toolbar) hides the boxes and the haze, the next one shows them again. The flag on the photo's
+  // corner sends this beetle to the curators; it shows only with the boxes (the CSS reads data-box).
   (function () {
     const photo = document.getElementById('roi-photo');
     const frame = document.getElementById('roi-frame');
@@ -430,10 +548,12 @@
       if (e.target.closest('.roi-box')) return;   // on a box: another beetle's opens its page, this one's does nothing
       if (!menuOpen()) toggleBoxes();   // while the flag's menu is open, a click on the photo only closes the menu
     });
-    toggle.addEventListener('click', (e) => {
-      e.stopPropagation();
-      toggleBoxes();
-    });
+    if (toggle) {
+      toggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleBoxes();
+      });
+    }
 
     if (!flag) return;
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
