@@ -73,8 +73,11 @@ class DetailsPhotoControlsTests(PageBehaviourCase):
                          ">Validate</button>", ">Unvalidate</button>"):
                 self.assertNotIn(gone, page)
             content = page[page.index("<main"):]
-            for field in ("<form", "<input", "<textarea", "<select"):
+            for field in ("<form", "<textarea", "<select"):
                 self.assertNotIn(field, content)
+            # the only inputs are the full-size viewer's lighting sliders (owner, round 7), never edit fields
+            for tag in re.findall(r"<input[^>]*>", content):
+                self.assertIn('type="range"', tag)
             self.assertNotIn("{#", content)   # a template comment over two lines shows on the page as text
             for shown in ("Specimen ID", "SP-7", "Country", "Peru", "Specimen notes", "Under bark",
                           "Multiple individuals", "This ROI", "Not validated", "Download"):
