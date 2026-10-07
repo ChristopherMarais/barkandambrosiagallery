@@ -15,7 +15,7 @@
       <span class="ml-auto text-sm text-gray-600 tabular-nums"><strong class="text-gray-900">{{ info.score|digit_groups }}</strong> pts &middot; <strong class="text-gray-900">{% widthratio info.rating 1 100 %}%</strong></span>
     </div>
     {% if info.next %}
-    <div class="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden"><div class="h-full bg-gray-600 rounded-full" style="width: {% widthratio info.progress 1 100 %}%"></div></div>
+    <div class="progress-bar mt-3"><div class="progress-bar-fill" style="width: {% widthratio info.progress 1 100 %}%"></div></div>
     <p class="mt-1.5 text-xs text-gray-500">
       Level {{ info.next.level }}: {% if info.next.points_needed %}{{ info.next.points_needed|digit_groups }} pts{% endif %}{% if info.next.points_needed and info.next.rating_short %} + {% endif %}{% if info.next.rating_short %}{% widthratio info.next.rating_needed 1 100 %}% reliability{% endif %}{% if not info.next.points_needed and not info.next.rating_short %}almost there{% endif %}
     </p>

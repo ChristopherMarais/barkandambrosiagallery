@@ -237,6 +237,7 @@
   <script src="{% static 'js/copy_id.js' %}" defer></script>
   <script src="{% static 'js/drop_zone.js' %}" defer></script>
   <script src="{% static 'js/jump_to.js' %}" defer></script>
+  <script src="{% static 'js/tables.js' %}" defer></script>
   {% if ga_measurement_id %}{# Google Analytics: only on the live site (GA_MEASUREMENT_ID); see docs/analytics.md #}
   <script src="{% static 'js/analytics.js' %}" defer data-ga-id="{{ ga_measurement_id }}" data-ga-page="{{ ga_page }}"></script>
   {% endif %}
@@ -266,7 +267,7 @@
           <div class="flex flex-col gap-2 w-full p-2 mt-2">
 
             <a href="{% url 'image_browser' %}"
-              class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% if request.resolver_match.url_name == 'image_browser' %}bg-gray-200 font-semibold{% else %}hover:bg-gray-200{% endif %}">
+              class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all whitespace-nowrap {% nav_home_active %}">
               <img src="{% static 'img/IMG_5557.PNG' %}" alt="" class="h-8 w-8 object-contain" />
               <span class="font-medium text-gray-700 ml-3">Home</span>
             </a>

@@ -38,11 +38,32 @@
       &ldquo;Verified&rdquo; names have been checked by our curators. Others show the name we have so far, which may be wrong;
       your answers help fix them. If a verified name looks wrong to you, report it: it won't count against you while we check.
     </p>
+    <p id="review-summary" class="mt-2 text-sm text-gray-700" data-testid="review-summary"></p>
   </div>
 
   {% if feedback.losses.answers %}<div class="mb-4">{% include "beetles/includes/game_losses.html" with losses=feedback.losses %}</div>{% endif %}
 
+  {% comment %}
+  A long round (site-long, #618): the box above sums it up, the answers to look at come first as full cards, the
+  fully correct ones fold into one list below them, and a contents bar stays at the top once there are more than a
+  few: numbered chips on a wider screen, a "Jump to" select on a phone (static/js/jump_to.js opens the fold).
+  {% endcomment %}
+  <div id="review-nav" class="hidden sticky top-0 z-10 bg-white/95 backdrop-blur py-2 mb-4 -mx-4 px-4 sm:mx-0 sm:px-0 border-b border-gray-100" data-testid="review-toc">
+    <nav id="review-chips" class="hidden sm:flex flex-wrap gap-1.5 text-xs" aria-label="Answers"></nav>
+    <select id="review-jump" class="select-chevron sm:hidden w-full h-10 px-3 border border-gray-300 rounded-lg bg-white" aria-label="Jump to answer" data-jump-to>
+      <option value="">Jump to&hellip;</option>
+    </select>
+  </div>
+
   <ul id="items" class="space-y-4"></ul>
+
+  <details id="correct-group" class="hidden group mt-4 border border-gray-200 rounded-lg bg-white scroll-mt-16" data-testid="correct-group">
+    <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+      <span class="text-sm font-semibold text-gray-900">Fully correct <span id="correct-count" class="font-normal text-gray-500"></span></span>
+      <i class="fi fi-rr-angle-small-down text-lg text-gray-500 transition-transform group-open:rotate-180" aria-hidden="true"></i>
+    </summary>
+    <ul id="items-correct" class="px-4 pb-4 space-y-2"></ul>
+  </details>
 
   <div class="flex flex-col sm:flex-row gap-3 mt-6">
     {% if is_self %}
@@ -322,13 +343,48 @@
   const openers = new WeakMap();
   window.onLongPress($("items"), ".review-photo", (btn) => { const open = openers.get(btn); if (open) open(); });
 
+  // What to look at first, before the cards: how many answers, how many fully correct, how many need a look
+  function summarize(toLook, correct) {
+    const parts = [`${items.length} answer${items.length === 1 ? "" : "s"}`];
+    if (correct) parts.push(`${correct} fully correct`);
+    if (toLook) parts.push(`${toLook} to look at below`);
+    $("review-summary").textContent = parts.join(" · ") + ".";
+  }
+
+  // A long review gets a contents bar: one chip (wider screens) or option (phones) per answer card, and one for the
+  // folded list of fully correct answers.
+  const NAV_FROM = 6;
+  function buildNav(cards, correct) {
+    const show = items.length >= NAV_FROM;
+    $("review-nav").classList.toggle("hidden", !show);
+    const chips = $("review-chips"), select = $("review-jump");
+    chips.innerHTML = "";
+    select.length = 1;
+    if (!show) return;
+    const add = (id, label) => {
+      const a = document.createElement("a");
+      a.href = "#" + id;
+      a.className = "px-2.5 py-1 rounded-full border border-gray-300 tabular-nums hover:bg-gray-50";
+      a.textContent = label;
+      chips.appendChild(a);
+      select.add(new Option(label, id));
+    };
+    cards.forEach(({ n, item }) => add(`answer-${n + 1}`, `#${n + 1}` + (item.skipped ? " skipped" : item.verdict === "wrong" ? " not quite" : item.verdict === "partly" ? " partly" : "")));
+    if (correct) add("correct-group", `Fully correct (${correct})`);
+  }
+
   function render() {
     const list = $("items");
+    const correctList = $("items-correct");
     list.innerHTML = "";
+    correctList.innerHTML = "";
+    const cards = [];
+    let correct = 0;
     items.forEach((item, n) => {
       const li = document.createElement("li");
+      li.id = `answer-${n + 1}`;
       if (isCorrect(item)) {
-        li.className = "flex items-center justify-between gap-3 px-4 py-2 border border-gray-200 rounded-lg bg-white";
+        li.className = "flex items-center justify-between gap-3 px-4 py-2 border border-gray-200 rounded-lg bg-white scroll-mt-16";
         li.dataset.testid = "item-row-correct";
         li.innerHTML = `
           <span class="flex items-center gap-2 min-w-0">
@@ -336,10 +392,12 @@
             ${chip(item)}
           </span>
           ${pointsLine(item)}`;
-        list.appendChild(li);
+        correctList.appendChild(li);
+        correct += 1;
         return;
       }
-      li.className = "p-4 border border-gray-200 rounded-lg bg-white";
+      cards.push({ n, item });
+      li.className = "p-4 border border-gray-200 rounded-lg bg-white scroll-mt-16";
       li.dataset.testid = "item-card";
       li.innerHTML = `
         <div class="mb-3">
@@ -381,6 +439,12 @@
       });
       list.appendChild(li);
     });
+    const group = $("correct-group");
+    group.classList.toggle("hidden", !correct);
+    $("correct-count").textContent = `(${correct})`;
+    if (!cards.length) group.open = true;   // nothing else to look at: show them
+    summarize(cards.length, correct);
+    buildNav(cards, correct);
     list.querySelectorAll("[data-report]").forEach((b) =>
       b.addEventListener("click", () => openSheet(Number(b.dataset.report), b.dataset.roi)));
   }

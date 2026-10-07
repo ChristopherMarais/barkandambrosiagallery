@@ -47,8 +47,8 @@
       <span class="font-bold text-gray-900">{{ rewards.level_name }}</span>
       <span class="ml-auto text-sm font-semibold text-gray-900 tabular-nums" data-testid="score">{{ score.score|digit_groups }} pts</span>
     </div>
-    <div class="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden" role="meter" aria-label="Progress to the next level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{% widthratio rewards.level_progress 1 100 %}">
-      <div class="h-full bg-gray-600 rounded-full" style="width: {% widthratio rewards.level_progress 1 100 %}%"></div>
+    <div class="progress-bar mt-3" role="meter" aria-label="Progress to the next level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{% widthratio rewards.level_progress 1 100 %}">
+      <div class="progress-bar-fill" style="width: {% widthratio rewards.level_progress 1 100 %}%"></div>
     </div>
     <div class="mt-1.5 text-xs text-gray-500">
       {% if not rewards.next %}Top level{% else %}{% if rewards.to_next %}{{ rewards.to_next|digit_groups }} pts to {{ rewards.next.name }}{% elif rewards.next.rating_short %}{% widthratio rewards.next.rating_needed 1 100 %}% reliability to {{ rewards.next.name }}{% else %}Almost at {{ rewards.next.name }}{% endif %}{% if rewards.next.perks %} &mdash; unlocks {{ rewards.next.perks|join:", "|lower }}{% endif %}{% endif %}
