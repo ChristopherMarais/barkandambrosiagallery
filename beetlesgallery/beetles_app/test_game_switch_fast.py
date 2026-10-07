@@ -255,13 +255,14 @@ class UpcomingTests(FastCase):
 
 @override_settings(GAME_RECOMPUTE_IN_BACKGROUND=True)
 class WarmSkipsTheGameNowPlayedTests(FastCase):
-    def test_a_game_they_switched_to_while_the_worker_ran_is_not_built_again(self):
+    def test_the_game_they_play_now_is_built_too_so_a_start_finds_it_ready(self):
+        # round 5: the batch for the game being played is built as well, and a normal start takes it (test_game_warm_worker)
         GamePreference.objects.create(player=self.user, granted_perks=["all"], play_mode="pair")
         real = game.play_mode
         with mock.patch.object(game, "play_mode", side_effect=lambda p, info=None: "classify" if info is None else real(p, info)):
             built = game_warm.build(self.user)
-        self.assertNotIn("classify", built)
-        self.assertIsNone(cache.get(game_warm.KEY.format(self.user.pk, "classify")))
+        self.assertIn("classify", built)
+        self.assertIsNotNone(cache.get(game_warm.KEY.format(self.user.pk, "classify")))
 
 
 class PageTests(GameCase):

@@ -1377,8 +1377,10 @@ def finish_round_later(rnd):
     """
     from django.db import transaction
 
+    from . import game_warm
     from .tasks import finish_game_round_task
 
+    game_warm.warm_later(rnd.player, game_warm.MIXED)   # after each round, the next batches are built (worker)
     if not game_setting("GAME_RECOMPUTE_IN_BACKGROUND", False):
         finish_round(rnd)
         return
