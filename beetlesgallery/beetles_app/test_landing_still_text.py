@@ -1,19 +1,18 @@
-"""The home page's "Team and Sponsors" and "Top" links stay in place but do not bounce or fade."""
+"""The home page fits on one screen: no second full-screen team section, no "Team and Sponsors" / "Top" scroll
+buttons. The team and institutions live on /team/ (#618 home-team)."""
 from django.urls import reverse
 
 from beetlesgallery.beetles_app.test_pages import PageTestCase
 
 
-class LandingStillTextTests(PageTestCase):
-    def test_the_team_and_top_links_are_still_there(self):
+class LandingOneScreenTests(PageTestCase):
+    def test_no_scroll_buttons_between_two_screen_high_sections(self):
         page = self.client.get(reverse("image_browser")).content.decode()
-        self.assertIn("Team and Sponsors", page)
-        self.assertIn(">Top<", page)
+        self.assertNotIn("Team and Sponsors", page)
+        self.assertNotIn(">Top<", page)
+        self.assertNotIn("lg:snap-start", page)
 
-    def test_the_team_and_top_links_do_not_animate(self):
-        page = self.client.get(reverse("image_browser")).content.decode()
-        for label, section in (("Team and Sponsors", 'id="landing-section"'), ("Top</span>", 'id="team-section"')):
-            start = page.index(label, page.index(section))
-            block = page[page.rindex("<button", 0, start):page.index("</button>", start)]
-            self.assertNotIn("animate-", block)
-            self.assertNotIn("transition-opacity", block)
+    def test_the_team_page_holds_the_team_and_institutions(self):
+        page = self.client.get(reverse("team")).content.decode()
+        self.assertIn('id="team-section"', page)
+        self.assertIn('id="institutions-list"', page)

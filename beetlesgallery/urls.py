@@ -5,6 +5,7 @@ from django.urls import path, re_path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.http import Http404
+from django.views.generic import TemplateView
 from django.views.static import serve
 
 from beetlesgallery.cache_policy import media_cache_control
@@ -46,6 +47,7 @@ urlpatterns = [
     # --- Pages ---
     # 1. Root URL -> Landing View (Sidebar "image_browser" links here)
     path('privacy/', privacy_views.privacy, name='privacy'),
+    path('team/', TemplateView.as_view(template_name='team.html'), name='team'),
     path('', beetles_views.landing, name='image_browser'),
     
     # 2. /beetles/ -> Gallery View (Sidebar "Beetles" links here)
