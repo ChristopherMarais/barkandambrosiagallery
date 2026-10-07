@@ -96,6 +96,9 @@ class PageTests(SimpleTestCase):
     def test_the_page_wakes_ibbi_ai_as_it_opens(self):
         self.assertIn("{% url 'tool_classify_warm' %}", self.page)
 
-    def test_the_floating_button_never_covers_the_end_of_the_page(self):
-        self.assertIn('class="pt-8 pb-28 lg:pb-8" data-testid="ai-page"', self.page)
-        self.assertIn("env(safe-area-inset-bottom)", self.page)
+    def test_the_button_sits_in_the_page_and_never_covers_it(self):
+        # round 8: Classify sits between Options and the photo on every screen, so it no longer floats
+        button = self.page[self.page.rfind("<button", 0, self.page.index('id="submitBtn"')):]
+        button = button[:button.index(">")]
+        self.assertNotIn("fixed", button)
+        self.assertIn("ui.form.scrollIntoView", self.page)   # a phone shows Classify and the photo under it

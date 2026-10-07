@@ -235,7 +235,8 @@
   #previous.hidden { display: none; }
   /* Next while the next beetle (or the review) is on its way: still there, still tappable, a grey sheen and a spinner */
   #submit.next-busy { background: linear-gradient(90deg, #6b7280 0%, #9ca3af 50%, #6b7280 100%); background-size: 200% 100%; }
-  #submit #submit-spin { margin-left: 0.4rem; font-size: 0.875rem; }
+  /* inline-block: an inline icon cannot rotate, so the spinner stood still (E13) */
+  #submit #submit-spin { display: inline-block; margin-left: 0.4rem; font-size: 0.875rem; }
   #submit #submit-spin.hidden { display: none; }
   /* Always moving (round 5): the loading screen's thin bar, the tiles' pulse while photos come in, the checking dot.
      One message only (not a short line and a fact stacked, side by side, fighting for attention): the short lines
@@ -249,6 +250,9 @@
   @media (prefers-reduced-motion: reduce) {
     #stage #photo-area { transition: none; }
     #loading-bar span { animation: none; left: 0; width: 100%; opacity: 0.5; }
+    /* still moving, gently: a slow fade instead of a turn (E13) */
+    #submit #submit-spin { animation: spin-calm 2s ease-in-out infinite; }
+    @keyframes spin-calm { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
   }
   @media (prefers-reduced-motion: no-preference) {
     #submit.next-busy { animation: next-sheen 1.2s linear infinite; }

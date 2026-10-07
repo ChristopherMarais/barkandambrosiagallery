@@ -834,6 +834,11 @@
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
+  /* Reduced motion: still moving, gently, as a slow fade instead of a turn (E13) */
+  @media (prefers-reduced-motion: reduce) {
+    .loading-spinner { animation: spin-calm 2s ease-in-out infinite; }
+  }
+  @keyframes spin-calm { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
   /* Ensure loading overlay is above everything */
   #page-loading-overlay {

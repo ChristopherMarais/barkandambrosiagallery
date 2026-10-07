@@ -67,10 +67,11 @@ class ModelPickerOnTopTests(PageBehaviourCase):
         return self.client.get(reverse("tool_classify")).content.decode()
 
     def test_the_model_picker_is_under_the_intro_and_before_the_drop_zone(self):
+        # Round 8: the picker, the checkbox and the examples are folded into Options, then Classify, then the photo
         page = self.page()
         order = [page.index(marker) for marker in (
-            'class="page-intro', 'data-testid="ibbi-link"', 'id="modelSelect"', 'id="canvasContainer"',
-            'id="dontKeep"', 'class="example-btn', 'id="classifyForm"')]
+            'class="page-intro', 'data-testid="ibbi-link"', 'id="modelSelect"', 'id="dontKeep"', 'class="example-btn',
+            'id="classifyForm"', 'id="canvasContainer"')]
         self.assertEqual(order, sorted(order))
 
     def test_the_picker_is_still_sent_with_the_form(self):

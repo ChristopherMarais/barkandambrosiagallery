@@ -1092,7 +1092,7 @@
       <pre id="log-modal-text"
         class="whitespace-pre-wrap wrap-break-word text-xs text-gray-700 font-mono bg-white p-4 rounded-sm border border-gray-200 shadow-inner"
         style="white-space: pre-wrap;">
-        Loading...
+        <span class="animate-pulse">Loading...</span>
       </pre>
     </div>
 
@@ -1137,7 +1137,7 @@
 
     // Show Modal
     modal.classList.remove('hidden');
-    contentArea.innerText = "Loading file...";
+    contentArea.innerHTML = '<span class="animate-pulse">Loading file...</span>';   // moving, so it reads as working
     contentArea.classList.remove('text-red-600'); // Reset error text color if present
 
     // Fetch the content
