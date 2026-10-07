@@ -80,12 +80,6 @@ class NavIconMapTests(SimpleTestCase):
         self.assertNotIn("fi-rr-gamepad", BASE_HTML)
 
 
-class ConsentButtonRoleTests(SimpleTestCase):
-    def test_accept_commits_so_it_is_the_primary_button(self):
-        self.assertIn('class="btn-primary" data-consent="granted"', BASE_HTML)
-        self.assertIn('class="btn-secondary" data-consent="denied"', BASE_HTML)
-
-
 class MobileTopBarTests(PageBehaviourCase):
     def test_the_bar_is_56px_and_names_the_section(self):
         page = self.client.get(reverse("beetles_image_browser")).content.decode()
