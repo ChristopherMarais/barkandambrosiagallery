@@ -161,12 +161,13 @@ class InstitutionsListTests(HomeTestCase):
     def test_the_list_is_left_aligned_and_two_columns_on_desktop(self):
         page = self.team_page()
         tag = opening_tag(page, 'id="institutions-list"')
-        self.assertIn("sm:grid-cols-2", tag)
-        self.assertIn('<section class="mt-12 text-left">', page)
+        self.assertIn("sm:columns-2", tag)   # numbered down the first column, then the second
+        self.assertIn('id="institutions-section" class="mt-14 text-left"', page)
 
     def test_only_ten_institutions_show_by_default(self):
         page = self.team_page()
-        list_html = page[page.index('id="institutions-list"'):page.index("</ul>")]
+        start = page.index('id="institutions-list"')
+        list_html = page[start:page.index("</ol>", start)]
         total = list_html.count("<li>") + list_html.count('<li class="institution-extra hidden">')
         extra = list_html.count('<li class="institution-extra hidden">')
         self.assertEqual(total - extra, 10)
@@ -220,3 +221,24 @@ class HomeCardIconTests(HomeTestCase):
         self.assertIn(">Image Browser</h2>", hero)
         self.assertIn(">AI Identification</h2>", hero)
         self.assertNotIn("Browse Images", hero)
+
+
+class TeamPageLayoutTests(HomeTestCase):
+    """The Team and partners page: people as cards grouped by team, a numbered institutions list, the funders."""
+
+    def test_people_are_cards_with_initials_and_their_role(self):
+        page = self.team_page()
+        self.assertEqual(page.count('data-testid="team-person"'), 8)
+        self.assertIn(">CM</span>", page)
+        for group in ("Taxonomy", "Development", "Support"):
+            self.assertIn(f'<h3 class="text-sm font-semibold text-gray-700">{group}</h3>', page)
+
+    def test_the_institutions_are_a_numbered_ranking(self):
+        page = self.team_page()
+        self.assertIn('<ol id="institutions-list" class="list-decimal', page)
+
+    def test_the_funders_are_named_under_their_logos(self):
+        page = self.team_page()
+        self.assertIn('id="funders-heading"', page)
+        self.assertIn("National Science Foundation (NSF)", page)
+        self.assertIn("Florida Forest Service", page)

@@ -1,50 +1,56 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Team and partners | Bark & Ambrosia Beetle Gallery{% endblock %}
-{% block meta_description %}The people and institutions behind the Bark and Ambrosia Beetle Gallery.{% endblock %}
+{% block meta_description %}The people, collections and funders behind the Bark and Ambrosia Beetle Gallery.{% endblock %}
 
 {% block content %}
 {% comment %}
-The team, the contributing institutions and the GitHub Discussions link, moved off the home page so it fits on
-one screen (#618 home-team: a compact "Who built this" link on the home page, the full list here).
+The team, the contributing institutions, the funders and the GitHub Discussions link, off the home page so it fits on
+one screen (#618 home-team). Each part is its own section with a heading and one line saying what it is.
 {% endcomment %}
 <div class="max-w-5xl mx-auto">
   <a href="{% url 'image_browser' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Home</a>
   <h1 class="page-title">Team and partners</h1>
+  <p class="page-intro max-w-2xl">The gallery is built by the University of Florida Forest Entomology Lab, with images from museums and collections around the world.</p>
 
-  <section id="team-section" class="mt-6">
-    {# "Team", not "Created by:", and no heavier than the section headings around it (#618 home-created) #}
-    <h2 class="text-xl font-bold text-gray-900 mb-6">Team</h2>
+  <section id="team-section" class="mt-10" aria-labelledby="team-heading">
+    {# "Team", not "Created by:", and no heavier than the other section headings (#618 home-created) #}
+    <h2 id="team-heading" class="text-xl font-bold text-gray-900">Team</h2>
 
-    {# A compact people grid: name and role on one line, a small icon row below (#618 home-team) #}
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-y-8 lg:gap-x-6 items-start">
-
-      <div class="flex flex-col gap-3 min-w-0">
-        <h3 class="text-xs font-bold text-gray-600 uppercase tracking-widest border-b border-gray-100 pb-2">Taxonomy team</h3>
-        {% include "beetles/includes/_team_person.html" with name="Andrew Johnson" role="Lead Taxonomist & Data Curator" lab_url="https://pitchtube.org/researchers-lab-andrew/" lab_label="UF Forest Entomology Lab" lab_icon="fi-rr-bugs" %}
-        {% include "beetles/includes/_team_person.html" with name="Jiri Hulcr" role="Principal Investigator" lab_url="https://pitchtube.org/researchers-lab-jiri/" lab_label="UF Forest Entomology Lab" lab_icon="fi-rr-bugs" %}
+    <div class="mt-5 space-y-8">
+      <div>
+        <h3 class="text-sm font-semibold text-gray-700">Taxonomy</h3>
+        <ul class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 list-none p-0 m-0">
+          {% include "beetles/includes/_team_person.html" with name="Andrew Johnson" initials="AJ" role="Lead Taxonomist & Data Curator" lab_url="https://pitchtube.org/researchers-lab-andrew/" lab_label="UF Forest Entomology Lab" lab_icon="fi-rr-bugs" %}
+          {% include "beetles/includes/_team_person.html" with name="Jiri Hulcr" initials="JH" role="Principal Investigator" lab_url="https://pitchtube.org/researchers-lab-jiri/" lab_label="UF Forest Entomology Lab" lab_icon="fi-rr-bugs" %}
+        </ul>
       </div>
 
-      <div class="flex flex-col gap-3 min-w-0">
-        <h3 class="text-xs font-bold text-gray-600 uppercase tracking-widest border-b border-gray-100 pb-2">Development team</h3>
-        {% include "beetles/includes/_team_person.html" with name="Christopher Marais" role="Co-Lead Full Stack Developer" github_url="https://github.com/ChristopherMarais" linkedin_url="https://www.linkedin.com/in/christopher-marais/" %}
-        {% include "beetles/includes/_team_person.html" with name="Layla Schuster" role="Co-Lead Full Stack Developer" github_url="https://github.com/laylaaschuster" linkedin_url="https://www.linkedin.com/in/layla-schuster-350712233/" %}
-        {% include "beetles/includes/_team_person.html" with name="Eric Kuo" role="Full Stack Developer" github_url="https://github.com/Ekuo79" linkedin_url="https://www.linkedin.com/in/eric-kuo79/" %}
-        {% include "beetles/includes/_team_person.html" with name="Yiqiao (Emily) Huang" role="Developer" github_url="https://github.com/APCSAemily" linkedin_url="https://www.linkedin.com/in/emily-h-profile/" %}
+      <div>
+        <h3 class="text-sm font-semibold text-gray-700">Development</h3>
+        <ul class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 list-none p-0 m-0">
+          {% include "beetles/includes/_team_person.html" with name="Christopher Marais" initials="CM" role="Co-Lead Full Stack Developer" github_url="https://github.com/ChristopherMarais" linkedin_url="https://www.linkedin.com/in/christopher-marais/" %}
+          {% include "beetles/includes/_team_person.html" with name="Layla Schuster" initials="LS" role="Co-Lead Full Stack Developer" github_url="https://github.com/laylaaschuster" linkedin_url="https://www.linkedin.com/in/layla-schuster-350712233/" %}
+          {% include "beetles/includes/_team_person.html" with name="Eric Kuo" initials="EK" role="Full Stack Developer" github_url="https://github.com/Ekuo79" linkedin_url="https://www.linkedin.com/in/eric-kuo79/" %}
+          {% include "beetles/includes/_team_person.html" with name="Yiqiao (Emily) Huang" initials="YH" role="Developer" github_url="https://github.com/APCSAemily" linkedin_url="https://www.linkedin.com/in/emily-h-profile/" %}
+        </ul>
       </div>
 
-      <div class="flex flex-col gap-3 min-w-0">
-        <h3 class="text-xs font-bold text-gray-600 uppercase tracking-widest border-b border-gray-100 pb-2">Support team</h3>
-        {% include "beetles/includes/_team_person.html" with name="Raquel Dias" role="Technical Director" github_url="https://github.com/Dias-Lab" lab_url="https://microcell.ufl.edu/people/raquel-dias/" lab_label="Dias Lab" lab_icon="fi-rr-brain-circuit" %}
-        {% include "beetles/includes/_team_person.html" with name="Cleydson Silva" role="Technical Consultant" github_url="https://github.com/jcleydsonsilva" linkedin_url="https://www.linkedin.com/in/jose-cleydson-ferreira-silva-a790b617b/" %}
+      <div>
+        <h3 class="text-sm font-semibold text-gray-700">Support</h3>
+        <ul class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 list-none p-0 m-0">
+          {% include "beetles/includes/_team_person.html" with name="Raquel Dias" initials="RD" role="Technical Director" github_url="https://github.com/Dias-Lab" lab_url="https://microcell.ufl.edu/people/raquel-dias/" lab_label="Dias Lab" lab_icon="fi-rr-brain-circuit" %}
+          {% include "beetles/includes/_team_person.html" with name="Cleydson Silva" initials="CS" role="Technical Consultant" github_url="https://github.com/jcleydsonsilva" linkedin_url="https://www.linkedin.com/in/jose-cleydson-ferreira-silva-a790b617b/" %}
+        </ul>
       </div>
     </div>
   </section>
 
-  {# Left-aligned, two columns on desktop, top 10 then "Show all" (#618 home-institutions) #}
-  <section class="mt-12 text-left">
-    <h2 class="text-xl font-bold text-gray-900">Contributing institutions</h2>
-    <p class="text-sm text-gray-500">Sorted by the number of images they contributed. Thank you!</p>
-    <ul id="institutions-list" class="list-none p-0 m-0 mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1 text-gray-600 text-sm md:text-base leading-relaxed">
+  {# Left-aligned, numbered (it is a ranking), two newspaper columns from a tablet up, top 10 then "Show all" (#618 home-institutions) #}
+  <section id="institutions-section" class="mt-14 text-left" aria-labelledby="institutions-heading">
+    <h2 id="institutions-heading" class="text-xl font-bold text-gray-900">Contributing institutions</h2>
+    <p class="mt-1 text-sm text-gray-600">Ranked by the number of images they shared. Thank you!</p>
+    <ol id="institutions-list" class="list-decimal list-outside pl-6 m-0 mt-4 sm:columns-2 gap-x-10 space-y-2 *:break-inside-avoid text-gray-700 text-sm md:text-base leading-snug marker:text-gray-500">
       <li>University of Florida Forest Entomology Lab (UFFE)</li>
       <li>Biodiversity Center, University of Texas at Austin</li>
       <li>Centre for Biodiversity Genomics, Guelph, Canada</li>
@@ -79,18 +85,42 @@ one screen (#618 home-team: a compact "Who built this" link on the home page, th
       <li class="institution-extra hidden">Museum national d'Histoire naturelle</li>
       <li class="institution-extra hidden">Universite Claude Bernard Lyon</li>
       <li class="institution-extra hidden">University of Rouen, ECODIV Laboratory</li>
-    </ul>
-    <button type="button" id="institutions-toggle" aria-expanded="false" aria-controls="institutions-list"
-            class="mt-3 btn-secondary">
+    </ol>
+    <button type="button" id="institutions-toggle" aria-expanded="false" aria-controls="institutions-list" class="mt-4 btn-secondary">
       Show all <span id="institutions-count"></span>
     </button>
   </section>
 
-  <section class="mt-12 mb-8">
-    <h2 class="text-xl font-bold text-gray-900">Questions and ideas</h2>
-    <p class="text-gray-600 mt-1">Have a question about the data, a feature request, or a bug to report? Talk to the team on GitHub.</p>
-    <a href="https://github.com/ChristopherMarais/barkandambrosiagallery/discussions" target="_blank" rel="noopener" class="btn-secondary mt-3 inline-flex items-center gap-2">
-      <i class="fi fi-brands-github flex"></i><span>GitHub Discussions</span>
+  <section class="mt-14" aria-labelledby="funders-heading">
+    <h2 id="funders-heading" class="text-xl font-bold text-gray-900">Funders</h2>
+    <p class="mt-1 text-sm text-gray-600">The work is supported by these agencies.</p>
+    <ul class="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-3 list-none p-0 m-0">
+      <li class="flex flex-col items-center justify-center gap-2 p-4 border border-gray-200 rounded-2xl text-center">
+        <img src="{% static 'img/NSF_4-Color_bitmap_Logo_RGB.png' %}" alt="" class="h-12 w-auto max-w-full object-contain grayscale" loading="lazy" decoding="async">
+        <span class="text-xs text-gray-600">National Science Foundation (NSF)</span>
+      </li>
+      <li class="flex flex-col items-center justify-center gap-2 p-4 border border-gray-200 rounded-2xl text-center">
+        <img src="{% static 'img/PngItem_2222864.png' %}" alt="" class="h-12 w-auto max-w-full object-contain grayscale" loading="lazy" decoding="async">
+        <span class="text-xs text-gray-600">USDA Animal and Plant Health Inspection Service (APHIS)</span>
+      </li>
+      <li class="flex flex-col items-center justify-center gap-2 p-4 border border-gray-200 rounded-2xl text-center">
+        <img src="{% static 'img/forest-service-usda-logos.png' %}" alt="" class="h-12 w-auto max-w-full object-contain grayscale" loading="lazy" decoding="async">
+        <span class="text-xs text-gray-600">USDA Forest Service</span>
+      </li>
+      <li class="flex flex-col items-center justify-center gap-2 p-4 border border-gray-200 rounded-2xl text-center">
+        <img src="{% static 'img/Florida-Forest-Service-Logo-Vector.jpg' %}" alt="" class="h-12 w-auto max-w-full object-contain grayscale" loading="lazy" decoding="async">
+        <span class="text-xs text-gray-600">Florida Forest Service</span>
+      </li>
+    </ul>
+  </section>
+
+  <section class="mt-14 mb-10 p-5 bg-gray-50 rounded-2xl flex flex-col sm:flex-row sm:items-center gap-4" aria-labelledby="questions-heading">
+    <div class="flex-1 min-w-0">
+      <h2 id="questions-heading" class="text-lg font-bold text-gray-900">Questions and ideas</h2>
+      <p class="text-sm text-gray-600 mt-1">A question about the data, a feature request or a bug? Talk to the team on GitHub.</p>
+    </div>
+    <a href="https://github.com/ChristopherMarais/barkandambrosiagallery/discussions" target="_blank" rel="noopener" class="btn-secondary inline-flex items-center justify-center gap-2 shrink-0">
+      <i class="fi fi-brands-github flex" aria-hidden="true"></i><span>GitHub Discussions</span>
     </a>
   </section>
 </div>
