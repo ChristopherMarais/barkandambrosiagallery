@@ -166,9 +166,8 @@ class TreeTests(ExpertCase):
 
     def test_the_count_lines_say_naming_and_telling_apart(self):
         text = text_of(self.page)
-        self.assertIn("Xyleborini tribe Naming: 0 of 10 correct · covered 1 of 1 genera "
-                      "Telling apart: 12 of 12 correct · covered 1 of 1 genera", text)
-        self.assertIn("Xyleborus genus Telling apart: 12 of 12 correct · covered 2 of 2 species", text)
+        self.assertIn("Xyleborini tribe 0/10 correct · 1 of 1 genera 12/12 correct · 1 of 1 genera", text)
+        self.assertIn("Xyleborus genus 12/12 correct · 2 of 2 species", text)
 
     def test_the_legend_keys_both_markers(self):
         self.assertNotIn("Two dots", self.page)

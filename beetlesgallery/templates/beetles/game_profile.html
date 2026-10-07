@@ -8,8 +8,9 @@
 
   <div class="grid grid-cols-3 gap-3 mb-6">
     <div class="p-4 bg-gray-50 border border-gray-100 rounded-2xl">
-      <div class="text-xs uppercase tracking-wider text-gray-500 font-semibold">Level {{ p.level.level }}</div>
-      <div class="mt-1 text-lg font-bold text-gray-900">{{ p.level.name }}</div>
+      <div class="text-xs uppercase tracking-wider text-gray-500 font-semibold">Level</div>
+      <div class="mt-1 text-lg font-bold text-gray-900 tabular-nums">{{ p.level.level }}</div>
+      <div class="text-xs text-gray-500 truncate">{{ p.level.name }}</div>
     </div>
     <div class="p-4 bg-gray-50 border border-gray-100 rounded-2xl">
       <div class="text-xs uppercase tracking-wider text-gray-500 font-semibold">Score</div>
@@ -21,8 +22,13 @@
     </div>
   </div>
 
-  <div class="mb-6 text-sm text-gray-600">
-    {{ p.streak|digit_groups }} day streak &middot; {{ p.modes.classify|default:0|digit_groups }} named &middot; {{ p.modes.pair|default:0|digit_groups }} compared for similarity &middot; {{ p.modes.odd|default:0|digit_groups }} odd ones spotted &middot; {{ p.modes.select|default:0|digit_groups }} grids
+  <!-- Only what's non-zero, as chips rather than one run-on line (#618 pro-runon) -->
+  <div class="mb-6 flex flex-wrap gap-2 text-sm text-gray-600" data-testid="stat-chips">
+    {% if p.streak %}<span class="px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-full">{{ p.streak|digit_groups }} day streak</span>{% endif %}
+    {% if p.modes.classify %}<span class="px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-full">{{ p.modes.classify|digit_groups }} named</span>{% endif %}
+    {% if p.modes.pair %}<span class="px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-full">{{ p.modes.pair|digit_groups }} compared for similarity</span>{% endif %}
+    {% if p.modes.odd %}<span class="px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-full">{{ p.modes.odd|digit_groups }} odd ones spotted</span>{% endif %}
+    {% if p.modes.select %}<span class="px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-full">{{ p.modes.select|digit_groups }} grids</span>{% endif %}
   </div>
   <div class="mb-6">{% include "beetles/includes/game_split.html" with games=p.games %}</div>
 
@@ -62,7 +68,7 @@
 
 
   <h2 class="text-lg font-semibold text-gray-900 mb-3">Badges</h2>
-  <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
     {% for b in p.badges %}{% if b.earned %}{% include "beetles/includes/game_badge.html" %}{% endif %}{% endfor %}
     {% if is_self %}{% for b in p.badges %}{% if not b.earned %}{% include "beetles/includes/game_badge.html" %}{% endif %}{% endfor %}{% endif %}
   </div>

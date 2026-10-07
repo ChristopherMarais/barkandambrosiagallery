@@ -9,36 +9,80 @@
   <form method="get" class="flex flex-wrap items-center gap-2 mb-4" role="search">
     <input type="search" name="q" value="{{ q }}" placeholder="Search players&hellip;" aria-label="Search players"
       class="h-10 px-3 flex-1 min-w-40 border border-gray-300 rounded-lg">
-    <select name="sort" class="select-chevron h-10 px-3 border border-gray-300 rounded-lg bg-white" aria-label="Sort by">
+    <select name="sort" class="select-chevron h-10 px-3 border border-gray-300 rounded-lg bg-white" aria-label="Sort by" onchange="this.form.submit()">
       {% for key, label in sorts.items %}<option value="{{ key }}" {% if sort == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
     </select>
     <input type="hidden" name="period" value="{{ period }}">
-    <button type="submit" class="btn-primary h-10">Show</button>
   </form>
-  <nav class="flex flex-wrap gap-1 mb-2" aria-label="Period" data-testid="periods">
+  <!-- One segmented control, not pills that wrap to a second line (#618 lb-periods) -->
+  <div class="grid grid-cols-4 gap-1 p-1 mb-2 bg-gray-100 rounded-lg text-xs sm:text-sm" role="tablist" aria-label="Period" data-testid="periods">
     {% for key, label in periods.items %}
     <a href="?period={{ key }}&sort={{ sort }}{% if q %}&q={{ q|urlencode }}{% endif %}"
-       class="px-3 py-1.5 rounded-full text-sm border {% if period == key %}bg-gray-600 border-gray-600 text-white font-semibold{% else %}bg-white border-gray-300 text-gray-700 hover:bg-gray-50{% endif %}"
+       class="text-center px-1 py-1.5 rounded-md font-medium truncate {% if period == key %}bg-white shadow-xs text-gray-900{% else %}text-gray-500 hover:text-gray-800{% endif %}"
        {% if period == key %}aria-current="page"{% endif %}>{{ label }}</a>
     {% endfor %}
-  </nav>
+  </div>
   {% if resets_at %}
   <p class="text-xs text-gray-500 mb-2" data-testid="resets">Since {% if period == 'week' %}Monday{% elif period == 'month' %}the 1st{% else %}1 January{% endif %}; starts again in {{ resets_at|timeuntil }} ({{ resets_at|date:"D j M" }}). Levels, expertise and badges never reset.</p>
   {% endif %}
-  {% include "beetles/includes/game_board_table.html" with rows=rows %}
+
+  <!-- Rows of rank - player+level - score - accuracy; every game's numbers open on tap (#618 lb-table, lb-badges, lb-me) -->
+  <ol class="border border-gray-200 rounded-lg divide-y divide-gray-100 overflow-hidden" data-testid="board-table">
+    {% for row in rows %}
+    <li class="{% if row.player_id == user.id %}bg-gray-100{% endif %}" data-testid="board-row">
+      <details class="group">
+        <summary class="list-none cursor-pointer flex items-center gap-3 px-3 py-2.5 select-none">
+          <span class="w-5 text-right text-gray-400 tabular-nums text-sm shrink-0">{{ row.position }}</span>
+          <span class="flex-1 min-w-0">
+            <span class="flex items-center gap-1 flex-wrap">
+              <a href="{% url 'game_profile' row.player_id %}" class="font-medium text-gray-900 underline decoration-gray-300 hover:decoration-gray-900">{{ row.username }}</a>
+              {% if row.player_id == user.id %}<span class="text-xs text-gray-500" data-testid="board-row-me">&middot; you</span>{% endif %}
+              {% if row.is_expert %}<i class="fi fi-rr-shield-check text-green-600 text-sm" title="Naming expert in a taxon"></i>{% endif %}
+              {% if row.discoveries %}<i class="fi fi-rr-sparkles text-amber-600 text-sm" title="New species finder: {{ row.discoveries }}" data-testid="finder-badge"></i>{% endif %}
+            </span>
+            <span class="flex items-center gap-1 mt-0.5">
+              {% include "beetles/includes/game_level_badge.html" with level=row.level name=row.level_name %}
+              <span class="text-xs text-gray-500">{{ row.level_name }}</span>
+            </span>
+          </span>
+          <span class="text-right shrink-0">
+            <span class="block text-sm font-semibold text-gray-900 tabular-nums">{{ row.score|digit_groups }}<span class="text-xs font-normal text-gray-400"> pts</span></span>
+            <span class="block text-xs text-gray-500 tabular-nums">{% if row.headline_accuracy is not None %}{% widthratio row.headline_accuracy 1 100 %}%{% else %}<span class="text-gray-300">&ndash;</span>{% endif %} <span class="text-gray-400">{{ row.headline_label }}</span></span>
+          </span>
+          <i class="fi fi-rr-angle-small-down text-gray-400 shrink-0 transition-transform group-open:rotate-180" aria-hidden="true"></i>
+        </summary>
+        <div class="px-3 pb-3 pt-1 border-t border-gray-100 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+          <div><span class="block text-gray-400">Name</span><span class="tabular-nums" data-testid="id-accuracy">{% if row.id_accuracy is not None %}{% widthratio row.id_accuracy 1 100 %}%{% else %}<span class="text-gray-300">&ndash;</span>{% endif %}</span></div>
+          <div><span class="block text-gray-400">Sim.</span><span class="tabular-nums" data-testid="sim-accuracy">{% if row.sim_accuracy is not None %}{% widthratio row.sim_accuracy 1 100 %}%{% else %}<span class="text-gray-300">&ndash;</span>{% endif %}</span></div>
+          <div><span class="block text-gray-400">Odd</span><span class="tabular-nums" data-testid="odd-accuracy">{% if row.odd_accuracy is not None %}{% widthratio row.odd_accuracy 1 100 %}%{% else %}<span class="text-gray-300">&ndash;</span>{% endif %}</span></div>
+          <div><span class="block text-gray-400">Find</span><span class="tabular-nums" data-testid="select-accuracy">{% if row.select_accuracy is not None %}{% widthratio row.select_accuracy 1 100 %}%{% else %}<span class="text-gray-300">&ndash;</span>{% endif %}</span></div>
+          <div class="col-span-2 sm:col-span-4 text-gray-500">Beetles seen: <span class="tabular-nums text-gray-700">{{ row.viewed|digit_groups }}</span></div>
+        </div>
+      </details>
+    </li>
+    {% empty %}
+    <li class="p-4 text-sm text-gray-500">No players to show.</li>
+    {% endfor %}
+  </ol>
   {% if period == 'week' and last_week %}{% include "beetles/includes/game_last_week.html" %}{% endif %}
 
   <!-- Specialists -->
   <h2 class="text-lg font-semibold text-gray-900 mt-10 mb-1">Specialists</h2>
   <p class="text-sm text-gray-600 mb-3">The best players inside one part of the tree: for a genus, how well they name its species; for a tribe, its genera; for a subfamily, its tribes.</p>
-  <form method="get" class="flex flex-wrap items-center gap-2 mb-4" id="branch-form" data-taxa-url="{% url 'game_taxa' %}">
-    <select name="rank" id="branch-rank" class="select-chevron h-10 px-3 border border-gray-300 rounded-lg bg-white" aria-label="Part of the tree">
-      <option value="">Choose&hellip;</option>
-      <option value="subfamily" {% if branch_rank == 'subfamily' %}selected{% endif %}>Subfamily</option>
-      <option value="tribe" {% if branch_rank == 'tribe' %}selected{% endif %}>Tribe</option>
-      <option value="genus" {% if branch_rank == 'genus' %}selected{% endif %}>Genus</option>
-    </select>
-    <select name="branch" id="branch-value" class="select-chevron h-10 px-3 flex-1 min-w-40 border border-gray-300 rounded-lg bg-white" data-current="{{ branch_value }}" aria-label="Which one">{% if branch_value %}<option value="{{ branch_value }}" selected>{{ branch_value }}</option>{% endif %}</select>
+  <form method="get" class="flex flex-wrap items-end gap-2 mb-4" id="branch-form" data-taxa-url="{% url 'game_taxa' %}">
+    <div>
+      <label for="branch-rank" class="block text-xs font-medium text-gray-500 mb-1">Rank</label>
+      <select name="rank" id="branch-rank" class="select-chevron h-10 px-3 border border-gray-300 rounded-lg bg-white">
+        <option value="">Choose&hellip;</option>
+        <option value="subfamily" {% if branch_rank == 'subfamily' %}selected{% endif %}>Subfamily</option>
+        <option value="tribe" {% if branch_rank == 'tribe' %}selected{% endif %}>Tribe</option>
+        <option value="genus" {% if branch_rank == 'genus' %}selected{% endif %}>Genus</option>
+      </select>
+    </div>
+    <div class="flex-1 min-w-40">
+      <label for="branch-value" class="block text-xs font-medium text-gray-500 mb-1">Taxon</label>
+      <select name="branch" id="branch-value" class="select-chevron w-full h-10 px-3 border border-gray-300 rounded-lg bg-white" data-current="{{ branch_value }}" {% if not branch_rank %}disabled{% endif %}>{% if branch_value %}<option value="{{ branch_value }}" selected>{{ branch_value }}</option>{% endif %}</select>
+    </div>
     <button type="submit" class="btn-primary h-10">Show</button>
   </form>
   {% if branch_rows is not None %}
@@ -73,6 +117,7 @@
   const url = document.getElementById("branch-form").dataset.taxaUrl;
   async function load() {
     value.innerHTML = "";
+    value.disabled = !rank.value;
     if (!rank.value) return;
     const data = await (await fetch(url + "?rank=" + encodeURIComponent(rank.value))).json();
     (data.options || []).forEach((o) => { const el = document.createElement("option"); el.value = el.textContent = o.value; value.appendChild(el); });
@@ -84,6 +129,21 @@
   }
   rank.addEventListener("change", () => { value.dataset.current = ""; load(); });
   load();
+})();
+
+(function () {
+  // "· you" stays pinned at the bottom of the screen once your own row scrolls out of view (#618 lb-me).
+  const me = document.querySelector('[data-testid="board-row-me"]');
+  if (!me || !("IntersectionObserver" in window)) return;
+  const row = me.closest("li");
+  const pin = document.createElement("div");
+  pin.className = "hidden fixed inset-x-0 bottom-0 z-20 px-4 py-2 bg-gray-900 text-white text-sm flex items-center justify-between shadow-lg";
+  pin.innerHTML = '<span>&middot; you</span><span class="tabular-nums"></span>';
+  const scoreText = row.querySelector(".text-right.shrink-0");
+  if (scoreText) pin.querySelector("span.tabular-nums").textContent = scoreText.textContent.trim();
+  document.body.appendChild(pin);
+  new IntersectionObserver(([entry]) => { pin.classList.toggle("hidden", entry.isIntersecting); },
+    { rootMargin: "0px 0px -10% 0px" }).observe(row);
 })();
 </script>
 {% endblock %}

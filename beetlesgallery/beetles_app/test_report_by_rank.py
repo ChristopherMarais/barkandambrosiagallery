@@ -36,10 +36,21 @@ class AccuracyByRankTests(GameCase):
             rows = {r["rank"]: r for r in game_trust.player_report(self.user)["by_rank"]}
         self.assertEqual((rows["genus"]["naming"]["accuracy"], rows["genus"]["distinction"]["accuracy"]), (0.75, 0.25))
 
-    def test_the_table_says_naming_and_distinction(self):
-        self.client.force_login(self.user)
-        page = self.client.get(reverse("game_report")).content.decode()
+    def test_the_table_says_naming_and_distinction_when_there_is_distinction_data(self):
+        PlayerSkill.objects.create(player=self.user, rank="genus", branch="Xyleborini", correct=3, judged=4)
+        with mock.patch.object(game_trust, "apart_counts", return_value={("genus", "xyleborini"): [1, 4, "Xyleborini", {}]}):
+            self.client.force_login(self.user)
+            page = self.client.get(reverse("game_report")).content.decode()
         table = page[page.index("Accuracy by rank"):page.index("<!-- Trend -->")]
         self.assertIn(">Naming<", table)
         self.assertIn(">Distinction<", table)
         self.assertNotIn("Similarity", table)
+
+    def test_the_distinction_column_hides_when_nobody_has_told_anything_apart(self):
+        # #618 rep-empty-col: a column of nothing but dashes is hidden rather than shown empty
+        PlayerSkill.objects.create(player=self.user, rank="genus", branch="Xyleborini", correct=3, judged=4)
+        self.client.force_login(self.user)
+        page = self.client.get(reverse("game_report")).content.decode()
+        table = page[page.index("Accuracy by rank"):page.index("<!-- Trend -->")]
+        self.assertIn(">Naming<", table)
+        self.assertNotIn(">Distinction<", table)
