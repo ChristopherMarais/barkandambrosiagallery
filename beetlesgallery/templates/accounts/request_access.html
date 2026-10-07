@@ -7,7 +7,7 @@
   {% if not signed_in %}<a href="{% url 'login' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Sign in</a>{% endif %}
   <h1 class="page-title">{% if signed_in %}Ask for more access{% else %}Sign up{% endif %}</h1>
   <p class="text-gray-600 mb-8">
-    {% if signed_in %}Your account already works. Tick what more you'd like below: we review it and email you our decision, and you get the access once it is approved.{% else %}Choose a username and password and tell us who you are. Confirm your email and your account works straight away.{% endif %}
+    {% if signed_in %}Your account already works. Tick anything else you'd like to help with below.{% else %}Choose a username and password and tell us who you are. Confirm your email and your account works straight away.{% endif %}
   </p>
 
   <form method="post" novalidate data-testid="signup-form" class="bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-xs space-y-5">
