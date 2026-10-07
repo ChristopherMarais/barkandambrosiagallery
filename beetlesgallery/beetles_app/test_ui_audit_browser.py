@@ -55,19 +55,19 @@ class TruncateAndDensityTests(BrowserTestCase):
         self.assertIn("line-clamp-2", classes)
         self.assertNotIn("truncate", classes)
 
-    def test_only_institution_aspect_and_type_status_show_on_the_card(self):
+    def test_all_fields_still_show_on_the_card(self):
+        # browser-density (cut the card down to name/institution/two facts) was skipped by the owner (#618):
+        # the fuller field set stays, just in the browser-pairs label/value table style.
         html = self.get().content.decode()
         self.assertIn('<dt class="col-span-1 text-text/60">Institution</dt>', html)
         self.assertIn("University of Florida Forest Entomology Lab", html)
         self.assertIn('<dt class="col-span-1 text-text/60">Aspect</dt>', html)
         self.assertIn('<dt class="col-span-1 text-text/60">Type Status</dt>', html)
         self.assertIn("Holotype", html)
-        # The rest (specimen ID, sex, country, photographer, full taxonomy) is on the detail page, not here.
-        self.assertNotIn(">Specimen ID:<", html)
-        self.assertNotIn(">Sex:<", html)
-        self.assertNotIn(">Country:<", html)
-        self.assertNotIn(">Photographer:<", html)
-        self.assertNotIn(">Subfamily:<", html)
+        self.assertIn('<dt class="col-span-1 text-text/60">Specimen ID</dt>', html)
+        self.assertIn('<dt class="col-span-1 text-text/60">Sex</dt>', html)
+        self.assertIn('<dt class="col-span-1 text-text/60">Country</dt>', html)
+        self.assertIn('<dt class="col-span-1 text-text/60">Subfamily</dt>', html)
 
     def test_the_label_value_table_matches_the_detail_page_style(self):
         html = self.get().content.decode()
@@ -77,11 +77,12 @@ class TruncateAndDensityTests(BrowserTestCase):
 class ThumbnailTests(BrowserTestCase):
     """browser-thumb, browser-empty-thumb."""
 
-    def test_the_thumbnail_is_full_width_on_phones_and_a_column_on_desktop(self):
+    def test_the_thumbnail_stays_a_small_side_column(self):
+        # browser-thumb (full-width/40%-column leading thumbnail) was skipped by the owner (#618).
         image = make_image(image_institution="UF")
         make_beetle(image=image, bbox="validated")
         html = self.get().content.decode()
-        self.assertIn("w-full h-48 sm:h-auto sm:w-2/5", html)
+        self.assertIn("w-32 sm:w-36", html)
 
     def test_a_missing_thumbnail_shows_a_no_preview_placeholder(self):
         image = make_image(image_institution="UF")  # no thumb_small set

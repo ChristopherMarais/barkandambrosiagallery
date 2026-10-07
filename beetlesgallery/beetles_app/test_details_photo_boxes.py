@@ -60,9 +60,10 @@ class DetailsPhotoBoxesTests(PageBehaviourCase):
         self.assertEqual(current["class"].split(), ["roi-box", "roi-box-current"])
         self.assertNotIn("href", current)
         self.assertEqual(page.count('id="roi-bbox"'), 1)
-        for rule in (".roi-box { position: absolute; border-radius: 0.375rem; border: 1px solid rgb(107 114 128 / 0.95);",
-                     "box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35), inset 0 0 0 1px rgb(0 0 0 / 0.35); }",
-                     ".roi-box-current { cursor: default; border: 2px solid rgb(17 24 39 / 0.95);",
+        # detail-boxes (numbered tab + thin/thick contrast) was skipped by the owner, #618.
+        for rule in (".roi-box { position: absolute; border: 2px solid rgb(255 255 255 / 0.9); border-radius: 0.375rem;",
+                     "box-shadow: 0 0 0 1px rgb(0 0 0 / 0.4), inset 0 0 0 1px rgb(0 0 0 / 0.4); }",
+                     ".roi-box-current { cursor: default; border-color: rgb(17 24 39 / 0.9);",
                      "box-shadow: 0 0 0 1px rgb(255 255 255 / 0.9), inset 0 0 0 1px rgb(255 255 255 / 0.9); }",
                      "a.roi-box:focus-visible {"):
             self.assertIn(rule, page)

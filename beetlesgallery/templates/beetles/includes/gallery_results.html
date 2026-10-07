@@ -45,21 +45,23 @@
     {# Card View #}
     <div id="card-view" class="flex flex-col gap-4">
       {% for b in beetles %}
-       <div class="group relative flex flex-col sm:flex-row rounded-lg border border-text/10 bg-primary2 overflow-hidden hover:shadow-md transition">
+       <div class="group relative flex flex-row rounded-lg border border-text/10 bg-primary2 overflow-hidden hover:shadow-md transition">
 
-            {# Thumbnail leads the card: full width on phones, a 40% column on larger screens (#618 browser-thumb) #}
-            <a {% if areas.details or not user.is_authenticated %}href="{% url 'beetle_detail' beetle_id=b.id %}"{% endif %}
-              class="w-full h-48 sm:h-auto sm:w-2/5 shrink-0 flex items-center justify-center bg-black/5 sm:border-r border-black/5 p-3">
-              <div class="thumb-wrap relative flex items-center justify-center w-full h-full rounded-xl overflow-hidden" data-src="{% if b.image_asset and b.image_asset.thumb_small %}{{ b.image_asset.thumb_small.url }}{% endif %}" data-alt="{{ b.ref_scientificName|default:'Unidentified' }}" data-img-class="thumb-img w-full h-full object-contain">
-                {% if b.image_asset and b.image_asset.thumb_small %}
-                  <img src="{{ b.image_asset.thumb_small.url }}" alt="{{ b.ref_scientificName|default:'Unidentified' }}" {% thumb_size b.image_asset %} loading="lazy" decoding="async" class="thumb-img w-full h-full object-contain" onerror="handleThumbError(this)" />
-                {% else %}
-                  {% include "beetles/includes/_no_preview.html" %}
-                {% endif %}
-              </div>
-            </a>
+            {# Small side thumbnail (browser-thumb skipped by the owner, #618) #}
+            <div class="w-32 sm:w-36 shrink-0 flex items-center justify-center p-3">
+              <a {% if areas.details or not user.is_authenticated %}href="{% url 'beetle_detail' beetle_id=b.id %}"{% endif %}
+                class="flex items-center justify-center w-full h-32 bg-black/5 rounded-xl overflow-hidden border border-black/5 shadow-xs">
+                <div class="thumb-wrap relative flex items-center justify-center w-full h-full" data-src="{% if b.image_asset and b.image_asset.thumb_small %}{{ b.image_asset.thumb_small.url }}{% endif %}" data-alt="{{ b.ref_scientificName|default:'Unidentified' }}" data-img-class="thumb-img w-full h-full object-contain">
+                  {% if b.image_asset and b.image_asset.thumb_small %}
+                    <img src="{{ b.image_asset.thumb_small.url }}" alt="{{ b.ref_scientificName|default:'Unidentified' }}" {% thumb_size b.image_asset %} loading="lazy" decoding="async" class="thumb-img w-full h-full object-contain" onerror="handleThumbError(this)" />
+                  {% else %}
+                    {% include "beetles/includes/_no_preview.html" %}
+                  {% endif %}
+                </div>
+              </a>
+            </div>
 
-           <div class="flex-1 p-3 sm:p-4 min-w-0">
+           <div class="flex-1 p-3 sm:p-4 min-w-0 overflow-y-auto scrollbar-thin">
              <div class="flex justify-between items-start gap-2 mb-2">
                <div class="min-w-0 flex-1">
                  {# Never truncate the name: let it wrap to two lines instead (#618 browser-truncate) #}
@@ -83,13 +85,11 @@
                </div>
              </div>
 
-             {# --- Fewer fields per card: name, institution, and two key facts (#618 browser-density) ---
-                  The rest (taxonomy, specimen/sex/country, photographer, ...) is on the detail page.
-                  Same label/value table style as the detail page (#618 browser-pairs). #}
+             {# --- All fields (browser-density skipped, #618); same label/value style as browser-pairs (kept). --- #}
              <dl class="grid grid-cols-3 gap-x-3 gap-y-1.5 text-sm items-baseline mt-3">
-                {% if b.image_asset.image_institution %}
-                  <dt class="col-span-1 text-text/60">Institution</dt>
-                  <dd class="col-span-2 text-text/80 truncate">{{ b.image_asset.image_institution }}</dd>
+                {% if b.depicts_specimen %}
+                  <dt class="col-span-1 text-text/60">Specimen ID</dt>
+                  <dd class="col-span-2 text-text/80 truncate">{{ b.depicts_specimen }}</dd>
                 {% endif %}
 
                 {% if b.has_multiple_aspect %}
@@ -98,6 +98,69 @@
                 {% elif b.aspect %}
                   <dt class="col-span-1 text-text/60">Aspect</dt>
                   <dd class="col-span-2 text-text/80">{{ b.aspect }}</dd>
+                {% endif %}
+
+                {% if b.image_asset.image_has_multiple_individuals is not None %}
+                  <dt class="col-span-1 text-text/60">Multiple Individuals</dt>
+                  <dd class="col-span-2 text-text/80">{% if b.image_asset.image_has_multiple_individuals %}Yes{% else %}No{% endif %}</dd>
+                {% endif %}
+
+                {% if b.has_multiple_country %}
+                  <dt class="col-span-1 text-text/60">Country</dt>
+                  <dd class="col-span-2 text-text/80 italic">Multiple</dd>
+                {% elif b.collection_country %}
+                  <dt class="col-span-1 text-text/60">Country</dt>
+                  <dd class="col-span-2 text-text/80">{{ b.collection_country }}</dd>
+                {% endif %}
+
+                {% if b.has_multiple_sex %}
+                  <dt class="col-span-1 text-text/60">Sex</dt>
+                  <dd class="col-span-2 text-text/80 italic">Multiple</dd>
+                {% elif b.specimen_sex %}
+                  <dt class="col-span-1 text-text/60">Sex</dt>
+                  <dd class="col-span-2 text-text/80">{{ b.specimen_sex|lower }}</dd>
+                {% endif %}
+
+                {% if b.image_asset.image_institution %}
+                  <dt class="col-span-1 text-text/60">Institution</dt>
+                  <dd class="col-span-2 text-text/80 truncate">{{ b.image_asset.image_institution }}</dd>
+                {% endif %}
+
+                {% if b.image_asset.photographer %}
+                  <dt class="col-span-1 text-text/60">Photographer</dt>
+                  <dd class="col-span-2 text-text/80 truncate">{{ b.image_asset.photographer }}</dd>
+                {% endif %}
+
+                {% if b.has_multiple_subfamily %}
+                  <dt class="col-span-1 text-text/60">Subfamily</dt>
+                  <dd class="col-span-2 text-text/80 italic">Multiple</dd>
+                {% elif b.ref_subfamily %}
+                  <dt class="col-span-1 text-text/60">Subfamily</dt>
+                  <dd class="col-span-2 text-text/80"><a href="{% taxon_url b.ref_subfamily %}" class="hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_subfamily }}</a></dd>
+                {% endif %}
+
+                {% if b.has_multiple_tribe %}
+                  <dt class="col-span-1 text-text/60">Tribe</dt>
+                  <dd class="col-span-2 text-text/80 italic">Multiple</dd>
+                {% elif b.ref_tribe %}
+                  <dt class="col-span-1 text-text/60">Tribe</dt>
+                  <dd class="col-span-2 text-text/80"><a href="{% taxon_url b.ref_subfamily b.ref_tribe %}" class="hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_tribe }}</a></dd>
+                {% endif %}
+
+                {% if b.has_multiple_genus %}
+                  <dt class="col-span-1 text-text/60">Genus</dt>
+                  <dd class="col-span-2 text-text/80 italic">Multiple</dd>
+                {% elif b.ref_genus %}
+                  <dt class="col-span-1 text-text/60">Genus</dt>
+                  <dd class="col-span-2 text-text/80 italic"><a href="{% taxon_url b.ref_subfamily b.ref_tribe b.ref_genus %}" class="hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_genus }}</a></dd>
+                {% endif %}
+
+                {% if b.has_multiple_species %}
+                  <dt class="col-span-1 text-text/60">Species</dt>
+                  <dd class="col-span-2 text-text/80 italic">Multiple</dd>
+                {% elif b.ref_species %}
+                  <dt class="col-span-1 text-text/60">Species</dt>
+                  <dd class="col-span-2 text-text/80 italic"><a href="{% url 'taxonomy_browser' %}?species={{ b.depicts_valid_name_id|urlencode }}" class="hover:underline hover:text-gray-600" title="View this taxon in the Taxonomy Browser">{{ b.ref_species }}</a></dd>
                 {% endif %}
 
                 {% if b.specimen_type_status %}

@@ -24,7 +24,7 @@ class DataManagementActionsTests(PageBehaviourCase):
 
     def test_card_headings_are_not_as_big_as_the_page_title(self):
         page = self.page()
-        self.assertIn('<h1 class="page-title">Data Management</h1>', page)
+        self.assertIn('<h1 class="page-title">Data management</h1>', page)
         for heading in ("Data Actions", "Species Tables", "Activity Logs"):
             with self.subTest(heading=heading):
                 idx = page.index(heading)
@@ -151,18 +151,18 @@ class AnnotationTemplateTests(SimpleTestCase):
     def setUp(self):
         self.page = (TEMPLATES / "tool_annotate.html").read_text(encoding="utf-8")
 
-    def test_the_canvas_title_is_the_species_name_or_unnamed_and_the_id_is_short_with_copy(self):
-        self.assertIn("img.species_name || 'Unnamed'", self.page)
-        self.assertIn('id="canvas-id-copy"', self.page)
-        self.assertIn("img.image_asset_id.slice(0, 8)", self.page)
-        self.assertNotIn('id="main-status-indicator"', self.page)   # replaced by the pill
+    def test_the_canvas_title_is_the_image_id_ann_title_skipped(self):
+        # ann-title (species name as the title, short id + copy) was skipped by the owner, #618.
+        self.assertIn("canvas-title').textContent = img.image_asset_id", self.page)
+        self.assertNotIn("species_name || 'Unnamed'", self.page)
+        self.assertNotIn('id="canvas-id-copy"', self.page)
+        self.assertNotIn('id="main-status-indicator"', self.page)   # replaced by the pill (ann-dot, kept)
 
-    def test_image_list_rows_lead_with_the_species_name_then_status_and_count_then_the_short_id(self):
+    def test_image_list_rows_lead_with_the_full_id_ann_list_skipped(self):
+        # ann-list (species name first, short id last) was skipped by the owner, #618.
         row = self.page[self.page.index("function renderImageList"):self.page.index("function renderImageList") + 2200]
-        name_at = row.index("species_name")
-        status_at = row.index("is_validated ?")
-        id_at = row.index("image_asset_id.slice(0, 8)")
-        self.assertEqual([name_at, status_at, id_at], sorted([name_at, status_at, id_at]))
+        self.assertIn("img.image_asset_id}</p>", row)
+        self.assertNotIn("species_name", row)
 
     def test_validated_status_is_a_pill_with_a_word_not_a_lone_dot(self):
         fn = self.page[self.page.index("function updateMainStatusIndicator"):]

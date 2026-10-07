@@ -314,13 +314,10 @@
       <div class="border-b border-gray-200 p-3 flex items-center justify-between bg-gray-50 shrink-0">
         <div class="flex items-center gap-3 min-w-0">
           <div class="min-w-0">
-            <h3 class="text-base font-semibold text-gray-900" id="canvas-title">Annotation Canvas</h3>
+            {# ann-title skipped (#618): the title stays the full image id, as before. #}
+            <h3 class="text-base font-semibold text-gray-900 truncate" id="canvas-title">Annotation Canvas</h3>
             <p class="text-xs text-gray-500" id="canvas-subtitle">Please select an image to begin annotating</p>
             <div id="canvas-meta" class="hidden mt-0.5 flex items-center gap-2">
-              <span id="canvas-id" class="font-mono text-[11px] text-gray-400 truncate"></span>
-              <button type="button" id="canvas-id-copy" class="shrink-0 text-gray-400 hover:text-gray-800 transition" title="Copy image ID" data-uuid="">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-              </button>
               <span id="canvas-status-pill" class="hidden inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"></span>
             </div>
           </div>
@@ -563,20 +560,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// The canvas header's short image id, click to copy (#618 ann-title)
-document.addEventListener("DOMContentLoaded", () => {
-  const btn = document.getElementById("canvas-id-copy");
-  if (!btn) return;
-  btn.addEventListener("click", async () => {
-    const id = btn.dataset.uuid;
-    if (!id) return;
-    try {
-      await navigator.clipboard.writeText(id);
-      btn.classList.add("text-green-600");
-      setTimeout(() => btn.classList.remove("text-green-600"), 1200);
-    } catch (e) { /* clipboard unavailable: nothing to do */ }
-  });
-});
 let searchDebounceTimer = null;
 
 // ---------------------------------------------------------
@@ -1083,9 +1066,8 @@ function renderImageList(imagesToRender, append = false) {
         ${img.thumbnail_url ? `<img src="${img.thumbnail_url}" class="w-full h-full object-cover" loading="lazy" decoding="async">` : `<i class="fi fi-rr-picture text-gray-400"></i>`}
       </div>
       <div class="flex-1 min-w-0 text-left">
-        <p class="text-sm font-medium text-gray-900 truncate">${escHtml(img.species_name || 'Unnamed')}</p>
-        <p class="text-xs text-gray-500 mt-0.5 truncate flex items-center gap-1.5">${img.is_validated ? 'Validated' : 'Not Validated'} &middot; ${digitGroupsText(img.annotation_count)} ${img.annotation_count === 1 ? 'box' : 'boxes'} ${gameBadgeHtml(img.game)}</p>
-        <p class="text-[10px] font-mono text-gray-400 truncate mt-0.5" title="${img.image_asset_id}">${img.image_asset_id.slice(0, 8)}</p>
+        <p class="text-sm font-medium text-gray-900 truncate" title="${img.image_asset_id}">${img.image_asset_id}</p>
+        <p class="text-xs text-gray-500 mt-0.5 truncate flex items-center gap-1.5">${img.is_validated ? 'Validated' : 'Not Validated'} ${gameBadgeHtml(img.game)}</p>
       </div>
       <div class="shrink-0">
         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${img.annotation_count === 0 ? 'bg-gray-100 text-gray-600 border border-gray-200' : (img.has_unvalidated_boxes ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-green-100 text-green-800 border border-green-200')} shadow-xs" title="ROIs">
@@ -1177,13 +1159,8 @@ async function selectImage(img) {
   renderImageList(state.images, false);
   if (phoneLayout.matches) mobileTab('center');   // on a phone, choosing an image opens it
 
-  // The species name (or "Unnamed") is the title; the UUID is a short mono id with its own copy button (#618 ann-title)
-  document.getElementById('canvas-title').textContent = img.species_name || 'Unnamed';
+  document.getElementById('canvas-title').textContent = img.image_asset_id;
   document.getElementById('canvas-subtitle').textContent = '';   // "Select an image" no longer applies
-  const idEl = document.getElementById('canvas-id');
-  idEl.textContent = img.image_asset_id.slice(0, 8);
-  idEl.title = img.image_asset_id;
-  document.getElementById('canvas-id-copy').dataset.uuid = img.image_asset_id;
   document.getElementById('canvas-meta').classList.remove('hidden');
   document.getElementById('canvas-empty').classList.add('hidden');
   document.getElementById('canvas-wrapper').classList.add('hidden');

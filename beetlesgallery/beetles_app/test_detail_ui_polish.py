@@ -40,7 +40,7 @@ class DetailUiPolishTests(PageBehaviourCase):
 
     # --- detail-ids-first / detail-ids-copy ---------------------------------------------------------------------
 
-    def test_ids_are_not_above_the_photo_and_every_identifier_is_copyable_in_one_card(self):
+    def test_ids_are_not_above_the_photo_and_every_identifier_is_in_one_card(self):
         page = self.page()
         self.assertNotIn("Region of Interest (ROI) ID:", page)
         self.assertLess(page.index('data-testid="roi-toolbar"'), page.index(">Identifiers<"))
@@ -52,23 +52,27 @@ class DetailUiPolishTests(PageBehaviourCase):
         ):
             start = page.index(f'data-testid="{testid}"')
             self.assertIn(value, page[start:start + 400])
-        for copy_testid in ("copy-roi-id", "copy-image-id", "copy-specimen-id", "copy-valid-name-id", "copy-alias-id"):
+        # detail-ids-copy skipped by the owner (#618): only ROI ID, Image ID and Alias ID are copyable, same as
+        # before this batch; Specimen ID and Valid Name ID stay plain text.
+        for copy_testid in ("copy-roi-id", "copy-image-id", "copy-alias-id"):
             self.assertIn(copy_testid, elements)
+        self.assertNotIn("copy-specimen-id", elements)
+        self.assertNotIn("copy-valid-name-id", elements)
         self.assertIn("copy-id-btn", page)
         self.assertIn("Copied</span>", page)
 
-    def test_an_id_without_a_value_is_hidden_not_copyable(self):
+    def test_an_id_without_a_value_is_hidden(self):
         bare = make_beetle(image=make_image(image_file="tests/photo.jpg"))
         elements = Outline(self.page(bare)).elements
-        self.assertNotIn("copy-specimen-id", elements)
         self.assertNotIn("copy-alias-id", elements)
-        self.assertNotIn("copy-valid-name-id", elements)
+        self.assertTrue(elements["specimen-id-value"]["class"].split().__contains__("field-hidden"))
 
-    # --- detail-boxes --------------------------------------------------------------------------------------------
+    # --- detail-boxes (skipped by the owner, #618: no numbered tab) ------------------------------------------------
 
-    def test_the_current_box_has_a_numbered_tab_and_the_switch_still_works(self):
+    def test_the_current_box_still_has_its_own_style_and_the_switch_still_works(self):
         page = self.page()
-        self.assertIn('<span class="roi-box-tab" aria-hidden="true">1</span>', page)
+        self.assertNotIn("roi-box-tab", page)
+        self.assertIn('class="roi-box roi-box-current"', page)
         self.assertIn("roi-boxes-btn", Outline(page).elements)
 
     # --- detail-toolbar / detail-roi-pager ------------------------------------------------------------------------
