@@ -69,7 +69,7 @@ class ModelPickerOnTopTests(PageBehaviourCase):
     def test_the_model_picker_is_under_the_intro_and_before_the_drop_zone(self):
         page = self.page()
         order = [page.index(marker) for marker in (
-            'class="page-intro', 'id="modelSelect"', 'data-testid="ibbi-link"', 'id="canvasContainer"',
+            'class="page-intro', 'data-testid="ibbi-link"', 'id="modelSelect"', 'id="canvasContainer"',
             'id="dontKeep"', 'class="example-btn', 'id="classifyForm"')]
         self.assertEqual(order, sorted(order))
 

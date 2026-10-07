@@ -1286,6 +1286,9 @@
   .gap-y-2 {
     row-gap: calc(var(--spacing) * 2);
   }
+  .gap-y-3 {
+    row-gap: calc(var(--spacing) * 3);
+  }
   .gap-y-3\.5 {
     row-gap: calc(var(--spacing) * 3.5);
   }

@@ -22,8 +22,9 @@ class HomeLockedGamesTests(GameCase):
 
     def odd_card(self, page):
         # the Odd One Out card's own slice of the page, not the whole thing (every card shares the same testids)
-        start = page.index("Odd One Out", page.index('data-testid="game-split"'))
-        return page[start:start + 300]
+        start = page.index('data-testid="game-card-odd"', page.index('data-testid="game-split"'))
+        end = page.find('<div class="relative p-3', start)   # the next card
+        return page[start:end if end != -1 else start + 1500]
 
     def test_a_locked_game_shows_a_lock_and_the_level_that_opens_it(self):
         # a brand-new player: Odd One Out is still locked, not showing "–" and "0 pts" like an unplayed game would

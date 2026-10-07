@@ -16,7 +16,7 @@ class GameCardMarkupTests(GameCase):
         page = self.client.get(reverse("game_home")).content.decode()
         marker = f'data-testid="game-card-{key}"'
         start = page.rindex("<div", 0, page.index(marker))
-        end = page.find('data-testid="game-card-', page.index(marker) + len(marker))   # the next card
+        end = page.find('<div class="relative p-3', page.index(marker))   # the next card
         return page[start:end if end != -1 else start + 1500]
 
     def test_the_card_is_a_div_with_an_empty_stretched_history_link(self):
