@@ -228,3 +228,22 @@ class PageTests(PageBehaviourCase):
         self.assertContains(self.post("x", name="p.txt"), "must be a .csv")
         with self.settings(MAX_UPLOAD_SIZE_INTERACTIONS=10):
             self.assertContains(self.post(csv_text(GOOD)), "too large")
+
+    def test_the_load_button_is_primary_and_starts_disabled_until_a_file_is_chosen(self):
+        self.client.force_login(self.superuser)
+        page = self.client.get(reverse("upload_interaction_proposals")).content.decode()
+        self.assertIn('id="load-proposals-btn" disabled\n      class="btn-primary', page)
+
+    def test_the_file_field_is_the_shared_drop_zone(self):
+        self.client.force_login(self.superuser)
+        page = self.client.get(reverse("upload_interaction_proposals")).content.decode()
+        self.assertIn('data-testid="csv_file-dropzone"', page)
+        self.assertIn(".csv, up to", page)
+        self.assertIn('id="csv_file"', page)
+
+    def test_the_columns_table_stacks_on_mobile(self):
+        self.client.force_login(self.superuser)
+        page = self.client.get(reverse("upload_interaction_proposals")).content.decode()
+        self.assertIn('class="block sm:table-row-group divide-y divide-gray-100"', page)
+        self.assertIn('class="block sm:table-row"', page)
+        self.assertIn('class="block sm:table-cell', page)

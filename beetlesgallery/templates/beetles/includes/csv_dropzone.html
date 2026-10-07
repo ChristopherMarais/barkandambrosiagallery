@@ -1,0 +1,61 @@
+{# A click-or-drag-and-drop zone for one CSV file, styled like the IBBI-AI classify page's photo drop zone.
+   Needs: field_id, label, max_mb; optional: submit_id (a button to enable once a file is chosen). #}
+<div>
+  <label for="{{ field_id }}" class="block text-sm font-semibold text-gray-700 mb-2">{{ label }}</label>
+  <div id="{{ field_id }}-zone" tabindex="0" role="button" aria-describedby="{{ field_id }}-hint"
+    class="relative flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center cursor-pointer transition hover:border-gray-400 hover:bg-gray-100 focus:outline-hidden focus-visible:ring-4 focus-visible:ring-gray-300"
+    data-testid="{{ field_id }}-dropzone">
+    <i class="fi fi-rr-document text-2xl text-gray-400"></i>
+    <p class="text-sm text-gray-600"><span class="font-semibold text-gray-800">Click to browse</span> or drag &amp; drop a file here</p>
+    <p id="{{ field_id }}-hint" class="text-xs text-gray-500">.csv, up to {{ max_mb }} MB</p>
+    <p id="{{ field_id }}-filename" class="hidden text-sm font-medium text-gray-900 break-all" data-testid="{{ field_id }}-filename"></p>
+    <input id="{{ field_id }}" name="{{ field_id }}" type="file" accept=".csv,text/csv" required class="sr-only">
+  </div>
+</div>
+<script>
+(function () {
+  "use strict";
+  var zone = document.getElementById("{{ field_id }}-zone");
+  var input = document.getElementById("{{ field_id }}");
+  var filenameEl = document.getElementById("{{ field_id }}-filename");
+  var submitBtn = document.getElementById("{{ submit_id }}");
+
+  function sync() {
+    var file = input.files && input.files[0];
+    if (file) {
+      filenameEl.textContent = file.name;
+      filenameEl.classList.remove("hidden");
+    } else {
+      filenameEl.classList.add("hidden");
+    }
+    if (submitBtn) submitBtn.disabled = !file;
+  }
+
+  zone.addEventListener("click", function () { input.click(); });
+  zone.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); }
+  });
+  input.addEventListener("change", sync);
+
+  ["dragenter", "dragover"].forEach(function (evt) {
+    zone.addEventListener(evt, function (e) {
+      e.preventDefault();
+      zone.classList.add("border-gray-400", "bg-gray-100");
+    });
+  });
+  ["dragleave", "drop"].forEach(function (evt) {
+    zone.addEventListener(evt, function (e) {
+      e.preventDefault();
+      zone.classList.remove("border-gray-400", "bg-gray-100");
+    });
+  });
+  zone.addEventListener("drop", function (e) {
+    if (e.dataTransfer.files.length) {
+      input.files = e.dataTransfer.files;
+      sync();
+    }
+  });
+
+  sync();
+})();
+</script>

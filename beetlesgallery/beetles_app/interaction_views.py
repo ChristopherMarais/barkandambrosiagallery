@@ -68,6 +68,9 @@ def interaction_review(request):
         "categories": review.CATEGORIES, "relationships": review.RELATIONSHIPS,
         "state": state,
         "querystring": urlencode({k: v for k, v in state.items() if k != "page"}),
+        # Every claim with this status, ignoring q/category/min_score: whether the queue itself is empty
+        # (show the "nothing waiting yet" message and hide the filters) or just these filters found nothing.
+        "queue_total": counts[filters["status"]],
     })
 
 

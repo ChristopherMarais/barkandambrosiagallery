@@ -149,6 +149,25 @@ class PageTests(ReviewCase):
         self.assertContains(second, "Fungus 020")
         self.assertNotContains(second, "Fungus 000")
 
+    def test_an_empty_queue_hides_the_filters_and_explains_itself_with_a_link(self):
+        response = self.get()
+        self.assertContains(response, "No claims waiting.")
+        self.assertContains(response, reverse("upload_interaction_proposals"))
+        self.assertNotContains(response, 'id="f-score"')   # the filter form itself is hidden
+        self.assertContains(self.get(status="accepted"), "No accepted claims yet.")
+        self.assertContains(self.get(status="rejected"), "No rejected claims yet.")
+
+    def test_filtering_to_nothing_keeps_the_filters_and_says_so_plainly(self):
+        self.proposal("Ophiostoma polonicum", doi="10.1/a")
+        response = self.get(q="no such beetle")
+        self.assertContains(response, 'id="f-score"')   # the queue has claims, so the filters stay
+        self.assertContains(response, "No claims match these filters.")
+        self.assertNotContains(response, "No claims waiting.")
+
+    def test_the_score_field_has_a_range_hint(self):
+        self.proposal()
+        self.assertContains(self.get(), "0&ndash;1")
+
 
 def review_page_size():
     from beetlesgallery.beetles_app.interaction_views import PAGE_SIZE
