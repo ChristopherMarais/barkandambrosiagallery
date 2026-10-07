@@ -147,7 +147,8 @@ class PageTests(GridCase):
         page = self.page()
         self.assertIn("#photo-area { container-type: size; }", page)
         self.assertIn('<div id="photo-area"', page)
-        self.assertIn("--tile: calc((min(100cqw, 100cqh - var(--light))", page)
+        # the prompt now takes a reserved band at the top too (#play-prompt), alongside Lighting's at the bottom
+        self.assertIn("--tile: calc((min(100cqw, 100cqh - var(--light) - var(--prompt))", page)
         self.assertIn("grid-auto-rows: var(--tile);", page)
         self.assertIn('#game #photos[data-size="25"] { --gap: 0.125rem; --pad: 0px; }', page)
 

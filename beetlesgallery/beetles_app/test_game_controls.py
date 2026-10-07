@@ -18,10 +18,11 @@ class GameControlsTests(GameCase):
     def test_skip_back_and_next(self):
         page = self.page()
         actions = page[page.index('<div id="actions">'):page.index('id="submit"')]
-        self.assertLess(actions.index('id="skip"'), actions.index('class="gap"'))
-        self.assertLess(actions.index('class="gap"'), actions.index('id="back"'))   # Back sits beside Next
+        self.assertLess(actions.index('id="skip"'), actions.index('id="back"'))   # Skip, then Back, then Next
         self.assertIn("<kbd class=\"kbd\">Del</kbd>", page)
         self.assertNotIn("Not sure</strong>", page)
+        # equal gaps, 1fr/1fr/2fr (#play-buttons: three different widths and an uneven gap before)
+        self.assertIn("grid-template-columns: 1fr 1fr 2fr", page)
 
     def test_keys_for_both_hands_and_no_number_keys(self):
         page = self.page()

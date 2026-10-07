@@ -14,11 +14,20 @@
   </div>
 
   {% if tab == 'sessions' %}
-  <!-- Narrow to one game and/or a day (#574); the game home's cards open these -->
-  <nav class="mb-2 flex flex-wrap gap-1" aria-label="Game" data-testid="game-filter">
+  <!-- Narrow to one game and/or a day (#574); the game home's cards open these. On a phone, two selects side by
+       side, not pills that wrap to three lines (#his-filters); from a tablet up, the pills. -->
+  <div class="sm:hidden flex gap-2 mb-4">
+    <select class="select-chevron flex-1 min-w-0 h-10 px-3 border border-gray-300 rounded-lg bg-white text-sm" aria-label="Game" data-testid="game-filter-select" onchange="if (this.value) location.href = this.value">
+      {% for c in game_chips %}<option value="{{ c.url }}" {% if c.active %}selected{% endif %}>{{ c.label }}</option>{% endfor %}
+    </select>
+    <select class="select-chevron flex-1 min-w-0 h-10 px-3 border border-gray-300 rounded-lg bg-white text-sm" aria-label="Day" data-testid="day-filter-select" onchange="if (this.value) location.href = this.value">
+      {% for c in day_chips %}<option value="{{ c.url }}" {% if c.active %}selected{% endif %}>{{ c.label }}</option>{% endfor %}
+    </select>
+  </div>
+  <nav class="hidden sm:flex mb-2 flex-wrap gap-1" aria-label="Game" data-testid="game-filter">
     {% for c in game_chips %}<a href="{{ c.url }}" {% if c.active %}aria-current="true" {% endif %}class="px-3 py-1.5 rounded-full text-sm border {% if c.active %}bg-gray-600 border-gray-600 text-white font-semibold{% else %}bg-white border-gray-300 text-gray-700 hover:bg-gray-50{% endif %}">{{ c.label }}</a>{% endfor %}
   </nav>
-  <nav class="mb-4 flex flex-wrap gap-1" aria-label="Day" data-testid="day-filter">
+  <nav class="hidden sm:flex mb-4 flex-wrap gap-1" aria-label="Day" data-testid="day-filter">
     {% for c in day_chips %}<a href="{{ c.url }}" {% if c.active %}aria-current="true" {% endif %}class="px-3 py-1.5 rounded-full text-sm border {% if c.active %}bg-gray-600 border-gray-600 text-white font-semibold{% else %}bg-white border-gray-300 text-gray-700 hover:bg-gray-50{% endif %}">{{ c.label }}</a>{% endfor %}
   </nav>
   {% if heading %}
@@ -39,7 +48,8 @@
             <span class="font-normal text-gray-500">&middot; {{ r.games_label }}</span></span>
           <span class="block text-xs text-gray-400">{{ r.finished_at|date:"H:i" }}</span>
         </span>
-        <span class="text-sm font-semibold tabular-nums {% if r.points and r.points < 0 %}text-red-700{% else %}text-gray-900{% endif %}">{% if r.points and r.points > 0 %}+{% endif %}{{ r.points|default:0|floatformat:0 }} pts</span>
+        {# green for a gain, red for a loss, matching the round review's ticks (#his-points) #}
+        <span class="text-sm font-semibold tabular-nums {% if r.points and r.points < 0 %}text-red-700{% elif r.points and r.points > 0 %}text-green-700{% else %}text-gray-900{% endif %}">{% if r.points and r.points > 0 %}+{% endif %}{{ r.points|default:0|floatformat:0 }} pts</span>
         <i class="fi fi-rr-angle-small-right text-gray-400"></i>
       </a>
       {% if r.review_rows %}

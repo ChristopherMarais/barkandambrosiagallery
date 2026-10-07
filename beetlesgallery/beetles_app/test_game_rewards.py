@@ -228,7 +228,7 @@ class FeedAndHomeTests(RewardsCase):
         PlayerScore.objects.update_or_create(player=self.user, defaults={"score": 60})
         self.client.force_login(self.user)
         page = self.client.get(reverse("game_home")).content.decode()
-        for text in ("Larva", "Level 2", "day streak", "/20 today"):
+        for text in ("Larva", "Level 2", "day streak", "goal 20"):   # "12 today · goal 20" (#gh-today), not a fraction
             self.assertIn(text, page)
         profile = self.client.get(reverse("game_profile", args=[self.user.id])).content.decode()
         for text in ("Warming up", "First steps"):

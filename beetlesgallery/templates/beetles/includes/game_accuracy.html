@@ -9,15 +9,23 @@
     {% endif %}
   </div>
   {% if standing.players %}
-  <div class="relative h-16 flex items-end gap-0.5" aria-hidden="true">
-    {% for b in standing.bins %}
-    <div class="flex-1 rounded-t-sm {% if me and forloop.counter0 == me.bin %}{% if me.tier == 'none' %}bg-gray-500{% else %}scale-fill-{{ me.tier }}{% endif %}{% else %}bg-gray-300{% endif %}"
-      style="height: {{ b.height }}%; min-height: {% if b.count %}3px{% else %}1px{% endif %}"></div>
-    {% endfor %}
-    {% if standing.average is not None %}<div class="absolute bottom-0 top-0 border-l border-dashed border-gray-500" style="left: {% widthratio standing.average 1 100 %}%" title="Average"></div>{% endif %}
-    {% if me %}<div class="absolute -bottom-1 top-0 w-0.5 bg-gray-900" style="left: {% widthratio me.accuracy 1 100 %}%" title="You"></div>{% endif %}
+  <div class="relative h-16 mt-5">
+    <div class="absolute inset-0 top-0 flex items-end gap-0.5" aria-hidden="true">
+      {% for b in standing.bins %}
+      <div class="flex-1 rounded-t-sm {% if me and forloop.counter0 == me.bin %}{% if me.tier == 'none' %}bg-gray-500{% else %}scale-fill-{{ me.tier }}{% endif %}{% else %}bg-gray-300{% endif %}"
+        style="height: {{ b.height }}%; min-height: {% if b.count %}3px{% else %}1px{% endif %}"></div>
+      {% endfor %}
+    </div>
+    {% if standing.average is not None %}
+    <div class="absolute bottom-0 top-5 border-l border-dashed border-gray-500" style="left: {% widthratio standing.average 1 100 %}%" aria-hidden="true"></div>
+    <span class="absolute top-0 -translate-x-1/2 whitespace-nowrap text-[11px] font-medium text-gray-500" style="left: {% widthratio standing.average 1 100 %}%" data-testid="accuracy-average-label">average {% widthratio standing.average 1 100 %}%</span>
+    {% endif %}
+    {% if me %}
+    <div class="absolute -bottom-1 top-5 w-0.5 bg-gray-900" style="left: {% widthratio me.accuracy 1 100 %}%" aria-hidden="true"></div>
+    <span class="absolute -translate-x-1/2 whitespace-nowrap text-[11px] font-semibold text-gray-900" style="left: {% widthratio me.accuracy 1 100 %}%; top: 1.1rem" data-testid="accuracy-you-label">You</span>
+    {% endif %}
   </div>
-  <div class="flex justify-between text-[10px] text-gray-400 mt-1"><span>0%</span><span>50%</span><span>100%</span></div>
+  <div class="flex justify-between text-xs text-gray-500 mt-1"><span>0%</span><span>50%</span><span>100%</span></div>
   {% endif %}
   <p class="mt-2 text-xs text-gray-500">
     {% if me and me.percentile is not None %}Better than {{ me.percentile }}% of players{% if standing.average is not None %} &middot; average {% widthratio standing.average 1 100 %}%{% endif %}
