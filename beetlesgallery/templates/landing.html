@@ -109,11 +109,13 @@
       </p>
     </div>
 
-    <div class="flex flex-wrap justify-center gap-6 opacity-70 hover:opacity-100 transition-opacity duration-300">
-      <img src="{% static 'img/NSF_4-Color_bitmap_Logo_RGB.png' %}" class="h-12 md:h-16 w-auto grayscale" alt="NSF" loading="lazy" decoding="async">
-      <img src="{% static 'img/PngItem_2222864.png' %}" class="h-12 md:h-16 w-auto grayscale" alt="USDA" loading="lazy" decoding="async">
-      <img src="{% static 'img/forest-service-usda-logos.png' %}" class="h-12 md:h-16 w-auto grayscale" alt="USDA" loading="lazy" decoding="async">
-      <img src="{% static 'img/Florida-Forest-Service-Logo-Vector.jpg' %}" class="h-12 md:h-16 w-auto grayscale" alt="USDA" loading="lazy" decoding="async">
+    {# The funders' logos wrap onto more rows rather than run off a phone's edge; none is ever wider than the screen
+       (mobile review round 6). #}
+    <div class="w-full max-w-full min-w-0 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 opacity-70 hover:opacity-100 transition-opacity duration-300">
+      <img src="{% static 'img/NSF_4-Color_bitmap_Logo_RGB.png' %}" class="h-10 md:h-16 w-auto max-w-full object-contain grayscale" alt="NSF" loading="lazy" decoding="async">
+      <img src="{% static 'img/PngItem_2222864.png' %}" class="h-10 md:h-16 w-auto max-w-full object-contain grayscale" alt="USDA" loading="lazy" decoding="async">
+      <img src="{% static 'img/forest-service-usda-logos.png' %}" class="h-10 md:h-16 w-auto max-w-full object-contain grayscale" alt="USDA" loading="lazy" decoding="async">
+      <img src="{% static 'img/Florida-Forest-Service-Logo-Vector.jpg' %}" class="h-10 md:h-16 w-auto max-w-full object-contain grayscale" alt="USDA" loading="lazy" decoding="async">
     </div>
     <p class="text-xs text-gray-600 italic text-center">The National Science Foundation (NSF)<br>
       The United States Department of Agriculture (USDA) Animal and Plant Health Inspection Service (APHIS)<br>

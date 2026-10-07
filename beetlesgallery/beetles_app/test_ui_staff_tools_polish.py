@@ -76,10 +76,11 @@ class ToolClassifyLayoutTests(PageBehaviourCase):
         eyebrow = page[:page.index('<h1 class="page-title">IBBI-AI</h1>')]
         self.assertIn("Intelligent Bark Beetle Identifier", eyebrow[-400:])
 
-    def test_the_drop_zone_the_consent_checkbox_and_examples_come_before_the_model_picker(self):
+    def test_the_model_picker_comes_first_then_the_drop_zone_the_consent_checkbox_and_examples(self):
+        # The picker moved to the top of the page in the owner's phone review (round 6); the rest keep their order.
         page = self.page()
         order = [page.index(marker) for marker in (
-            'id="canvasContainer"', 'id="dontKeep"', 'class="example-btn', 'id="modelSelect"')]
+            'id="modelSelect"', 'id="canvasContainer"', 'id="dontKeep"', 'class="example-btn')]
         self.assertEqual(order, sorted(order))
 
     def test_examples_are_small_thumbnails_in_one_row(self):

@@ -93,9 +93,9 @@ class ClosedSidebarTests(SimpleTestCase):
 
     def test_rows_are_padded_so_the_icon_is_centred_and_the_padding_is_the_same_open(self):
         # #sidenav-footer > a joined the list when Account was pinned to the footer (nav-drawer-account, #618):
-        # its row is padded the same as every other closed-rail row.
+        # its row is padded the same as every other closed-rail row; so is Log out, under it since round 6.
         self.assertIn("#sideItems > a:not(#sidenav-logo), #sideItems > form > button, #sidenav-footer > div, "
-                      "#sidenav-footer > a { padding-inline: calc((5rem - 1px - 2 * 0.5rem - 2rem) / 2); }", self.css)
+                      "#sidenav-footer > a, #sidenav-footer > form > button { padding-inline: calc((5rem - 1px - 2 * 0.5rem - 2rem) / 2); }", self.css)
         self.assertIn("#sidenav i.fi { flex-shrink: 0; }", self.css)
 
     def test_the_padding_is_worked_out_from_the_rails_sizes(self):

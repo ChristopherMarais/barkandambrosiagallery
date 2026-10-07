@@ -33,6 +33,32 @@
 
         <div class="lg:col-span-8 flex flex-col gap-6">
 
+            {# The model picker on top, under the intro and before the drop zone (mobile review round 6). It sits outside
+               the form, so form="classifyForm" keeps it in what Classify sends. #}
+            <details class="group rounded-lg border border-gray-200 bg-white shadow-xs">
+                <summary class="flex items-center justify-between gap-2 cursor-pointer list-none px-4 py-3">
+                    <span class="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                        <i class="fi fi-rr-settings-sliders text-gray-400"></i> Model
+                    </span>
+                    <i class="fi fi-rr-angle-small-down text-gray-400 transition-transform group-open:rotate-180"></i>
+                </summary>
+                <div class="px-4 pb-4 pt-1 border-t border-gray-100">
+                    <div class="flex items-center justify-between gap-2 mt-3 mb-1">
+                        <label for="modelSelect" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Model</label>
+                        <a href="{{ ibbi_docs_url }}" target="_blank" rel="noopener" class="text-sm text-gray-600 hover:text-gray-800 underline" data-testid="ibbi-link">Compare models</a>
+                    </div>
+                    <div class="relative">
+                        <select name="architecture" id="modelSelect" form="classifyForm" class="block w-full pl-3 pr-8 py-2.5 text-sm border-gray-300 focus:outline-hidden focus:ring-gray-500 focus:border-gray-500 rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer appearance-none" data-testid="model-select">
+                            {% ibbi_model_options %}
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                            <i class="fi fi-rr-angle-small-down text-lg"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2" data-testid="model-help">All models find and name bark beetles.</p>
+                </div>
+            </details>
+
             {# What went wrong, or that IBBI-AI is waking up: short and plain, never a raw error #}
             <p id="classifyMessage" class="hidden rounded-lg border px-4 py-3 text-sm" role="alert" data-testid="classify-message"></p>
 
@@ -146,30 +172,6 @@
 
             <form id="classifyForm" class="space-y-5">
                 {% csrf_token %}
-
-                <details class="group rounded-lg border border-gray-200 bg-white shadow-xs">
-                    <summary class="flex items-center justify-between gap-2 cursor-pointer list-none px-4 py-3">
-                        <span class="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                            <i class="fi fi-rr-settings-sliders text-gray-400"></i> Model
-                        </span>
-                        <i class="fi fi-rr-angle-small-down text-gray-400 transition-transform group-open:rotate-180"></i>
-                    </summary>
-                    <div class="px-4 pb-4 pt-1 border-t border-gray-100">
-                        <div class="flex items-center justify-between gap-2 mt-3 mb-1">
-                            <label for="modelSelect" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Model</label>
-                            <a href="{{ ibbi_docs_url }}" target="_blank" rel="noopener" class="text-sm text-gray-600 hover:text-gray-800 underline" data-testid="ibbi-link">Compare models</a>
-                        </div>
-                        <div class="relative">
-                            <select name="architecture" id="modelSelect" class="block w-full pl-3 pr-8 py-2.5 text-sm border-gray-300 focus:outline-hidden focus:ring-gray-500 focus:border-gray-500 rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer appearance-none" data-testid="model-select">
-                                {% ibbi_model_options %}
-                            </select>
-                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                                <i class="fi fi-rr-angle-small-down text-lg"></i>
-                            </div>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-2" data-testid="model-help">All models find and name bark beetles.</p>
-                    </div>
-                </details>
 
                 {# On phones the button floats at the bottom of the screen, since the image is below this form #}
                 <button type="submit" id="submitBtn" disabled data-testid="classify-button"
