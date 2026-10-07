@@ -28,7 +28,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from . import game, game_board, game_checked, game_discoveries, game_feedback, game_queue, game_levels, game_rewards, game_scoring, game_tips, game_trust
-from . import game_answer_review, game_applied, game_crops
+from . import game_answer_review, game_applied, game_crops, game_history_rounds
 from . import game_grid_ladder, game_grow, game_warm
 from . import game_taxa as taxa_tree
 from .areas import ANNOTATE, BOXES, VALIDATE, area_required, has_area
@@ -266,10 +266,18 @@ def game_history(request):
     if tab == "checked" and any(c["new"] for c in checked):   # seen once the Checked later tab is open
         RetroCredit.objects.filter(player=request.user, seen_at__isnull=True).update(seen_at=timezone.now())
     sessions = Paginator(rounds, HISTORY_PER_PAGE).get_page(request.GET.get("page") if tab == "sessions" else 1)
-    for r in sessions:   # which games a session was: one by name, or how many
+    for r in sessions:   # which games a session was: one by name, or how many game types
         played = [game_levels.GAME_NAMES[g] for g in ("classify", "pair", "odd", "select") if getattr(r, f"n_{g}")]
         r.games_label = game_levels.GAME_NAMES[game_key] if game_key else (
-            played[0] if len(played) == 1 else f"{len(played)} games")
+            played[0] if len(played) == 1 else f"{len(played)} game types")
+    # each session's rounds in the review's words and colours (game_history_rounds), from the answers it counts
+    page_rounds = [r.id for r in sessions]
+    round_rows = game_history_rounds.rows_by_round(
+        GameAnswer.objects.filter(round_id__in=page_rounds).filter(filters.answers_q(game_key, window))
+        .select_related("points").order_by("round_id", "index")) if page_rounds else {}
+    for r in sessions:
+        r.review_rows = round_rows.get(r.id, [])[:game_history_rounds.ROUNDS_SHOWN]
+        r.more_rounds = max(0, r.labelled - len(r.review_rows))
     checked_page = Paginator(checked, HISTORY_PER_PAGE).get_page(request.GET.get("page") if tab == "checked" else 1)
     summary = None
     if game_key or window:   # the filtered beetles and points, and the game's own accuracy and points
@@ -287,6 +295,7 @@ def game_history(request):
         "game_key": game_key, "game_label": game_levels.GAME_NAMES.get(game_key, ""), "window": window,
         "filters": filters.query(game_key, window["key"] if window else ""),
         "game_chips": game_chips, "day_chips": day_chips, "heading": heading, "summary": summary,
+        "show_game": not game_key,
     })
 
 
