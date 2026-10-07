@@ -83,7 +83,7 @@ class LighthouseFixesTests(PageBehaviourCase):
     def test_gallery_labels_use_gray_600(self):
         source = (TEMPLATES / "beetles/includes/gallery_results.html").read_text(encoding="utf-8")
         self.assertNotIn("text-text/50", source)
-        self.assertIn('<span class="font-semibold text-gray-600">Specimen ID:</span>', source)
+        self.assertIn('<span class="font-semibold text-gray-600 shrink-0">Record ID:</span>', source)
 
     def test_landing_labels_use_gray_600(self):
         source = (TEMPLATES / "landing.html").read_text(encoding="utf-8")
