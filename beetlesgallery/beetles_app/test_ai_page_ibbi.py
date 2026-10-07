@@ -53,9 +53,18 @@ class AiPageTests(PageBehaviourCase):
         help_text = page[page.index('data-testid="model-help"'):]
         help_text = help_text[:help_text.index("</p>")]
         self.assertIn("All models find and name bark beetles.", help_text)   # the picker marks the recommended one (#534)
-        self.assertIn('data-testid="ibbi-link"', help_text)
         self.assertNotIn("Species classifier", page)
         self.assertNotIn("Species detector", page)
+
+    def test_the_compare_models_link_sits_next_to_the_select_at_14px(self):
+        # it used to be buried in the 10px help line; now it reads at text-sm (14px), right by the picker (#618)
+        page = self.page()
+        marker = page.index('data-testid="ibbi-link"')
+        tag_start = page.rfind("<a", 0, marker)
+        link = page[tag_start:page.index("</a>", marker)]
+        self.assertIn("Compare models", link)
+        self.assertIn("text-sm", link)
+        self.assertLess(marker, page.index('id="modelSelect"'))
 
     def test_the_server_note_is_on_top_and_the_ibbi_text_under_the_tool(self):
         page = self.page()
@@ -69,7 +78,10 @@ class AiPageTests(PageBehaviourCase):
 
     def test_it_is_called_ibbi_ai_not_the_classifier(self):
         page = self.page()
-        self.assertIn('<h1 class="page-title">IBBI-AI: Intelligent Bark Beetle Identifier</h1>', page)
+        # "IBBI-AI" is the title; "Intelligent Bark Beetle Identifier" is the eyebrow line above it (#618: one line,
+        # not a two-line heading)
+        self.assertIn('<h1 class="page-title">IBBI-AI</h1>', page)
+        self.assertIn("Intelligent Bark Beetle Identifier", page[:page.index('<h1 class="page-title">IBBI-AI</h1>')])
         self.assertIn("Before you use IBBI-AI", page)
         self.assertIn("IBBI-AI is a screening tool", page)
         self.assertIn("so you can try IBBI-AI", page)

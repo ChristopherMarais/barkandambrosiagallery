@@ -7,11 +7,15 @@
 <section class="max-w-3xl">
   <a href="{% url 'data_management' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Data Management</a>
   <h1 class="page-title">Model predictions</h1>
-  <p class="text-gray-600 mb-8">
-    The usual way is the Upload Model Predictions button on Data Management, which shows its progress.
+  <p class="text-gray-600 mb-2">
     Upload an AI model's species guesses for ROIs. They appear as an unverified suggestion on ROIs that
     have no species label yet, and they set how hard the game treats each image.
     A prediction never changes an ROI's label.
+  </p>
+  <p class="text-sm text-gray-500 mb-8">
+    The quickest way is the Upload Model Predictions action on
+    <a href="{% url 'data_management' %}" class="underline hover:text-gray-800">Data Management</a>, which shows
+    its progress as it saves.
   </p>
 
   {% if error %}
@@ -69,24 +73,29 @@
     <label class="flex items-center gap-2 text-sm text-gray-700">
       <input type="checkbox" name="dry_run" class="rounded-sm border-gray-300"> Check the file only, don't save anything
     </label>
-    <button type="submit"
-      class="flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-6 py-3 text-base font-bold text-gray-700 shadow-xs hover:bg-gray-50 hover:text-black transition">
+    <button type="submit" id="submit-predictions" disabled class="btn-primary">
       <i class="fi fi-rr-upload"></i><span>Upload predictions</span>
     </button>
   </form>
+  <script>
+    document.getElementById("csv_file").addEventListener("change", function () {
+      document.getElementById("submit-predictions").disabled = !this.files.length;
+    });
+  </script>
 
   <h2 id="columns" class="text-xl font-semibold text-gray-900 mb-3">Columns</h2>
-  <div class="rounded-xl border border-gray-200 bg-white overflow-x-auto">
-    <table class="w-full text-sm">
-      <tbody class="divide-y divide-gray-100">
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">record_id</td><td class="px-4 py-2 text-gray-600">The ROI's id (the record_id column of a gallery download). Leave it empty for a box the model found.</td></tr>
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">image_id, bbox_x, bbox_y, bbox_width, bbox_height</td><td class="px-4 py-2 text-gray-600">Only when record_id is empty: the image and the box (fractions of the image, top-left corner). The same box already on the image is used; otherwise the box is added, with no species label.</td></tr>
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">valid_species_id</td><td class="px-4 py-2 text-gray-600">The predicted species, as in the species list. Required.</td></tr>
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">confidence</td><td class="px-4 py-2 text-gray-600">0 to 1 (0.87, not 87). Required.</td></tr>
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">model_name</td><td class="px-4 py-2 text-gray-600">Or give one name for the whole file above.</td></tr>
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">model_version</td><td class="px-4 py-2 text-gray-600">Optional. Uploading the same model and version again replaces its predictions.</td></tr>
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">top_k</td><td class="px-4 py-2 text-gray-600">Optional further candidates, best first: <span class="font-mono">1733:0.08;2210:0.03</span></td></tr>
-        <tr><td class="px-4 py-2 font-mono text-gray-900 whitespace-nowrap">subfamily, tribe, genus</td><td class="px-4 py-2 text-gray-600">Optional: what the model said at that rank, each with a <span class="font-mono">&lt;rank&gt;_confidence</span> column (0 to 1), e.g. <span class="font-mono">genus=Xyleborus, genus_confidence=0.92</span></td></tr>
+  {# Below sm the field name and its description stack instead of running off-screen in a wide, mostly-empty row #}
+  <div class="rounded-xl border border-gray-200 bg-white overflow-hidden">
+    <table class="w-full text-sm block sm:table">
+      <tbody class="divide-y divide-gray-100 block sm:table-row-group">
+        <tr class="block sm:table-row py-2 sm:py-0"><td class="block sm:table-cell px-4 pt-3 sm:py-2 font-mono text-gray-900 sm:whitespace-nowrap">record_id</td><td class="block sm:table-cell px-4 pb-3 sm:py-2 text-gray-600">The ROI's id (the record_id column of a gallery download). Leave it empty for a box the model found.</td></tr>
+        <tr class="block sm:table-row py-2 sm:py-0"><td class="block sm:table-cell px-4 pt-3 sm:py-2 font-mono text-gray-900 sm:whitespace-nowrap">image_id, bbox_x, bbox_y, bbox_width, bbox_height</td><td class="block sm:table-cell px-4 pb-3 sm:py-2 text-gray-600">Only when record_id is empty: the image and the box (fractions of the image, top-left corner). The same box already on the image is used; otherwise the box is added, with no species label.</td></tr>
+        <tr class="block sm:table-row py-2 sm:py-0"><td class="block sm:table-cell px-4 pt-3 sm:py-2 font-mono text-gray-900 sm:whitespace-nowrap">valid_species_id</td><td class="block sm:table-cell px-4 pb-3 sm:py-2 text-gray-600">The predicted species, as in the species list. Required.</td></tr>
+        <tr class="block sm:table-row py-2 sm:py-0"><td class="block sm:table-cell px-4 pt-3 sm:py-2 font-mono text-gray-900 sm:whitespace-nowrap">confidence</td><td class="block sm:table-cell px-4 pb-3 sm:py-2 text-gray-600">0 to 1 (0.87, not 87). Required.</td></tr>
+        <tr class="block sm:table-row py-2 sm:py-0"><td class="block sm:table-cell px-4 pt-3 sm:py-2 font-mono text-gray-900 sm:whitespace-nowrap">model_name</td><td class="block sm:table-cell px-4 pb-3 sm:py-2 text-gray-600">Or give one name for the whole file above.</td></tr>
+        <tr class="block sm:table-row py-2 sm:py-0"><td class="block sm:table-cell px-4 pt-3 sm:py-2 font-mono text-gray-900 sm:whitespace-nowrap">model_version</td><td class="block sm:table-cell px-4 pb-3 sm:py-2 text-gray-600">Optional. Uploading the same model and version again replaces its predictions.</td></tr>
+        <tr class="block sm:table-row py-2 sm:py-0"><td class="block sm:table-cell px-4 pt-3 sm:py-2 font-mono text-gray-900 sm:whitespace-nowrap">top_k</td><td class="block sm:table-cell px-4 pb-3 sm:py-2 text-gray-600">Optional further candidates, best first: <span class="font-mono">1733:0.08;2210:0.03</span></td></tr>
+        <tr class="block sm:table-row py-2 sm:py-0"><td class="block sm:table-cell px-4 pt-3 sm:py-2 font-mono text-gray-900 sm:whitespace-nowrap">subfamily, tribe, genus</td><td class="block sm:table-cell px-4 pb-3 sm:py-2 text-gray-600">Optional: what the model said at that rank, each with a <span class="font-mono">&lt;rank&gt;_confidence</span> column (0 to 1), e.g. <span class="font-mono">genus=Xyleborus, genus_confidence=0.92</span></td></tr>
       </tbody>
     </table>
   </div>

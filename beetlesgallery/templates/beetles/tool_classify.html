@@ -5,25 +5,22 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
 
 <section class="relative z-0">
-    <div class="pt-8"> 
-        <h1 class="page-title">IBBI-AI: Intelligent Bark Beetle Identifier</h1>
+    <div class="pt-8">
+        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 flex items-center gap-1.5">
+            <i class="fi fi-rr-sparkles text-gray-700"></i>
+            Intelligent Bark Beetle Identifier
+        </p>
+        <h1 class="page-title">IBBI-AI</h1>
     </div>
 </section>
 
 {# On phones the Classify button floats at the bottom of the screen: the space below the page keeps it off the text #}
 <div class="pt-8 pb-28 lg:pb-8" data-testid="ai-page">
 
-    <div class="pb-6 flex flex-col md:flex-row md:items-start justify-between gap-4">
-        <div class="max-w-3xl mx-auto text-center">
-            <div class="mt-3" data-testid="server-info">
-                <p class="text-gray-700 bg-gray-100 inline-block px-2 py-1 rounded-sm border border-gray-300 text-sm">
-                    <i class="fi fi-rr-info text-base align-middle mr-1"></i>
-                    <strong>Server Info:</strong> The analysis server sleeps when idle. The first image may take a moment to wake it up; subsequent uploads will process much faster.
-                </p>
-            </div>
-        </div>
-        
-        <div id="globalStatus" class="hidden flex items-center gap-2 text-sm font-medium text-gray-800 bg-gray-300 px-3 py-1 rounded-full whitespace-nowrap self-start mt-2 md:mt-0">
+    <div class="pb-6 flex items-start justify-between gap-4">
+        <p class="page-intro max-w-2xl">Upload a photo and IBBI-AI finds and names the bark or ambrosia beetles in it.</p>
+
+        <div id="globalStatus" class="hidden flex items-center gap-2 text-sm font-medium text-gray-800 bg-gray-300 px-3 py-1 rounded-full whitespace-nowrap self-start">
             <span class="relative flex h-2 w-2">
             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white"></span>
             <span class="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
@@ -33,89 +30,21 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        <div class="lg:col-span-3 space-y-6">
-            <form id="classifyForm" class="space-y-5 bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
-                {% csrf_token %}
-                
-                <div>
-                    <label for="modelSelect" class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Model</label>
-                    <p class="text-[10px] text-gray-500 mb-2 leading-tight" data-testid="model-help">
-                        All models find and name bark beetles.
-                        <a href="{{ ibbi_docs_url }}" target="_blank" rel="noopener" class="underline hover:text-gray-800" data-testid="ibbi-link">Find out more about the performance of each model.</a>
-                    </p>
-                    <div class="relative">
-                        <select name="architecture" id="modelSelect" class="block w-full pl-3 pr-8 py-2.5 text-sm border-gray-300 focus:outline-hidden focus:ring-gray-500 focus:border-gray-500 rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer appearance-none" data-testid="model-select">
-                            {% ibbi_model_options %}
-                        </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                            <i class="fi fi-rr-angle-small-down text-lg"></i>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    <label class="flex items-start gap-2 text-xs text-gray-700 cursor-pointer">
-                        <input type="checkbox" id="dontKeep" class="mt-0.5 h-4 w-4 rounded-sm border-gray-300 accent-gray-600">
-                        <span><span class="font-semibold">Don't keep my image.</span>
-                        Unless you tick this, an image with a bark or ambrosia beetle in it is added to the gallery as an unvalidated image for experts to check (location data removed).
-                        <a href="#" id="showTerms" class="underline hover:text-black">Details</a></span>
-                    </label>
-                </div>
-
-                <input id="fileInput" name="image" type="file" class="hidden" accept="image/*">
-
-                {# On phones the button floats at the bottom of the screen, since the image is below this form #}
-                <button type="submit" id="submitBtn" disabled data-testid="classify-button"
-                    style="bottom: max(1rem, env(safe-area-inset-bottom));"
-                    class="btn-main hidden flex fixed bottom-4 inset-x-4 z-30 lg:static lg:inset-auto lg:z-auto lg:w-full px-6 py-4 lg:py-5 text-base lg:text-lg shadow-lg">
-                    <i class="fi fi-rr-sparkles text-xl lg:text-2xl"></i>
-                    <span>Classify Image</span>
-                </button>
-            </form>
-
-            {% if examples %}
-            <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-xs">
-                <div class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Try an example</div>
-                <p class="text-[11px] text-gray-500 mb-2">Loads a photo so you can try IBBI-AI. Examples are never added to the gallery.</p>
-                <div class="grid grid-cols-2 gap-2">
-                    {% for ex in examples %}
-                    <button type="button" class="example-btn group text-left rounded-lg border border-gray-200 overflow-hidden hover:border-gray-500 transition"
-                        data-src="{{ ex.src }}" data-name="{{ ex.file }}" title="{{ ex.title }}{% if ex.credit %} &middot; {{ ex.credit }}{% endif %}{% if ex.licence %} &middot; {{ ex.licence }}{% endif %}">
-                        <img src="{{ ex.src }}" alt="{{ ex.title }}" class="block w-full h-20 lg:h-16 object-cover bg-gray-100" loading="lazy" decoding="async">
-                        <div class="px-1.5 py-1 text-[10px] text-gray-600 italic truncate">{{ ex.title }}</div>
-                    </button>
-                    {% endfor %}
-                </div>
-                <p class="text-[10px] text-gray-400 mt-2">Photos: {% for ex in examples %}{% if ex.credit %}{% if not forloop.first %}; {% endif %}{{ ex.credit }}{% if ex.licence %} ({{ ex.licence }}){% endif %}{% endif %}{% endfor %}.</p>
-            </div>
-            {% endif %}
-
-            <div id="loadingContainer" class="hidden p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div class="flex justify-between text-xs font-semibold text-gray-600 mb-1">
-                    <span id="loadingStatus">Initializing...</span>
-                    <span id="loadingPercent">0%</span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                    <div id="progressBar" class="bg-gray-600 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="lg:col-span-9 flex flex-col gap-6">
+        <div class="lg:col-span-8 flex flex-col gap-6">
 
             {# What went wrong, or that IBBI-AI is waking up: short and plain, never a raw error #}
             <p id="classifyMessage" class="hidden rounded-lg border px-4 py-3 text-sm" role="alert" data-testid="classify-message"></p>
 
-            <div class="bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 shadow-xs overflow-hidden relative min-h-[280px] lg:min-h-[500px] flex items-center justify-center group hover:border-gray-400 hover:bg-gray-100 transition-all cursor-pointer" id="canvasContainer">
-                
+            <div class="bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 shadow-xs overflow-hidden relative min-h-[280px] lg:min-h-[420px] flex items-center justify-center group hover:border-gray-400 hover:bg-gray-100 transition-all cursor-pointer" id="canvasContainer">
+
                 <div id="placeholderState" class="text-center p-8 w-full h-full flex flex-col items-center justify-center transition-opacity duration-300">
                     <div class="bg-white w-24 h-24 rounded-full flex items-center justify-center mb-4 shadow-xs group-hover:scale-110 group-hover:shadow-md transition-all duration-300">
                         <i class="fi fi-rr-picture text-4xl text-gray-500"></i>
                     </div>
                     <h3 class="text-xl font-bold text-gray-800 mb-2">Upload Image to Classify</h3>
                     <p class="text-sm text-gray-500 mb-6">Click to browse or drag & drop a file here</p>
-                    
+
                     <button type="button" id="cameraBtn" class="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-300 rounded-full shadow-xs text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-600 hover:border-gray-300 transition-all z-10">
                         <i class="fi fi-rr-camera"></i> Use Camera
                     </button>
@@ -134,16 +63,52 @@
                 </div>
 
                 <div id="imageWrapper" class="relative hidden inline-block cursor-default" style="line-height: 0;">
-                    <img id="previewImage" class="max-w-full max-h-[75vh] object-contain block opacity-0 transition-opacity duration-300" alt="Preview"> 
+                    <img id="previewImage" class="max-w-full max-h-[75vh] object-contain block opacity-0 transition-opacity duration-300" alt="Preview">
                     <canvas id="detectionCanvas" class="absolute inset-0 cursor-crosshair touch-none w-full h-full"></canvas>
-                    
+
                     <button type="button" id="clearBtn" class="absolute top-4 right-4 bg-white/90 p-2 rounded-full hover:bg-red-50 hover:text-red-600 text-gray-600 shadow-md z-10 transition-all border border-gray-200" title="Clear Image">
                         <i class="fi fi-rr-cross-small text-xl leading-none"></i>
                     </button>
                 </div>
             </div>
+            <input id="fileInput" name="image" type="file" class="hidden" accept="image/*">
 
-            {# Right under the photo: shows and hides IBBI-AI's boxes as it moves, without asking IBBI-AI again #}
+            {# A muted line under the drop zone; the same line becomes the loading message while IBBI-AI wakes up #}
+            <p id="serverNote" class="text-xs text-gray-500" data-testid="server-info">
+                <i class="fi fi-rr-info text-sm align-middle mr-1"></i>
+                The analysis server sleeps when idle, so the first photo may take a moment to wake it.
+            </p>
+
+            {# "Don't keep my image": right with the upload, not buried in the model card #}
+            <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <label class="flex items-start gap-2 text-xs text-gray-700 cursor-pointer">
+                    <input type="checkbox" id="dontKeep" class="mt-0.5 h-4 w-4 rounded-sm border-gray-300 accent-gray-600">
+                    <span><span class="font-semibold">Don't keep my image.</span>
+                    Unless you tick this, an image with a bark or ambrosia beetle in it is added to the gallery as an unvalidated image for experts to check (location data removed).
+                    <a href="#" id="showTerms" class="underline hover:text-black">Details</a></span>
+                </label>
+            </div>
+
+            {% if examples %}
+            <div>
+                <div class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Or try an example</div>
+                <div class="flex flex-wrap gap-2">
+                    {% for ex in examples %}
+                    <button type="button" class="example-btn group text-left rounded-lg border border-gray-200 overflow-hidden hover:border-gray-500 transition w-16 shrink-0"
+                        data-src="{{ ex.src }}" data-name="{{ ex.file }}" title="{{ ex.title }}{% if ex.credit %} &middot; {{ ex.credit }}{% endif %}{% if ex.licence %} &middot; {{ ex.licence }}{% endif %}">
+                        <img src="{{ ex.src }}" alt="{{ ex.title }}" class="block w-full h-16 object-cover bg-gray-100" loading="lazy" decoding="async">
+                    </button>
+                    {% endfor %}
+                </div>
+                <p class="text-xs text-gray-500 mt-2">Loads a photo so you can try IBBI-AI. Examples are never added to the gallery.</p>
+                <div class="text-xs text-gray-500 mt-1 space-y-0.5">
+                    {% for ex in examples %}{% if ex.credit %}
+                    <p>{{ ex.credit }}{% if ex.licence %} ({{ ex.licence }}){% endif %}</p>
+                    {% endif %}{% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <div id="confidenceBar" class="hidden bg-white px-4 py-3 rounded-xl border border-gray-200 shadow-xs" data-testid="confidence-bar">
                 {# On phones the slider gets a row of its own, so it is wide enough for a thumb #}
                 <div class="flex flex-wrap sm:flex-nowrap items-center gap-x-3">
@@ -162,7 +127,7 @@
                     <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Identification</h3>
                     <span id="chartLabel" class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-sm">Select a detection</span>
                 </div>
-                
+
                 {# What happened to the photo (the "saved" answer), one line #}
                 <p id="savedNote" class="hidden mb-4 text-xs text-gray-600" role="status" data-testid="saved-note"></p>
 
@@ -171,10 +136,59 @@
                 <div class="relative w-full" id="chartWrapper" style="height: 400px;">
                     <canvas id="probsChart"></canvas>
                 </div>
-                
+
                 <div id="tagsContainer" class="mt-4 flex flex-wrap gap-2 pt-4 border-t border-gray-100"></div>
             </div>
 
+        </div>
+
+        <div class="lg:col-span-4 flex flex-col gap-6">
+
+            <form id="classifyForm" class="space-y-5">
+                {% csrf_token %}
+
+                <details class="group rounded-lg border border-gray-200 bg-white shadow-xs">
+                    <summary class="flex items-center justify-between gap-2 cursor-pointer list-none px-4 py-3">
+                        <span class="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                            <i class="fi fi-rr-settings-sliders text-gray-400"></i> Model
+                        </span>
+                        <i class="fi fi-rr-angle-small-down text-gray-400 transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <div class="px-4 pb-4 pt-1 border-t border-gray-100">
+                        <div class="flex items-center justify-between gap-2 mt-3 mb-1">
+                            <label for="modelSelect" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Model</label>
+                            <a href="{{ ibbi_docs_url }}" target="_blank" rel="noopener" class="text-sm text-gray-600 hover:text-gray-800 underline" data-testid="ibbi-link">Compare models</a>
+                        </div>
+                        <div class="relative">
+                            <select name="architecture" id="modelSelect" class="block w-full pl-3 pr-8 py-2.5 text-sm border-gray-300 focus:outline-hidden focus:ring-gray-500 focus:border-gray-500 rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer appearance-none" data-testid="model-select">
+                                {% ibbi_model_options %}
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                <i class="fi fi-rr-angle-small-down text-lg"></i>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2" data-testid="model-help">All models find and name bark beetles.</p>
+                    </div>
+                </details>
+
+                {# On phones the button floats at the bottom of the screen, since the image is below this form #}
+                <button type="submit" id="submitBtn" disabled data-testid="classify-button"
+                    style="bottom: max(1rem, env(safe-area-inset-bottom));"
+                    class="btn-main hidden flex fixed bottom-4 inset-x-4 z-30 lg:static lg:inset-auto lg:z-auto lg:w-full px-6 py-4 lg:py-5 text-base lg:text-lg shadow-lg">
+                    <i class="fi fi-rr-sparkles text-xl lg:text-2xl"></i>
+                    <span>Classify Image</span>
+                </button>
+            </form>
+
+            <div id="loadingContainer" class="hidden p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div class="flex justify-between text-xs font-semibold text-gray-600 mb-1">
+                    <span id="loadingStatus">Initializing...</span>
+                    <span id="loadingPercent">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div id="progressBar" class="bg-gray-600 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -203,7 +217,8 @@
       <p class="text-xs text-gray-500">Kept images may be shown in the gallery and used for research on bark and ambrosia beetles. To have one removed, contact the gallery team.</p>
     </div>
     <label class="mt-4 flex items-center gap-2 text-sm text-gray-800">
-      <input type="checkbox" id="termsDontKeep" class="h-4 w-4 rounded-sm border-gray-300 accent-gray-600"> Don't keep my images
+      <input type="checkbox" id="termsDontKeep" class="h-4 w-4 rounded-sm border-gray-300 accent-gray-600">
+      Don't keep my image <span class="text-gray-500">(sets the same checkbox on the page)</span>
     </label>
     <div class="mt-5 flex justify-between gap-3">
       <a href="{% url 'image_browser' %}" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100">No thanks</a>
@@ -247,8 +262,18 @@ document.addEventListener('DOMContentLoaded', () => {
         confidenceBar: document.getElementById('confidenceBar'),
         confCount: document.getElementById('confCount'),
         keepHint: document.getElementById('keepHint'),
-        ranksPanel: document.getElementById('ranksPanel')
+        ranksPanel: document.getElementById('ranksPanel'),
+        serverNote: document.getElementById('serverNote')
     };
+
+    // The server note under the drop zone doubles as the "waking up" message; remember its resting text
+    const defaultServerNote = ui.serverNote ? ui.serverNote.innerHTML : '';
+    function setServerNote(text) {
+        if (!ui.serverNote) return;
+        ui.serverNote.innerHTML = text
+            ? '<i class="fi fi-rr-info text-sm align-middle mr-1"></i>' + text
+            : defaultServerNote;
+    }
 
     // --- State ---
     let state = {
@@ -267,15 +292,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Chart.js Config (Horizontal) ---
     function initChart() {
         if (state.chart) state.chart.destroy();
-        
+
         state.chart = new Chart(ui.chartCanvas, {
-            type: 'bar', 
+            type: 'bar',
             data: {
                 labels: [],
                 datasets: [{
                     label: 'Confidence',
                     data: [],
-                    backgroundColor: 'rgba(99, 102, 241, 0.6)', 
+                    backgroundColor: 'rgba(99, 102, 241, 0.6)',
                     borderColor: 'rgba(79, 70, 229, 1)',
                     borderWidth: 1,
                     borderRadius: 4,
@@ -316,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateChartData(index) {
         if (index === -1 || !state.detections[index]) return;
-        
+
         const det = state.detections[index];
         renderRanks(det);
 
@@ -338,11 +363,11 @@ document.addEventListener('DOMContentLoaded', () => {
         state.chart.data.datasets[0].data = sorted.map(i => i.p * 100);
         state.chart.data.datasets[0].backgroundColor = getBoxColor(index, 0.6);
         state.chart.data.datasets[0].borderColor = getBoxColor(index, 1);
-        
+
         // Adjust chart height dynamically (approx 30px per bar)
         const newHeight = Math.max(300, sorted.length * 35);
         ui.chartWrapper.style.height = `${newHeight}px`;
-        
+
         state.chart.update();
     }
 
@@ -414,9 +439,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Canvas & Interaction Logic ---
-    
+
     function getBoxColor(index, alpha=1) {
-        const hue = (index * 137.508) % 360; 
+        const hue = (index * 137.508) % 360;
         return `hsla(${hue}, 70%, 50%, ${alpha})`;
     }
 
@@ -432,7 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function draw() {
         const ctx = ui.canvas.getContext('2d');
-        
+
         // 1. Sync Resolution
         const imgW = ui.previewImage.naturalWidth;
         const imgH = ui.previewImage.naturalHeight;
@@ -441,7 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.canvas.width = imgW;
             ui.canvas.height = imgH;
         }
-        
+
         ctx.clearRect(0, 0, ui.canvas.width, ui.canvas.height);
 
         if (!state.detections.length) return;
@@ -454,7 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Reduced from 4/7 to 2/4 for precision
         const baseLineWidth = 2 * scale;
         const activeLineWidth = 4 * scale;
-        
+
         // Font settings
         const fontSize = Math.round(24 * scale);
         const padding = 8 * scale;
@@ -464,7 +489,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const [x1, y1, x2, y2] = det.box;
             const w = x2 - x1;
             const h = y2 - y1;
-            
+
             const isHovered = (i === state.hoveredIndex);
             const isSelected = (i === state.selectedIndex);
             const color = getBoxColor(i);
@@ -480,18 +505,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isHovered || isSelected) {
                 ctx.fillStyle = getBoxColor(i, 0.15);
                 ctx.fill();
-                
+
                 // Text Setup
-                ctx.font = `bold ${fontSize}px sans-serif`; 
+                ctx.font = `bold ${fontSize}px sans-serif`;
                 const label = `${det.label} ${Math.round(confidenceOf(det) * 100)}%`;
                 const textMetrics = ctx.measureText(label);
-                
+
                 // Background Dimensions
                 const bgW = textMetrics.width + (padding * 2);
-                const bgH = fontSize + padding; 
-                
+                const bgH = fontSize + padding;
+
                 // --- UPDATE: SMART LABEL POSITIONING ---
-                
+
                 // 1. Horizontal Clamp (Right Edge)
                 // Default to x1. If label extends past image width, pull it left.
                 let lx = x1;
@@ -502,17 +527,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (lx < 0) lx = 0;
 
                 // 2. Vertical Clamp (Top Edge)
-                // Default to above box (y1 - bgH). If that goes off top ( < 0 ), 
+                // Default to above box (y1 - bgH). If that goes off top ( < 0 ),
                 // move it "inside" the box (y1).
                 let ly = y1 - bgH;
                 if (ly < 0) {
-                    ly = y1; 
+                    ly = y1;
                 }
-                
+
                 // Draw Label Background
                 ctx.fillStyle = color;
                 ctx.fillRect(lx, ly, bgW, bgH);
-                
+
                 // Draw Text
                 ctx.fillStyle = "#ffffff";
                 // Text aligns relative to lx/ly
@@ -540,7 +565,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (found !== state.hoveredIndex) {
             state.hoveredIndex = found;
             ui.canvas.style.cursor = found !== -1 ? 'pointer' : 'default';
-            requestAnimationFrame(draw); 
+            requestAnimationFrame(draw);
         }
     });
 
@@ -553,7 +578,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- File Handling (Drag & Drop + Input) ---
-    
+
     // Clicking the container triggers file input (unless clicking a specific button)
     ui.canvasContainer.addEventListener('click', (e) => {
         // Don't trigger if clicking existing image/buttons
@@ -576,7 +601,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ui.canvasContainer.addEventListener('dragover', () => {
         ui.canvasContainer.classList.add('bg-gray-50', 'border-gray-500');
     });
-    
+
     ui.canvasContainer.addEventListener('dragleave', () => {
         ui.canvasContainer.classList.remove('bg-gray-50', 'border-gray-500');
     });
@@ -751,7 +776,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const open = () => { modalBox.checked = box.checked; modal.classList.remove('hidden'); };
         document.getElementById('showTerms').addEventListener('click', (e) => { e.preventDefault(); open(); });
         document.getElementById('termsAgree').addEventListener('click', () => {
+            // The dialog's checkbox sets the page's one: there is only ever one "don't keep" setting.
             box.checked = modalBox.checked;
+            box.dispatchEvent(new Event('change'));
             try { localStorage.setItem('classifierTerms', '1'); localStorage.setItem('classifierDontKeep', box.checked ? '1' : '0'); } catch (e) {}
             modal.classList.add('hidden');
         });
@@ -759,16 +786,16 @@ document.addEventListener('DOMContentLoaded', () => {
     })();
 
     // --- Camera Logic ---
-    
+
     ui.cameraBtn.addEventListener('click', async (e) => {
         e.stopPropagation(); // Don't trigger background file upload
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'environment' } 
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment' }
             });
             state.cameraStreamObj = stream;
             ui.cameraStream.srcObject = stream;
-            
+
             ui.placeholder.classList.add('hidden');
             ui.cameraInterface.classList.remove('hidden');
         } catch (err) {
@@ -785,7 +812,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!state.currentFile) {
             ui.placeholder.classList.remove('hidden');
         } else {
-            // If we had an image loaded before, show it again? 
+            // If we had an image loaded before, show it again?
             // Simplified: just show placeholder if canceling
             ui.placeholder.classList.remove('hidden');
         }
@@ -798,14 +825,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     ui.captureBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        
+
         // Capture frame to canvas
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = ui.cameraStream.videoWidth;
         tempCanvas.height = ui.cameraStream.videoHeight;
         const ctx = tempCanvas.getContext('2d');
         ctx.drawImage(ui.cameraStream, 0, 0);
-        
+
         // Convert to blob
         tempCanvas.toBlob((blob) => {
             // Create a File object
@@ -825,19 +852,19 @@ document.addEventListener('DOMContentLoaded', () => {
         state.detections = [];
         ui.fileInput.value = '';
         clearMessage();
-        
+
         ui.imageWrapper.classList.add('hidden');
         ui.placeholder.classList.remove('hidden');
         ui.analysisDetails.classList.add('hidden');
         ui.confidenceBar.classList.add('hidden');
-        
+
         // --- NEW LOGIC: HIDE BUTTON ---
         ui.submitBtn.classList.add('hidden'); // Hide the button
         // -----------------------------
     });
 
     // --- Submission ---
-    
+
     // One line on what happened to the photo (the answer's "saved"); nothing when it was not kept for another reason
     function showSaved(data) {
         const n = data.attached || 0;
@@ -864,6 +891,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.globalStatus.classList.add('hidden');
             ui.submitBtn.disabled = false;
             ui.submitBtn.classList.remove('opacity-75', 'cursor-wait');
+            setServerNote('');   // back to the resting note once loading (or waking) is over
         }
     }
 
@@ -881,7 +909,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     ui.form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         if (!state.currentFile) return;
 
         // Construct FormData manually to include the correct file (drag/cam/input)
@@ -895,8 +923,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Examples are never kept, and neither is an image the person asked us not to keep.
             if (state.isExample || document.getElementById('dontKeep').checked) formData.set('keep_image', '0');
         }
-        
+
         clearMessage();
+        setServerNote('');
         setLoading(true, "Processing image...");
         const pIntv = animateProgress();
 
@@ -907,6 +936,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 outcome = await post(formData);
                 if (!outcome.waking || attempt >= WAKE_TRIES) break;
                 ui.loadingStatus.innerText = 'IBBI-AI is waking up...';
+                setServerNote(MESSAGES.waking);
                 showMessage(MESSAGES.waking, 'wait');
                 await new Promise(resolve => setTimeout(resolve, 3000));
             }
@@ -925,10 +955,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 state.kept = ['saved', 'attached'].includes(data.saved);
                 state.selectedIndex = -1;
                 state.hoveredIndex = -1;
-                
+
                 ui.analysisDetails.classList.remove('hidden');
                 initChart();
-                
+
                 // Tags (the slider hides those below it)
                 ui.tagsContainer.innerHTML = '';
                 state.detections.forEach((det, i) => {
@@ -940,7 +970,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     btn.innerHTML = `<span class="w-2.5 h-2.5 rounded-full" style="background-color:${color}"></span> ${det.label} <span class="text-gray-400">${Math.round(confidenceOf(det)*100)}%</span>`;
                     btn.onclick = () => {
                         select(i);
-                        draw(); 
+                        draw();
                     };
                     ui.tagsContainer.appendChild(btn);
                 });
