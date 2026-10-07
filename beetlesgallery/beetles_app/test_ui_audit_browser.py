@@ -99,6 +99,14 @@ class ThumbnailTests(BrowserTestCase):
         self.assertIn("thumb-retry-btn", html)
         self.assertIn('onerror="handleThumbError(this)"', html)
 
+    def test_the_retry_handler_validates_the_url_before_building_img_src(self):
+        # Same-origin-checked via the URL constructor, not a raw attribute read straight into img.src
+        # (CodeQL DOM text reinterpreted as HTML / js/xss-through-dom, #618).
+        html = self.get().content.decode()
+        self.assertIn("new URL(src, location.href)", html)
+        self.assertIn("parsed.origin !== location.origin", html)
+        self.assertIn("parsed.protocol !== 'http:'", html)
+
 
 class DownloadButtonTests(BrowserTestCase):
     """browser-download."""
