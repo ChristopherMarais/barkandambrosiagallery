@@ -40,7 +40,7 @@ class GameSettingsPagingTests(GameCase):
 
     def test_the_pager_says_where_you_are(self):
         second = self.page("?unlocks_page=2")
-        self.assertIn("26&ndash;", self.pager(second))
+        self.assertIn('<span class="digit-group">26</span>&ndash;', self.pager(second))   # numbers grouped in threes
         self.assertIn("Page 2 of", self.pager(second))
         self.assertIn("unlocks_page=1#unlocks", self.pager(second))        # back to the first page
 

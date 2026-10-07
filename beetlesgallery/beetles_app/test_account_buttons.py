@@ -8,6 +8,7 @@ The account page and the request-access pages (#501).
   The AI is called IBBI-AI and the game goes by its name. Only people not signed in get the Sign in link at the top of
   the form.
 """
+import re
 from html.parser import HTMLParser
 
 from django.conf import settings
@@ -164,11 +165,16 @@ class RequestAccessExplainsTheReviewTests(ReadsPages, PageBehaviourCase):
         self.client.force_login(self.user)
         for name in self.PAGES:
             with self.subTest(page=name):
-                words = self.main(name).root.words
+                html = self.client.get(reverse(name)).content.decode()
+                # the ticks' own descriptions are left out (one is "Review proposed interactions", as in test_signup)
+                main = re.sub(r"<fieldset\b.*?</fieldset>", " ", html[html.index("<main"):], flags=re.S)
+                words = " ".join(re.sub(r"<[^>]+>", " ", main).split())
                 for talk in ("review", "approv", "decision", "wait"):
                     self.assertNotIn(talk, words.lower())
-                self.assertIn("Tick anything else you'd like to help with below.", words)
-                self.assertIn("We have your request.", words)
+                if name == "request_access":   # the form says what to tick; the sent page says thank you
+                    self.assertIn("Tick anything else you'd like to help with below.", words)
+                else:
+                    self.assertIn("We have your request.", words)
 
     def test_signed_out_they_say_the_account_works_once_the_email_is_confirmed(self):
         for name in self.PAGES:

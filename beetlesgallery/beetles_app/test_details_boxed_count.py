@@ -8,7 +8,12 @@ from django.urls import reverse
 
 from beetlesgallery.beetles_app.testing import PageBehaviourCase, make_beetle, make_image
 
-COUNT = re.compile(r">\s*ROI (\S+) of (\S+)\s*<")
+COUNT = re.compile(r"ROI (\S+) of (\S+?)\s*<")
+
+
+def plain(html):
+    """The page without the digit-group spans (numbers are grouped in threes, so "ROI 1 of 2" can be marked up)."""
+    return re.sub(r"</?span\b[^>]*>", "", html)
 
 
 class BoxedCountTests(PageBehaviourCase):
@@ -29,14 +34,14 @@ class BoxedCountTests(PageBehaviourCase):
         # the boxed ROIs in id order, as the page orders them; the first of them is "ROI 1"
         boxed = sorted([self.first, self.second], key=lambda roi: str(roi.id))
         html = self.page(boxed[0])
-        self.assertEqual(COUNT.findall(html), [("1", "2")])               # "ROI 1 of 2", not "of 3"
+        self.assertEqual(COUNT.findall(plain(html)), [("1", "2")])               # "ROI 1 of 2", not "of 3"
         next_link = re.search(r'href="([^"]+)" class="p-1[^"]*"[^>]*title="Next Individual"', html)
         self.assertEqual(next_link.group(1), reverse("beetle_detail", args=[boxed[1].id]))
         self.assertNotIn(reverse("beetle_detail", args=[self.unboxed.id]), html)   # no arrow to the unboxed ROI
 
     def test_a_beetle_without_a_box_has_no_count_and_no_arrows(self):
         html = self.page(self.unboxed)
-        self.assertEqual(COUNT.findall(html), [])
+        self.assertEqual(COUNT.findall(plain(html)), [])
         self.assertNotIn('title="Next Individual"', html)
         self.assertNotIn('title="Previous Individual"', html)
         self.assertIn("Image Details", html)                              # its information is still shown
@@ -46,6 +51,6 @@ class BoxedCountTests(PageBehaviourCase):
         roi = make_beetle(image=bare)
         make_beetle(image=bare)
         html = self.page(roi)
-        self.assertEqual(COUNT.findall(html), [])
+        self.assertEqual(COUNT.findall(plain(html)), [])
         self.assertIn("Image Details", html)
         self.assertNotIn("Show ROI", html)                                # no boxes drawn either
