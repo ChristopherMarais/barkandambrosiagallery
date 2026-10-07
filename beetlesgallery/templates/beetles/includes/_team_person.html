@@ -1,0 +1,32 @@
+{# One row of the home page's compact team grid: name and role on one line, a small icon row below.
+   24px icons in 44px hit areas, no "|" separators, each with its own aria-label (#618 home-team, home-team-icons).
+   Needs ``name`` and ``role``; any of ``github_url``, ``linkedin_url``, ``lab_url`` (with ``lab_label`` and
+   ``lab_icon``, a flaticon class, defaulting to a lab/building icon). #}
+<div class="flex items-center justify-between gap-2">
+  <div class="min-w-0 pr-2 leading-tight">
+    <span class="font-bold text-gray-900">{{ name }}</span>
+    <span class="text-gray-500 text-sm">&mdash; {{ role }}</span>
+  </div>
+  {% if github_url or linkedin_url or lab_url %}
+  <div class="flex items-center shrink-0">
+    {% if github_url %}
+      <a href="{{ github_url }}" target="_blank" rel="noopener" aria-label="{{ name }}: GitHub" title="GitHub"
+         class="flex items-center justify-center w-11 h-11 text-gray-600 hover:text-black transition-colors">
+        <i class="fi fi-brands-github text-2xl" aria-hidden="true"></i>
+      </a>
+    {% endif %}
+    {% if linkedin_url %}
+      <a href="{{ linkedin_url }}" target="_blank" rel="noopener" aria-label="{{ name }}: LinkedIn" title="LinkedIn"
+         class="flex items-center justify-center w-11 h-11 text-gray-600 hover:text-black transition-colors">
+        <i class="fi fi-brands-linkedin text-2xl" aria-hidden="true"></i>
+      </a>
+    {% endif %}
+    {% if lab_url %}
+      <a href="{{ lab_url }}" target="_blank" rel="noopener" aria-label="{{ name }}: {{ lab_label|default:'Lab webpage' }}" title="{{ lab_label|default:'Lab webpage' }}"
+         class="flex items-center justify-center w-11 h-11 text-gray-600 hover:text-black transition-colors">
+        <i class="fi {{ lab_icon|default:'fi-rr-bugs' }} text-2xl" aria-hidden="true"></i>
+      </a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>

@@ -491,6 +491,9 @@ def _build_gallery_filter_context(base_search_qs, active_filters):
             options = ["Yes", "No"]
             has_na = ctx_qs.filter(**{f"{cfg['field']}__isnull": True}).exists()
 
+        elif cfg["type"] == "custom_has_type_status":
+            options = ["Yes", "No"]
+
         elif cfg["type"] == "ref":
             field_name = f"taxon__{cfg['field']}"
             raw_options = ctx_qs.exclude(taxon__isnull=True) \
@@ -590,6 +593,14 @@ def gallery(request):
     size_max = request.GET.get("size_max", "").strip()
     res_min = request.GET.get("res_min", "").strip()
     res_max = request.GET.get("res_max", "").strip()
+
+    # How many filters are active, for the "Filters" button's pill (#618 browser-filter). One per
+    # category-checked value, plus one each for the size/resolution ranges when set.
+    active_filter_count = sum(len(v) for v in active_filters.values())
+    if size_min or size_max:
+        active_filter_count += 1
+    if res_min or res_max:
+        active_filter_count += 1
 
     def apply_filters(qs, filters_dict, exclude_param=None):
         return filter_beetles_queryset(qs, filters_dict, size_min, size_max, res_min, res_max, exclude_param)
@@ -699,6 +710,9 @@ def gallery(request):
             if siblings is None:
                 siblings = [s for s in b.image_asset.specimens.all() if not s.is_deleted]
             b.siblings_count = len(siblings)
+            # Only the boxed ROIs are counted ("ROI badge" on the grid tile, #618 browser-roi-badge), same as
+            # the "ROI n of m" count on the detail page: a sibling without a box doesn't make this one a duplicate.
+            b.boxed_count = sum(1 for s in siblings if s.bbox_x is not None)
 
             # Only calculate multiple attributes if there is more than 1 sibling
             if b.siblings_count > 1:
@@ -719,6 +733,7 @@ def gallery(request):
             b.warn_large = (b.image_asset.image_size_bytes or 0) >= WARN_IMAGE_SIZE_BYTES
         else:
             b.siblings_count = 0
+            b.boxed_count = 0
             b.warn_large = False
 
     context = {
@@ -733,6 +748,7 @@ def gallery(request):
         "warn_size_bytes": WARN_IMAGE_SIZE_BYTES,
         "filter_groups": filter_context,
         "selected_filters": active_filters,
+        "active_filter_count": active_filter_count,
         "per_page": page_size,
         "sort": sort,
         "sort_options": [(k, v[0]) for k, v in GALLERY_SORTS.items()],

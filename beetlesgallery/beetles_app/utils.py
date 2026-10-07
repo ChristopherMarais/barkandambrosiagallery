@@ -346,6 +346,8 @@ FILTERS_CONFIG = [
     {"category": "Collection", "param": "state", "type": "db", "field": "collection_stateProvince", "label": "State/Province"},
     {"category": "Collection", "param": "sex", "type": "db", "field": "specimen_sex", "label": "Sex"},
     {"category": "Collection", "param": "type_status", "type": "db", "field": "specimen_type_status", "label": "Type Status"},
+    # Any non-blank type status at all (the landing page's "Type Specimens" count links here, #618).
+    {"category": "Collection", "param": "has_type_status", "type": "custom_has_type_status", "field": "", "label": "Type Specimen"},
     {"category": "Image Details", "param": "institution", "type": "db", "field": "image_asset__image_institution", "label": "Institution"},
     {"category": "Image Details", "param": "photographer", "type": "db", "field": "image_asset__photographer", "label": "Photographer"},
     {"category": "Image Details", "param": "usage", "type": "db", "field": "image_asset__photo_usage_statement", "label": "Photo Usage"},
@@ -402,6 +404,13 @@ def filter_beetles_queryset(qs, filters_dict, size_min=None, size_max=None, res_
                     image_asset__specimens__bbox_x__isnull=False, 
                     image_asset__specimens__bbox_is_validated=False
                 )
+
+        elif cfg["type"] == "custom_has_type_status":
+            if "Yes" in vals and "No" not in vals:
+                # Specimens with a type status recorded at all (Holotype, Paratype, ...)
+                qs = qs.exclude(specimen_type_status__isnull=True).exclude(specimen_type_status="")
+            elif "No" in vals and "Yes" not in vals:
+                qs = qs.filter(Q(specimen_type_status__isnull=True) | Q(specimen_type_status=""))
 
         elif cfg["type"] == "db":
             q_part = Q()

@@ -64,6 +64,8 @@
       .tree-toggle { justify-content: flex-start; }
       /* the species and taxonomy links in the gallery cards */
       #gallery-results-container .truncate a { display: inline-block; padding: 0.3rem 0; }
+      /* the grid view's selection checkbox has no hover on a touch screen, so always show it (#618 browser-grid-select) */
+      #gallery-view .grid-select-overlay { opacity: 1; }
     }
     @media (pointer: coarse) and (max-width: 767px) {
       select, textarea, input[type="text"], input[type="search"], input[type="email"], input[type="password"],

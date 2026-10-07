@@ -1,0 +1,24 @@
+{% load beetle_tags %}{# The image browser's pager: always shows &lsaquo; and &rsaquo;, disabled (not removed) when unavailable, around
+   "Page X of Y" -- the same shape as the pager on the detail pages (#618 browser-pager). Needs ``page_obj`` and
+   ``page_options_html`` (and ``is_paginated``, checked by the caller). #}
+<nav class="flex items-center gap-2 pagination-nav" aria-label="Pages">
+  <button type="button"
+          {% if page_obj.has_previous %}onclick="goToPage('{{ page_obj.previous_page_number }}')"{% else %}disabled{% endif %}
+          class="rounded-sm border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent">
+    &lsaquo; Previous
+  </button>
+
+  <div class="flex items-center gap-2 text-sm text-text/70">
+    <span>Page</span>
+    <select onchange="goToPage(this.value)" class="page-select rounded-sm border border-text/20 bg-background py-1.5 px-2 text-sm focus:ring-gray-400 cursor-pointer">
+      {{ page_options_html }}
+    </select>
+    <span>of {{ paginator.num_pages|digit_groups_text }}</span>
+  </div>
+
+  <button type="button"
+          {% if page_obj.has_next %}onclick="goToPage('{{ page_obj.next_page_number }}')"{% else %}disabled{% endif %}
+          class="rounded-sm border border-text/20 px-3 py-1.5 text-sm hover:bg-secondary/30 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent">
+    Next &rsaquo;
+  </button>
+</nav>
