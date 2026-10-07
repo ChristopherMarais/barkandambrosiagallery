@@ -404,8 +404,8 @@
     <div class="taxonomy-detail-section" id="taxonomy-detail-section">
       <div class="border border-gray-200 rounded-lg bg-white shadow-xs h-full flex flex-col overflow-hidden">
 
-        {# #618 tax-mobile: on a phone this bar only shows once a species is open (see the CSS), to go back to the tree.
-           It sits above the scrolling panel, so it stays at the top however far down the details you read. #}
+        {% comment %} #618 tax-mobile: on a phone this bar only shows once a species is open (see the CSS), to go back to the tree.
+           It sits above the scrolling panel, so it stays at the top however far down the details you read. {% endcomment %}
         <button type="button" id="mobile-species-back" aria-label="Back to the taxonomy tree"
           class="items-center gap-1.5 border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-semibold text-gray-700 shrink-0">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>

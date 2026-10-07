@@ -543,8 +543,8 @@
     <p>Your choice is kept in an essential cookie for a year. You can change it at any time with
       <strong>Cookie settings</strong> at the bottom of a page. <a href="{% url 'privacy' %}" class="underline">Privacy notice</a></p>
     <div class="consent-actions">
-      {# Accept and Reject must share one class and look identical: the consent banner's equal-prominence
-         requirement (#613, GDPR) overrides the general site-buttons role rule (#618) for this one pair. #}
+      {% comment %} Accept and Reject must share one class and look identical: the consent banner's equal-prominence
+         requirement (#613, GDPR) overrides the general site-buttons role rule (#618) for this one pair. {% endcomment %}
       <button type="button" class="btn-secondary" data-consent="granted">Accept</button>
       <button type="button" class="btn-secondary" data-consent="denied">Reject</button>
     </div>
