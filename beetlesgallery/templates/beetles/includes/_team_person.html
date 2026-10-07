@@ -1,7 +1,9 @@
-{# One row of the home page's compact team grid: name and role on one line, a small icon row below.
-   24px icons in 44px hit areas, no "|" separators, each with its own aria-label (#618 home-team, home-team-icons).
-   Needs ``name`` and ``role``; any of ``github_url``, ``linkedin_url``, ``lab_url`` (with ``lab_label`` and
-   ``lab_icon``, a flaticon class, defaulting to a lab/building icon). #}
+{% comment %}
+One row of the home page's compact team grid: name and role on one line, a small icon row below.
+24px icons in 44px hit areas, no "|" separators, each with its own aria-label (#618 home-team, home-team-icons).
+Needs ``name`` and ``role``; any of ``github_url``, ``linkedin_url``, ``lab_url`` (with ``lab_label`` and
+``lab_icon``, a flaticon class, defaulting to a lab/building icon).
+{% endcomment %}
 <div class="flex items-center justify-between gap-2">
   <div class="min-w-0 pr-2 leading-tight">
     <span class="font-bold text-gray-900">{{ name }}</span>

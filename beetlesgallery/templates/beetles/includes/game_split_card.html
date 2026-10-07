@@ -1,6 +1,9 @@
-{% load beetle_tags %}{# One game in game_split.html. Needs ``key``, ``icon`` and ``s`` (its mode_stats, plus ``locked``
-   and ``unlock_level`` the view adds so a locked game never looks the same as one just not played yet, #gh-locked);
-   with ``link`` the whole card opens History for that game (#574). #}
+{% load beetle_tags %}
+{% comment %}
+One game in game_split.html. Needs ``key``, ``icon`` and ``s`` (its mode_stats, plus ``locked``
+and ``unlock_level`` the view adds so a locked game never looks the same as one just not played yet, #gh-locked);
+with ``link`` the whole card opens History for that game (#574).
+{% endcomment %}
 {% if link %}<a href="{% url 'game_history' %}?game={{ key }}" class="block p-3 bg-gray-50 border border-gray-100 rounded-2xl hover:border-gray-300 hover:bg-gray-100 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900" data-testid="game-card-{{ key }}">{% else %}<div class="p-3 bg-gray-50 border border-gray-100 rounded-2xl">{% endif %}
     <div class="flex items-center gap-1.5 text-xs uppercase tracking-wider text-gray-500 font-semibold"><i class="fi {{ icon }}"></i>{{ key|game_label }}</div>
     {% if s.locked %}

@@ -1,6 +1,9 @@
-{% load beetle_tags %}{# rows from game_board.board: position, username, level, score, overall accuracy, each game's
-   accuracy (#543), viewed, is_expert, discoveries. Eight columns ran off the right edge on a phone (#gh-leaderboard):
-   now each row shows rank, player, score and overall accuracy only; tap a row to open its per-game breakdown. #}
+{% load beetle_tags %}
+{% comment %}
+rows from game_board.board: position, username, level, score, overall accuracy, each game's
+accuracy (#543), viewed, is_expert, discoveries. Eight columns ran off the right edge on a phone (#gh-leaderboard):
+now each row shows rank, player, score and overall accuracy only; tap a row to open its per-game breakdown.
+{% endcomment %}
 <div class="border border-gray-200 rounded-lg overflow-x-auto">
   <table class="w-full text-sm" data-testid="board-table">
     <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">

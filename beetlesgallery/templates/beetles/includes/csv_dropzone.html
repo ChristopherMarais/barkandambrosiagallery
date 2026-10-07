@@ -1,5 +1,7 @@
-{# A click-or-drag-and-drop zone for one CSV file, styled like the IBBI-AI classify page's photo drop zone.
-   Needs: field_id, label, max_mb; optional: submit_id (a button to enable once a file is chosen). #}
+{% comment %}
+A click-or-drag-and-drop zone for one CSV file, styled like the IBBI-AI classify page's photo drop zone.
+Needs: field_id, label, max_mb; optional: submit_id (a button to enable once a file is chosen).
+{% endcomment %}
 <div>
   <label for="{{ field_id }}" class="block text-sm font-semibold text-gray-700 mb-2">{{ label }}</label>
   <div id="{{ field_id }}-zone" tabindex="0" role="button" aria-describedby="{{ field_id }}-hint"

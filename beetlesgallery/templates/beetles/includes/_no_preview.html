@@ -1,6 +1,8 @@
-{# Blank-thumbnail placeholder: an icon and "No preview" rather than an empty grey box (#618 browser-empty-thumb).
-   A thumbnail whose <img> tag fails to load swaps in the same markup, plus a Retry button, via handleThumbError()
-   in image_browser.html. #}
+{% comment %}
+Blank-thumbnail placeholder: an icon and "No preview" rather than an empty grey box (#618 browser-empty-thumb).
+A thumbnail whose <img> tag fails to load swaps in the same markup, plus a Retry button, via handleThumbError()
+in image_browser.html.
+{% endcomment %}
 <div class="no-preview flex flex-col items-center justify-center gap-1 w-full h-full text-gray-600">
   <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7a2 2 0 012-2h3l1.5-2h5L16 5h3a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"></path>

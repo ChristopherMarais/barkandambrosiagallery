@@ -1,6 +1,8 @@
-{# One download control: ``form_suffix`` is "selected" or "all"; ``menu_up`` flips the staff dropdown to open
-   upward (the bottom controls). Styled as .btn-secondary with a download icon, so it reads as a button rather
-   than plain text, and "Download Selected" is disabled until something is ticked (#618 browser-download). #}
+{% comment %}
+One download control: ``form_suffix`` is "selected" or "all"; ``menu_up`` flips the staff dropdown to open
+upward (the bottom controls). Styled as .btn-secondary with a download icon, so it reads as a button rather
+than plain text, and "Download Selected" is disabled until something is ticked (#618 browser-download).
+{% endcomment %}
 {% load beetle_tags %}
 {% if form_suffix == "selected" %}
   {% with form_id="download-selected-form" label="Download Selected" count_html='(<span class="selected-count">0</span>)' disabled_attr="disabled" %}
