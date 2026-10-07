@@ -4,10 +4,11 @@
 
 {% block extra_css %}
 <style>
-  /* The tables scroll sideways on narrow screens instead of being cut off */
+  /* On a phone the tables' rows are cards (.table-cards, site-tables #618); from 640px up they are tables again, and
+     scroll sideways if the screen is still too narrow for them */
   .wide-table { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
   .wide-table.wide-table-both { overflow-y: auto; }
-  .wide-table > table { min-width: 36rem; }
+  @media (min-width: 640px) { .wide-table > table { min-width: 36rem; } }
   /* "No downloads yet" and the like: start at the left on a phone so the message is not half off screen */
   @media (max-width: 639px) { .wide-table td[colspan] { text-align: left; } }
 </style>
@@ -157,13 +158,13 @@
 
       <div id="table-history" data-restriction="max-h-28"
         class="rounded-lg border border-gray-200 bg-white wide-table max-h-28 transition-all duration-500 ease-in-out relative">
-        <table class="w-full text-sm text-left">
+        <table class="table-cards w-full text-sm text-left">
           <thead
             class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200 sticky top-0 z-10 shadow-xs">
             <tr>
               <th class="px-4 py-3 bg-gray-100">Archived Date</th>
               <th class="px-4 py-3 bg-gray-100">Filename</th>
-              <th class="px-4 py-3 bg-gray-100">Download</th>
+              <th class="px-4 py-3 bg-gray-100" data-label="">Download</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100" id="archive-tbody">
@@ -249,7 +250,7 @@
 
         <div id="table-downloads" data-restriction="max-h-80"
           class="rounded-lg border border-gray-200 bg-white wide-table max-h-80 transition-all duration-500 ease-in-out relative">
-          <table class="w-full text-sm text-left">
+          <table class="table-cards w-full text-sm text-left">
             <thead
               class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200 sticky top-0 z-10 shadow-xs">
               <tr>
@@ -394,7 +395,7 @@
 
         <div id="table-uploads" data-restriction="max-h-80"
           class="rounded-lg border border-gray-200 bg-white wide-table max-h-80 transition-all duration-500 ease-in-out relative">
-          <table class="w-full text-sm text-left">
+          <table class="table-cards w-full text-sm text-left">
             <thead
               class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200 sticky top-0 z-10 shadow-xs">
               <tr>
@@ -474,7 +475,7 @@
 
         <div id="table-updates" data-restriction="max-h-80"
           class="rounded-lg border border-gray-200 bg-white wide-table max-h-80 transition-all duration-500 ease-in-out relative">
-          <table class="w-full text-sm text-left">
+          <table class="table-cards w-full text-sm text-left">
             <thead
               class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200 sticky top-0 z-10 shadow-xs">
               <tr>
@@ -609,8 +610,8 @@
 
                 {# --- PROGRESS BAR --- #}
                 <div id="progress-container-new" class="hidden mt-4">
-                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                    <div id="progress-bar-new" class="bg-gray-600 h-full rounded-full transition-all duration-300"
+                  <div class="progress-bar h-1.5">
+                    <div id="progress-bar-new" class="progress-bar-fill transition-all duration-300"
                       style="width: 0%"></div>
                   </div>
                   <p id="progress-text-new" class="text-sm text-gray-500 mt-2 text-center">Starting upload...</p>
@@ -687,8 +688,8 @@
 
                 {# --- PROGRESS BAR --- #}
                 <div id="progress-container-update" class="hidden mt-4">
-                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                    <div id="progress-bar-update" class="bg-gray-600 h-full rounded-full transition-all duration-300"
+                  <div class="progress-bar h-1.5">
+                    <div id="progress-bar-update" class="progress-bar-fill transition-all duration-300"
                       style="width: 0%"></div>
                   </div>
                   <p id="progress-text-update" class="text-sm text-gray-500 mt-2 text-center">Starting update...</p>
@@ -763,8 +764,8 @@
               </label>
 
               <div id="progress-container-predictions" class="hidden mt-4">
-                <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                  <div id="progress-bar-predictions" class="bg-gray-600 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                <div class="progress-bar h-1.5">
+                  <div id="progress-bar-predictions" class="progress-bar-fill transition-all duration-300" style="width: 0%"></div>
                 </div>
                 <p id="progress-text-predictions" class="text-sm text-gray-500 mt-2 text-center">Starting upload...</p>
               </div>
@@ -803,8 +804,7 @@
     function setBar(percent, message, failed) {
       box.classList.remove('hidden');
       bar.style.width = Math.max(2, Math.min(100, percent)) + '%';
-      bar.classList.toggle('bg-red-600', !!failed);
-      bar.classList.toggle('bg-gray-600', !failed);
+      bar.classList.toggle('bg-red-600', !!failed);   // a failure is red; otherwise .progress-bar-fill's gray-700
       text.classList.toggle('text-red-600', !!failed);
       text.innerText = message;
     }
@@ -912,8 +912,8 @@
                 </div>
 
                 <div id="progress-container-taxonomy" class="hidden mt-4">
-                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                    <div id="progress-bar-taxonomy" class="bg-gray-600 h-full rounded-full transition-all duration-300"
+                  <div class="progress-bar h-1.5">
+                    <div id="progress-bar-taxonomy" class="progress-bar-fill transition-all duration-300"
                       style="width: 0%"></div>
                   </div>
                   <p id="progress-text-taxonomy" class="text-sm text-gray-500 mt-2 text-center">Starting upload...</p>
@@ -959,11 +959,11 @@
 
       {# Modal Content (Scrollable) #}
       <div class="wide-table wide-table-both p-0">
-        <table class="w-full text-sm text-left border-collapse">
+        <table class="table-cards w-full text-sm text-left border-collapse">
           <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-bold sticky top-0 shadow-xs z-10">
             <tr>
-              <th class="px-6 py-3 border-b border-gray-200 w-1/4">Field ID</th>
-              <th class="px-6 py-3 border-b border-gray-200">Description</th>
+              <th class="px-6 py-3 border-b border-gray-200 w-1/4" data-label="">Field ID</th>
+              <th class="px-6 py-3 border-b border-gray-200" data-label="">Description</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 text-gray-700">
@@ -1354,7 +1354,7 @@
         progressText.innerText = message;
         progressText.classList.remove('text-gray-500');
         progressText.classList.add('text-red-600');
-        progressBar.classList.remove('bg-gray-600', 'upload-working');
+        progressBar.classList.remove('upload-working');
         progressBar.classList.add('bg-red-600');
         progressBar.style.width = '100%';
         submitBtn.disabled = false;
@@ -1365,7 +1365,6 @@
       progressText.classList.remove('text-red-600');
       progressText.classList.add('text-gray-500');
       progressBar.classList.remove('bg-red-600', 'upload-working');
-      progressBar.classList.add('bg-gray-600');
       progressBar.style.width = '0%';
 
       // Size check before sending anything
@@ -1911,6 +1910,8 @@
       tr.appendChild(td);
       tbody.appendChild(tr);
     }
+    // the new rows' column names for the phone's card layout (tables.js; on first load it labels them itself)
+    if (window.labelTableCards) window.labelTableCards(tbody.closest('table'));
   }
 
   function updateTaxonomyReference() {
@@ -1957,7 +1958,7 @@
 
     progressContainer.classList.add('hidden');
     progressBar.style.width = '0%';
-    progressBar.className = 'bg-gray-600 h-full rounded-full transition-all duration-300';
+    progressBar.className = 'progress-bar-fill transition-all duration-300';
     progressText.textContent = 'Starting upload...';
     progressText.className = 'text-sm text-gray-500 mt-2 text-center';
     submitBtn.disabled = false;

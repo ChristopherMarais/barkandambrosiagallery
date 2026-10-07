@@ -85,7 +85,7 @@
   <details class="group mb-8" data-testid="section" id="players" {% if request.GET.players_page or request.GET.players_sort %}open{% endif %}>
   <summary class="cursor-pointer list-none flex items-center gap-2 mb-2"><i class="fi fi-rr-angle-small-right group-open:rotate-90 transition-transform text-gray-400"></i><h3 class="inline text-lg font-semibold text-gray-900">Players <span class="text-sm font-normal text-gray-400">({{ players.paginator.count|digit_groups }})</span></h3></summary>
   <p class="text-xs text-gray-500 mb-3">Correct / judged per rank on validated items. Click a player for their full report.</p>
-  <div class="overflow-x-auto border border-gray-200 rounded-lg mb-10">
+  <div class="table-scroll border border-gray-200 rounded-lg mb-10">
     <table class="w-full text-sm whitespace-nowrap">
       <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wider">
         <tr>
@@ -143,7 +143,7 @@
     Percent = the winning name's share of the weighted vote; <i class="fi fi-rr-shield-check text-green-700"></i> = expert-backed.
     Most answered first unless you sort by a column; the CSV has all of them.
   </p>
-  <div class="overflow-x-auto border border-gray-200 rounded-lg">
+  <div class="table-scroll border border-gray-200 rounded-lg">
     <table class="w-full text-sm whitespace-nowrap">
       <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wider">
         <tr>

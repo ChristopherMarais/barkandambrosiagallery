@@ -1047,7 +1047,7 @@ function gameBadgeHtml(g) {
     (g.trusted_rank ? `, expert-backed to ${g.trusted_rank}` : '');
   const cls = g.trusted_rank ? 'bg-green-50 text-green-800 border-green-200' : 'bg-gray-50 text-gray-600 border-gray-200';
   return `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm border text-[10px] font-semibold ${cls}" title="${title}" data-testid="game-badge">
-    <i class="fi ${g.trusted_rank ? 'fi-rr-shield-check' : 'fi-rr-gamepad'}"></i>${g.trusted_rank ? 'expert · ' + g.trusted_rank
+    <i class="fi ${g.trusted_rank ? 'fi-rr-shield-check' : 'fi-rr-play'}"></i>${g.trusted_rank ? 'expert · ' + g.trusted_rank
       : (g.rank ? Math.round(g.support * 100) + '% · ' + g.rank : g.players + (g.players === 1 ? ' vote' : ' votes'))}</span>`;
 }
 
@@ -1521,11 +1521,11 @@ function gameTipsHtml(b) {
   const items = tips.map(t => {
     const icon = t.kind === 'not' ? 'fi-rr-cross-circle text-gray-500' : (t.kind === 'expert' ? 'fi-rr-shield-check text-green-600' : 'fi-rr-users text-gray-500');
     return `<li class="flex gap-2 text-xs text-gray-700 ${t.conflicts ? 'bg-amber-50 border border-amber-200 rounded-sm px-2 py-1' : ''}" data-tip="${t.kind}">
-      <i class="fi ${icon} mt-0.5"></i><span>${gameTipText(t)}</span></li>`;
+      <span class="flex h-4 shrink-0 items-center"><i class="fi ${icon}"></i></span><span>${gameTipText(t)}</span></li>`;
   }).join('');
   return `
     <div class="rounded-lg border border-gray-200 bg-white p-3" data-testid="game-tips">
-      <div class="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-2"><i class="fi fi-rr-bulb"></i> Tips from the game</div>
+      <div class="flex items-center gap-1 text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-2"><i class="fi fi-rr-bulb"></i> Tips from the game</div>
       <ul class="space-y-1.5">${items}</ul>
     </div>`;
 }
@@ -1611,7 +1611,7 @@ function gameAppliedHtml(b, i) {
     : `<div class="text-[10px] text-gray-500 mt-1">The label has been changed since.</div>`;
   return `
     <div class="rounded-lg border border-gray-200 bg-white p-3" data-testid="game-applied">
-      <div class="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1"><i class="fi fi-rr-gamepad"></i> Label from the game</div>
+      <div class="flex items-center gap-1 text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1"><i class="fi fi-rr-play"></i> Label from the game</div>
       <div class="text-xs text-gray-700"><span class="italic">${escHtml(a.name)}</span> applied ${who} on ${escHtml(when)}.</div>
       ${action}
     </div>`;
@@ -1667,7 +1667,7 @@ function gameProposalHtml(b, i) {
   return `
     <div class="rounded-lg border ${p.trusted_rank ? 'border-green-200 bg-green-50/40' : 'border-gray-200 bg-gray-50'} p-3">
       <div class="flex items-center justify-between gap-2 mb-2">
-        <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wide"><i class="fi fi-rr-gamepad"></i> Game proposal</span>
+        <span class="flex items-center gap-1 text-[11px] font-bold text-gray-500 uppercase tracking-wide"><i class="fi fi-rr-play"></i> Game proposal</span>
         ${trusted}
       </div>
       <div class="text-xs leading-relaxed flex flex-wrap items-center gap-x-0.5">${cells}</div>

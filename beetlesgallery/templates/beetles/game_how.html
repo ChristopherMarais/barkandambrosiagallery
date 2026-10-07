@@ -26,13 +26,51 @@
     </details>
   </section>
 
-  <h2 class="text-xl font-semibold text-gray-900 mb-1" id="scoring">Scoring</h2>
+  {% comment %}
+  A long page (site-long, #618): "In 30 seconds" above is the summary, each part below opens on its own, and this
+  contents bar stays at the top: chips on a wider screen, a "Jump to" select on a phone (static/js/jump_to.js opens
+  the part it jumps to).
+  {% endcomment %}
+  <div class="sticky top-0 z-10 bg-white/95 backdrop-blur py-2 mb-6 -mx-4 px-4 sm:mx-0 sm:px-0 border-b border-gray-100" data-testid="how-toc">
+    <nav class="hidden sm:flex flex-wrap gap-2 text-sm" aria-label="On this page">
+      <a href="#scoring" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Scoring</a>
+      <a href="#known" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Known beetles</a>
+      <a href="#unchecked" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Unchecked beetles</a>
+      <a href="#rescoring" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Scores keep up</a>
+      <a href="#mistakes" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Mistakes</a>
+      <a href="#not-sure" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Not sure?</a>
+      <a href="#levels" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Levels</a>
+      <a href="#labels" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Your labels</a>
+      <a href="#leaderboard" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Leaderboard</a>
+      <a href="#faq" class="px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50">Quick answers</a>
+    </nav>
+    <select class="select-chevron sm:hidden w-full h-10 px-3 border border-gray-300 rounded-lg bg-white" aria-label="Jump to section" data-jump-to>
+      <option value="">Jump to&hellip;</option>
+      <option value="scoring">Scoring</option>
+      <option value="known">Known beetles</option>
+      <option value="unchecked">Unchecked beetles</option>
+      <option value="rescoring">Scores keep up</option>
+      <option value="mistakes">Mistakes</option>
+      <option value="not-sure">Not sure?</option>
+      <option value="levels">Levels</option>
+      <option value="labels">Your labels</option>
+      <option value="leaderboard">Leaderboard</option>
+      <option value="faq">Quick answers</option>
+    </select>
+  </div>
+
+  <h2 class="text-xl font-semibold text-gray-900 mb-1 scroll-mt-16" id="scoring">Scoring</h2>
   {% if request.user.is_superuser %}
   <p class="text-sm text-gray-500 mb-3"><a href="{% url 'game_scoring' %}" class="underline hover:text-gray-900">See the full numbers, balance checks and settings</a></p>
   {% endif %}
-  <div class="space-y-6">
-    <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl">
-      <h2 class="text-lg font-semibold text-gray-900 mb-2">1. Beetles we already know</h2>
+  <div class="space-y-3">
+    <section class="bg-gray-50 border border-gray-200 rounded-2xl scroll-mt-16" id="known">
+      <details class="group">
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden">
+        <h2 class="text-lg font-semibold text-gray-900">1. Beetles we already know</h2>
+        <i class="fi fi-rr-angle-small-down text-xl text-gray-500 transition-transform group-open:rotate-180" aria-hidden="true"></i>
+      </summary>
+      <div class="px-5 pb-5">
       <p class="text-sm text-gray-600 mb-3">Some beetles in the feed have an expert-checked name. You never know which ones, so treat every beetle as if it counts.</p>
       <h3 class="text-sm font-semibold text-gray-900 mb-1">Naming</h3>
       <p class="text-sm text-gray-600 mb-2">Naming a beetle is the harder game, so it is worth {{ classify_weight }}&times; the points. Each rank you get correct earns its points:</p>
@@ -52,47 +90,89 @@
       <h3 class="text-sm font-semibold text-gray-900 mb-1 mt-4" data-testid="how-select">Find Them All</h3>
       <p class="text-sm text-gray-600">Select every beetle of the group named under the photos. Every wrong tap costs {{ wrong_cost }}&times; a correct one, and a member you leave out costs nothing, so leave out any you&rsquo;re less than {{ confidence }}% sure of. Some beetles in the grid haven&rsquo;t been checked yet: your taps on those help name them and are never held against you.</p>
       <p class="text-sm text-gray-600 mt-4" data-testid="how-grids">Both grids grow as you get better: from 4 to 9, 16 and 25 beetles (in Odd One Out, then with two, three and four odd ones), then a rank deeper, from subfamily to species. A run of good grids takes you up a step, a poor one back down. Bigger grids are worth more. A bad photo in a grid? Open it with its corner button, flag it there and carry on with the rest.</p>
+      </div>
+      </details>
     </section>
 
-    <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl" id="unchecked">
-      <h2 class="text-lg font-semibold text-gray-900 mb-2">2. Beetles nobody has checked yet</h2>
+    <section class="bg-gray-50 border border-gray-200 rounded-2xl scroll-mt-16" id="unchecked">
+      <details class="group">
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden">
+        <h2 class="text-lg font-semibold text-gray-900">2. Beetles nobody has checked yet</h2>
+        <i class="fi fi-rr-angle-small-down text-xl text-gray-500 transition-transform group-open:rotate-180" aria-hidden="true"></i>
+      </summary>
+      <div class="px-5 pb-5">
       <p class="text-sm text-gray-600 mb-2">Here there is no correct answer to compare with yet, so you earn points by <strong>agreeing with strong players</strong>:</p>
       <ul class="text-sm text-gray-600 list-disc pl-5 space-y-1">
         <li>The more players stronger than you (or <strong>Naming experts</strong>, or a confident <strong>identification model</strong>) agree with you, the more you earn &mdash; up to {{ cap }}% of what the same answer would earn on a known beetle. Agreeing with weaker players earns very little.</li>
         <li>A name stronger players disagree with takes points back, but an answer here never costs you points overall, and none of it counts towards your accuracy: only checked beetles do.</li>
       </ul>
+      </div>
+      </details>
     </section>
 
-    <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl">
-      <h2 class="text-lg font-semibold text-gray-900 mb-2">3. Scores keep up with the truth</h2>
+    <section class="bg-gray-50 border border-gray-200 rounded-2xl scroll-mt-16" id="rescoring">
+      <details class="group">
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden">
+        <h2 class="text-lg font-semibold text-gray-900">3. Scores keep up with the truth</h2>
+        <i class="fi fi-rr-angle-small-down text-xl text-gray-500 transition-transform group-open:rotate-180" aria-hidden="true"></i>
+      </summary>
+      <div class="px-5 pb-5">
       <p class="text-sm text-gray-600">When a curator later checks a beetle you answered, your answer is scored again against the real name, up or down, and it counts towards your accuracy and expertise. You'll see it on the game home under <strong>Reviewed by curators</strong>, with the photo and the real name. Points from agreement move as more people answer, whenever anyone finishes playing and every night.</p>
+      </div>
+      </details>
     </section>
 
-    <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl">
-      <h2 class="text-lg font-semibold text-gray-900 mb-2">4. Learning from mistakes</h2>
+    <section class="bg-gray-50 border border-gray-200 rounded-2xl scroll-mt-16" id="mistakes">
+      <details class="group">
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden">
+        <h2 class="text-lg font-semibold text-gray-900">4. Learning from mistakes</h2>
+        <i class="fi fi-rr-angle-small-down text-xl text-gray-500 transition-transform group-open:rotate-180" aria-hidden="true"></i>
+      </summary>
+      <div class="px-5 pb-5">
       <p class="text-sm text-gray-600">A known beetle you got wrong comes back in a later session, first in an easier game, marked &ldquo;Seen before&rdquo;. Getting it correct then earns half points. Second tries help your score but not your accuracy, which only counts the first time you see a beetle.</p>
       <p class="mt-2 text-sm text-gray-600" data-testid="how-seen-again">After each answer you see every beetle&rsquo;s names. Those beetles come back too, in a later session at least {{ reveal_hours }} hour{{ reveal_hours|pluralize }} on, usually in another game, so you learn them by playing. They earn full points but don&rsquo;t count towards your accuracy or expertise: those only count beetles you name unseen. Once you haven&rsquo;t seen a beetle for {{ recall_days }} day{{ recall_days|pluralize }}, naming it counts again.</p>
+      </div>
+      </details>
     </section>
 
-    <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl">
-      <h2 class="text-lg font-semibold text-gray-900 mb-2">5. Not sure?</h2>
+    <section class="bg-gray-50 border border-gray-200 rounded-2xl scroll-mt-16" id="not-sure">
+      <details class="group">
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden">
+        <h2 class="text-lg font-semibold text-gray-900">5. Not sure?</h2>
+        <i class="fi fi-rr-angle-small-down text-xl text-gray-500 transition-transform group-open:rotate-180" aria-hidden="true"></i>
+      </summary>
+      <div class="px-5 pb-5">
       <p class="text-sm text-gray-600">Skipping or answering &ldquo;Not sure&rdquo; costs a tiny {{ unsure }} points, much less than a wrong guess. Your score never drops below zero.</p>
+      </div>
+      </details>
     </section>
   </div>
 
   <h2 class="text-xl font-semibold text-gray-900 mt-10 mb-3">Levels, experts and your labels</h2>
-  <div class="space-y-6">
-    <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl" id="levels">
-      <h2 class="text-lg font-semibold text-gray-900 mb-2">Levels</h2>
+  <div class="space-y-3">
+    <section class="bg-gray-50 border border-gray-200 rounded-2xl scroll-mt-16" id="levels">
+      <details class="group">
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden">
+        <h2 class="text-lg font-semibold text-gray-900">Levels</h2>
+        <i class="fi fi-rr-angle-small-down text-xl text-gray-500 transition-transform group-open:rotate-180" aria-hidden="true"></i>
+      </summary>
+      <div class="px-5 pb-5">
       <p class="text-sm text-gray-600 mb-3">A level needs enough points <em>and</em> enough reliability. Reliability can go down as well as up, so a level is kept only while your answers stay good.</p>
-      <div class="overflow-x-auto"><table class="text-sm w-full"><thead class="text-xs uppercase tracking-wider text-gray-500"><tr><th class="text-left py-1 pr-3">Level</th><th class="text-right py-1 pr-3">Points</th><th class="text-right py-1 pr-3">Reliability</th></tr></thead><tbody>
+      <div class="table-scroll"><table class="text-sm w-full"><thead class="text-xs uppercase tracking-wider text-gray-500"><tr><th class="text-left py-1 pr-3">Level</th><th class="text-right py-1 pr-3">Points</th><th class="text-right py-1 pr-3">Reliability</th></tr></thead><tbody>
         {% for l in levels %}<tr class="border-t border-gray-200"><td class="py-1.5 pr-3 text-gray-900"><span class="inline-flex items-center gap-2">{% include "beetles/includes/game_level_badge.html" with level=l.level name=l.name %}{{ l.name }}</span>{% if l.perks %}<div class="text-xs text-gray-500">Unlocks: {% for p in l.perks %}{{ p.title|lower }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>{% endif %}</td><td class="py-1 pr-3 text-right tabular-nums">{{ l.points|digit_groups }}</td><td class="py-1 pr-3 text-right tabular-nums">{% if l.rating %}{% widthratio l.rating 1 100 %}%{% else %}&ndash;{% endif %}</td></tr>{% endfor %}
       </tbody></table></div>
       <p class="mt-3 text-sm text-gray-600"><strong>Focus</strong> lets you play only one subfamily, tribe or genus: beetles named in it, and beetles nobody has named yet that IBBI-AI places there. Change it any time on the <a href="{% url 'game_unlocks' %}" class="underline">unlocks page</a>.</p>
+      </div>
+      </details>
     </section>
 
-    <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl" id="labels">
-      <h2 class="text-lg font-semibold text-gray-900 mb-2">Where your labels go</h2>
+    <section class="bg-gray-50 border border-gray-200 rounded-2xl scroll-mt-16" id="labels">
+      <details class="group">
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden">
+        <h2 class="text-lg font-semibold text-gray-900">Where your labels go</h2>
+        <i class="fi fi-rr-angle-small-down text-xl text-gray-500 transition-transform group-open:rotate-180" aria-hidden="true"></i>
+      </summary>
+      <div class="px-5 pb-5">
       <ul class="text-sm text-gray-600 list-disc pl-5 space-y-1">
         <li>From level {{ proposal_level }}, your names for beetles nobody has checked yet go to the curators as <strong>suggestions</strong>. Curators decide.</li>
         <li>Only <strong>Naming experts</strong> have their labels written to the database without review. You become one by proving yourself on <strong>beetles curators have already checked</strong>, in that exact taxon, in Naming and Find Them All: {{ per_species }} images each of at least {% widthratio children_share 1 100 %}% of its members (a genus&rsquo;s species, a tribe&rsquo;s genera, a subfamily&rsquo;s tribes), with at least {% widthratio trust_accuracy 1 100 %}% correct. Small taxa need few answers, large ones many. You must also be among the most reliable players overall.</li>
@@ -102,15 +182,24 @@
         <li>Expertise is checked again all the time, so it can be lost as well as earned.</li>
         <li><strong>Found a new species?</strong> If you name a species the gallery has no validated images of yet, and a curator later confirms you were correct, you get a pop-up and a <em>New species finder</em> badge on your profile.</li>
       </ul>
+      </div>
+      </details>
     </section>
 
-    <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl">
-      <h2 class="text-lg font-semibold text-gray-900 mb-2">Leaderboard</h2>
+    <section class="bg-gray-50 border border-gray-200 rounded-2xl scroll-mt-16" id="leaderboard">
+      <details class="group">
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden">
+        <h2 class="text-lg font-semibold text-gray-900">Leaderboard</h2>
+        <i class="fi fi-rr-angle-small-down text-xl text-gray-500 transition-transform group-open:rotate-180" aria-hidden="true"></i>
+      </summary>
+      <div class="px-5 pb-5">
       <p class="text-sm text-gray-600">The <a href="{% url 'game_leaderboard' %}" class="underline">leaderboard</a> ranks players by score, accuracy or beetles seen: this week (it starts again every Monday), this month, or all time. Only the board's points start again; your level, expertise and badges never reset, and each week's top three are kept on their profiles. Tap a name to see that player. The specialists board ranks players inside one subfamily, tribe or genus.</p>
+      </div>
+      </details>
     </section>
   </div>
 
-  <h2 class="text-xl font-semibold text-gray-900 mt-10 mb-3" id="faq">Quick answers</h2>
+  <h2 class="text-xl font-semibold text-gray-900 mt-10 mb-3 scroll-mt-16" id="faq">Quick answers</h2>
   <section class="p-5 bg-gray-50 border border-gray-200 rounded-2xl" data-testid="how-faq">
     <dl class="text-sm text-gray-600 space-y-3">
       <div><dt class="font-semibold text-gray-900">Do I lose points if I flag a photo?</dt>

@@ -300,20 +300,48 @@
     .progress-bar-fill { @apply h-full rounded-full bg-gray-700; }
 }
 
-/* A wide table that truly cannot be trimmed to its priority columns or turned into cards on a phone (site-tables,
-   #618): wrap it in a .table-scroll div as the last resort. A fade over the trailing edge hints that more of the
-   table is there; scrolling it all the way to the end runs past the fade, which is the point. */
+/* Wide tables on a phone (site-tables, #618). One rule per table:
+   - 2-4 priority columns, the rest behind a tap (hidden sm:table-cell + a detail row, as on the leaderboard), or
+   - .table-cards on the <table>: below 640px each row becomes a card and each cell shows its column's name above
+     it (from data-label, which static/js/tables.js copies from the <th> when the cell has none), or
+   - only where neither works, .table-scroll on a wrapper div: the table scrolls sideways and its cut edge fades
+     while there is more to see (tables.js sets .is-cut; the mask stays on the visible edge as the table scrolls). */
+@media (max-width: 639px) {
+    .table-cards, .table-cards > tbody, .table-cards > tbody > tr:not(.hidden),
+    .table-cards > tbody > tr > td:not(.hidden) {
+        display: block;
+        width: 100%;
+        max-width: none;
+    }
+    .table-cards > thead {
+        position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+    }
+    .table-cards > tbody > tr:not(.hidden) { padding: 0.5rem 0; }
+    .table-cards > tbody > tr > td:not(.hidden) {
+        padding: 0.25rem 1rem;
+        text-align: left;
+        white-space: normal;
+    }
+    .table-cards > tbody > tr > td:empty { display: none; }
+    /* a table that rules every cell keeps one line per card, under its last cell */
+    .table-cards > tbody > tr > td:not(:last-child) { border-bottom-width: 0; }
+    .table-cards > tbody > tr > td[data-label]:not([data-label=""])::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--color-gray-500);
+    }
+}
 .table-scroll {
     position: relative;
     overflow-x: auto;
 }
-.table-scroll::after {
-    content: "";
-    position: absolute;
-    top: 0; right: 0; bottom: 0;
-    width: 1.5rem;
-    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.9));
-    pointer-events: none;
+.table-scroll.is-cut {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
 }
 
 /* A sticky table of contents alongside a very long page (site-long, #618), paired with a "Jump to" <select
