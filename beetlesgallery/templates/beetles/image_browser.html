@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block meta_description %}Browse and filter photographs of bark and ambrosia beetle specimens by taxonomy, country, sex and more.{% endblock %}
 {% load humanize %}
 {% load beetle_tags %}
 
@@ -47,7 +48,7 @@
                   class="group inline-flex items-center gap-1 rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-800 capitalize border border-gray-300 hover:bg-gray-300 hover:text-gray-900 hover:border-gray-200 transition cursor-pointer no-underline"
                   title="Click to remove filter">
                     {{ param|title }}: {{ val }}
-                    <span class="ml-1 text-text/50 group-hover:text-gray-700">×</span>
+                    <span class="ml-1 text-gray-600 group-hover:text-gray-700">×</span>
                 </a>
                 {% endfor %}
             {% endfor %}
@@ -85,7 +86,7 @@
             {% for category_name, filters_list in filter_groups %}
             <div class="contents mb-8">
                 <div class="col-span-full border-b border-text/10 pb-1 mb-2 {% if not forloop.first %}mt-8{% endif %}">
-                    <h3 class="text-sm font-bold uppercase text-text/50 tracking-wider">{{ category_name }}</h3>
+                    <h3 class="text-sm font-bold uppercase text-gray-600 tracking-wider">{{ category_name }}</h3>
                 </div>
 
                 {% for f in filters_list %}
@@ -137,7 +138,7 @@
 
                         {# Scrollable Options (populated on-demand when dropdown is opened to keep HTML under 500KB) #}
                         <div class="dropdown-options-list max-h-60 overflow-y-auto scrollbar-thin flex flex-col gap-0.5">
-                            <div class="no-results hidden px-2 py-4 text-center text-xs text-text/40 italic">No matches found.</div>
+                            <div class="no-results hidden px-2 py-4 text-center text-xs text-gray-600 italic">No matches found.</div>
                         </div>
                     </div>
 
@@ -150,7 +151,7 @@
                             <label class="text-xs font-semibold text-text/70">Image Size (MB)</label>
                             <div class="flex items-center gap-2">
                                 <input type="number" step="0.1" name="size_min" value="{{ size_min }}" placeholder="Min" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-gray-400" onchange="this.form.submit()">
-                                <span class="text-text/50">-</span>
+                                <span class="text-gray-600">-</span>
                                 <input type="number" step="0.1" name="size_max" value="{{ size_max }}" placeholder="Max" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-gray-400" onchange="this.form.submit()">
                             </div>
                         </div>
@@ -158,7 +159,7 @@
                             <label class="text-xs font-semibold text-text/70">Resolution (px/mm)</label>
                             <div class="flex items-center gap-2">
                                 <input type="number" step="0.1" name="res_min" value="{{ res_min }}" placeholder="Min" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-gray-400" onchange="this.form.submit()">
-                                <span class="text-text/50">-</span>
+                                <span class="text-gray-600">-</span>
                                 <input type="number" step="0.1" name="res_max" value="{{ res_max }}" placeholder="Max" class="w-full rounded-lg border border-text/20 bg-background text-sm p-2 focus:ring-gray-400" onchange="this.form.submit()">
                             </div>
                         </div>
@@ -170,7 +171,7 @@
             {# Display Settings #}
             <div class="contents">
                  <div class="col-span-full border-t border-text/10 pt-4 mt-4">
-                    <h3 class="text-m font-bold uppercase text-text/50 tracking-wider mb-2">Display</h3>
+                    <h3 class="text-m font-bold uppercase text-gray-600 tracking-wider mb-2">Display</h3>
                 </div>
                 <div class="col-span-1 space-y-1">
                       <label class="text-xs font-semibold text-text/70">Items Per Page</label>

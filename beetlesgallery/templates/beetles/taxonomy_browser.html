@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block meta_description %}Explore the bark and ambrosia beetle taxonomy, from subfamily down to species, with example specimen images.{% endblock %}
 {% load static %}
 
 {% block extra_css %}
@@ -705,7 +706,7 @@
           var src = img.thumb_url || "";
           return '<a href="' + escapeHtml(img.detail_url) + '" class="species-thumb-link" target="_blank" rel="noopener">' +
             (src
-              ? '<img src="' + escapeHtml(src) + '" alt="Beetle ' + escapeHtml(img.beetle_id) + '" class="species-thumb-img" />'
+              ? '<img src="' + escapeHtml(src) + '" alt="Beetle ' + escapeHtml(img.beetle_id) + '" class="species-thumb-img" loading="lazy" decoding="async" />'
               : '<div class="species-thumb-placeholder">No image</div>'
             ) +
           '</a>';

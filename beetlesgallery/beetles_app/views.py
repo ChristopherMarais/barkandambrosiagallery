@@ -763,27 +763,28 @@ def beetle_detail(request, beetle_id):
             beetle.image_asset.specimens.filter(is_deleted=False).order_by("id")
         )
 
-    # Calculate pagination context
+    # Only the ROIs with a box are counted ("ROI n of m") and walked by the arrows. A beetle without a box is shown on
+    # its own, with no count and no arrows.
+    boxed = [s for s in siblings if s.bbox_x is not None]
     prev_sibling = None
     next_sibling = None
     current_index = 0
-    total_siblings = len(siblings)
+    total_siblings = len(boxed)
 
-    if total_siblings > 1:
-        for i, s in enumerate(siblings):
-            if s.id == beetle.id:
-                current_index = i + 1
-                if i > 0:
-                    prev_sibling = siblings[i - 1]
-                if i < total_siblings - 1:
-                    next_sibling = siblings[i + 1]
-                break
+    for i, s in enumerate(boxed):
+        if s.id == beetle.id:
+            current_index = i + 1
+            if i > 0:
+                prev_sibling = boxed[i - 1]
+            if i < total_siblings - 1:
+                next_sibling = boxed[i + 1]
+            break
 
     # Every boxed ROI of the photo, drawn on it as a link to its own page (#536). Numbered as in "ROI n of m"; the
     # biggest come first, so a box inside another is drawn over it and gets its own clicks.
     photo_boxes = sorted(
         ({"roi": s, "number": i, "current": s.id == beetle.id}
-         for i, s in enumerate(siblings, start=1) if s.bbox_x is not None),
+         for i, s in enumerate(boxed, start=1)),
         key=lambda b: -(b["roi"].bbox_width or 0) * (b["roi"].bbox_height or 0),
     )
 

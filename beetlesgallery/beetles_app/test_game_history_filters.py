@@ -79,7 +79,7 @@ class GameFilterTests(HistoryFilterCase):
     def test_all_games_is_unchanged(self):
         mixed = self.session(["classify", "pair"])
         res = self.history()
-        self.assertEqual(list(res.context["sessions"])[0].games_label, "2 games")
+        self.assertEqual(list(res.context["sessions"])[0].games_label, "2 game types")
         self.assertIsNone(res.context["summary"])
         self.assertNotIn('data-testid="history-summary"', res.content.decode())
         self.assertIn(f'href="{reverse("game_round_review", args=[mixed.id])}"', res.content.decode())

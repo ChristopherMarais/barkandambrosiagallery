@@ -112,7 +112,7 @@
   #skip { flex: 0 0 24%; font-weight: 500; color: #4b5563; border: 1px solid #d1d5db; background: #fff; }
   #actions .gap { flex: 1 1 auto; min-width: 0.5rem; }
   #back { flex: 0 0 22%; font-weight: 500; color: #374151; border: 1px solid #d1d5db; background: #fff; }
-  #back:disabled { color: #d1d5db; border-color: #e5e7eb; }
+  #back[aria-disabled="true"] { color: #d1d5db; border-color: #e5e7eb; }
   #submit { flex: 0 0 42%; font-weight: 600; color: #fff; background: #6b7280; }
   /* Exit: big and plain, top left */
   #exit { height: 2.5rem; padding: 0 1rem 0 0.75rem; gap: 0.375rem; border: 1px solid #d1d5db; border-radius: 9999px; font-size: 0.9375rem; font-weight: 600; color: #111827; background: #fff; }
@@ -213,7 +213,38 @@
   /* Your last beetle (Back) */
   #previous.hidden { display: none; }
   #submit:disabled { background: #d1d5db; }
+  /* Next while the next beetle (or the review) is on its way: still there, still tappable, a grey sheen and a spinner */
+  #submit.next-busy { background: linear-gradient(90deg, #6b7280 0%, #9ca3af 50%, #6b7280 100%); background-size: 200% 100%; }
+  #submit #submit-spin { margin-left: 0.4rem; font-size: 0.875rem; }
+  #submit #submit-spin.hidden { display: none; }
+  /* Always moving (round 5): the loading screen's thin bar, the tiles' pulse while photos come in, the checking dot */
+  #loading-fact { min-height: 2.5rem; max-width: 20rem; padding: 0 1rem; text-align: center; font-size: 0.8125rem; color: #6b7280; }
+  #loading-bar { position: relative; width: 10rem; height: 3px; margin-top: 1rem; overflow: hidden; border-radius: 9999px; background: #e5e7eb; }
+  #loading-bar.hidden { display: none; }
+  #loading-bar span { position: absolute; top: 0; bottom: 0; left: -35%; width: 35%; background: #4b5563; animation: wait-slide 1.1s ease-in-out infinite; }
+  #stage #photo-area { transition: opacity .15s ease; }
+  #stage.switching #photo-area { opacity: 0.3; }   /* the old game fades out at once, the new one lays its tiles */
+  @media (prefers-reduced-motion: reduce) {
+    #stage #photo-area { transition: none; }
+    #loading-bar span { animation: none; left: 0; width: 100%; opacity: 0.5; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    #submit.next-busy { animation: next-sheen 1.2s linear infinite; }
+    #submit #submit-spin { animation: btn-spin 1s linear infinite; }
+    #loading-fact.new { animation: fact-in 0.4s ease-out; }
+    #photos.laying .cell.slot:not(.landed)::before { content: ""; position: absolute; inset: 0; border-radius: inherit;
+        background: #9ca3af; animation: tile-wait 1.1s ease-in-out infinite; }
+    .rv-verdict.pending { animation: rv-pulse 0.9s ease-in-out infinite; }
+    @keyframes next-sheen { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+    @keyframes btn-spin { to { transform: rotate(360deg); } }
+    @keyframes fact-in { from { opacity: 0; } }
+    @keyframes tile-wait { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.6; } }
+    @keyframes rv-pulse { 50% { opacity: 0.3; } }
+  }
   #actions button:active:not(:disabled) { transform: scale(0.98); }
+  /* Pressed (round 5): the browser's own :active, so every control dims in the same frame as the touch, before any
+     reply from the server. Busy controls (aria-disabled, not disabled) press too: a tap is never silent. */
+  :is(#game, #lightbox, #recap) :is(button:not(:disabled), .rank-row):active, :is(#game, #lightbox, #recap) :is(button, .rank-row).pressed { filter: brightness(0.9); }
   .icon-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 2.75rem; height: 2.75rem; border-radius: 0.75rem; color: #374151; }
   .icon-btn:active { background: #f3f4f6; }
   /* Flag a bad photo: always on the photo itself, bottom left, so nobody has to hunt for it */
@@ -253,14 +284,14 @@
   .rv-verdict.wrong { background: #ef4444; }
   .rv-verdict.partly { background: #f97316; }
   .rv-verdict.right { background: #22c55e; }
+  .rv-verdict.pending { background: #6b7280; }   /* checking: the dot pulses until the review is in (round 5) */
   .rv-yes { color: #16a34a; }
   .rv-no { color: #dc2626; }
-  .rv-pill { margin-left: auto; padding: 0.0625rem 0.5rem; border-radius: 9999px; background: #f3f4f6; color: #374151; font-size: 0.6875rem; font-weight: 600; white-space: nowrap; }
   /* the one short line under the headline (#569) */
   .rv-line { margin-top: 0.25rem; font-size: 0.8125rem; color: #374151; }
   .rv-line .fi { vertical-align: -0.125em; }
   /* Where a name comes from (#569): green validated, blue IBBI-AI, purple the players, glowing purple when a proven
-     expert backs them. One dot per photo, no rim (#600). */
+     expert backs them. One dot per taxon level, no rim (#600, #615). */
   .rv-dot { display: inline-block; flex: none; width: 0.5rem; height: 0.5rem; margin-right: 0.25rem; border-radius: 9999px; vertical-align: 0.05em; }
   .rv-dot.truth { background: #16a34a; }
   .rv-dot.ai { background: #2563eb; }
@@ -289,17 +320,22 @@
      annotation page's Save button (.btn-primary). Out of the way while the pointer is on the photo or a finger holds
      it; a tap opens the whole photo. */
   .rv-names { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; justify-content: center; gap: 0.25rem;
-              padding: 2.25rem 1rem 1.25rem; pointer-events: none; background: rgba(107,114,128,.8); color: #fff;
+              padding: 2.25rem 1rem 2.25rem; pointer-events: none; background: rgba(107,114,128,.8); color: #fff;
               font-size: 1.125rem; line-height: 1.25; text-shadow: 0 1px 1px rgba(17,24,39,.25); transition: opacity .15s; }
   .rv-names > span { display: flex; align-items: center; gap: 0.5rem; min-width: 0; width: 100%; max-width: 24rem; align-self: center; }
-  .rv-names .who { white-space: pre; }
   .rv-names .nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-  .rv-names .src { flex: none; display: inline-flex; align-items: center; color: #f3f4f6; font-size: 0.8em; }
-  .rv-names .src .fi { font-size: 0.85em; margin-right: 0.125rem; }
   .rv-names .none { color: #e5e7eb; font-weight: 400; }
-  /* the photo's one dot sits in a slot of its own before the first name, so the names stay in line (#600) */
-  :is(.rv-names, .lb-names) .lead { flex: none; display: inline-flex; width: 0.5rem; margin-right: -0.25rem; }
+  /* each taxon level's dots sit in a slot of their own before its name, so the names stay in line (#615) */
+  :is(.rv-names, .lb-names) .lead { flex: none; display: inline-flex; align-items: center; gap: 0.125rem; width: 1.125rem; }
   :is(.rv-names, .lb-names) .lead .rv-dot { margin-right: 0; }
+  /* the ID type after the name ("Validated ID", "AI ID", "Player ID"), then the two confidence columns (#615) */
+  :is(.rv-names, .lb-names) .idl { flex: none; font-size: 0.75em; font-weight: 500; white-space: nowrap; opacity: 0.9; }
+  :is(.rv-names, .lb-names) .c { flex: none; min-width: 3.25rem; text-align: right; font-size: 0.8em; white-space: nowrap; }
+  :is(.rv-names, .lb-names) .c.players { min-width: 6.5rem; }
+  :is(.rv-names, .lb-names) .c .rv-dot { margin-right: 0.125rem; }
+  :is(.rv-names, .lb-names) .c .alt { opacity: 0.85; }
+  :is(.rv-names, .lb-names) .hdr { font-size: 0.6875em; font-weight: 600; opacity: 0.95; }
+  :is(.rv-names, .lb-names) .hdr .spacer { flex: 1 1 auto; }
   /* Similarity: the rank the two share (the answer, or probably), underlined on both photos (#600) */
   :is(.rv-names, .lb-names) .nm.shared { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
   /* the whole photo opens from its own button on a reviewed photo, bottom left; a tap on the photo turns its names off (#600) */
@@ -311,11 +347,7 @@
   .lb-names > span { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
   .lb-names .rk { flex: 0 0 5rem; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #9ca3af; }
   .lb-names .nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-  .lb-names .src { flex: none; display: inline-flex; align-items: center; color: #d1d5db; font-size: 0.8em; }
-  .lb-names .src .fi { font-size: 0.85em; margin-right: 0.125rem; }
   .lb-names .none { color: #9ca3af; font-weight: 400; }
-  :is(.rv-names, .lb-names) .also { margin-left: 0.3em; }
-  .lb-names .who { white-space: pre; }
   #lightbox.with-names #lightbox-img { max-height: calc(85vh - 7rem); }
   /* grids: smaller tiles, smaller text and corners; the text keeps clear of the rounded corners and the marks above */
   #game:is([data-mode="odd"], [data-mode="select"]) #photos .rv-names, #previous-photos:is([data-size="4"], [data-size="9"], [data-size="16"]) .rv-names {
@@ -326,13 +358,13 @@
   :is(#photos, #previous-photos)[data-size="16"] .cell > .rv-names { font-size: 0.625rem; line-height: 1.15; gap: 0; padding: 1.5rem 0.3rem 0.3rem; }
   :is(#photos, #previous-photos)[data-size="16"] .rv-names > span { gap: 0.2rem; }
   :is(#photos, #previous-photos)[data-size="16"] .rv-names .rv-dot { width: 0.375rem; height: 0.375rem; margin-right: 0.125rem; }
+  :is(#photos, #previous-photos)[data-size="16"] .rv-names .lead { width: 0.875rem; }
+  /* small tiles have no room for the columns (their numbers are on the card); the names keep their ID type */
+  :is(#photos, #previous-photos):is([data-size="9"], [data-size="16"]) .rv-names :is(.c, .hdr) { display: none; }
   @media (max-width: 639px) {
-    .rv-names { font-size: 0.9375rem; padding: 2.25rem 0.75rem 0.75rem; }
-    /* the small grid tiles of a phone keep the names: the dot alone says who (its words on the dot) */
-    :is(#photos, #previous-photos):is([data-size="4"], [data-size="9"], [data-size="16"]) .rv-names :is(.tier, .fi) { display: none; }
-    :is(#photos, #previous-photos):is([data-size="9"], [data-size="16"]) .rv-names .who { display: none; }
-    /* small tiles: one confidence only, the photo's own source's */
-    :is(#photos, #previous-photos):is([data-size="9"], [data-size="16"]) .rv-names .also { display: none; }
+    .rv-names { font-size: 0.9375rem; padding: 2.25rem 0.75rem 2.25rem; }
+    /* the smallest tiles of a phone keep only the names and dots */
+    :is(#photos, #previous-photos)[data-size="4"] .rv-names :is(.c, .hdr) { display: none; }
   }
   .cell.names-off .rv-names { opacity: 0; }
   @media (hover: hover) { .cell:hover .rv-names { opacity: 0; } }
@@ -351,10 +383,10 @@
      it), the other way round; the card above lists every tile's name at the grid's rank. Only the names and dots. */
   :is(#photos, #previous-photos)[data-size="25"] .cell > .rv-names { font-size: 0.5625rem; line-height: 1.15; gap: 0; padding: 1.25rem 0.1875rem 0.125rem; opacity: 0; }
   :is(#photos, #previous-photos)[data-size="25"] .rv-names > span { gap: 0.2rem; }
-  :is(#photos, #previous-photos)[data-size="25"] .rv-names :is(.who, .tier, .fi) { display: none; }
+  :is(#photos, #previous-photos)[data-size="25"] .rv-names :is(.idl, .c, .hdr) { display: none; }
   :is(#photos, #previous-photos)[data-size="25"] .rv-names .rv-dot { width: 0.3125rem; height: 0.3125rem; margin-right: 0.125rem; }
+  :is(#photos, #previous-photos)[data-size="25"] .rv-names .lead { width: 0.75rem; }
   :is(#photos, #previous-photos)[data-size="25"] .cell.names-off .rv-names { opacity: 1; }
-  :is(#photos, #previous-photos)[data-size="25"] .rv-names .also { display: none; }
   @media (hover: hover) { :is(#photos, #previous-photos)[data-size="25"] .cell:hover .rv-names { opacity: 1; } }
   /* a grid tile seen before (#600): bottom right, the eye alone on the small tiles of 16 and 25 */
   .rv-seen { position: absolute; right: 0.375rem; bottom: 0.375rem; z-index: 5; display: inline-flex; align-items: center; gap: 0.25rem; height: 1.375rem;
@@ -363,6 +395,14 @@
   :is(#photos, #previous-photos):is([data-size="9"], [data-size="16"], [data-size="25"]) .rv-seen .word { display: none; }
   :is(#photos, #previous-photos)[data-size="16"] .rv-seen { right: 0.25rem; bottom: 0.25rem; height: 1.125rem; padding: 0 0.25rem; font-size: 0.625rem; }
   :is(#photos, #previous-photos)[data-size="25"] .rv-seen { right: 0.125rem; bottom: 0.125rem; height: 1rem; padding: 0 0.2rem; font-size: 0.5625rem; }
+  /* The corner marks on a photo (#615): the number top left, the points beside it, the whole-photo button bottom left,
+     "Seen before" bottom right. The names keep clear of the bottom corners, and the button never sits on the number. */
+  :is(#photos, #previous-photos) .cell.has-names > .rv-names { padding-bottom: 2.25rem; }
+  :is(#photos, #previous-photos)[data-size="16"] .cell.has-names > .rv-names { padding-bottom: 1.75rem; }
+  :is(#photos, #previous-photos)[data-size="25"] .cell.has-names > .rv-names { padding-bottom: 1.5rem; }
+  :is(#photos, #previous-photos) .cell > .rv-whole { top: auto; right: auto; bottom: 0.375rem; left: 0.375rem; }
+  :is(#photos, #previous-photos)[data-size="16"] .cell > .rv-whole { bottom: 0.25rem; left: 0.25rem; }
+  :is(#photos, #previous-photos)[data-size="25"] .cell > .rv-whole { bottom: 0.125rem; left: 0.125rem; }
   @media (hover: hover) { .cell > .rv-seen { transition: opacity .15s; } .cell:hover > .rv-seen { opacity: 0; } }
   .rv-badge.up { background: #16a34a; color: #fff; }
   .rv-badge.down { background: #dc2626; color: #fff; }
@@ -483,6 +523,8 @@
   <div id="loading" class="flex-1 flex flex-col items-center justify-center text-gray-400">
     <i class="fi fi-rr-spinner animate-spin inline-block text-3xl"></i>
     <p id="loading-line" class="mt-2 text-sm" data-testid="loading-line">Finding beetles&hellip;</p>
+    <p id="loading-fact" data-testid="loading-fact" aria-live="off"></p>
+    <div id="loading-bar" class="hidden" aria-hidden="true" data-testid="loading-bar"><span></span></div>
   </div>
 
   <!-- The feed -->
@@ -533,8 +575,8 @@
       <div id="actions">
         <button type="button" id="skip"><span id="skip-text">Skip</span><kbd class="kbd">Del</kbd></button>
         <span class="gap"></span>
-        <button type="button" id="back" disabled title="Your last beetle">Back<kbd class="kbd">&#9003;</kbd></button>
-        <button type="button" id="submit" disabled><span id="submit-text">Submit</span><kbd class="kbd">Enter</kbd></button>
+        <button type="button" id="back" aria-disabled="true" title="Your last beetle">Back<kbd class="kbd">&#9003;</kbd></button>
+        <button type="button" id="submit" disabled><span id="submit-text">Submit</span><i id="submit-spin" class="fi fi-rr-spinner hidden" aria-hidden="true"></i><kbd class="kbd">Enter</kbd></button>
       </div>
     </div>
   </div>
@@ -716,6 +758,7 @@
       body: JSON.stringify(body),
     };
     const res = await fetch(url, opts);
+    moved();   // a reply is something new: the watchdog's bar waits for the next stretch of nothing
     let data = {};
     try { data = await res.json(); } catch (e) { /* not JSON */ }
     if (!res.ok) {
@@ -736,6 +779,7 @@
     ["loading", "stage", "caughtup"].forEach((id) => {
       $(id).classList.toggle("hidden", id !== which);
     });
+    if (typeof syncBars === "function") syncBars();   // the loading bar goes with the loading screen, at once (round 5)
   }
 
   // Draw the beetle with some of the photo around it and its box outlined, so the player sees how the crop sits
@@ -1187,14 +1231,24 @@
     return api(url).then((d) => { data.item = d.item; return d.item; }, () => null);
   }
 
+  // Pressed (round 5): the control under a finger gets a class at pointerdown, in the same frame as the touch, and
+  // loses it when the finger lifts or the touch turns into a scroll. :active covers the same, where the browser has it.
+  document.addEventListener("pointerdown", (e) => {
+    const el = e.target.closest && e.target.closest("button, .rank-row");
+    if (el && el.closest("#game, #lightbox, #recap")) el.classList.add("pressed");
+  }, true);
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach((t) => document.addEventListener(t, () => {
+    document.querySelectorAll(".pressed").forEach((el) => el.classList.remove("pressed"));
+  }, true));
+
   // ---------- confetti (only ever for a correct answer, or a level) ----------
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   // The kind says who agreed and so the colours (game_answer_review._celebrate, static/js/beetle_confetti.js): green
   // for correct on a checked beetle, blue where IBBI-AI agreed, purple where the players did, grey for a little.
   // The size (0.2 to 1) comes from the answer's points (game_answer_review.confetti_size).
-  function confetti(kind, size) {
+  function confetti(kind, size, colour) {
     if (reduceMotion || !window.beetleConfetti) return;
-    window.beetleConfetti($("confetti"), kind || "validated", size);
+    window.beetleConfetti($("confetti"), kind || "validated", size, null, colour);
   }
 
   // ---------- the chip and the toasts: counts and celebrations, never the score ----------
@@ -1403,11 +1457,13 @@
     $("focus-btn").classList.toggle("border-gray-600", !!p.focus);
   }
   async function savePrefs(body) {
+    switching(true);   // the old game fades out at once, before the server has answered
     try {
       const data = await api(root.dataset.prefsUrl, body);
       renderPrefs(data.prefs);
       await startFeed(true);   // the new choice applies from the next beetle
     } catch (e) {
+      switching(false);
       toast({ kind: "lock", title: "Locked", text: e.message });
     }
   }
@@ -1510,20 +1566,29 @@
     return n > 1 ? "Which " + n + " are a different " + rank + "?" : "Which one is a different " + rank + "?";
   }
 
-  // While the feed loads: two short lines in turn, each three times (about 15 s), then two lines that say it's slow, in
-  // turn, until the loading screen is gone. With reduced motion nothing swaps: the first line, then after the same wait
-  // the first slow line.
-  const LOADING_LINES = ["Finding beetles…", "Building your gallery…"];
-  const LOADING_SLOW = ["This is taking a while: probably making frass…",
-                        "This is taking a while: waiting for the fungus garden to grow…"];
-  const LOADING_LINE_MS = 2500, LOADING_TURNS = LOADING_LINES.length * 3;
+  // While the feed loads: short, light lines in turn (never about speed), and a beetle fact from a fixed list that
+  // changes every few seconds. Nothing here calls the server. With reduced motion nothing swaps: the first line and fact.
+  const LOADING_LINES = ["Finding beetles…", "Building your gallery…", "Turning over the bark…", "Counting the antennae…"];
+  // The owner's facts, in this order, the Colorado one first so it stands out. Fact 5 is from a preprint (not yet
+  // peer-reviewed): its label is here, not on the page.
+  const LOADING_FACTS = [
+    "In a Colorado study, forests killed by spruce beetles had 62% more flowers and more bee species than forests that were not.",
+    "Ambrosia beetles grow their own fungus inside the wood, and they eat it.",
+    "Some ambrosia beetles steal fungus gardens from other beetles.",
+    "Fungus farming has evolved independently at least 16 times in ambrosia beetles.",
+    "Ambrosia and bark beetles help break down dead wood in tropical forests.",
+    "One lineage of ambrosia beetles has invaded California, South Africa and Western Australia.",
+    "A spruce bark beetle was found attacking Sitka spruce in Great Britain for the first time.",
+  ];
+  const LOADING_LINE_MS = 2500;
   let loadingTimer = null;
   function loadingLines() {
     clearInterval(loadingTimer);
-    const line = $("loading-line");
+    const line = $("loading-line"), fact = $("loading-fact");
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let turn = 0;
     line.textContent = LOADING_LINES[0];
+    fact.textContent = LOADING_FACTS[0];
     loadingTimer = setInterval(() => {
       if ($("loading").classList.contains("hidden")) {
         clearInterval(loadingTimer);
@@ -1531,12 +1596,14 @@
         return;
       }
       turn += 1;
-      const slow = turn >= LOADING_TURNS;
-      if (still) {   // one change only, once the wait is long
-        if (turn === LOADING_TURNS) line.textContent = LOADING_SLOW[0];
-        return;
+      if (still) return;   // reduced motion: the first line and fact stay put
+      line.textContent = LOADING_LINES[turn % LOADING_LINES.length];
+      if (turn % 2 === 0) {   // a new fact every two turns (about 5 s), fading in
+        fact.textContent = LOADING_FACTS[(turn / 2) % LOADING_FACTS.length];
+        fact.classList.remove("new");
+        void fact.offsetWidth;
+        fact.classList.add("new");
       }
-      line.textContent = slow ? LOADING_SLOW[(turn - LOADING_TURNS) % LOADING_SLOW.length] : LOADING_LINES[turn % LOADING_LINES.length];
     }, LOADING_LINE_MS);
   }
 
@@ -1549,11 +1616,13 @@
     // Switching game or focus: the beetle on screen stays, locked, with the slim bar, until the new one is in (#542)
     const keep = !!fresh && !$("stage").classList.contains("hidden");
     const before = phase;
+    if (keep) switching(true);   // the old game fades at once (round 5)
     if (keep) setPhase("next");
     else {
       show("loading");
       loadingLines();
     }
+    moved();
     showError("");
     try {
       const data = await api(root.dataset.startUrl, { mode: PAGE_MODE, fresh: !!fresh });
@@ -1567,6 +1636,7 @@
       feedNotes(data);   // the feed had to change game: say why
       warmOthers();
     } catch (e) {
+      if (keep) switching(false);
       if (keep) setPhase(before);
       else $("loading").classList.add("hidden");
       if (e.data && e.data.prefs) renderPrefs(e.data.prefs);   // nothing in this game: the player can pick another (#604)
@@ -1608,6 +1678,7 @@
         if (!got || !canvas.isConnected) return;
         drawCrop(canvas, got.img, im.box, got.cut);
         cell.classList.add("landed");
+        moved();
         if (got.cut && im.large) {
           loadImage(im.large).then((big) => { if (canvas.isConnected) drawCrop(canvas, big, im.box, true); }).catch(() => {});
         }
@@ -1706,10 +1777,12 @@
     resetLight();
     toggleLight(false);
     show("stage");
+    switching(false);
     measureSince("game:next", "game:tiles");   // the tiles are down (the photos may still be on their way)
     const got = await Promise.all(loads);     // every photo in its tile (each drew as it came)
     if (item !== next) return false;          // a newer beetle took its place meanwhile
     holder.classList.remove("laying");
+    moved();
     showError(got.every(Boolean) ? "" : "An image failed to load. You can skip this one.");
     document.dispatchEvent(new CustomEvent("game:item-shown"));   // the new-player tour waits for the first beetle
     if (MODE === "odd" && window.gameTour && window.gameTour.unlocked) {
@@ -1731,12 +1804,28 @@
   }
 
   // ---------- answering: Submit locks the answer in, the review shows what it earned, Next brings the next beetle ----------
-  let waitTimer = null;
-  function waiting(on) {   // the slim bar, for dead time; not for a blink (a fast answer shows nothing)
-    clearTimeout(waitTimer);
-    if (on) waitTimer = setTimeout(() => $("wait-bar").classList.remove("hidden"), 150);
-    else $("wait-bar").classList.add("hidden");
+  // ---------- always moving (round 5): a thin bar moves once nothing new has happened for a moment ----------
+  // Anything new counts: a reply, a photo in its tile, a step of the flow (moved). The loading screen and the wait after
+  // Submit or Next show the bar after STUCK_MS with none; a fast reply shows nothing. Until then the spinner, the
+  // loading lines, the tiles' pulse and the checking dot are what moves.
+  const STUCK_MS = 1500;
+  let movedAt = performance.now(), waitingOn = false;
+  function moved() { movedAt = performance.now(); }
+  function syncBars() {
+    const loading = !$("loading").classList.contains("hidden");
+    const stuck = (loading || waitingOn) && performance.now() - movedAt >= STUCK_MS;
+    $("loading-bar").classList.toggle("hidden", !(loading && stuck));
+    $("wait-bar").classList.toggle("hidden", !(!loading && waitingOn && stuck));
   }
+  setInterval(syncBars, 150);
+  function waiting(on) {   // the wait after Submit or Next (or a switch) is on: the bar comes if nothing moves
+    waitingOn = on;
+    moved();
+    syncBars();
+  }
+  // The old game fades out at once when a switch starts (#stage.switching), and comes back when the new one shows
+  function switching(on) { $("stage").classList.toggle("switching", on); }
+  function setOff(btn, off) { btn.setAttribute("aria-disabled", off ? "true" : "false"); }   // busy, but still tappable
   function setPhase(p) {
     phase = p;
     busy = p !== "answer";
@@ -1744,7 +1833,7 @@
     root.dataset.phase = p;
     if (busy && document.activeElement && $("panel").contains(document.activeElement)) document.activeElement.blur();
     waiting(p === "send" || p === "next");
-    $("skip").disabled = busy;
+    setOff($("skip"), busy);
     updateBack();
     updateSubmit();
   }
@@ -1755,6 +1844,7 @@
     const skipping = !!extra.skipped || extra.pair_answer === "unsure";
     const where = { round: roundId, index: item.index };   // the answer's place, for a Flag from its review
     setPhase("send");
+    if (!skipping) showPending();   // the review's card at once, with the answer; the real review replaces it (round 5)
     showError("");
     performance.mark("game:submit");   // until the review's first tile and the whole review (sweepTick)
     // a grid's tiles get their numbers one by one while the answer is on its way (#602)
@@ -1768,6 +1858,7 @@
       );
     } catch (e) {
       sweepStop(true);
+      endReview();          // the checking card goes with the answer's lock
       setPhase("answer");   // unlocked again: change the answer, or try again
       if (e.status === 409) { await startFeed(); return; }   // out of step (another tab, a double tap): pick up where the server is
       showError(e.message);
@@ -1783,6 +1874,7 @@
     if (!data.item && !data.done && data.next !== undefined) data.itemLoad = fetchItem(data);
     if (data.review) rememberPrevious(Object.assign(data.review, { where }));
     // A skip goes straight on; anything else stops on its review. Its confetti first, so a level-up's burst (a toast) wins.
+    if (!skipping && !data.review) endReview();
     if (!skipping && data.review) showReview(data.review);
     (data.events || []).forEach(toast);
     if (skipping || !data.review) await next();
@@ -1837,7 +1929,7 @@
       markTiles(cells, review);
       nameTiles(cells, review);
     }
-    if (review.celebrate) confetti(review.celebrate.kind, review.celebrate.size);
+    if (review.celebrate) confetti(review.celebrate.kind, review.celebrate.size, review.celebrate.colour);
     // the next photos start loading now (usually they are in already; at the end of a batch, or a grid built again at
     // a new step, they are not): the crops the next beetle shows, small ones first (#494)
     const loadNext = (it) => {
@@ -1854,6 +1946,24 @@
     $("review").classList.add("hidden");
     $("review").replaceChildren();
     $("panel").classList.remove("reviewing");
+  }
+  // Straight after Submit (round 5): the review's card with the answer as the player gave it, and a pulsing dot while
+  // the server checks. Nothing waits on the server; showReview replaces it with the real review when it is in.
+  function yourAnswer() {
+    if (MODE === "classify") return pick.species ? pick.genus + " " + pick.species : pick.genus || pick.tribe || pick.subfamily;
+    if (MODE === "pair") { const on = rungs.find((r) => r.classList.contains("selected")); return on ? on.firstChild.textContent : ""; }
+    if (MODE === "odd") return oddPicks.size + " picked";
+    return tapped.size + " tapped";
+  }
+  function showPending() {
+    const dot = node("span", "rv-verdict pending");
+    dot.setAttribute("aria-hidden", "true");
+    const line = yourAnswer();
+    $("review").replaceChildren(node("p", "rv-head", dot, node("span", "", "Checking your answer…")),
+                                ...(line ? [node("p", "rv-line", "Your answer: " + line)] : []));
+    $("review").classList.remove("hidden");
+    $("panel").classList.add("reviewing");
+    $("panel").scrollTop = 0;
   }
 
   // ---------- the review card (game_answer_review.py builds it): after an answer, and again under Back ----------
@@ -1878,8 +1988,7 @@
     const verdict = r.skipped || r.held ? null : r.verdict;
     const dot = node("span", "rv-verdict " + (verdict || "none"));
     dot.setAttribute("aria-hidden", "true");
-    const head = node("p", "rv-head", dot, node("span", "", r.headline),
-                      r.again ? node("span", "rv-pill", "Seen before") : null);
+    const head = node("p", "rv-head", dot, node("span", "", r.headline));
     // Under the headline at most one short line of what matters (#569): the names are on the photos, the points on
     // the tiles, and the rings and dots need no legend
     const line = r.classify ? classifyLine(r.classify) : r.pair ? pairLine(r.pair) : r.grid ? parts(r.grid.note || []) : [];
@@ -1888,8 +1997,7 @@
 
   // Where a name comes from, as a coloured dot (#569): green validated, blue IBBI-AI, purple the players, glowing
   // purple when a proven expert backs the players. Its words are on the dot for screen readers and on hover.
-  const SOURCE_DOT = { truth: "Validated name", ai: "IBBI-AI", players: "Players' consensus",
-                       expert: "Players' consensus, backed by an expert" };
+  const SOURCE_DOT = { truth: "Validated ID", ai: "AI ID", players: "Player ID", expert: "Player ID, backed by an expert" };
   function sourceDot(kind) {
     const dot = node("span", "rv-dot " + kind);
     dot.setAttribute("role", "img");
@@ -1967,6 +2075,14 @@
     if (!p && !a) return null;
     return p && (!a || p.sure >= a.sure) ? "players" : "ai";
   }
+  // The "Seen before" mark on a photo (#600, #615): the eye, bottom right, the same on a grid tile and a single photo
+  function seenMark(testid) {
+    const seen = node("span", "rv-seen", node("i", "fi fi-rr-eye"), node("span", "word", "Seen before"));
+    seen.title = "Seen before";
+    seen.setAttribute("aria-label", "Seen before");
+    seen.dataset.testid = testid;
+    return seen;
+  }
   // One grid tile's marks: its ring (blue or purple where it is called but not checked yet), number and points
   function markTile(cellEl, i, review) {
     const g = review.grid, t = g.tiles[i];
@@ -1985,13 +2101,7 @@
     const badge = t.points ? [pts(t.points), t.points > 0 ? "up" : "down"] : t.state === "missed" ? ["missed", "flat"]
                 : t.state === "vote" || t.state === "pick" ? ["vote", "flat"] : null;
     if (badge) cellEl.appendChild(node("span", "rv-badge " + badge[1], badge[0]));
-    if ((g.seen || []).includes(i)) {   // this very tile was seen before (#600): the headline pill is for one photo
-      const seen = node("span", "rv-seen", node("i", "fi fi-rr-eye"), node("span", "word", "Seen before"));
-      seen.title = "Seen before";
-      seen.setAttribute("aria-label", "Seen before");
-      seen.dataset.testid = "tile-seen";
-      cellEl.appendChild(seen);
-    }
+    if ((g.seen || []).includes(i)) cellEl.appendChild(seenMark("tile-seen"));   // this very tile was seen before (#600)
   }
 
   // ---------- the review, tile by tile (#602) ----------
@@ -2056,18 +2166,21 @@
     if (performance.getEntriesByName(mark).length) performance.measure(name, mark);
   }
 
-  // Every beetle's names on its photo, in every game (#541): four short lines, subfamily to species (the genus cut to
-  // its letter in the species), true names with how reliable they are, or the likeliest with who says so and how sure.
-  // One dot per photo says where its names come from (#600): the source of its deepest name. Where IBBI-AI and the
-  // players say the same name, both confidences show ("AI 82% · 67%").
-  const NAME_SOURCE = { ai: (r) => [[node("span", "who", "AI "), r.sure + "%"], "IBBI-AI: " + r.sure + "%"],
-                        players: (r) => [[node("i", "fi fi-rr-users"), node("span", "who", r.votes + " · "), r.sure + "%"],
-                                         r.votes + (r.votes === 1 ? " player: " : " players: ") + r.sure + "%" +
-                                         (r.expert ? ", backed by an expert" : "")] };
-  // the photo's one dot: validated, IBBI-AI, or the players (glowing with an expert: playersDot(r.expert))
-  function photoDot(b) {
-    const kind = b.source || (b.validated ? "truth" : "");
-    return kind === "players" ? playersDot(b.expert) : SOURCE_DOT[kind] ? sourceDot(kind) : null;
+  // Every beetle's names on its photo, in every game (#541): one line per taxon level, subfamily to species (the genus
+  // cut to its letter in the species). Each line has its own dots (green validated, blue IBBI-AI, purple the players,
+  // glowing when a proven expert backs them), its ID type after the name ("Validated ID", "AI ID", "Player ID"), and,
+  // where IBBI-AI and the players give a confidence, the two columns under their headings (#615).
+  const ID_COLUMN = { ai: "AI ID", players: "Player ID" };
+  // one column's cell: IBBI-AI's share, or the players' count, share and expert count; a name the other source
+  // gives at this level is shown in front of its share
+  function columnCell(kind, view, rowName) {
+    const cell = node("span", "c " + kind);
+    if (!view) return cell;
+    if (kind === "players") cell.append(view.votes + " · ", view.sure + "%",
+                                        view.experts ? " · " + view.experts + (view.experts === 1 ? " expert" : " experts") : "");
+    else cell.append(view.sure + "%");
+    if ((view.name || "").trim().toLowerCase() !== (rowName || "").trim().toLowerCase()) cell.prepend(node("span", "alt", view.name + " "));
+    return cell;
   }
   // The rank a Similarity pair shares, when it is the answer or probably is (#600): underlined on both photos, only
   // where the two photos show the same name there
@@ -2086,23 +2199,20 @@
       box.append(node("span", "", node("span", "nm none", "Not named yet")));
       return box;
     }
+    const cols = b.columns || [];
+    if (cols.length) box.append(node("span", "hdr", node("span", "spacer"), ...cols.map((k) => node("span", "c " + k, sourceDot(k), ID_COLUMN[k]))));
     const shared = sharedRank(review);
-    let genus = "", dot = photoDot(b);
-    b.ranks.forEach((r, i) => {
+    let genus = "";
+    b.ranks.forEach((r) => {
       let name = r.name;
       if (r.rank === "genus") genus = name;
       if (!full && r.rank === "species" && genus && name.startsWith(genus + " ")) name = genus[0] + ". " + name.slice(genus.length + 1);
       const nm = name ? node("span", "nm" + (r.rank === shared ? " shared" : ""), taxonName(name, r.rank)) : node("span", "nm none", "—");
-      nm.title = r.rank + ": " + (r.name || "not known");
-      // who says so and how sure, on every line (#569); how reliable a validated name is, on the first
-      const how = r.source === "truth" ? [[i === 0 ? node("span", "tier", b.tier) : ""], b.tier]
-                : NAME_SOURCE[r.source] && NAME_SOURCE[r.source](r);
-      const also = r.also && NAME_SOURCE[r.also.source] && NAME_SOURCE[r.also.source](r.also);
-      nm.title += how ? " (" + how[1] + (also ? "; " + also[1] : "") + ")" : "";
-      const lead = node("span", "lead", name && dot ? dot : null);
-      if (name) dot = null;   // the one dot, on the first line with a name
-      box.append(node("span", "", lead, full ? node("span", "rk", r.rank) : null, nm,
-                      how ? node("span", "src", ...[].concat(how[0]), also ? node("span", "also", "· ", ...also[0]) : null) : null));
+      nm.title = r.rank + ": " + (r.name || "not known") + (r.label ? " (" + r.label + ")" : "");
+      const dots = name ? (r.dots || []).map(sourceDot) : [];
+      const idType = name && r.label ? node("span", "idl", r.label) : null;
+      const cells = cols.map((k) => columnCell(k, (r.columns || {})[k], r.name));
+      box.append(node("span", "", node("span", "lead", ...dots), full ? node("span", "rk", r.rank) : null, nm, idType, ...cells));
     });
     return box;
   }
@@ -2113,6 +2223,7 @@
     const b = (review.beetles || [])[i];
     if (!b || !c || c.classList.contains("flagged")) return;
     c.appendChild(namesLabel(b, review));
+    if (review.seen && review.seen[i]) c.appendChild(seenMark("photo-seen"));   // a photo seen before (#615)
     c.classList.add("has-names");
     if (!c.querySelector(".zoom-chip")) {   // the whole photo on its own button: a finger's tap turns the names off (#600)
       const whole = node("button", "zoom-chip rv-whole", node("i", "fi fi-rr-expand"));
@@ -2166,7 +2277,7 @@
   let previous = null;                                  // the last answer's review, from memory...
   let previousUrl = root.dataset.lastReviewUrl || "";   // ...or, after a reload, where to fetch it
   function rememberPrevious(review) { previous = review; previousUrl = ""; }
-  function updateBack() { $("back").disabled = busy || !(previous || previousUrl); }
+  function updateBack() { setOff($("back"), busy || !(previous || previousUrl)); }
   async function showPrevious() {
     if (busy) return false;   // never over a review in progress
     if (!previous && previousUrl) {
@@ -2652,13 +2763,19 @@
   }
 
   // Submit while answering (once there is an answer), Next on the review (off while the next beetle loads)
+  // Next is there from the moment of Submit (the review is on its way), and stays there while the next beetle loads:
+  // then it is busy (a sheen and a spinner), never gone and never silent to a tap (round 5)
   function updateSubmit() {
-    const onReview = phase === "review" || phase === "next";
+    const waitingNext = phase === "send" || phase === "next";
+    const onReview = phase === "review" || waitingNext;
     $("submit-text").textContent = onReview ? "Next" : "Submit";
-    if (onReview) { $("submit").disabled = phase === "next"; return; }
     const ready = MODE === "classify" ? RANKS.some((r) => pick[r]) : MODE === "odd" ? oddPicks.size === oddWant
       : MODE === "select" ? tapped.size > 0 : !!pairChoice;
-    $("submit").disabled = busy || !ready;
+    $("submit").disabled = !onReview && (busy || !ready);
+    setOff($("submit"), waitingNext);
+    $("submit").classList.toggle("next-busy", waitingNext);
+    $("submit").setAttribute("aria-busy", waitingNext ? "true" : "false");
+    $("submit-spin").classList.toggle("hidden", !waitingNext);
   }
 
   function resetAnswer() {

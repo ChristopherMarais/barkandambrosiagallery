@@ -28,7 +28,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from . import game, game_board, game_checked, game_discoveries, game_feedback, game_queue, game_levels, game_rewards, game_scoring, game_tips, game_trust
-from . import game_answer_review, game_applied, game_crops
+from . import game_answer_review, game_applied, game_crops, game_history_rounds
 from . import game_grid_ladder, game_grow, game_warm
 from . import game_taxa as taxa_tree
 from .areas import ANNOTATE, BOXES, VALIDATE, area_required, has_area
@@ -77,6 +77,7 @@ def discussions_url():
 # ---------------------------------------------------------------------------
 @login_required
 def game_home(request):
+    game_warm.warm_later(request.user, game_warm.MIXED)   # signed in: the first batches are built while they look around
     left_at = game.close_idle_rounds(request.user)   # anything they left open counts now
     last_session = _pop_last_session(request, left_at)
     game_discoveries.find([request.user.id])
@@ -198,7 +199,7 @@ def _save_unlocks(request):
 
 
 def _unlocks_context(request):
-    """The Unlocks section of the Game settings page: the players found (up to 100) and what each has been given."""
+    """The Unlocks section of the Game settings page: the players found (a page at a time) and what each has been given."""
     from .models import GamePreference
 
     if not request.user.is_superuser:
@@ -210,16 +211,18 @@ def _unlocks_context(request):
     else:   # people with grants first, then the most recent players
         users = users.filter(id__in=GamePreference.objects.exclude(granted_perks=[]).values("player_id")) | users.filter(
             id__in=GameAnswer.objects.values("player_id"))
-    grants = dict(GamePreference.objects.filter(player__in=users).values_list("player_id", "granted_perks"))
+    page = Paginator(users.distinct().order_by("username"), UNLOCKS_PER_PAGE).get_page(request.GET.get("unlocks_page"))
+    people = list(page.object_list)
+    grants = dict(GamePreference.objects.filter(player__in=people).values_list("player_id", "granted_perks"))
     rows = []
-    for u in users.distinct().order_by("username")[:100]:
+    for u in people:
         info = game_levels.describe(*(
             PlayerScore.objects.filter(player=u).values_list("score", "rating").first() or (0.0, 0.0)))
         mine = grants.get(u.id) or []
         rows.append({"user": u, "level": info["level"], "name": info["name"], "all": "all" in mine,
                      "perks": [{"key": k, "title": t, "level": game_levels.perk_level(k), "on": "all" in mine or k in mine,
                                 "earned": k in info["perks"]} for k, (t, _) in game_levels.PERKS.items()]})
-    return {"rows": rows, "q": q}
+    return {"rows": rows, "q": q, "unlocks": page}
 
 
 @login_required
@@ -229,6 +232,7 @@ def game_checked_page(request):
 
 
 HISTORY_PER_PAGE = 20
+UNLOCKS_PER_PAGE = 25
 
 
 @login_required
@@ -263,10 +267,18 @@ def game_history(request):
     if tab == "checked" and any(c["new"] for c in checked):   # seen once the Checked later tab is open
         RetroCredit.objects.filter(player=request.user, seen_at__isnull=True).update(seen_at=timezone.now())
     sessions = Paginator(rounds, HISTORY_PER_PAGE).get_page(request.GET.get("page") if tab == "sessions" else 1)
-    for r in sessions:   # which games a session was: one by name, or how many
+    for r in sessions:   # which games a session was: one by name, or how many game types
         played = [game_levels.GAME_NAMES[g] for g in ("classify", "pair", "odd", "select") if getattr(r, f"n_{g}")]
         r.games_label = game_levels.GAME_NAMES[game_key] if game_key else (
-            played[0] if len(played) == 1 else f"{len(played)} games")
+            played[0] if len(played) == 1 else f"{len(played)} game types")
+    # each session's rounds in the review's words and colours (game_history_rounds), from the answers it counts
+    page_rounds = [r.id for r in sessions]
+    round_rows = game_history_rounds.rows_by_round(
+        GameAnswer.objects.filter(round_id__in=page_rounds).filter(filters.answers_q(game_key, window))
+        .select_related("points").order_by("round_id", "index")) if page_rounds else {}
+    for r in sessions:
+        r.review_rows = round_rows.get(r.id, [])[:game_history_rounds.ROUNDS_SHOWN]
+        r.more_rounds = max(0, r.labelled - len(r.review_rows))
     checked_page = Paginator(checked, HISTORY_PER_PAGE).get_page(request.GET.get("page") if tab == "checked" else 1)
     summary = None
     if game_key or window:   # the filtered beetles and points, and the game's own accuracy and points
@@ -284,6 +296,7 @@ def game_history(request):
         "game_key": game_key, "game_label": game_levels.GAME_NAMES.get(game_key, ""), "window": window,
         "filters": filters.query(game_key, window["key"] if window else ""),
         "game_chips": game_chips, "day_chips": day_chips, "heading": heading, "summary": summary,
+        "show_game": not game_key,
     })
 
 
@@ -416,6 +429,7 @@ def game_how(request):
 def game_play(request, mode):
     if mode not in MODES:
         raise Http404("Unknown game mode")
+    game_warm.warm_later(request.user, game_warm.MIXED)   # the first batch is ready by the time the feed starts (#round5)
     return render(request, "beetles/game_play.html", {
         "discussions": discussions_url(),
         # short, one line each, for the little report menu in the full-image view. No "Wrong name" here: that is
@@ -917,10 +931,12 @@ def _timed(view):
     def timed(request, *args, **kwargs):
         stats = {"batches": 0, "items": 0, "crops": 0}
         token, rows = game_crops.built.set(stats), _rows.set({})
+        memo = game.reveals_memo.set({})
         started = time.perf_counter()
         try:
             return view(request, *args, **kwargs)
         finally:
+            game.reveals_memo.reset(memo)
             _rows.reset(rows)
             game_crops.built.reset(token)
             logger.info("%s took %d ms: %d new batch(es), %d item(s), %d crop(s) queued", view.__name__,
@@ -980,7 +996,8 @@ def game_start(request):
             game.finish_round_later(rnd)
         # after a switch of game, the batch the worker built for it while they played (game_warm), if there is one
         # else a new one: its first beetles now, the rest on the worker or as the feed goes (game_grow, #575)
-        rnd = (fresh and game_warm.take(request.user, mode)) or game_grow.start_round(request.user, mode)
+        # a batch the worker built ahead (for the page load, after a round, or the switch): ready at once; else built here
+        rnd = game_warm.take(request.user, mode) or game_grow.start_round(request.user, mode)
         index = _next_index(rnd, 0) if rnd else None
     if index is None:   # nothing in their game: say why (no beetles yet, all seen, their focus, ...)
         # with the toolbar's choices, so the page can offer another game (#604)

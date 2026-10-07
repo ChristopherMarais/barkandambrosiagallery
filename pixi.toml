@@ -11,7 +11,7 @@ platforms = ["linux-64", "linux-aarch64"]   # the site runs only in Docker (Linu
 install-js = "npm install"
 
 # Run this to fix broken CSS
-build-css = "node node_modules/@tailwindcss/cli/dist/index.mjs -i ./beetlesgallery/static/css/input.css -o ./beetlesgallery/static/css/style.css"
+build-css = "node node_modules/@tailwindcss/cli/dist/index.mjs -i ./beetlesgallery/static/css/input.css -o ./beetlesgallery/static/css/style.css --minify"
 
 # Run this in a separate terminal while developing
 watch-css = "node node_modules/@tailwindcss/cli/dist/index.mjs -i ./beetlesgallery/static/css/input.css -o ./beetlesgallery/static/css/style.css --watch"

@@ -171,6 +171,8 @@ class EliteTests(ScoringCase):
         self.strong("ok", right=30, wrong=10)
         self.strong("meh", right=20, wrong=20)
         cache.clear()
+        from beetlesgallery.beetles_app import game_scoring
+        game_scoring.refresh_ratings()   # the worker has worked the table out and stored it (round 5)
         self.assertEqual(elite_players(), {best.id})
 
     def test_no_limit_while_few_players_are_rated(self):

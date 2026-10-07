@@ -110,28 +110,23 @@ class StartSmallTests(FastCase):
             item = out["item"]
         self.assertGreater(len(GameRound.objects.get(id=rnd.id).items), 3)
 
-    def test_an_answer_waits_for_the_worker_that_is_growing_it(self):
+    def test_an_answer_does_not_wait_for_the_worker_that_is_growing_it(self):
         rnd, _, _ = self.start()
         cache.set(game_grow.LOCK.format(rnd.id), 1, 60)             # the worker is at it this moment
-        grown = GameRound.objects.get(id=rnd.id)
+        with mock.patch("time.sleep") as slept:
+            started = time.monotonic()
+            self.assertEqual(game_grow.grow_or_wait(rnd, game_grow.FIRST), 0)
+        self.assertFalse(slept.called)                              # never a sleep in the request
+        self.assertLess(time.monotonic() - started, 1)
+        self.assertEqual(len(GameRound.objects.get(id=rnd.id).items), 2)
 
-        def worker_done(_seconds):
-            grown.items = grown.items + [dict(grown.items[0], a="x")]
-            GameRound.objects.filter(id=rnd.id).update(items=grown.items)
-            cache.delete(game_grow.LOCK.format(rnd.id))
-
-        with mock.patch.object(game_grow.time, "sleep", side_effect=worker_done) as slept:
-            self.assertEqual(game_grow.grow_or_wait(rnd, game_grow.FIRST), 1)
-        self.assertTrue(slept.called)
-        self.assertEqual(len(rnd.items), 3)
-
-    def test_it_waits_only_so_long(self):
+    def test_it_picks_up_what_the_worker_added_meanwhile(self):
         rnd, _, _ = self.start()
         cache.set(game_grow.LOCK.format(rnd.id), 1, 60)
-        started = time.monotonic()
-        self.assertEqual(game_grow.grow_or_wait(rnd, game_grow.FIRST, wait=0.2), 0)
-        self.assertLess(time.monotonic() - started, 2)
-        self.assertEqual(len(GameRound.objects.get(id=rnd.id).items), 2)
+        grown = GameRound.objects.get(id=rnd.id)
+        GameRound.objects.filter(id=rnd.id).update(items=grown.items + [dict(grown.items[0], a="x")])
+        self.assertEqual(game_grow.grow_or_wait(rnd, game_grow.FIRST), 1)
+        self.assertEqual(len(rnd.items), 3)
 
     def test_the_whole_batch_where_game_work_stays_in_the_request(self):
         with override_settings(GAME_RECOMPUTE_IN_BACKGROUND=False):
@@ -260,13 +255,14 @@ class UpcomingTests(FastCase):
 
 @override_settings(GAME_RECOMPUTE_IN_BACKGROUND=True)
 class WarmSkipsTheGameNowPlayedTests(FastCase):
-    def test_a_game_they_switched_to_while_the_worker_ran_is_not_built_again(self):
+    def test_the_game_they_play_now_is_built_too_so_a_start_finds_it_ready(self):
+        # round 5: the batch for the game being played is built as well, and a normal start takes it (test_game_warm_worker)
         GamePreference.objects.create(player=self.user, granted_perks=["all"], play_mode="pair")
         real = game.play_mode
         with mock.patch.object(game, "play_mode", side_effect=lambda p, info=None: "classify" if info is None else real(p, info)):
             built = game_warm.build(self.user)
-        self.assertNotIn("classify", built)
-        self.assertIsNone(cache.get(game_warm.KEY.format(self.user.pk, "classify")))
+        self.assertIn("classify", built)
+        self.assertIsNotNone(cache.get(game_warm.KEY.format(self.user.pk, "classify")))
 
 
 class PageTests(GameCase):

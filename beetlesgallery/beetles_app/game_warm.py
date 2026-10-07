@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 KEY = "game:warm:{}:{}"            # player, game choice
 LOCK = "game:warming:{}"           # player: one build at a time
-KEEP = 60 * 60                     # seconds a batch built ahead is kept
+KEEP = 15 * 60                     # seconds a batch built ahead is kept (short: a batch is re-built on each page load / round)
 LOCK_SECONDS = 120
 FIRST_ITEMS = 2                    # the items whose crops are cut ahead, so the first beetles show at once
 MIXED = "mixed"                    # only the mixed feed has the toolbar
@@ -40,12 +40,15 @@ def choices(player, info=None):
 
 
 def missing(player):
-    """The choices with no batch waiting for them under the player's current unlocks and focus."""
+    """
+    The games with no batch waiting for them under the player's current unlocks and focus: the ones they could switch
+    to, and the one they play now (its batch is what a page load starts from, so the first beetles are ready).
+    """
     from . import game, game_levels
 
     info = game_levels.for_player(player)
     sig = _signature(info, game.player_focus(player))
-    options = choices(player, info)
+    options = choices(player, info) + [game.play_mode(player, info)]
     found = cache.get_many([KEY.format(player.pk, c) for c in options])
     return [c for c in options if (found.get(KEY.format(player.pk, c)) or {}).get("sig") != sig]
 
@@ -64,8 +67,6 @@ def build(player):
         sig = _signature(info, game.player_focus(player))
         built = []
         for choice in missing(player):
-            if game.play_mode(player) == choice:
-                continue   # they switched to it while this ran: the feed has built its batch already (#575)
             items, notice = game.batch_items(player, MIXED, choice=choice)
             if not items:
                 continue

@@ -4,13 +4,16 @@
  * IBBI-AI, purple the players, grey a little; game_answer_review._celebrate picks it):
  *   "pop"               a few small grey beetles: very few points
  *   "partial"           grey beetles: a beetle named correctly to some rank
- *   "validated"         green beetles: a right species or a perfect grid on a checked beetle; at full size a second wave
- *   "validated_agreed"  green, blue and purple beetles: that, and IBBI-AI and the other players said the same
- *   "ai", "players", "ai_players"  grey with blue (IBBI-AI), purple (the players) or both: a beetle nobody checked yet
- *   "expert"            glowing purple beetles: a Naming expert among the players said the same
+ *   "validated"         a right species or a perfect grid on a checked beetle; at full size a second wave
+ *   "validated_agreed"  the same shape as "validated" (IBBI-AI and the players agreeing no longer change the colour)
+ *   "ai", "players", "ai_players"  a beetle nobody checked yet: the shape of the points' ID type
+ *   "expert"            glowing beetles: a Naming expert among the players said the same
+ * The colour comes from the fifth argument, ``colour`` (#615): "green" (Validated ID), "blue" (AI ID) or
+ * "purple" (Player ID), the ID type that gave the points (game_answer_review._celebrate). "blue purple" mixes both in
+ * one burst, when IBBI-AI and the players agree. Without one, the kind's own colour is used.
  *   "plain"             ordinary paper confetti
- *   "level"             the biggest: gold and brown beetles from both sides and a centre burst with paper; a fourth
- *                       argument, the new level's colour on the scale, adds a sprinkle of beetles in it
+ *   "level"             the biggest: gold and brown beetles from both sides and a centre burst with paper; the
+ *                       fourth argument, the new level's colour on the scale, adds a sprinkle of beetles in it
  * ``size`` (0.2 to 1, from the answer's points) scales how many pieces there are, how big and how far they fly.
  * Bursts run side by side in one shared animation loop, so a daily-goal burst never wipes out a level-up. The total
  * is capped (lower on phones): the oldest pieces fade out early to make room. Nothing moves under reduced motion.
@@ -25,14 +28,15 @@
     pop: GREY,
     partial: GREY,
     validated: GREEN,
-    validated_agreed: [...GREEN, ...GREEN, ...BLUE, ...PURPLE],
-    ai: [...GREY, ...BLUE, ...BLUE],
-    players: [...GREY, ...PURPLE, ...PURPLE],
-    ai_players: [...GREY, ...BLUE, ...PURPLE],
+    validated_agreed: GREEN,
+    ai: BLUE,
+    players: PURPLE,
+    ai_players: PURPLE,
     expert: PURPLE,
     level: ["#ca8a04", "#eab308", "#facc15", "#a16207", "#3f2a14", "#5b3a1e", "#7c4a1e", "#8b5a2b"],
     plain: ["#111827", "#374151", "#9ca3af", "#d1d5db", "#ffffff", "#16a34a"],
   };
+  const COLOURS = { green: GREEN, blue: BLUE, purple: PURPLE };   // the ID type that gave the points (#615)
   // How each kind's pieces look: [base size, how much it varies]; paper is the only kind that isn't beetles
   const LOOK = { pop: [10, 5], partial: [13, 7], level: [26, 16], plain: [6, 6], accent: [22, 12] };
   const BEETLE_LOOK = [18, 12];
@@ -254,10 +258,12 @@
     requestAnimationFrame(frame);
   }
 
-  window.beetleConfetti = function (canvas, kind, size, accent) {
+  window.beetleConfetti = function (canvas, kind, size, accent, colour) {
     if (!canvas || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     kind = PALETTES[kind] ? kind : (kind === "beetles" ? "validated" : "plain");
     accent = /^#[0-9a-f]{6}$/i.test(accent || "") ? accent : null;
+    const tint = colour ? String(colour).split(" ").flatMap((c) => COLOURS[c] || []) : [];
+    const tinted = tint.length ? tint : null;
     size = Math.max(0.2, Math.min(1, Number(size) || 1));
     let scene = scenes.get(canvas);
     if (!scene) {
@@ -267,7 +273,7 @@
     fit(scene);
     const now = performance.now();
     waves(kind, size, accent).forEach(([k, count, from, delay, life]) => {
-      for (let i = 0; i < count; i++) scene.pieces.push(piece(k, size, from, now + delay, life, k === "accent" ? [accent] : null));
+      for (let i = 0; i < count; i++) scene.pieces.push(piece(k, size, from, now + delay, life, k === "accent" ? [accent] : k === "plain" ? null : tinted));
     });
     // Over the cap: the oldest pieces (the front of the list) fade out within a quarter second.
     const extra = scene.pieces.length - maxPieces();

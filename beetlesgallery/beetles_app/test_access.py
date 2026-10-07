@@ -198,7 +198,7 @@ class ConfirmEmailTests(AccessCase):
         self.assertEqual(approvers_mail.reply_to, ["ada@example.org"])
         for text in ("Ada Lovelace", "University of Somewhere", "Specimen pages", "I study ambrosia beetles.", "/tools/access-requests/"):
             self.assertIn(text, approvers_mail.body)
-        self.assertIn("A curator will review", self.to("ada@example.org").body)
+        self.assertIn("We have your request and will email you about it.", self.to("ada@example.org").body)
         self.client.get(link)  # opening the link again changes nothing
         self.assertEqual(len(mail.outbox), 3)   # the link, the approvers, the welcome
 

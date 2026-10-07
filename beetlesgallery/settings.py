@@ -165,6 +165,11 @@ STORAGES = {
     },
 }
 
+# Cache lifetimes: hashed static files for a year, the rest for five minutes (beetlesgallery/cache_policy.py)
+from beetlesgallery.cache_policy import whitenoise_add_headers
+WHITENOISE_ADD_HEADERS_FUNCTION = whitenoise_add_headers
+WHITENOISE_MAX_AGE = 5 * 60
+
 # Point to the internal static folder inside beetlesgallery/
 STATICFILES_DIRS = [
     BASE_DIR / "beetlesgallery" / "static",

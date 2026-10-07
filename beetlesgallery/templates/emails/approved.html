@@ -8,7 +8,7 @@
     <div><span style="color:#777777;">Username:</span> <strong>{{ username }}</strong></div>
     <div style="color:#555555;margin-top:4px;">Every account can use {{ summary }}.</div>
     {% if granted %}<div style="margin-top:4px;"><span style="color:#777777;">You also have:</span> <strong>{{ granted|join:", " }}</strong></div>{% endif %}
-    {% if waiting %}<div style="color:#555555;margin-top:4px;">You also asked for {{ waiting|join:", " }}. A curator will review that and we will email you.</div>{% endif %}
+    {% if waiting %}<div style="color:#555555;margin-top:4px;">You also asked for {{ waiting|join:", " }}. We have your request and will email you about it.</div>{% endif %}
   </td></tr>
 </table>
 {% include "emails/_note.html" %}
