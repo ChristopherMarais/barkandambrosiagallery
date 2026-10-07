@@ -7,18 +7,43 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="csrf-token" content="{{ csrf_token }}">
   {% if staging %}<meta name="robots" content="noindex, nofollow">{% endif %}
+  <meta name="description" content="{% block meta_description %}Bark and Ambrosia Beetle Gallery: images, specimen records, taxonomy and beetle-pathogen interaction data for bark and ambrosia beetles.{% endblock %}">
   <title>Bark and Ambrosia Gallery</title>
 
   <link rel="icon" type="image/png" href="{% static 'img/IMG_5557.PNG' %}" />
 
   <link href="{% static 'css/style.css' %}" rel="stylesheet" />
 
-  <script src="{% static 'js/timezone_cookie.js' %}"></script>
+  <script src="{% static 'js/timezone_cookie.js' %}" defer></script>
 
-  <link rel="stylesheet"
+  <script>
+    // The icon stylesheets do not hold up the page: they load as print styles and switch to screen when they arrive
+    // (onload below). The icons show once both icon fonts are in; a 2.5 s fallback means they never stay hidden.
+    (function () {
+      var root = document.documentElement;
+      var shown = false;
+      var loaded = 0;
+      function show() { if (!shown) { shown = true; root.classList.add("icons-ready"); } }
+      window.uiconsCssLoaded = function () {
+        if (++loaded < 2) return;
+        try {
+          Promise.all([
+            document.fonts.load('1em "uicons-regular-rounded"'),
+            document.fonts.load('1em "uicons-brands"')
+          ]).then(show, show);
+        } catch (e) { show(); }
+      };
+      setTimeout(show, 2500);  // never leave the icons hidden if the CDN is slow or blocked
+    })();
+  </script>
+  <link rel="stylesheet" media="print" onload="this.media='all'; window.uiconsCssLoaded()"
     href="https://cdn-uicons.flaticon.com/2.2.0/uicons-regular-rounded/css/uicons-regular-rounded.css" />
-  <link rel='stylesheet' 
-    href='https://cdn-uicons.flaticon.com/2.1.0/uicons-brands/css/uicons-brands.css'>
+  <link rel="stylesheet" media="print" onload="this.media='all'; window.uiconsCssLoaded()"
+    href="https://cdn-uicons.flaticon.com/2.1.0/uicons-brands/css/uicons-brands.css" />
+  <noscript>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.2.0/uicons-regular-rounded/css/uicons-regular-rounded.css" />
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.1.0/uicons-brands/css/uicons-brands.css" />
+  </noscript>
   <link rel="preconnect" href="https://cdn-uicons.flaticon.com" crossorigin>
   <link rel="preload" as="font" type="font/woff2" crossorigin
     href="https://cdn-uicons.flaticon.com/2.2.0/uicons-regular-rounded/webfonts/uicons-regular-rounded.woff2">
@@ -45,20 +70,6 @@
       input[type="number"], input[type="url"], input[type="tel"] { font-size: 16px; min-height: 2.5rem; }
     }
   </style>
-  <script>
-    (function () {
-      var root = document.documentElement;
-      var shown = false;
-      function show() { if (!shown) { shown = true; root.classList.add("icons-ready"); } }
-      try {
-        Promise.all([
-          document.fonts.load('1em "uicons-regular-rounded"'),
-          document.fonts.load('1em "uicons-brands"')
-        ]).then(show, show);
-      } catch (e) { show(); }
-      setTimeout(show, 2500);  // never leave the icons hidden if the CDN is slow or blocked
-    })();
-  </script>
 
   <script>
     // Big uploads now go through Cloudflare in pieces, so the old direct. address is no longer used:
@@ -210,7 +221,7 @@
     }
   </style>
 
-  <script src="{% static 'js/digit_groups.js' %}"></script>
+  <script src="{% static 'js/digit_groups.js' %}" defer></script>
   <script src="{% static 'js/progressive_image.js' %}" defer></script>
   <script src="{% static 'js/footer_basehtml.js' %}" defer></script>
   {% if ga_measurement_id %}{# Google Analytics: only on the live site (GA_MEASUREMENT_ID); see docs/analytics.md #}
@@ -310,7 +321,7 @@
               <button type="submit"
                 class="flex items-center w-full min-h-14 rounded-lg hover:bg-gray-200 px-5 transition-all whitespace-nowrap group">
                 <i class="fi fi-rr-sign-out-alt text-xl text-gray-400 w-8 text-center"></i>
-                <span class="font-medium text-gray-400 ml-1">Logout</span>
+                <span class="font-medium text-gray-600 ml-1">Logout</span>
               </button>
             </form>
 
@@ -324,7 +335,7 @@
 
           </div>
           <div id="mobile-menu-footer" class="px-2 pb-2">
-          <div class="flex items-center gap-1 px-5 py-3 border-t border-gray-200 text-[10px] font-mono text-gray-400">
+          <div class="flex items-center gap-1 px-5 py-3 border-t border-gray-200 text-[10px] font-mono text-gray-600">
             <a href="https://github.com/ChristopherMarais/barkandambrosiagallery" target="_blank" rel="noopener noreferrer"
               class="w-8 shrink-0 flex justify-center text-gray-400 hover:text-gray-700 transition-colors" title="View source on GitHub" aria-label="View source on GitHub">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
@@ -423,7 +434,7 @@
             <button type="submit"
               class="flex items-center w-full min-h-14 rounded-lg hover:bg-gray-200 group overflow-hidden whitespace-nowrap px-5 transition-all">
               <i class="fi fi-rr-sign-out-alt text-xl text-gray-400 w-8 text-center"></i>
-              <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-400">
+              <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium text-gray-600">
                 Logout
               </span>
             </button>
@@ -445,7 +456,7 @@
               class="w-8 shrink-0 flex justify-center" title="View source on GitHub" aria-label="View source on GitHub">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
             </a>
-            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-[10px] font-mono text-gray-400">
+            <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-[10px] font-mono text-gray-600">
               {% if debug %}<strong class="font-normal text-yellow-600/70">DEV:</strong> {% endif %}{{ app_version }}
             </span>
           </div>

@@ -1,6 +1,23 @@
 from django import template
+from django.utils.html import format_html
 
 register = template.Library()
+
+# The longest side of a stored thumbnail (image_pipeline writes them at this size or smaller)
+THUMB_SIDE = 96
+
+@register.simple_tag
+def thumb_size(asset):
+    """width and height attributes for an <img> that shows asset.thumb_small.
+
+    They tell the browser the picture's shape before it loads, so the page does not jump (layout shift). The sizes
+    are the thumbnail's own (longest side THUMB_SIDE), so CSS can still size the image however it likes.
+    """
+    if not asset or not asset.image_width or not asset.image_height:
+        return ""
+    w, h = asset.image_width, asset.image_height
+    scale = min(1, THUMB_SIDE / max(w, h))
+    return format_html('width="{}" height="{}"', max(1, round(w * scale)), max(1, round(h * scale)))
 
 @register.simple_tag(takes_context=True)
 def remove_filter(context, field, value=None):

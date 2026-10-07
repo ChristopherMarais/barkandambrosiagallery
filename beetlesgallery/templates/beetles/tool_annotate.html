@@ -1019,7 +1019,7 @@ function renderImageList(imagesToRender, append = false) {
 
     btn.innerHTML = `
       <div class="w-10 h-10 shrink-0 rounded-sm bg-gray-200 flex items-center justify-center overflow-hidden border border-gray-300">
-        ${img.thumbnail_url ? `<img src="${img.thumbnail_url}" class="w-full h-full object-cover">` : `<i class="fi fi-rr-picture text-gray-400"></i>`}
+        ${img.thumbnail_url ? `<img src="${img.thumbnail_url}" class="w-full h-full object-cover" loading="lazy" decoding="async">` : `<i class="fi fi-rr-picture text-gray-400"></i>`}
       </div>
       <div class="flex-1 min-w-0 text-left">
         <p class="text-sm font-medium text-gray-900 truncate" title="${img.image_asset_id}">${img.image_asset_id}</p>
