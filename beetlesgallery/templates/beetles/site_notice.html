@@ -2,16 +2,32 @@
 
 {% block content %}
 <div class="max-w-2xl">
-  <a href="{% url 'my_account' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; My account</a>
+  <a href="{% url 'my_account' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Account</a>
   <h1 class="page-title">Site notice</h1>
   <p class="text-gray-500 mb-5">One line at the top of every page while it is on. Players see it within a minute.</p>
   <form method="post" class="space-y-4 p-5 bg-gray-50 border border-gray-200 rounded-2xl">
     {% csrf_token %}
     <label class="block text-sm font-semibold text-gray-800" for="notice-text">Message</label>
-    <input id="notice-text" name="text" maxlength="300" value="{{ notice.text }}" class="w-full rounded-lg border border-gray-300 px-3 py-2">
+    <input id="notice-text" name="text" maxlength="300" value="{{ notice.text }}" class="w-full rounded-lg border border-gray-300 px-3 py-2" data-testid="notice-text-input">
+
+    {# Live preview, in the banner's own style, so you see how it will look and wrap before saving (not-preview, #618). #}
+    <div>
+      <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">Preview</p>
+      <div class="w-full rounded-lg px-6 py-2 bg-gray-800 text-white text-sm text-center" data-testid="notice-preview">
+        <span id="notice-preview-text">{{ notice.text }}</span>
+      </div>
+    </div>
+
     <label class="flex items-center gap-2 text-sm text-gray-800"><input type="checkbox" name="active" {% if notice.active %}checked{% endif %}> Show it now</label>
     <button type="submit" class="btn-primary">Save</button>
   </form>
   {% if notice.updated_by %}<p class="mt-3 text-xs text-gray-500">Last changed by {{ notice.updated_by.username }}, {{ notice.updated_at|date:"j M Y H:i" }}.</p>{% endif %}
 </div>
+<script>
+  (function () {
+    const input = document.getElementById('notice-text');
+    const preview = document.getElementById('notice-preview-text');
+    input.addEventListener('input', () => { preview.textContent = input.value; });
+  })();
+</script>
 {% endblock %}

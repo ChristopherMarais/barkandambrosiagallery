@@ -12,48 +12,52 @@
     together. Validating an image validates every boxed ROI on it. Open an image to fix it first.
   </p>
 
+  {# Filters apply themselves on change (bulk-filter, #618): no separate Filter button to press. #}
   <form method="get" class="flex flex-wrap items-end gap-3 mb-6" data-testid="bulk-filters">
     <label class="block"><span class="block text-xs font-semibold text-gray-600 mb-1">Search</span>
-      <input type="search" name="q" value="{{ q }}" placeholder="Species, institution or file" class="w-64 max-w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"></label>
+      <input type="search" name="q" value="{{ q }}" placeholder="Species, institution or file" class="w-64 max-w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" onchange="this.form.submit()"></label>
     <label class="block"><span class="block text-xs font-semibold text-gray-600 mb-1">Name source</span>
-      <select name="source" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+      <select name="source" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm" onchange="this.form.submit()">
         <option value="">Any</option>
         {% for key, label in sources %}<option value="{{ key }}" {% if key == source %}selected{% endif %}>{{ label }}</option>{% endfor %}
       </select></label>
-    <label class="flex items-center gap-2 py-2 text-sm text-gray-700"><input type="checkbox" name="named" value="1" class="h-4 w-4 rounded-sm border-gray-300" {% if named_only %}checked{% endif %}> Every ROI has a name</label>
-    <button type="submit" class="btn-main px-4 py-2 text-sm">Filter</button>
+    <label class="flex items-center gap-2 py-2 text-sm text-gray-700"><input type="checkbox" name="named" value="1" class="h-4 w-4 rounded-sm border-gray-300" {% if named_only %}checked{% endif %} onchange="this.form.submit()"> Every ROI has a name</label>
   </form>
 
-  <form method="post" id="bulk-form" data-testid="bulk-form">
+  <form method="post" id="bulk-form" data-testid="bulk-form" class="pb-4">
     {% csrf_token %}
     <input type="hidden" name="next" value="{{ request.get_full_path }}">
-    <div class="sticky top-0 z-10 -mx-4 mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white/95 px-4 py-3">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
       <span class="text-sm text-gray-600"><span data-testid="bulk-total">{{ total|digit_groups }}</span> unvalidated image{{ total|pluralize }} with boxes</span>
-      <span class="flex items-center gap-3">
-        <label class="flex items-center gap-2 whitespace-nowrap text-sm text-gray-700"><input type="checkbox" id="select-page" class="h-4 w-4 rounded-sm border-gray-300"> Select this page</label>
-        <button type="submit" id="validate-selected" class="btn-main px-4 py-2 text-sm" disabled data-testid="validate-selected"><span>Validate selected (<span id="selected-count">0</span>)</span></button>
-      </span>
+      <label class="flex items-center gap-2 whitespace-nowrap text-sm text-gray-700"><input type="checkbox" id="select-page" class="h-4 w-4 rounded-sm border-gray-300"> Select this page</label>
     </div>
 
     {% if page.object_list %}
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {% for image in page.object_list %}
-      <label class="block cursor-pointer rounded-xl border border-gray-200 bg-white p-2 shadow-xs has-checked:border-gray-700 has-checked:ring-2 has-checked:ring-gray-400" data-testid="bulk-image">
+      {# Whole card is the toggle (bulk-checkbox, #618): selected = dark border, tick sits in the caption row, not over the specimen. #}
+      <label class="block cursor-pointer rounded-xl border-2 border-gray-200 bg-white p-2 shadow-xs has-checked:border-gray-700" data-testid="bulk-image">
         <div class="relative overflow-hidden rounded-lg bg-gray-100">
           {% if image.thumb_small %}<img src="{{ image.thumb_small.url }}" alt="" {% thumb_size image %} class="block w-full h-auto" loading="lazy" decoding="async">{% else %}<div class="aspect-4/3"></div>{% endif %}
           {% for roi in image.active_rois %}{% if roi.bbox_x is not None %}
           <span class="absolute border-2 border-white outline-solid outline-1 outline-gray-900" title="{{ roi.taxon.scientific_name|default:'No name' }}"
             style="left: {{ roi.bbox_x|percent }}%; top: {{ roi.bbox_y|percent }}%; width: {{ roi.bbox_width|percent }}%; height: {{ roi.bbox_height|percent }}%;"></span>
           {% endif %}{% endfor %}
-          <input type="checkbox" name="image" value="{{ image.pk }}" class="bulk-pick absolute left-2 top-2 h-5 w-5 rounded-sm border-gray-300">
         </div>
         <ul class="mt-2 space-y-0.5 text-xs text-gray-700">
           {% for roi in image.active_rois %}
           <li class="truncate">{% if roi.taxon %}<i>{{ roi.taxon.scientific_name }}</i>{% else %}<span class="text-gray-400">No name</span>{% endif %}{% if roi.bbox_x is None %} <span class="text-gray-400">(no box)</span>{% endif %}{% if roi.label_source %} <span class="text-gray-400">· {{ roi.get_label_source_display }}</span>{% endif %}</li>
           {% endfor %}
         </ul>
+        {# Caption: what is being validated (bulk-boxes, #618): the shared name (if any), box count and naming status. #}
+        <p class="mt-1 truncate text-xs text-gray-600" data-testid="bulk-caption">
+          {% if image.caption_name %}<i>{{ image.caption_name }}</i> &middot; {% endif %}{{ image.box_count }} box{{ image.box_count|pluralize:"es" }}{% if image.unnamed_count %}, {{ image.unnamed_count }} unnamed{% else %}, all named{% endif %}
+        </p>
         <div class="mt-1 flex items-center justify-between gap-2 text-xs text-gray-500">
-          <span class="truncate">{{ image.image_institution|default:"" }}</span>
+          <span class="flex items-center gap-1.5">
+            <input type="checkbox" name="image" value="{{ image.pk }}" class="bulk-pick h-4 w-4 rounded-sm border-gray-300">
+            <span class="truncate">{{ image.image_institution|default:"" }}</span>
+          </span>
           <a href="{% url 'tool_annotate' %}?image={{ image.pk }}" target="_blank" rel="noopener" class="shrink-0 underline hover:text-gray-900">Open</a>
         </div>
       </label>
@@ -62,6 +66,14 @@
     {% else %}
     <p class="rounded-xl border border-gray-200 bg-gray-50 p-6 text-gray-600" data-testid="bulk-empty">Nothing to validate here.</p>
     {% endif %}
+
+    {# Sticky bottom bar (bulk-sticky, #618): stays in view while scrolling through the grid, instead of a top bar
+       that scrolls away. #}
+    <div class="sticky bottom-4 z-20 mt-4 flex items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white/95 backdrop-blur-xs px-4 py-3 shadow-lg" data-testid="bulk-sticky-bar">
+      <span class="text-sm font-medium text-gray-700"><span id="selected-count">0</span> selected</span>
+      <span class="text-gray-300">&middot;</span>
+      <button type="submit" id="validate-selected" class="btn-main px-4 py-2 text-sm" disabled data-testid="validate-selected">Validate</button>
+    </div>
   </form>
 
   {% include "beetles/includes/pager.html" with page=page param="page" anchor="bulk" %}
