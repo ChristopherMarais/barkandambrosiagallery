@@ -2094,12 +2094,6 @@
       color: color-mix(in oklab, var(--color-text) 30%, transparent);
     }
   }
-  .text-text\/40 {
-    color: color-mix(in srgb, #111827 40%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      color: color-mix(in oklab, var(--color-text) 40%, transparent);
-    }
-  }
   .text-text\/50 {
     color: color-mix(in srgb, #111827 50%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
