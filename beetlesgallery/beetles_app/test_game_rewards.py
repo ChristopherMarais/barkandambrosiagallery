@@ -1,6 +1,7 @@
 """Daily goal, streak, levels, badges and the recap: the things that keep people playing, without showing a live score."""
 import json
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
+from unittest import mock
 
 from django.test import override_settings
 from django.urls import reverse
@@ -199,8 +200,11 @@ class RecapTests(RewardsCase):
 
 
 class FeedAndHomeTests(RewardsCase):
+    # the clock is fixed at midday (local): "Night owl"/"Early bird" are for specific hours, so the
+    # test never depends on when it runs
+    @mock.patch("django.utils.timezone.now", return_value=datetime(2026, 10, 6, 16, 0, tzinfo=dt_timezone.utc))
     @override_settings(GAME_ROUND_SIZE=3)
-    def test_the_feed_gets_a_chip_and_events_but_no_accuracy(self):
+    def test_the_feed_gets_a_chip_and_events_but_no_accuracy(self, _now):
         for _ in range(3):
             self.roi(self.t_affinis, validated=False)
         rnd, item = self.play("classify")
