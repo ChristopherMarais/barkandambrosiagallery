@@ -87,7 +87,7 @@ class PageTests(ReviewCase):
                      "@media (prefers-reduced-motion: reduce) { .rv-dot.expert { animation: none; } }"):
             self.assertIn(rule, page)
         self.assertIn('dot.setAttribute("aria-label", SOURCE_DOT[kind]);', page)
-        self.assertIn("playersDot(r.expert)", page)
+        self.assertIn("(r.dots || []).map(sourceDot)", page)
 
     def test_no_legend_and_no_line_per_tile(self):
         page = self.page()

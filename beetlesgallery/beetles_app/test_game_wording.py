@@ -101,7 +101,8 @@ class PromptTests(PlayPageCase):
     def test_the_seen_before_tag_is_gone_from_the_photo_but_the_server_still_marks_it(self):
         page = self.play_page()
         self.assertNotIn("Seen before: have another go", page)
-        self.assertIn('r.again ? node("span", "rv-pill", "Seen before")', page)   # the review still says so
+        self.assertNotIn('r.again ? node("span", "rv-pill", "Seen before")', page)   # no headline pill: a mark on the photo (#615)
+        self.assertIn("function seenMark(testid)", page)
         source = (APP / "beetles_app" / "game_views.py").read_text(encoding="utf-8")
         self.assertIn('payload["again"] = True', source)
 

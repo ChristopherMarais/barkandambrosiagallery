@@ -255,12 +255,11 @@
   .rv-verdict.right { background: #22c55e; }
   .rv-yes { color: #16a34a; }
   .rv-no { color: #dc2626; }
-  .rv-pill { margin-left: auto; padding: 0.0625rem 0.5rem; border-radius: 9999px; background: #f3f4f6; color: #374151; font-size: 0.6875rem; font-weight: 600; white-space: nowrap; }
   /* the one short line under the headline (#569) */
   .rv-line { margin-top: 0.25rem; font-size: 0.8125rem; color: #374151; }
   .rv-line .fi { vertical-align: -0.125em; }
   /* Where a name comes from (#569): green validated, blue IBBI-AI, purple the players, glowing purple when a proven
-     expert backs them. One dot per photo, no rim (#600). */
+     expert backs them. One dot per taxon level, no rim (#600, #615). */
   .rv-dot { display: inline-block; flex: none; width: 0.5rem; height: 0.5rem; margin-right: 0.25rem; border-radius: 9999px; vertical-align: 0.05em; }
   .rv-dot.truth { background: #16a34a; }
   .rv-dot.ai { background: #2563eb; }
@@ -289,17 +288,22 @@
      annotation page's Save button (.btn-primary). Out of the way while the pointer is on the photo or a finger holds
      it; a tap opens the whole photo. */
   .rv-names { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; justify-content: center; gap: 0.25rem;
-              padding: 2.25rem 1rem 1.25rem; pointer-events: none; background: rgba(107,114,128,.8); color: #fff;
+              padding: 2.25rem 1rem 2.25rem; pointer-events: none; background: rgba(107,114,128,.8); color: #fff;
               font-size: 1.125rem; line-height: 1.25; text-shadow: 0 1px 1px rgba(17,24,39,.25); transition: opacity .15s; }
   .rv-names > span { display: flex; align-items: center; gap: 0.5rem; min-width: 0; width: 100%; max-width: 24rem; align-self: center; }
-  .rv-names .who { white-space: pre; }
   .rv-names .nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-  .rv-names .src { flex: none; display: inline-flex; align-items: center; color: #f3f4f6; font-size: 0.8em; }
-  .rv-names .src .fi { font-size: 0.85em; margin-right: 0.125rem; }
   .rv-names .none { color: #e5e7eb; font-weight: 400; }
-  /* the photo's one dot sits in a slot of its own before the first name, so the names stay in line (#600) */
-  :is(.rv-names, .lb-names) .lead { flex: none; display: inline-flex; width: 0.5rem; margin-right: -0.25rem; }
+  /* each taxon level's dots sit in a slot of their own before its name, so the names stay in line (#615) */
+  :is(.rv-names, .lb-names) .lead { flex: none; display: inline-flex; align-items: center; gap: 0.125rem; width: 1.125rem; }
   :is(.rv-names, .lb-names) .lead .rv-dot { margin-right: 0; }
+  /* the ID type after the name ("Validated ID", "AI ID", "Player ID"), then the two confidence columns (#615) */
+  :is(.rv-names, .lb-names) .idl { flex: none; font-size: 0.75em; font-weight: 500; white-space: nowrap; opacity: 0.9; }
+  :is(.rv-names, .lb-names) .c { flex: none; min-width: 3.25rem; text-align: right; font-size: 0.8em; white-space: nowrap; }
+  :is(.rv-names, .lb-names) .c.players { min-width: 6.5rem; }
+  :is(.rv-names, .lb-names) .c .rv-dot { margin-right: 0.125rem; }
+  :is(.rv-names, .lb-names) .c .alt { opacity: 0.85; }
+  :is(.rv-names, .lb-names) .hdr { font-size: 0.6875em; font-weight: 600; opacity: 0.95; }
+  :is(.rv-names, .lb-names) .hdr .spacer { flex: 1 1 auto; }
   /* Similarity: the rank the two share (the answer, or probably), underlined on both photos (#600) */
   :is(.rv-names, .lb-names) .nm.shared { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
   /* the whole photo opens from its own button on a reviewed photo, bottom left; a tap on the photo turns its names off (#600) */
@@ -311,11 +315,7 @@
   .lb-names > span { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
   .lb-names .rk { flex: 0 0 5rem; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #9ca3af; }
   .lb-names .nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-  .lb-names .src { flex: none; display: inline-flex; align-items: center; color: #d1d5db; font-size: 0.8em; }
-  .lb-names .src .fi { font-size: 0.85em; margin-right: 0.125rem; }
   .lb-names .none { color: #9ca3af; font-weight: 400; }
-  :is(.rv-names, .lb-names) .also { margin-left: 0.3em; }
-  .lb-names .who { white-space: pre; }
   #lightbox.with-names #lightbox-img { max-height: calc(85vh - 7rem); }
   /* grids: smaller tiles, smaller text and corners; the text keeps clear of the rounded corners and the marks above */
   #game:is([data-mode="odd"], [data-mode="select"]) #photos .rv-names, #previous-photos:is([data-size="4"], [data-size="9"], [data-size="16"]) .rv-names {
@@ -326,13 +326,13 @@
   :is(#photos, #previous-photos)[data-size="16"] .cell > .rv-names { font-size: 0.625rem; line-height: 1.15; gap: 0; padding: 1.5rem 0.3rem 0.3rem; }
   :is(#photos, #previous-photos)[data-size="16"] .rv-names > span { gap: 0.2rem; }
   :is(#photos, #previous-photos)[data-size="16"] .rv-names .rv-dot { width: 0.375rem; height: 0.375rem; margin-right: 0.125rem; }
+  :is(#photos, #previous-photos)[data-size="16"] .rv-names .lead { width: 0.875rem; }
+  /* small tiles have no room for the columns (their numbers are on the card); the names keep their ID type */
+  :is(#photos, #previous-photos):is([data-size="9"], [data-size="16"]) .rv-names :is(.c, .hdr) { display: none; }
   @media (max-width: 639px) {
-    .rv-names { font-size: 0.9375rem; padding: 2.25rem 0.75rem 0.75rem; }
-    /* the small grid tiles of a phone keep the names: the dot alone says who (its words on the dot) */
-    :is(#photos, #previous-photos):is([data-size="4"], [data-size="9"], [data-size="16"]) .rv-names :is(.tier, .fi) { display: none; }
-    :is(#photos, #previous-photos):is([data-size="9"], [data-size="16"]) .rv-names .who { display: none; }
-    /* small tiles: one confidence only, the photo's own source's */
-    :is(#photos, #previous-photos):is([data-size="9"], [data-size="16"]) .rv-names .also { display: none; }
+    .rv-names { font-size: 0.9375rem; padding: 2.25rem 0.75rem 2.25rem; }
+    /* the smallest tiles of a phone keep only the names and dots */
+    :is(#photos, #previous-photos)[data-size="4"] .rv-names :is(.c, .hdr) { display: none; }
   }
   .cell.names-off .rv-names { opacity: 0; }
   @media (hover: hover) { .cell:hover .rv-names { opacity: 0; } }
@@ -351,10 +351,10 @@
      it), the other way round; the card above lists every tile's name at the grid's rank. Only the names and dots. */
   :is(#photos, #previous-photos)[data-size="25"] .cell > .rv-names { font-size: 0.5625rem; line-height: 1.15; gap: 0; padding: 1.25rem 0.1875rem 0.125rem; opacity: 0; }
   :is(#photos, #previous-photos)[data-size="25"] .rv-names > span { gap: 0.2rem; }
-  :is(#photos, #previous-photos)[data-size="25"] .rv-names :is(.who, .tier, .fi) { display: none; }
+  :is(#photos, #previous-photos)[data-size="25"] .rv-names :is(.idl, .c, .hdr) { display: none; }
   :is(#photos, #previous-photos)[data-size="25"] .rv-names .rv-dot { width: 0.3125rem; height: 0.3125rem; margin-right: 0.125rem; }
+  :is(#photos, #previous-photos)[data-size="25"] .rv-names .lead { width: 0.75rem; }
   :is(#photos, #previous-photos)[data-size="25"] .cell.names-off .rv-names { opacity: 1; }
-  :is(#photos, #previous-photos)[data-size="25"] .rv-names .also { display: none; }
   @media (hover: hover) { :is(#photos, #previous-photos)[data-size="25"] .cell:hover .rv-names { opacity: 1; } }
   /* a grid tile seen before (#600): bottom right, the eye alone on the small tiles of 16 and 25 */
   .rv-seen { position: absolute; right: 0.375rem; bottom: 0.375rem; z-index: 5; display: inline-flex; align-items: center; gap: 0.25rem; height: 1.375rem;
@@ -363,6 +363,14 @@
   :is(#photos, #previous-photos):is([data-size="9"], [data-size="16"], [data-size="25"]) .rv-seen .word { display: none; }
   :is(#photos, #previous-photos)[data-size="16"] .rv-seen { right: 0.25rem; bottom: 0.25rem; height: 1.125rem; padding: 0 0.25rem; font-size: 0.625rem; }
   :is(#photos, #previous-photos)[data-size="25"] .rv-seen { right: 0.125rem; bottom: 0.125rem; height: 1rem; padding: 0 0.2rem; font-size: 0.5625rem; }
+  /* The corner marks on a photo (#615): the number top left, the points beside it, the whole-photo button bottom left,
+     "Seen before" bottom right. The names keep clear of the bottom corners, and the button never sits on the number. */
+  :is(#photos, #previous-photos) .cell.has-names > .rv-names { padding-bottom: 2.25rem; }
+  :is(#photos, #previous-photos)[data-size="16"] .cell.has-names > .rv-names { padding-bottom: 1.75rem; }
+  :is(#photos, #previous-photos)[data-size="25"] .cell.has-names > .rv-names { padding-bottom: 1.5rem; }
+  :is(#photos, #previous-photos) .cell > .rv-whole { top: auto; right: auto; bottom: 0.375rem; left: 0.375rem; }
+  :is(#photos, #previous-photos)[data-size="16"] .cell > .rv-whole { bottom: 0.25rem; left: 0.25rem; }
+  :is(#photos, #previous-photos)[data-size="25"] .cell > .rv-whole { bottom: 0.125rem; left: 0.125rem; }
   @media (hover: hover) { .cell > .rv-seen { transition: opacity .15s; } .cell:hover > .rv-seen { opacity: 0; } }
   .rv-badge.up { background: #16a34a; color: #fff; }
   .rv-badge.down { background: #dc2626; color: #fff; }
@@ -1189,9 +1197,9 @@
   // The kind says who agreed and so the colours (game_answer_review._celebrate, static/js/beetle_confetti.js): green
   // for correct on a checked beetle, blue where IBBI-AI agreed, purple where the players did, grey for a little.
   // The size (0.2 to 1) comes from the answer's points (game_answer_review.confetti_size).
-  function confetti(kind, size) {
+  function confetti(kind, size, colour) {
     if (reduceMotion || !window.beetleConfetti) return;
-    window.beetleConfetti($("confetti"), kind || "validated", size);
+    window.beetleConfetti($("confetti"), kind || "validated", size, null, colour);
   }
 
   // ---------- the chip and the toasts: counts and celebrations, never the score ----------
@@ -1834,7 +1842,7 @@
       markTiles(cells, review);
       nameTiles(cells, review);
     }
-    if (review.celebrate) confetti(review.celebrate.kind, review.celebrate.size);
+    if (review.celebrate) confetti(review.celebrate.kind, review.celebrate.size, review.celebrate.colour);
     // the next photos start loading now (usually they are in already; at the end of a batch, or a grid built again at
     // a new step, they are not): the crops the next beetle shows, small ones first (#494)
     const loadNext = (it) => {
@@ -1875,8 +1883,7 @@
     const verdict = r.skipped || r.held ? null : r.verdict;
     const dot = node("span", "rv-verdict " + (verdict || "none"));
     dot.setAttribute("aria-hidden", "true");
-    const head = node("p", "rv-head", dot, node("span", "", r.headline),
-                      r.again ? node("span", "rv-pill", "Seen before") : null);
+    const head = node("p", "rv-head", dot, node("span", "", r.headline));
     // Under the headline at most one short line of what matters (#569): the names are on the photos, the points on
     // the tiles, and the rings and dots need no legend
     const line = r.classify ? classifyLine(r.classify) : r.pair ? pairLine(r.pair) : r.grid ? parts(r.grid.note || []) : [];
@@ -1885,8 +1892,7 @@
 
   // Where a name comes from, as a coloured dot (#569): green validated, blue IBBI-AI, purple the players, glowing
   // purple when a proven expert backs the players. Its words are on the dot for screen readers and on hover.
-  const SOURCE_DOT = { truth: "Validated name", ai: "IBBI-AI", players: "Players' consensus",
-                       expert: "Players' consensus, backed by an expert" };
+  const SOURCE_DOT = { truth: "Validated ID", ai: "AI ID", players: "Player ID", expert: "Player ID, backed by an expert" };
   function sourceDot(kind) {
     const dot = node("span", "rv-dot " + kind);
     dot.setAttribute("role", "img");
@@ -1964,6 +1970,14 @@
     if (!p && !a) return null;
     return p && (!a || p.sure >= a.sure) ? "players" : "ai";
   }
+  // The "Seen before" mark on a photo (#600, #615): the eye, bottom right, the same on a grid tile and a single photo
+  function seenMark(testid) {
+    const seen = node("span", "rv-seen", node("i", "fi fi-rr-eye"), node("span", "word", "Seen before"));
+    seen.title = "Seen before";
+    seen.setAttribute("aria-label", "Seen before");
+    seen.dataset.testid = testid;
+    return seen;
+  }
   // One grid tile's marks: its ring (blue or purple where it is called but not checked yet), number and points
   function markTile(cellEl, i, review) {
     const g = review.grid, t = g.tiles[i];
@@ -1982,13 +1996,7 @@
     const badge = t.points ? [pts(t.points), t.points > 0 ? "up" : "down"] : t.state === "missed" ? ["missed", "flat"]
                 : t.state === "vote" || t.state === "pick" ? ["vote", "flat"] : null;
     if (badge) cellEl.appendChild(node("span", "rv-badge " + badge[1], badge[0]));
-    if ((g.seen || []).includes(i)) {   // this very tile was seen before (#600): the headline pill is for one photo
-      const seen = node("span", "rv-seen", node("i", "fi fi-rr-eye"), node("span", "word", "Seen before"));
-      seen.title = "Seen before";
-      seen.setAttribute("aria-label", "Seen before");
-      seen.dataset.testid = "tile-seen";
-      cellEl.appendChild(seen);
-    }
+    if ((g.seen || []).includes(i)) cellEl.appendChild(seenMark("tile-seen"));   // this very tile was seen before (#600)
   }
 
   // ---------- the review, tile by tile (#602) ----------
@@ -2053,18 +2061,21 @@
     if (performance.getEntriesByName(mark).length) performance.measure(name, mark);
   }
 
-  // Every beetle's names on its photo, in every game (#541): four short lines, subfamily to species (the genus cut to
-  // its letter in the species), true names with how reliable they are, or the likeliest with who says so and how sure.
-  // One dot per photo says where its names come from (#600): the source of its deepest name. Where IBBI-AI and the
-  // players say the same name, both confidences show ("AI 82% · 67%").
-  const NAME_SOURCE = { ai: (r) => [[node("span", "who", "AI "), r.sure + "%"], "IBBI-AI: " + r.sure + "%"],
-                        players: (r) => [[node("i", "fi fi-rr-users"), node("span", "who", r.votes + " · "), r.sure + "%"],
-                                         r.votes + (r.votes === 1 ? " player: " : " players: ") + r.sure + "%" +
-                                         (r.expert ? ", backed by an expert" : "")] };
-  // the photo's one dot: validated, IBBI-AI, or the players (glowing with an expert: playersDot(r.expert))
-  function photoDot(b) {
-    const kind = b.source || (b.validated ? "truth" : "");
-    return kind === "players" ? playersDot(b.expert) : SOURCE_DOT[kind] ? sourceDot(kind) : null;
+  // Every beetle's names on its photo, in every game (#541): one line per taxon level, subfamily to species (the genus
+  // cut to its letter in the species). Each line has its own dots (green validated, blue IBBI-AI, purple the players,
+  // glowing when a proven expert backs them), its ID type after the name ("Validated ID", "AI ID", "Player ID"), and,
+  // where IBBI-AI and the players give a confidence, the two columns under their headings (#615).
+  const ID_COLUMN = { ai: "AI ID", players: "Player ID" };
+  // one column's cell: IBBI-AI's share, or the players' count, share and expert count; a name the other source
+  // gives at this level is shown in front of its share
+  function columnCell(kind, view, rowName) {
+    const cell = node("span", "c " + kind);
+    if (!view) return cell;
+    if (kind === "players") cell.append(view.votes + " · ", view.sure + "%",
+                                        view.experts ? " · " + view.experts + (view.experts === 1 ? " expert" : " experts") : "");
+    else cell.append(view.sure + "%");
+    if ((view.name || "").trim().toLowerCase() !== (rowName || "").trim().toLowerCase()) cell.prepend(node("span", "alt", view.name + " "));
+    return cell;
   }
   // The rank a Similarity pair shares, when it is the answer or probably is (#600): underlined on both photos, only
   // where the two photos show the same name there
@@ -2083,23 +2094,20 @@
       box.append(node("span", "", node("span", "nm none", "Not named yet")));
       return box;
     }
+    const cols = b.columns || [];
+    if (cols.length) box.append(node("span", "hdr", node("span", "spacer"), ...cols.map((k) => node("span", "c " + k, sourceDot(k), ID_COLUMN[k]))));
     const shared = sharedRank(review);
-    let genus = "", dot = photoDot(b);
-    b.ranks.forEach((r, i) => {
+    let genus = "";
+    b.ranks.forEach((r) => {
       let name = r.name;
       if (r.rank === "genus") genus = name;
       if (!full && r.rank === "species" && genus && name.startsWith(genus + " ")) name = genus[0] + ". " + name.slice(genus.length + 1);
       const nm = name ? node("span", "nm" + (r.rank === shared ? " shared" : ""), taxonName(name, r.rank)) : node("span", "nm none", "—");
-      nm.title = r.rank + ": " + (r.name || "not known");
-      // who says so and how sure, on every line (#569); how reliable a validated name is, on the first
-      const how = r.source === "truth" ? [[i === 0 ? node("span", "tier", b.tier) : ""], b.tier]
-                : NAME_SOURCE[r.source] && NAME_SOURCE[r.source](r);
-      const also = r.also && NAME_SOURCE[r.also.source] && NAME_SOURCE[r.also.source](r.also);
-      nm.title += how ? " (" + how[1] + (also ? "; " + also[1] : "") + ")" : "";
-      const lead = node("span", "lead", name && dot ? dot : null);
-      if (name) dot = null;   // the one dot, on the first line with a name
-      box.append(node("span", "", lead, full ? node("span", "rk", r.rank) : null, nm,
-                      how ? node("span", "src", ...[].concat(how[0]), also ? node("span", "also", "· ", ...also[0]) : null) : null));
+      nm.title = r.rank + ": " + (r.name || "not known") + (r.label ? " (" + r.label + ")" : "");
+      const dots = name ? (r.dots || []).map(sourceDot) : [];
+      const idType = name && r.label ? node("span", "idl", r.label) : null;
+      const cells = cols.map((k) => columnCell(k, (r.columns || {})[k], r.name));
+      box.append(node("span", "", node("span", "lead", ...dots), full ? node("span", "rk", r.rank) : null, nm, idType, ...cells));
     });
     return box;
   }
@@ -2110,6 +2118,7 @@
     const b = (review.beetles || [])[i];
     if (!b || !c || c.classList.contains("flagged")) return;
     c.appendChild(namesLabel(b, review));
+    if (review.seen && review.seen[i]) c.appendChild(seenMark("photo-seen"));   // a photo seen before (#615)
     c.classList.add("has-names");
     if (!c.querySelector(".zoom-chip")) {   // the whole photo on its own button: a finger's tap turns the names off (#600)
       const whole = node("button", "zoom-chip rv-whole", node("i", "fi fi-rr-expand"));
