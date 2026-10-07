@@ -1638,13 +1638,27 @@ def taxonomy_browser(request):
     """
     Display the taxonomy browser page dynamically grouped from flat Postgres records.
     """
-    from beetlesgallery.beetles_app.models import Taxon
+    from beetlesgallery.beetles_app.models import Beetles, Taxon
     from django.core.serializers.json import DjangoJSONEncoder
+    from django.db.models import Count
     import json
     from collections import defaultdict
 
     # 1. Fetch all flat taxa from DB
     taxa = Taxon.objects.all()
+
+    # How many images depict each species (#618 tax-counts: species counts already showed on every node; this adds
+    # image counts alongside them, summed up the tree the same way). One image can hold several specimens of the
+    # same species, so distinct image assets are counted, not rows.
+    image_counts = dict(
+        Beetles.objects
+        .filter(is_deleted=False)
+        .exclude(depicts_valid_name_id__isnull=True)
+        .exclude(depicts_valid_name_id="")
+        .values("depicts_valid_name_id")
+        .annotate(n=Count("image_asset_id", distinct=True))
+        .values_list("depicts_valid_name_id", "n")
+    )
 
     # 2. Build nested dictionary: Subfamily -> Tribe -> Genus -> list of Species
     tree_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
@@ -1667,7 +1681,8 @@ def taxonomy_browser(request):
             "level": "species",
             "species_id": t.valid_species_id,
             "scientific_name": t.scientific_name,
-            "subspecies": t.subspecies.strip() if t.subspecies else None
+            "subspecies": t.subspecies.strip() if t.subspecies else None,
+            "imageCount": image_counts.get(t.valid_species_id, 0),
         })
 
         # Pre-fetch for the UI detail pane
@@ -1681,7 +1696,7 @@ def taxonomy_browser(request):
             "subspecies": t.subspecies,
         }
 
-    # 3. Recursively convert nested dicts to arrays with speciesCount
+    # 3. Recursively convert nested dicts to arrays with speciesCount and imageCount
     def dict_to_tree(d, current_level):
         next_level_map = {
             "subfamily": "tribe",
@@ -1699,16 +1714,19 @@ def taxonomy_browser(request):
                     "name": key,
                     "level": "genus",
                     "speciesCount": len(sorted_species),
+                    "imageCount": sum(s.get("imageCount", 0) for s in sorted_species),
                     "children": sorted_species
                 })
             else:
                 # Value is a dictionary of the next level
                 children = dict_to_tree(value, next_level)
                 total_count = sum(c.get("speciesCount", 1) for c in children)
+                total_images = sum(c.get("imageCount", 0) for c in children)
                 result.append({
                     "name": key,
                     "level": current_level,
                     "speciesCount": total_count,
+                    "imageCount": total_images,
                     "children": children
                 })
         return result

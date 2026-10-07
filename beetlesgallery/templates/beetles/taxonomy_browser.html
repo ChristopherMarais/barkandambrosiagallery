@@ -30,7 +30,19 @@
     .taxonomy-browser-container { flex-direction: column; height: auto; min-height: 0; gap: 1rem; }
     .taxonomy-tree-section { flex: none; min-width: 0; max-width: none; width: 100%; height: 60vh; height: 60dvh; }
     .taxonomy-detail-section { flex: none; width: 100%; min-height: 12rem; scroll-margin-top: 4rem; }
+
+    /* #618 tax-mobile: tapping a species opens its details as a full-screen page over the tree, with a back
+       button, instead of a panel below the tree you'd have to scroll down (and back up) to see. */
+    .taxonomy-detail-section.mobile-species-open {
+      position: fixed; inset: 0; z-index: 40; height: 100vh; height: 100dvh; width: 100%;
+    }
+    .taxonomy-detail-section.mobile-species-open > div { border-radius: 0; border: 0; }
+
+    /* #618 tax-expand: Expand All opens 7800+ species at once on a phone -- too much to open in one tap. */
+    #expand-all-btn { display: none; }
   }
+  #mobile-species-back { display: none; }
+  .mobile-species-open #mobile-species-back { display: flex; }
 
   /* --------------------------------------------------------
      Taxonomy tree styles
@@ -384,8 +396,15 @@
     {# ----------------------------------------------------------------- #}
     {# RIGHT: species detail panel                                        #}
     {# ----------------------------------------------------------------- #}
-    <div class="taxonomy-detail-section">
+    <div class="taxonomy-detail-section" id="taxonomy-detail-section">
       <div class="border border-gray-200 rounded-lg bg-white shadow-xs h-full flex flex-col overflow-hidden">
+
+        {# #618 tax-mobile: on a phone this bar only shows once a species is open (see the CSS), to go back to the tree #}
+        <button type="button" id="mobile-species-back"
+          class="items-center gap-1.5 border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-semibold text-gray-700 shrink-0">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+          Back to the tree
+        </button>
 
         {# placeholder shown until a species is clicked #}
         <div id="species-detail-placeholder" class="flex flex-col items-center justify-center text-gray-400 p-12 flex-1">
@@ -507,11 +526,12 @@
     btn.type = "button";
     btn.className = "tree-toggle";
     btn.setAttribute("aria-expanded", "false");
+    // #618 tax-counts: species counts already showed here; image counts now sit beside them, in the same grey.
     btn.innerHTML =
       '<span class="tree-toggle-icon">+</span>' +
       '<span class="tree-label">' +
         escapeHtml(node.name) +
-        ' <span class="tree-count">(' + node.speciesCount + ' species)</span>' +
+        ' <span class="tree-count">(' + node.speciesCount + ' species, ' + (node.imageCount || 0) + ' images)</span>' +
       '</span>';
 
     // Create "View in Image Browser" icon link
@@ -519,6 +539,8 @@
     browseLink.href = buildImageBrowserUrl(node);
     browseLink.className = "tree-browse-link";
     browseLink.title = "View images in image browser";
+    // #618 tax-image-icon: the icon alone said nothing to a screen reader; an aria-label names the taxon and count.
+    browseLink.setAttribute("aria-label", "Browse " + (node.imageCount || 0) + " images of " + node.name);
     browseLink.setAttribute("target", "_blank");
     browseLink.innerHTML = '<svg class="tree-browse-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
     browseLink.addEventListener("click", function(e) {
@@ -570,7 +592,8 @@
     btn.type = "button";
     btn.className = "tree-species-btn";
     btn.dataset.speciesId = node.species_id;
-    btn.textContent = node.name;
+    // #618 tax-counts: a species shows its own image count too, in the same grey as the branches' counts.
+    btn.innerHTML = escapeHtml(node.name) + ' <span class="tree-count">(' + (node.imageCount || 0) + ' images)</span>';
     btn.setAttribute("aria-label", "View details for " + node.scientific_name);
 
     btn.addEventListener("click", function () {
@@ -588,6 +611,8 @@
     browseLink.href = buildImageBrowserUrl(node);
     browseLink.className = "tree-browse-link";
     browseLink.title = "View images in image browser";
+    // #618 tax-image-icon: an aria-label so the icon-only link means something to a screen reader.
+    browseLink.setAttribute("aria-label", "Browse " + (node.imageCount || 0) + " images of " + (node.scientific_name || node.name));
     browseLink.setAttribute("target", "_blank");
     browseLink.innerHTML = '<svg class="tree-browse-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
     browseLink.addEventListener("click", function(e) {
@@ -610,9 +635,10 @@
 
     detailPlaceholder.classList.add("hidden");
     detailPanel.classList.remove("hidden");
-    // Stacked layout (phones): bring the details into view once a species is chosen
+    // #618 tax-mobile: on a phone, open the species as its own full-screen page over the tree (CSS:
+    // .mobile-species-open), with a back button, instead of a panel below a tall tree you'd have to scroll to see.
     if (window.matchMedia("(max-width: 899px)").matches) {
-      document.querySelector(".taxonomy-detail-section").scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById("taxonomy-detail-section").classList.add("mobile-species-open");
     }
 
     // Helper: one label/value row, hidden when value is empty
@@ -624,22 +650,29 @@
         '</div>';
     }
 
-    // Synonym card natively mapping to Postgres JSON response
-    function synonymCard(n) {
-      var name = n.described_scientific_name || "—";
-      return '<div style="border:1px solid #e5e7eb; border-radius:6px; padding:10px 12px; margin-bottom:8px; background:#f9fafb;">' +
-        '<p style="font-size:0.9rem; font-weight:600; color:#1f2937; font-style:italic; margin:0 0 6px 0;">' + escapeHtml(name) + '</p>' +
-        fieldRow("Genus",      n.genus) +
-        fieldRow("Species",    n.species) +
-        fieldRow("Authority",  n.described_scientific_name_authority || n.authority) +
-        fieldRow("Subspecies", n.subspecies) +
-        fieldRow("Year",       n.year) +
-      '</div>';
+    // #618 tax-synonyms: one line per synonym ("Bostrichus saxesenii Ratzeburg, 1837"), not a four-row card -- a
+    // list of 19 used to run about ten screens. The lines past the 5th start hidden (see the caller).
+    function synonymLine(n, extra) {
+      var name = n.described_scientific_name || [n.genus, n.species].filter(Boolean).join(" ") || "—";
+      var authority = n.described_scientific_name_authority || n.authority || "";
+      var tail = [authority, n.year].filter(Boolean).join(", ");
+      return '<li class="' + (extra ? 'synonym-extra' : '') + '" style="padding:4px 0; font-size:0.85rem; color:#1f2937; ' +
+        'border-bottom:1px solid #f3f4f6;' + (extra ? ' display:none;' : '') + '">' +
+        '<i style="font-style:italic;">' + escapeHtml(name) + '</i>' +
+        (tail ? ' <span style="color:#6b7280;">' + escapeHtml(tail) + '</span>' : '') +
+      '</li>';
     }
 
     detailPanel.innerHTML =
       '<h2 style="font-size:1.25rem; font-weight:600; color:#1f2937; margin:0 0 4px 0; font-style:italic;">' + escapeHtml(scientificName) + '</h2>' +
-      '<p style="font-size:0.8rem; color:#6b7280; margin:0 0 16px 0;">valid_species_id: <code style="background:#f3f4f6; padding:2px 6px; border-radius:4px;">' + escapeHtml(node.species_id) + '</code></p>' +
+      '<p style="font-size:0.8rem; color:#6b7280; margin:0 0 16px 0; display:flex; align-items:center; gap:6px;">' +
+        'Accepted name ID <code id="accepted-id-value" style="background:#f3f4f6; padding:2px 6px; border-radius:4px;">' + escapeHtml(node.species_id) + '</code>' +
+        '<button type="button" class="copy-accepted-id" data-value="' + escapeHtml(node.species_id) + '" title="Copy accepted name ID" aria-label="Copy accepted name ID" ' +
+          'style="border:0; background:none; cursor:pointer; color:#6b7280; display:inline-flex; align-items:center;">' +
+          '<svg class="copy-accepted-icon" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>' +
+          '<svg class="copy-accepted-check" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display:none; color:#16a34a;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>' +
+        '</button>' +
+      '</p>' +
       '<div style="margin-bottom:16px;">' +
         fieldRow("Subfamily",        ref.subfamily) +
         fieldRow("Tribe",            ref.tribe) +
@@ -674,9 +707,15 @@
           return;
         }
 
+        // #618 tax-synonyms: show the first 5 lines; the rest sit behind "Show all N" so a long synonymy
+        // (this species has had 19 names) doesn't push the images and everything else far down the page.
+        var shown = names.slice(0, 5).map(function (n) { return synonymLine(n, false); }).join("");
+        var rest = names.slice(5).map(function (n) { return synonymLine(n, true); }).join("");
         container.innerHTML =
           '<h3 style="font-size:0.85rem; font-weight:600; color:#4b5563; margin:0 0 8px 0;">Described Names / Synonyms <span style="font-weight:400; color:#9ca3af;">(' + names.length + ')</span></h3>' +
-          names.map(synonymCard).join("");
+          '<ul style="list-style:none; margin:0; padding:0;">' + shown + rest + '</ul>' +
+          (rest ? '<button type="button" class="show-all-synonyms" style="margin-top:8px; border:0; background:none; padding:0; ' +
+            'font-size:0.8rem; color:#6b7280; text-decoration:underline; cursor:pointer;">Show all ' + names.length + '</button>' : '');
       })
       .catch(function () {
         var container = document.getElementById("synonyms-section");
@@ -765,6 +804,7 @@
             name: node.name,
             level: node.level,
             speciesCount: node.speciesCount,
+            imageCount: node.imageCount,
             children: filteredChildren
           });
         }
@@ -813,6 +853,7 @@
               name: node.name,
               level: node.level,
               speciesCount: node.speciesCount,
+            imageCount: node.imageCount,
               children: filteredChildren
             });
           }
@@ -1075,6 +1116,56 @@
   // ---------- expand / collapse all ----------
   document.getElementById("expand-all-btn").addEventListener("click", function () { setAllBranches(true); });
   document.getElementById("collapse-all-btn").addEventListener("click", function () { setAllBranches(false); });
+
+  // #618 tax-mobile: back out of the full-screen species page to the tree.
+  var mobileBack = document.getElementById("mobile-species-back");
+  if (mobileBack) {
+    mobileBack.addEventListener("click", function () {
+      document.getElementById("taxonomy-detail-section").classList.remove("mobile-species-open");
+    });
+  }
+
+  // #618 tax-raw-id: copy the accepted name ID shown in the species panel (delegated: the panel's content is
+  // replaced each time a species is picked, so the button itself is never the same element twice).
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest(".copy-accepted-id");
+    if (!btn) return;
+    e.preventDefault();
+    var value = btn.getAttribute("data-value");
+    navigator.clipboard.writeText(value).then(function () {
+      var icon = btn.querySelector(".copy-accepted-icon");
+      var check = btn.querySelector(".copy-accepted-check");
+      icon.style.display = "none";
+      check.style.display = "inline-flex";
+      setTimeout(function () { icon.style.display = "inline-flex"; check.style.display = "none"; }, 1500);
+    }).catch(function (err) { console.error(err); });
+  });
+
+  // #618 tax-synonyms: reveal the lines past the first 5.
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest(".show-all-synonyms");
+    if (!btn) return;
+    var container = document.getElementById("synonyms-section");
+    if (container) {
+      container.querySelectorAll(".synonym-extra").forEach(function (li) { li.style.display = ""; });
+    }
+    btn.remove();
+  });
+
+  // #618 tax-search: the placeholder names what the box searches, following the rank picked in the select, so the
+  // two controls read as one ("Genus" + "Enter search term…" didn't say they belonged together).
+  var SEARCH_PLACEHOLDERS = {
+    tribe: "Search tribes…",
+    genus: "Search genera…",
+    species: "Search species…",
+    original_genus: "Search original genus…",
+    described_name: "Search described names…"
+  };
+  function updateSearchPlaceholder() {
+    filterInputEl.placeholder = SEARCH_PLACEHOLDERS[filterFieldEl.value] || "Enter search term…";
+  }
+  filterFieldEl.addEventListener("change", updateSearchPlaceholder);
+  updateSearchPlaceholder();
 
   // ---------- tiny helper ----------
   function escapeHtml(s) {

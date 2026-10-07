@@ -77,7 +77,7 @@ class DetailsPhotoControlsTests(PageBehaviourCase):
                 self.assertNotIn(field, content)
             self.assertNotIn("{#", content)   # a template comment over two lines shows on the page as text
             for shown in ("Specimen ID", "SP-7", "Country", "Peru", "Specimen Notes", "Under bark",
-                          "Multiple Individuals", "This ROI", "Not validated", "Download Original Image"):
+                          "Multiple Individuals", "This ROI", "Not validated", "Download"):
                 self.assertIn(shown, content)
 
     def test_the_endpoints_only_those_controls_used_are_gone(self):

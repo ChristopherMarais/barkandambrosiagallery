@@ -60,9 +60,9 @@ class DetailsPhotoBoxesTests(PageBehaviourCase):
         self.assertEqual(current["class"].split(), ["roi-box", "roi-box-current"])
         self.assertNotIn("href", current)
         self.assertEqual(page.count('id="roi-bbox"'), 1)
-        for rule in (".roi-box { position: absolute; border: 2px solid rgb(255 255 255 / 0.9);",
-                     "box-shadow: 0 0 0 1px rgb(0 0 0 / 0.4), inset 0 0 0 1px rgb(0 0 0 / 0.4); }",
-                     ".roi-box-current { cursor: default; border-color: rgb(17 24 39 / 0.9);",
+        for rule in (".roi-box { position: absolute; border-radius: 0.375rem; border: 1px solid rgb(107 114 128 / 0.95);",
+                     "box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35), inset 0 0 0 1px rgb(0 0 0 / 0.35); }",
+                     ".roi-box-current { cursor: default; border: 2px solid rgb(17 24 39 / 0.95);",
                      "box-shadow: 0 0 0 1px rgb(255 255 255 / 0.9), inset 0 0 0 1px rgb(255 255 255 / 0.9); }",
                      "a.roi-box:focus-visible {"):
             self.assertIn(rule, page)
@@ -87,8 +87,8 @@ class DetailsPhotoBoxesTests(PageBehaviourCase):
         switch = elements["roi-boxes-btn"]
         self.assertEqual((switch["type"], switch["aria-pressed"]), ("button", "true"))
         self.assertEqual((switch["aria-label"], switch["title"]), ("Hide the boxes",) * 2)
-        self.assertLessEqual({"btn-secondary", "rounded-full", "absolute", "bottom-2", "left-2"}, set(switch["class"].split()))
-        self.assertEqual(switch["inside"][0], "roi-photo")   # beside the clickable photo, not in it
+        self.assertLessEqual({"flex", "h-10", "w-10", "rounded-lg"}, set(switch["class"].split()))
+        self.assertEqual(switch["inside"][0], "roi-toolbar")   # in the toolbar under the photo, not on it (#618)
         self.assertEqual(elements["roi-photo"]["data-box"], "shown")
         for code in ('#roi-photo[data-box="hidden"] #roi-boxes { display: none; }',
                      "const label = show ? 'Hide the boxes' : 'Show the boxes';",
