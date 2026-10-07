@@ -4,10 +4,8 @@
 {% block content %}
 <div class="max-w-3xl mx-auto">
 
-  <div class="flex items-center gap-3 mb-6">
-    <a href="{% if is_self %}{% url 'game_home' %}{% else %}{% url 'game_settings' %}#review{% endif %}" class="p-2 -ml-2 rounded-lg text-gray-500 hover:bg-gray-100" aria-label="Back">
-      <i class="fi fi-rr-angle-left text-lg"></i>
-    </a>
+  {% if is_self %}{% url 'game_home' as back_url %}{% include "beetles/includes/back_link.html" with url=back_url label=game_name %}{% else %}{% url 'game_settings' as settings_url %}{% with back_url=settings_url|add:"#review" %}{% include "beetles/includes/back_link.html" with url=back_url label="Game settings" %}{% endwith %}{% endif %}
+  <div class="mb-6">
     <div>
       <h1 class="page-title">
         {% if is_self %}My performance{% else %}{{ player.username }} &middot; performance{% endif %}
@@ -19,21 +17,21 @@
   <!-- Headline numbers -->
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
     <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-      <div class="text-xs uppercase tracking-wider text-gray-500 font-semibold">Labelled</div>
+      <div class="card-label">Labelled</div>
       <div class="mt-1 text-2xl font-semibold text-gray-900 tabular-nums">{{ report.summary.labelled }}</div>
     </div>
     <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-      <div class="text-xs uppercase tracking-wider text-gray-500 font-semibold">Accuracy</div>
+      <div class="card-label">Accuracy</div>
       <div class="mt-1 text-2xl font-semibold tabular-nums scale-{{ report.summary.accuracy|scale }}" data-testid="report-accuracy">
-        {% if report.summary.accuracy is not None %}{% widthratio report.summary.accuracy 1 100 %}%{% else %}<span class="text-gray-400">&ndash;</span>{% endif %}
+        {% if report.summary.accuracy is not None %}{% widthratio report.summary.accuracy 1 100 %}%{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}
       </div>
     </div>
     <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-      <div class="text-xs uppercase tracking-wider text-gray-500 font-semibold">Sessions</div>
+      <div class="card-label">Sessions</div>
       <div class="mt-1 text-2xl font-semibold text-gray-900 tabular-nums">{{ report.rounds|digit_groups }}</div>
     </div>
     <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-      <div class="text-xs uppercase tracking-wider text-gray-500 font-semibold">ID expert areas</div>
+      <div class="card-label">ID expert areas</div>
       <div class="mt-1 text-2xl font-semibold text-gray-900 tabular-nums">{{ report.proven|length }}</div>
     </div>
   </div>
@@ -44,7 +42,7 @@
       <h2 class="text-lg font-semibold text-gray-900">Challenge level</h2>
       <span class="text-sm font-semibold tabular-nums scale-{{ report.challenge|scale }}">{% widthratio report.challenge 1 100 %} / 100</span>
     </div>
-    <div class="h-2 bg-gray-100 rounded-full overflow-hidden" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{% widthratio report.challenge 1 100 %}" aria-label="Challenge level">
+    <div class="h-2 bg-gray-200 rounded-full overflow-hidden" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{% widthratio report.challenge 1 100 %}" aria-label="Challenge level">
       <div class="h-full rounded-full scale-fill-{{ report.challenge|scale }}" data-testid="challenge-bar" style="width: {% widthratio report.challenge 1 100 %}%"></div>
     </div>
     <p class="mt-2 text-xs text-gray-500">Images get harder as you play and as your accuracy grows.</p>
@@ -85,8 +83,8 @@
           <span class="text-gray-900 truncate">{{ s.rank|capfirst }} ID{% if s.branch %} in <span class="{% if s.rank == 'species' %}italic{% endif %}">{{ s.branch }}</span>{% endif %}</span>
           <span class="text-xs text-gray-500 tabular-nums ml-2 shrink-0">{{ s.children_done|digit_groups }}/{{ s.children_needed|digit_groups }} {{ s.children_unit }} · {% widthratio s.accuracy 1 100 %}% correct</span>
         </div>
-        <div class="mt-1 h-1.5 bg-gray-100 rounded-full overflow-hidden" title="{{ s.covered|digit_groups_text }} of the {{ s.required|digit_groups_text }} answers needed, {{ s.correct|digit_groups_text }} of {{ s.judged|digit_groups_text }} correct">
-          <div class="h-full bg-gray-600 rounded-full" style="width: {% widthratio s.progress 1 100 %}%"></div>
+        <div class="progress-bar mt-1 h-1.5" title="{{ s.covered|digit_groups_text }} of the {{ s.required|digit_groups_text }} answers needed, {{ s.correct|digit_groups_text }} of {{ s.judged|digit_groups_text }} correct">
+          <div class="progress-bar-fill" style="width: {% widthratio s.progress 1 100 %}%"></div>
         </div>
       </li>
       {% endfor %}
@@ -105,7 +103,7 @@
       <li>
         <a href="{% url 'game_round_review' r.id %}" class="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
           <span class="text-sm text-gray-900">{% if r.mode == "classify" %}Naming{% elif r.mode == "pair" %}Similarity{% elif r.mode == "odd" %}Odd One Out{% elif r.mode == "select" %}Find Them All{% else %}All modes{% endif %}
-            <span class="text-gray-400">· {{ r.labelled }} labelled</span></span>
+            <span class="text-gray-500">· {{ r.labelled }} labelled</span></span>
           <span class="text-xs text-gray-500">{{ r.finished_at|date:"M j" }} <i class="fi fi-rr-angle-right ml-1"></i></span>
         </a>
       </li>
@@ -133,11 +131,11 @@
           <tr class="border-t border-gray-100">
             <td class="py-2.5 pl-4 pr-2 text-gray-900">{{ row.rank|capfirst }}</td>
             <td class="py-2.5 px-2 text-right tabular-nums">
-              {% if row.naming.n %}{% widthratio row.naming.accuracy 1 100 %}% <span class="text-xs text-gray-400">of {{ row.naming.n|digit_groups }}</span>{% else %}<span class="text-gray-300">&ndash;</span>{% endif %}
+              {% if row.naming.n %}{% widthratio row.naming.accuracy 1 100 %}% <span class="text-xs text-gray-500">of {{ row.naming.n|digit_groups }}</span>{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}
             </td>
             {% if report.by_rank_has_distinction %}
             <td class="py-2.5 pl-2 pr-4 text-right tabular-nums">
-              {% if row.distinction.n %}{% widthratio row.distinction.accuracy 1 100 %}% <span class="text-xs text-gray-400">of {{ row.distinction.n|digit_groups }}</span>{% else %}<span class="text-gray-300">&ndash;</span>{% endif %}
+              {% if row.distinction.n %}{% widthratio row.distinction.accuracy 1 100 %}% <span class="text-xs text-gray-500">of {{ row.distinction.n|digit_groups }}</span>{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}
             </td>
             {% endif %}
           </tr>
@@ -168,12 +166,13 @@
             <td class="py-2.5 pl-2 pr-4">
               {% if m.accuracy is not None %}
               <div class="flex items-center gap-2" title="{{ m.judged }} scored ranks">
-                <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div class="h-full bg-gray-600 rounded-full" style="width: {% widthratio m.accuracy 1 100 %}%"></div>
+                {# accuracy is a rating, so its bar takes the scale's colour (site-progress, #618) #}
+                <div class="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                  <div class="h-full rounded-full scale-fill-{{ m.accuracy|scale }}" style="width: {% widthratio m.accuracy 1 100 %}%"></div>
                 </div>
                 <span class="text-xs text-gray-600 tabular-nums w-9 text-right">{% widthratio m.accuracy 1 100 %}%</span>
               </div>
-              {% else %}<span class="text-gray-300">&ndash;</span>{% endif %}
+              {% else %}<span class="text-gray-500">&mdash;</span>{% endif %}
             </td>
           </tr>
           {% endfor %}

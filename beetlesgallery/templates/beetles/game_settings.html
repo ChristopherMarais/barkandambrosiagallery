@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="max-w-6xl mx-auto">
-  <a href="{% url 'game_home' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; {{ game_name }}</a>
+  {% url 'game_home' as back_url %}{% include "beetles/includes/back_link.html" with url=back_url label=game_name %}
   <h1 class="page-title">Game settings</h1>
   <nav class="flex flex-wrap gap-x-5 gap-y-1 mb-8 text-sm border-b border-gray-200" aria-label="Sections" data-testid="settings-nav">
     <a href="#review" class="px-1 py-2 text-gray-700 border-b-2 border-gray-700 font-medium hover:text-gray-900">Review game labels</a>
@@ -16,14 +16,14 @@
     <div>
       <h2 class="text-xl font-bold text-gray-900">Review game labels</h2>
       <p class="text-sm text-gray-500">
-        {{ rounds|digit_groups }} rounds, {{ answers|digit_groups }} answers. Accuracy is measured on validated ROIs (<code>bbox_is_validated</code>) only;
+        {{ rounds|digit_groups }} rounds, {{ answers|digit_groups }} answers. Accuracy is measured only on beetles a curator has validated;
         players are not told which items those are.
       </p>
     </div>
     <div class="text-sm">
       <a href="{% url 'tool_annotate' %}" class="btn-primary px-3" data-testid="to-annotation"><i class="fi fi-rr-edit"></i> Review labels in Image Annotation</a>
       <div class="mt-2 text-gray-600">
-        <span class="text-xs uppercase tracking-wider text-gray-400 font-semibold">Downloads</span>
+        <span class="card-label">Downloads</span>
         <ul class="mt-1 space-y-0.5">
           <li><a href="{% url 'game_export' 'labels' %}" class="underline hover:text-gray-900"><i class="fi fi-rr-download"></i> Label proposals CSV</a></li>
           <li><a href="{% url 'game_export' 'players' %}" class="underline hover:text-gray-900"><i class="fi fi-rr-download"></i> Player reliability CSV</a></li>
@@ -46,7 +46,7 @@
   </details>
 
   <details class="group mb-8" open data-testid="section" id="reports">
-  <summary class="cursor-pointer list-none flex items-center gap-2 mb-2"><i class="fi fi-rr-angle-small-right group-open:rotate-90 transition-transform text-gray-400"></i><h3 class="inline text-lg font-semibold text-gray-900">Open player reports <span class="text-sm font-normal text-gray-400">({{ open_reports.paginator.count|digit_groups }})</span></h3></summary>
+  <summary class="cursor-pointer list-none flex items-center gap-2 mb-2"><i class="fi fi-rr-angle-small-right group-open:rotate-90 transition-transform text-gray-400"></i><h3 class="inline text-lg font-semibold text-gray-900">Open player reports <span class="text-sm font-normal text-gray-500">({{ open_reports.paginator.count|digit_groups }})</span></h3></summary>
   <p class="text-xs text-gray-500 mb-3">
     Reported ROIs are not used to score anyone until resolved, and the reporter's answer on them is held.
     Open the image, fix it if needed, then resolve the reports from the ROI panel.
@@ -54,7 +54,7 @@
   <!-- A card per report, not a four-column table that forces the reason into a sliver of width on a phone
        (#618 set-reports): ROI and its label on top, the reason below, who reported it and when in the footer. -->
   <div class="flex flex-wrap gap-x-4 gap-y-1 mb-2 text-xs text-gray-500" data-testid="reports-sort">
-    <span class="text-gray-400">Sort:</span>
+    <span class="text-gray-500">Sort:</span>
     {% sort_link "reports_sort" "roi" "ROI" "reports" %}
     {% sort_link "reports_sort" "label" "Label" "reports" %}
     {% sort_link "reports_sort" "reason" "Reason" "reports" %}
@@ -76,16 +76,16 @@
       </div>
     </div>
     {% empty %}
-    <p class="p-4 text-center text-gray-400 border border-gray-200 rounded-lg">No open reports.</p>
+    {% include "beetles/includes/empty_state.html" with icon="fi-rr-flag" text="No open reports. Reports players send from a round will appear here." compact=True %}
     {% endfor %}
   </div>
   {% include "beetles/includes/pager.html" with page=open_reports param="reports_page" anchor="reports" %}
   </details>
 
   <details class="group mb-8" data-testid="section" id="players" {% if request.GET.players_page or request.GET.players_sort %}open{% endif %}>
-  <summary class="cursor-pointer list-none flex items-center gap-2 mb-2"><i class="fi fi-rr-angle-small-right group-open:rotate-90 transition-transform text-gray-400"></i><h3 class="inline text-lg font-semibold text-gray-900">Players <span class="text-sm font-normal text-gray-400">({{ players.paginator.count|digit_groups }})</span></h3></summary>
+  <summary class="cursor-pointer list-none flex items-center gap-2 mb-2"><i class="fi fi-rr-angle-small-right group-open:rotate-90 transition-transform text-gray-400"></i><h3 class="inline text-lg font-semibold text-gray-900">Players <span class="text-sm font-normal text-gray-500">({{ players.paginator.count|digit_groups }})</span></h3></summary>
   <p class="text-xs text-gray-500 mb-3">Correct / judged per rank on validated items. Click a player for their full report.</p>
-  <div class="overflow-x-auto border border-gray-200 rounded-lg mb-10">
+  <div class="table-scroll border border-gray-200 rounded-lg mb-10">
     <table class="w-full text-sm whitespace-nowrap">
       <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wider">
         <tr>
@@ -107,20 +107,20 @@
           <td class="px-3 py-2 text-right tabular-nums">{{ p.labelled }}</td>
           {% for cell in p.classify %}
           <td class="px-3 py-2 text-right tabular-nums {% if forloop.first %}border-l border-gray-100{% endif %}">
-            {% if cell.n %}{% widthratio cell.accuracy 1 100 %}% <span class="text-gray-400 text-xs">{{ cell.ok }}/{{ cell.n }}</span>{% endif %}
+            {% if cell.n %}{% widthratio cell.accuracy 1 100 %}% <span class="text-gray-500 text-xs">{{ cell.ok }}/{{ cell.n }}</span>{% endif %}
           </td>
           {% endfor %}
           {% for cell in p.pair %}
           <td class="px-3 py-2 text-right tabular-nums {% if forloop.first %}border-l border-gray-100{% endif %}">
-            {% if cell.n %}{% widthratio cell.accuracy 1 100 %}% <span class="text-gray-400 text-xs">{{ cell.ok }}/{{ cell.n }}</span>{% endif %}
+            {% if cell.n %}{% widthratio cell.accuracy 1 100 %}% <span class="text-gray-500 text-xs">{{ cell.ok }}/{{ cell.n }}</span>{% endif %}
           </td>
           {% endfor %}
           <td class="px-3 py-2 border-l border-gray-100 text-xs text-gray-600 whitespace-normal min-w-48">
-            {% for s in p.proven %}<span class="inline-block mr-1 mb-1 px-1.5 py-0.5 rounded-sm bg-green-50 text-green-800 border border-green-200"><i class="fi fi-rr-shield-check"></i> {{ s.rank|digit_groups }}{% if s.branch %}: {{ s.branch }}{% endif %}</span>{% empty %}<span class="text-gray-300">—</span>{% endfor %}
+            {% for s in p.proven %}<span class="inline-block mr-1 mb-1 px-1.5 py-0.5 rounded-sm bg-green-50 text-green-800 border border-green-200"><i class="fi fi-rr-shield-check"></i> {{ s.rank|digit_groups }}{% if s.branch %}: {{ s.branch }}{% endif %}</span>{% empty %}<span class="text-gray-500">&mdash;</span>{% endfor %}
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="11" class="px-3 py-6 text-center text-gray-400">No players yet.</td></tr>
+        <tr><td colspan="11">{% include "beetles/includes/empty_state.html" with icon="fi-rr-users" text="No players yet. Players appear here once they answer a round." compact=True %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -129,7 +129,7 @@
   </details>
 
   <details class="group mb-8" data-testid="section" id="labels" {% if only_trusted or request.GET.labels_page or request.GET.labels_sort %}open{% endif %}>
-  <summary class="cursor-pointer list-none flex items-center gap-2 mb-2"><i class="fi fi-rr-angle-small-right group-open:rotate-90 transition-transform text-gray-400"></i><h3 class="inline text-lg font-semibold text-gray-900">Label proposals for unvalidated ROIs <span class="text-sm font-normal text-gray-400">({{ consensus_total|digit_groups }})</span></h3></summary>
+  <summary class="cursor-pointer list-none flex items-center gap-2 mb-2"><i class="fi fi-rr-angle-small-right group-open:rotate-90 transition-transform text-gray-400"></i><h3 class="inline text-lg font-semibold text-gray-900">Label proposals for unvalidated ROIs <span class="text-sm font-normal text-gray-500">({{ consensus_total|digit_groups }})</span></h3></summary>
   <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-2">
     <span></span>
     <div class="flex text-sm bg-gray-100 rounded-lg p-1 self-start">
@@ -143,7 +143,7 @@
     Percent = the winning name's share of the weighted vote; <i class="fi fi-rr-shield-check text-green-700"></i> = expert-backed.
     Most answered first unless you sort by a column; the CSV has all of them.
   </p>
-  <div class="overflow-x-auto border border-gray-200 rounded-lg">
+  <div class="table-scroll border border-gray-200 rounded-lg">
     <table class="w-full text-sm whitespace-nowrap">
       <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wider">
         <tr>
@@ -158,15 +158,15 @@
         <tr class="border-t border-gray-100">
           <td class="px-3 py-2"><a class="text-gray-900 underline hover:text-gray-600 font-mono text-xs" href="{% url 'tool_annotate' %}?image={{ entry.roi.image_asset_id }}&roi={{ entry.roi.id }}">{{ entry.roi.id|stringformat:"s"|slice:":8" }}</a></td>
           <td class="px-3 py-2 text-gray-500">{{ entry.roi.taxon.scientific_name|default:"—" }}</td>
-          <td class="px-3 py-2 text-right tabular-nums">{{ entry.answers|digit_groups }} <span class="text-gray-400 text-xs">({{ entry.players|digit_groups }} player{{ entry.players|pluralize }})</span></td>
+          <td class="px-3 py-2 text-right tabular-nums">{{ entry.answers|digit_groups }} <span class="text-gray-500 text-xs">({{ entry.players|digit_groups }} player{{ entry.players|pluralize }})</span></td>
           {% for r, vote in entry.rank_list %}
           <td class="px-3 py-2 {% if vote.trusted %}font-semibold text-gray-900{% endif %}">
-            {% if vote %}{{ vote.value }} <span class="text-gray-400 text-xs font-normal">{% widthratio vote.support 1 100 %}% · {{ vote.votes|digit_groups }}</span>{% if vote.trusted %} <i class="fi fi-rr-shield-check text-green-700" title="Expert-backed ({{ vote.trusted_votes }})"></i>{% endif %}{% else %}<span class="text-gray-300">—</span>{% endif %}
+            {% if vote %}{{ vote.value }} <span class="text-gray-500 text-xs font-normal">{% widthratio vote.support 1 100 %}% · {{ vote.votes|digit_groups }}</span>{% if vote.trusted %} <i class="fi fi-rr-shield-check text-green-700" title="Expert-backed ({{ vote.trusted_votes }})"></i>{% endif %}{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}
           </td>
           {% endfor %}
         </tr>
         {% empty %}
-        <tr><td colspan="7" class="px-3 py-6 text-center text-gray-400">No proposals{% if only_trusted %} backed by experts{% endif %} yet.</td></tr>
+        <tr><td colspan="7">{% if only_trusted %}{% include "beetles/includes/empty_state.html" with icon="fi-rr-list" text="No proposals backed by experts yet. Names players give unvalidated beetles will appear here." compact=True %}{% else %}{% include "beetles/includes/empty_state.html" with icon="fi-rr-list" text="No proposals yet. Names players give unvalidated beetles will appear here." compact=True %}{% endif %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -194,23 +194,23 @@
       <div class="flex items-center gap-2 mb-2">
         {% include "beetles/includes/game_level_badge.html" with level=row.level name=row.name %}
         <span class="font-semibold text-gray-900">{{ row.user.username }}</span>
-        <span class="text-xs text-gray-400">{{ row.name }}</span>
+        <span class="text-xs text-gray-500">{{ row.name }}</span>
         <label class="ml-auto inline-flex items-center gap-1.5 text-sm font-semibold text-gray-800">
           <input type="checkbox" name="all" value="1" {% if row.all %}checked{% endif %}> Unlock everything
         </label>
       </div>
       <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm">
         {% for p in row.perks %}
-        <label class="inline-flex items-center gap-1.5 {% if p.earned %}text-gray-400{% else %}text-gray-700{% endif %}" title="Earned at level {{ p.level }}">
+        <label class="inline-flex items-center gap-1.5 {% if p.earned %}text-gray-500{% else %}text-gray-700{% endif %}" title="Earned at level {{ p.level }}">
           <input type="checkbox" name="perks" value="{{ p.key }}" {% if p.on %}checked{% endif %}>
-          {{ p.title }} <span class="text-[10px] text-gray-400">L{{ p.level }}{% if p.earned %} &#10003;{% endif %}</span>
+          {{ p.title }} <span class="text-[10px] text-gray-500">L{{ p.level }}{% if p.earned %} &#10003;{% endif %}</span>
         </label>
         {% endfor %}
         <button class="btn-primary ml-auto px-3 py-1">Save</button>
       </div>
     </form>
     {% empty %}
-    <p class="p-4 text-sm text-gray-500 bg-gray-50 rounded-2xl">No players found.</p>
+    {% include "beetles/includes/empty_state.html" with icon="fi-rr-users" text="No players found. Players appear here once they answer a round." compact=True %}
     {% endfor %}
   </div>
   {% include "beetles/includes/pager.html" with page=unlocks param="unlocks_page" anchor="unlocks" %}

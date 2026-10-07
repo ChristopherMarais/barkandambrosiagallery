@@ -7,14 +7,15 @@ from . import access
 User = get_user_model()
 
 # A grey box that turns darker grey while typing in it. (The old "border-stroke" had no colour defined and
-# "focus:border-primary" is white, so a focused box, like the autofocused Username, lost its border.) Tailwind
-# only scans templates, so use classes that templates use too. The grey ring (cre-focus, #618) is explicit, so no
-# browser ever falls back to its own default (amber/orange) focus outline on the autofocused Username field.
+# old focus border colour, "primary", is white, so a focused box, like the autofocused Username, lost its border.) Tailwind
+# only scans templates, so use classes that templates use too. The focus ring is the site's own (site-focus, #618:
+# 2px gray-600, 2px offset, the :focus-visible rule in input.css), so no outline or ring class here hides or
+# replaces it, and no browser falls back to its own default (amber/orange) outline on the autofocused Username field.
 TAILWIND_INPUT = (
     "w-full rounded-lg border border-gray-300 bg-transparent "
-    "py-4 pl-6 pr-10 outline-none "
-    "focus:border-gray-500 focus:ring-2 focus:ring-gray-400 focus-visible:shadow-none "
-    "dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+    "py-4 pl-6 pr-10 "
+    "focus:border-gray-500 "
+    "dark:border-form-strokedark dark:bg-form-input"
 )
 
 class ProfileForm(forms.ModelForm):

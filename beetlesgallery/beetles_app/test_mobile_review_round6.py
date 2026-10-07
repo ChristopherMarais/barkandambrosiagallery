@@ -20,7 +20,7 @@ class OtherImagesComeLastTests(PageBehaviourCase):
         page = self.client.get(reverse("beetle_detail", args=[roi.id])).content.decode()
         related = page.index('data-testid="related-specimens"')
         self.assertIn("Other images of this specimen (1)", page[related:])
-        for card in (">Taxonomy<", ">Specimen and Collection<", ">Attribution<", ">Validation<", ">Identifiers<"):
+        for card in (">Taxonomy<", ">Specimen and collection<", ">Attribution<", ">Validation<", ">Identifiers<"):
             self.assertLess(page.index(card), related, card)
         self.assertLess(page.index("</aside>"), related)   # out of the photo's column, after the details
         self.assertNotIn("copy-specimen-id", page)   # detail-ids-copy stays skipped (#618)

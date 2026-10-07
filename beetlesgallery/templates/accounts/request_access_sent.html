@@ -19,6 +19,6 @@
     <a href="{% url 'signup' %}" class="btn-secondary" data-testid="signup-done-again"><i class="fi fi-rr-user-add"></i><span>Sign up again</span></a>
   </div>
   {% endif %}
-  <a href="{% url 'image_browser' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Back to the gallery</a>
+  {% url 'image_browser' as back_url %}{% include "beetles/includes/back_link.html" with url=back_url label="Back to the gallery" %}
 </section>
 {% endblock %}

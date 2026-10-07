@@ -143,9 +143,9 @@
     *, ::after, ::before, ::backdrop, ::file-selector-button {
         border-color: var(--color-gray-200, currentcolor);
     }
-    /* Placeholders are mid grey (Tailwind 4: the text colour at half strength). */
+    /* Placeholders are gray-500, the lightest text colour on the site (site-contrast, #618). */
     input::placeholder, textarea::placeholder {
-        color: var(--color-gray-400);
+        color: var(--color-gray-500);
     }
     /* Buttons show the hand pointer (Tailwind 4: the arrow), anything switched off the plain arrow. */
     button:not(:disabled), [role="button"]:not(:disabled) {
@@ -251,7 +251,12 @@
        .btn-primary    dark grey, white text (the annotation page's Save): Save, Apply filters, Generate and
                        other work in tools and forms.
        .btn-secondary  white with a grey outline: the quieter choice next to those, such as Undo.
-     No black buttons.
+     Pick by role, not by look (site-buttons, #618): btn-main is the page's one purpose (at most one per page),
+     btn-primary commits a form or dialog, btn-secondary is everything else (Cancel, Close, Download ...), and a
+     plain text link only navigates. No black buttons.
+   - One of each shared piece: includes/drop_zone.html for every file input, includes/back_link.html above a
+     sub-page's title, includes/short_id.html for an id shown in passing, .hit-area on a small link or icon button,
+     and the :focus-visible ring above (never outline-hidden or a focus:ring of a page's own).
    - Ticked boxes and radio buttons are dark grey (see above).
    - Numbers of four digits or more are grouped in threes (12 345): the |digit_groups filter in templates,
      digitGroups() / digitGroupsText() in scripts (static/js/digit_groups.js).
@@ -298,22 +303,67 @@
        the .scale-fill-<step> classes below for its fill instead of .progress-bar-fill. */
     .progress-bar { @apply w-full h-2 rounded-full bg-gray-200 overflow-hidden; }
     .progress-bar-fill { @apply h-full rounded-full bg-gray-700; }
+
+    /* A 44x44px tap target (site-targets, #618) for a small link or icon button whose look stays small ("All",
+       "Open", "Details", a copy icon): on a touch screen an invisible box, centred on it and at least 44px each way,
+       takes the tap. Nothing changes with a mouse. In the components layer so a utility such as absolute still
+       wins over its position: relative. */
+    .hit-area { position: relative; }
+    @media (pointer: coarse) {
+        .hit-area::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: max(100%, 44px);
+            height: max(100%, 44px);
+            transform: translate(-50%, -50%);
+        }
+    }
 }
 
-/* A wide table that truly cannot be trimmed to its priority columns or turned into cards on a phone (site-tables,
-   #618): wrap it in a .table-scroll div as the last resort. A fade over the trailing edge hints that more of the
-   table is there; scrolling it all the way to the end runs past the fade, which is the point. */
+/* Wide tables on a phone (site-tables, #618). One rule per table:
+   - 2-4 priority columns, the rest behind a tap (hidden sm:table-cell + a detail row, as on the leaderboard), or
+   - .table-cards on the <table>: below 640px each row becomes a card and each cell shows its column's name above
+     it (from data-label, which static/js/tables.js copies from the <th> when the cell has none), or
+   - only where neither works, .table-scroll on a wrapper div: the table scrolls sideways and its cut edge fades
+     while there is more to see (tables.js sets .is-cut; the mask stays on the visible edge as the table scrolls). */
+@media (max-width: 639px) {
+    .table-cards, .table-cards > tbody, .table-cards > tbody > tr:not(.hidden),
+    .table-cards > tbody > tr > td:not(.hidden) {
+        display: block;
+        width: 100%;
+        max-width: none;
+    }
+    .table-cards > thead {
+        position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+    }
+    .table-cards > tbody > tr:not(.hidden) { padding: 0.5rem 0; }
+    .table-cards > tbody > tr > td:not(.hidden) {
+        padding: 0.25rem 1rem;
+        text-align: left;
+        white-space: normal;
+    }
+    .table-cards > tbody > tr > td:empty { display: none; }
+    /* a table that rules every cell keeps one line per card, under its last cell */
+    .table-cards > tbody > tr > td:not(:last-child) { border-bottom-width: 0; }
+    .table-cards > tbody > tr > td[data-label]:not([data-label=""])::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--color-gray-500);
+    }
+}
 .table-scroll {
     position: relative;
     overflow-x: auto;
 }
-.table-scroll::after {
-    content: "";
-    position: absolute;
-    top: 0; right: 0; bottom: 0;
-    width: 1.5rem;
-    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.9));
-    pointer-events: none;
+.table-scroll.is-cut {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
 }
 
 /* A sticky table of contents alongside a very long page (site-long, #618), paired with a "Jump to" <select

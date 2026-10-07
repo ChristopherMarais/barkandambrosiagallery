@@ -79,13 +79,13 @@ class EnforcementTests(AreaCase):
         page = self.client.get(reverse("data_management")).content.decode()
         self.assertNotIn("Image Annotation", page)
         self.assertNotIn("openModal('modal-upload-new')", page)
-        self.assertNotIn("Review Proposed Interactions", self.client.get(reverse("interactions_preview")).content.decode())
+        self.assertNotIn("Review proposed interactions", self.client.get(reverse("interactions_preview")).content.decode())
         self.grant(self.user, "annotate", "interactions", "upload")
         self.client.force_login(self.user)
         page = self.client.get(reverse("data_management")).content.decode()
         self.assertIn("Image Annotation", page)
         self.assertIn("openModal('modal-upload-new')", page)
-        self.assertIn("Review Proposed Interactions", self.client.get(reverse("interactions_preview")).content.decode())
+        self.assertIn("Review proposed interactions", self.client.get(reverse("interactions_preview")).content.decode())
 
     def test_superuser_only_pages_stay_superuser_only(self):
         self.grant(self.user, "annotate", "upload", "interactions")
@@ -166,7 +166,7 @@ class StaffOnlySeeTheirOwnAccountTests(AreaCase):
     def test_staff_cannot_create_users_or_see_the_directory(self):
         self.client.force_login(self.staff)
         page = self.client.get(reverse("my_account"))
-        for text in ("Create user", "User Directory", "modal-create-user"):
+        for text in ("Create user", "User directory", "modal-create-user"):
             self.assertNotContains(page, text)
         before = self.user.__class__.objects.count()
         self.client.post(reverse("my_account"), {"action_create_user": "1", "username": "newbie", "password1": "Correct-Horse-9-Staple", "password2": "Correct-Horse-9-Staple"})
@@ -180,6 +180,6 @@ class StaffOnlySeeTheirOwnAccountTests(AreaCase):
     def test_superusers_see_and_can_do_all_of_it(self):
         self.client.force_login(self.superuser)
         page = self.client.get(reverse("my_account"))
-        for text in ("Create user", "User Directory"):
+        for text in ("Create user", "User directory"):
             self.assertContains(page, text)
         self.assertEqual(self.client.get(reverse("create_account")).status_code, 200)

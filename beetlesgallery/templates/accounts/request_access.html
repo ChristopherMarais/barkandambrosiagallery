@@ -5,7 +5,7 @@
 
 {% block content %}
 <section class="max-w-2xl">
-  {% if not signed_in %}<a href="{% url 'login' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Sign in</a>{% endif %}
+  {% if not signed_in %}{% url 'login' as back_url %}{% include "beetles/includes/back_link.html" with url=back_url label="Sign in" %}{% endif %}
   <h1 class="page-title">{% if signed_in %}Ask for more access{% else %}Sign up{% endif %}</h1>
   <p class="text-gray-600 mb-8">
     {% if signed_in %}Your account already works. Tick anything else you'd like to help with below.{% else %}Choose a username and password and tell us who you are. Confirm your email and your account works straight away.{% endif %}
@@ -26,14 +26,14 @@
     <div>
       <label for="id_name" class="block text-sm font-semibold text-gray-700 mb-2">Your name</label>
       <input id="id_name" name="name" type="text" maxlength="200" required autocomplete="name" value="{{ form.name.value|default:'' }}"
-        class="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 focus:outline-hidden focus:ring-2 focus:ring-gray-400">
+        class="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700">
       {% for error in form.name.errors %}<p class="text-sm text-red-700 mt-1">{{ error }}</p>{% endfor %}
     </div>
 
     <div>
       <label for="id_email" class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
       <input id="id_email" name="email" type="email" maxlength="254" required autocomplete="email" value="{{ form.email.value|default:'' }}"
-        class="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 focus:outline-hidden focus:ring-2 focus:ring-gray-400">
+        class="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700">
       {% for error in form.email.errors %}<p class="text-sm text-red-700 mt-1">{{ error }}</p>{% endfor %}
     </div>
 
@@ -43,20 +43,20 @@
       <div>
         <label for="id_username" class="block text-sm font-semibold text-gray-700 mb-2">Username</label>
         <input id="id_username" name="username" type="text" maxlength="150" required autocomplete="username" value="{{ form.username.value|default:'' }}"
-          class="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 focus:outline-hidden focus:ring-2 focus:ring-gray-400">
+          class="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700">
         {% for error in form.username.errors %}<p class="text-sm text-red-700 mt-1">{{ error }}</p>{% endfor %}
       </div>
       <div class="grid gap-4 sm:grid-cols-2">
         <div>
           <label for="id_password1" class="block text-sm font-semibold text-gray-700 mb-2">Password</label>
           <input id="id_password1" name="password1" type="password" required autocomplete="new-password"
-            class="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 focus:outline-hidden focus:ring-2 focus:ring-gray-400">
+            class="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700">
           {% for error in form.password1.errors %}<p class="text-sm text-red-700 mt-1">{{ error }}</p>{% endfor %}
         </div>
         <div>
           <label for="id_password2" class="block text-sm font-semibold text-gray-700 mb-2">Confirm password</label>
           <input id="id_password2" name="password2" type="password" required autocomplete="new-password"
-            class="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 focus:outline-hidden focus:ring-2 focus:ring-gray-400">
+            class="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700">
           {% for error in form.password2.errors %}<p class="text-sm text-red-700 mt-1">{{ error }}</p>{% endfor %}
         </div>
       </div>
@@ -66,7 +66,7 @@
     <div>
       <label for="id_affiliation" class="block text-sm font-semibold text-gray-700 mb-2">Institution or affiliation</label>
       <input id="id_affiliation" name="affiliation" type="text" maxlength="200" required autocomplete="organization" value="{{ form.affiliation.value|default:'' }}"
-        class="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 focus:outline-hidden focus:ring-2 focus:ring-gray-400">
+        class="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700">
       {% for error in form.affiliation.errors %}<p class="text-sm text-red-700 mt-1">{{ error }}</p>{% endfor %}
     </div>
 
@@ -91,7 +91,7 @@
     <div>
       <label for="id_reason" class="block text-sm font-semibold text-gray-700 mb-2">What will you use it for? <span class="font-normal text-gray-500">(optional)</span></label>
       <textarea id="id_reason" name="reason" rows="4" maxlength="2000"
-        class="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 focus:outline-hidden focus:ring-2 focus:ring-gray-400">{{ form.reason.value|default:'' }}</textarea>
+        class="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700">{{ form.reason.value|default:'' }}</textarea>
       {% for error in form.reason.errors %}<p class="text-sm text-red-700 mt-1">{{ error }}</p>{% endfor %}
     </div>
 

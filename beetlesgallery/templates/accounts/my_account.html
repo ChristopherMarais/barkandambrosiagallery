@@ -15,9 +15,9 @@
         {% if request.user.is_superuser %}
           <span class="inline-flex items-center rounded-full bg-gray-700 px-2.5 py-0.5 text-xs font-medium text-white whitespace-nowrap">Superuser</span>
         {% elif request.user.is_staff %}
-          <span class="inline-flex items-center rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium text-gray-800 whitespace-nowrap">Staff</span>
+          <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 whitespace-nowrap">Staff</span>
         {% else %}
-          <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 whitespace-nowrap">Standard</span>
+          <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 whitespace-nowrap">Standard</span>
         {% endif %}
         {% if game_player %}{% include "beetles/includes/game_level_badge.html" with level=game_player.level name=game_player.name %}{% endif %}
       </div>
@@ -60,10 +60,10 @@
 
   {# --- SECTION: USER LIST (Superusers Only) --- #}
   {% if request.user.is_superuser %}
-  <div id="user-directory" class="bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-xs">
-    <div class="mb-8 flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 pb-4">
+  <section id="user-directory">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h2 class="text-2xl font-bold mb-2 text-gray-800">User Directory</h2>
+        <h2 class="section-heading mb-1">User directory</h2>
         <p class="text-sm text-gray-500">
           Overview of all registered accounts.
         </p>
@@ -88,32 +88,32 @@
            class="flex w-full items-center gap-3 px-4 py-3 text-left">
           <div class="min-w-0 flex-1">
             <p class="truncate font-medium text-gray-900">{{ u.username }}</p>
-            {% if u.email %}<p class="truncate text-xs text-gray-400">{{ u.email }}</p>{% endif %}
+            {% if u.email %}<p class="truncate text-xs text-gray-500">{{ u.email }}</p>{% endif %}
           </div>
           {% if u.is_superuser %}
             <span class="inline-flex items-center rounded-full bg-gray-700 px-2.5 py-0.5 text-xs font-medium text-white whitespace-nowrap">Superuser</span>
           {% elif u.is_staff %}
-            <span class="inline-flex items-center rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium text-gray-800 whitespace-nowrap">Staff</span>
+            <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 whitespace-nowrap">Staff</span>
           {% else %}
-            <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 whitespace-nowrap">Standard</span>
+            <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 whitespace-nowrap">Standard</span>
           {% endif %}
           <i class="fi fi-rr-angle-right text-gray-400"></i>
         </button>
         {% empty %}
-        <p class="px-4 py-6 text-center text-gray-500 italic text-sm">No users found.</p>
+        {% include "beetles/includes/empty_state.html" with icon="fi-rr-users" text="No users found. People who sign up will appear here." compact=True %}
         {% endfor %}
       </div>
 
-      <div class="hidden sm:block rounded-lg border border-gray-200 bg-white overflow-x-auto">
+      <div class="table-scroll hidden sm:block rounded-lg border border-gray-200 bg-white">
         <table class="w-full text-sm text-left">
           <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
             <tr>
               <th class="px-4 py-3">Username</th>
               <th class="px-4 py-3">Role</th>
-              <th class="px-4 py-3">Date Joined</th>
-              <th class="px-4 py-3">Last Login</th>
+              <th class="px-4 py-3">Date joined</th>
+              <th class="px-4 py-3">Last login</th>
               <th class="px-4 py-3 text-right">Status</th>
-              <th class="px-4 py-3 text-right">Edit User</th>
+              <th class="px-4 py-3 text-right">Edit user</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
@@ -127,7 +127,7 @@
                       onclick="this.closest('tr').querySelector('[data-edit-user]').click()"
                       class="text-base text-left underline decoration-gray-300 underline-offset-2 hover:decoration-gray-700">{{ u.username }}</button>
                     {% if u.email %}
-                      <span class="text-xs text-gray-400 font-normal">{{ u.email }}</span>
+                      <span class="text-xs text-gray-500 font-normal">{{ u.email }}</span>
                     {% endif %}
                   </div>
               </td>
@@ -137,16 +137,16 @@
                     {% if u.is_superuser %}
                       <span class="inline-flex items-center rounded-full bg-gray-700 px-2.5 py-0.5 text-xs font-medium text-white">Superuser</span>
                     {% elif u.is_staff %}
-                      <span class="inline-flex items-center rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium text-gray-800">Staff</span>
+                      <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">Staff</span>
                     {% else %}
-                      <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">Standard</span>
+                      <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">Standard</span>
                     {% endif %}
                     {% if u.granted_areas and not u.is_superuser %}<span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800" title="{{ u.granted_areas }}">+ extra access</span>{% endif %}
                   </div>
               </td>
               <td class="px-4 py-3 text-gray-600 whitespace-nowrap">{{ u.date_joined|date:"M d, Y" }}</td>
               <td class="px-4 py-3 text-gray-600 whitespace-nowrap">
-                  {% if u.last_login %}{{ u.last_login|date:"M d, H:i" }}{% else %}<span class="text-gray-400 italic">Never</span>{% endif %}
+                  {% if u.last_login %}{{ u.last_login|date:"M d, H:i" }}{% else %}<span class="text-gray-500 italic">Never</span>{% endif %}
               </td>
               <td class="px-4 py-3 text-right">
                   {% if u.is_active %}
@@ -168,19 +168,19 @@
                      '{{ u.granted_areas }}'
                    )"
                    class="text-gray-500 hover:text-gray-900 transition p-1 rounded-md hover:bg-gray-100"
-                   title="Edit User">
+                   title="Edit user">
                    <i class="fi fi-rr-edit"></i>
                 </button>
                 {% endif %}
               </td>
             </tr>
             {% empty %}
-            <tr><td colspan="6" class="px-4 py-6 text-center text-gray-500 italic">No users found.</td></tr>
+            <tr><td colspan="6">{% include "beetles/includes/empty_state.html" with icon="fi-rr-users" text="No users found. People who sign up will appear here." compact=True %}</td></tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
-  </div>
+  </section>
   {% endif %}
 
 {# --- MODAL 1: CHANGE PASSWORD --- #}
@@ -201,7 +201,7 @@
             </div>
             
             <div class="mt-3 text-center w-full">
-              <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title-pw">Change Password</h3>
+              <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title-pw">Change password</h3>
               
               <div class="mt-6 text-left space-y-4">
                 {# Display Form Errors (if any) #}
@@ -212,20 +212,20 @@
                 {% endif %}
 
                 {# Render Fields #}
-                {% include "accounts/field.html" with field=password_form.old_password label="Current Password" %}
-                {% include "accounts/field.html" with field=password_form.new_password1 label="New Password" %}
-                {% include "accounts/field.html" with field=password_form.new_password2 label="Confirm New Password" %}
+                {% include "accounts/field.html" with field=password_form.old_password label="Current password" %}
+                {% include "accounts/field.html" with field=password_form.new_password1 label="New password" %}
+                {% include "accounts/field.html" with field=password_form.new_password2 label="Confirm new password" %}
               </div>
             </div>
           </div>
         </div>
 
         <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
-          <button type="button" onclick="closeModal('modal-password')" class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-xs hover:bg-red-50 focus:outline-hidden sm:text-sm">
+          <button type="button" onclick="closeModal('modal-password')" class="btn-secondary">
             Cancel
           </button>
-          <button type="submit" class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-xs hover:bg-gray-50 focus:outline-hidden sm:text-sm">
-            Save Password
+          <button type="submit" class="btn-primary">
+            Save password
           </button>
         </div>
       </form>
@@ -267,17 +267,17 @@
                 {# Render Fields using your helper template #}
                 {% include "accounts/field.html" with field=create_user_form.username label="Username" %}
                 {% include "accounts/field.html" with field=create_user_form.password1 label="Password" %}
-                {% include "accounts/field.html" with field=create_user_form.password2 label="Confirm Password" %}
+                {% include "accounts/field.html" with field=create_user_form.password2 label="Confirm password" %}
               </div>
             </div>
           </div>
         </div>
 
         <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
-          <button type="button" onclick="closeModal('modal-create-user')" class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-xs hover:bg-red-50 focus:outline-hidden sm:text-sm">
+          <button type="button" onclick="closeModal('modal-create-user')" class="btn-secondary">
             Cancel
           </button>
-          <button type="submit" class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-xs hover:bg-gray-50 focus:outline-hidden sm:text-sm">
+          <button type="submit" class="btn-primary">
             Create user
           </button>
         </div>
@@ -300,18 +300,18 @@
         <input type="hidden" name="user_id" id="edit-user-id">
 
         <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4" id="modal-title-edit">Edit User Details</h3>
+            <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4" id="modal-title-edit">Edit user details</h3>
             
             <div class="space-y-4">
                 
                 {# 1. Status Toggle #}
                 <div class="flex items-center justify-between border rounded-md p-3 bg-gray-50">
                     <div class="flex flex-col">
-                        <span class="text-sm font-medium text-gray-900">Active Account</span>
+                        <span class="text-sm font-medium text-gray-900">Active account</span>
                         <span class="text-xs text-gray-500">Uncheck to disable login (Deactivate).</span>
                     </div>
                     <div class="flex items-center">
-                        <input type="checkbox" name="is_active" id="edit-is-active" class="h-5 w-5 rounded-sm border-gray-300 text-gray-600 focus:ring-gray-500">
+                        <input type="checkbox" name="is_active" id="edit-is-active" class="h-5 w-5 rounded-sm border-gray-300 text-gray-600">
                     </div>
                 </div>
 
@@ -319,13 +319,13 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Username</label>
                     <input type="text" name="username" id="edit-username" required
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-xs focus:border-gray-500 focus:ring-gray-500 sm:text-sm border p-2">
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-xs focus:border-gray-500 sm:text-sm border p-2">
                 </div>
 
                 {# 3. Role Dropdown #}
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Role</label>
-                    <select name="role" id="edit-role" class="mt-1 block w-full rounded-md border-gray-300 shadow-xs focus:border-gray-500 focus:ring-gray-500 sm:text-sm border p-2 bg-white">
+                    <select name="role" id="edit-role" class="mt-1 block w-full rounded-md border-gray-300 shadow-xs focus:border-gray-500 sm:text-sm border p-2 bg-white">
                         <option value="standard">Standard</option>
                         <option value="staff">Staff</option>
                         <option value="superuser">Superuser (everything)</option>
@@ -355,9 +355,9 @@
 
                 {# 4. Password Reset (Optional) #}
                 <div class="border-t border-gray-200 pt-4 mt-2">
-                    <label class="block text-sm font-medium text-gray-700">Set New Password (Optional)</label>
+                    <label class="block text-sm font-medium text-gray-700">Set new password (optional)</label>
                     <input type="text" name="new_password" placeholder="Leave blank to keep current password"
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-xs focus:border-gray-500 focus:ring-gray-500 sm:text-sm border p-2">
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-xs focus:border-gray-500 sm:text-sm border p-2">
                     <p class="text-xs text-gray-500 mt-1">Existing passwords cannot be viewed, only overwritten.</p>
                 </div>
 
@@ -365,11 +365,11 @@
         </div>
 
         <div class="bg-gray-50 px-4 py-3 flex w-full justify-between items-center sm:px-6">
-          <button type="button" onclick="closeModal('modal-edit-user')" class="inline-flex w-auto justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-700 shadow-xs hover:bg-gray-50 focus:outline-hidden sm:text-sm">
+          <button type="button" onclick="closeModal('modal-edit-user')" class="btn-secondary">
             Cancel
           </button>
-          <button type="submit" class="inline-flex w-auto justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-xs hover:bg-gray-50 focus:outline-hidden sm:text-sm">
-            Save Changes
+          <button type="submit" class="btn-primary">
+            Save changes
           </button>
         </div>
       </form>

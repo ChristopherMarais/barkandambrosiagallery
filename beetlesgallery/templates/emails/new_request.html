@@ -5,11 +5,11 @@
 <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 16px;width:100%;background:#f5f5f5;border-radius:6px;font-size:14px;line-height:1.6;">
   <tr><td style="padding:10px 16px 0;color:#777777;width:110px;vertical-align:top;">Name</td><td style="padding:10px 16px 0;">{{ name }}</td></tr>
   <tr><td style="padding:2px 16px 0;color:#777777;vertical-align:top;">Email</td><td style="padding:2px 16px 0;"><a href="mailto:{{ email }}" style="color:#222222;">{{ email }}</a></td></tr>
-  <tr><td style="padding:2px 16px 0;color:#777777;vertical-align:top;">Affiliation</td><td style="padding:2px 16px 0;">{{ affiliation|default:"-" }}</td></tr>
+  <tr><td style="padding:2px 16px 0;color:#777777;vertical-align:top;">Affiliation</td><td style="padding:2px 16px 0;">{{ affiliation|default:"—" }}</td></tr>
   <tr><td style="padding:2px 16px 10px;color:#777777;vertical-align:top;">Would like</td><td style="padding:2px 16px 10px;">{% for label in areas %}{{ label }}{% if not forloop.last %}<br>{% endif %}{% empty %}(nothing selected){% endfor %}</td></tr>
 </table>
 <p style="margin:0 0 4px;color:#777777;font-size:13px;">In their own words</p>
-<p style="margin:0 0 16px;white-space:pre-line;">{{ reason|default:"-" }}</p>
+<p style="margin:0 0 16px;white-space:pre-line;">{{ reason|default:"—" }}</p>
 {% include "emails/_button.html" with url=review_url label="Review the request" %}
 <p style="margin:0 0 16px;">They cannot sign in until someone decides. Replying to this email writes to {{ name }} directly.</p>
 <p style="margin:0 0 16px;">Thank you for looking after the gallery!</p>

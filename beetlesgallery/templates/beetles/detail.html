@@ -3,13 +3,10 @@
 
 {% block extra_css %}
 <style>
-  /* The flag on the photo: shown while the pointer is on the photo or the keyboard is in it, always on touch screens
-     (they can't hover), and never while the whole photo shows, since only the beetle in its box is flagged here. */
-  #report-roi-btn { opacity: 0; }
-  #roi-photo:hover #report-roi-btn, #roi-photo:focus-within #report-roi-btn, #report-roi-btn[aria-expanded="true"] { opacity: 1; }
-  @media (hover: none) { #report-roi-btn { opacity: 1; } }
-  #roi-photo[data-box="hidden"] #report-roi-btn { display: none; }
-  #report-roi-btn:disabled { cursor: default; }
+  /* The flag, in the toolbar under the photo (#618 detail-toolbar): never while the whole photo shows, since only the
+     beetle in its box is flagged here. */
+  .roi-figure:has(#roi-photo[data-box="hidden"]) #report-roi-wrap { display: none; }
+  #report-roi-btn:disabled { cursor: default; opacity: 0.5; }
 
   /* Every beetle's box on the photo (#536): a white line with a darker outline; this page's beetle the other way
      round, a dark line with a white outline. The other boxes are links to their beetles' pages; a click on this one
@@ -42,8 +39,10 @@
   <header class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
     <div>
       {# Same title as the gallery card: the linked taxon's name, or "Unidentified" (#112) #}
+      {# #618 detail-ids-first: name and authority first, the authority smaller and grey beside the name (under it when the line is full). #}
       <h1 class="page-title">
-        {{ ref_species.scientificName|default:"Unidentified" }}
+        {{ ref_species.scientificName|default:"Unidentified" }}{% if ref_species.scientificName and ref_species.authority %}
+        <span class="ml-1 text-base font-normal text-gray-500" data-testid="detail-authority">{{ ref_species.authority }}</span>{% endif %}
       </h1>
     </div>
 
@@ -52,7 +51,7 @@
     <nav class="inline-flex h-9 items-center gap-0.5 self-start rounded-lg border border-gray-300 bg-white px-1 shrink-0 md:self-center"
          aria-label="Specimen pager" data-testid="specimen-pager">
       {% if prev_sibling %}
-        <a href="{% url 'beetle_detail' beetle_id=prev_sibling.id %}" class="flex h-7 w-7 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-black transition" title="Previous ROI" aria-label="Previous ROI">
+        <a href="{% url 'beetle_detail' beetle_id=prev_sibling.id %}" class="flex h-7 w-7 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-black transition hit-area" title="Previous ROI" aria-label="Previous ROI">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
         </a>
       {% else %}
@@ -62,7 +61,7 @@
       {% endif %}
       <span class="px-1 text-sm font-semibold text-gray-700 tabular-nums">{{ current_sibling_index|digit_groups }} / {{ total_siblings|digit_groups }}</span>
       {% if next_sibling %}
-        <a href="{% url 'beetle_detail' beetle_id=next_sibling.id %}" class="flex h-7 w-7 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-black transition" title="Next ROI" aria-label="Next ROI">
+        <a href="{% url 'beetle_detail' beetle_id=next_sibling.id %}" class="flex h-7 w-7 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-black transition hit-area" title="Next ROI" aria-label="Next ROI">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
         </a>
       {% else %}
@@ -93,7 +92,7 @@
               <img
                 src="{{ asset.thumb_small.url }}"
                 data-full-src="{{ beetle.display_url }}" data-thumb
-                alt="Specimen Image"
+                alt="Specimen image"
                 style="aspect-ratio: {{ asset.image_width }} / {{ asset.image_height }}; width: min({{ asset.image_width }}px, calc(70vh * {{ asset.image_width }} / {{ asset.image_height }}));"
                 class="block max-h-[70vh] max-w-full h-auto rounded-lg object-contain"
                 decoding="async"
@@ -102,7 +101,7 @@
               {% else %}
               <img
                 src="{{ beetle.display_url }}"
-                alt="Specimen Image"
+                alt="Specimen image"
                 {% if asset.image_width %}
                   style="aspect-ratio: {{ asset.image_width }}/{{ asset.image_height }};"
                 {% endif %}
@@ -137,42 +136,29 @@
               {% endif %}
             </div>
 
-            {% if beetle.bbox_x is not None %}
-              {# FLAG: sends this beetle to the curators, as Report does in the game. Shown on hover and focus, always on touch screens, only with the box (see the CSS). Its menu opens upward, over the toolbar below. #}
-              <button type="button" id="report-roi-btn" class="btn-secondary absolute bottom-2 right-2 h-9 w-9 p-0 rounded-full text-base shadow-md" aria-haspopup="menu" aria-expanded="false" aria-label="Flag this" title="Flag this" data-testid="report-roi"><i class="fi fi-rr-flag" aria-hidden="true"></i></button>
-              <div id="report-roi-menu" class="hidden absolute bottom-12 right-2 z-20 scroll-mt-24 p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Flag this" data-url="{% url 'report_roi' beetle.id %}">
-                <div class="px-2 py-1 text-xs font-semibold text-gray-500">Flag this</div>
-                {% for value, label in report_reasons %}
-                <button type="button" class="report-roi-reason block w-full text-left px-2 py-2 rounded-lg hover:bg-gray-100" data-reason="{{ value }}" role="menuitem">{{ label }}</button>
-                {% endfor %}
-              </div>
-            {% endif %}
           </div>
-          {% if beetle.bbox_x is not None %}
-            <p id="report-roi-status" class="mt-2 empty:mt-0 text-sm text-gray-600" role="status"></p>
-          {% endif %}
 
-          {# #618 detail-toolbar / detail-roi-pager: a toolbar on the photo's bottom edge, ROI pager left, boxes toggle and full size right. The flag stays on the photo itself, above (it marks this beetle, not the whole photo). #}
+          {# #618 detail-toolbar / detail-roi-pager: a toolbar on the photo's bottom edge, ROI pager left; boxes toggle, full size and flag right. Nothing sits on the photo itself. #}
           {% if photo_boxes or beetle.image_asset %}
           <div id="roi-toolbar" class="mt-2 w-full flex items-center justify-between gap-2 border-t border-text/10 pt-2" data-testid="roi-toolbar">
             <div class="flex items-center gap-1">
               {% if current_sibling_index %}
                 {% if prev_sibling %}
-                  <a href="{% url 'beetle_detail' beetle_id=prev_sibling.id %}" class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" title="Previous ROI" aria-label="Previous ROI" data-testid="roi-pager-prev">
+                  <a href="{% url 'beetle_detail' beetle_id=prev_sibling.id %}" class="flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" title="Previous ROI" aria-label="Previous ROI" data-testid="roi-pager-prev">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                   </a>
                 {% else %}
-                  <span class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-300" aria-hidden="true">
+                  <span class="flex h-11 w-11 items-center justify-center rounded-lg text-gray-300" aria-hidden="true">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                   </span>
                 {% endif %}
                 <span class="px-1 text-sm text-gray-600 tabular-nums">ROI {{ current_sibling_index|digit_groups }} of {{ total_siblings|digit_groups }}</span>
                 {% if next_sibling %}
-                  <a href="{% url 'beetle_detail' beetle_id=next_sibling.id %}" class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" title="Next ROI" aria-label="Next ROI" data-testid="roi-pager-next">
+                  <a href="{% url 'beetle_detail' beetle_id=next_sibling.id %}" class="flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" title="Next ROI" aria-label="Next ROI" data-testid="roi-pager-next">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                   </a>
                 {% else %}
-                  <span class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-300" aria-hidden="true">
+                  <span class="flex h-11 w-11 items-center justify-center rounded-lg text-gray-300" aria-hidden="true">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                   </span>
                 {% endif %}
@@ -181,17 +167,32 @@
             <div class="flex items-center gap-1">
               {% if photo_boxes %}
                 {# BOXES SWITCH: shows or hides the boxes and the haze, as a click outside the boxes does; for the keyboard and for those who don't know that click. #}
-                <button type="button" id="roi-boxes-btn" class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" aria-pressed="true" aria-label="Hide the boxes" title="Hide the boxes">
+                <button type="button" id="roi-boxes-btn" class="flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" aria-pressed="true" aria-label="Hide the boxes" title="Hide the boxes">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="11" height="9" rx="1.5"/><rect x="10" y="10" width="11" height="9" rx="1.5"/><path class="boxes-off" stroke-linecap="round" d="M3 3l18 18"/></svg>
                 </button>
               {% endif %}
               {% if beetle.image_asset %}
-                <a href="{{ beetle.display_url }}" target="_blank" rel="noopener" class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" title="View full size" aria-label="View full size" data-testid="roi-fullsize">
+                <a href="{{ beetle.display_url }}" target="_blank" rel="noopener" class="flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" title="View full size" aria-label="View full size" data-testid="roi-fullsize">
                   <i class="fi fi-rr-expand" aria-hidden="true"></i>
                 </a>
               {% endif %}
+              {% if beetle.bbox_x is not None %}
+                {# FLAG: sends this beetle to the curators, as Report does in the game; only while its box shows (see the CSS). Its menu opens upward, over the photo. #}
+                <div id="report-roi-wrap" class="relative">
+                  <button type="button" id="report-roi-btn" class="flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" aria-haspopup="menu" aria-expanded="false" aria-label="Flag this" title="Flag this" data-testid="report-roi"><i class="fi fi-rr-flag" aria-hidden="true"></i></button>
+                  <div id="report-roi-menu" class="hidden absolute bottom-12 right-0 z-20 scroll-mt-24 p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Flag this" data-url="{% url 'report_roi' beetle.id %}">
+                    <div class="px-2 py-1 text-xs font-semibold text-gray-500">Flag this</div>
+                    {% for value, label in report_reasons %}
+                    <button type="button" class="report-roi-reason block w-full text-left px-2 py-2 rounded-lg hover:bg-gray-100" data-reason="{{ value }}" role="menuitem">{{ label }}</button>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endif %}
             </div>
           </div>
+          {% endif %}
+          {% if beetle.bbox_x is not None %}
+            <p id="report-roi-status" class="mt-2 empty:mt-0 w-full text-right text-sm text-gray-600" role="status"></p>
           {% endif %}
 
         </figure>
@@ -226,7 +227,7 @@
 
           {# --- TAXONOMY (Reference Read-Only), first: what people look for (#618 detail-order) --- #}
           <div class="group-section">
-              <h3 class="mt-2 mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Taxonomy</h3>
+              <h3 class="section-heading mt-2">Taxonomy</h3>
               {% with verbatim=beetle.depicts_name_verbatim scientific=ref_species.scientificName %}
               {% if verbatim and verbatim != scientific %}
               <p class="mb-2 text-xs text-text/60" title="As written on the specimen's own label, which may differ from the accepted name below">
@@ -235,7 +236,7 @@
               {% endif %}
               {% endwith %}
               <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
-                <dt class="col-span-1 text-text/60 {% if not ref_species.scientificName %}hidden field-hidden{% endif %}">Scientific Name</dt>
+                <dt class="col-span-1 text-text/60 {% if not ref_species.scientificName %}hidden field-hidden{% endif %}">Scientific name</dt>
                 <dd class="col-span-2 text-text/80 {% if not ref_species.scientificName %}hidden field-hidden{% endif %}">{% if beetle.depicts_valid_name_id and ref_species.scientificName %}<a href="{% url 'taxonomy_browser' %}?species={{ beetle.depicts_valid_name_id|urlencode }}" class="hover:underline hover:text-black" title="View this taxon in the Taxonomy Browser">{{ ref_species.scientificName }}</a>{% else %}{{ ref_species.scientificName|default:"—" }}{% endif %}</dd>
 
                 <dt class="col-span-1 text-text/60 {% if not ref_species.authority %}hidden field-hidden{% endif %}">Authority</dt>
@@ -265,10 +266,10 @@
                     <ul class="mt-1 space-y-0.5">{% for n in other_names %}<li><i>{{ n.taxon.scientific_name|default:n.valid_species_id }}</i> &middot; {{ n.get_tier_display|default:"No ID" }}{% if n.detail %} &middot; {{ n.detail }}{% endif %} &middot; {{ n.created_at|date:"M j, Y" }}</li>{% endfor %}</ul>
                   </details>{% endif %}</dd>
 
-                <dt class="col-span-1 text-text/60 {% if not ref_species.authorityYear %}hidden field-hidden{% endif %}">Authority Year</dt>
+                <dt class="col-span-1 text-text/60 {% if not ref_species.authorityYear %}hidden field-hidden{% endif %}">Authority year</dt>
                 <dd class="col-span-2 text-text/80 {% if not ref_species.authorityYear %}hidden field-hidden{% endif %}">{{ ref_species.authorityYear|default:"—" }}</dd>
 
-                <dt class="col-span-1 text-text/60 {% if not ref_species.originalGenus %}hidden field-hidden{% endif %}">Original Genus</dt>
+                <dt class="col-span-1 text-text/60 {% if not ref_species.originalGenus %}hidden field-hidden{% endif %}">Original genus</dt>
                 <dd class="col-span-2 text-text/80 italic {% if not ref_species.originalGenus %}hidden field-hidden{% endif %}">{{ ref_species.originalGenus|default:"—" }}</dd>
               </dl>
               <button type="button" class="show-all-fields mt-2 text-xs text-gray-500 underline hover:text-gray-700">Show all 11 fields</button>
@@ -288,19 +289,19 @@
 
           {# --- SPECIMEN AND COLLECTION --- #}
           <div class="group-section mt-4">
-              <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Specimen and Collection</h3>
+              <h3 class="section-heading">Specimen and collection</h3>
               <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
                 <dt class="col-span-1 text-text/60 {% if not beetle.collection_country %}hidden field-hidden{% endif %}">Country</dt>
                 <dd class="col-span-2 {% if not beetle.collection_country %}hidden field-hidden{% endif %}">{{ beetle.collection_country|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60 {% if not beetle.collection_stateProvince %}hidden field-hidden{% endif %}">State/Province</dt>
+                <dt class="col-span-1 text-text/60 {% if not beetle.collection_stateProvince %}hidden field-hidden{% endif %}">State/province</dt>
                 <dd class="col-span-2 {% if not beetle.collection_stateProvince %}hidden field-hidden{% endif %}">{{ beetle.collection_stateProvince|default:"—" }}</dd>
                 <dt class="col-span-1 text-text/60 {% if not beetle.specimen_sex %}hidden field-hidden{% endif %}">Sex</dt>
                 <dd class="col-span-2 {% if not beetle.specimen_sex %}hidden field-hidden{% endif %}">{{ beetle.specimen_sex|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60 {% if not beetle.specimen_type_status %}hidden field-hidden{% endif %}">Type Status</dt>
+                <dt class="col-span-1 text-text/60 {% if not beetle.specimen_type_status %}hidden field-hidden{% endif %}">Type status</dt>
                 <dd class="col-span-2 {% if not beetle.specimen_type_status %}hidden field-hidden{% endif %}">{{ beetle.specimen_type_status|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.image_notes %}hidden field-hidden{% endif %}">Image Notes</dt>
+                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.image_notes %}hidden field-hidden{% endif %}">Image notes</dt>
                 <dd class="col-span-2 note-box whitespace-pre-wrap {% if not beetle.image_asset.image_notes %}hidden field-hidden{% endif %}">{{ beetle.image_asset.image_notes|default:"—"|linkify }}</dd>
-                <dt class="col-span-1 text-text/60 {% if not beetle.specimen_notes %}hidden field-hidden{% endif %}">Specimen Notes</dt>
+                <dt class="col-span-1 text-text/60 {% if not beetle.specimen_notes %}hidden field-hidden{% endif %}">Specimen notes</dt>
                 <dd class="col-span-2 note-box whitespace-pre-wrap {% if not beetle.specimen_notes %}hidden field-hidden{% endif %}">{{ beetle.specimen_notes|default:"—"|linkify }}</dd>
               </dl>
               <button type="button" class="show-all-fields mt-2 text-xs text-gray-500 underline hover:text-gray-700">Show all 6 fields</button>
@@ -308,15 +309,15 @@
 
           {# --- ATTRIBUTION --- #}
           <div class="group-section mt-4">
-              <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Attribution</h3>
+              <h3 class="section-heading">Attribution</h3>
               <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
                 <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.image_institution %}hidden field-hidden{% endif %}">Institution</dt>
                 <dd class="col-span-2 {% if not beetle.image_asset.image_institution %}hidden field-hidden{% endif %}">{{ beetle.image_asset.image_institution|default:"—" }}</dd>
                 <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.photographer %}hidden field-hidden{% endif %}">Photographer</dt>
                 <dd class="col-span-2 {% if not beetle.image_asset.photographer %}hidden field-hidden{% endif %}">{{ beetle.image_asset.photographer|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.image_email %}hidden field-hidden{% endif %}">Image Email</dt>
+                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.image_email %}hidden field-hidden{% endif %}">Image email</dt>
                 <dd class="col-span-2 {% if not beetle.image_asset.image_email %}hidden field-hidden{% endif %}">{{ beetle.image_asset.image_email|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.photo_usage_statement %}hidden field-hidden{% endif %}">Usage License</dt>
+                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.photo_usage_statement %}hidden field-hidden{% endif %}">Usage license</dt>
                 <dd class="col-span-2 note-box {% if not beetle.image_asset.photo_usage_statement %}hidden field-hidden{% endif %}">{{ beetle.image_asset.photo_usage_statement|default:"—"|linkify }}</dd>
               </dl>
               <button type="button" class="show-all-fields mt-2 text-xs text-gray-500 underline hover:text-gray-700">Show all 4 fields</button>
@@ -324,7 +325,7 @@
 
           {# --- VALIDATION --- #}
           <div class="group-section mt-4">
-              <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Validation</h3>
+              <h3 class="section-heading">Validation</h3>
               <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
                 <dt class="col-span-1 text-text/60">Image</dt>
                 <dd class="col-span-2 flex items-center justify-between gap-2">
@@ -353,7 +354,7 @@
 
           {# --- TECHNICAL (#618 detail-order: technical and identifiers last) --- #}
           <div class="group-section mt-4">
-              <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Technical</h3>
+              <h3 class="section-heading">Technical</h3>
               <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
                 <dt class="col-span-1 text-text/60 {% if not beetle.aspect %}hidden field-hidden{% endif %}">Aspect</dt>
                 <dd class="col-span-2 {% if not beetle.aspect %}hidden field-hidden{% endif %}">{{ beetle.aspect|default:"—" }}</dd>
@@ -361,9 +362,9 @@
                 <dd class="col-span-2 {% if not beetle.image_asset.resolution_in_ppmm %}hidden field-hidden{% endif %}">
                   {% if beetle.image_asset.resolution_in_ppmm %}<span title="{{ beetle.image_asset.resolution_in_ppmm }} px/mm">{{ beetle.image_asset.resolution_in_ppmm|floatformat:2 }} px/mm</span>{% else %}—{% endif %}
                 </dd>
-                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.image_date_taken %}hidden field-hidden{% endif %}">Image Date</dt>
+                <dt class="col-span-1 text-text/60 {% if not beetle.image_asset.image_date_taken %}hidden field-hidden{% endif %}">Image date</dt>
                 <dd class="col-span-2 {% if not beetle.image_asset.image_date_taken %}hidden field-hidden{% endif %}">{{ beetle.image_asset.image_date_taken|default:"—" }}</dd>
-                <dt class="col-span-1 text-text/60">Multiple Individuals</dt>
+                <dt class="col-span-1 text-text/60">Multiple individuals</dt>
                 <dd class="col-span-2">{% if beetle.image_asset.image_has_multiple_individuals %}Yes{% else %}No{% endif %}</dd>
               </dl>
               <button type="button" class="show-all-fields mt-2 text-xs text-gray-500 underline hover:text-gray-700">Show all 4 fields</button>
@@ -371,7 +372,7 @@
 
           {# --- IDENTIFIERS, last (#618 detail-ids-first / detail-ids-copy): every id in one card, each copyable --- #}
           <div class="group-section mt-4">
-              <h3 class="mb-2 text-md font-semibold tracking-wide text-text/70 uppercase">Identifiers</h3>
+              <h3 class="section-heading">Identifiers</h3>
               <dl class="grid grid-cols-3 gap-x-3 gap-y-2 text-sm items-center">
                 <dt class="col-span-1 text-text/60">ROI ID</dt>
                 <dd class="col-span-2 flex items-center gap-2">
@@ -399,7 +400,7 @@
                 <dt class="col-span-1 text-text/60 {% if not beetle.depicts_specimen %}hidden field-hidden{% endif %}">Specimen ID</dt>
                 <dd class="col-span-2 {% if not beetle.depicts_specimen %}hidden field-hidden{% endif %}" data-testid="specimen-id-value">{{ beetle.depicts_specimen|default:"—" }}</dd>
 
-                <dt class="col-span-1 text-text/60 {% if not beetle.depicts_valid_name_id %}hidden field-hidden{% endif %}">Valid Name ID</dt>
+                <dt class="col-span-1 text-text/60 {% if not beetle.depicts_valid_name_id %}hidden field-hidden{% endif %}">Valid name ID</dt>
                 <dd class="col-span-2 {% if not beetle.depicts_valid_name_id %}hidden field-hidden{% endif %}" data-testid="valid-name-id-value">{{ beetle.depicts_valid_name_id|default:"—" }}</dd>
 
                 <dt class="col-span-1 text-text/60 {% if not beetle.depicts_described_name_id %}hidden field-hidden{% endif %}">Described ID</dt>
@@ -492,8 +493,8 @@
   });
 
   // The photo: every beetle's box, the other beetles' boxes linking to their pages. A click outside every box (or the
-  // switch in the toolbar) hides the boxes and the haze, the next one shows them again. The flag on the photo's
-  // corner sends this beetle to the curators; it shows only with the boxes (the CSS reads data-box).
+  // switch in the toolbar) hides the boxes and the haze, the next one shows them again. The flag in the
+  // toolbar sends this beetle to the curators; it shows only with the boxes (the CSS reads data-box).
   (function () {
     const photo = document.getElementById('roi-photo');
     const frame = document.getElementById('roi-frame');

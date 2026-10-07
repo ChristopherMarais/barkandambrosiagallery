@@ -251,16 +251,45 @@ def _nav_sections(context):
     )
 
 
+# Pages that live outside their section's own URL prefix but sit below it in the menu (nav-active, #618): the nav
+# item's prefix -> the other prefixes that mark it current too. Account and Login are never shown together (one for
+# signed-in visitors, one for the rest), so the sign-up pages can sit under both.
+NAV_EXTRA_PREFIXES = {
+    "/my-uploads/": ("/tools/predictions/", "/tools/bulk-validate/", "/upload/", "/updates/"),
+    "/accounts/me/": ("/tools/site-notice/", "/tools/access-requests/", "/accounts/create-account/",
+                      "/accounts/signup/", "/accounts/request-access/"),
+    "/accounts/login/": ("/accounts/signup/", "/accounts/request-access/", "/accounts/password-reset/",
+                         "/accounts/set-password/", "/accounts/verify-email/"),
+}
+# Pages below Home, which can't use a prefix of its own ("/" would match everything).
+NAV_HOME_PREFIXES = ("/team/",)
+
+
+def _in_section(path, prefix):
+    return path.startswith(prefix) or any(path.startswith(p) for p in NAV_EXTRA_PREFIXES.get(prefix, ()))
+
+
 @register.simple_tag(takes_context=True)
 def nav_active(context, prefix):
     """
     The classes for a nav item, current or not (nav-active, #618): matched by URL prefix (e.g. "/game/"), not an
     exact page name, so every sub-page of a section (Leaderboard, Unlocks, ... under "/game/") marks its parent nav
-    item too. Not for the home link, whose own prefix ("/") would match every page.
+    item too, as do the pages listed for it in NAV_EXTRA_PREFIXES (Predictions under Data Management, ...). Not for
+    the home link, whose own prefix ("/") would match every page: see nav_home_active.
     """
     request = context.get("request")
     path = getattr(request, "path", "") or ""
-    return "bg-gray-200 font-semibold" if path.startswith(prefix) else "hover:bg-gray-200"
+    return "bg-gray-200 font-semibold" if _in_section(path, prefix) else "hover:bg-gray-200"
+
+
+@register.simple_tag(takes_context=True)
+def nav_home_active(context):
+    """The home link's classes: current on the home page itself and on the pages below it (NAV_HOME_PREFIXES)."""
+    request = context.get("request")
+    path = getattr(request, "path", "") or ""
+    if path == "/" or any(path.startswith(p) for p in NAV_HOME_PREFIXES):
+        return "bg-gray-200 font-semibold"
+    return "hover:bg-gray-200"
 
 
 @register.simple_tag(takes_context=True)
@@ -270,7 +299,12 @@ def nav_section_title(context):
     path = getattr(request, "path", "") or ""
     if path == "/":
         return "Bark and Ambrosia Gallery"
+    user = context.get("user") or getattr(request, "user", None)
+    signed_in = bool(getattr(user, "is_authenticated", False))
     for prefix, label in _nav_sections(context):
-        if path.startswith(prefix):
+        # the same rule as the menu: Account only for signed-in visitors, Login only for the rest
+        if prefix == ("/accounts/login/" if signed_in else "/accounts/me/") and not path.startswith(prefix):
+            continue
+        if _in_section(path, prefix):
             return label
     return "Bark and Ambrosia Gallery"

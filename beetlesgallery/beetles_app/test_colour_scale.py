@@ -105,17 +105,19 @@ class RenderedTests(SimpleTestCase):
             self.assertIn(f"scale-{tier}", html)
             self.assertEqual("scale-glow" in html, tier == "excellent")
 
-    def test_accuracy_standing_shows_the_word_in_its_colour(self):
+    def test_accuracy_standing_colours_the_number_by_its_own_step(self):
+        # one number, one colour (#site-meaning-85): the step of the value, and the rank among players in grey
         standing = {"players": 3, "bins": [], "average": 0.6,
-                    "me": {"accuracy": 0.8, "percentile": 80, "tier": "great", "tier_name": "Great", "bin": 8}}
+                    "me": {"accuracy": 0.8, "percentile": 80, "rank": "Top 20%", "step": "great", "bin": 8}}
         html = render_to_string("beetles/includes/game_accuracy.html", {"standing": standing})
-        self.assertIn('scale-chip-great" data-testid="accuracy-tier">Great<', html)
-        standing["me"].update(percentile=None, tier="none", tier_name="Not yet")
-        self.assertNotIn("accuracy-tier", render_to_string("beetles/includes/game_accuracy.html", {"standing": standing}))
+        self.assertIn("scale-great", html)
+        self.assertIn('data-testid="accuracy-rank">Top 20%<', html)
+        self.assertNotIn("scale-chip-", html)
+        standing["me"].update(percentile=None, rank=None)
+        self.assertNotIn("accuracy-rank", render_to_string("beetles/includes/game_accuracy.html", {"standing": standing}))
 
-    def test_accuracy_tiers_by_percentile(self):
-        self.assertEqual([(lo, word) for lo, _, word in game_board.ACCURACY_TIERS],
-                         [(0, "Fair"), (25, "Decent"), (50, "Good"), (75, "Great"), (90, "Excellent")])
+    def test_accuracy_has_no_percentile_tiers(self):
+        self.assertFalse(hasattr(game_board, "ACCURACY_TIERS"))
 
     @override_settings(GAME_TRUST_MIN_ACCURACY=0.8)
     def test_the_expertise_key_names_each_band(self):

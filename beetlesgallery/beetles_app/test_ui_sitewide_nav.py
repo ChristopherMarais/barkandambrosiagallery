@@ -102,12 +102,9 @@ class NavActiveByPrefixTests(PageBehaviourCase):
 
 class NavHomeLinkTests(SimpleTestCase):
     def test_the_home_link_keeps_its_own_exact_match(self):
-        # "/" is every page's prefix, so home cannot use nav_active's prefix matching like the other sections
-        self.assertIn(
-            "{% if request.resolver_match.url_name == 'image_browser' %}bg-gray-200 font-semibold{% else %}"
-            "hover:bg-gray-200{% endif %}",
-            BASE_HTML,
-        )
+        # "/" is every page's prefix, so home cannot use nav_active's prefix matching like the other sections: it has
+        # its own tag, current on "/" and the pages below home (/team/, test_audit_layout_finish.py)
+        self.assertIn("{% nav_home_active %}", BASE_HTML)
 
 
 class NavDrawerAccountTests(PageBehaviourCase):

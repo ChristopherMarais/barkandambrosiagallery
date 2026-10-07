@@ -17,11 +17,11 @@
          <div class="flex flex-wrap items-center gap-4">
              {# View Toggle #}
              <div class="flex items-center gap-1 border border-gray-300 rounded-lg overflow-hidden">
-               <button type="button" id="view-toggle-card" class="view-toggle-btn active px-3 py-1.5 text-sm hover:bg-gray-100 transition flex items-center gap-1.5" title="Card View">
+               <button type="button" id="view-toggle-card" class="view-toggle-btn active px-3 py-1.5 text-sm hover:bg-gray-100 transition flex items-center gap-1.5" title="Card view">
                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
                  <span class="hidden sm:inline">Cards</span>
                </button>
-               <button type="button" id="view-toggle-gallery" class="view-toggle-btn px-3 py-1.5 text-sm hover:bg-gray-100 transition flex items-center gap-1.5" title="Gallery View">
+               <button type="button" id="view-toggle-gallery" class="view-toggle-btn px-3 py-1.5 text-sm hover:bg-gray-100 transition flex items-center gap-1.5" title="Gallery view">
                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg>
                  <span class="hidden sm:inline">Gallery</span>
                </button>
@@ -72,15 +72,13 @@
                  </h3>
                  <div class="flex items-center gap-2 mt-1 min-w-0">
                      <span class="font-semibold text-gray-600 shrink-0">Record ID:</span>
-                     <span class="font-mono text-xs text-text/70 truncate select-all" title="{{ b.id }}">{{ b.id|stringformat:"s" }}</span>
-                     <button type="button" class="copy-uuid shrink-0 text-gray-500 hover:text-black transition" data-uuid="{{ b.id }}" title="Copy Full Record ID">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                     </button>
+                     {# An id in passing (site-uuid, #618): the first 8 characters and a copy button for the whole value #}
+                     {% include "beetles/includes/short_id.html" with value=b.id %}
                  </div>
                </div>
                <div class="shrink-0 pt-0.5">
                    <label class="flex items-center gap-1.5 cursor-pointer select-none group/check">
-                    <input type="checkbox" class="row-select h-4 w-4 rounded-sm border-gray-300 text-gray-800 accent-gray-500 focus:ring-gray-400 focus:ring-offset-0 cursor-pointer" value="{{ b.id }}">
+                    <input type="checkbox" class="row-select h-4 w-4 rounded-sm border-gray-300 text-gray-800 accent-gray-500 cursor-pointer" value="{{ b.id }}">
                   </label>
                </div>
              </div>
@@ -101,7 +99,7 @@
                 {% endif %}
 
                 {% if b.image_asset.image_has_multiple_individuals is not None %}
-                  <dt class="col-span-1 text-text/60">Multiple Individuals</dt>
+                  <dt class="col-span-1 text-text/60">Multiple individuals</dt>
                   <dd class="col-span-2 text-text/80">{% if b.image_asset.image_has_multiple_individuals %}Yes{% else %}No{% endif %}</dd>
                 {% endif %}
 
@@ -164,7 +162,7 @@
                 {% endif %}
 
                 {% if b.specimen_type_status %}
-                  <dt class="col-span-1 text-text/60">Type Status</dt>
+                  <dt class="col-span-1 text-text/60">Type status</dt>
                   <dd class="col-span-2 text-text/80">{{ b.specimen_type_status }}</dd>
                 {% endif %}
              </dl>
@@ -175,9 +173,7 @@
            </div>
        </div>
       {% empty %}
-         <div class="py-12 text-center text-gray-600 border-2 border-dashed border-text/10 rounded-xl">
-            <p>No specimens found matching your search.</p>
-         </div>
+         {% include "beetles/includes/empty_state.html" with icon="fi-rr-search" text="No specimens found matching your search. Clear a filter or try other words, and matching images will appear here." %}
       {% endfor %}
     </div>
 
@@ -202,7 +198,7 @@
             {# Checkbox in the top-left corner: shown on hover for a mouse, always shown for touch (#618 browser-grid-select) #}
             <div class="grid-select-overlay absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <label class="flex items-center cursor-pointer" onclick="event.preventDefault(); event.stopPropagation();">
-                <input type="checkbox" class="row-select h-5 w-5 rounded-sm border-gray-300 bg-white shadow-xs text-gray-800 accent-gray-500 focus:ring-gray-400 cursor-pointer" value="{{ b.id }}" onclick="event.stopPropagation();">
+                <input type="checkbox" class="row-select h-5 w-5 rounded-sm border-gray-300 bg-white shadow-xs text-gray-800 accent-gray-500 cursor-pointer" value="{{ b.id }}" onclick="event.stopPropagation();">
               </label>
             </div>
           </a>
@@ -212,9 +208,7 @@
           </div>
         </div>
       {% empty %}
-        <div class="col-span-full py-12 text-center text-gray-600 border-2 border-dashed border-text/10 rounded-xl">
-          <p>No specimens found matching your search.</p>
-        </div>
+        <div class="col-span-full">{% include "beetles/includes/empty_state.html" with icon="fi-rr-search" text="No specimens found matching your search. Clear a filter or try other words, and matching images will appear here." %}</div>
       {% endfor %}
     </div>
 

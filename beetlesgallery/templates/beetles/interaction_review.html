@@ -5,7 +5,7 @@
 
 {% block content %}
 <section class="max-w-5xl">
-  <a href="{% url 'interactions_preview' %}" class="inline-block py-2 text-sm text-gray-500 hover:text-gray-800">&larr; Ecological Interactions</a>
+  {% url 'interactions_preview' as back_url %}{% include "beetles/includes/back_link.html" with url=back_url label="Ecological Interactions" %}
   <h1 class="page-title">Review interactions</h1>
   <p class="text-gray-600 mb-6 max-w-3xl">
     Each card is one claim (a beetle and another organism) with every paper that proposes it. Read the sentence in the paper,
@@ -19,7 +19,7 @@
     {% for value, label, count in tabs %}
     <a href="?status={{ value }}" role="tab" aria-selected="{% if filters.status == value %}true{% else %}false{% endif %}"
       class="flex-1 min-w-0 whitespace-nowrap overflow-hidden text-center px-2 sm:px-4 py-2 text-xs sm:text-sm font-semibold {% if not forloop.first %}border-l border-gray-300{% endif %} {% if filters.status == value %}bg-gray-600 text-white{% else %}bg-white text-gray-700 hover:bg-gray-100{% endif %}">
-      {{ label }} <span class="{% if filters.status == value %}text-gray-300{% else %}text-gray-400{% endif %}">({{ count|digit_groups }})</span></a>
+      {{ label }} <span class="{% if filters.status == value %}text-gray-300{% else %}text-gray-500{% endif %}">({{ count|digit_groups }})</span></a>
     {% endfor %}
   </div>
 
@@ -53,7 +53,7 @@
       <div class="flex flex-wrap items-baseline justify-between gap-2">
         <h2 class="text-lg font-semibold text-gray-900">
           <a href="{% url 'taxonomy_browser' %}?species={{ claim.beetle_id|urlencode }}" class="italic hover:underline">{{ claim.beetle_name }}</a>
-          <span class="text-gray-400 font-normal">&harr;</span>
+          <span class="text-gray-500 font-normal">&harr;</span>
           <span class="italic">{{ claim.partner_name }}</span>
         </h2>
         <span class="text-xs text-gray-500">
@@ -65,7 +65,7 @@
       </p>
       {% if claim.covered_by %}
       <p class="mt-2 text-sm text-green-900 bg-green-50 border border-green-200 rounded-sm px-3 py-2">
-        Already in the published dataset (record {{ claim.covered_by.record_number|default:"-" }}: {{ claim.covered_by.pathogen }}, {{ claim.covered_by.source|default:"no citation" }}).
+        Already in the published dataset (record {{ claim.covered_by.record_number|default:"—" }}: {{ claim.covered_by.pathogen }}, {{ claim.covered_by.source|default:"no citation" }}).
         These papers may be extra evidence.
       </p>
       {% elif claim.existing %}
@@ -137,15 +137,16 @@
   </article>
   {% empty %}
   {% if queue_total %}
-  <p class="text-sm text-gray-500 mb-6">No claims match these filters.</p>
+  <div class="mb-6">{% include "beetles/includes/empty_state.html" with icon="fi-rr-filter" text="No claims match these filters. Change or clear a filter and matching claims will appear here." compact=True %}</div>
   {% else %}
-  <div class="mb-6 rounded-xl border border-gray-200 bg-gray-50 p-5 text-sm text-gray-600">
+  <div class="mb-6">
+    {% url 'upload_interaction_proposals' as proposals_url %}
     {% if filters.status == "proposed" %}
-    <p>No claims waiting. Proposals appear here after a <a href="{% url 'upload_interaction_proposals' %}" class="underline hover:text-black">proposals file is loaded</a>.</p>
+    {% include "beetles/includes/empty_state.html" with icon="fi-rr-inbox" text="No claims waiting. Proposals appear here after a proposals file is loaded." action_url=proposals_url action_label="Load a proposals file" %}
     {% elif filters.status == "accepted" %}
-    <p>No accepted claims yet. Proposals appear here after a <a href="{% url 'upload_interaction_proposals' %}" class="underline hover:text-black">proposals file is loaded</a>.</p>
+    {% include "beetles/includes/empty_state.html" with icon="fi-rr-inbox" text="No accepted claims yet. Proposals appear here after a proposals file is loaded." action_url=proposals_url action_label="Load a proposals file" %}
     {% else %}
-    <p>No rejected claims yet. Proposals appear here after a <a href="{% url 'upload_interaction_proposals' %}" class="underline hover:text-black">proposals file is loaded</a>.</p>
+    {% include "beetles/includes/empty_state.html" with icon="fi-rr-inbox" text="No rejected claims yet. Proposals appear here after a proposals file is loaded." action_url=proposals_url action_label="Load a proposals file" %}
     {% endif %}
   </div>
   {% endif %}
