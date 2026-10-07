@@ -162,9 +162,9 @@ class PageTests(GridCase):
         self.assertIn('if (!grid) holder.querySelectorAll(".cell")', page)   # no Flag on a tile
         self.assertIn("if (MODE === \"odd\" || MODE === \"select\") openTile(at);", page)   # Q and R too
 
-    def test_names_on_a_grid_of_25_show_on_a_tap(self):
+    def test_names_on_a_grid_of_25_start_on_view_like_every_other(self):
         page = self.page()
-        self.assertIn(':is(#photos, #previous-photos)[data-size="25"] .cell.names-off .rv-names { opacity: 1; }', page)
+        self.assertNotIn(':is(#photos, #previous-photos)[data-size="25"] .cell.names-off .rv-names { opacity: 1; }', page)   # round 7
         self.assertIn('[data-size="25"] .flag-badge { font-size: 0;', page)
 
     def test_the_round_review_lays_out_25_in_five_columns(self):

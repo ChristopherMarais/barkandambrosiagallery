@@ -98,7 +98,7 @@ class PageTests(ReviewCase):
     def test_one_ring_scheme_for_every_game(self):
         page = self.page()
         self.assertIn(":is(#photos, #previous-photos) .cell:is(.ring-missed, .ring-avoided, .ring-unknown)::after "
-                      "{ border-style: dashed; border-width: 2px; opacity: 0.7; }", page)
+                      "{ border-style: dashed; border-width: 3px; opacity: 0.7; }", page)
         self.assertIn('if (chosen) return good === true ? "ring-right" : good === false ? "ring-wrong" : "ring-open";', page)
         self.assertIn('const VERDICT_RING = { right: "ring-right", partly: "ring-partly", wrong: "ring-wrong" };', page)
         for gone in ("sel-missed", "odd-one", "sel-vote"):

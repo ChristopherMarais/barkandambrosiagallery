@@ -155,7 +155,7 @@ class GamePageTests(ReviewCase):
         self.assertIn("nameTiles(cells, review);", page)   # a grid tile by tile since #602 (nameTile)
         self.assertIn("nameTiles(cells, previous);", page)
         self.assertIn('box.dataset.testid = "beetle-names";', page)
-        self.assertIn('name = genus[0] + ". " + name.slice(genus.length + 1);', page)   # X. affinis
+        self.assertNotIn('genus[0] + ". "', page)   # every name in full since round 7, no "X. affinis"
 
     def test_a_hover_or_a_tap_clears_them_off_the_photo(self):
         page = self.page()
@@ -168,6 +168,6 @@ class GamePageTests(ReviewCase):
     def test_the_rings_are_drawn_on_top_of_the_photos(self):
         page = self.page()
         self.assertIn("#photos .cell::after, #previous-photos .cell::after { content: \"\"; position: absolute; inset: 0; z-index: 4;", page)
-        self.assertIn("border: 3px solid var(--ring, transparent)", page)
+        self.assertIn("border: 4px solid var(--ring, transparent)", page)
         self.assertNotIn("outline-offset: -3px", page)
         self.assertIn(":is(#photos, #previous-photos) .cell:is(.ring-missed, .ring-avoided, .ring-unknown)::after { border-style: dashed;", page)
