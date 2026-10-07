@@ -65,3 +65,10 @@ def grow_game_round_task(round_id):
     """Grow a batch that was started small to its full size (game_grow.start_round)."""
     from beetlesgallery.beetles_app.game_grow import grow_now
     grow_now(round_id)
+
+
+@shared_task(ignore_result=True)
+def refresh_game_ratings_task():
+    """The game's ratings table, worked out over all answers and stored (game_scoring.refresh_ratings), off the web path."""
+    from beetlesgallery.beetles_app.game_scoring import refresh_ratings
+    refresh_ratings()
