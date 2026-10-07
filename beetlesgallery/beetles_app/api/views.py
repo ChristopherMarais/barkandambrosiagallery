@@ -538,7 +538,10 @@ class BeetlesViewSet(viewsets.ModelViewSet):
         image_qs = ImageAsset.objects.filter(
             id__in=valid_image_ids, is_deleted=False
         ).select_related('active_lock__locked_by').prefetch_related(
-            Prefetch('specimens', queryset=Beetles.objects.filter(is_deleted=False).only('id', 'image_asset_id'))
+            Prefetch('specimens', queryset=Beetles.objects.filter(is_deleted=False)
+                     .select_related('taxon')
+                     .only('id', 'image_asset_id', 'taxon_id', 'depicts_valid_name_id',
+                           'taxon__scientific_name', 'taxon__valid_species_id'))
         )
 
         unvalidated_rois = Beetles.objects.filter(
@@ -633,16 +636,21 @@ class BeetlesViewSet(viewsets.ModelViewSet):
 
             specimens = list(img.specimens.all())
             first_specimen = specimens[0] if specimens else None
+            # One representative name for the whole image (it may hold several beetles): the first specimen that
+            # has been named, so the annotation tool's canvas title and image list show a name, not just an ID.
+            named_specimen = next((s for s in specimens if s.taxon_id), None)
+            species_name = named_specimen.taxon.scientific_name if named_specimen and named_specimen.taxon else None
 
             images.append({
                 'image_asset_id': str(img.id),
-                'beetle_id': str(first_specimen.id) if first_specimen else None, 
+                'beetle_id': str(first_specimen.id) if first_specimen else None,
                 'filename': os.path.basename(img.image_file.name) if img.image_file else 'unknown',
                 'thumbnail_url': img.thumb_small.url if img.thumb_small else None,
                 'full_image_url': img.display_url,
                 'annotation_count': img.roi_count,
                 'has_unvalidated_boxes': img.has_unvalidated_boxes,
                 'is_validated': img.is_validated,
+                'species_name': species_name,
                 'created_at': img.created_at.isoformat() if img.created_at else None,
                 'lock': lock_info,
                 'game': game_queue.public(queue[str(img.id)]) if str(img.id) in queue else None,
