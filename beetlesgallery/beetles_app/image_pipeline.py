@@ -200,5 +200,5 @@ def write_original_and_thumb96(sha256: str, fileobj: BinaryIO) -> dict:
             "original_path": orig_rel,
             "thumb_path": thumb_rel,
             "image_size": (w, h),
-            "thumb_size": (96, 96),
+            "thumb_size": thumb.size,  # the real size: the longest side is 96, the shape follows the photo
         }

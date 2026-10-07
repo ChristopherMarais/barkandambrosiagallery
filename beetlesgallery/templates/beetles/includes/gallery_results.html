@@ -152,7 +152,7 @@
               <a {% if areas.details or not user.is_authenticated %}href="{% url 'beetle_detail' beetle_id=b.id %}"{% endif %} 
                 class="flex items-center justify-center w-full h-32 bg-black/5 rounded-xl overflow-hidden border border-black/5 shadow-xs">
                 {% if b.image_asset and b.image_asset.thumb_small %}
-                  <img src="{{ b.image_asset.thumb_small.url }}" alt="{{ b.ref_scientificName }}" loading="lazy" decoding="async" class="w-full h-full object-contain" />
+                  <img src="{{ b.image_asset.thumb_small.url }}" alt="{{ b.ref_scientificName }}" {% thumb_size b.image_asset %} loading="lazy" decoding="async" class="w-full h-full object-contain" />
                 {% else %}
                   <div class="text-gray-600 text-xs text-center">No Image</div>
                 {% endif %}
@@ -315,7 +315,7 @@
         <div class="gallery-item group relative">
           <a {% if areas.details or not user.is_authenticated %}href="{% url 'beetle_detail' beetle_id=b.id %}"{% endif %} class="block aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200 hover:border-gray-500 hover:shadow-lg transition-all">
             {% if b.image_asset and b.image_asset.thumb_small %}
-              <img src="{{ b.image_asset.thumb_small.url }}" alt="{{ b.ref_scientificName|default:'Unidentified' }}" loading="lazy" decoding="async" class="w-full h-full object-cover" />
+              <img src="{{ b.image_asset.thumb_small.url }}" alt="{{ b.ref_scientificName|default:'Unidentified' }}" {% thumb_size b.image_asset %} loading="lazy" decoding="async" class="w-full h-full object-cover" />
             {% else %}
               <div class="w-full h-full flex items-center justify-center text-gray-600 text-xs">No Image</div>
             {% endif %}
