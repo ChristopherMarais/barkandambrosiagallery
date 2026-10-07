@@ -1,7 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-from django.db.models.functions import Lower, Upper
+from django.db.models.functions import Lower, Trim, Upper
 from django.contrib.postgres.indexes import GinIndex
 
 import uuid
@@ -373,6 +373,8 @@ class Beetles(models.Model):
             models.Index(Upper("specimen_sex"), name="beetles_u_sex_idx"),
             models.Index(Upper("specimen_type_status"), name="beetles_u_type_status_idx"),
             models.Index(fields=["image_asset", "id"], name="beetles_asset_id_idx"),
+            # same_specimen (game, #386) looks photos up by Lower(Trim(depicts_specimen)) on every batch and review
+            models.Index(Lower(Trim("depicts_specimen")), name="beetles_lower_specimen_idx"),
         ]
 
     def __str__(self):
@@ -1460,6 +1462,10 @@ class GameAnswer(models.Model):
         ]
         indexes = [
             models.Index(fields=["player", "mode", "is_check"], name="game_answer_player_idx"),
+            # a player's answers by day (game_rewards: today's count, the streak, the recap)
+            models.Index(fields=["player", "answered_at"], name="game_answer_player_day_idx"),
+            # grid games: "which grids showed this beetle" is a JSON containment test on tiles (game.showing)
+            GinIndex(fields=["tiles"], name="game_answer_tiles_gin", opclasses=["jsonb_path_ops"]),
         ]
 
     def __str__(self):

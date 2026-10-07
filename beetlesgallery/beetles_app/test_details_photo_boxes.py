@@ -18,8 +18,8 @@ class DetailsPhotoBoxesTests(PageBehaviourCase):
         self.small = self.box(0.1, 0.1, 0.2, 0.2)   # inside the big one
         self.corner = self.box(0.7, 0.7, 0.25, 0.25)
         self.unboxed = make_beetle(image=self.image)
-        # numbered in id order, as in the page's "ROI n of 4"
-        rois = sorted([self.big, self.small, self.corner, self.unboxed], key=lambda roi: str(roi.id))
+        # numbered in id order among the boxed ROIs, as in the page's "ROI n of 3" (the unboxed one is not counted)
+        rois = sorted([self.big, self.small, self.corner], key=lambda roi: str(roi.id))
         self.number = {roi.id: i for i, roi in enumerate(rois, start=1)}
         self.gone = self.box(0.4, 0.1, 0.1, 0.1, is_deleted=True)
 
@@ -46,7 +46,7 @@ class DetailsPhotoBoxesTests(PageBehaviourCase):
         for roi in (self.big, self.corner):
             link = boxes[f"roi-box-{self.number[roi.id]}"]
             self.assertEqual(link["href"], reverse("beetle_detail", args=[roi.id]))
-            label = f"Show ROI {self.number[roi.id]} of 4"
+            label = f"Show ROI {self.number[roi.id]} of 3"
             self.assertEqual((link["aria-label"], link["title"]), (label, label))
             self.assertEqual(link["class"].split(), ["roi-box"])
             self.assertEqual(link["inside"][:2], ["roi-boxes", "roi-frame"])

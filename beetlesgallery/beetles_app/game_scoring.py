@@ -446,17 +446,59 @@ def wilson(ok, n, z=1.0):
     return (p + z2 / (2 * n) - z * math.sqrt(p * (1 - p) / n + z2 / (4 * n * n))) / (1 + z2 / n)
 
 
-RATINGS_CACHE = "game:ratings:v1"
+RATINGS_STORE = "game:ratings:v2"    # {"at": when ratings() was run (epoch seconds), "table": its result}
+RATINGS_REFRESH = "game:ratings:refreshing"   # one refresh queued (or running) at a time
+RATINGS_KEEP = 60 * 60 * 24
+
+
+def store_ratings(table):
+    """Keep a freshly worked-out table, for the requests that read it (cached_ratings)."""
+    import time
+    from django.core.cache import cache
+    cache.set(RATINGS_STORE, {"at": time.time(), "table": table}, RATINGS_KEEP)
+
+
+def refresh_ratings():
+    """The worker's part (tasks.refresh_game_ratings_task): work the table out over the whole table and store it."""
+    from django.core.cache import cache
+    try:
+        store_ratings(ratings())
+    finally:
+        cache.delete(RATINGS_REFRESH)
+
+
+def _queue_refresh():
+    from django.core.cache import cache
+    from .tasks import refresh_game_ratings_task
+    if not cache.add(RATINGS_REFRESH, 1, 300):
+        return
+    try:
+        refresh_game_ratings_task.apply_async(retry=False)
+    except Exception:
+        cache.delete(RATINGS_REFRESH)   # the next request asks again
 
 
 def cached_ratings():
-    """ratings(), kept for a few minutes: used while playing, where a slightly old table is fine."""
+    """
+    The ratings table, as the worker last stored it (refresh_ratings). A web request never works it out over the
+    whole table where game work is on the worker (GAME_RECOMPUTE_IN_BACKGROUND): a table older than
+    GAME_RATINGS_CACHE_SECONDS is used as it is and a refresh is queued; none yet means no judges for now (the
+    answer's points are settled again by the next recompute). Where game work stays in the request, it is worked out
+    as before, and stored.
+    """
+    import time
     from django.core.cache import cache
-    table = cache.get(RATINGS_CACHE)
-    if table is None:
-        table = ratings()
-        cache.set(RATINGS_CACHE, table, setting("GAME_RATINGS_CACHE_SECONDS", 300))
-    return table
+    if not setting("GAME_RECOMPUTE_IN_BACKGROUND", False):
+        stored = cache.get(RATINGS_STORE)
+        if stored is None or time.time() - stored["at"] > setting("GAME_RATINGS_CACHE_SECONDS", 300):
+            store_ratings(ratings())
+            stored = cache.get(RATINGS_STORE)
+        return stored["table"]
+    stored = cache.get(RATINGS_STORE)
+    if stored is None or time.time() - stored["at"] > setting("GAME_RATINGS_CACHE_SECONDS", 300):
+        _queue_refresh()
+    return stored["table"] if stored else {}
+
 
 
 def ratings():
@@ -840,10 +882,9 @@ def recompute(player_ids=None):
     this is how validations, label corrections and other players' later answers reach a score.
     Returns the number of players updated.
     """
-    from django.core.cache import cache
     sync_late_truth(player_ids)
     table = ratings()
-    cache.set(RATINGS_CACHE, table, setting("GAME_RATINGS_CACHE_SECONDS", 300))
+    store_ratings(table)
     judges = Judges(table)
     answers = GameAnswer.objects.select_related(
         "roi__taxon", "roi__image_asset", "roi_b__taxon", "roi_b__image_asset",

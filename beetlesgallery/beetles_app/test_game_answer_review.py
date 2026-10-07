@@ -288,7 +288,7 @@ class ConfettiTests(ReviewCase):
     def test_agreeing_with_a_sure_ibbi_ai_gets_the_smallest_burst(self):
         roi = self.roi(self.t_affinis, validated=False)
         self.predict(roi, self.t_affinis, 0.8)
-        self.assertEqual(self.classify(roi, AFFINIS)["celebrate"], {"kind": "ai", "size": 0.2})   # blue (#572)
+        self.assertEqual(self.classify(roi, AFFINIS)["celebrate"], {"kind": "ai", "size": 0.2, "colour": "blue"})   # #572, #615
         unsure = self.roi(self.t_affinis, validated=False)
         self.predict(unsure, self.t_affinis, 0.3)
         self.assertIsNone(self.classify(unsure, AFFINIS)["celebrate"])
@@ -301,4 +301,4 @@ class ConfettiTests(ReviewCase):
                                     detail={"agreement": {"species": 0.8}, "participation": 0.5})
         review = game_answer_review.past(rnd, 0)
         self.assertEqual(review["headline"], "Not checked yet · +9 so far")
-        self.assertEqual(review["celebrate"], {"kind": "players", "size": game_answer_review.confetti_size(9)})
+        self.assertEqual(review["celebrate"], {"kind": "players", "size": game_answer_review.confetti_size(9), "colour": "purple"})

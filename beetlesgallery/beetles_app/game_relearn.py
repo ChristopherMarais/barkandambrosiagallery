@@ -102,6 +102,11 @@ def _grid_misses(rows):
 
 
 def _events(player):
+    """The events of the player's answers (_compute_events), kept while their answers stand (game.per_history)."""
+    return game.per_history(player, "events", _compute_events)
+
+
+def _compute_events(player):
     """
     {beetle id: [event, ...]} oldest first, from the player's scored answers on validated beetles in every game.
     An event is {"when", "ok", "mode", "rank", "relation", "retry"}: ``ok`` whether the beetle the answer was about

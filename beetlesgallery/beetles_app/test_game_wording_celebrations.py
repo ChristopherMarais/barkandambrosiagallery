@@ -54,7 +54,7 @@ class CelebrationTierTests(GameCase):
 
     def test_a_full_answer_is_full_size(self):
         data = self.answer({"subfamily": "Scolytinae", "tribe": "Xyleborini", "genus": "Xyleborus", "species": "affinis"})
-        self.assertEqual(data["review"]["celebrate"], {"kind": "validated", "size": 1.0})
+        self.assertEqual(data["review"]["celebrate"], {"kind": "validated", "size": 1.0, "colour": "green"})   # round 5: colour too
 
     def test_the_game_page_loads_the_logo_and_has_the_level_burst(self):
         self.client.force_login(self.user)

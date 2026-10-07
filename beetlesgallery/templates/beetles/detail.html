@@ -188,7 +188,7 @@
     <aside class="lg:col-span-4">
       
       {# PAGINATION HEADER inside card (Redundant but requested context) #}
-      {% if total_siblings > 1 %}
+      {% if current_sibling_index %}
       <div class="mb-4 flex items-center justify-between bg-primary2 rounded-xl p-2 border border-text/10 shadow-xs">
           <div class="text-sm font-bold text-text/50 tracking-wide px-2">
               ROI {{ current_sibling_index|digit_groups }} of {{ total_siblings|digit_groups }}

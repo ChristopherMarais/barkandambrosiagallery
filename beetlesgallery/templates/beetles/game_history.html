@@ -24,7 +24,7 @@
   {% if heading %}
   <div class="mb-4" data-testid="history-summary">
     <h2 class="text-lg font-semibold text-gray-900">{{ heading }}</h2>
-    <p class="text-sm text-gray-600 tabular-nums">{{ summary.beetles|digit_groups }} beetle{{ summary.beetles|pluralize }} &middot; {% if summary.points and summary.points > 0 %}+{% endif %}{{ summary.points|default:0|floatformat:0 }} pts</p>
+    <p class="text-sm text-gray-600 tabular-nums">{{ summary.beetles|digit_groups }} round{{ summary.beetles|pluralize }} &middot; {% if summary.points and summary.points > 0 %}+{% endif %}{{ summary.points|default:0|floatformat:0 }} pts</p>
     {% if summary.game %}<p class="text-xs text-gray-500 tabular-nums" data-testid="game-summary">{{ game_label }} all time: {% if summary.game.accuracy is not None %}{% widthratio summary.game.accuracy 1 100 %}% accuracy{% else %}no accuracy yet{% endif %} &middot; {{ summary.game.points|digit_groups }} pts</p>{% endif %}
   </div>
   {% endif %}
@@ -35,13 +35,26 @@
     <li>
       <a href="{% url 'game_round_review' r.id %}{% if game_key %}?game={{ game_key }}{% endif %}" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
         <span class="flex-1 min-w-0">
-          <span class="block text-sm font-semibold text-gray-900">{{ r.labelled|digit_groups }} beetle{{ r.labelled|pluralize }}
+          <span class="block text-sm font-semibold text-gray-900">{{ r.labelled|digit_groups }} round{{ r.labelled|pluralize }}
             <span class="font-normal text-gray-500">&middot; {{ r.games_label }}</span></span>
           <span class="block text-xs text-gray-400">{{ r.finished_at|date:"H:i" }}</span>
         </span>
         <span class="text-sm font-semibold tabular-nums {% if r.points and r.points < 0 %}text-red-700{% else %}text-gray-900{% endif %}">{% if r.points and r.points > 0 %}+{% endif %}{{ r.points|default:0|floatformat:0 }} pts</span>
         <i class="fi fi-rr-angle-small-right text-gray-400"></i>
       </a>
+      {% if r.review_rows %}
+      <!-- Each round in the review card's words and colours (game_history_rounds), in the order played -->
+      <ul class="px-4 pb-3 space-y-1" data-testid="round-rows">
+        {% for row in r.review_rows %}
+        <li class="rv-head" data-testid="round-row">
+          <span class="rv-verdict {{ row.verdict }}" aria-hidden="true"></span>
+          <span class="min-w-0">{{ row.headline }}</span>
+          {% if show_game %}<span class="rv-pill">{{ row.game }}</span>{% endif %}
+        </li>
+        {% endfor %}
+        {% if r.more_rounds %}<li class="text-xs text-gray-500" data-testid="more-rounds">+{{ r.more_rounds|digit_groups }} more round{{ r.more_rounds|pluralize }} in this session</li>{% endif %}
+      </ul>
+      {% endif %}
     </li>
     {% endfor %}
   </ul>

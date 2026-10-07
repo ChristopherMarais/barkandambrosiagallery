@@ -147,7 +147,6 @@
     --animate-spin: spin 1s linear infinite;
     --animate-ping: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
     --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    --animate-bounce: bounce 1s infinite;
     --blur-xs: 4px;
     --blur-3xl: 64px;
     --aspect-video: 16 / 9;
@@ -1055,9 +1054,6 @@
   }
   .transform {
     transform: var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,);
-  }
-  .animate-bounce {
-    animation: var(--animate-bounce);
   }
   .animate-ping {
     animation: var(--animate-ping);
@@ -2096,12 +2092,6 @@
     color: color-mix(in srgb, #111827 30%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
       color: color-mix(in oklab, var(--color-text) 30%, transparent);
-    }
-  }
-  .text-text\/40 {
-    color: color-mix(in srgb, #111827 40%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      color: color-mix(in oklab, var(--color-text) 40%, transparent);
     }
   }
   .text-text\/50 {
@@ -3556,6 +3546,48 @@
   background-color: var(--color-green-700);
   color: #fff;
 }
+.rv-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #111827;
+}
+.rv-verdict {
+  flex: none;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 9999px;
+  background: #9ca3af;
+}
+.rv-verdict.wrong {
+  background: #ef4444;
+}
+.rv-verdict.partly {
+  background: #f97316;
+}
+.rv-verdict.right {
+  background: #22c55e;
+}
+.rv-pill {
+  margin-left: auto;
+  padding: 0.0625rem 0.5rem;
+  border-radius: 9999px;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.rv-line {
+  margin-top: 0.25rem;
+  font-size: 0.8125rem;
+  color: #374151;
+}
+.rv-line .fi {
+  vertical-align: -0.125em;
+}
 @property --tw-translate-x {
   syntax: "*";
   inherits: false;
@@ -3839,16 +3871,6 @@
 @keyframes pulse {
   50% {
     opacity: 0.5;
-  }
-}
-@keyframes bounce {
-  0%, 100% {
-    transform: translateY(-25%);
-    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
-  }
-  50% {
-    transform: none;
-    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
   }
 }
 @layer properties {

@@ -101,7 +101,8 @@ class PromptTests(PlayPageCase):
     def test_the_seen_before_tag_is_gone_from_the_photo_but_the_server_still_marks_it(self):
         page = self.play_page()
         self.assertNotIn("Seen before: have another go", page)
-        self.assertIn('r.again ? node("span", "rv-pill", "Seen before")', page)   # the review still says so
+        self.assertNotIn('r.again ? node("span", "rv-pill", "Seen before")', page)   # no headline pill: a mark on the photo (#615)
+        self.assertIn("function seenMark(testid)", page)
         source = (APP / "beetles_app" / "game_views.py").read_text(encoding="utf-8")
         self.assertIn('payload["again"] = True', source)
 
@@ -144,17 +145,14 @@ class LoadingTests(PlayPageCase):
         self.assertIn('<p id="loading-line" class="mt-2 text-sm" data-testid="loading-line">Finding beetles&hellip;</p>',
                       loading)
 
-    def test_the_lines_take_turns_then_say_it_is_slow_and_stop_once_loaded(self):
+    def test_the_lines_take_turns_and_stop_once_loaded(self):
         page = self.play_page()
-        self.assertIn('const LOADING_LINES = ["Finding beetles…", "Building your gallery…"];', page)
-        self.assertIn('const LOADING_SLOW = ["This is taking a while: probably making frass…",\n'
-                      '                        "This is taking a while: waiting for the fungus garden to grow…"];',
-                      page.replace("\r\n", "\n"))
-        # each first line three times (about 15 s), then the slow ones in turn (#569)
-        self.assertIn("const LOADING_LINE_MS = 2500, LOADING_TURNS = LOADING_LINES.length * 3;", page)
+        # short and light, never about speed (round 5 removed the "taking a while" lines; see test_game_feel.py)
+        self.assertIn('const LOADING_LINES = ["Finding beetles…", "Building your gallery…", "Turning over the bark…", '
+                      '"Counting the antennae…"];', page)
+        self.assertIn("const LOADING_LINE_MS = 2500;", page)
         lines = page[page.index("function loadingLines()"):page.index("async function startFeed")]
         self.assertIn('window.matchMedia("(prefers-reduced-motion: reduce)").matches', lines)
-        self.assertIn("if (turn === LOADING_TURNS) line.textContent = LOADING_SLOW[0];", lines)   # reduced motion: one change
         self.assertIn('$("loading").classList.contains("hidden")', lines)    # stops once the beetles are in
         self.assertIn("clearInterval(loadingTimer)", lines)
         feed = page[page.index("async function startFeed"):]
