@@ -251,16 +251,16 @@ class RetroactiveTests(ScoringCase):
 
 
 class RetryTests(ScoringCase):
-    """A beetle got wrong comes back in a later sitting (game_relearn; test_game_relearn has the rest)."""
+    """A beetle got wrong comes back by the rule of 3 (game_relearn; test_game_relearn has the rest)."""
 
-    def test_a_beetle_got_wrong_comes_back_in_a_later_sitting(self):
+    def test_a_beetle_got_wrong_comes_back_after_a_while(self):
         roi = self.roi(self.t_affinis)
         self.answer(self.user, roi, FERR, when=timezone.now() - timedelta(hours=3))
         self.assertEqual(list(game_relearn.due(self.user)), [roi.id])
 
-    def test_not_in_the_same_sitting(self):
+    def test_not_within_its_first_3_minutes(self):
         roi = self.roi(self.t_affinis)
-        self.answer(self.user, roi, FERR, when=timezone.now() - timedelta(minutes=5))
+        self.answer(self.user, roi, FERR, when=timezone.now() - timedelta(minutes=2))
         self.assertEqual(game_relearn.due(self.user), {})
 
     def test_not_once_they_got_it_right(self):

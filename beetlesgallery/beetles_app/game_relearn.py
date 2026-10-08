@@ -1,13 +1,15 @@
 """
 Learning from mistakes, and hard beetles through the easy games first (#490).
 
-Mistakes come back. A validated beetle the player got wrong, in any game, comes back in a later sitting (not the one
-they missed it in) until they get it right, at most GAME_RETRY_MAX times and GAME_RETRY_PER_BATCH per batch. It comes
+Mistakes come back. A validated beetle the player got wrong, in any game, comes back by the rule of 3 (game.SEEN_AGAIN:
+3 minutes after it was last shown, then 3 hours, 3 days, 3 weeks and 3 months) until they get it right, at most
+GAME_RETRY_MAX times and GAME_RETRY_PER_BATCH per batch. It comes
 back first in an easier game than the one it was missed in (Similarity < Odd One Out < Select all < Identification,
 among the games the player has), and once they get it right there, in the game it was missed in. A mistake in the
 easiest game they have comes back in that game. Retries earn GAME_POINTS_RETRY_FACTOR of the points and stay out
 of ratings, skills and badges (GameAnswer.is_retry). Any other beetle whose names a player has seen comes back too,
-after a while (game.held_back_ids), at full points but likewise out of ratings and skills (GameAnswer.seen_before).
+on the same schedule (game.held_back_ids), at full points but likewise out of ratings and skills
+(GameAnswer.seen_before).
 
 Hard beetles go through the easy games first. An unvalidated beetle is hard when players disagree on it, nobody could
 take it to species, IBBI-AI is unsure of it, or nobody has answered it and IBBI-AI has no confident call (hard_q).
@@ -18,7 +20,6 @@ others (identification_open). So a label is checked in more than one game before
 import random
 import uuid
 from collections import defaultdict
-from datetime import timedelta
 
 from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
@@ -34,25 +35,6 @@ NEAR_RELATION = {"subfamily": "different", "tribe": "subfamily", "genus": "tribe
 # Similarity: how related two beetles are, by the deepest rank they share (game.PAIR_DEPTH the other way round)
 RELATION_AT_DEPTH = {d: name for name, d in game.PAIR_DEPTH.items()}
 GRID_TILES = 4
-
-
-# ---------------------------------------------------------------------------
-# Sittings
-# ---------------------------------------------------------------------------
-def sitting_start(player, now=None):
-    """
-    When the player's current sitting began: their answers since then follow each other with no break of
-    GAME_SESSION_GAP_MINUTES or more. ``now`` itself when they are only just sitting down.
-    """
-    gap = timedelta(minutes=game_setting("GAME_SESSION_GAP_MINUTES", 30))
-    start = now or timezone.now()
-    times = (GameAnswer.objects.filter(player=player, answered_at__lte=start)
-             .order_by("-answered_at").values_list("answered_at", flat=True)[:2000])
-    for when in times:
-        if start - when >= gap:
-            break
-        start = when
-    return start
 
 
 # ---------------------------------------------------------------------------
@@ -179,12 +161,19 @@ def open_mistakes(player):
 
 def due(player, now=None):
     """
-    The player's mistakes ready to come back: from before this sitting, not put right since, tried fewer than
-    GAME_RETRY_MAX times, and still a validated beetle in the game. {beetle id: mistake}, in random order.
+    The player's mistakes ready to come back: not put right since, tried fewer than GAME_RETRY_MAX times, still a
+    validated beetle in the game, and past their wait by the rule of 3 (game.SEEN_AGAIN), counted from the last time
+    the beetle was shown to them. {beetle id: mistake}, in random order.
     """
-    start = sitting_start(player, now)
+    now = now or timezone.now()
     most = game_setting("GAME_RETRY_MAX", 3)
-    ready = {b: m for b, m in open_mistakes(player).items() if m["last"] < start and m["tries"] < most}
+    shown = game.reveals(player)
+
+    def waited(beetle, mistake):
+        entry = shown.get(beetle) or {"at": mistake["last"], "seen": 1}
+        return max(entry["at"], mistake["last"]) + game.seen_again_after(entry.get("seen", 1)) <= now
+
+    ready = {b: m for b, m in open_mistakes(player).items() if m["tries"] < most and waited(b, m)}
     if not ready:
         return {}
     usable = list(game.check_rois().filter(id__in=list(ready)).values_list("id", flat=True))
