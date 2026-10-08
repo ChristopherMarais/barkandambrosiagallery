@@ -728,7 +728,9 @@ def _item_mode(rnd, index):
 
 
 def _item_payload(rnd, index):
-    game_grid_ladder.restep(rnd, index)   # grids picked before the player's step moved are built again at the new one
+    # Grids picked before the player's step moved are built again at the new one, from the grid after this one: this
+    # one's photos were loaded ahead with the beetle before it, and building it again made the player wait for new ones
+    game_grid_ladder.restep(rnd, index + 1)
     payload = {
         "index": index,
         "mode": _item_mode(rnd, index),
