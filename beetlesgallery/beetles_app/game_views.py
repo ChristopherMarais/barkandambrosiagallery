@@ -1326,24 +1326,36 @@ def game_answer(request, round_id):
             if first is not None:
                 return JsonResponse(dict(extra, round=str(fresh.id), item=_item_payload(fresh, first), notice=fresh.notice))
     nxt = _next_index(rnd, index + 1)
-    later = bool(body.get("item_later"))
-    if nxt is None and game_grow.wanted(rnd):
-        # a batch started small (#575) that neither the worker nor the look-ahead has grown yet: its next beetles now
-        game_grow.grow_or_wait(rnd, game_grow.FIRST)
-        nxt = _next_index(rnd, index + 1)
+    if body.get("item_later"):
+        # The review first (#602), always: whatever comes next comes from game_item, which the page asks for while the
+        # player reads the review. That is the next beetle of this batch, or, past its last one, the beetles a batch
+        # started small still gets or the next batch (_carry_on): building those here kept the review waiting for
+        # seconds at the end of a batch.
+        return JsonResponse(dict(extra, next=index + 1 if nxt is None else nxt))
     if nxt is None:
-        # The feed carries straight on into a new batch (usually built ahead), and the work of closing this one is
-        # done on the worker. It only ends when there is nothing new left to show.
-        fresh, first = _next_batch(rnd)
-        if first is not None:
-            game.finish_round_later(rnd)
-            return JsonResponse(dict(extra, round=str(fresh.id), item=_item_payload(fresh, first), notice=fresh.notice))
-        return JsonResponse(dict(_finish(rnd), **extra))
-    if later:
-        # The review first (#602): the next beetle of this batch (a grid built again at a new step can take a while)
-        # comes from game_item, which the page asks for while the player reads the review
-        return JsonResponse(dict(extra, next=nxt))
+        return JsonResponse(dict(extra, **_carry_on(rnd, index + 1)))
     return JsonResponse(dict(extra, item=_item_payload(rnd, nxt)))
+
+
+def _carry_on(rnd, start):
+    """
+    What follows when the batch has no beetle at or after ``start``: the next of the beetles a batch started small
+    still gets (#575), else the next batch's first beetle (with its "round" and "notice"), else the end of the feed
+    ("done", _finish). For the reply to a skip, or to game_item after an answer sent with "item_later".
+    """
+    if game_grow.wanted(rnd):
+        # a batch started small that neither the worker nor the look-ahead has grown yet: its next beetles now
+        game_grow.grow_or_wait(rnd, game_grow.FIRST)
+        nxt = _next_index(rnd, start)
+        if nxt is not None:
+            return {"item": _item_payload(rnd, nxt)}
+    # The feed carries straight on into a new batch (usually built ahead), and the work of closing this one is
+    # done on the worker. It only ends when there is nothing new left to show.
+    fresh, first = _next_batch(rnd)
+    if first is not None:
+        game.finish_round_later(rnd)
+        return {"round": str(fresh.id), "item": _item_payload(fresh, first), "notice": fresh.notice}
+    return _finish(rnd)
 
 
 @login_required
@@ -1352,12 +1364,19 @@ def game_answer(request, round_id):
 def game_item(request, round_id, index):
     """
     The next beetle of the player's batch, after an answer sent with "item_later" (#602): the same as the answer would
-    have carried, asked for while its review is up. Only the next one to answer; anything else is out of step.
+    have carried, asked for while its review is up. Only the next one to answer; anything else is out of step. Past
+    the batch's last beetle (``index`` just after the last answer) it is what carries the feed on (_carry_on): a
+    beetle the batch still gets, the next batch's first ("round" says which), or the end of the feed ("done").
     """
     rnd = get_object_or_404(GameRound, id=round_id, player=request.user)
-    if rnd.finished_at is not None or _next_index(rnd) != index:
-        return JsonResponse({"error": "Out of step with the round; please reload."}, status=409)
-    return JsonResponse({"item": _item_payload(rnd, index)})
+    if rnd.finished_at is None:
+        at = _next_index(rnd)
+        if at is not None and at == index:
+            return JsonResponse({"item": _item_payload(rnd, index)})
+        last = rnd.answers.aggregate(m=Max("index"))["m"]
+        if at is None and last is not None and index == last + 1:
+            return JsonResponse(_carry_on(rnd, index))
+    return JsonResponse({"error": "Out of step with the round; please reload."}, status=409)
 
 
 @login_required

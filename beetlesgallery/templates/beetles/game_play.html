@@ -1355,11 +1355,13 @@
     if (!root.dataset.prepareUrl) return;
     api(root.dataset.prepareUrl.replace("00000000-0000-0000-0000-000000000000", roundId) + "?index=" + at.index).catch(() => {});
   }
-  // The next beetle after an answer sent with item_later (#602): asked for as soon as the review is in, while it is read
+  // The next beetle after an answer sent with item_later (#602): asked for as soon as the review is in, while it is read.
+  // After a batch's last beetle the reply also says how the feed goes on: the next batch ("round", "notice") or its end
+  // ("done"); all of it is kept with the answer for Next
   function fetchItem(data) {
     const url = root.dataset.itemUrl.replace("00000000-0000-0000-0000-000000000000", data.round || roundId)
       .replace(/\/0\/$/, "/" + data.next + "/");
-    return api(url).then((d) => { data.item = d.item; return d.item; }, () => null);
+    return api(url).then((d) => { Object.assign(data, d); return d.item; }, () => null);
   }
 
   // Pressed (round 5): the control under a finger gets a class at pointerdown, in the same frame as the touch, and
@@ -2031,6 +2033,7 @@
     upcoming = null;
     performance.mark("game:next");   // until the next beetle shows: "game:photo" (present)
     setPhase("next");
+    if (!data.item && data.itemLoad) await data.itemLoad;   // usually in long since: asked for with the review
     feedNotes(data);   // the next batch had to change game, or the feed ended: say why
     if (data.done) {
       $("review-link").href = data.review_url;
@@ -2044,7 +2047,6 @@
       return;
     }
     if (data.round) roundId = data.round;   // the feed moved on to its next batch; the player never notices
-    if (!data.item && data.itemLoad) await data.itemLoad;   // usually in long since: asked for with the review
     if (!data.item) { await startFeed(); return; }          // it couldn't be had: pick up where the server is
     await present(data.item);
   }
