@@ -58,10 +58,13 @@ def game_setting(name, default):
 # handful of malformed rows in the species list whose columns are shifted (their
 # "subfamily" is a species epithet and genus is blank).
 COMPLETE_TAXON = ~Q(subfamily__isnull=True) & ~Q(subfamily="") & ~Q(genus__isnull=True) & ~Q(genus="")
+# A photo of a specimen's label (its aspect says "label", in any case or wording around it) gives the name away: the
+# game never shows one, as a beetle to answer or among a beetle's other photos (specimen_photos)
+LABEL_PHOTO = Q(aspect__icontains="label")
 
 
 def playable_rois():
-    """ROIs that can be shown: a live bounding box on a live image with a file."""
+    """ROIs that can be shown: a live bounding box on a live image with a file, and not a photo of a label."""
     return (
         Beetles.objects.filter(
             is_deleted=False,
@@ -74,6 +77,7 @@ def playable_rois():
         )
         .exclude(image_asset__image_file="")
         .exclude(image_asset__image_file__isnull=True)
+        .exclude(LABEL_PHOTO)
     )
 
 
@@ -1948,7 +1952,8 @@ def specimen_photos(roi, limit=6):
     """
     Other photos of exactly this beetle: ROIs with the same specimen id (depicts_specimen), each on a photo that
     shows only that one beetle, as must the photo of ``roi`` itself (a photo of several beetles can't promise
-    which is which). Not deleted, with a box. Used by the "More photos of each beetle" unlock.
+    which is which). Not deleted, with a box, never a photo of its label. Used by the "More photos of each beetle"
+    unlock.
     """
     from django.db.models import Count
     from django.db.models.functions import Lower, Trim
@@ -1968,7 +1973,8 @@ def specimen_photos(roi, limit=6):
         Beetles.objects.annotate(specimen=Lower(Trim("depicts_specimen")))
         .filter(specimen=key.lower(), is_deleted=False, image_asset__isnull=False,
                 image_asset__is_deleted=False, bbox_x__isnull=False, bbox_width__gt=0)
-        .exclude(image_asset_id=roi.image_asset_id).select_related("image_asset").order_by("aspect", "id")
+        .exclude(image_asset_id=roi.image_asset_id).exclude(LABEL_PHOTO)
+        .select_related("image_asset").order_by("aspect", "id")
     )
     ok = single_beetle({c.image_asset_id for c in candidates})
     return [c for c in candidates if c.image_asset_id in ok][:limit]
