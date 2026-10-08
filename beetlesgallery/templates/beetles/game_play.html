@@ -2534,12 +2534,15 @@
   $("exit").addEventListener("click", async () => {
     if (leaving || !$("recap").classList.contains("hidden")) return;
     recapSeen = true;
-    recapState("Nice session!", "Saving your answers…", false);
-    $("recap-saving").classList.remove("hidden");   // a turning spinner while it saves, so the game never looks frozen
+    // every answer is saved as it is given (the rest is counted on the worker): this only adds the sitting up
+    recapState("Nice session!", "Adding up your session…", false);
+    $("recap-saving").classList.remove("hidden");   // a turning spinner meanwhile, so the game never looks frozen
     $("recap").scrollTop = 0;
     $("recap").classList.remove("hidden");
-    // on a review that ended a batch, the next batch is the open one
-    leaving = api(root.dataset.exitUrl, { round: (upcoming && upcoming.round) || roundId, since: openedAt }).catch(() => null);
+    // on a review that ended a batch, the next batch is the open one. Asked again once if it fails (a dropped
+    // connection): closing a batch twice is harmless, and the player gets the recap rather than none
+    const goodbye = { round: (upcoming && upcoming.round) || roundId, since: openedAt };
+    leaving = api(root.dataset.exitUrl, goodbye).catch(() => api(root.dataset.exitUrl, goodbye)).catch(() => null);
     const data = await leaving;
     leaving = null;
     $("recap-saving").classList.add("hidden");

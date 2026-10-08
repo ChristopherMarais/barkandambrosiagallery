@@ -134,7 +134,7 @@ class LeavePageTests(GameCase):
         self.assertLess(handler.index('$("recap").classList.remove("hidden")'), handler.index("await leaving"))
         self.assertNotIn("location.href", handler)
         self.assertNotIn("setTimeout", handler)   # no race that gives up and leaves without the recap
-        self.assertIn("Saving your answers", handler)
+        self.assertIn("Adding up your session", handler)
 
     def test_the_back_gesture_closes_what_is_open_or_shows_the_recap(self):
         page = self.page()
