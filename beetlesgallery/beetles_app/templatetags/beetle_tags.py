@@ -237,7 +237,7 @@ def dash(value):
 # #618).
 def _nav_sections(context):
     """Not a template tag: a plain helper for nav_section_title below."""
-    game_name = context.get("game_name") or "Ambrosia Archive"
+    game_name = context.get("game_name") or "Bark & Ambrosia Detective"
     return (
         ("/beetles/", "Image Browser"),
         ("/taxonomy/", "Taxonomy Browser"),

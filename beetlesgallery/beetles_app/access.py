@@ -4,7 +4,7 @@ Accounts and requests for more access.
 Someone fills in the Sign up page (/accounts/signup/; the old /accounts/request-access/ still works) with who they are, the username and password they want and, optionally,
 what more than a Basic account they would like (and why). They get an inactive account and an email with a link to
 confirm their address. Confirming it **activates the account straight away as Basic** (areas.py): the image
-browser, taxonomy browser, interactions page, IBBI-AI and the game (Ambrosia Archive).
+browser, taxonomy browser, interactions page, IBBI-AI and the game (Bark & Ambrosia Detective).
 
 If they asked for more, the request stays open for a superuser on My Account -> Access Requests, who grants the
 areas they think right, one by one (or none). Their Basic account works meanwhile. Someone already signed in can

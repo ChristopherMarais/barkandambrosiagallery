@@ -1,4 +1,4 @@
-"""The game is called Ambrosia Archive; levels 5-9 follow a bark beetle's life with matching icons; the sidebar has
+"""The game is called Bark & Ambrosia Detective; levels 5-9 follow a bark beetle's life with matching icons; the sidebar has
 one entry for the game, showing the player's level and points under its name."""
 from django.conf import settings
 
@@ -9,10 +9,10 @@ from beetlesgallery.beetles_app.test_game import GameCase
 
 class AmbrosiaArchiveTests(GameCase):
     def test_the_name_comes_from_one_setting(self):
-        self.assertEqual(settings.GAME_DISPLAY_NAME, "Ambrosia Archive")
+        self.assertEqual(settings.GAME_DISPLAY_NAME, "Bark & Ambrosia Detective")
         self.client.force_login(self.user)
         page = self.client.get("/game/").content.decode()
-        self.assertIn("Ambrosia Archive", page)
+        self.assertIn("Bark &amp; Ambrosia Detective", page)
         self.assertNotIn("Beetle ID Game", page)
 
     def test_levels_follow_a_bark_beetles_life_and_their_icons_match(self):
@@ -32,4 +32,4 @@ class AmbrosiaArchiveTests(GameCase):
         for chunk in page.split('data-testid="sidebar-player"')[1:]:
             self.assertIn("pts", chunk[:400])
         entry = page[page.rfind('<a href="/game/"', 0, page.index('data-testid="sidebar-player"')):]
-        self.assertIn("Ambrosia Archive", entry[:entry.index('data-testid="sidebar-player"')])
+        self.assertIn("Bark &amp; Ambrosia Detective", entry[:entry.index('data-testid="sidebar-player"')])

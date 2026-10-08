@@ -1,4 +1,4 @@
-# Ambrosia Archive (the Beetle ID game): Specification
+# Bark & Ambrosia Detective (the Beetle ID game): Specification
 
 Status: built on branch `claude/funny-tesla-pi0iki` (PR #255). Classifier integration is out of scope (see section 12).
 
@@ -478,7 +478,7 @@ changed (migration 0053); stored modes, URLs and perk keys stay.
 - The "Seen before: have another go" tag on a retried beetle's photo is gone (it sat under the photo's own pills,
   and players know); the server still marks the item (`again`) and the review still says "Seen before".
 - The photo rule in the help, the how-to page and the tips is just "A photo must show a good part of the beetle."
-- The session recap leads back to the game's home ("Ambrosia Archive home").
+- The session recap leads back to the game's home ("Bark & Ambrosia Detective home").
 - While the feed loads, "Finding beetles…" and "Building your gallery…" take turns every 2.5 s; after 10 s it
   says "This is taking a while: probably making frass…". With reduced motion the lines don't alternate.
 - The game is out of beta: the Beta pills (sidebar, game home, how-to page, loading screen, landing page) are gone.
