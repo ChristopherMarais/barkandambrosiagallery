@@ -73,22 +73,10 @@ def build(player):
             cache.set(KEY.format(player.pk, choice),
                       {"items": items, "notice": notice, "sig": sig, "at": time.time()}, KEEP)
             built.append(choice)
-            for roi in _rois(items[:FIRST_ITEMS]):
-                for size in game_crops.SIZES:
-                    game_crops.ensure(roi, size)
+            game_crops.cut_ahead(items[:FIRST_ITEMS])
         return built
     finally:
         cache.delete(LOCK.format(player.pk))
-
-
-def _rois(items):
-    from .models import Beetles
-
-    ids = []
-    for item in items:
-        ids += [i for i in (item.get("tiles") or [item.get("a"), item.get("b")]) if i and i not in ids]
-    found = {str(k): v for k, v in Beetles.objects.select_related("image_asset").in_bulk(ids).items()}
-    return [found[i] for i in ids if i in found and found[i].has_bbox()]
 
 
 def warm_later(player, mode):

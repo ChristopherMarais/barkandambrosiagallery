@@ -743,6 +743,8 @@ def _item_payload(rnd, index):
         payload["more_level"] = game_levels.perk_level(game_levels.SPECIMEN_PHOTOS)
     if rnd.items[index].get("retry"):
         payload["again"] = True   # a beetle they got wrong before, shown again so they can learn it
+    if game_crops.sharp_on_zoom(rnd.items[index]):
+        payload["sharp_on_zoom"] = True   # a big grid: a tile's sharp crop loads once it is zoomed (game_crops.BIG_GRID)
     if payload["mode"] in (GameRound.Mode.ODD, GameRound.Mode.SELECT):
         grid = rnd.items[index]
         # Odd One Out: all but one share a name at this rank; the grid's size, and the player's step when it was built
@@ -778,7 +780,8 @@ def _item_payload(rnd, index):
             coming.append((ahead, first))
     for n, (batch, at) in enumerate(coming):
         upcoming = _item_images(batch, at)
-        payload["prefetch"] += [im["small"] for im in upcoming] + ([im["large"] for im in upcoming] if n == 0 else [])
+        sharp = n == 0 and "large" in game_crops.sizes_ahead(batch.items[at])   # never a big grid's (sharp_on_zoom)
+        payload["prefetch"] += [im["small"] for im in upcoming] + ([im["large"] for im in upcoming] if sharp else [])
     return payload
 
 
@@ -1142,8 +1145,9 @@ def game_upcoming(request, round_id):
     items = []
     for batch, at in coming:
         images = _item_images(batch, at)
+        sharp = "large" in game_crops.sizes_ahead(batch.items[at])   # a big grid's wait until a tile is zoomed
         items.append({"round": str(batch.id), "index": at, "small": [im["small"] for im in images],
-                      "large": [im["large"] for im in images]})
+                      "large": [im["large"] for im in images] if sharp else []})
     return JsonResponse({"items": items})
 
 

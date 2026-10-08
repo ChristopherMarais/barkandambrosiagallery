@@ -176,37 +176,52 @@ def ensure(roi, size):
     return path
 
 
-def round_rois(rnd):
-    """Every beetle a batch shows, in the order of its items."""
-    return item_rois(rnd.items)
+# A grid of this many beetles or more (4×4, 5×5) shows each one small, smaller than its small crop on any screen: its
+# sharp crops are not cut or loaded ahead, only a tile's own once it is zoomed. They were most of the work of a big grid
+# (a large crop takes two to four times as long to cut as a small one) and most of its download.
+BIG_GRID = 16
 
 
-def item_rois(items):
-    """Every beetle these batch items show, in their order."""
+def sharp_on_zoom(item):
+    """Whether a batch item is a big grid, whose sharp crops wait until a tile is zoomed (BIG_GRID)."""
+    return len(item.get("tiles") or []) >= BIG_GRID
+
+
+def sizes_ahead(item):
+    """The crops of a batch item cut and loaded ahead of time: small and large, a big grid's small ones only."""
+    return ("small",) if sharp_on_zoom(item) else tuple(SIZES)
+
+
+def ahead(items):
+    """[(roi, sizes)]: every beetle these batch items show, in their order, with the crops cut ahead for it."""
     from .models import Beetles
 
-    ids = []
+    wanted = {}
     for item in items:
         for i in (item.get("tiles") or [item.get("a"), item.get("b")]):
-            if i and i not in ids:
-                ids.append(i)
-    found = {str(k): v for k, v in Beetles.objects.select_related("image_asset").in_bulk(ids).items()}
-    return [found[i] for i in ids if i in found and found[i].has_bbox()]
+            if i:
+                wanted.setdefault(i, set()).update(sizes_ahead(item))
+    found = {str(k): v for k, v in Beetles.objects.select_related("image_asset").in_bulk(list(wanted)).items()}
+    return [(found[i], [s for s in SIZES if s in sizes]) for i, sizes in wanted.items()
+            if i in found and found[i].has_bbox()]
+
+
+def cut_ahead(items):
+    """Cut these batch items' crops ahead of time: every small one first (shown first), then the large ones."""
+    made, rois = 0, ahead(items)
+    for size in SIZES:
+        for roi, sizes in rois:
+            if size in sizes:
+                made += ensure(roi, size) is not None
+    return made
 
 
 def prepare(round_id):
-    """Cut a batch's crops ahead of time: every small one first (shown first), then the large ones."""
+    """Cut a batch's crops ahead of time (cut_ahead)."""
     from .models import GameRound
 
     rnd = GameRound.objects.filter(id=round_id).first()
-    if rnd is None:
-        return 0
-    rois = round_rois(rnd)
-    made = 0
-    for size in SIZES:
-        for roi in rois:
-            made += ensure(roi, size) is not None
-    return made
+    return 0 if rnd is None else cut_ahead(rnd.items)
 
 
 def prepare_later(rnd):
@@ -232,4 +247,5 @@ def _new_batch(sender, instance, created, **kwargs):
     if stats is not None:
         stats["batches"] += 1
         stats["items"] += len(instance.items or [])
-        stats["crops"] += len(SIZES) * sum(len(it.get("tiles") or []) or 1 + bool(it.get("b")) for it in instance.items or [])
+        stats["crops"] += sum(len(sizes_ahead(it)) * (len(it.get("tiles") or []) or 1 + bool(it.get("b")))
+                              for it in instance.items or [])

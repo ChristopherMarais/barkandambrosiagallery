@@ -188,8 +188,5 @@ def grow_now(round_id):
     before = len(rnd.items)
     added = grow(rnd)
     if added:
-        rois = game_crops.item_rois(rnd.items[before:])
-        for size in game_crops.SIZES:
-            for roi in rois:
-                game_crops.ensure(roi, size)
+        game_crops.cut_ahead(rnd.items[before:])
     return added
