@@ -1129,10 +1129,10 @@
     if (title.toLowerCase().includes('error')) {
       header.className = "px-6 py-4 border-b border-red-200 flex justify-between items-center bg-red-50";
       titleArea.className = "text-lg font-semibold text-red-800 flex items-center gap-2";
-      titleArea.innerHTML = `<i class="fi fi-rr-exclamation-triangle"></i> ${title}`;
+      titleArea.innerHTML = `<i class="fi fi-rr-triangle-warning"></i> ${title}`;
     } else {
       // Normal Icon
-      titleArea.innerHTML = `<i class="fi fi-rr-file-alt"></i> ${title}`;
+      titleArea.innerHTML = `<i class="fi fi-rr-document"></i> ${title}`;
     }
 
     // Show Modal
@@ -1166,7 +1166,7 @@
     // Force Error Styles (Red)
     header.className = "px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50";
     titleArea.className = "text-lg font-semibold text-gray-800 flex items-center gap-2";
-    titleArea.innerHTML = `<i class="fi fi-rr-exclamation-triangle"></i> ${title}`;
+    titleArea.innerHTML = `<i class="fi fi-rr-triangle-warning"></i> ${title}`;
 
     // Show Modal & Set Text
     modal.classList.remove('hidden');
