@@ -500,3 +500,15 @@ kept for IBBI-AI and purple for the players' consensus; neither is ever on the s
   players said the same), grey with blue or purple on an unchecked beetle IBBI-AI or the players agree on, glowing
   purple when a Naming expert did, a small grey pop for very few points. A new level is a pop-up in the middle of the
   screen in the level's colour, with gold and brown beetles and a sprinkle of that colour.
+
+## Update: quicker between beetles, no label photos
+
+- **No photos of labels.** A photo whose aspect mentions "label" is never in the game: not as a beetle to answer and
+  not among a beetle's other photos (`game.LABEL_PHOTO`, in `playable_rois` and `specimen_photos`).
+- **The review comes first, always.** An answer (other than a skip) replies with its review at once. Whatever comes
+  next, the next beetle of the batch, the beetles a batch started small still gets, the next batch or the end of the
+  feed, comes from `game_item`, which the page asks for while the review is read (`game_views._carry_on`).
+- **A step change applies from the grid after next.** The next grid's photos are already loaded, so it shows as it was
+  built; `restep` builds the later ones again at the new step.
+- **Big grids load small.** In grids of 16 and 25 beetles only the small crops are cut and loaded ahead; a tile loads
+  its sharp crop when it is zoomed (`game_crops.BIG_GRID`, `sizes_ahead`, the item's `sharp_on_zoom`).
