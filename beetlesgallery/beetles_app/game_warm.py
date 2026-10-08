@@ -3,7 +3,9 @@ Batches built ahead for the games a player might switch to (#542).
 
 Switching game in the feed's toolbar used to build a whole new batch while the player waited. Now, once the feed is
 showing, the worker builds one batch for each of the player's other game choices and cuts the crops of its first
-beetles. They wait in the cache; switching to one of those games turns its batch into the player's new round at once
+beetles. That is the heavy worker's job (one at a time, at low CPU priority): it is only ever a head start, and on the
+quick worker it held up what a player in the middle of a feed waits on (a batch growing, the next batch). When it
+hasn't got to it, switching builds the batch as before. They wait in the cache; switching to one of those games turns its batch into the player's new round at once
 (take). A batch is only used for the choices, focus and unlocks it was built under, and loses any beetle the player
 has answered since, so it never shows anything a freshly built one wouldn't.
 """
@@ -41,14 +43,15 @@ def choices(player, info=None):
 
 def missing(player):
     """
-    The games with no batch waiting for them under the player's current unlocks and focus: the ones they could switch
-    to, and the one they play now (its batch is what a page load starts from, so the first beetles are ready).
+    The games with no batch waiting for them under the player's current unlocks and focus: the one they play now
+    first (its batch is what a page load starts from, so the first beetles are ready soonest), then the ones they could
+    switch to.
     """
     from . import game, game_levels
 
     info = game_levels.for_player(player)
     sig = _signature(info, game.player_focus(player))
-    options = choices(player, info) + [game.play_mode(player, info)]
+    options = [game.play_mode(player, info)] + choices(player, info)
     found = cache.get_many([KEY.format(player.pk, c) for c in options])
     return [c for c in options if (found.get(KEY.format(player.pk, c)) or {}).get("sig") != sig]
 

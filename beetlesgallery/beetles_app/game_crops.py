@@ -245,7 +245,7 @@ def prepare_later(rnd):
 # 12 KB each, and most of what a batch shows; the large ones (five times the size) are still cut per batch, as before.
 PRECUT_KEY = "game:precut"
 PRECUT_EVERY = 6 * 60 * 60     # seconds: a sweep at most this often (it only cuts what's missing: new or moved boxes)
-PRECUT_PART = 200              # crops one part cuts before queueing the next
+PRECUT_PART = 100              # crops one part cuts before queueing the next
 
 
 def precut(after=None, part=PRECUT_PART):
