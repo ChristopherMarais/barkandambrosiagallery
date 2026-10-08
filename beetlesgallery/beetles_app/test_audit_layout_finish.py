@@ -180,7 +180,7 @@ class SiteIconsTests(SimpleTestCase):
 
 def ctx(path, signed_in=True):
     user = SimpleNamespace(is_authenticated=signed_in)
-    return {"request": SimpleNamespace(path=path, user=user), "user": user, "game_name": "Ambrosia Archive"}
+    return {"request": SimpleNamespace(path=path, user=user), "user": user, "game_name": "Bark & Ambrosia Detective"}
 
 
 class NavActiveTagTests(SimpleTestCase):

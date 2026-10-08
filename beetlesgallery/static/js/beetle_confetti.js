@@ -1,5 +1,5 @@
 /*
- * Confetti for Ambrosia Archive, made of the site's beetle logo (its silhouette, tinted). One call per celebration,
+ * Confetti for Bark & Ambrosia Detective, made of the site's beetle logo (its silhouette, tinted). One call per celebration,
  * beetleConfetti(canvas, kind, size), the kind saying who agreed and so the colours (#572: green is correct, blue is
  * IBBI-AI, purple the players, grey a little; game_answer_review._celebrate picks it):
  *   "pop"               a few small grey beetles: very few points

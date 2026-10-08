@@ -1,6 +1,7 @@
 // The specimen page's photo (owner, round 7): the whole photo opens over the page, like the game's photo viewer
 // (zoom with the buttons, the wheel, a pinch or a double click, drag when zoomed; brightness and contrast; the flag,
-// wired by the page's own script), and on a computer a round lens magnifies the photo under the pointer.
+// wired by the page's own script). On the page itself, the mouse wheel zooms the photo where the pointer is and a drag
+// moves it (owner, replacing the round lens), and a Lighting button sets its brightness and contrast.
 (function () {
   const $ = (id) => document.getElementById(id);
 
@@ -8,7 +9,10 @@
   // written at most once per frame, and the browser's own image drag and text selection never take over a drag. ---
   const ZOOM_STEP = 2.5, ZOOM_MAX = 5, BUTTON_STEP = 1.5, TAP_MS = 300, DRAG_SLOP = 4;
   const zoomEase = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  function makeZoomable(frame, layer, onChange) {
+  // ``opts.inline`` (the photo on the page): a mouse only (a phone opens the whole photo instead), the pointer is caught
+  // only while zoomed (so a click on another beetle's box still follows its link), a click is left alone unless it
+  // ended a drag, and a wheel turned down on the unzoomed photo scrolls the page as usual.
+  function makeZoomable(frame, layer, onChange, opts = {}) {
     let z = 1, tx = 0, ty = 0, lastTap = 0, drag = null, pinch = null, moved = false;
     let rect = null, raf = 0, wheelEnd = null;
     const pointers = new Map();   // pointerId -> [clientX, clientY]
@@ -46,6 +50,7 @@
     };
     frame.addEventListener("dragstart", (e) => e.preventDefault());
     frame.addEventListener("wheel", (e) => {
+      if (opts.inline && z <= 1 && e.deltaY >= 0) return;   // not zoomed and scrolling down: the page scrolls
       e.preventDefault();
       measure();
       moving(true);
@@ -56,9 +61,11 @@
     }, { passive: false });
     frame.addEventListener("pointerdown", (e) => {
       if (e.button > 0) return;
+      if (opts.inline && (e.pointerType !== "mouse" || z <= 1)) { moved = false; return; }
       if (!pointers.size) { measure(); moved = false; }
       pointers.set(e.pointerId, [e.clientX, e.clientY]);
-      try { frame.setPointerCapture(e.pointerId); } catch (err) { /* already gone */ }
+      // inline: no capture, so a click still reaches the box under it (a link to that beetle); the window hears the release
+      if (!opts.inline) try { frame.setPointerCapture(e.pointerId); } catch (err) { /* already gone */ }
       if (pointers.size === 2) { startPinch(); moved = true; }
       else if (pointers.size === 1 && z > 1) startDrag([e.clientX, e.clientY]);
       if (pinch || drag) moving(true);
@@ -91,7 +98,11 @@
       }
       if (!pointers.size) { drag = null; pinch = null; frame.classList.remove("dragging"); moving(false); }
     };
-    ["pointerup", "pointercancel", "lostpointercapture"].forEach((t) => frame.addEventListener(t, up));
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach((t) => (opts.inline ? window : frame).addEventListener(t, up));
+    if (opts.inline) {
+      // a click that ended a drag is not a click (no link, no boxes switch); every other click does what it did
+      frame.addEventListener("click", (e) => { if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; } }, true);
+    } else
     // a double click (or double tap) zooms in at that spot, or back out
     frame.addEventListener("click", (e) => {
       e.preventDefault();
@@ -205,31 +216,35 @@
     });
   }
 
-  // --- Hover zoom: a lens that follows the pointer over the photo, on a computer only (touch opens the viewer) ---
-  const lens = $("roi-lens");
-  const stage = $("roi-photo");
-  const pic = stage && stage.querySelector("#roi-frame img");
-  if (lens && stage && pic && stage.dataset.zoomSrc) {
-    const LENS_ZOOM = 2.5;
-    const fine = window.matchMedia("(hover: hover) and (pointer: fine)");
-    let loaded = false;
-    const hide = () => lens.classList.remove("on");
-    stage.addEventListener("mousemove", (e) => {
-      if (!fine.matches) return;
-      const menu = $("report-roi-menu");
-      if (e.target.closest("#report-roi-wrap") || (menu && !menu.classList.contains("hidden"))) { hide(); return; }
-      const r = pic.getBoundingClientRect(), s = stage.getBoundingClientRect();
-      const x = e.clientX - r.left, y = e.clientY - r.top;
-      if (x < 0 || y < 0 || x > r.width || y > r.height) { hide(); return; }
-      if (!loaded) { lens.style.backgroundImage = `url(${JSON.stringify(stage.dataset.zoomSrc)})`; loaded = true; }
-      lens.classList.add("on");
-      const outer = lens.offsetWidth / 2, inner = lens.clientWidth / 2;   // the box, and inside its border
-      lens.style.left = `${e.clientX - s.left - outer}px`;
-      lens.style.top = `${e.clientY - s.top - outer}px`;
-      lens.style.backgroundSize = `${r.width * LENS_ZOOM}px ${r.height * LENS_ZOOM}px`;
-      lens.style.backgroundPosition = `${inner - x * LENS_ZOOM}px ${inner - y * LENS_ZOOM}px`;
+  // --- The photo on the page: the wheel zooms where the pointer is, a drag moves it; Lighting (owner) ---
+  const pageFrame = $("roi-frame"), pageLayer = $("roi-zoom");
+  if (pageFrame && pageLayer) {
+    const pageZoom = makeZoomable(pageFrame, pageLayer, (z) => {
+      const reset = $("roi-zoom-reset");
+      if (reset) reset.classList.toggle("hidden", z <= 1);
+    }, { inline: true });
+    const reset = $("roi-zoom-reset");
+    if (reset) reset.addEventListener("click", () => pageZoom.reset());
+  }
+  const pageLightBtn = $("roi-light-btn"), pageLightPanel = $("roi-light-panel");
+  if (pageLightBtn && pageLightPanel && pageFrame) {
+    const pb = $("roi-brightness"), pc = $("roi-contrast");
+    const setPageLight = (open) => {
+      pageLightPanel.classList.toggle("hidden", !open);
+      pageLightBtn.setAttribute("aria-expanded", String(open));
+    };
+    const applyPageLight = () => {
+      const b = Number(pb.value), c = Number(pc.value);
+      pageFrame.style.setProperty("--roi-filter", b !== 100 || c !== 100 ? `brightness(${b}%) contrast(${c}%)` : "none");
+    };
+    pageLightBtn.addEventListener("click", (e) => { e.stopPropagation(); setPageLight(pageLightPanel.classList.contains("hidden")); });
+    [pb, pc].forEach((input) => input.addEventListener("input", applyPageLight));
+    $("roi-light-reset").addEventListener("click", () => { pb.value = 100; pc.value = 100; applyPageLight(); });
+    document.addEventListener("click", (e) => {
+      if (!pageLightPanel.classList.contains("hidden") && !e.target.closest("#roi-light-panel, #roi-light-btn")) setPageLight(false);
     });
-    stage.addEventListener("mouseleave", hide);
-    window.addEventListener("scroll", hide, { passive: true });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !pageLightPanel.classList.contains("hidden")) { setPageLight(false); pageLightBtn.focus(); }
+    });
   }
 })();

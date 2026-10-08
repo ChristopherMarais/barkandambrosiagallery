@@ -29,7 +29,7 @@ Where things live. Paths are relative to the repository root.
 | **AI classifier** | `classify_assist.py`, `predictions.py`; the model itself runs on Modal (`beetlesgallery/tools/modal_ibbi_api.py`). |
 | **Accounts & permissions** | `access.py`, `access_views.py` (request access, approval), `areas.py` (which parts of the site an account may use), `auth_backends.py`. |
 | **Interactions database** | `interaction_*.py`. |
-| **The game (Ambrosia Archive)** | `game.py` (rounds), `game_views.py` (pages and JSON API), `game_scoring.py`, `game_levels.py` (levels, perks, unlocks), `game_rewards.py` (streaks, goals, badges), `game_board.py` (leaderboard), `game_queue.py` (what to show next), `game_taxa.py` (names players can choose), `game_trust.py`, `game_feedback.py`, `game_tips.py` ... one module per job. The design is in `docs/beetle_id_game_spec.md`. |
+| **The game (Bark & Ambrosia Detective)** | `game.py` (rounds), `game_views.py` (pages and JSON API), `game_scoring.py`, `game_levels.py` (levels, perks, unlocks), `game_rewards.py` (streaks, goals, badges), `game_board.py` (leaderboard), `game_queue.py` (what to show next), `game_taxa.py` (names players can choose), `game_trust.py`, `game_feedback.py`, `game_tips.py` ... one module per job. The design is in `docs/beetle_id_game_spec.md`. |
 | **Site-wide bits** | `context_processors.py`, `middleware.py` (time zones), `site_notice.py`, `staging.py`, `templatetags/`. |
 | **Management commands** | `management/commands/`: imports, thumbnails, downloads, `recompute_game_scores`, `audit_taxa`, `remind_access_requests` ... |
 | **API** | `api/` (Django REST Framework, `/api/v1/`). |

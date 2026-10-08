@@ -3,7 +3,7 @@ What each person may use beyond a Basic account, set per person on the My Accoun
 access request).
 
 * Basic (every account, approved automatically once the email is confirmed): the image browser (without specimen
-  pages), the taxonomy browser, the interactions page, IBBI-AI and the game (Ambrosia Archive).
+  pages), the taxonomy browser, the interactions page, IBBI-AI and the game (Bark & Ambrosia Detective).
 * Each area below is granted on its own (AreaGrant), to anyone, staff or not, so two curators can have different
   access. Superusers have everything. "Staff" is only a preset that ticks the usual curator areas (and lets someone
   into Django's own admin pages).

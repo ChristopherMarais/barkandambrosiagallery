@@ -40,7 +40,7 @@ class GameEntryTests(PageBehaviourCase):
     def test_signed_out_it_is_the_play_icon_and_the_games_name(self):
         for entry in self.entries():
             self.assert_play_icon_first(entry)
-            self.assertIn("Ambrosia Archive", entry)
+            self.assertIn("Bark &amp; Ambrosia Detective", entry)
             self.assertNotIn('data-testid="level-badge"', entry)
             self.assertNotIn('data-testid="sidebar-player"', entry)
 
@@ -49,7 +49,7 @@ class GameEntryTests(PageBehaviourCase):
         phone, desktop = self.entries()
         for entry in (phone, desktop):
             self.assert_play_icon_first(entry)   # the badge is no longer the icon
-            name = entry.index("Ambrosia Archive")
+            name = entry.index("Bark &amp; Ambrosia Detective")
             badge = entry.index('data-testid="level-badge"')
             level = entry.index(">Tunnel master</span>")
             points = entry.index(" pts</span>")
@@ -59,7 +59,7 @@ class GameEntryTests(PageBehaviourCase):
         self.assertIn(f"&middot; {digit_groups_text(1234)} pts", desktop)
         self.assertIn('<span class="digit-group">1</span><span class="digit-group" style="margin-left:0.4em">234</span> pts',
                       phone)
-        self.assertIn(f'title="Ambrosia Archive: user, level 5 (Tunnel master), {digit_groups_text(1234)} pts"', desktop)
+        self.assertIn(f'title="Bark &amp; Ambrosia Detective: user, level 5 (Tunnel master), {digit_groups_text(1234)} pts"', desktop)
         self.assertNotIn(">Beta</span>", phone)   # out of beta (#538): the phone menu's pill is gone too
 
     def test_a_long_level_name_is_shortened_but_never_the_points(self):

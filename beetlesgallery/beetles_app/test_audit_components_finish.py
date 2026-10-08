@@ -168,7 +168,7 @@ class TapTargetTests(SimpleTestCase):
     def test_the_roi_buttons_are_44px(self):
         detail = template("beetles/detail.html")
         self.assertNotIn("flex h-10 w-10", detail)
-        self.assertEqual(detail.count("flex h-11 w-11"), 6)   # the photo toolbar: ROI pager, boxes, full size
+        self.assertEqual(detail.count("flex h-11 w-11"), 7)   # the photo toolbar: ROI pager, lighting, boxes, full size
         # the small pager in the header keeps its look and gets the 44px tap target
         self.assertIn("hit-area", opening_tag(detail, 'title="Next ROI" aria-label="Next ROI">'))
 

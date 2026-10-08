@@ -129,7 +129,7 @@ class LoadingTests(SimpleTestCase):
 
     def test_the_facts_are_a_fixed_list_of_beetle_facts(self):
         facts = re.findall(r'"([^"]+)"', between("const LOADING_FACTS", "const LOADING_BASE_MS"))
-        self.assertEqual(len(facts), 7)   # the owner's seven, in this order
+        self.assertEqual(len(facts), 8)   # the owner's seven, in this order, then the hand-drawn art
         self.assertEqual(len(set(facts)), len(facts))
         self.assertTrue(facts[0].startswith("In a Colorado study, forests killed by spruce beetles had 62% more flowers"))
         self.assertIn("Ambrosia beetles grow their own fungus inside the wood, and they eat it.", facts)

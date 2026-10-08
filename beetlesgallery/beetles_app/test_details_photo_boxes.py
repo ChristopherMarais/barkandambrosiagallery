@@ -49,7 +49,7 @@ class DetailsPhotoBoxesTests(PageBehaviourCase):
             label = f"Show ROI {self.number[roi.id]} of 3"
             self.assertEqual((link["aria-label"], link["title"]), (label, label))
             self.assertEqual(link["class"].split(), ["roi-box"])
-            self.assertEqual(link["inside"][:2], ["roi-boxes", "roi-frame"])
+            self.assertEqual(link["inside"][:3], ["roi-boxes", "roi-zoom", "roi-frame"])   # the boxes zoom with the photo
             self.assertIn(f"left: calc({roi.bbox_x:f} * 100%)", link["style"])
         self.assertEqual(self.client.get(boxes[f"roi-box-{self.number[self.big.id]}"]["href"]).status_code, 200)
 

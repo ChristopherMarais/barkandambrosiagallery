@@ -757,9 +757,12 @@
 {# Fits a small phone and scrolls when it can't (many new badges); its own scroll never moves the page under it #}
 <div id="recap" class="hidden fixed inset-0 z-97 bg-white overflow-y-auto overscroll-contain" role="dialog" aria-modal="true" aria-labelledby="recap-title">
   <div class="max-w-md mx-auto px-4 sm:px-6 pt-6 sm:pt-10 text-center" style="padding-bottom: max(1.5rem, env(safe-area-inset-bottom))">
+    {# The site's back link, to the game's home (owner): also a way out at the top, not only the button at the bottom #}
+    <div class="text-left -mt-2 mb-2" data-testid="recap-back">{% url 'game_home' as back_url %}{% include "beetles/includes/back_link.html" with url=back_url label=game_name %}</div>
     <div class="inline-flex p-3 sm:p-4 bg-gray-100 rounded-full mb-3 sm:mb-4"><i class="fi fi-rr-trophy text-3xl text-gray-700"></i></div>
     <h2 class="text-2xl font-bold text-gray-900" id="recap-title">Nice session!</h2>
     <p class="mt-1 text-gray-500" id="recap-line" aria-live="polite"></p>
+    <p id="recap-saving" class="hidden mt-4 text-center text-gray-500" role="status" data-testid="recap-saving"><i class="fi fi-rr-spinner animate-spin text-2xl" aria-hidden="true"></i><span class="sr-only">Saving</span></p>
     <div class="grid grid-cols-2 gap-2 my-5 sm:my-6" id="recap-stats">
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="recap-points">0</div><div class="text-xs text-gray-500">points &middot; <a href="{% url 'game_how' %}#scoring" class="underline hover:text-gray-800" data-testid="recap-why">why?</a></div></div>
       <div class="p-3 bg-gray-50 rounded-2xl"><div class="text-2xl font-bold text-gray-900" id="recap-right">&mdash;</div><div class="text-xs text-gray-500">known beetles correct</div></div>
@@ -1711,6 +1714,7 @@
     "Ambrosia and bark beetles help break down dead wood in tropical forests.",
     "One lineage of ambrosia beetles has invaded California, South Africa and Western Australia.",
     "A spruce bark beetle was found attacking Sitka spruce in Great Britain for the first time.",
+    "All the art on this website is drawn by hand, by people.",
   ];
   // Each line stays long enough to read (owner, on a phone: the facts went by too fast): a base plus a little per
   // letter, so a short line moves on sooner and a long fact stays up for several seconds, within 3 to 9 seconds.
@@ -2521,12 +2525,14 @@
     if (leaving || !$("recap").classList.contains("hidden")) return;
     recapSeen = true;
     recapState("Nice session!", "Saving your answers…", false);
+    $("recap-saving").classList.remove("hidden");   // a turning spinner while it saves, so the game never looks frozen
     $("recap").scrollTop = 0;
     $("recap").classList.remove("hidden");
     // on a review that ended a batch, the next batch is the open one
     leaving = api(root.dataset.exitUrl, { round: (upcoming && upcoming.round) || roundId, since: openedAt }).catch(() => null);
     const data = await leaving;
     leaving = null;
+    $("recap-saving").classList.add("hidden");
     if ($("recap").classList.contains("hidden")) return;   // they went back to playing meanwhile
     if (data && data.recap && data.recap.labelled) fillRecap(data.recap);
     else if (data) recapState("See you soon!", "No beetles labelled this time.", false);

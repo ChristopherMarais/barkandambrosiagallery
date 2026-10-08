@@ -386,6 +386,8 @@
             </select>
             <button type="button" id="classify-btn" onclick="classifyCurrentImage()"
               class="btn-primary w-full py-1.5 text-xs"><i class="fi fi-rr-sparkles"></i><span>Generate</span></button>
+            {# Shown while IBBI-AI works on the image (owner: it was unclear it was processing); blue = IBBI-AI #}
+            <div class="flex justify-center"><span id="classify-processing" class="hidden inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-800 text-xs font-semibold leading-none" role="status" data-testid="classify-processing"><i class="fi fi-rr-spinner animate-spin" aria-hidden="true"></i><span>IBBI-AI is processing this image…</span></span></div>
           </div>
           <div id="classify-status" class="text-[11px] text-gray-600 mt-2 hidden"></div>
         </div>
@@ -1239,8 +1241,13 @@ async function classifyCurrentImage() {
   const btn = document.getElementById('classify-btn');
   const status = document.getElementById('classify-status');
   const show = (text) => { status.textContent = text; status.classList.remove('hidden'); };
+  const pill = document.getElementById('classify-processing');
+  const idle = btn.innerHTML;
   btn.disabled = true;
-  show('Generating... the first request can take a minute while the AI wakes up.');
+  btn.setAttribute('aria-busy', 'true');
+  btn.innerHTML = '<i class="fi fi-rr-spinner animate-spin"></i><span>Processing…</span>';
+  pill.classList.remove('hidden');
+  show('The first request can take a minute while the AI wakes up.');
   try {
     const res = await fetch(`/api/v1/image-assets/${state.selectedImageId}/classify/`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
@@ -1260,6 +1267,9 @@ async function classifyCurrentImage() {
     show(e.message);
   } finally {
     btn.disabled = false;
+    btn.removeAttribute('aria-busy');
+    btn.innerHTML = idle;
+    pill.classList.add('hidden');
   }
 }
 

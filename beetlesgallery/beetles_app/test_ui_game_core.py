@@ -1,5 +1,5 @@
 """
-UI audit fixes for the core game pages (issue #618): the Ambrosia Archive home, play (all modes), History and the
+UI audit fixes for the core game pages (issue #618): the Bark & Ambrosia Detective home, play (all modes), History and the
 round review. One regression fix is included: the loading screen used to show a short line and a beetle fact at
 once (#play-loading-double), now covered in test_game_feel.py / test_game_wording.py alongside the rest of the
 loading-screen behaviour they already own.
