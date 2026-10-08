@@ -142,6 +142,14 @@
       flex-shrink: 0;
     }
 
+    /* The game's name is wider than the open sidebar leaves its label (10.25rem; 11rem in the phone menu), so it wraps
+       onto a second line instead of being cut off. Its width is fixed, so it wraps the same while the rail opens and
+       the rows under it never move. */
+    .nav-game-name {
+      width: 10rem;
+      white-space: normal;
+    }
+
     #sidenav-footer a {
       color: rgb(156 163 175);
       transition: color 0.15s ease-in-out;
@@ -296,7 +304,7 @@
               class="flex items-center w-full min-h-14 rounded-lg pl-5 pr-2 transition-all whitespace-nowrap {% nav_active '/game/' %}">
               <i class="fi fi-rr-play text-xl text-gray-700 w-8 text-center"></i>
               <span class="ml-1 flex-1 min-w-0 leading-tight">
-                <span class="block font-medium text-gray-700">{{ game_name }}</span>
+                <span class="nav-game-name block font-medium text-gray-700">{{ game_name }}</span>
                 {% if game_player %}<span class="flex items-center gap-1.5 mt-0.5">{% include "beetles/includes/game_level_badge.html" with level=game_player.level name=game_player.name %}<span class="flex min-w-0 text-xs text-gray-500" data-testid="sidebar-player"><span class="truncate">{{ game_player.name }}</span><span class="shrink-0">&nbsp;&middot; {{ game_player.score|digit_groups }} pts</span></span></span>{% endif %}
               </span>
             </a>
@@ -407,7 +415,7 @@
             class="flex items-center w-full min-h-14 rounded-lg px-5 transition-all group overflow-hidden whitespace-nowrap {% nav_active '/game/' %}">
             <i class="fi fi-rr-play text-xl text-gray-700 w-8 text-center"></i>
             <span class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 min-w-0 leading-tight">
-              <span class="block font-medium text-gray-700">{{ game_name }}</span>
+              <span class="nav-game-name block font-medium text-gray-700">{{ game_name }}</span>
               {% if game_player %}<span class="flex items-center gap-1.5 mt-0.5">{% include "beetles/includes/game_level_badge.html" with level=game_player.level name=game_player.name %}<span class="flex min-w-0 text-xs text-gray-500" data-testid="sidebar-player"><span class="truncate">{{ game_player.name }}</span><span class="shrink-0">&nbsp;&middot; {{ game_player.score|digit_groups_text }} pts</span></span></span>{% endif %}
             </span>
           </a>
