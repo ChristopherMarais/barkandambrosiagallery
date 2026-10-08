@@ -2,7 +2,7 @@
 The owner's review of the specimen page, round 7: the full-size photo opens over the page (A1) with zoom, lighting
 and the flag (A2); the flag is back on the corner of this beetle's box, out of the toolbar (A3); Edit only for those
 who may open the annotation page (A4); the other images of the specimen under the photo on desktop, last on a phone
-(A5); a hover lens on a computer (A6); the authority out of the title (E2); round buttons centred (E6).
+(A5); the wheel zooms the photo in place and Lighting sets it (A6, owner: no lens); the authority out of the title (E2); round buttons centred (E6).
 """
 import uuid
 from pathlib import Path
@@ -142,17 +142,33 @@ class R7DetailTests(PageBehaviourCase):
                      "#detail-grid > #related-specimens { grid-column: 1 / span 8; grid-row: 2;"):
             self.assertIn(rule, page)
 
-    # --- A6: hover zoom ---------------------------------------------------------------------------------------------
+    # --- A6: wheel zoom and lighting on the page (owner: no hover lens) ---------------------------------------------
 
-    def test_a_lens_magnifies_the_photo_on_a_computer(self):
+    def test_the_wheel_zooms_the_photo_and_its_boxes_in_place(self):
         page = self.page()
         elements = Outline(page).elements
-        self.assertIn("roi-photo", elements["roi-lens"]["inside"])
-        self.assertEqual(elements["roi-photo"]["data-zoom-src"], self.roi.display_url)
-        self.assertIn("@media (hover: hover) and (pointer: fine) { #roi-lens.on { display: block; } }", page)
+        self.assertNotIn("roi-lens", elements)
+        self.assertIn("roi-frame", elements["roi-zoom"]["inside"])
+        self.assertIn("roi-zoom", elements["roi-boxes"]["inside"])   # the boxes zoom with the photo
+        self.assertIn("#roi-zoom { position: relative; transform-origin: 0 0; }", page)
+        self.assertIn("#roi-photo:has(#roi-frame.zoomed) #report-roi-wrap { display: none; }", page)
+        self.assertIn('id="roi-zoom-reset" class="hidden', page)
         script = (STATIC_JS / "photo_viewer.js").read_text(encoding="utf-8")
-        self.assertIn('matchMedia("(hover: hover) and (pointer: fine)")', script)
-        self.assertIn("lens.style.backgroundPosition", script)
+        self.assertIn('makeZoomable(pageFrame, pageLayer,', script)
+        self.assertIn("{ inline: true }", script)
+        self.assertIn("if (opts.inline && z <= 1 && e.deltaY >= 0) return;", script)   # scrolling down still scrolls
+        self.assertIn('if (opts.inline && (e.pointerType !== "mouse" || z <= 1))', script)
+
+    def test_a_lighting_button_sets_the_photo_on_the_page(self):
+        page = self.page()
+        toolbar = page[page.index('id="roi-toolbar"'):page.index('id="roi-fullsize"')]
+        self.assertIn('id="roi-light-btn"', toolbar)
+        self.assertIn('<i class="fi fi-rr-brightness"', toolbar)
+        for slider in ('id="roi-brightness"', 'id="roi-contrast"', 'id="roi-light-reset"'):
+            self.assertIn(slider, toolbar)
+        self.assertIn("#roi-zoom img { filter: var(--roi-filter, none); }", page)
+        script = (STATIC_JS / "photo_viewer.js").read_text(encoding="utf-8")
+        self.assertIn('pageFrame.style.setProperty("--roi-filter"', script)
 
     # --- E2 / E6 ----------------------------------------------------------------------------------------------------
 

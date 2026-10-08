@@ -23,12 +23,19 @@
   .roi-flag-menu { position: absolute; top: calc(100% + 0.25rem); right: 0; z-index: 30; }
   .roi-flag-menu.open-right { right: auto; left: 0; }
 
-  /* Hover zoom (round 7): on a computer, a round lens follows the pointer over the photo and shows it magnified.
-     Not on touch screens: they open the whole photo instead. */
-  #roi-lens { display: none; position: absolute; z-index: 15; width: 11rem; height: 11rem; border-radius: 9999px;
-              pointer-events: none; background-repeat: no-repeat; background-color: #fff;
-              border: 2px solid #fff; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.4), 0 6px 20px rgb(0 0 0 / 0.3); }
-  @media (hover: hover) and (pointer: fine) { #roi-lens.on { display: block; } }
+  /* Zoom on the page (owner, replacing the round lens): the mouse wheel over the photo zooms in where the pointer is,
+     a drag moves the zoomed photo, "Reset zoom" goes back (photo_viewer.js). The boxes zoom with it; the flag, which
+     can't follow, hides while zoomed. Lighting sets the photo's brightness and contrast. */
+  #roi-zoom { position: relative; transform-origin: 0 0; }
+  #roi-zoom img { filter: var(--roi-filter, none); }
+  #roi-frame.zoomed { cursor: grab; user-select: none; -webkit-user-select: none; }
+  #roi-frame.dragging { cursor: grabbing; }
+  #roi-photo:has(#roi-frame.zoomed) #report-roi-wrap { display: none; }
+  #roi-zoom-reset { position: absolute; left: 0.5rem; bottom: 0.5rem; z-index: 25; }
+  #roi-light-panel label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; font-weight: 600; color: #4b5563; }
+  #roi-light-panel label + label { margin-top: 0.5rem; }
+  #roi-light-panel label span { flex: 0 0 4.5rem; }
+  #roi-light-panel input[type=range] { flex: 1 1 auto; accent-color: #4b5563; }
 
   /* Desktop (lg and up): the other images of this specimen sit in the left column right under the photo, the details
      on the right; on a phone they come last, after the details (one copy, placed by the grid). The second row takes
@@ -154,6 +161,8 @@
           <div id="roi-photo" class="relative max-w-full min-w-0" data-zoom-src="{{ beetle.display_url }}"{% if photo_boxes %} data-box="shown"{% endif %}>
             {# IMAGE WRAPPER (Hooks absolute positioning to the actual image bounds). A click outside every box hides the boxes, the next one shows them again. #}
             <div id="roi-frame" class="relative block max-h-[70vh] max-w-full overflow-hidden rounded-lg{% if photo_boxes %} cursor-pointer{% endif %}">
+              {# THE ZOOM LAYER: the photo and its boxes, scaled together by the wheel (photo_viewer.js) #}
+              <div id="roi-zoom" data-testid="roi-zoom">
               {% with asset=beetle.image_asset %}
               {% if asset.thumb_small and asset.image_width and asset.image_height %}
               {# The thumbnail first, at the photo's own size, then the full photo once it has loaded (#607, progressive_image.js) #}
@@ -202,10 +211,11 @@
                   {% endfor %}
                 </div>
               {% endif %}
+              </div>
             </div>
 
-            {# HOVER ZOOM: a lens that follows the pointer on a computer (photo_viewer.js). #}
-            <div id="roi-lens" aria-hidden="true" data-testid="roi-lens"></div>
+            {# Back to the whole photo after zooming with the wheel; shown only while zoomed #}
+            <button type="button" id="roi-zoom-reset" class="hidden pv-pill" data-testid="roi-zoom-reset"><i class="fi fi-rr-zoom-out" aria-hidden="true"></i><span>Reset zoom</span></button>
 
             {% if beetle.bbox_x is not None %}
               {% comment %} FLAG on the top right corner of this beetle's box (straddling it, kept inside the photo): sends the
@@ -250,7 +260,16 @@
                 {% endif %}
               {% endif %}
             </div>
-            <div class="flex items-center gap-1">
+            <div class="relative flex items-center gap-1">
+              {# LIGHTING for the photo on the page (owner): brightness and contrast, as in the whole-photo view #}
+              <button type="button" id="roi-light-btn" class="flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" aria-haspopup="true" aria-expanded="false" aria-controls="roi-light-panel" aria-label="Lighting" title="Lighting" data-testid="roi-light-btn">
+                <i class="fi fi-rr-brightness" aria-hidden="true"></i>
+              </button>
+              <div id="roi-light-panel" class="hidden absolute right-0 bottom-full mb-2 z-30 w-72 max-w-[calc(100vw-2rem)] p-3 bg-white border border-gray-300 rounded-xl shadow-xl" data-testid="roi-light-panel">
+                <label><span>Brightness</span><input type="range" id="roi-brightness" min="50" max="250" step="5" value="100" aria-label="Brightness"></label>
+                <label><span>Contrast</span><input type="range" id="roi-contrast" min="50" max="200" step="5" value="100" aria-label="Contrast"></label>
+                <button type="button" id="roi-light-reset" class="btn-secondary mt-3 w-full">Reset</button>
+              </div>
               {% if photo_boxes %}
                 {# BOXES SWITCH: shows or hides the boxes and the haze, as a click outside the boxes does; for the keyboard and for those who don't know that click. #}
                 <button type="button" id="roi-boxes-btn" class="flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-black/5 hover:text-black transition" aria-pressed="true" aria-label="Hide the boxes" title="Hide the boxes">
