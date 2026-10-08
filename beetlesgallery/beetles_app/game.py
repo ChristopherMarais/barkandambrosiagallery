@@ -31,9 +31,11 @@ from datetime import datetime, timedelta
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db.models import Count, Exists, F, OuterRef, Q
+from django.db.models import Count, Exists, F, OuterRef, Q, QuerySet
+from django.db.models.expressions import RawSQL
 from django.utils import timezone
 
+from . import game_ai_calls
 from .models import Beetles, GameAnswer, GameRound, RoiDifficulty
 
 RANKS = ("subfamily", "tribe", "genus", "species")
@@ -110,6 +112,21 @@ def open_rois():
 # batch that grows (game_grow, #575). Read where the builders draw their beetles (_random_ids).
 avoiding = contextvars.ContextVar("game_avoiding", default=frozenset())
 
+# A list of beetles this long or longer goes to Postgres as one array, not as one parameter per beetle. The beetles a
+# player has been shown grow with every grid (up to 25 a grid) and are left out of every query that builds one; as
+# separate parameters a list of thousands cost more than the query itself.
+ARRAY_FROM = 100
+
+
+def among(ids):
+    """Q for beetles whose id is one of ``ids`` (ids, UUIDs, or a queryset of ids), for filter() and exclude()."""
+    if isinstance(ids, QuerySet):
+        return Q(id__in=ids)
+    ids = [str(i) for i in ids]
+    if len(ids) < ARRAY_FROM:
+        return Q(id__in=ids)
+    return Q(id__in=RawSQL("SELECT unnest(%s::uuid[])", (ids,)))
+
 
 def _random_ids(qs, n):
     """
@@ -122,7 +139,7 @@ def _random_ids(qs, n):
     if n <= 0:
         return []
     if avoiding.get():
-        qs = qs.exclude(id__in=list(avoiding.get()))
+        qs = qs.exclude(among(avoiding.get()))
     pivot = uuid.uuid4()
     ids = list(qs.filter(id__gte=pivot).order_by("id").values_list("id", flat=True)[:n])
     if len(ids) < n:
@@ -434,12 +451,12 @@ def _sample(qs, n, target, seen=None, exclude=(), allow_seen=True):
     if n <= 0:
         return []
     oversample = game_setting("GAME_CANDIDATE_OVERSAMPLE", 6)
-    fresh = qs.exclude(id__in=list(exclude))
+    fresh = qs.exclude(among(exclude))
     if seen is not None:
-        fresh = fresh.exclude(id__in=seen)
+        fresh = fresh.exclude(among(seen))
     ids = _pick_near(_random_ids(fresh, n * oversample), n, target)
     if len(ids) < n and allow_seen:
-        rest = qs.exclude(id__in=list(exclude) + ids)
+        rest = qs.exclude(among(list(exclude) + ids))
         ids += _pick_near(_random_ids(rest, (n - len(ids)) * oversample), n - len(ids), target)
     return ids
 
@@ -654,7 +671,7 @@ def _partner_for(anchor, target, exclude=(), relation=None):
     For an unvalidated anchor its current (unchecked) label is only used to aim the
     pairing; the answer is what we record.
     """
-    pool = check_rois().exclude(id=anchor.id).exclude(id__in=list(exclude))
+    pool = check_rois().exclude(id=anchor.id).exclude(among(exclude))
     if anchor.image_asset_id:
         pool = pool.exclude(image_asset_id=anchor.image_asset_id)
     taxon = anchor.taxon
@@ -820,24 +837,6 @@ def _named_at(rank):
     return ~Q(**{f"taxon__{rank}": ""}) & ~Q(**{f"taxon__{rank}__isnull": True})
 
 
-def _predicted(rank, value, low, high):
-    """
-    Q for unvalidated beetles a classifier puts at ``value`` at ``rank`` (at any name when ``value`` is None) with a
-    confidence in [low, high): what it said for that rank, or else what its species implies, with the species' confidence.
-    """
-    if rank == "species":
-        named = rank_q(rank, value, "predictions__taxon__") if value else Q()
-        return named & Q(predictions__confidence__gte=low, predictions__confidence__lt=high)
-    said = Q(**{f"predictions__rank_confidence__{rank}__confidence__gte": low,
-                f"predictions__rank_confidence__{rank}__confidence__lt": high})
-    implied = (Q(**{f"predictions__rank_confidence__{rank}__isnull": True})
-               & Q(predictions__confidence__gte=low, predictions__confidence__lt=high))
-    if value:
-        said &= Q(**{f"predictions__rank_confidence__{rank}__value__iexact": value})
-        implied &= rank_q(rank, value, "predictions__taxon__")
-    return said | implied
-
-
 def _distinct_photos(ids, taken, limit):
     """
     Up to ``limit`` of the ids, in order, each on a photo not used yet (``taken``: ImageAsset ids, which grows with
@@ -877,16 +876,18 @@ def _ai_beetles(open_pool, rank, value, n, target, avoid, photos, pair):
     """
     Up to ``n`` unvalidated beetles IBBI-AI puts at ``value``, each on a photo not used yet. With ``pair``, one it is
     sure about and one it is unsure about first (for a single place, one of either), then any confidence.
-    Returns (ids, kinds): each one's "sure", "unsure" or "other".
+    Returns (ids, kinds): each one's "sure", "unsure" or "other". Drawn from its calls in memory (game_ai_calls), like
+    _sample: a few times as many as wanted, then the ones nearest the target difficulty.
     """
     sure, unsure, _ = ai_bands()
-    chosen, kinds, avoid = [], [], set(avoid)
+    chosen, kinds, avoid = [], [], set(avoid) | {uuid.UUID(str(i)) for i in avoiding.get()}
+    oversample = game_setting("GAME_CANDIDATE_OVERSAMPLE", 6)
 
     def take(band, k, kind):
         if k <= 0:
             return
-        q = open_pool.filter(_predicted(rank, value, *band)).exclude(id__in=avoid).distinct()
-        got = _distinct_photos(_sample(q, k * 2, target, allow_seen=False), photos, k)
+        drawn = game_ai_calls.draw(open_pool, rank, value, *band, k * 2 * oversample, avoid)
+        got = _distinct_photos(_pick_near(drawn, k * 2, target), photos, k)
         avoid.update(got)
         chosen.extend(got)
         kinds.extend([kind] * len(got))
@@ -932,6 +933,7 @@ class _Grids:
         shown = reveals(player)
         self.avoid = held_back_ids(player, shown=shown) | {uuid.UUID(str(i)) for i in avoid}
         self.later = shown_in(shown, game_key) - self.avoid
+        game_ai_calls.refresh()   # IBBI-AI's calls, read again if predictions were uploaded since
         self.prefer_ai = ai_preferred()
         self.pairs = {}   # rank: whether IBBI-AI's predictions could give a grid there a sure and an unsure beetle
 
@@ -966,7 +968,7 @@ class _Grids:
         for rank in self.plan["ranks"]:
             pair = self.pair_wanted(rank)
             best = None
-            anchors = _sample(self.check_pool.filter(_named_at(rank)).exclude(id__in=self.avoid), GRID_ANCHORS,
+            anchors = _sample(self.check_pool.filter(_named_at(rank)).exclude(among(self.avoid)), GRID_ANCHORS,
                               self.target, allow_seen=False)
             for anchor in Beetles.objects.select_related("taxon").filter(id__in=anchors):
                 grid = (self.odd if self.game == "odd" else self.select)(anchor, rank, pair)
@@ -989,7 +991,7 @@ class _Grids:
             return False
         if rank not in self.pairs:
             sure, unsure, _ = ai_bands()
-            self.pairs[rank] = all(self.open_pool.filter(_predicted(rank, None, *band)).exists() for band in (sure, unsure))
+            self.pairs[rank] = all(game_ai_calls.draw(self.open_pool, rank, None, *band, 1) for band in (sure, unsure))
         return self.pairs[rank]
 
     def finish(self, grid, rank):
@@ -1037,7 +1039,7 @@ class _Grids:
         most, wanted = self.plan["size"], self.plan.get("odds", 1)
         # The odd ones: validated, so there is always a known answer, each outside the group (they may share another);
         # near relatives (the same parent) on harder rounds
-        odd_pool = self.check_pool.filter(_named_at(rank)).exclude(same).exclude(id__in=self.avoid)
+        odd_pool = self.check_pool.filter(_named_at(rank)).exclude(same).exclude(among(self.avoid))
         near = self.near(rank, group)
         odds = _distinct_photos(_sample(odd_pool.filter(near), 3 * wanted, self.target, allow_seen=False), photos,
                                 wanted) if near else []
@@ -1051,7 +1053,7 @@ class _Grids:
         opens, kinds = _ai_beetles(self.open_pool, rank, group[rank], self.odd_ai(most, pair), self.target, self.avoid,
                                    photos, pair)
         rest = _distinct_photos(
-            _sample(self.check_pool.filter(same).exclude(id__in=self.avoid).exclude(id=anchor.id), (most - 2) * 3,
+            _sample(self.check_pool.filter(same).exclude(among(self.avoid)).exclude(id=anchor.id), (most - 2) * 3,
                     self.target, allow_seen=True), photos, most - 2)
         for size in self.sizes():
             for k in range(min(wanted, most_odds(size), len(odds)), 0, -1):
@@ -1072,14 +1074,14 @@ class _Grids:
         most = self.plan["size"]
         # Validated members: the anchor and as many more as the biggest grid takes
         members = [anchor.id] + _distinct_photos(
-            _sample(self.check_pool.filter(same).exclude(id__in=self.avoid).exclude(id=anchor.id),
+            _sample(self.check_pool.filter(same).exclude(among(self.avoid)).exclude(id=anchor.id),
                     (SELECT_MEMBERS[most][1] - 1) * 3, self.target, allow_seen=True), photos, SELECT_MEMBERS[most][1] - 1)
         # AI beetles: a sure and an unsure one first when there are predictions. Taps on them are votes, never scored
         opens, kinds = _ai_beetles(self.open_pool, rank, group[rank], self.select_ai(most, pair), self.target, self.avoid,
                                    photos, pair)
         # The rest: validated beetles of other groups at this rank; near relatives (the same parent) on harder rounds
         want = most - SELECT_MEMBERS[most][0]
-        others = self.check_pool.filter(_named_at(rank)).exclude(same).exclude(id__in=self.avoid)
+        others = self.check_pool.filter(_named_at(rank)).exclude(same).exclude(among(self.avoid))
         near = self.near(rank, group)
         rest = _distinct_photos(_sample(others.filter(near), want * 2, self.target, allow_seen=True),
                                 photos, want) if near else []
@@ -1329,7 +1331,7 @@ def nothing_to_play(player, mode=GameRound.Mode.MIXED):
     held = list(held_back_ids(player))
 
     def new(check_pool, open_pool):   # never answered, or validated and its names not shown to them a moment ago
-        return open_pool.exclude(id__in=answered).exists() or check_pool.exclude(id__in=held).exists()
+        return open_pool.exclude(id__in=answered).exists() or check_pool.exclude(among(held)).exists()
 
     if not new(checks, opens):
         return {"text": "You've seen every beetle we have. New photos are added regularly.", "clear_focus": False}
