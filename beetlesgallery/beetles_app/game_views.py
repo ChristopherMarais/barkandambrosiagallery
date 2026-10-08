@@ -426,7 +426,6 @@ def game_how(request):
         "select_level": game_levels.game_level("select"),
         "odd_skip": game.game_setting("GAME_POINTS_ODD_SKIP", 0.25),
         "difficulty_spread": round(game_scoring.difficulty_spread() * 100),
-        "reveal_hours": _weight_label(game.game_setting("GAME_REVEAL_COOLDOWN_HOURS", 2)),
         "recall_days": _weight_label(game.game_setting("GAME_EXPERTISE_RECALL_DAYS", 30)),
     })
 

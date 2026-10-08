@@ -1,16 +1,15 @@
 """
 Beetles whose names a player has been shown come back (owner decision with #541): "users learn to classify these beetles
-by playing". Not in the same sitting and not before GAME_REVEAL_COOLDOWN_HOURS; in another game first when there is
-one; then at full points, but left out of accuracy and expertise (GameAnswer.seen_before), so those still mean naming
-beetles unseen.
+by playing". By the rule of 3 (game.SEEN_AGAIN): 3 minutes after the first time they were shown, then 3 hours, 3 days,
+3 weeks and 3 months; in another game first when there is one; then at full points, but left out of accuracy and
+expertise (GameAnswer.seen_before), so those still mean naming beetles unseen.
 """
 from datetime import timedelta
 
-from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from beetlesgallery.beetles_app import game, game_tuning
+from beetlesgallery.beetles_app import game
 from beetlesgallery.beetles_app.models import GameAnswer, GameRound
 from beetlesgallery.beetles_app.test_game import AFFINIS
 from beetlesgallery.beetles_app.test_game_answer_review import ReviewCase
@@ -28,28 +27,44 @@ class SeenAgainCase(ReviewCase):
         return answer
 
 
-class CooldownTests(SeenAgainCase):
-    def test_held_back_in_the_same_sitting_and_free_after_the_wait(self):
+class RuleOfThreeTests(SeenAgainCase):
+    def test_held_back_for_3_minutes_after_the_first_time(self):
         roi = self.roi(self.t_affinis)
-        self.shown(roi)
+        self.shown(roi, minutes_ago=2)
         self.assertIn(roi.id, game.held_back_ids(self.user))
-        GameAnswer.objects.update(answered_at=timezone.now() - timedelta(hours=3))
+        GameAnswer.objects.update(answered_at=timezone.now() - timedelta(minutes=4))
         self.assertNotIn(roi.id, game.held_back_ids(self.user))
         self.assertIn(roi.id, game.revealed_ids(self.user))   # still shown: it just isn't held back any more
 
-    def test_a_long_sitting_holds_it_back_however_long_ago(self):
+    def test_each_time_it_is_shown_the_wait_grows(self):
+        roi = self.roi(self.t_affinis)
+        waits = [timedelta(minutes=3), timedelta(hours=3), timedelta(days=3), timedelta(weeks=3), timedelta(weeks=13)]
+        self.assertEqual(list(game.SEEN_AGAIN), waits)
+        for times, wait in enumerate(waits + [waits[-1]], start=1):   # and every 3 months from then on
+            GameAnswer.objects.all().delete()
+            for n in range(times):   # shown this many times, the last one ``ago``
+                self.shown(roi, minutes_ago=wait.total_seconds() / 60 * 2 * (times - n))
+            last = GameAnswer.objects.order_by("-answered_at").first()
+            with self.subTest(times=times):
+                for ago, held in ((wait - timedelta(minutes=1), True), (wait + timedelta(minutes=1), False)):
+                    GameAnswer.objects.filter(pk=last.pk).update(answered_at=timezone.now() - ago)
+                    self.assertEqual(roi.id in game.held_back_ids(self.user), held, (times, ago))
+
+    def test_a_long_sitting_no_longer_holds_it_back_once_its_wait_is_over(self):
         roi = self.roi(self.t_affinis)
         self.shown(roi, minutes_ago=200)
         for minutes in range(180, -1, -20):   # answers every 20 minutes since: one sitting
             self.shown(self.roi(self.t_ferr), minutes_ago=minutes)
-        self.assertIn(roi.id, game.held_back_ids(self.user))
+        self.assertNotIn(roi.id, game.held_back_ids(self.user))
 
-    @override_settings(GAME_REVEAL_COOLDOWN_HOURS=5)
-    def test_the_wait_is_a_setting(self):
-        roi = self.roi(self.t_affinis)
-        self.shown(roi, minutes_ago=180)   # an earlier sitting, but only 3 hours ago
-        self.assertIn(roi.id, game.held_back_ids(self.user))
-        self.assertIn("GAME_REVEAL_COOLDOWN_HOURS", {t["key"] for _, group in game_tuning.GROUPS for t in group})
+    def test_another_photo_of_the_specimen_counts_its_showings(self):
+        dorsal, lateral = self.roi(self.t_affinis), self.roi(self.t_affinis)
+        type(dorsal).objects.filter(pk__in=[dorsal.pk, lateral.pk]).update(depicts_specimen="SPEC-1")
+        self.shown(dorsal, minutes_ago=600)
+        self.shown(lateral, minutes_ago=60)   # the second time this specimen is shown: 3 hours
+        shown = game.reveals(self.user)
+        self.assertEqual((shown[dorsal.id]["seen"], shown[lateral.id]["seen"]), (2, 2))
+        self.assertTrue({dorsal.id, lateral.id} <= game.held_back_ids(self.user))
 
     def test_comes_back_in_another_game_first(self):
         here, elsewhere = self.roi(self.t_affinis), self.roi(self.t_affinis)
@@ -93,5 +108,7 @@ class SeenBeforeTests(SeenAgainCase):
         self.client.force_login(self.user)
         page = self.client.get(reverse("game_how")).content.decode()
         self.assertIn('data-testid="how-seen-again"', page)
-        self.assertIn("at least 2 hours on, usually in another game", page)
+        self.assertIn("usually in another game", page)
+        self.assertIn("The rule of 3: a beetle comes back 3 minutes after you first see it, then 3 hours, 3 days, "
+                      "3 weeks and 3 months", page)
         self.assertIn("don&rsquo;t count towards your accuracy or expertise", page)

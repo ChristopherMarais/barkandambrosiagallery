@@ -44,11 +44,11 @@ class RelearnCase(ScoringCase):
 
 
 class WhenTests(RelearnCase):
-    def test_a_mistake_waits_for_a_later_sitting(self):
-        self.miss(when=timezone.now() - timedelta(minutes=20))
-        self.answer(self.user, self.roi(self.t_plat), {"subfamily": "Platypodinae"},
-                    when=timezone.now() - timedelta(minutes=2))
-        self.assertEqual(game_relearn.due(self.user), {})   # still the same sitting
+    def test_a_mistake_waits_3_minutes_the_first_time(self):
+        self.miss(when=timezone.now() - timedelta(minutes=2))
+        self.assertEqual(game_relearn.due(self.user), {})
+        GameAnswer.objects.update(answered_at=timezone.now() - timedelta(minutes=4))   # the same sitting is fine
+        self.assertEqual(list(game_relearn.due(self.user)), [self.x.id])
 
     def test_after_a_break_it_is_due(self):
         self.miss(when=timezone.now() - timedelta(hours=2))
@@ -56,9 +56,11 @@ class WhenTests(RelearnCase):
                     when=timezone.now() - timedelta(minutes=2))   # a new sitting began after the break
         self.assertEqual(list(game_relearn.due(self.user)), [self.x.id])
 
-    @override_settings(GAME_SESSION_GAP_MINUTES=5)
-    def test_the_break_is_a_setting(self):
-        self.miss(when=timezone.now() - timedelta(minutes=10))
+    def test_then_3_hours_after_it_was_shown_again(self):
+        self.miss(when=timezone.now() - timedelta(days=1))
+        self.miss(when=timezone.now() - timedelta(hours=2), retry=True)   # the second time: 3 hours
+        self.assertEqual(game_relearn.due(self.user), {})
+        GameAnswer.objects.filter(is_retry=True).update(answered_at=timezone.now() - timedelta(hours=4))
         self.assertEqual(list(game_relearn.due(self.user)), [self.x.id])
 
     def test_a_right_answer_in_the_game_it_was_missed_in_ends_it(self):

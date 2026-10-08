@@ -529,6 +529,23 @@ None of this changes what a player sees or how the game plays; it changes when a
 - **Timing lines reach the server log** (`LOGGING` in settings: one line per feed request; `LOG_GAME_TIMINGS=0`
   turns them off).
 
+## Update: the rule of 3 for seeing a beetle again
+
+A beetle whose names a player was shown (any answer's review names every beetle in it, with every other photo of the
+same specimen) comes back to that player by the rule of 3: **3 minutes** after the first time it was shown, **3 hours**
+after the second, then **3 days**, **3 weeks** and **3 months** (13 weeks), and every 3 months from then on, each wait
+counted from the last time it was shown (`game.SEEN_AGAIN`, `held_back_ids`). This replaces "a later sitting and at
+least `GAME_REVEAL_COOLDOWN_HOURS`" (that setting and `GAME_SESSION_GAP_MINUTES` are gone).
+
+- Mistakes come back as retries on the same schedule (`game_relearn.due`), still at most `GAME_RETRY_MAX` tries and
+  `GAME_RETRY_PER_BATCH` a batch, first in an easier game.
+- The number of times shown is counted from the player's answers (`reveals`: one per answer, a specimen's showings
+  for each of its photos).
+- A chosen game that runs short takes back every beetle past its first 3-minute wait.
+- Unchanged: such beetles come back in another game first; they earn full points but count towards accuracy and
+  expertise only once they haven't been shown for `GAME_EXPERTISE_RECALL_DAYS`; unvalidated beetles a player has
+  named or paired don't come back to them in that game.
+
 ## Update: naming skill counts upward
 
 What a player recognises at a rank they recognise at the ranks above it: someone good at a tribe's genera is good at

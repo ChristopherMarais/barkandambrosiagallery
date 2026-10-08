@@ -56,8 +56,8 @@ class RecallTests(SeenAgainCase):
         self.assertEqual(keys["GAME_EXPERTISE_RECALL_DAYS"]["default"], 30)
         self.assertTrue(keys["GAME_EXPERTISE_RECALL_DAYS"]["label"] and keys["GAME_EXPERTISE_RECALL_DAYS"]["help"])
 
-    def test_on_the_scoring_page_next_to_the_reveal_wait(self):
-        group = next(g for _, g in game_tuning.GROUPS if any(t["key"] == "GAME_REVEAL_COOLDOWN_HOURS" for t in g))
+    def test_on_the_scoring_page_next_to_the_mistakes_coming_back(self):
+        group = next(g for _, g in game_tuning.GROUPS if any(t["key"] == "GAME_RETRY_MAX" for t in g))
         self.assertIn("GAME_EXPERTISE_RECALL_DAYS", {t["key"] for t in group})
 
     def test_another_photo_of_the_specimen_follows_the_same_gap(self):

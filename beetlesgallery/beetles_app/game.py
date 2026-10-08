@@ -163,7 +163,7 @@ def _seen(player, mode, is_check):
 reveals_memo = contextvars.ContextVar("game_reveals_memo", default=None)
 
 
-HISTORY_CACHE = "game:history:v1:{}:{}:{}"   # kind, player, the player's answers (count and last moment)
+HISTORY_CACHE = "game:history:v2:{}:{}:{}"   # kind, player, the player's answers (count and last moment)
 HISTORY_SECONDS = 10 * 60
 
 
@@ -188,10 +188,11 @@ def per_history(player, kind, compute):
 
 def reveals(player):
     """
-    {roi_id: {"at", "modes"}}: the ROIs whose names this player has been shown after an answer, when last and in which
-    games: every scored item, every validated partner in a pair, and every beetle of a grid (the review names them all
-    at every rank, #541; a grid at species names them in its prompt too, skipped or not), with every other photo of
-    the same specimen (#386: once its name was shown, any photo of it tests memory first).
+    {roi_id: {"at", "modes", "seen"}}: the ROIs whose names this player has been shown after an answer, when last, in
+    which games and how many times (once per answer): every scored item, every validated partner in a pair, and every
+    beetle of a grid (the review names them all at every rank, #541; a grid at species names them in its prompt too,
+    skipped or not), with every other photo of the same specimen (#386: once its name was shown, any photo of it tests
+    memory first; the specimen's showings count for each of its photos).
     """
     memo = reveals_memo.get()
     if memo is None:
@@ -205,9 +206,10 @@ def _reveals(player):
     out = {}
 
     def shown(roi_id, at, mode):
-        entry = out.setdefault(roi_id, {"at": at, "modes": set()})
+        entry = out.setdefault(roi_id, {"at": at, "modes": set(), "times": set()})
         entry["at"] = max(entry["at"], at)
         entry["modes"].add(mode)
+        entry["times"].add(at)   # one showing an answer, however many times the answer shows it
 
     answers = GameAnswer.objects.filter(player=player)
     for roi_id, at, mode in answers.filter(is_check=True).values_list("roi_id", "answered_at", "mode"):
@@ -229,12 +231,18 @@ def _reveals(player):
         siblings = by_specimen.filter(specimen__in=set(specimen_of.values()) - {None})
         for roi_id, specimen in siblings.values_list("id", "specimen"):
             groups[specimen].append(roi_id)
+        merged = {}   # specimen: every showing of any of its photos
         for roi_id, specimen in specimen_of.items():
-            if specimen is None:
-                continue
+            if specimen is not None:
+                into = merged.setdefault(specimen, {"at": out[roi_id]["at"], "modes": set(), "times": set()})
+                into["at"] = max(into["at"], out[roi_id]["at"])
+                into["modes"] |= out[roi_id]["modes"]
+                into["times"] |= out[roi_id]["times"]
+        for specimen, entry in merged.items():
             for sibling in groups[specimen]:
-                for mode in list(out[roi_id]["modes"]):
-                    shown(sibling, out[roi_id]["at"], mode)
+                out[sibling] = {"at": entry["at"], "modes": set(entry["modes"]), "times": set(entry["times"])}
+    for entry in out.values():
+        entry["seen"] = len(entry.pop("times"))
     return out
 
 
@@ -331,22 +339,32 @@ def revealed_ids(player):
 # On while a chosen game that came up empty tries again with a wider pool (build_chosen)
 widened = contextvars.ContextVar("game_widened", default=False)
 
+# The rule of 3 (owner): a beetle whose names a player was shown comes back to them 3 minutes after the first time,
+# 3 hours after the second, then 3 days, 3 weeks and about 3 months (13 weeks), and every 3 months from then on: each
+# time it has been remembered, a longer wait before it is asked again (spaced repetition).
+SEEN_AGAIN = (timedelta(minutes=3), timedelta(hours=3), timedelta(days=3), timedelta(weeks=3), timedelta(weeks=13))
+
+
+def seen_again_after(times):
+    """How long after it was last shown a beetle shown ``times`` times waits before it comes back (SEEN_AGAIN)."""
+    return SEEN_AGAIN[max(1, min(times, len(SEEN_AGAIN))) - 1]
+
 
 def held_back_ids(player, now=None, shown=None):
     """
-    The revealed ROIs that are not scored for this player yet: shown in the current sitting (game_relearn.sitting_start,
-    GAME_SESSION_GAP_MINUTES), or less than GAME_REVEAL_COOLDOWN_HOURS ago. After that a beetle may come back, so a
-    player learns the beetles by playing, but not straight from the answer they just saw. A beetle they got wrong comes
-    back only as a retry, at the retry's points (game_relearn). ``shown``: reveals(player).
+    The revealed ROIs that wait before they come back to this player, by the rule of 3 (SEEN_AGAIN) counted from the
+    last time they were shown. A chosen game that ran short (build_chosen) takes back every one past the first wait. A
+    beetle they got wrong comes back only as a retry, on the same schedule (game_relearn.due). ``shown``:
+    reveals(player).
     """
-    from .game_relearn import open_mistakes, sitting_start
+    from .game_relearn import open_mistakes
 
     now = now or timezone.now()
     shown = reveals(player) if shown is None else shown
-    cutoff = sitting_start(player, now)
-    if not widened.get():   # a chosen game that ran short (build_chosen) takes back what was shown before this sitting
-        cutoff = min(cutoff, now - timedelta(hours=game_setting("GAME_REVEAL_COOLDOWN_HOURS", 2)))
-    return {roi_id for roi_id, entry in shown.items() if entry["at"] >= cutoff} | set(open_mistakes(player))
+    first = widened.get()
+    waiting = {roi_id for roi_id, entry in shown.items()
+               if now < entry["at"] + (SEEN_AGAIN[0] if first else seen_again_after(entry.get("seen", 1)))}
+    return waiting | set(open_mistakes(player))
 
 
 def shown_in(shown, mode):
@@ -1367,8 +1385,8 @@ def build_mixed_items(player, size, fresh_only=False, choice=None):
 def build_chosen(game_key, player, size, fresh_only=False):
     """
     Items for the one game a player chose (#604). When it has nothing, it tries again with a wider pool before giving
-    up: validated beetles whose names the player was shown before this sitting come back, though it is less than
-    GAME_REVEAL_COOLDOWN_HOURS ago (held_back_ids). Their answers then count for points, not for accuracy or expertise
+    up: validated beetles whose names the player was shown come back once the first wait (3 minutes) is over, though
+    their wait by the rule of 3 isn't (held_back_ids). Their answers then count for points, not for accuracy or expertise
     (seen_recently). Never another game: when this is empty too, the feed says so (nothing_to_play).
     """
     items = build(game_key, player, size, fresh_only)
