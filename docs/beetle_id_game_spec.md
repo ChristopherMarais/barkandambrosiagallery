@@ -545,3 +545,19 @@ least `GAME_REVEAL_COOLDOWN_HOURS`" (that setting and `GAME_SESSION_GAP_MINUTES`
 - Unchanged: such beetles come back in another game first; they earn full points but count towards accuracy and
   expertise only once they haven't been shown for `GAME_EXPERTISE_RECALL_DAYS`; unvalidated beetles a player has
   named or paired don't come back to them in that game.
+
+## Update: naming skill counts upward
+
+What a player recognises at a rank they recognise at the ranks above it: someone good at a tribe's genera is good at
+that tribe and its subfamily too (`game_trust.skill_counts`, `grid_claims`).
+
+- **Find Them All:** a tap counts at every rank of the group above the grid's own, filed under the tapped beetle's own
+  taxon. It is right where the beetle shares the group's name there (an Ips tapped in a Xyleborus grid is wrong at
+  genus and tribe, right at subfamily). A member left out says nothing about the ranks above.
+- **Identification:** a right name counts at the ranks above it that the answer didn't give (the page fills them in
+  when a name is picked, so this matters for answers sent without them), never at a rank the beetle has no name at.
+  A wrong name implies nothing.
+- Unchanged: each beetle counts once per rank; proving a skill still needs its children covered (#381); Similarity
+  already judges every shared rank; Odd One Out (telling apart within a group) stays at its own rank. The player
+  report may now show the higher names a grid gave the player. `recompute_game_scores` brings existing skills up to
+  date at once (otherwise each player's catch up after their next batch).

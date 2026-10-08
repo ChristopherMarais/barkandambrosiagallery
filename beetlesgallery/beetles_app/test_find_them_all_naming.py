@@ -1,8 +1,8 @@
 """
 Find Them All counts toward naming, not telling apart (#543): the grid names a group and the player has to recognise
 its members, so a member tapped is a right name for its taxon at the grid's rank, a wrong tap or a member left out a
-wrong one. A grid counts once per taxon it showed, each beetle once per rank, so big grids can't be farmed. And the
-leaderboard shows every game's accuracy.
+wrong one. A tap counts at the ranks above too (test_expertise_trickles_up.py). A grid counts once per taxon it showed,
+each beetle once per rank, so big grids can't be farmed. And the leaderboard shows every game's accuracy.
 """
 import html
 
@@ -37,28 +37,34 @@ class NamingTests(FindThemAllNamingCase):
         self.assertEqual(self.counts(), {
             ("genus", "xyleborini"): [1, 1],   # Xyleborus, once for its four beetles
             ("genus", "ipini"): [0, 1],        # "this Ips is a Xyleborus"
+            ("tribe", "scolytinae"): [1, 2],   # above: the Xyleborus are Xyleborini, the Ips isn't
+            ("subfamily", ""): [1, 1],         # and they are all Scolytinae
         })                                     # the Xylosandrus left out says nothing about naming
         shown = game_trust.skill_counts(self.user)[("genus", "xyleborini")][3]
         self.assertEqual(dict(shown), {"xyleborus": 1})
 
     def test_a_member_left_out_was_not_recognised(self):
         self.grid(self.known["affinis"][:3], [self.known["typographus"][0]], picks=[0, 1])
-        self.assertEqual(self.counts(), {("genus", "xyleborini"): [0, 1]})
+        self.assertEqual(self.counts(), {("genus", "xyleborini"): [0, 1],
+                                         ("tribe", "scolytinae"): [1, 1], ("subfamily", ""): [1, 1]})   # the taps
 
     def test_a_species_grid_counts_within_its_genus(self):
         members = self.known["affinis"][:2]
         self.grid(members, [self.known["ferrugineus"][0]], picks=[0, 1, 2], rank="species")
-        self.assertEqual(self.counts(), {("species", "xyleborus"): [1, 2]})   # affinis right, ferrugineus wrong
+        self.assertEqual(self.counts(), {("species", "xyleborus"): [1, 2],   # affinis right, ferrugineus wrong
+                                         ("genus", "xyleborini"): [1, 1],    # both are Xyleborus
+                                         ("tribe", "scolytinae"): [1, 1], ("subfamily", ""): [1, 1]})
         shown = game_trust.skill_counts(self.user)[("species", "xyleborus")][3]
         self.assertEqual(dict(shown), {"xyleborus affinis": 1, "xyleborus ferrugineus": 1})
 
     def test_each_beetle_counts_once_per_rank_across_grids_and_identification(self):
         members = self.known["affinis"][:4]
+        above = {("tribe", "scolytinae"): [1, 1], ("subfamily", ""): [1, 1]}
         self.grid(members, [], picks=[0, 1, 2, 3])
         self.grid(members, [], picks=[0, 1, 2, 3])                          # the same beetles again: nothing new
-        self.assertEqual(self.counts(), {("genus", "xyleborini"): [1, 1]})
+        self.assertEqual(self.counts(), {("genus", "xyleborini"): [1, 1], **above})
         self.grid(members[:1] + self.known["affinis"][4:5], [], picks=[0])   # only the new beetle counts: missed
-        self.assertEqual(self.counts(), {("genus", "xyleborini"): [1, 2]})
+        self.assertEqual(self.counts(), {("genus", "xyleborini"): [1, 2], **above})
 
     def test_a_beetle_named_in_identification_first_does_not_count_again_in_a_grid(self):
         from beetlesgallery.beetles_app.test_game import AFFINIS
@@ -73,11 +79,12 @@ class NamingTests(FindThemAllNamingCase):
     def test_unvalidated_and_flagged_beetles_and_unscored_grids_count_for_nothing(self):
         members = self.known["affinis"][:2]
         self.grid(members, [self.unknown["typographus"][0]], picks=[0, 2], flagged=[1])   # flagged member not missed
-        self.assertEqual(self.counts(), {("genus", "xyleborini"): [1, 1]})
+        counted = {("genus", "xyleborini"): [1, 1], ("tribe", "scolytinae"): [1, 1], ("subfamily", ""): [1, 1]}
+        self.assertEqual(self.counts(), counted)
         fresh = self.known["affinis"][5:7]
         for fields in ({"skipped": True}, {"is_retry": True}, {"score_hold": True}):
             self.grid(fresh, [], picks=[], **fields)
-        self.assertEqual(self.counts(), {("genus", "xyleborini"): [1, 1]})
+        self.assertEqual(self.counts(), counted)
 
     def test_find_them_all_no_longer_counts_as_telling_apart(self):
         self.grid(self.known["affinis"][:2], [self.known["typographus"][0]], picks=[0, 1])

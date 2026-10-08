@@ -89,7 +89,8 @@ class SeenBeforeOutOfNamingTests(FindThemAllNamingCase):
         self.grid(self.known["affinis"][:3], [self.known["typographus"][0]], picks=[0, 1, 2], seen_before=True)
         self.assertEqual(self.counts(), {})
         self.grid(self.known["affinis"][3:6], [self.known["typographus"][1]], picks=[0, 1, 2])
-        self.assertEqual(self.counts(), {("genus", "xyleborini"): [1, 1]})
+        self.assertEqual(self.counts(), {("genus", "xyleborini"): [1, 1],   # and the ranks above it (#640)
+                                         ("tribe", "scolytinae"): [1, 1], ("subfamily", ""): [1, 1]})
 
     def test_the_boards_game_accuracy_leaves_beetles_seen_before_out(self):
         for i in range(10):
