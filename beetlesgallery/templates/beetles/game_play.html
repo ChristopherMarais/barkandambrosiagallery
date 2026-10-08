@@ -757,6 +757,8 @@
 {# Fits a small phone and scrolls when it can't (many new badges); its own scroll never moves the page under it #}
 <div id="recap" class="hidden fixed inset-0 z-97 bg-white overflow-y-auto overscroll-contain" role="dialog" aria-modal="true" aria-labelledby="recap-title">
   <div class="max-w-md mx-auto px-4 sm:px-6 pt-6 sm:pt-10 text-center" style="padding-bottom: max(1.5rem, env(safe-area-inset-bottom))">
+    {# The site's back link, to the game's home (owner): also a way out at the top, not only the button at the bottom #}
+    <div class="text-left -mt-2 mb-2" data-testid="recap-back">{% url 'game_home' as back_url %}{% include "beetles/includes/back_link.html" with url=back_url label=game_name %}</div>
     <div class="inline-flex p-3 sm:p-4 bg-gray-100 rounded-full mb-3 sm:mb-4"><i class="fi fi-rr-trophy text-3xl text-gray-700"></i></div>
     <h2 class="text-2xl font-bold text-gray-900" id="recap-title">Nice session!</h2>
     <p class="mt-1 text-gray-500" id="recap-line" aria-live="polite"></p>

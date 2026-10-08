@@ -20,3 +20,11 @@ class ExitSavingTests(SimpleTestCase):
         facts = PAGE[PAGE.index("const LOADING_FACTS = ["):]
         facts = facts[:facts.index("];")]
         self.assertIn('"All the art on this website is drawn by hand, by people."', facts)
+
+
+class RecapBackLinkTests(SimpleTestCase):
+    def test_the_finishing_screen_has_the_sites_back_link_to_the_game_home(self):
+        recap = PAGE[PAGE.index('<div id="recap"'):PAGE.index('id="recap-title"')]
+        self.assertIn('data-testid="recap-back"', recap)
+        self.assertIn("{% url 'game_home' as back_url %}", recap)
+        self.assertIn('{% include "beetles/includes/back_link.html" with url=back_url label=game_name %}', recap)
