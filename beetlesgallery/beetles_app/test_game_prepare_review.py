@@ -112,9 +112,10 @@ class ItemLaterTests(ReviewCase):
         self.client.force_login(stranger)
         self.assertEqual(self.item(1).status_code, 404)
 
-    def test_the_last_beetle_still_ends_or_carries_on_in_one_answer(self):
+    def test_the_last_beetle_too_brings_its_review_alone(self):
         self.answer(0, item_later=True)
         self.answer(1, item_later=True)
         data = self.answer(2, item_later=True).json()
-        self.assertNotIn("next", data)   # the batch's end: the next batch's first beetle, or the end, as before
-        self.assertTrue("item" in data or data.get("done"))
+        # the batch's end: the next batch's first beetle, or the end, comes from game_item (test_game_review_first.py)
+        self.assertEqual(data["next"], 3)
+        self.assertNotIn("item", data)

@@ -218,7 +218,7 @@ def _others(beetle, rank, ctx, exclude_ids=()):
     """Validated beetles named at ``rank`` but not as ``beetle`` is: near relatives (the same parent) first."""
     group = game.lineage(beetle.taxon, rank)
     pool = (game.check_rois().filter(game._named_at(rank)).exclude(game.rank_q(rank, group[rank]))
-            .exclude(id__in=list(ctx["revealed"] | ctx["avoid"] | set(exclude_ids))))
+            .exclude(game.among(ctx["revealed"] | ctx["avoid"] | set(exclude_ids))))
     if rank == "subfamily":
         return [pool]
     parent = RANKS[RANKS.index(rank) - 1]
@@ -239,7 +239,7 @@ def _odd_item(beetle, mistake, ctx):
             if len(photos) < 2:
                 continue
             same = (game.check_rois().filter(game.rank_q(rank, group[rank]))
-                    .exclude(id__in=list(ctx["revealed"] | ctx["avoid"] | {anchor.id})))
+                    .exclude(game.among(ctx["revealed"] | ctx["avoid"] | {anchor.id})))
             rest = game._distinct_photos(game._sample(same, 6, ctx["target"]), photos, GRID_TILES - 2)
             if len(rest) < GRID_TILES - 2:
                 continue
@@ -258,7 +258,7 @@ def _select_item(beetle, mistake, ctx):
         return None
     photos = {beetle.image_asset_id}
     same = (game.check_rois().filter(game.rank_q(rank, group[rank]))
-            .exclude(id__in=list(ctx["revealed"] | ctx["avoid"] | {beetle.id})))
+            .exclude(game.among(ctx["revealed"] | ctx["avoid"] | {beetle.id})))
     members = [beetle.id, *game._distinct_photos(game._sample(same, 3, ctx["target"]), photos, 1)]
     others = []
     for pool in _others(beetle, rank, ctx):
