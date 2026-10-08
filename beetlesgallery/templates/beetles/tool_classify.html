@@ -168,7 +168,7 @@ equal padding, and its icon is a flex box of its own, so the icon font's line he
                 {# Crop: drag a rectangle to classify only that part; the same button goes back to the whole photo #}
                 <button type="button" id="cropBtn" aria-pressed="false" data-testid="crop-button"
                     class="hidden cls-pill absolute top-3 left-3 z-10 bg-white/90 border border-gray-200 shadow-md text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:text-black transition-colors">
-                    <i id="cropIcon" class="fi fi-rr-crop-alt cls-icon"></i><span id="cropLabel">Crop</span>
+                    <i id="cropIcon" class="fi fi-rr-tool-crop cls-icon"></i><span id="cropLabel">Crop</span>
                 </button>
                 <div id="cropHint" class="hidden absolute inset-x-0 bottom-3 z-10 flex justify-center pointer-events-none" data-testid="crop-hint">
                     <span class="cls-pill h-8 bg-white/90 border border-gray-200 shadow-md text-xs font-semibold text-gray-700">Drag over the part to classify</span>
@@ -706,7 +706,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateCropUi() {
         const back = state.cropMode || state.showingCrop;
         ui.cropLabel.textContent = back ? 'Use whole photo' : 'Crop';
-        ui.cropIcon.className = `fi ${back ? 'fi-rr-expand' : 'fi-rr-crop-alt'} cls-icon`;
+        ui.cropIcon.className = `fi ${back ? 'fi-rr-expand' : 'fi-rr-tool-crop'} cls-icon`;
         ui.cropBtn.setAttribute('aria-pressed', state.cropMode ? 'true' : 'false');
         ui.cropBtn.classList.toggle('hidden', !state.currentFile || !!state.assetId);
         ui.cropHint.classList.toggle('hidden', !state.cropMode || !!state.crop);
