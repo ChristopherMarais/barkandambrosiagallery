@@ -146,15 +146,31 @@ class CroppedUploadIsKeptAsSentTests(ClassifyCase):
         self.assertFalse(ImageAsset.objects.filter(full_path_at_import__startswith="classifier/").exists())
 
 
-class HoverZoomTests(SimpleTestCase):
-    def test_a_lens_at_the_games_zoom_step_for_a_mouse_only(self):
-        game = (TEMPLATES / "beetles" / "game_play.html").read_text(encoding="utf-8")
-        step = re.search(r"ZOOM_STEP = ([\d.]+)", game).group(1)
-        self.assertIn(f"const ZOOM = {step}", TEMPLATE)
-        self.assertIn('id="zoomLens"', TEMPLATE)
-        self.assertIn("(hover: hover) and (pointer: fine)", TEMPLATE)
-        self.assertIn("ctx.drawImage(ui.canvas, sx, sy, span, span, 0, 0, side, side)", TEMPLATE)   # boxes too
-        self.assertIn("pointer-events: none", TEMPLATE[TEMPLATE.index("#zoomLens {"):])
+class WheelZoomTests(SimpleTestCase):
+    """Owner: no round lens; the mouse wheel over the photo zooms it in place, boxes and crop included."""
+
+    def test_the_photo_and_its_boxes_zoom_together_and_the_lens_is_gone(self):
+        self.assertNotIn("zoomLens", TEMPLATE)
+        self.assertNotIn("drawLens", TEMPLATE)
+        layer = TEMPLATE[TEMPLATE.index('<div id="clsZoom"'):]
+        layer = layer[:layer.index("</div>")]
+        self.assertIn('id="previewImage"', layer)
+        self.assertIn('id="detectionCanvas"', layer)
+        self.assertIn('id="imageWrapper" class="relative hidden inline-block cursor-default overflow-hidden"', TEMPLATE)
+
+    def test_the_wheel_zooms_where_the_pointer_is_and_scrolling_down_still_scrolls(self):
+        self.assertIn("ui.imageWrapper.addEventListener('wheel'", TEMPLATE)
+        self.assertIn("if (zoom <= 1 && e.deltaY >= 0) return;", TEMPLATE)
+        self.assertIn("panX = cx - (cx - panX) * next / zoom;", TEMPLATE)
+        self.assertIn('id="zoomReset" class="hidden cls-pill', TEMPLATE)
+        self.assertIn("resetZoom();   // a new photo", TEMPLATE)
+
+
+class CentredPageTests(SimpleTestCase):
+    def test_title_tool_and_about_share_one_centred_column(self):
+        self.assertIn('<div class="pt-8 max-w-4xl mx-auto">', TEMPLATE)
+        self.assertIn('<div class="max-w-4xl mx-auto flex flex-col gap-6">', TEMPLATE)
+        self.assertIn('<section class="max-w-3xl mx-auto mt-12 text-center', TEMPLATE)
 
 
 class OnlyTheSliderBetweenPhotoAndPlotTests(PageCase):
@@ -234,3 +250,10 @@ class SpinnersMoveTests(SimpleTestCase):
                       (TEMPLATES / "beetles" / "tool_annotate.html").read_text(encoding="utf-8"))
         self.assertIn('<span class="animate-pulse">Loading file...</span>',
                       (TEMPLATES / "beetles" / "data_management.html").read_text(encoding="utf-8"))
+
+
+class ButtonWordingTests(SimpleTestCase):
+    def test_the_button_says_identify_beetles_or_identify_cropped_beetles(self):
+        self.assertIn('<span id="submitLabel">Identify beetles</span>', TEMPLATE)
+        self.assertIn("'Identify cropped beetles' : 'Identify beetles'", TEMPLATE)
+        self.assertNotIn("Classify image", TEMPLATE)
