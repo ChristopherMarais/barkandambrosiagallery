@@ -7,7 +7,7 @@
 {% comment %}
 Round buttons and pills on this page keep their text and icon dead centre (owner, round 8): each is a flex box with
 equal padding, and its icon is a flex box of its own, so the icon font's line height cannot nudge it off the middle
-(as #exit on the game page). The hover lens is the photo under the mouse at 2.5x, the game's zoom step.
+(as #exit on the game page). Over the photo the mouse wheel zooms it in place, boxes and crop included (owner: no lens).
 {% endcomment %}
 <style>
   /* In the components layer, so a utility next to them (hidden, h-10, px-5) still wins */
@@ -18,13 +18,15 @@ equal padding, and its icon is a flex box of its own, so the icon font's line he
     .cls-subtitle { margin-top: -0.75rem; }   /* right under the title, which keeps its own spacing */
     .cls-round { display: flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; padding: 0; border-radius: 9999px; line-height: 1; }
   }
-  #zoomLens { position: absolute; z-index: 15; width: 160px; height: 160px; border-radius: 9999px; pointer-events: none;
-              border: 2px solid #fff; box-shadow: 0 0 0 1px #d1d5db, 0 8px 20px rgba(17, 24, 39, .3); background: #f9fafb; }
+  /* Wheel zoom (owner): the photo and its canvas scale together inside the wrapper; a drag moves the zoomed photo */
+  #clsZoom { position: relative; transform-origin: 0 0; }
+  #imageWrapper.zoomed #detectionCanvas { cursor: grab; }
+  #imageWrapper.panning #detectionCanvas { cursor: grabbing; }
   #optionsPanel > summary::-webkit-details-marker { display: none; }
 </style>
 
 <section class="relative z-0">
-    <div class="pt-8">
+    <div class="pt-8 max-w-4xl mx-auto">
         <h1 class="page-title">IBBI-AI</h1>
         <p class="cls-subtitle text-sm font-medium text-gray-500" data-testid="ibbi-subtitle">Intelligent Bark Beetle Identifier</p>
     </div>
@@ -32,7 +34,7 @@ equal padding, and its icon is a flex box of its own, so the icon font's line he
 
 <div class="pt-6 pb-8" data-testid="ai-page">
 
-    <div class="max-w-4xl flex flex-col gap-6">
+    <div class="max-w-4xl mx-auto flex flex-col gap-6">
 
         <div class="flex items-start justify-between gap-4">
             <p class="page-intro">Upload a photo and IBBI-AI finds and names the bark or ambrosia beetles in it.</p>
@@ -106,7 +108,7 @@ equal padding, and its icon is a flex box of its own, so the icon font's line he
                 {% csrf_token %}
                 <button type="submit" id="submitBtn" disabled data-testid="classify-button" class="btn-main w-full px-6 py-4 text-base lg:text-lg">
                     <i class="fi fi-rr-sparkles cls-icon text-xl"></i>
-                    <span id="submitLabel">Classify image</span>
+                    <span id="submitLabel">Identify beetles</span>
                 </button>
             </form>
             {# A muted line under Classify; the same line becomes the loading message while IBBI-AI wakes up #}
@@ -155,11 +157,13 @@ equal padding, and its icon is a flex box of its own, so the icon font's line he
                 </div>
             </div>
 
-            <div id="imageWrapper" class="relative hidden inline-block cursor-default" style="line-height: 0;">
+            <div id="imageWrapper" class="relative hidden inline-block cursor-default overflow-hidden" style="line-height: 0;">
+                {# The zoom layer: the photo and its boxes, scaled together by the mouse wheel (owner) #}
+                <div id="clsZoom" data-testid="cls-zoom">
                 <img id="previewImage" class="max-w-full max-h-[75vh] object-contain block opacity-0 transition-opacity duration-300" alt="Preview">
                 <canvas id="detectionCanvas" class="absolute inset-0 cursor-crosshair w-full h-full"></canvas>
-                {# The hover zoom: drawn from the photo and its boxes, so the lens shows both #}
-                <canvas id="zoomLens" class="hidden" aria-hidden="true" data-testid="zoom-lens"></canvas>
+                </div>
+                <button type="button" id="zoomReset" class="hidden cls-pill absolute bottom-3 left-3 z-10 bg-white/90 border border-gray-200 shadow-md text-sm font-semibold text-gray-700 hover:bg-gray-50" data-testid="zoom-reset"><i class="fi fi-rr-zoom-out cls-icon"></i><span>Reset zoom</span></button>
 
                 {# Crop: drag a rectangle to classify only that part; the same button goes back to the whole photo #}
                 <button type="button" id="cropBtn" aria-pressed="false" data-testid="crop-button"
@@ -267,7 +271,8 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingPercent: document.getElementById('loadingPercent'),
         globalStatus: document.getElementById('globalStatus'),
         canvas: document.getElementById('detectionCanvas'),
-        lens: document.getElementById('zoomLens'),
+        zoomLayer: document.getElementById('clsZoom'),
+        zoomReset: document.getElementById('zoomReset'),
         cropBtn: document.getElementById('cropBtn'),
         cropIcon: document.getElementById('cropIcon'),
         cropLabel: document.getElementById('cropLabel'),
@@ -517,7 +522,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (state.cropMode) drawCrop(ctx, imgW, imgH, scale);
         else if (state.detections.length) drawBoxes(ctx, imgW, scale);
-        drawLens();
     }
 
     // The part being cropped: the rest of the photo is dimmed, the part keeps a dashed white edge
@@ -602,41 +606,55 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Hover zoom: a round lens over the photo at 2.5x (the game's zoom step), with the boxes or the crop on it ---
-    // Only with a mouse: a touch screen has no hover.
-    const ZOOM = 2.5, LENS = 160;
-    const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-    let lensAt = null;   // where the mouse is (client pixels), or null when it is off the photo
-    function drawLens() {
-        const img = ui.previewImage;
-        if (!canHover || !lensAt || ui.imageWrapper.classList.contains('hidden') || !img.naturalWidth) {
-            ui.lens.classList.add('hidden');
-            return;
-        }
-        const rect = ui.canvas.getBoundingClientRect();
-        const x = lensAt.x - rect.left, y = lensAt.y - rect.top;
-        if (x < 0 || y < 0 || x > rect.width || y > rect.height) { ui.lens.classList.add('hidden'); return; }
-        const dpr = window.devicePixelRatio || 1;
-        const side = Math.round(LENS * dpr);
-        if (ui.lens.width !== side) { ui.lens.width = side; ui.lens.height = side; }
-        const perPx = img.naturalWidth / rect.width;     // photo pixels per screen pixel
-        const span = LENS / ZOOM * perPx;                // photo pixels across the lens
-        const sx = x * perPx - span / 2, sy = y * (img.naturalHeight / rect.height) - span / 2;
-        const ctx = ui.lens.getContext('2d');
-        ctx.fillStyle = '#f9fafb';
-        ctx.fillRect(0, 0, side, side);
-        ctx.drawImage(img, sx, sy, span, span, 0, 0, side, side);
-        if (ui.canvas.width) ctx.drawImage(ui.canvas, sx, sy, span, span, 0, 0, side, side);
-        ui.lens.style.left = `${x - LENS / 2}px`;
-        ui.lens.style.top = `${y - LENS / 2}px`;
-        ui.lens.classList.remove('hidden');
+    // --- Wheel zoom (owner, instead of the round lens): over the photo the mouse wheel zooms in where the pointer is,
+    // a drag moves the zoomed photo, "Reset zoom" goes back. The photo and its canvas scale together, so the boxes and
+    // the crop zoom too, and the hit testing and the crop still work: they read the canvas's on-screen rectangle, which
+    // includes the zoom. Scrolling down on the unzoomed photo scrolls the page; a touch screen keeps its own pinch.
+    const ZOOM_MAX = 5;
+    let zoom = 1, panX = 0, panY = 0, pan = null, panned = false;
+    function applyZoom() {
+        ui.zoomLayer.style.transform = zoom > 1 ? `translate(${panX}px, ${panY}px) scale(${zoom})` : '';
+        ui.imageWrapper.classList.toggle('zoomed', zoom > 1);
+        ui.zoomReset.classList.toggle('hidden', zoom <= 1);
     }
-    ui.canvas.addEventListener('pointermove', (e) => {
-        if (e.pointerType !== 'mouse') return;
-        lensAt = { x: e.clientX, y: e.clientY };
-        drawLens();
+    function keepPhotoInView() {
+        const w = ui.imageWrapper.clientWidth, h = ui.imageWrapper.clientHeight;
+        panX = Math.min(0, Math.max(w - w * zoom, panX));
+        panY = Math.min(0, Math.max(h - h * zoom, panY));
+    }
+    function resetZoom() { zoom = 1; panX = 0; panY = 0; applyZoom(); }
+    ui.imageWrapper.addEventListener('wheel', (e) => {
+        if (zoom <= 1 && e.deltaY >= 0) return;   // not zoomed and scrolling down: the page scrolls
+        e.preventDefault();
+        const r = ui.imageWrapper.getBoundingClientRect();
+        const cx = e.clientX - r.left, cy = e.clientY - r.top;
+        const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+        const next = Math.min(ZOOM_MAX, Math.max(1, zoom * Math.min(1.25, Math.max(0.8, Math.exp(-dy * 0.002)))));
+        panX = cx - (cx - panX) * next / zoom;
+        panY = cy - (cy - panY) * next / zoom;
+        zoom = next;
+        if (zoom === 1) { panX = 0; panY = 0; }
+        keepPhotoInView();
+        applyZoom();
+    }, { passive: false });
+    ui.canvas.addEventListener('pointerdown', (e) => {
+        if (e.pointerType !== 'mouse' || e.button > 0 || zoom <= 1 || state.cropMode) return;
+        pan = { x: e.clientX - panX, y: e.clientY - panY, sx: e.clientX, sy: e.clientY };
+        panned = false;
     });
-    ui.canvas.addEventListener('pointerleave', () => { lensAt = null; drawLens(); });
+    window.addEventListener('pointermove', (e) => {
+        if (!pan) return;
+        if (!panned && Math.hypot(e.clientX - pan.sx, e.clientY - pan.sy) > 4) { panned = true; ui.imageWrapper.classList.add('panning'); }
+        if (!panned) return;
+        panX = e.clientX - pan.x;
+        panY = e.clientY - pan.y;
+        keepPhotoInView();
+        applyZoom();
+    });
+    window.addEventListener('pointerup', () => { pan = null; ui.imageWrapper.classList.remove('panning'); });
+    // a click that ended a drag selects nothing
+    ui.canvas.addEventListener('click', (e) => { if (panned) { e.stopImmediatePropagation(); panned = false; } }, true);
+    ui.zoomReset.addEventListener('click', (e) => { e.stopPropagation(); resetZoom(); });
 
     // Hit Testing
     ui.canvas.addEventListener('mousemove', (e) => {
@@ -692,13 +710,14 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.cropBtn.setAttribute('aria-pressed', state.cropMode ? 'true' : 'false');
         ui.cropBtn.classList.toggle('hidden', !state.currentFile || !!state.assetId);
         ui.cropHint.classList.toggle('hidden', !state.cropMode || !!state.crop);
-        ui.submitLabel.textContent = state.cropMode && state.crop ? 'Classify the cropped part' : 'Classify image';
+        ui.submitLabel.textContent = state.cropMode && state.crop ? 'Identify cropped beetles' : 'Identify beetles';
         ui.canvas.style.cursor = state.cropMode ? 'crosshair' : '';
         // Only a crop takes the finger: otherwise a phone still scrolls over the photo
         ui.canvas.style.touchAction = state.cropMode ? 'none' : 'manipulation';
     }
 
     async function showPhoto(file) {
+        resetZoom();   // a new photo (or the crop of one) starts whole
         ui.previewImage.src = await readAsUrl(file);
         try { await ui.previewImage.decode(); } catch (e) { /* onerror says so */ }
     }
@@ -1065,8 +1084,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         ui.imageWrapper.classList.add('hidden');
         ui.placeholder.classList.remove('hidden');
-        lensAt = null;
-        drawLens();
+        resetZoom();
 
         // Nothing to classify until there is a photo again
         ui.submitBtn.disabled = true;
