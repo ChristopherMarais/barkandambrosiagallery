@@ -699,8 +699,7 @@ def _shown_rois(item):
 
 def _crop_url(rnd, index, image, roi, size):
     """Where the feed gets a beetle's crop (game_crop); ``v`` changes with the box, so the browser may keep it for good."""
-    url = reverse("game_crop", args=[rnd.id, index, image, size])
-    return f"{url}?v={game_crops.crop_key(roi)}"
+    return game_crops.crop_url(rnd.id, index, image, roi, size)
 
 
 def _item_images(rnd, index, extras=False):

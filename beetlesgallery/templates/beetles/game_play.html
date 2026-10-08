@@ -2454,7 +2454,7 @@
     const box = $("previous-photos"), n = previous.images.length;
     box.style.setProperty("--cols", n > 2 ? Math.ceil(Math.sqrt(n)) : n);
     box.dataset.size = String(n);
-    const cells = previous.images.map((im, i) => reviewCell(im, i, n));
+    const cells = previous.images.map((im, i) => reviewCell(im, i, n, !!previous.sharp_on_zoom));
     box.replaceChildren(...cells);
     markTiles(cells, previous);
     nameTiles(cells, previous);
@@ -2463,8 +2463,10 @@
     return true;
   }
   // One of Back's photos (round 7): built as the review's own, in a frame that zooms (scroll, pinch, double-click,
-  // drag), the small crop first and the sharp one after it; the names, marks, hover and whole photo are the review's
-  function reviewCell(im, i, n) {
+  // drag), the small crop first and the sharp one after it; the names, marks, hover and whole photo are the review's.
+  // The crops are the feed's own, so the page has them already; a big grid's sharp one waits until it is zoomed, as
+  // in the feed (``sharpOnZoom``).
+  function reviewCell(im, i, n, sharpOnZoom) {
     const c = node("div", "cell");
     const frame = node("button", "frame");
     frame.type = "button";
@@ -2472,12 +2474,16 @@
     const canvas = document.createElement("canvas");
     frame.appendChild(canvas);
     c.appendChild(frame);
-    makeZoomable(frame, canvas, () => openReviewPhoto(c));
+    const loaded = im ? loadCrop(im) : null;
+    const sharpen = () => loaded && loaded.then((got) => {   // the sharp crop, over the small one
+      if (got.cut && im.large) loadImage(im.large).then((big) => { if (canvas.isConnected) drawCrop(canvas, big, im.box, true); }).catch(() => {});
+    }).catch(() => {});
+    makeZoomable(frame, canvas, () => openReviewPhoto(c), false, sharpOnZoom ? sharpen : null);
     if (n === 2) c.appendChild(node("span", "rv-num", i === 0 ? "A" : "B"));
-    if (im) loadCrop(im).then((got) => {
+    if (loaded) loaded.then((got) => {
       if (!canvas.isConnected) return;   // Back closed, or another beetle's
       drawCrop(canvas, got.img, im.box, got.cut);
-      if (got.cut && im.large) loadImage(im.large).then((big) => drawCrop(canvas, big, im.box, true)).catch(() => {});
+      if (!sharpOnZoom) sharpen();
     }).catch(() => {});
     return c;
   }

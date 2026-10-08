@@ -81,6 +81,16 @@ def crop_name(roi, size):
     return f"crops/{key[:2]}/{key[2:4]}/{uuid.UUID(str(roi.id))}_{key}_{size}.{file_format()[1]}"
 
 
+def crop_url(round_id, index, image, roi, size):
+    """
+    Where the feed gets a shown beetle's crop (game_views.game_crop): by its batch, its item and its place there, never
+    by the beetle. ``v`` changes with the box, so the browser may keep the file for good.
+    """
+    from django.urls import reverse
+
+    return f"{reverse('game_crop', args=[round_id, index, image, size])}?v={crop_key(roi)}"
+
+
 def crop_path(roi, size):
     """
     Where the crop is kept (an absolute Path), or None for an unknown size or a name that would leave the crops

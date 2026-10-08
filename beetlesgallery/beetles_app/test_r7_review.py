@@ -76,10 +76,11 @@ class R7ReviewTests(SimpleTestCase):
 
     # B4: Back
     def test_back_builds_its_photos_like_the_review(self):
-        self.assertIn("const cells = previous.images.map((im, i) => reviewCell(im, i, n));", self.page)
+        self.assertIn("const cells = previous.images.map((im, i) => reviewCell(im, i, n, !!previous.sharp_on_zoom));",
+                      self.page)
         cell = js_function(self.page, "reviewCell")
         self.assertIn('const frame = node("button", "frame");', cell)
-        self.assertIn("makeZoomable(frame, canvas, () => openReviewPhoto(c));", cell)
+        self.assertIn("makeZoomable(frame, canvas, () => openReviewPhoto(c), false, sharpOnZoom ? sharpen : null);", cell)
         self.assertIn("loadCrop(im)", cell)
         self.assertIn("#previous-photos button.frame { position: relative; width: 100%; height: 100%;", self.page)
         self.assertIn("#previous-photos .frame { touch-action: none;", self.page)
