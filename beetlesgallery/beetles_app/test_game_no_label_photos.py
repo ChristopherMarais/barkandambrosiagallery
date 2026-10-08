@@ -2,7 +2,7 @@
 or among a beetle's other photos, even with a box drawn on it."""
 from django.test import override_settings
 
-from beetlesgallery.beetles_app import game
+from beetlesgallery.beetles_app import game, game_views
 from beetlesgallery.beetles_app.models import GameRound
 from beetlesgallery.beetles_app.test_game import GameCase
 from beetlesgallery.beetles_app.testing import make_beetle, make_image
@@ -40,3 +40,11 @@ class LabelPhotoTests(GameCase):
         lateral = self.photo("lateral", specimen="UF-8")
         self.photo("label", specimen="UF-8")
         self.assertEqual(game.specimen_photos(dorsal), [lateral])
+
+    def test_one_in_a_batch_built_before_is_passed_over(self):
+        label, dorsal = self.photo("label"), self.photo("dorsal")
+        rnd = GameRound.objects.create(player=self.user, mode="classify",
+                                       items=[{"a": str(r.id), "b": None, "check": True} for r in (label, dorsal)])
+        self.assertEqual(game_views._next_index(rnd), 1)
+        grid = {"a": str(dorsal.id), "tiles": [str(dorsal.id), str(label.id)], "rank": "genus", "group": {}}
+        self.assertIsNone(game_views._item_tiles(grid))   # a grid with one is gone too

@@ -613,13 +613,18 @@ _rows = contextvars.ContextVar("game_rows", default=None)
 
 
 def _beetles(ids):
-    """{id: Beetles row} for these ids (strings) that exist, with their photo and taxon; remembered in a timed request."""
+    """
+    {id: Beetles row} for these ids (strings) that exist, with their photo and taxon; remembered in a timed request. A
+    photo of a label counts as gone (game.LABEL_PHOTO), so an item with one, in a batch built before it was left out of
+    the game, is passed over like a deleted beetle.
+    """
+    rows = Beetles.objects.exclude(game.LABEL_PHOTO).select_related("image_asset", "taxon")
     memo = _rows.get()
     if memo is None:
-        return {str(k): v for k, v in Beetles.objects.select_related("image_asset", "taxon").in_bulk(ids).items()}
+        return {str(k): v for k, v in rows.in_bulk(ids).items()}
     wanted = [str(i) for i in ids if str(i) not in memo]
     if wanted:
-        found = {str(k): v for k, v in Beetles.objects.select_related("image_asset", "taxon").in_bulk(wanted).items()}
+        found = {str(k): v for k, v in rows.in_bulk(wanted).items()}
         memo.update({i: found.get(i) for i in wanted})
     return {str(i): memo[str(i)] for i in ids if memo[str(i)] is not None}
 
