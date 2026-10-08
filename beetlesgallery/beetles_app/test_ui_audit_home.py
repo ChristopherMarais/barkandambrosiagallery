@@ -187,6 +187,8 @@ class OneScreenHomeTests(HomeTestCase):
         page = self.page()
         self.assertIn('data-testid="who-built-this"', page)
         self.assertIn(f'href="{reverse("team")}"', page)
+        team = page[page.rindex("<a ", 0, page.index('data-testid="team-button"')):]
+        self.assertIn("btn-secondary", team[:team.index(">")])   # a button, not a text link (owner)
         self.assertNotIn('id="team-section"', page)
         self.assertNotIn('id="institutions-list"', page)
         self.assertNotIn("Christopher Marais", page)

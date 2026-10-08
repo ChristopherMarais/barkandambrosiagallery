@@ -95,7 +95,7 @@
   {# A compact "Who built this" line; the full team and institutions list lives on its own page (#618 home-team) #}
   <div class="max-w-3xl mx-auto px-4 py-6 text-center" data-testid="who-built-this">
     <p class="text-gray-600">Built by the UF Forest Entomology Lab and its partners, with images from more than 30 collections.</p>
-    <a href="{% url 'team' %}" class="mt-2 inline-flex items-center gap-1 py-2 text-sm font-semibold text-gray-800 underline hover:text-black">Team and partners <i class="fi fi-rr-angle-small-right flex"></i></a>
+    <a href="{% url 'team' %}" class="btn-secondary mt-3 inline-flex items-center justify-center gap-1.5" data-testid="team-button">Team and partners <i class="fi fi-rr-angle-small-right" aria-hidden="true"></i></a>
   </div>
 
   {# Image Attribution and "Maintained by" live in the footer, out of the way of the three actions (#618 home-actions) #}
