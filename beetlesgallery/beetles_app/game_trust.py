@@ -152,7 +152,9 @@ def skill_counts(player):
     {(rank, branch_lower): [correct, judged, branch_display, {child: answers}]} from scored Identification answers and
     Find Them All grids (#543), where a child is the beetle's taxon at that rank (its genus, for genus calls within a
     tribe). Each validated ROI counts once per rank, in its first answer in either game, so replayed items can't pad a
-    record.
+    record. A right name at a rank is a right name at the ranks above it too, where the answer didn't give them (the
+    tree has one parent per taxon; the page fills them in when a name is picked, an answer sent without them counts
+    the same), as a grid's taps count at the ranks above its own (grid_claims).
     """
     stats = {}
     seen = set()
@@ -185,6 +187,8 @@ def skill_counts(player):
                   "species": a["ref_species"]}
         for r in RANKS:
             ok = a[f"correct_{r}"]
+            if ok is None and labels[r] and any(a[f"correct_{d}"] for d in RANKS[RANKS.index(r) + 1:]):
+                ok = True   # a right name deeper down
             if ok is None or (r, a["roi_id"]) in seen:
                 continue
             seen.add((r, a["roi_id"]))
@@ -206,11 +210,15 @@ def grid_claims(answer, beetles):
     What a Find Them All grid says about naming (#543): tapping a beetle claims it is of the named group, so a member
     tapped is a right claim at the grid's rank, a non-member tapped a wrong one, and a member left out a wrong one too
     (it wasn't recognised). Only validated beetles count, and a photo the player flagged counts for nothing.
-    Claims are grouped by the beetle's own taxon, so a grid counts at most once per taxon it showed, whatever its size:
-    [(rank, branch_display, {roi_id: ok}, child, [roi_id, ...])], ``ok`` per beetle so beetles already judged can be
-    left out.
+    A tap also claims the group's names above the grid's rank (its tribe and subfamily, for a genus): what a player
+    recognises at a rank they recognise at the ranks above it too. There a tapped beetle is right where it shares the
+    group's name (an Ips tapped as a Xyleborus is still a Scolytinae) and wrong where it doesn't; a member left out says
+    nothing about them (the player only said it isn't of the group).
+    Claims are grouped by rank and the beetle's own taxon, so a grid counts at most once per taxon it showed, whatever
+    its size: [(rank, branch_display, {roi_id: ok}, child, [roi_id, ...])], ``ok`` per beetle so beetles already judged
+    can be left out.
     """
-    rank = answer.grid_rank
+    rank, group = answer.grid_rank, answer.grid_group or {}
     shown = [beetles.get(str(t)) for t in answer.tiles or []]
     states = score_select(shown, answer.picks, rank, answer.grid_group, answer.flagged)["tiles"]
     claims = {}
@@ -219,14 +227,21 @@ def grid_claims(answer, beetles):
             continue
         t = roi.taxon
         labels = {r: getattr(t, r) or "" for r in RANKS}
-        branch = branch_for(rank, labels)
-        if BRANCH_OF[rank] and not branch:
-            continue
-        child = child_at(rank, t.genus, t.species, labels[rank])
-        ok, ids = claims.setdefault((branch.lower(), child), (branch, {}, []))[1:]
-        ok[roi.id] = state == "right"
-        ids.append(roi.id)
-    return [(rank, branch, ok, child, ids) for (_, child), (branch, ok, ids) in claims.items()]
+        for r in RANKS[:RANKS.index(rank) + 1]:
+            if r == rank:
+                ok = state == "right"
+            elif state == "missed" or not group.get(r) or not labels[r]:
+                continue
+            else:
+                ok = labels[r].lower() == group[r].lower()
+            branch = branch_for(r, labels)
+            if BRANCH_OF[r] and not branch:
+                continue
+            child = child_at(r, t.genus, t.species, labels[r])
+            oks, ids = claims.setdefault((r, branch.lower(), child), (branch, {}, []))[1:]
+            oks[roi.id] = ok
+            ids.append(roi.id)
+    return [(r, branch, ok, child, ids) for (r, _, child), (branch, ok, ids) in claims.items()]
 
 
 def children_available():
@@ -497,9 +512,10 @@ def player_report(player):
         claimed["genus"].add(tribe.lower())
         claimed["species"].add(genus.lower())
     for rank, group in GameAnswer.objects.filter(player=player, mode="select", skipped=False).values_list(
-            "grid_rank", "grid_group"):   # a Find Them All grid names its group's branch to the player (#543)
-        if BRANCH_OF.get(rank) and (group or {}).get(BRANCH_OF[rank]):
-            claimed[rank].add(group[BRANCH_OF[rank]].lower())
+            "grid_rank", "grid_group"):   # a Find Them All grid names its group to the player, every rank of it (#543)
+        for r in RANKS[:RANKS.index(rank) + 1] if rank in RANKS else ():
+            if BRANCH_OF[r] and (group or {}).get(BRANCH_OF[r]):
+                claimed[r].add(group[BRANCH_OF[r]].lower())
     min_shown = game_setting("GAME_REPORT_MIN_JUDGED", 5)
     progressing = sorted(
         (s for s in skills if not s.proven and s.judged >= min_shown and s.branch.lower() in claimed[s.rank]),
