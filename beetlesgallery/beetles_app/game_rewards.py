@@ -524,9 +524,11 @@ def recap(player, since, until=None):
     done = sitting.filter(skipped=False)
     scored = sitting.filter(is_check=True, skipped=False, score_hold=False).exclude(mode="pair", pair_answer="unsure")
     right = scored.exclude(correct_subfamily=False).exclude(correct_tribe=False).exclude(correct_genus=False).exclude(correct_species=False).count()
+    # the badges worked out twice, now and before the sitting (inside the loop it was twice per badge: seconds)
+    have, had = earned_badges(player), earned_badges(player, before=since)
     new = [
         {"key": key, "name": BADGES[key][0], "how": BADGES[key][1], "icon": BADGES[key][2], "tier": badge_tier(key)}
-        for key in BADGES if key in earned_badges(player) and key not in earned_badges(player, before=since)
+        for key in BADGES if key in have and key not in had
     ]
     state = progress(player)
     from django.db.models import Sum

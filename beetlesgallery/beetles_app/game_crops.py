@@ -9,7 +9,8 @@ small one the feed shows at once and a large one it swaps in when it arrives. Th
 
 Files live under MEDIA_ROOT/crops/, named by the photo and the box, so a moved box or a replaced photo gets a new file
 and an old file never has to be invalidated. A new batch's crops are cut on the worker as soon as the batch is made,
-so they are usually ready before the feed asks for them; any that aren't are cut on that first request.
+so they are usually ready before the feed asks for them; any that aren't are cut on that first request. Every
+beetle's small crop is also cut ahead of any batch, by a sweep on the heavy worker (precut).
 """
 import contextvars
 import hashlib
@@ -21,6 +22,7 @@ import uuid
 from pathlib import Path
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -77,6 +79,16 @@ def crop_name(roi, size):
         return None
     key = crop_key(roi)
     return f"crops/{key[:2]}/{key[2:4]}/{uuid.UUID(str(roi.id))}_{key}_{size}.{file_format()[1]}"
+
+
+def crop_url(round_id, index, image, roi, size):
+    """
+    Where the feed gets a shown beetle's crop (game_views.game_crop): by its batch, its item and its place there, never
+    by the beetle. ``v`` changes with the box, so the browser may keep the file for good.
+    """
+    from django.urls import reverse
+
+    return f"{reverse('game_crop', args=[round_id, index, image, size])}?v={crop_key(roi)}"
 
 
 def crop_path(roi, size):
@@ -176,37 +188,52 @@ def ensure(roi, size):
     return path
 
 
-def round_rois(rnd):
-    """Every beetle a batch shows, in the order of its items."""
-    return item_rois(rnd.items)
+# A grid of this many beetles or more (4×4, 5×5) shows each one small, smaller than its small crop on any screen: its
+# sharp crops are not cut or loaded ahead, only a tile's own once it is zoomed. They were most of the work of a big grid
+# (a large crop takes two to four times as long to cut as a small one) and most of its download.
+BIG_GRID = 16
 
 
-def item_rois(items):
-    """Every beetle these batch items show, in their order."""
+def sharp_on_zoom(item):
+    """Whether a batch item is a big grid, whose sharp crops wait until a tile is zoomed (BIG_GRID)."""
+    return len(item.get("tiles") or []) >= BIG_GRID
+
+
+def sizes_ahead(item):
+    """The crops of a batch item cut and loaded ahead of time: small and large, a big grid's small ones only."""
+    return ("small",) if sharp_on_zoom(item) else tuple(SIZES)
+
+
+def ahead(items):
+    """[(roi, sizes)]: every beetle these batch items show, in their order, with the crops cut ahead for it."""
     from .models import Beetles
 
-    ids = []
+    wanted = {}
     for item in items:
         for i in (item.get("tiles") or [item.get("a"), item.get("b")]):
-            if i and i not in ids:
-                ids.append(i)
-    found = {str(k): v for k, v in Beetles.objects.select_related("image_asset").in_bulk(ids).items()}
-    return [found[i] for i in ids if i in found and found[i].has_bbox()]
+            if i:
+                wanted.setdefault(i, set()).update(sizes_ahead(item))
+    found = {str(k): v for k, v in Beetles.objects.select_related("image_asset").in_bulk(list(wanted)).items()}
+    return [(found[i], [s for s in SIZES if s in sizes]) for i, sizes in wanted.items()
+            if i in found and found[i].has_bbox()]
+
+
+def cut_ahead(items):
+    """Cut these batch items' crops ahead of time: every small one first (shown first), then the large ones."""
+    made, rois = 0, ahead(items)
+    for size in SIZES:
+        for roi, sizes in rois:
+            if size in sizes:
+                made += ensure(roi, size) is not None
+    return made
 
 
 def prepare(round_id):
-    """Cut a batch's crops ahead of time: every small one first (shown first), then the large ones."""
+    """Cut a batch's crops ahead of time (cut_ahead)."""
     from .models import GameRound
 
     rnd = GameRound.objects.filter(id=round_id).first()
-    if rnd is None:
-        return 0
-    rois = round_rois(rnd)
-    made = 0
-    for size in SIZES:
-        for roi in rois:
-            made += ensure(roi, size) is not None
-    return made
+    return 0 if rnd is None else cut_ahead(rnd.items)
 
 
 def prepare_later(rnd):
@@ -222,14 +249,73 @@ def prepare_later(rnd):
     transaction.on_commit(queue)
 
 
+# Every beetle's small crop, cut before any batch needs it: then no player ever waits for one to be cut, however fast
+# they play or however busy the quick worker is. The sweep runs on the heavy worker (one job at a time, at low CPU
+# priority), a part at a time, so an upload queued meanwhile goes between two parts. Small crops only: they are about
+# 12 KB each, and most of what a batch shows; the large ones (five times the size) are still cut per batch, as before.
+PRECUT_KEY = "game:precut"
+PRECUT_EVERY = 6 * 60 * 60     # seconds: a sweep at most this often (it only cuts what's missing: new or moved boxes)
+PRECUT_PART = 100              # crops one part cuts before queueing the next
+
+
+def precut(after=None, part=PRECUT_PART):
+    """
+    The heavy worker's part of precut_later: cut the small crop of each playable beetle that has none yet, in id order
+    from just after ``after``. After ``part`` crops it queues the rest (from the last beetle it got to) and stops.
+    Returns how many it tried to cut. A photo that can't be read is passed over (ensure logs it).
+    """
+    from . import game
+
+    rois = game.playable_rois().select_related("image_asset").order_by("pk")
+    if after:
+        rois = rois.filter(pk__gt=after)
+    tried = 0
+    for roi in rois.iterator(chunk_size=500):
+        path = crop_path(roi, "small")
+        if path is None or path.exists():
+            continue
+        ensure(roi, "small")
+        tried += 1
+        if tried >= part:
+            _queue_precut(str(roi.pk))
+            break
+    return tried
+
+
+def _queue_precut(after=None):
+    from .tasks import precut_game_crops_task
+
+    try:
+        precut_game_crops_task.apply_async(args=[after], retry=False)
+        return True
+    except Exception:
+        logger.info("Crop sweep not queued: crops are cut per batch and on request, as before")
+        return False
+
+
+def precut_later():
+    """Queue a sweep of the small crops (precut) on the heavy worker, at most once every PRECUT_EVERY seconds."""
+    if not cache.add(PRECUT_KEY, 1, PRECUT_EVERY):
+        return False
+
+    def queue():
+        if not _queue_precut():
+            cache.delete(PRECUT_KEY)   # try again with the next batch
+
+    transaction.on_commit(queue)
+    return True
+
+
 @receiver(post_save, sender="beetles_app.GameRound", dispatch_uid="game_crops_new_batch")
 def _new_batch(sender, instance, created, **kwargs):
     """A new batch: cut its crops on the worker while the player is still busy with the one before."""
     if not created:
         return
     prepare_later(instance)
+    precut_later()
     stats = built.get()
     if stats is not None:
         stats["batches"] += 1
         stats["items"] += len(instance.items or [])
-        stats["crops"] += len(SIZES) * sum(len(it.get("tiles") or []) or 1 + bool(it.get("b")) for it in instance.items or [])
+        stats["crops"] += sum(len(sizes_ahead(it)) * (len(it.get("tiles") or []) or 1 + bool(it.get("b")))
+                              for it in instance.items or [])

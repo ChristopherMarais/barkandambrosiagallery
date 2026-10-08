@@ -6,6 +6,10 @@ showing, the worker builds one batch for each of the player's other game choices
 beetles. They wait in the cache; switching to one of those games turns its batch into the player's new round at once
 (take). A batch is only used for the choices, focus and unlocks it was built under, and loses any beetle the player
 has answered since, so it never shows anything a freshly built one wouldn't.
+
+Building them is the heavy worker's job (one job at a time, at low CPU priority): they are only ever a head start, and
+on the quick worker they held up what a player in the middle of a feed waits on (a batch growing, the next batch).
+When it hasn't got to them yet, switching builds the batch as before.
 """
 import logging
 import time
@@ -41,14 +45,15 @@ def choices(player, info=None):
 
 def missing(player):
     """
-    The games with no batch waiting for them under the player's current unlocks and focus: the ones they could switch
-    to, and the one they play now (its batch is what a page load starts from, so the first beetles are ready).
+    The games with no batch waiting for them under the player's current unlocks and focus: the one they play now
+    first (its batch is what a page load starts from, so the first beetles are ready soonest), then the ones they could
+    switch to.
     """
     from . import game, game_levels
 
     info = game_levels.for_player(player)
     sig = _signature(info, game.player_focus(player))
-    options = choices(player, info) + [game.play_mode(player, info)]
+    options = [game.play_mode(player, info)] + choices(player, info)
     found = cache.get_many([KEY.format(player.pk, c) for c in options])
     return [c for c in options if (found.get(KEY.format(player.pk, c)) or {}).get("sig") != sig]
 
@@ -73,22 +78,10 @@ def build(player):
             cache.set(KEY.format(player.pk, choice),
                       {"items": items, "notice": notice, "sig": sig, "at": time.time()}, KEEP)
             built.append(choice)
-            for roi in _rois(items[:FIRST_ITEMS]):
-                for size in game_crops.SIZES:
-                    game_crops.ensure(roi, size)
+            game_crops.cut_ahead(items[:FIRST_ITEMS])
         return built
     finally:
         cache.delete(LOCK.format(player.pk))
-
-
-def _rois(items):
-    from .models import Beetles
-
-    ids = []
-    for item in items:
-        ids += [i for i in (item.get("tiles") or [item.get("a"), item.get("b")]) if i and i not in ids]
-    found = {str(k): v for k, v in Beetles.objects.select_related("image_asset").in_bulk(ids).items()}
-    return [found[i] for i in ids if i in found and found[i].has_bbox()]
 
 
 def warm_later(player, mode):

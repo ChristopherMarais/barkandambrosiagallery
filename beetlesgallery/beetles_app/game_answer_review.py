@@ -23,7 +23,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from django.core.cache import cache
 from django.db.models import Q
 
-from . import game, game_feedback, game_levels, game_scoring
+from . import game, game_crops, game_feedback, game_levels, game_scoring
 from .game import RANKS, game_setting
 from .models import AnswerPoints, Beetles, GameAnswer, ModelPrediction
 from .predictions import best_predictions, rank_tips
@@ -57,6 +57,8 @@ def review(answer, item):
         "again": (answer.is_retry or answer.seen_before) and answer.mode not in ("odd", "select"),
         "images": _images(answer, item), "verdict": None,
         "points": _points(row, basis, losses),
+        # a big grid's sharp crops load once a photo is zoomed, as in the feed (game_crops.BIG_GRID)
+        "sharp_on_zoom": game_crops.sharp_on_zoom(item),
     }
     facts = {}
     if not (skipped or held):
@@ -589,12 +591,17 @@ def _shown(answer, item):
 
 def _images(answer, item):
     """
-    The photos as they were shown, for Back, each with its thumbnail (shown first in the whole-photo view, #601) and,
-    for one photo or a pair, the specimen's other photos once the player has unlocked them, so the whole photo opened
-    from the review goes through them all.
+    The photos as they were shown, for Back, each with its thumbnail (shown first in the whole-photo view, #601), the
+    crops the feed showed it with ("small", "large"; so Back draws them from the crops the page has already, not from
+    the whole photos) and, for one photo or a pair, the specimen's other photos once the player has unlocked them, so
+    the whole photo opened from the review goes through them all.
     """
     shown = _shown(answer, item)
     out = [None if r is None else photo(r) for r in shown]
+    for i, (image, roi) in enumerate(zip(out, shown)):
+        if image is not None and roi.has_bbox():
+            image.update({size: game_crops.crop_url(answer.round_id, answer.index, i, roi, size)
+                          for size in game_crops.SIZES})
     if answer.mode in ("odd", "select"):   # a grid shows each beetle on its own
         return out
     others = [game.specimen_photos(r) if r is not None else [] for r in shown]
