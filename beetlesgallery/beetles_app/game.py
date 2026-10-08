@@ -22,6 +22,7 @@ there (see game_trust.py for how expertise and trusted labels work).
 
 The views live in game_views.py; this module has no request handling.
 """
+import bisect
 import contextvars
 import math
 import random
@@ -841,6 +842,72 @@ def _named_at(rank):
     return ~Q(**{f"taxon__{rank}": ""}) & ~Q(**{f"taxon__{rank}__isnull": True})
 
 
+def _in_group(rank, value):
+    """rank_q as a test of a beetle's names in a _Pool (upper case): whether it is ``value`` at ``rank``."""
+    if rank == "species":
+        genus, _, species = value.partition(" ")
+        genus, species = genus.upper(), species.upper()
+        return lambda names: names["genus"] == genus and names["species"] == species
+    value = value.upper()
+    return lambda names: names[rank] == value
+
+
+def _named_test(rank):
+    """_named_at as a test of a beetle's names in a _Pool: whether its taxon has a name at ``rank``."""
+    return lambda names: names[rank] not in ("", None)
+
+
+class _Pool:
+    """
+    A batch build's validated beetles (pools()), read once: each one's id and names at every rank, in id order. Its
+    grids ask the same few things of them over and over: a group's beetles at a rank, the other groups', a parent's,
+    leaving out the beetles to avoid. Each was a query (hundreds for a batch of big grids, most of the time it took);
+    here they are worked out from that one read, by the same random walk as _random_ids, so the same beetles come out
+    as likely as before. A question is a test of a beetle's names (_in_group, _named_test), which are kept in upper
+    case: the database's iexact.
+    """
+
+    def __init__(self, qs):
+        self.qs, self.rows, self.ids = qs, None, None
+
+    def _load(self):
+        if self.rows is None:
+            fields = [f"taxon__{r}" for r in RANKS]
+            self.rows = [(row[0], row[0].int, {r: v.upper() if isinstance(v, str) else v for r, v in zip(RANKS, row[1:])})
+                         for row in self.qs.order_by("id").values_list("id", *fields)]
+            self.ids = [i for i, _, _ in self.rows]
+        return self.rows
+
+    def random_ids(self, test, n, avoid=()):
+        """
+        _random_ids in memory: up to n ids of beetles passing ``test`` and not in ``avoid``, from a random place in id
+        order, wrapping around, in random order.
+        """
+        rows = self._load()
+        if n <= 0 or not rows:
+            return []
+        skip = {i.int if isinstance(i, uuid.UUID) else uuid.UUID(str(i)).int for i in (*avoid, *avoiding.get())}
+        start = bisect.bisect_left(self.ids, uuid.uuid4())
+        ids = []
+        for k in range(len(rows)):
+            roi, key, names = rows[(start + k) % len(rows)]
+            if key not in skip and test(names):
+                ids.append(roi)
+                if len(ids) >= n:
+                    break
+        random.shuffle(ids)
+        return ids
+
+    def sample(self, test, n, target, avoid=()):
+        """
+        _sample in memory, as the grids call it (nothing seen or left out besides ``avoid``): n ids near the target
+        difficulty. Its second try at seen beetles never finds one there, so there is none here.
+        """
+        if n <= 0:
+            return []
+        return _pick_near(self.random_ids(test, n * game_setting("GAME_CANDIDATE_OVERSAMPLE", 6), avoid), n, target)
+
+
 def _distinct_photos(ids, taken, limit):
     """
     Up to ``limit`` of the ids, in order, each on a photo not used yet (``taken``: ImageAsset ids, which grows with
@@ -931,6 +998,8 @@ class _Grids:
         self.game, self.level = game_key, info["level"]
         self.plan = plan(player, game_key, deepest, player_focus(player))
         self.check_pool, self.open_pool = pools(player)
+        self.checks = _Pool(self.check_pool)   # its questions answered in memory (_Pool)
+        self._open_ids = None
         self.target = target_difficulty(player)
         # Beetles whose names the player has just been shown wait a while (held_back_ids); ones shown in this game come
         # back in another game first, so they are used here only when a grid can't be built without them
@@ -940,6 +1009,13 @@ class _Grids:
         game_ai_calls.refresh()   # IBBI-AI's calls, read again if predictions were uploaded since
         self.prefer_ai = ai_preferred()
         self.pairs = {}   # rank: whether IBBI-AI's predictions could give a grid there a sure and an unsure beetle
+
+    @property
+    def open_ids(self):
+        """The open pool's ids, read once: IBBI-AI's beetles drawn for every grid are checked against them in memory."""
+        if self._open_ids is None:
+            self._open_ids = frozenset(self.open_pool.values_list("id", flat=True))
+        return self._open_ids
 
     def items(self, n):
         items = []
@@ -972,8 +1048,7 @@ class _Grids:
         for rank in self.plan["ranks"]:
             pair = self.pair_wanted(rank)
             best = None
-            anchors = _sample(self.check_pool.filter(_named_at(rank)).exclude(among(self.avoid)), GRID_ANCHORS,
-                              self.target, allow_seen=False)
+            anchors = self.checks.sample(_named_test(rank), GRID_ANCHORS, self.target, self.avoid)
             for anchor in Beetles.objects.select_related("taxon").filter(id__in=anchors):
                 grid = (self.odd if self.game == "odd" else self.select)(anchor, rank, pair)
                 if grid is None:
@@ -995,7 +1070,7 @@ class _Grids:
             return False
         if rank not in self.pairs:
             sure, unsure, _ = ai_bands()
-            self.pairs[rank] = all(game_ai_calls.draw(self.open_pool, rank, None, *band, 1) for band in (sure, unsure))
+            self.pairs[rank] = all(game_ai_calls.draw(self.open_ids, rank, None, *band, 1) for band in (sure, unsure))
         return self.pairs[rank]
 
     def finish(self, grid, rank):
@@ -1012,10 +1087,13 @@ class _Grids:
         return [s for s in reversed(GRID_SIZES) if s <= self.plan["size"]]
 
     def near(self, rank, group):
-        """On harder rounds the beetles outside the group are near relatives: Q for the group's parent, else None."""
+        """
+        On harder rounds the beetles outside the group are near relatives: a test (_Pool) for the group's parent, else
+        None.
+        """
         parent = RANKS[RANKS.index(rank) - 1] if rank != "subfamily" else None
         if parent and random.random() < min(0.9, game_setting("GAME_ODD_NEAR_FLOOR", 0.3) + self.target):
-            return rank_q(parent, group[parent])
+            return _in_group(parent, group[parent])
         return None
 
     def odd_ai(self, size, pair, odds=1):
@@ -1038,27 +1116,30 @@ class _Grids:
         group = lineage(anchor.taxon, rank) if anchor.taxon else None
         if group is None:
             return None
-        same = rank_q(rank, group[rank])
+        value = group[rank]
         photos = {anchor.image_asset_id}
         most, wanted = self.plan["size"], self.plan.get("odds", 1)
         # The odd ones: validated, so there is always a known answer, each outside the group (they may share another);
         # near relatives (the same parent) on harder rounds
-        odd_pool = self.check_pool.filter(_named_at(rank)).exclude(same).exclude(among(self.avoid))
+        same, named = _in_group(rank, value), _named_test(rank)
+
+        def outside(names):
+            return named(names) and not same(names)
+
         near = self.near(rank, group)
-        odds = _distinct_photos(_sample(odd_pool.filter(near), 3 * wanted, self.target, allow_seen=False), photos,
-                                wanted) if near else []
+        odds = _distinct_photos(self.checks.sample(lambda names: outside(names) and near(names), 3 * wanted, self.target,
+                                                   self.avoid), photos, wanted) if near else []
         if len(odds) < wanted:
-            odds += _distinct_photos(_sample(odd_pool.exclude(id__in=odds), 3 * (wanted - len(odds)), self.target,
-                                             allow_seen=False), photos, wanted - len(odds))
+            odds += _distinct_photos(self.checks.sample(outside, 3 * (wanted - len(odds)), self.target,
+                                                        self.avoid | set(odds)), photos, wanted - len(odds))
         if not odds:
             return None
         # The rest share the group: AI beetles (a sure and an unsure one when there are predictions), then validated
         # ones, at least the anchor
-        opens, kinds = _ai_beetles(self.open_pool, rank, group[rank], self.odd_ai(most, pair), self.target, self.avoid,
+        opens, kinds = _ai_beetles(self.open_ids, rank, value, self.odd_ai(most, pair), self.target, self.avoid,
                                    photos, pair)
         rest = _distinct_photos(
-            _sample(self.check_pool.filter(same).exclude(among(self.avoid)).exclude(id=anchor.id), (most - 2) * 3,
-                    self.target, allow_seen=True), photos, most - 2)
+            self.checks.sample(same, (most - 2) * 3, self.target, self.avoid | {anchor.id}), photos, most - 2)
         for size in self.sizes():
             for k in range(min(wanted, most_odds(size), len(odds)), 0, -1):
                 n = min(len(opens), self.odd_ai(size, pair, k))
@@ -1073,23 +1154,27 @@ class _Grids:
         group = lineage(anchor.taxon, rank) if anchor.taxon else None
         if group is None:
             return None
-        same = rank_q(rank, group[rank])
+        value = group[rank]
+        same, named = _in_group(rank, value), _named_test(rank)
         photos = {anchor.image_asset_id}
         most = self.plan["size"]
         # Validated members: the anchor and as many more as the biggest grid takes
         members = [anchor.id] + _distinct_photos(
-            _sample(self.check_pool.filter(same).exclude(among(self.avoid)).exclude(id=anchor.id),
-                    (SELECT_MEMBERS[most][1] - 1) * 3, self.target, allow_seen=True), photos, SELECT_MEMBERS[most][1] - 1)
+            self.checks.sample(same, (SELECT_MEMBERS[most][1] - 1) * 3, self.target, self.avoid | {anchor.id}), photos,
+            SELECT_MEMBERS[most][1] - 1)
         # AI beetles: a sure and an unsure one first when there are predictions. Taps on them are votes, never scored
-        opens, kinds = _ai_beetles(self.open_pool, rank, group[rank], self.select_ai(most, pair), self.target, self.avoid,
+        opens, kinds = _ai_beetles(self.open_ids, rank, value, self.select_ai(most, pair), self.target, self.avoid,
                                    photos, pair)
         # The rest: validated beetles of other groups at this rank; near relatives (the same parent) on harder rounds
         want = most - SELECT_MEMBERS[most][0]
-        others = self.check_pool.filter(_named_at(rank)).exclude(same).exclude(among(self.avoid))
+
+        def others(names):
+            return named(names) and not same(names)
+
         near = self.near(rank, group)
-        rest = _distinct_photos(_sample(others.filter(near), want * 2, self.target, allow_seen=True),
-                                photos, want) if near else []
-        rest += _distinct_photos(_sample(others.exclude(id__in=rest), (want - len(rest)) * 3, self.target, allow_seen=True),
+        rest = _distinct_photos(self.checks.sample(lambda names: others(names) and near(names), want * 2, self.target,
+                                                   self.avoid), photos, want) if near else []
+        rest += _distinct_photos(self.checks.sample(others, (want - len(rest)) * 3, self.target, self.avoid | set(rest)),
                                  photos, want - len(rest))
         for size in self.sizes():
             mix = select_mix(size, len(members), len(opens), len(rest), self.select_ai(size, pair))

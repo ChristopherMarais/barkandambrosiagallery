@@ -101,8 +101,9 @@ def refresh():
 
 def draw(pool, rank, value, low, high, n, avoid=()):
     """
-    Up to ``n`` ids, in random order, of beetles in ``pool`` (a Beetles queryset), none in ``avoid``, that IBBI-AI puts
-    at ``value`` at ``rank`` (at any name when ``value`` is None) with a confidence in [low, high).
+    Up to ``n`` ids, in random order, of beetles in ``pool`` (a Beetles queryset, or a set of their ids already read),
+    none in ``avoid``, that IBBI-AI puts at ``value`` at ``rank`` (at any name when ``value`` is None) with a confidence
+    in [low, high).
     """
     found = _calls["by_name"].get(_key(rank, value)) if value else _calls["by_rank"].get(rank)
     if n <= 0 or not found:
@@ -112,7 +113,7 @@ def draw(pool, rank, value, low, high, n, avoid=()):
     out, chunk, taken = [], [], set()
 
     def check():
-        usable = set(pool.filter(id__in=chunk).values_list("id", flat=True))
+        usable = pool if isinstance(pool, (set, frozenset)) else set(pool.filter(id__in=chunk).values_list("id", flat=True))
         out.extend(i for i in chunk if i in usable)
         chunk.clear()
 
