@@ -129,17 +129,11 @@ GROUPS = [
     ("Feeds: mistakes come back, hard beetles go to the easier games first", [
         _t("GAME_RETRY_PER_BATCH", "Mistakes back per batch", 2,
            "Up to this many validated beetles the player got wrong come back in each batch of the feed, spread "
-           "through it: first in an easier game than the one they were missed in, then in that game.", 0, 10, 1),
+           "through it: first in an easier game than the one they were missed in, then in that game. They come back "
+           "by the rule of 3, like every beetle whose names were shown: 3 minutes after they were last shown, then "
+           "3 hours, 3 days, 3 weeks and 3 months.", 0, 10, 1),
         _t("GAME_RETRY_MAX", "Tries at one mistake", 3,
            "A mistake stops coming back after this many tries, right or wrong.", 0, 20, 1),
-        _t("GAME_SESSION_GAP_MINUTES", "Break that ends a sitting (minutes)", 30,
-           "A mistake comes back only in a later sitting: one that starts after at least this long without an "
-           "answer.", 1, 1440, 1),
-        _t("GAME_REVEAL_COOLDOWN_HOURS", "Wait before a beetle whose names were shown comes back (hours)", 2,
-           "After each answer the review shows every beetle's names. Such a beetle is scored for that player again "
-           "only in a later sitting and after at least this many hours, in another game first when it can be. It "
-           "earns full points but doesn't count towards accuracy or expertise until the recall gap below has passed.",
-           0, 720, 0.5),
         _t("GAME_EXPERTISE_RECALL_DAYS", "Gap after which a shown beetle counts again (days)", 30,
            "A beetle whose names a player was shown counts towards their accuracy, expertise and rating again "
            "once it hasn't been shown to them for this many days: naming it then is recall, not short-term "

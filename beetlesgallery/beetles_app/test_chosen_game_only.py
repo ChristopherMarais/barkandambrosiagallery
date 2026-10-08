@@ -19,22 +19,23 @@ class WiderPoolTests(FallbackCase):
         self.checked = [self.roi(t) for t in (self.t_affinis, self.t_ferr, self.t_plat)]
 
     def shown(self, ago):
-        """The player was shown the names of every checked beetle ``ago``."""
-        rnd = GameRound.objects.create(player=self.user, mode="classify", items=[])
-        for i, roi in enumerate(self.checked):
-            GameAnswer.objects.create(round=rnd, player=self.user, mode="classify", index=i, roi=roi,
-                                      is_check=True, **AFFINIS)
-        GameAnswer.objects.update(answered_at=timezone.now() - ago)
+        """The player was shown the names of every checked beetle twice, the second time ``ago`` (a 3-hour wait)."""
+        for when in (timedelta(days=1), ago):
+            rnd = GameRound.objects.create(player=self.user, mode="classify", items=[])
+            for i, roi in enumerate(self.checked):
+                answer = GameAnswer.objects.create(round=rnd, player=self.user, mode="classify", index=i, roi=roi,
+                                                   is_check=True, **AFFINIS)
+                GameAnswer.objects.filter(pk=answer.pk).update(answered_at=timezone.now() - when)
 
-    def test_beetles_shown_before_this_sitting_come_back_when_the_chosen_game_is_empty(self):
-        self.shown(timedelta(hours=1))   # within the cooldown, but not this sitting
+    def test_beetles_past_their_first_wait_come_back_when_the_chosen_game_is_empty(self):
+        self.shown(timedelta(hours=1))   # within their 3-hour wait, past the first 3 minutes
         self.assertEqual(game.build("classify", self.user, 3), [])
         items = game.build_chosen("classify", self.user, 3)
         self.assertTrue(items)
         self.assertTrue(all(i["check"] for i in items))
 
-    def test_beetles_shown_in_this_sitting_stay_held_back(self):
-        self.shown(timedelta(minutes=5))
+    def test_beetles_shown_a_moment_ago_stay_held_back(self):
+        self.shown(timedelta(minutes=2))
         self.assertEqual(game.build_chosen("classify", self.user, 3), [])
 
     def test_the_wider_pool_is_only_for_that_try(self):
