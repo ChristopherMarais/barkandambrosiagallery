@@ -124,19 +124,28 @@ class StepTests(LadderCase):
 
 
 class FeedTests(GridCase):
-    """Through the feed: the answer moves the step, and the batch's next grid is built at the new step."""
+    """
+    Through the feed: the answer moves the step, and the batch's later grids are built at the new step, from the grid
+    after the next one: the next one's photos are already loaded, so it shows as it was built.
+    """
 
-    def test_a_poor_grid_makes_the_next_grid_smaller_straight_away(self):
+    def test_a_poor_grid_makes_the_grid_after_next_smaller(self):
         start = ladder.step_for(16, "genus")
         at(self.user, "odd", start)
-        with override_settings(GAME_ROUND_SIZE=3):   # a short batch, leaving beetles for a fresh grid of nine
+        # a short batch built whole, leaving beetles for a fresh grid of nine
+        with override_settings(GAME_ROUND_SIZE=3, GAME_FIRST_ITEMS=0):
             res = self.post("game_start", {"mode": "odd"})
         rnd, item = GameRound.objects.get(id=res.json()["round"]), res.json()["item"]
         self.assertEqual((item["size"], item["rank"], item["step"]), (16, "genus", start))
         grid = rnd.items[item["index"]]
         wrong = next(i for i, t in enumerate(grid["tiles"]) if t != grid["a"]
                      and game.Beetles.objects.get(id=t).bbox_is_validated)
+        following = rnd.items[item["index"] + 1]
         data = self.post("game_answer", {"index": item["index"], "pick": wrong}, rnd.id).json()
         self.assertEqual(ladder.current(self.user, "odd"), start - 1)
-        self.assertEqual((data["item"]["size"], data["item"]["rank"], data["item"]["step"]), (9, "genus", start - 1))
+        self.assertEqual((data["item"]["size"], data["item"]["rank"], data["item"]["step"]), (16, "genus", start))
+        items = GameRound.objects.get(id=rnd.id).items
+        self.assertEqual(items[data["item"]["index"]]["tiles"], following["tiles"])   # its photos, loaded ahead
+        after = items[data["item"]["index"] + 1]
+        self.assertEqual((after["size"], after["rank"], after["step"]), (9, "genus", start - 1))
         self.assertEqual(GameAnswer.objects.get().grid_step, start)

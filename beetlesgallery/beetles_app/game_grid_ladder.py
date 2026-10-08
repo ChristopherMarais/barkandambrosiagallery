@@ -19,7 +19,8 @@ A player starts on GAME_GRID_START_STEP, goes up a step after GAME_GRID_UP_AFTER
 after a poor grid (outcome says which is which; skips and grids ended by flags are neither). No step goes deeper than
 the ranks the player has open (game_levels.rank_unlock). game.py builds each grid at the player's step, or the nearest
 easier grid the beetles allow (plan); restep() builds a batch's later grids again when the step moves, so the change
-shows from the next grid rather than the next batch.
+shows from the grid after the next one rather than the next batch. Not the next one itself: its photos are loaded
+while the grid before it is played, and building it again made the player wait for new ones.
 """
 from django.db import IntegrityError, transaction
 

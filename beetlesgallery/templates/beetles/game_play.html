@@ -932,11 +932,12 @@
   // another tap, not a zoom (pinch and the wheel still zoom).
   // Smooth on any device: the frame is measured once per gesture (not on every move), the transform is written at
   // most once per frame on the GPU (translate3d), and the browser's own image drag and text selection never take
-  // over a drag. Lifting one finger of a pinch carries on as a drag.
+  // over a drag. Lifting one finger of a pinch carries on as a drag. ``onZoom``, if given, is called once, the first
+  // time the photo is zoomed in (a big grid's tile then loads its sharp crop).
   const ZOOM_STEP = 2.5, ZOOM_MAX = 5, TAP_MS = 300, DRAG_SLOP = 4;
   const TAP_SLOP = 10;   // a finger that slides further than this is a swipe, never a tap (#603)
   const zoomEase = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  function makeZoomable(frame, canvas, onTap, immediate) {
+  function makeZoomable(frame, canvas, onTap, immediate, onZoom) {
     let z = 1, tx = 0, ty = 0, lastTap = 0, tapTimer = null, drag = null, pinch = null, moved = false;
     let rect = null, raf = 0, wheelEnd = null, down = null;
     const pointers = new Map();   // pointerId -> [clientX, clientY]
@@ -946,6 +947,7 @@
       raf = 0;
       canvas.style.transform = z > 1 ? `translate3d(${tx}px, ${ty}px, 0) scale(${z})` : "";
       frame.classList.toggle("zoomed", z > 1);
+      if (z > 1 && onZoom) { const zoomed = onZoom; onZoom = null; zoomed(); }
     };
     // Keep the photo covering the frame, then draw on the next frame. ``animate``: a short ease, for the
     // double-click steps only (a drag or a pinch follows the finger exactly).
@@ -1355,11 +1357,13 @@
     if (!root.dataset.prepareUrl) return;
     api(root.dataset.prepareUrl.replace("00000000-0000-0000-0000-000000000000", roundId) + "?index=" + at.index).catch(() => {});
   }
-  // The next beetle after an answer sent with item_later (#602): asked for as soon as the review is in, while it is read
+  // The next beetle after an answer sent with item_later (#602): asked for as soon as the review is in, while it is read.
+  // After a batch's last beetle the reply also says how the feed goes on: the next batch ("round", "notice") or its end
+  // ("done"); all of it is kept with the answer for Next
   function fetchItem(data) {
     const url = root.dataset.itemUrl.replace("00000000-0000-0000-0000-000000000000", data.round || roundId)
       .replace(/\/0\/$/, "/" + data.next + "/");
-    return api(url).then((d) => { data.item = d.item; return d.item; }, () => null);
+    return api(url).then((d) => { Object.assign(data, d); return d.item; }, () => null);
   }
 
   // Pressed (round 5): the control under a finger gets a class at pointerdown, in the same frame as the touch, and
@@ -1793,6 +1797,8 @@
     item = next;
     // small crops, loading from now on (the whole photo loads only when opened); a failed one leaves its tile empty
     const loads = item.images.map((im) => loadCrop(im).catch(() => null));
+    // a big grid's tiles are smaller than their small crops: each one's sharp crop loads once it is zoomed (game_crops)
+    const sharpOnZoom = !!item.sharp_on_zoom;
     sweepStop();
     setMode(item.mode || PAGE_MODE);
     endReview();
@@ -1815,6 +1821,11 @@
       frame.className = "frame";
       frame.setAttribute("aria-label", MODE === "odd" ? "Pick this beetle" : MODE === "select" ? "Tap this beetle" : "See the whole image");
       const canvas = document.createElement("canvas");
+      const sharpen = () => loads[i].then((got) => {   // the sharp crop, over the small one
+        if (got && got.cut && im.large) {
+          loadImage(im.large).then((big) => { if (canvas.isConnected) drawCrop(canvas, big, im.box, true); }).catch(() => {});
+        }
+      });
       loads[i].then((got) => {   // the photo lands in its tile (if this beetle is still on screen), then the sharp one
         if (!got || !canvas.isConnected) return;
         drawCrop(canvas, got.img, im.box, got.cut);
@@ -1822,9 +1833,7 @@
         if (MODE === "classify") cell.style.setProperty("--photo-ar", canvas.width + " / " + canvas.height);
         cell.classList.add("landed");
         moved();
-        if (got.cut && im.large) {
-          loadImage(im.large).then((big) => { if (canvas.isConnected) drawCrop(canvas, big, im.box, true); }).catch(() => {});
-        }
+        if (!sharpOnZoom) sharpen();
       });
       frame.appendChild(canvas);
       if (MODE === "pair") {
@@ -1837,7 +1846,8 @@
       if (grid) {
         // a tap picks it (Select all: toggles it) and brings up its button for a moment; the whole photo opens from
         // that small button (or the Q key), with the Flag and the beetle's other photos
-        makeZoomable(frame, canvas, () => { showChips(i); MODE === "odd" ? pickTile(i) : toggleTile(i); }, true);
+        makeZoomable(frame, canvas, () => { showChips(i); MODE === "odd" ? pickTile(i) : toggleTile(i); }, true,
+                     sharpOnZoom ? sharpen : null);
         if (MODE === "select") {
           const mark = document.createElement("span");
           mark.className = "tap-mark";
@@ -2031,6 +2041,7 @@
     upcoming = null;
     performance.mark("game:next");   // until the next beetle shows: "game:photo" (present)
     setPhase("next");
+    if (!data.item && data.itemLoad) await data.itemLoad;   // usually in long since: asked for with the review
     feedNotes(data);   // the next batch had to change game, or the feed ended: say why
     if (data.done) {
       $("review-link").href = data.review_url;
@@ -2044,7 +2055,6 @@
       return;
     }
     if (data.round) roundId = data.round;   // the feed moved on to its next batch; the player never notices
-    if (!data.item && data.itemLoad) await data.itemLoad;   // usually in long since: asked for with the review
     if (!data.item) { await startFeed(); return; }          // it couldn't be had: pick up where the server is
     await present(data.item);
   }
@@ -2444,7 +2454,7 @@
     const box = $("previous-photos"), n = previous.images.length;
     box.style.setProperty("--cols", n > 2 ? Math.ceil(Math.sqrt(n)) : n);
     box.dataset.size = String(n);
-    const cells = previous.images.map((im, i) => reviewCell(im, i, n));
+    const cells = previous.images.map((im, i) => reviewCell(im, i, n, !!previous.sharp_on_zoom));
     box.replaceChildren(...cells);
     markTiles(cells, previous);
     nameTiles(cells, previous);
@@ -2453,8 +2463,10 @@
     return true;
   }
   // One of Back's photos (round 7): built as the review's own, in a frame that zooms (scroll, pinch, double-click,
-  // drag), the small crop first and the sharp one after it; the names, marks, hover and whole photo are the review's
-  function reviewCell(im, i, n) {
+  // drag), the small crop first and the sharp one after it; the names, marks, hover and whole photo are the review's.
+  // The crops are the feed's own, so the page has them already; a big grid's sharp one waits until it is zoomed, as
+  // in the feed (``sharpOnZoom``).
+  function reviewCell(im, i, n, sharpOnZoom) {
     const c = node("div", "cell");
     const frame = node("button", "frame");
     frame.type = "button";
@@ -2462,12 +2474,16 @@
     const canvas = document.createElement("canvas");
     frame.appendChild(canvas);
     c.appendChild(frame);
-    makeZoomable(frame, canvas, () => openReviewPhoto(c));
+    const loaded = im ? loadCrop(im) : null;
+    const sharpen = () => loaded && loaded.then((got) => {   // the sharp crop, over the small one
+      if (got.cut && im.large) loadImage(im.large).then((big) => { if (canvas.isConnected) drawCrop(canvas, big, im.box, true); }).catch(() => {});
+    }).catch(() => {});
+    makeZoomable(frame, canvas, () => openReviewPhoto(c), false, sharpOnZoom ? sharpen : null);
     if (n === 2) c.appendChild(node("span", "rv-num", i === 0 ? "A" : "B"));
-    if (im) loadCrop(im).then((got) => {
+    if (loaded) loaded.then((got) => {
       if (!canvas.isConnected) return;   // Back closed, or another beetle's
       drawCrop(canvas, got.img, im.box, got.cut);
-      if (got.cut && im.large) loadImage(im.large).then((big) => drawCrop(canvas, big, im.box, true)).catch(() => {});
+      if (!sharpOnZoom) sharpen();
     }).catch(() => {});
     return c;
   }
@@ -2524,12 +2540,15 @@
   $("exit").addEventListener("click", async () => {
     if (leaving || !$("recap").classList.contains("hidden")) return;
     recapSeen = true;
-    recapState("Nice session!", "Saving your answers…", false);
-    $("recap-saving").classList.remove("hidden");   // a turning spinner while it saves, so the game never looks frozen
+    // every answer is saved as it is given (the rest is counted on the worker): this only adds the sitting up
+    recapState("Nice session!", "Adding up your session…", false);
+    $("recap-saving").classList.remove("hidden");   // a turning spinner meanwhile, so the game never looks frozen
     $("recap").scrollTop = 0;
     $("recap").classList.remove("hidden");
-    // on a review that ended a batch, the next batch is the open one
-    leaving = api(root.dataset.exitUrl, { round: (upcoming && upcoming.round) || roundId, since: openedAt }).catch(() => null);
+    // on a review that ended a batch, the next batch is the open one. Asked again once if it fails (a dropped
+    // connection): closing a batch twice is harmless, and the player gets the recap rather than none
+    const goodbye = { round: (upcoming && upcoming.round) || roundId, since: openedAt };
+    leaving = api(root.dataset.exitUrl, goodbye).catch(() => api(root.dataset.exitUrl, goodbye)).catch(() => null);
     const data = await leaving;
     leaving = null;
     $("recap-saving").classList.add("hidden");
