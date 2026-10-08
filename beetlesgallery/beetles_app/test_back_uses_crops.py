@@ -49,8 +49,8 @@ class BackCropTests(CropFileCase):
         members = [self.roi(self.t_affinis) for _ in range(9)]
         others = [self.roi(self.t_plat) for _ in range(7)]
         for tiles, big in ((members[:3] + others[:1], False), (members + others, True)):
-            item = {"a": str(members[0].id), "b": None, "check": True, "mode": "select",
-                    "tiles": [str(t.id) for t in tiles], "rank": "species", "group": game.lineage(self.t_affinis, "species")}
+            item = {"a": str(members[0].id), "b": None, "check": True, "mode": "select", "rank": "species",
+                    "tiles": [str(t.id) for t in tiles], "group": game.lineage(self.t_affinis, "species")}
             rnd, review = self.answer(item, {"picks": [0]})
             self.assertEqual(len(review["images"]), len(tiles))
             self.assertEqual([im["small"] for im in review["images"]], [im["small"] for im in self.feed_images(rnd)])
@@ -63,6 +63,7 @@ class PageTests(SimpleTestCase):
         page = GAME_PLAY.read_text(encoding="utf-8")
         cell = js_function(page, "reviewCell")
         self.assertIn("const loaded = im ? loadCrop(im) : null;", cell)    # the small crop (whole photo if it fails)
-        self.assertIn("makeZoomable(frame, canvas, () => openReviewPhoto(c), false, sharpOnZoom ? sharpen : null);", cell)
+        self.assertIn("makeZoomable(frame, canvas, () => openReviewPhoto(c), false, sharpOnZoom ? sharpen : null);",
+                      cell)
         self.assertIn("if (!sharpOnZoom) sharpen();", cell)
         self.assertIn("reviewCell(im, i, n, !!previous.sharp_on_zoom)", page)

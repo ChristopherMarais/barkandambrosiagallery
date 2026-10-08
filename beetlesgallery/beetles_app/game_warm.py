@@ -3,11 +3,13 @@ Batches built ahead for the games a player might switch to (#542).
 
 Switching game in the feed's toolbar used to build a whole new batch while the player waited. Now, once the feed is
 showing, the worker builds one batch for each of the player's other game choices and cuts the crops of its first
-beetles. That is the heavy worker's job (one at a time, at low CPU priority): it is only ever a head start, and on the
-quick worker it held up what a player in the middle of a feed waits on (a batch growing, the next batch). When it
-hasn't got to it, switching builds the batch as before. They wait in the cache; switching to one of those games turns its batch into the player's new round at once
+beetles. They wait in the cache; switching to one of those games turns its batch into the player's new round at once
 (take). A batch is only used for the choices, focus and unlocks it was built under, and loses any beetle the player
 has answered since, so it never shows anything a freshly built one wouldn't.
+
+Building them is the heavy worker's job (one job at a time, at low CPU priority): they are only ever a head start, and
+on the quick worker they held up what a player in the middle of a feed waits on (a batch growing, the next batch).
+When it hasn't got to them yet, switching builds the batch as before.
 """
 import logging
 import time

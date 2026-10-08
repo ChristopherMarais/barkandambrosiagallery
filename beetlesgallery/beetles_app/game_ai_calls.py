@@ -113,7 +113,10 @@ def draw(pool, rank, value, low, high, n, avoid=()):
     out, chunk, taken = [], [], set()
 
     def check():
-        usable = pool if isinstance(pool, (set, frozenset)) else set(pool.filter(id__in=chunk).values_list("id", flat=True))
+        if isinstance(pool, (set, frozenset)):
+            usable = pool
+        else:
+            usable = set(pool.filter(id__in=chunk).values_list("id", flat=True))
         out.extend(i for i in chunk if i in usable)
         chunk.clear()
 

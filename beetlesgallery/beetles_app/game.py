@@ -859,23 +859,31 @@ def _named_test(rank):
 
 class _Pool:
     """
-    A batch build's validated beetles (pools()), read once: each one's id and names at every rank, in id order. Its
-    grids ask the same few things of them over and over: a group's beetles at a rank, the other groups', a parent's,
-    leaving out the beetles to avoid. Each was a query (hundreds for a batch of big grids, most of the time it took);
-    here they are worked out from that one read, by the same random walk as _random_ids, so the same beetles come out
-    as likely as before. A question is a test of a beetle's names (_in_group, _named_test), which are kept in upper
-    case: the database's iexact.
+    A batch build's validated beetles (pools()), read once: each one's id and taxon, in id order, and the names of those
+    taxa at every rank. Its grids ask the same few things of them over and over: a group's beetles at a rank, the other
+    groups', a parent's, leaving out the beetles to avoid. Each was a query (hundreds for a batch of big grids, most of
+    the time it took); here they are worked out from that one read, by the same random walk as _random_ids, so the same
+    beetles come out as likely as before. A question is a test of a taxon's names (_in_group, _named_test), kept in
+    upper case as the database's iexact compares them, and asked once per taxon.
     """
 
     def __init__(self, qs):
-        self.qs, self.rows, self.ids = qs, None, None
+        self.qs, self.rows, self.ids, self.names = qs, None, None, None
 
     def _load(self):
+        from django.db.models import CharField
+        from django.db.models.functions import Cast
+
+        from .models import Taxon
+
         if self.rows is None:
-            fields = [f"taxon__{r}" for r in RANKS]
-            self.rows = [(row[0], row[0].int, {r: v.upper() if isinstance(v, str) else v for r, v in zip(RANKS, row[1:])})
-                         for row in self.qs.order_by("id").values_list("id", *fields)]
-            self.ids = [i for i, _, _ in self.rows]
+            # ids as text (lower case, so in the same order as the ids themselves): only the ones picked become UUIDs
+            text = Cast("id", CharField())
+            self.rows = list(self.qs.order_by("id").annotate(text=text).values_list("text", "taxon_id"))
+            self.ids = [roi for roi, _ in self.rows]
+            taxa = {taxon for _, taxon in self.rows}
+            self.names = {row[0]: {r: v.upper() if isinstance(v, str) else v for r, v in zip(RANKS, row[1:])}
+                          for row in Taxon.objects.filter(id__in=taxa).values_list("id", *RANKS)}
         return self.rows
 
     def random_ids(self, test, n, avoid=()):
@@ -886,13 +894,18 @@ class _Pool:
         rows = self._load()
         if n <= 0 or not rows:
             return []
-        skip = {i.int if isinstance(i, uuid.UUID) else uuid.UUID(str(i)).int for i in (*avoid, *avoiding.get())}
-        start = bisect.bisect_left(self.ids, uuid.uuid4())
-        ids = []
+        skip = {str(i).lower() for i in (*avoid, *avoiding.get())}
+        start = bisect.bisect_left(self.ids, str(uuid.uuid4()))
+        ids, passed = [], {}   # passed: taxon -> its answer to the test
         for k in range(len(rows)):
-            roi, key, names = rows[(start + k) % len(rows)]
-            if key not in skip and test(names):
-                ids.append(roi)
+            roi, taxon = rows[(start + k) % len(rows)]
+            if roi in skip:
+                continue
+            ok = passed.get(taxon)
+            if ok is None:
+                ok = passed[taxon] = test(self.names[taxon])
+            if ok:
+                ids.append(uuid.UUID(roi))
                 if len(ids) >= n:
                     break
         random.shuffle(ids)
@@ -1127,8 +1140,8 @@ class _Grids:
             return named(names) and not same(names)
 
         near = self.near(rank, group)
-        odds = _distinct_photos(self.checks.sample(lambda names: outside(names) and near(names), 3 * wanted, self.target,
-                                                   self.avoid), photos, wanted) if near else []
+        odds = _distinct_photos(self.checks.sample(lambda names: outside(names) and near(names), 3 * wanted,
+                                                   self.target, self.avoid), photos, wanted) if near else []
         if len(odds) < wanted:
             odds += _distinct_photos(self.checks.sample(outside, 3 * (wanted - len(odds)), self.target,
                                                         self.avoid | set(odds)), photos, wanted - len(odds))
@@ -1174,8 +1187,8 @@ class _Grids:
         near = self.near(rank, group)
         rest = _distinct_photos(self.checks.sample(lambda names: others(names) and near(names), want * 2, self.target,
                                                    self.avoid), photos, want) if near else []
-        rest += _distinct_photos(self.checks.sample(others, (want - len(rest)) * 3, self.target, self.avoid | set(rest)),
-                                 photos, want - len(rest))
+        rest += _distinct_photos(self.checks.sample(others, (want - len(rest)) * 3, self.target,
+                                                    self.avoid | set(rest)), photos, want - len(rest))
         for size in self.sizes():
             mix = select_mix(size, len(members), len(opens), len(rest), self.select_ai(size, pair))
             if mix:
