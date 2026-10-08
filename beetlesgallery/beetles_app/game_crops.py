@@ -9,7 +9,8 @@ small one the feed shows at once and a large one it swaps in when it arrives. Th
 
 Files live under MEDIA_ROOT/crops/, named by the photo and the box, so a moved box or a replaced photo gets a new file
 and an old file never has to be invalidated. A new batch's crops are cut on the worker as soon as the batch is made,
-so they are usually ready before the feed asks for them; any that aren't are cut on that first request.
+so they are usually ready before the feed asks for them; any that aren't are cut on that first request. Every
+beetle's small crop is also cut ahead of any batch, by a sweep on the heavy worker (precut).
 """
 import contextvars
 import hashlib
@@ -21,6 +22,7 @@ import uuid
 from pathlib import Path
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -237,12 +239,70 @@ def prepare_later(rnd):
     transaction.on_commit(queue)
 
 
+# Every beetle's small crop, cut before any batch needs it: then no player ever waits for one to be cut, however fast
+# they play or however busy the quick worker is. The sweep runs on the heavy worker (one job at a time, at low CPU
+# priority), a part at a time, so an upload queued meanwhile goes between two parts. Small crops only: they are about
+# 12 KB each, and most of what a batch shows; the large ones (five times the size) are still cut per batch, as before.
+PRECUT_KEY = "game:precut"
+PRECUT_EVERY = 6 * 60 * 60     # seconds: a sweep at most this often (it only cuts what's missing: new or moved boxes)
+PRECUT_PART = 200              # crops one part cuts before queueing the next
+
+
+def precut(after=None, part=PRECUT_PART):
+    """
+    The heavy worker's part of precut_later: cut the small crop of each playable beetle that has none yet, in id order
+    from just after ``after``. After ``part`` crops it queues the rest (from the last beetle it got to) and stops.
+    Returns how many it tried to cut. A photo that can't be read is passed over (ensure logs it).
+    """
+    from . import game
+
+    rois = game.playable_rois().select_related("image_asset").order_by("pk")
+    if after:
+        rois = rois.filter(pk__gt=after)
+    tried = 0
+    for roi in rois.iterator(chunk_size=500):
+        path = crop_path(roi, "small")
+        if path is None or path.exists():
+            continue
+        ensure(roi, "small")
+        tried += 1
+        if tried >= part:
+            _queue_precut(str(roi.pk))
+            break
+    return tried
+
+
+def _queue_precut(after=None):
+    from .tasks import precut_game_crops_task
+
+    try:
+        precut_game_crops_task.apply_async(args=[after], retry=False)
+        return True
+    except Exception:
+        logger.info("Crop sweep not queued: crops are cut per batch and on request, as before")
+        return False
+
+
+def precut_later():
+    """Queue a sweep of the small crops (precut) on the heavy worker, at most once every PRECUT_EVERY seconds."""
+    if not cache.add(PRECUT_KEY, 1, PRECUT_EVERY):
+        return False
+
+    def queue():
+        if not _queue_precut():
+            cache.delete(PRECUT_KEY)   # try again with the next batch
+
+    transaction.on_commit(queue)
+    return True
+
+
 @receiver(post_save, sender="beetles_app.GameRound", dispatch_uid="game_crops_new_batch")
 def _new_batch(sender, instance, created, **kwargs):
     """A new batch: cut its crops on the worker while the player is still busy with the one before."""
     if not created:
         return
     prepare_later(instance)
+    precut_later()
     stats = built.get()
     if stats is not None:
         stats["batches"] += 1

@@ -46,6 +46,12 @@ def prepare_game_crops_task(round_id):
     prepare(round_id)
 
 @shared_task(ignore_result=True)
+def precut_game_crops_task(after=None):
+    """Cut every playable beetle's small crop that isn't cut yet, a part at a time (game_crops.precut; heavy queue)."""
+    from beetlesgallery.beetles_app.game_crops import precut
+    precut(after)
+
+@shared_task(ignore_result=True)
 def build_game_batch_ahead_task(round_id):
     """Build the batch that follows one in play, from its middle on (game_views.build_ahead_later)."""
     from beetlesgallery.beetles_app.game_views import build_ahead_now
