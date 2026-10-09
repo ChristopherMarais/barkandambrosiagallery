@@ -547,6 +547,51 @@
   :is(#game, #lightbox, #recap, #toasts, .level-pop) .fi::before { display: block; line-height: 1; }
   #light-btn, .more-chip, #chip, #combo, #level-chip, #focus-btn, #lb-light, .flag-badge, .rv-seen { justify-content: center; }
   #lightbox > button[aria-label="Close"], .lb-nav { display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+
+  /* A computer (lg, 64rem and up: the lg breakpoint changes structure). The phone's column, photos over the answer,
+     became a narrow strip in the middle of a wide screen; here the photos take the screen's width and height on the
+     left and the answer is a column on the right (--side), its buttons at its foot. The column has a width of its
+     own, so nothing the answer or the review puts in it moves the photos, and the buttons stay where they are from
+     the first beetle to the review. Below lg none of this applies: the phone and tablet layout is the one above. */
+  @media (min-width: 64rem) {
+    #game { --side: clamp(24rem, 30vw, 30rem); }
+    #stage { flex-direction: row; }
+    #photo-area { flex: 1 1 0; min-width: 0; }
+    #panel, #game #stage:has(#photos) #panel { flex: 0 0 var(--side); width: var(--side); max-height: none; display: flex; flex-direction: column;
+             padding: 1rem 1rem 0; border-top: 0; border-left: 1px solid #e5e7eb; }
+    /* the tip and the buttons at the foot of the column, whether the tip is there (answering) or not (the review) */
+    #submit-hint { margin-top: auto; padding-top: 0.75rem; }
+    #submit-hint.hidden + #actions { margin-top: auto; }
+    #actions { padding-bottom: calc(1rem + env(safe-area-inset-bottom)); }
+    /* Naming and Similarity: the photos as big as the room allows, a strip at the bottom kept for Lighting */
+    #game:is([data-mode="classify"], [data-mode="pair"]) #photos { --pad: 0.75rem; --light: 2.25rem; padding: var(--pad) var(--pad) calc(var(--pad) + var(--light)); }
+    #game[data-mode="classify"] #photos { flex: 1 1 0; max-height: none; height: 100%; }
+    #game[data-mode="classify"] #photos .cell { width: min(100%, calc((100cqh - 2 * var(--pad) - var(--light)) * var(--ar, 1.3333))); }
+    /* Similarity: each tile has its photo's own shape (--ar, from the item) and is as big as fits in its half, so the
+       letter, the Flag and the chips sit on the photo's corners; two wide photos show bigger one above the other
+       (pairStack) */
+    #game[data-mode="pair"] #photos { gap: 0.75rem; }
+    #game[data-mode="pair"] #photos .cell { flex: 0 1 auto; height: auto; aspect-ratio: var(--photo-ar, 4 / 3);
+        width: min((100% - 0.75rem) / 2, (100cqh - 2 * var(--pad) - var(--light)) * var(--ar, 1.3333)); }
+    #game[data-mode="pair"] #photos[data-stack] { flex-direction: column; }
+    #game[data-mode="pair"] #photos[data-stack] .cell { width: min(100%, (100cqh - 2 * var(--pad) - var(--light) - 0.75rem) / 2 * var(--ar, 1.3333)); }
+    /* the names on a big photo: bigger, with room for both columns */
+    #game:is([data-mode="classify"], [data-mode="pair"]) #photos .rv-names { font-size: 1.25rem; }
+    #game:is([data-mode="classify"], [data-mode="pair"]) #photos .rv-names > span { max-width: 32rem; }
+    /* the grids: a little more room round the tiles than on a phone */
+    #game:is([data-mode="odd"], [data-mode="select"]) #photos { --pad: 0.75rem; }
+    #game #photos:is([data-size="16"], [data-size="25"]) { --pad: 0.5rem; }
+    /* Back: the photos on the left and the card on the right, as in play */
+    #previous:not(.hidden) { display: grid; grid-template-columns: minmax(0, 1fr) var(--side); grid-template-rows: auto minmax(0, 1fr); }
+    #previous > :first-child { grid-column: 1 / -1; }
+    #previous-photos { gap: 0.75rem; padding: 0.75rem; }
+    #previous #previous-side { max-height: none; border-left: 1px solid #e5e7eb; }
+    /* the sheets over the game (How to play, Focus): a readable line, not the whole width */
+    #help-sheet > div + div, #focus-sheet > div + div { width: 100%; max-width: 40rem; margin: 0 auto; }
+    /* the recap: the four numbers in a row */
+    #recap > div { max-width: 40rem; }
+    #recap-stats:not(.hidden) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  }
 </style>
 {% endblock %}
 
@@ -729,7 +774,7 @@
       <h2 class="font-semibold text-gray-900">Your last beetle</h2>
     </div>
     <div id="previous-photos"></div>
-    <div class="p-4 space-y-3 overflow-y-auto max-h-[60%]">
+    <div id="previous-side" class="p-4 space-y-3 overflow-y-auto max-h-[60%]">
       <div id="previous-review" data-testid="previous-review"></div>
       <button type="button" id="previous-done" class="btn-primary w-full h-12 text-base rounded-xl">Current beetle</button>
     </div>
@@ -1797,6 +1842,22 @@
     cell.style.setProperty("--ar", String(ar));
   }
 
+  // Similarity on a computer (lg): A and B side by side, or one above the other where that shows the smaller of the
+  // two bigger (two wide photos next to the answer column). Chosen from the shapes the item sends, before the photos
+  // land, so they never move once they are on screen; a phone keeps its own layout (the CSS applies only from lg).
+  const WIDE_SCREEN = window.matchMedia("(min-width: 64rem)");
+  function pairStack(holder, ars) {
+    delete holder.dataset.stack;
+    if (MODE !== "pair" || !WIDE_SCREEN.matches || ars.length !== 2 || !ars.every((ar) => ar > 0)) return;
+    const box = $("photo-area").getBoundingClientRect();   // the first beetle: the stage is still hidden, so roughly
+    const W = (box.width || innerWidth * 0.7) - 36, H = (box.height || innerHeight - 64) - 60;
+    const shown = (w, h, ar) => { const ht = Math.min(h, w / ar); return ht * ht * ar; };   // a photo's area in its cell
+    const side = Math.min(...ars.map((ar) => shown(W / 2, H, ar)));
+    const stacked = Math.min(...ars.map((ar) => shown(W, H / 2, ar)));
+    if (stacked > side) holder.dataset.stack = "1";
+  }
+  window.addEventListener("resize", () => { if (item && MODE === "pair") pairStack($("photos"), item.images.map((im) => im.ar)); });
+
   // Lay the tiles (#602): the new beetle's empty tiles go down at once, quickly one after another, and each photo
   // lands in its tile as soon as it is decoded (the small crop, then the sharp one). Usually the photos are in already
   // (loaded ahead); otherwise the laying covers the wait. The answer opens once every photo is in.
@@ -1820,6 +1881,7 @@
     holder.style.setProperty("--grid-cols", String(Math.ceil(Math.sqrt(item.images.length))));
     if (grid) holder.dataset.size = String(item.images.length);
     else delete holder.dataset.size;
+    pairStack(holder, item.images.map((im) => im.ar));
     item.images.forEach((im, i) => {
       const cell = document.createElement("div");
       cell.className = "cell slot";
@@ -1836,12 +1898,13 @@
       });
       // Naming: the tile takes this photo's own shape, not a fixed box (#play-space), from the item when it says
       if (MODE === "classify" && im.ar) photoShape(cell, im.ar);
+      if (MODE === "pair" && im.ar) photoShape(cell, im.ar);   // Similarity's tiles take it on a computer (lg)
       loads[i].then((got) => {   // the photo lands in its tile (if this beetle is still on screen), then the sharp one
         if (!got || !canvas.isConnected) return;
         drawCrop(canvas, got.img, im.box, got.cut);
         // ...or from the photo itself, where the item didn't say or said otherwise (a photo stored on its side)
         const ar = canvas.width / canvas.height;
-        if (MODE === "classify" && (!im.ar || Math.abs(ar - im.ar) > 0.02 * im.ar)) photoShape(cell, ar);
+        if ((MODE === "classify" || MODE === "pair") && (!im.ar || Math.abs(ar - im.ar) > 0.02 * im.ar)) photoShape(cell, ar);
         cell.classList.add("landed");
         moved();
         if (!sharpOnZoom) sharpen();
