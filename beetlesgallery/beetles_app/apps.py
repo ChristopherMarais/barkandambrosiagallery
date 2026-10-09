@@ -8,3 +8,4 @@ class BeetlesAppConfig(AppConfig):
         # Import models to ensure signals register when the app boots
         import beetlesgallery.beetles_app.models
         import beetlesgallery.beetles_app.game_crops  # noqa: F401 (cuts a new batch's crops on the worker)
+        import beetlesgallery.beetles_app.game_negatives  # noqa: F401 (each new answer writes its negative labels)

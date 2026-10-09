@@ -254,6 +254,7 @@ answer = max(0, Σ points)   (Naming answers then × weight {{ v.GAME_POINTS_CLA
         </tbody>
       </table></div>
       <p class="mt-2">A <b>"not in" tip</b> ("Players are confident it is not in genus <i>Xyleborus</i>", or "Naming experts and players…") appears once at least {{ v.GAME_TIP_MIN_NOT_VOTES }} players say so and they are at least {{ v.GAME_TIP_MIN_SUPPORT|floatformat:"-2" }} of everyone who spoke to that group either way. It helps a curator rule names out, and flags a current label that players reject.</p>
+      <p class="mt-2">Every "not" is written down with its answer. It counts against that name in the game's suggestion: the name's share of the vote is its votes over all votes plus the weight of the players who said it is not that name. Once at least {{ v.GAME_NOT_MIN_PLAYERS }} players rule a name out and outweigh the votes for it, it is never the suggestion, and nor is any name under it.</p>
     </div>
 
     <div class="pt-2 text-sm">

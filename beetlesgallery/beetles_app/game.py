@@ -1948,28 +1948,18 @@ def grid_exclusions(answer):
     """
     [(roi_id, rank, value)] a grid answer says beetles nobody has validated are *not* in: in Odd One Out the picked
     beetles are not of the rest's group; in Select all the beetles left untapped are not of the grid's group (a photo
-    the player flagged says nothing).
+    the player flagged says nothing). The open beetles among game_negatives.derive, which every answer writes down.
     """
-    if answer.skipped or answer.mode not in ("odd", "select") or answer.grid_rank not in RANKS or not answer.grid_group:
+    from . import game_negatives
+
+    if answer.mode not in ("odd", "select"):
         return []
-    value = answer.grid_group.get(answer.grid_rank)
-    if not value:
+    found = game_negatives.derive(answer)
+    if not found:
         return []
-    if answer.mode == "odd" and not answer.picks:   # one pick, from before several odd ones (#540)
-        roi = answer.roi
-        return [(roi.id, answer.grid_rank, value)] if roi is not None and not roi.bbox_is_validated else []
-    if answer.mode == "odd":
-        tiles = answer.tiles or []
-        picked = [tiles[i] for i in answer.picks if isinstance(i, int) and 0 <= i < len(tiles)]
-        open_ids = Beetles.objects.filter(id__in=picked, bbox_is_validated=False, is_deleted=False).values_list("id", flat=True)
-        return [(rid, answer.grid_rank, value) for rid in open_ids]
-    picked = set(answer.picks or [])
-    if not picked:   # tapped nothing: says too little about each beetle
-        return []
-    left_out = picked | set(answer.flagged or [])
-    untapped = [t for i, t in enumerate(answer.tiles or []) if i not in left_out]
-    open_ids = Beetles.objects.filter(id__in=untapped, bbox_is_validated=False, is_deleted=False).values_list("id", flat=True)
-    return [(rid, answer.grid_rank, value) for rid in open_ids]
+    open_ids = set(Beetles.objects.filter(id__in=[r for r, _, _ in found], bbox_is_validated=False)
+                   .values_list("id", flat=True))
+    return [row for row in found if row[0] in open_ids]
 
 
 def implied_labels(answer):
@@ -1980,7 +1970,7 @@ def implied_labels(answer):
     ROI shares with its validated partner, taken from the partner's taxon. "Different
     subfamily" and "not sure" say nothing positive, so they imply nothing, and nor does a grid answer here: it is about
     other beetles than its own ``roi`` (what a grid says a beetle is counts through tap_votes, what it says a beetle is
-    not through grid_exclusions).
+    not through game_negatives).
     Species values are "Genus species".
     """
     if answer.skipped or answer.mode in ("odd", "select"):
@@ -2010,7 +2000,10 @@ def consensus(limit=None, roi_ids=None, voters=None):
     Returns a list of dicts sorted by number of answers (most first):
     {"roi", "answers", "players", "ranks": {rank: {"value", "support", "votes",
     "trusted", "trusted_votes"}}, "trusted_rank", "taxon"}
-    ``support`` is the winning value's share of the total vote weight at that rank.
+    ``support`` is the winning value's share of the total vote weight at that rank, counting the weight of the
+    players who said the beetle is *not* that value (game_negatives) as weight against it. ``against`` is how many
+    players said so, and ``ruled_out`` the names at that rank that enough players ruled out (GAME_NOT_MIN_PLAYERS,
+    outweighing the votes for them), which are never the suggestion; nor is a name below one ruled out.
     ``voters``, when given, limits it to the answers of those players (see game_levels.suggestion_voters).
     """
     from .game_trust import TrustContext
@@ -2053,28 +2046,58 @@ def consensus(limit=None, roi_ids=None, voters=None):
             entry["players"].add(pid)
             entry["votes"].append((pid, vote))
 
+    # What players said each beetle is not (game_negatives): evidence against a name, and enough of it rules it out
+    from . import game_negatives
+    nots = game_negatives.against(None if roi_ids is None else list(per_roi), voters) if per_roi else {}
+    said_not = {p for by_rank in nots.values() for names in by_rank.values() for s in names.values() for p in s["players"]}
+    if said_not - set(reliability):
+        reliability.update(player_reliability(said_not - set(reliability)))
+    not_weight, min_not = tap_weight(), int(game_setting("GAME_NOT_MIN_PLAYERS", 2))
+
     results = []
     for entry in per_roi.values():
         ranks = {}
+        ruled = set()   # (rank, name) ruled out at a rank above: the names below it are out too
+        roi_nots = nots.get(entry["roi"].id, {})
         for r in RANKS:
             tally, count = defaultdict(float), defaultdict(int)
-            display = {}
+            display, uppers = {}, defaultdict(set)
             for pid, labels in entry["votes"]:
                 if r not in labels:
                     continue
                 key = labels[r].lower()
                 display.setdefault(key, labels[r])
+                uppers[key].update((rr, labels[rr].lower()) for rr in RANKS[: RANKS.index(r)] if labels.get(rr))
                 weights = reliability.get(pid, {}).get("all") or default_weight()
                 tally[key] += weights[r]["weight"] * getattr(labels, "weight", 1.0)
                 count[key] += 1
+            names_not = roi_nots.get(r, {})
+            # a name enough players ruled out is out even if nobody voted for it here (for the ranks below)
+            ruled.update((r, k) for k, s in names_not.items() if k not in tally and len(s["players"]) >= min_not)
             if not tally:
                 ranks[r] = None
                 continue
-            key = max(tally, key=tally.get)
+            weight_against, n_against, out = {}, {}, []
+            for key in tally:
+                players = names_not.get(key, {}).get("players", set())
+                weight_against[key] = not_weight * sum(
+                    (reliability.get(p, {}).get("all") or default_weight())[r]["weight"] for p in players)
+                n_against[key] = len(players)
+                if (len(players) >= min_not and weight_against[key] > tally[key]) or uppers[key] & ruled:
+                    out.append(key)
+            ruled.update((r, k) for k in out)
+            candidates = [k for k in tally if k not in out]
+            if not candidates:
+                ranks[r] = None
+                continue
+            key = max(candidates, key=lambda k: tally[k] - weight_against[k])
             ranks[r] = {
                 "value": display[key],
-                "support": tally[key] / sum(tally.values()),
+                # the winner's share of everything said at this rank, the "not that name"s included
+                "support": tally[key] / (sum(tally.values()) + weight_against[key]),
                 "votes": count[key],
+                "against": n_against[key],
+                "ruled_out": sorted(display[k] for k in out),
             }
         verdict = trust.verdict([(p, l) for p, l in entry["votes"] if getattr(l, "weight", 1.0) == 1.0], ranks)
         for r in RANKS:
