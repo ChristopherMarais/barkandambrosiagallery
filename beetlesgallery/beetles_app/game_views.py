@@ -704,13 +704,14 @@ def _crop_url(rnd, index, image, roi, size):
 def _item_images(rnd, index, extras=False):
     """
     The photos of one item: the whole photo ("url", for the whole-photo view), its box, and the crop the feed shows
-    ("small" at once, "large" swapped in when it arrives; #494). With ``extras``, each also says how many other photos
+    ("small" at once, "large" swapped in when it arrives; #494) with its shape ("ar", so its tile never reshapes). With ``extras``, each also says how many other photos
     there are of that same beetle ("more"), and lists them ("photos") once the player has unlocked them
     (game_levels.SPECIMEN_PHOTOS). Odd One Out shows its beetles in a grid, each on its own (no other photos of them).
     """
     rois = _shown_rois(rnd.items[index])
     images = [{"url": r.display_url, "box": _box(r), "thumb": game_answer_review.thumb_url(r),
-               "small": _crop_url(rnd, index, i, r, "small"), "large": _crop_url(rnd, index, i, r, "large")}
+               "small": _crop_url(rnd, index, i, r, "small"), "large": _crop_url(rnd, index, i, r, "large"),
+               "ar": game_crops.aspect(r)}
               for i, r in enumerate(rois)]
     if rnd.items[index].get("tiles"):
         return images

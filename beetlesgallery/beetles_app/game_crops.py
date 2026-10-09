@@ -81,6 +81,18 @@ def crop_name(roi, size):
     return f"crops/{key[:2]}/{key[2:4]}/{uuid.UUID(str(roi.id))}_{key}_{size}.{file_format()[1]}"
 
 
+def aspect(roi):
+    """
+    The crop's width over its height (the window around the box keeps the box's shape), from the photo's stored size:
+    the page sizes a photo's tile with it before the crop arrives. None when the photo's size isn't stored.
+    """
+    asset = roi.image_asset
+    width, height = (asset.image_width, asset.image_height) if asset is not None else (None, None)
+    if not (width and height and roi.has_bbox()):
+        return None
+    return round(float(roi.bbox_width) * width / (float(roi.bbox_height) * height), 4)
+
+
 def crop_url(round_id, index, image, roi, size):
     """
     Where the feed gets a shown beetle's crop (game_views.game_crop): by its batch, its item and its place there, never

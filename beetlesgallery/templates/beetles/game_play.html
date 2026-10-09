@@ -24,10 +24,12 @@
   #photos.fade canvas { opacity: 0; }
   #photos canvas { transition: opacity 0.15s ease; }
   /* Naming shows one photo: size the image area to it, not a tall grey band of empty space (#play-space). The cell
-     takes the photo's own aspect ratio (--photo-ar, set once it loads), capped at 45% of the screen's height. */
+     takes the photo's own aspect ratio (--photo-ar, and --ar as a number: sent with the item, so the empty tile already
+     has it), as wide as fits under 45% of the screen's height (less the padding) and the room above the panel. Its
+     size is set here, never taken from the canvas, so the photo doesn't move when it lands or turns sharp. */
   #game[data-mode="classify"] #photos { flex: 0 1 auto; max-height: 45vh; width: 100%; background: none; }
-  #game[data-mode="classify"] #photos .cell { flex: 0 1 auto; width: auto; height: auto; max-width: 100%; max-height: 100%;
-      aspect-ratio: var(--photo-ar, 4 / 3); }
+  #game[data-mode="classify"] #photos .cell { flex: 0 1 auto; height: auto; max-width: 100%; max-height: none;
+      width: min(100%, calc((min(45vh, 100cqh) - 1rem) * var(--ar, 1.3333))); aspect-ratio: var(--photo-ar, 4 / 3); }
   /* ...and centred in the room above the answer panel, the same space above and below it, not pushed to the top (r7) */
   #game[data-mode="classify"] #photo-area { justify-content: center; }
   /* Lay the tiles (#602): the new beetle's empty tiles go down at once, one after another (--i, --lay-step), and each
@@ -1789,6 +1791,12 @@
     }
   }
 
+  // A Naming tile's shape: the CSS's aspect ratio and the number its width is worked out from
+  function photoShape(cell, ar) {
+    cell.style.setProperty("--photo-ar", String(ar));
+    cell.style.setProperty("--ar", String(ar));
+  }
+
   // Lay the tiles (#602): the new beetle's empty tiles go down at once, quickly one after another, and each photo
   // lands in its tile as soon as it is decoded (the small crop, then the sharp one). Usually the photos are in already
   // (loaded ahead); otherwise the laying covers the wait. The answer opens once every photo is in.
@@ -1826,11 +1834,14 @@
           loadImage(im.large).then((big) => { if (canvas.isConnected) drawCrop(canvas, big, im.box, true); }).catch(() => {});
         }
       });
+      // Naming: the tile takes this photo's own shape, not a fixed box (#play-space), from the item when it says
+      if (MODE === "classify" && im.ar) photoShape(cell, im.ar);
       loads[i].then((got) => {   // the photo lands in its tile (if this beetle is still on screen), then the sharp one
         if (!got || !canvas.isConnected) return;
         drawCrop(canvas, got.img, im.box, got.cut);
-        // Naming: size the tile to this photo's own shape, not a fixed box (#play-space)
-        if (MODE === "classify") cell.style.setProperty("--photo-ar", canvas.width + " / " + canvas.height);
+        // ...or from the photo itself, where the item didn't say or said otherwise (a photo stored on its side)
+        const ar = canvas.width / canvas.height;
+        if (MODE === "classify" && (!im.ar || Math.abs(ar - im.ar) > 0.02 * im.ar)) photoShape(cell, ar);
         cell.classList.add("landed");
         moved();
         if (!sharpOnZoom) sharpen();
@@ -3006,9 +3017,12 @@
     $("submit").classList.toggle("next-busy", waitingNext);
     $("submit").setAttribute("aria-busy", waitingNext ? "true" : "false");
     $("submit-spin").classList.toggle("hidden", !waitingNext);
+    // While answering, its line stays when there is nothing to say (a pick made, the photos still coming), so the
+    // photos above never move as it comes and goes; on the review it is gone
     const hint = !onReview && !busy && !ready ? submitHint() : "";
-    $("submit-hint").textContent = hint;
-    $("submit-hint").classList.toggle("hidden", !hint);
+    $("submit-hint").textContent = hint || "\u00a0";
+    $("submit-hint").classList.toggle("hidden", onReview);
+    $("submit-hint").classList.toggle("invisible", !onReview && !hint);
   }
 
   function resetAnswer() {
