@@ -364,7 +364,7 @@
   :is(#photos, #previous-photos)[data-size="25"] :is(.rv-num, .rv-badge) { font-size: 0.5625rem; top: 0.125rem; height: 1rem; }
   :is(#photos, #previous-photos)[data-size="25"] .rv-num { left: 0.125rem; min-width: 1rem; padding: 0 0.2rem; }
   :is(#photos, #previous-photos)[data-size="25"] .rv-badge { left: 1.25rem; padding: 0 0.25rem; }
-  /* On a phone the small tiles of 16 and 25 keep only the points: "missed" and "vote" would run into the tile's
+  /* On a phone the small tiles of 16 and 25 keep only the points: "missed" would run into the tile's
      number, and the dashed and grey rings already say them (the card lists them too) */
   @media (max-width: 639px) { :is(#photos, #previous-photos):is([data-size="16"], [data-size="25"]) .rv-badge.flat { display: none; } }
   /* the photo's own buttons and tags stay on top of the names */
@@ -471,7 +471,7 @@
   :is(#photos, #previous-photos)[data-size="16"] .cell.has-names > .rv-names { padding-bottom: 1.75rem; }
   :is(#photos, #previous-photos)[data-size="25"] .cell.has-names > .rv-names { padding-bottom: 1.5rem; }
   /* A grid's photo after the answer: one name, at the grid's rank, centred and a little bigger (rankLabel); a long
-     one wraps. How sure IBBI-AI (blue) or the players (purple) are follows it, in a light tint of their colour. */
+     one wraps. A beetle IBBI-AI (blue) or the players (purple) named has their dot before the name and how sure they are after it. */
   #game :is(#photos, #previous-photos) .cell > .rv-names.at-rank { font-size: 0.9375rem; line-height: 1.2; }
   #game :is(#photos, #previous-photos)[data-size="9"] .cell > .rv-names.at-rank { font-size: 0.875rem; }
   #game :is(#photos, #previous-photos)[data-size="16"] .cell > .rv-names.at-rank { font-size: 0.75rem; }
@@ -479,8 +479,9 @@
   .rv-names.at-rank > span { display: block; text-align: center; overflow-wrap: break-word; }
   .rv-names.at-rank .nm { white-space: normal; }
   .rv-names.at-rank .sure { font-size: 0.85em; font-weight: 600; white-space: nowrap; }
-  .rv-names.at-rank .sure.ai { color: #bfdbfe; }
-  .rv-names.at-rank .sure.players { color: #e9d5ff; }
+  .rv-names.at-rank .sure.ai { color: #93c5fd; }
+  .rv-names.at-rank .sure.players { color: #d8b4fe; }
+  .rv-names.at-rank .rv-dot { box-shadow: 0 0 0 1.5px #fff; }
   @media (min-width: 640px) {
     #game :is(#photos, #previous-photos)[data-size="9"] .cell > .rv-names.at-rank { font-size: 1rem; }
     #game :is(#photos, #previous-photos)[data-size="16"] .cell > .rv-names.at-rank { font-size: 0.875rem; }
@@ -2251,7 +2252,11 @@
     // Under the headline at most one short line of what matters (#569): the names are on the photos, the points on
     // the tiles, and the rings and dots need no legend
     const line = r.classify ? classifyLine(r.classify) : r.pair ? pairLine(r.pair) : r.grid ? parts(r.grid.note || []) : [];
-    holder.replaceChildren(head, ...(line.length ? [node("p", "rv-line", ...line)] : []));
+    const votes = r.grid ? (r.grid.tiles || []).filter((t) => t && (t.state === "vote" || t.state === "pick")).length : 0;
+    const voted = votes ? [node("p", "rv-line", votes === 1 ? "1 of your picks counts as a vote: no one knows this one yet."
+                                                 : votes + " of your picks count as votes: no one knows these yet.")] : [];
+    voted.forEach((p) => { p.dataset.testid = "vote-line"; });
+    holder.replaceChildren(head, ...(line.length ? [node("p", "rv-line", ...line)] : []), ...voted);
   }
 
   // Where a name comes from, as a coloured dot (#569): green validated, blue IBBI-AI, purple the players, glowing
@@ -2357,8 +2362,8 @@
     const by = ring === "ring-open" || ring === "ring-unknown" ? callBy(t) : null;
     if (by) cellEl.classList.add("by-" + by);
     if (!cellEl.querySelector(".rv-num")) cellEl.appendChild(node("span", "rv-num", String(i + 1)));   // numbered at Submit
-    const badge = t.points ? [pts(t.points), t.points > 0 ? "up" : "down"] : t.state === "missed" ? ["missed", "flat"]
-                : t.state === "vote" || t.state === "pick" ? ["vote", "flat"] : null;
+    // a pick nobody can check yet has no tag: its grey ring says so, and the line under the result counts them
+    const badge = t.points ? [pts(t.points), t.points > 0 ? "up" : "down"] : t.state === "missed" ? ["missed", "flat"] : null;
     if (badge) cellEl.appendChild(node("span", "rv-badge " + badge[1], badge[0]));
     if ((g.seen || []).includes(i)) cellEl.appendChild(seenMark("tile-seen"));   // this very tile was seen before (#600)
   }
@@ -2495,6 +2500,7 @@
     }
     const line = node("span", "", node("span", "nm", taxonName(r.name, rank)));
     line.title = rank + ": " + r.name + (b.validated ? " (validated)" : "");
+    if (!b.validated && SURE_BY[r.source]) line.prepend(sourceDot(r.source));
     if (!b.validated && r.sure != null && SURE_BY[r.source]) {
       const sure = node("span", "sure " + r.source, r.sure + "%");
       sure.title = SURE_BY[r.source] + ": " + r.sure + "% sure";

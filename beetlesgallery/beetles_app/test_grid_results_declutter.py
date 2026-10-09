@@ -24,17 +24,18 @@ class GridTileNamesPageTests(SimpleTestCase):
         # the whole photo still gets every rank and both sources
         self.assertIn('$("lb-names").replaceChildren(...(names ? [namesLabel(names, previous, true)] : []));', self.html)
 
-    def test_the_label_has_no_dots_rank_tags_or_id_types(self):
+    def test_the_label_has_no_validated_dot_rank_tags_or_id_types(self):
         body = self.html.split("function rankLabel(b, rank) {", 1)[1].split("\n  }\n", 1)[0]
-        for clutter in ("sourceDot", "RANK_ABBR", '"idl"', "columnCell", '"hdr"'):
+        for clutter in ('sourceDot("truth")', "RANK_ABBR", '"idl"', "columnCell", '"hdr"'):
             self.assertNotIn(clutter, body)
         self.assertIn('const r = (b.ranks || []).find((x) => x.rank === rank) || {};', body)
 
     def test_only_an_unvalidated_name_shows_how_sure_and_whose_it_is(self):
         self.assertIn('if (!b.validated && r.sure != null && SURE_BY[r.source]) {', self.html)
         self.assertIn('const sure = node("span", "sure " + r.source, r.sure + "%");', self.html)
-        self.assertIn(".rv-names.at-rank .sure.ai { color: #bfdbfe; }", self.html)        # blue: IBBI-AI
-        self.assertIn(".rv-names.at-rank .sure.players { color: #e9d5ff; }", self.html)   # purple: the players
+        self.assertIn(".rv-names.at-rank .sure.ai { color: #93c5fd; }", self.html)        # blue: IBBI-AI
+        self.assertIn(".rv-names.at-rank .sure.players { color: #d8b4fe; }", self.html)   # purple: the players
+        self.assertIn("if (!b.validated && SURE_BY[r.source]) line.prepend(sourceDot(r.source));", self.html)   # their dot
 
     def test_the_name_is_centred_and_sized_per_grid(self):
         self.assertIn(".rv-names.at-rank > span { display: block; text-align: center; overflow-wrap: break-word; }", self.html)
@@ -70,3 +71,17 @@ class GridReviewCarriesTheTileNameTests(ReviewCase):
         self.assertEqual(review["grid"]["rank"], "genus")
         names = [next(r for r in b["ranks"] if r["rank"] == "genus")["name"] for b in review["beetles"]]
         self.assertEqual(names, ["Xyleborus", "Xyleborus", "Platypus"])
+
+
+class VoteTagTests(SimpleTestCase):
+    """A pick nobody can check yet has no "vote" tag on its photo; one line under the result counts them."""
+
+    def setUp(self):
+        self.html = GAME_PLAY.read_text(encoding="utf-8")
+
+    def test_no_vote_tag_on_the_photos(self):
+        self.assertNotIn('["vote", "flat"]', self.html)
+
+    def test_the_line_under_the_result_counts_the_votes(self):
+        self.assertIn('" of your picks count as votes: no one knows these yet."', self.html)
+        self.assertIn('"1 of your picks counts as a vote: no one knows this one yet."', self.html)
