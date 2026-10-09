@@ -3,6 +3,8 @@ Select all (#370): 4, 9 or 16 beetles (the grid ladder, #489) and a group ("Tap 
 a perfect grid earns twice a Similarity answer times its size factor, a wrong tap costs 1.5 times a right one, and taps
 on unchecked beetles are only recorded.
 """
+from unittest import mock
+
 from django.test import override_settings
 from django.urls import reverse
 
@@ -56,18 +58,20 @@ class LadderTests(SelectCase):
 
 
 class BuildTests(SelectCase):
-    def test_every_grid_has_three_or_four_members_and_at_least_as_many_others(self):
+    def test_every_grid_has_two_to_four_members_and_at_least_as_many_others(self):
         for rank in game.RANKS:
             with self.subTest(rank=rank):
                 self.at(rank)
                 item = game.build_select_items(self.user, 1)[0]
                 self.assertEqual((item["mode"], item["rank"], len(item["tiles"]), len(set(item["tiles"]))), ("select", rank, 9, 9))
                 named = [self.name_at(t, rank).lower() == item["group"][rank].lower() for t in item["tiles"]]
-                self.assertIn(sum(named), (3, 4))
+                low, high = game.SELECT_MEMBERS[9]
+                self.assertTrue(low <= sum(named) <= high, sum(named))
                 self.assertGreaterEqual(9 - sum(named), sum(named))   # tapping everything never pays
                 photos = game.Beetles.objects.filter(id__in=item["tiles"]).values_list("image_asset_id", flat=True)
                 self.assertEqual(len(set(photos)), 9)
 
+    @mock.patch.dict(game.SELECT_MEMBERS, {9: (3, 4)})   # a group of nine needs three members, so only affinis fits
     def test_every_grid_has_a_sure_and_an_unsure_ai_beetle_besides_validated_ones(self):
         self.at("species")
         # only Xyleborus affinis has three validated beetles, so only it can be the group of nine; two each of the others

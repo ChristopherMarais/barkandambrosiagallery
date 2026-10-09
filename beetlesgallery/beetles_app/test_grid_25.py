@@ -91,7 +91,8 @@ class BuilderTests(GridCase):
         self.assertEqual((item["size"], len(set(item["tiles"])), item["rank"]), (25, 25, "genus"))
         known = game.Beetles.objects.select_related("taxon").filter(id__in=item["tiles"], bbox_is_validated=True)
         members = sum(b.taxon.genus == item["group"]["genus"] for b in known)
-        self.assertTrue(7 <= members <= 10, members)                      # about a quarter to under half
+        low, high = game.SELECT_MEMBERS[25]
+        self.assertTrue(low <= members <= high, members)                  # a number drawn for each grid
         self.assertGreaterEqual(known.count() - members, members)         # tapping everything never pays
         self.assertLessEqual(25 - known.count(), game.SELECT_AI[25][1])
 
