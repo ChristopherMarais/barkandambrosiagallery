@@ -4,30 +4,61 @@
 
 {% block extra_css %}
 <style>
-  /* A computer (lg, 64rem and up: the lg breakpoint changes structure): two columns, playing on the left and the
-     rest on the right, not a phone's column in the middle of the screen. Below lg the wrappers are plain blocks and
-     the page is the phone's, one column in the same order. */
+  /* A computer (lg, 64rem and up: the lg breakpoint changes structure): a play-first dashboard on six columns.
+     A top band (last session | Play | level, streak, goal), the four games in a row, the four accuracy plots in a
+     row, then this week's top players (wide) beside the shortcuts, Invite and feedback. Below lg the wrappers are
+     plain blocks and the page is the phone's, one column in the same order: grid areas only place things here. */
   @media (min-width: 64rem) {
-    #game-home { max-width: 72rem; }
-    #game-home .gh-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 2.5rem; align-items: start; }
+    #game-home { max-width: 80rem; }
+    #game-home .gh-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); column-gap: 1.5rem;
+      grid-template-rows: auto auto auto auto auto auto 1fr;
+      grid-template-areas: "recap recap play play stats stats" "modes modes modes modes modes modes" "ranks ranks ranks ranks ranks ranks"
+        "checked checked checked checked checked checked" "news news news news news news" "board board board board nav nav" "board board board board more more"; }
+    #game-home.gh-no-recap .gh-grid { grid-template-areas: "play play play play stats stats" "modes modes modes modes modes modes" "ranks ranks ranks ranks ranks ranks"
+        "checked checked checked checked checked checked" "news news news news news news" "board board board board nav nav" "board board board board more more"; }
+    /* one gap under every row, as a margin, so a row that isn't there (no recap, nothing checked) leaves no gap */
+    #game-home .gh-grid > * { margin: 0 0 1.75rem; }
+    #game-home .gh-recap { grid-area: recap; }
+    #game-home .gh-play { grid-area: play; display: flex; flex-direction: column; }
+    #game-home .gh-play > a { flex: 1 1 auto; min-height: 7rem; font-size: 1.875rem; }
+    #game-home .gh-play p { margin: 0.5rem 0 0; }
+    #game-home .gh-stats { grid-area: stats; display: flex; flex-direction: column; gap: 0.75rem; }
+    #game-home .gh-stats > * { margin: 0; }
+    #game-home .gh-days { grid-template-columns: minmax(0, 1fr); gap: 0.75rem; flex: 1 1 auto; }
+    #game-home .gh-modes { grid-area: modes; }
+    #game-home .gh-ranks { grid-area: ranks; }
+    /* the four plots in a row from 80rem (1280 wide); below that their ticks would touch, so two by two */
+    #game-home .gh-ranks .acc-ranks { gap: 0.75rem; }
+    @media (min-width: 80rem) { #game-home .gh-ranks .acc-ranks { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+    #game-home .gh-checked { grid-area: checked; }
+    #game-home .gh-checked .checked-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
+    #game-home .gh-checked .checked-list > * { margin: 0; }
+    #game-home .gh-news { grid-area: news; }
+    /* the five shortcuts as three over two, the two below each half a row wide, so no hole is left */
+    #game-home .gh-nav { grid-area: nav; grid-template-columns: repeat(6, minmax(0, 1fr)); align-self: start; }
+    #game-home .gh-nav > a { grid-column: span 2; }
+    #game-home .gh-nav > a:nth-child(n+4) { grid-column: span 3; }
+    #game-home .gh-board { grid-area: board; align-self: start; }
+    #game-home .gh-more { grid-area: more; align-self: start; }
+    #game-home .gh-more > * { margin: 0 0 1rem; }
+    #game-home .gh-more summary { display: flex; width: 100%; }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div id="game-home" class="max-w-xl mx-auto">
+<div id="game-home" class="max-w-xl mx-auto{% if not last_session %} gh-no-recap{% endif %}">
 
   <div class="flex items-center justify-between gap-3 mb-5">
     <h1 class="page-title"><span class="inline-flex items-center gap-2">{{ game_name }}</span></h1>
     <a href="{% url 'game_how' %}" class="text-sm text-gray-500 underline hover:text-gray-900 hit-area">How it works</a>
   </div>
 
-  <div class="gh-cols">
-  <div class="gh-main">
+  <div class="gh-grid">
   {% if last_session %}
   <!-- The recap the game shows when you leave, once, when the page was closed or put away before it could show it -->
   {% with r=last_session %}
-  <section class="mb-5 p-4 border border-gray-200 rounded-2xl text-center" data-testid="last-session">
+  <section class="gh-recap mb-5 p-4 border border-gray-200 rounded-2xl text-center" data-testid="last-session">
     <h2 class="text-lg font-semibold text-gray-900">Your last session</h2>
     <p class="mt-1 text-sm text-gray-500">{{ r.labelled|digit_groups }} beetle{{ r.labelled|pluralize }} labelled. Level {{ r.level }}, {{ r.level_name }}. {{ r.today }} of {{ r.goal }} beetles today.</p>
     <div class="grid grid-cols-2 gap-2 mt-3">
@@ -48,13 +79,16 @@
   {% endif %}
 
   <!-- One button: the feed mixes both games -->
+  <div class="gh-play">
   <a href="{% url 'game_play' 'mixed' %}" data-testid="play"
     class="btn-main flex w-full py-6 mb-2 text-2xl rounded-2xl">
     <i class="fi fi-rr-play"></i> Play
   </a>
   <p class="mb-5 text-center text-sm"><a href="{% url 'game_play' 'mixed' %}?tour=1" class="text-gray-500 underline hover:text-gray-900" data-testid="home-tour">Show me around the game</a></p>
+  </div>
 
   <!-- Level, points, streak, today -->
+  <div class="gh-stats">
   <a href="{% url 'game_unlocks' %}" class="block p-4 mb-3 bg-gray-50 border border-gray-100 rounded-2xl hover:border-gray-300">
     <div class="flex items-center gap-2">
       {% include "beetles/includes/game_level_badge.html" with level=rewards.level name=rewards.level_name %}
@@ -70,7 +104,7 @@
   </a>
 
   <!-- Each opens History for those days (#574) -->
-  <div class="grid grid-cols-2 gap-3 mb-5">
+  <div class="gh-days grid grid-cols-2 gap-3 mb-5">
     <a href="{% url 'game_history' %}?day=streak" class="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex items-center gap-2 text-sm hover:border-gray-300 hover:bg-gray-100" data-testid="streak-card">
       {% include "beetles/includes/game_streak.html" with days=rewards.streak alive=rewards.goal_met %}
     </a>
@@ -80,15 +114,14 @@
       <span class="text-sm font-semibold text-gray-900">{{ rewards.today }} today &middot; goal {{ rewards.goal }}{% if rewards.goal_met %} <i class="fi fi-rr-check text-green-600"></i>{% endif %}</span>
     </a>
   </div>
-
-  <div class="mb-3">{% include "beetles/includes/game_split.html" with link=True %}</div>
   </div>
-  <div class="gh-side">
-  <div class="mb-5">{% include "beetles/includes/game_accuracy_ranks.html" %}</div>
+
+  <div class="gh-modes mb-3">{% include "beetles/includes/game_split.html" with link=True %}</div>
+  <div class="gh-ranks mb-5">{% include "beetles/includes/game_accuracy_ranks.html" %}</div>
 
   {% if checked %}
   <!-- Beetles checked by a curator since last time: what you said, what it is -->
-  <section class="mb-5" data-testid="checked-recap">
+  <section class="gh-checked mb-5" data-testid="checked-recap">
     <div class="flex items-baseline justify-between mb-2">
       <h2 class="text-lg font-semibold text-gray-900">Reviewed by curators{% if checked_new > checked|length %} <span class="text-sm font-normal text-gray-500">({{ checked_new }})</span>{% endif %}</h2>
       <a href="{% url 'game_history' %}?tab=checked" class="text-sm underline text-gray-600 hover:text-gray-900 hit-area">All</a>
@@ -99,14 +132,14 @@
   {% endif %}
 
   {% if proposals_notice %}
-  <p class="mb-5 px-4 py-3 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-2xl" data-testid="proposals-banner">
+  <p class="gh-news mb-5 px-4 py-3 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-2xl" data-testid="proposals-banner">
     <i class="fi fi-rr-check-circle"></i> Your labels now go to the curators. <a href="{% url 'game_unlocks' %}?new=labels#labels" class="underline">More</a>
   </p>
   {% endif %}
 
   <!-- Everything else, one tap away. Two rows of three on a phone (five across breaks "Leaderboard" mid-word,
        #gh-icons-row); one row of five from a tablet up. -->
-  <nav class="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-6 text-center text-xs font-medium text-gray-700" aria-label="More">
+  <nav class="gh-nav grid grid-cols-3 sm:grid-cols-5 gap-2 mb-6 text-center text-xs font-medium text-gray-700" aria-label="More">
     <a href="{% url 'game_leaderboard' %}" class="py-3 rounded-2xl border border-gray-200 hover:bg-gray-50"><i class="fi fi-rr-trophy block text-xl text-gray-600"></i>Leaderboard</a>
     <a href="{% url 'game_unlocks' %}" class="py-3 rounded-2xl border border-gray-200 hover:bg-gray-50"><i class="fi fi-rr-unlock block text-xl text-gray-600"></i>Unlocks</a>
     <a href="{% url 'game_expertise' %}" class="py-3 rounded-2xl border border-gray-200 hover:bg-gray-50"><i class="fi fi-rr-sitemap block text-xl text-gray-600"></i>Expertise</a>
@@ -115,7 +148,7 @@
   </nav>
 
   <!-- This week's top players, never all time; an empty week shows last week's top three -->
-  <div class="mb-6" data-testid="home-board">
+  <div class="gh-board mb-6" data-testid="home-board">
     <div class="flex items-baseline justify-between mb-2">
       <h2 class="text-lg font-semibold text-gray-900">Top players this week</h2>
       <a href="{% url 'game_leaderboard' %}" class="text-sm underline text-gray-600 hover:text-gray-900 hit-area">All</a>
@@ -128,6 +161,7 @@
     {% endif %}
   </div>
 
+  <div class="gh-more">
   <!-- Share: anyone can scan this off your screen to join (they sign up or sign in, then land here) -->
   {# The QR code stays folded until the button opens it (r7 D4). #}
   <section class="mb-6 text-center" data-testid="share-qr">
@@ -153,6 +187,14 @@
 
   {% include "beetles/includes/game_discussions.html" %}
 
+  {% if user.is_superuser %}
+  <a href="{% url 'game_settings' %}" class="flex items-center gap-2 mt-4 text-sm text-gray-500 hover:text-gray-900" data-testid="game-settings-link">
+    <i class="fi fi-rr-settings"></i> Superuser: Game settings
+  </a>
+  {% endif %}
+  </div>
+  </div>
+
   {% if discoveries %}
   <div id="discovery" class="fixed inset-0 z-96 flex items-center justify-center p-4 bg-black/40" role="dialog" aria-modal="true" aria-labelledby="discovery-title" data-testid="discovery-popup">
     <div class="w-full max-w-sm p-6 bg-white rounded-2xl shadow-xl text-center">
@@ -165,14 +207,6 @@
     </div>
   </div>
   {% endif %}
-
-  {% if user.is_superuser %}
-  <a href="{% url 'game_settings' %}" class="flex items-center gap-2 mt-4 text-sm text-gray-500 hover:text-gray-900" data-testid="game-settings-link">
-    <i class="fi fi-rr-settings"></i> Superuser: Game settings
-  </a>
-  {% endif %}
-  </div>
-  </div>
 </div>
 {% load game_podium_tags %}{% podium_popup %}
 {% endblock %}

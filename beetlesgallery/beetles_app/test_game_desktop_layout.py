@@ -101,24 +101,23 @@ class PhoneLayoutUntouchedTests(SimpleTestCase):
 
 
 class GameHomeTests(SimpleTestCase):
-    """The game home on a computer: two columns, playing on the left and the rest on the right; one column below lg,
-    in the same order as before."""
+    """The game home on a computer: a play-first dashboard on one grid (more in test_game_home_dashboard); one
+    column below lg, in the same order as before."""
 
     HOME = (Path(__file__).resolve().parent.parent / "templates" / "beetles" / "game_home.html").read_text(encoding="utf-8")
 
-    def test_two_columns_from_lg_only(self):
+    def test_one_grid_from_lg_only(self):
         style = self.HOME[self.HOME.index("<style>"):self.HOME.index("</style>")]
         lg = block(style, LG)
-        self.assertIn("#game-home { max-width: 72rem; }", lg)
-        self.assertIn("#game-home .gh-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);", lg)
-        self.assertNotIn("gh-cols", style.replace(lg, ""))
-        self.assertIn('<div id="game-home" class="max-w-xl mx-auto">', self.HOME)
+        self.assertIn("#game-home { max-width: 80rem; }", lg)
+        self.assertIn("#game-home .gh-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));", lg)
+        self.assertNotIn("gh-grid", style.replace(lg, ""))
+        self.assertNotIn("gh-cols", self.HOME)   # the two columns of #649 are gone
+        self.assertIn('<div id="game-home" class="max-w-xl mx-auto{% if not last_session %} gh-no-recap{% endif %}">', self.HOME)
 
-    def test_playing_left_and_the_rest_right_in_the_phone_s_order(self):
+    def test_the_phone_s_order_is_kept(self):
         home = self.HOME
-        main, side = home.index('<div class="gh-main">'), home.index('<div class="gh-side">')
-        self.assertLess(home.index('<div class="gh-cols">'), main)
-        for left in ('data-testid="last-session"', 'data-testid="play"', 'data-testid="daily-goal"', "game_split.html"):
-            self.assertTrue(main < home.index(left) < side, left)
-        for right in ("game_accuracy_ranks.html", 'data-testid="checked-recap"', 'aria-label="More"', 'data-testid="home-board"', 'data-testid="share-qr"'):
-            self.assertLess(side, home.index(right), right)
+        order = ['data-testid="last-session"', 'data-testid="play"', 'data-testid="daily-goal"', "game_split.html", "game_accuracy_ranks.html",
+                 'data-testid="checked-recap"', 'aria-label="More"', 'data-testid="home-board"', 'data-testid="share-qr"', "game_discussions.html"]
+        at = [home.index(marker) for marker in order]
+        self.assertEqual(at, sorted(at))
