@@ -37,7 +37,7 @@ from collections import defaultdict
 from datetime import timedelta
 
 from django.core.cache import cache
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
 
@@ -156,47 +156,59 @@ def skill_counts(player):
     tree has one parent per taxon; the page fills them in when a name is picked, an answer sent without them counts
     the same), as a grid's taps count at the ranks above its own (grid_claims).
     """
-    stats = {}
+    return skill_counts_many([player.id]).get(player.id, {})
+
+
+def skill_counts_many(player_ids, since=None):
+    """
+    skill_counts for many players at once, {player_id: counts}, in three queries whatever their number (the
+    leaderboard's accuracy by rank). With ``since``, only answers given from then on (a leaderboard period).
+    """
+    stats = defaultdict(dict)
     seen = set()
 
-    def judge(rank, branch, ok, child):
-        row = stats.setdefault((rank, branch.lower()), [0, 0, branch, defaultdict(int)])
+    def judge(pid, rank, branch, ok, child):
+        row = stats[pid].setdefault((rank, branch.lower()), [0, 0, branch, defaultdict(int)])
         row[0] += int(ok)
         row[1] += 1
         row[3][child] += 1
 
     # a beetle seen before (#541) earns points but shows memory, not skill: left out of naming, grids included
-    scored = dict(player=player, is_retry=False, seen_before=False, skipped=False, score_hold=False)
+    scored = dict(player_id__in=list(player_ids), is_retry=False, seen_before=False, skipped=False, score_hold=False)
+    if since is not None:
+        scored["answered_at__gte"] = since
     answers = (
         GameAnswer.objects.filter(Q(is_check=True) | Q(validated_later=True), mode="classify", **scored)
-        .values("answered_at", "roi_id", "ref_subfamily", "ref_tribe", "ref_genus", "ref_species",
+        .values("player_id", "answered_at", "roi_id", "ref_subfamily", "ref_tribe", "ref_genus", "ref_species",
                 *[f"correct_{r}" for r in RANKS])
     )
     grids = list(GameAnswer.objects.filter(mode="select", grid_rank__in=RANKS, **scored).only(
-        "answered_at", "tiles", "picks", "flagged", "grid_rank", "grid_group"))
+        "player", "answered_at", "tiles", "picks", "flagged", "grid_rank", "grid_group"))
     tiles = grid_beetles(grids)
     for a in sorted([*answers, *grids], key=lambda a: a["answered_at"] if isinstance(a, dict) else a.answered_at):
         if isinstance(a, GameAnswer):
+            pid = a.player_id
             for rank, branch, ok, child, roi_ids in grid_claims(a, tiles):
-                fresh = [i for i in roi_ids if (rank, i) not in seen]
-                seen.update((rank, i) for i in fresh)
+                fresh = [i for i in roi_ids if (pid, rank, i) not in seen]
+                seen.update((pid, rank, i) for i in fresh)
                 if fresh:
-                    judge(rank, branch, all(ok[i] for i in fresh), child)
+                    judge(pid, rank, branch, all(ok[i] for i in fresh), child)
             continue
+        pid = a["player_id"]
         labels = {"subfamily": a["ref_subfamily"], "tribe": a["ref_tribe"], "genus": a["ref_genus"],
                   "species": a["ref_species"]}
         for r in RANKS:
             ok = a[f"correct_{r}"]
             if ok is None and labels[r] and any(a[f"correct_{d}"] for d in RANKS[RANKS.index(r) + 1:]):
                 ok = True   # a right name deeper down
-            if ok is None or (r, a["roi_id"]) in seen:
+            if ok is None or (pid, r, a["roi_id"]) in seen:
                 continue
-            seen.add((r, a["roi_id"]))
+            seen.add((pid, r, a["roi_id"]))
             branch = branch_for(r, labels)
             if BRANCH_OF[r] and not branch:
                 continue
-            judge(r, branch, ok, child_at(r, a["ref_genus"], a["ref_species"], labels[r]))
-    return stats
+            judge(pid, r, branch, ok, child_at(r, a["ref_genus"], a["ref_species"], labels[r]))
+    return dict(stats)
 
 
 def grid_beetles(grids):
@@ -477,20 +489,49 @@ def accuracy_by_rank(skills, apart):
     Naming and Find Them All (the player's skills, skill_counts); Distinction is Similarity and Odd One Out
     (apart_counts).
     """
+    return rank_cells([(s.rank, s.correct, s.judged) for s in skills], _by_rank_counts(apart))
+
+
+def _by_rank_counts(counts):
+    """skill_counts / apart_counts as (rank, correct, judged), one per branch."""
+    return [(rank, ok, n) for (rank, _), (ok, n, *_) in counts.items()]
+
+
+def rank_cells(naming, distinction):
+    """accuracy_by_rank's rows from (rank, correct, judged) counts for Naming and for Distinction, added up by rank."""
     totals = {r: {"naming": [0, 0], "distinction": [0, 0]} for r in RANKS}
-    for s in skills:
-        if s.rank in totals:
-            totals[s.rank]["naming"][0] += s.correct
-            totals[s.rank]["naming"][1] += s.judged
-    for (rank, _), (ok, n, *_) in apart.items():
-        if rank in totals:
-            totals[rank]["distinction"][0] += ok
-            totals[rank]["distinction"][1] += n
+    for kind, counts in (("naming", naming), ("distinction", distinction)):
+        for rank, ok, n in counts:
+            if rank in totals:
+                totals[rank][kind][0] += ok
+                totals[rank][kind][1] += n
 
     def cell(ok, n):
         return {"ok": ok, "n": n, "accuracy": ok / n if n else None}
 
     return [{"rank": r, **{k: cell(*v) for k, v in totals[r].items()}} for r in RANKS]
+
+
+def accuracy_by_rank_many(player_ids, since=None):
+    """
+    {player_id: accuracy_by_rank rows} for the leaderboard: the report's own numbers, for many players at once in a
+    few queries whatever their number. All time (no ``since``), Naming is the stored skills, exactly as on the report;
+    for a period, Naming and Distinction are both counted from that period's answers alone, by the same rules.
+    """
+    ids = list(player_ids)
+    if not ids:
+        return {}
+    naming = defaultdict(list)
+    if since is None:
+        stored = (PlayerSkill.objects.filter(player_id__in=ids).order_by().values("player_id", "rank")
+                  .annotate(ok=Sum("correct"), n=Sum("judged")).values_list("player_id", "rank", "ok", "n"))
+        for pid, rank, ok, n in stored:
+            naming[pid].append((rank, ok, n))
+    else:
+        for pid, counts in skill_counts_many(ids, since).items():
+            naming[pid] = _by_rank_counts(counts)
+    apart = apart_counts_many(ids, since)
+    return {pid: rank_cells(naming[pid], _by_rank_counts(apart.get(pid, {}))) for pid in ids}
 
 
 def player_report(player):
@@ -684,10 +725,18 @@ def apart_counts(player):
     (a pick outside the group), and shows the group's child, and the odd one's when it has the same parent. Coverage
     counts the judged answers that showed each child, as naming counts the images named.
     """
-    out = {}
+    return apart_counts_many([player.id]).get(player.id, {})
 
-    def judge(rank, branch, ok, children):
-        row = out.setdefault((rank, branch.lower()), [0, 0, branch, defaultdict(int)])
+
+def apart_counts_many(player_ids, since=None):
+    """
+    apart_counts for many players at once, {player_id: counts}, in two queries whatever their number (the
+    leaderboard's accuracy by rank). With ``since``, only answers given from then on (a leaderboard period).
+    """
+    out = defaultdict(dict)
+
+    def judge(pid, rank, branch, ok, children):
+        row = out[pid].setdefault((rank, branch.lower()), [0, 0, branch, defaultdict(int)])
         row[0] += int(ok)
         row[1] += 1
         for child in {c for c in children if c}:
@@ -696,20 +745,23 @@ def apart_counts(player):
     def child(a, side, rank):
         return child_at(rank, a[f"{side}__taxon__genus"], a[f"{side}__taxon__species"], a[f"{side}__taxon__{rank}"])
 
-    answers = GameAnswer.objects.filter(player=player, is_retry=False, seen_before=False, skipped=False,
-                                        score_hold=False)
+    answers = GameAnswer.objects.filter(player_id__in=list(player_ids), is_retry=False, seen_before=False,
+                                        skipped=False, score_hold=False)
+    if since is not None:
+        answers = answers.filter(answered_at__gte=since)
     correct = [f"correct_{r}" for r in RANKS]
     sides = [f"{side}__taxon__{r}" for side in ("roi", "roi_b") for r in RANKS]
-    for a in answers.filter(mode="pair").values(*sides, *correct):
+    for a in answers.filter(mode="pair").values("player_id", *sides, *correct):
         for r in RANKS:
             parent = BRANCH_OF[r]
             branch = (a[f"roi__taxon__{parent}"] or "") if parent else ""
             if parent and (not branch or branch.lower() != (a[f"roi_b__taxon__{parent}"] or "").lower()):
                 break   # different above this rank: nothing inside one taxon to tell apart
             if a[f"correct_{r}"] is not None:
-                judge(r, branch, a[f"correct_{r}"], [child(a, "roi", r), child(a, "roi_b", r)])
+                judge(a["player_id"], r, branch, a[f"correct_{r}"], [child(a, "roi", r), child(a, "roi_b", r)])
     odd_one = [f"roi_b__taxon__{r}" for r in RANKS]
-    for a in answers.filter(mode="odd", grid_rank__in=RANKS).values("grid_rank", "grid_group", *odd_one, *correct):
+    for a in answers.filter(mode="odd", grid_rank__in=RANKS).values("player_id", "grid_rank", "grid_group", *odd_one,
+                                                                     *correct):
         r, ok = a["grid_rank"], a[f"correct_{a['grid_rank']}"]
         parent, group = BRANCH_OF[r], a["grid_group"] or {}
         branch = (group.get(parent) or "") if parent else ""
@@ -718,8 +770,8 @@ def apart_counts(player):
         shown = [(group.get(r) or "").lower()]   # species groups are "Genus species", as child_at keys them
         if not parent or (a[f"roi_b__taxon__{parent}"] or "").lower() == branch.lower():
             shown.append(child(a, "roi_b", r))
-        judge(r, branch, ok, shown)
-    return out
+        judge(a["player_id"], r, branch, ok, shown)
+    return dict(out)
 
 
 def distinction_experts(player):

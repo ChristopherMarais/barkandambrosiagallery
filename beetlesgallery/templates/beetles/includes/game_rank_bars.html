@@ -1,0 +1,8 @@
+{% comment %}
+Four small bars, subfamily to species: one kind of accuracy split by rank, beside the leaderboard's pooled accuracy.
+cells: [{rank, ok, n, accuracy, step}] (game_board.with_by_rank); label: what they measure ("Naming", "Telling apart").
+Each bar is as tall as the accuracy and takes its colour on the site's scale (grey until enough answers).
+{% endcomment %}
+<span class="inline-flex items-end gap-0.5 h-4 shrink-0" role="img" data-testid="rank-bars"
+      aria-label="{{ label }} by rank: {% for c in cells %}{{ c.rank }} {% if c.n %}{% widthratio c.accuracy 1 100 %}%{% else %}none{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}"
+      title="{{ label }} by rank: {% for c in cells %}{{ c.rank }} {% if c.n %}{% widthratio c.accuracy 1 100 %}%{% else %}none{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}">{% for c in cells %}<span class="flex items-end w-1.5 h-full rounded-xs bg-gray-200 overflow-hidden"><span class="block w-full scale-fill-{{ c.step }}" style="height: {% if c.n %}{% widthratio c.accuracy 1 100 %}{% else %}0{% endif %}%"></span></span>{% endfor %}</span>

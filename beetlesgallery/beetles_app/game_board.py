@@ -10,6 +10,7 @@ identify what is in it, which is where people specialise and compete.
 from datetime import datetime, timedelta
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.db.models import Avg, Count, F, Q, Sum
 from django.db.models.functions import Floor, TruncWeek
 from django.utils import timezone
@@ -27,6 +28,9 @@ ACCURACY_COLUMNS = {"classify": ("id_accuracy", "identification"), "pair": ("sim
                     "odd": ("odd_accuracy", "odd"), "select": ("select_accuracy", "select")}
 # a branch of the tree -> the skill that measures it (see game_trust.BRANCH_OF)
 BRANCH_SKILL = {"subfamily": "tribe", "tribe": "genus", "genus": "species"}
+# one player's accuracy by rank on the board: period start, player, when their score row last changed (with_by_rank)
+BY_RANK_CACHE = "game:board_by_rank:v1:{}:{}:{}"
+BY_RANK_KEEP = 600
 
 
 def mode_stats(player_ids=None, since=None):
@@ -143,10 +147,11 @@ def last_week_top(top=3, now=None):
             for i, (p, total) in enumerate(places, start=1)]
 
 
-def board(sort="score", period="week", q="", limit=50):
+def board(sort="score", period="week", q="", limit=50, by_rank=False):
     """
     Rows: position, player_id, username, level, level_name, score, accuracy, id_accuracy, sim_accuracy, odd_accuracy,
-    select_accuracy, viewed, is_expert, discoveries. Sort by score, one game's accuracy, or beetles seen.
+    select_accuracy, viewed, is_expert, discoveries, and with ``by_rank`` their accuracy by rank (with_by_rank).
+    Sort by score, one game's accuracy, or beetles seen.
     Everything but the level and the expert mark follows the period: points, beetles seen, accuracy and finds.
     """
     scores = {s.player_id: s for s in PlayerScore.objects.all()}
@@ -191,7 +196,44 @@ def board(sort="score", period="week", q="", limit=50):
         rows.sort(key=lambda r: (-r["score"], r["username"]))
     for i, row in enumerate(rows, start=1):
         row["position"] = i
-    return rows[:limit] if limit else rows
+    rows = rows[:limit] if limit else rows
+    if by_rank:
+        stamps = {row["player_id"]: scores[row["player_id"]].updated_at.timestamp() for row in rows}
+        with_by_rank(rows, since, stamps)
+    return rows
+
+
+def with_by_rank(rows, since=None, stamps=None):
+    """
+    Each row's ``by_rank``: Naming and Distinction at each rank, subfamily to species, as the player's report counts
+    them (game_trust.accuracy_by_rank), from the period's answers (``since``; all time: the report's own numbers).
+    One pooled accuracy mixes easy subfamily calls with hard species ones, so this shows where a player really stands.
+    Every cell gets its ``step`` on the site's scale, grey until GAME_REPORT_MIN_JUDGED answers at that rank, as on
+    the expertise tree. A few queries for all the rows together, only for the rows shown.
+    With ``stamps`` ({player_id: PlayerScore.updated_at as a number}, moved by every answer and every recompute),
+    each player's figures are kept in the cache until they play again, so a view only counts for those who played
+    since the last one; BY_RANK_KEEP seconds at most, in case anything re-scores answers without touching it.
+    """
+    min_shown = game.game_setting("GAME_REPORT_MIN_JUDGED", 5)
+    period = since.isoformat() if since else "all"
+    keys = {row["player_id"]: BY_RANK_CACHE.format(period, row["player_id"], stamps.get(row["player_id"]))
+            for row in rows} if stamps else {}
+    found = cache.get_many(list(keys.values())) if keys else {}
+    cells = {pid: found[key] for pid, key in keys.items() if key in found}
+    missing = [row["player_id"] for row in rows if row["player_id"] not in cells]
+    if missing:
+        counted = game_trust.accuracy_by_rank_many(missing, since)
+        if keys:
+            cache.set_many({keys[pid]: counted[pid] for pid in missing}, BY_RANK_KEEP)
+        cells.update(counted)
+    for row in rows:
+        row["by_rank"] = cells[row["player_id"]]
+        for rank in row["by_rank"]:
+            for cell in (rank["naming"], rank["distinction"]):
+                cell["step"] = value_step(cell["accuracy"]) if cell["n"] >= min_shown else "none"
+        # as on the report (#618 rep-empty-col): no line of dashes for someone who told nothing apart in the period
+        row["by_rank_has_distinction"] = any(rank["distinction"]["n"] for rank in row["by_rank"])
+    return rows
 
 
 def branch_board(rank, value, limit=50):

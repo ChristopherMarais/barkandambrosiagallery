@@ -25,6 +25,8 @@
   {% if resets_at %}
   <p class="text-xs text-gray-500 mb-2" data-testid="resets">Since {% if period == 'week' %}Monday{% elif period == 'month' %}the 1st{% else %}1 January{% endif %}; starts again in {{ resets_at|timeuntil }} ({{ resets_at|date:"D j M" }}). Levels, expertise and badges never reset.</p>
   {% endif %}
+  <!-- One accuracy mixes easy subfamily calls with hard species ones: the bars split it by rank -->
+  <p class="text-xs text-gray-500 mb-2" data-testid="accuracy-hint">Accuracy mixes all ranks. Bars: subfamily to species.</p>
 
   <!-- Rows of rank - player+level - score - accuracy; every game's numbers open on tap (#618 lb-table, lb-badges, lb-me) -->
   <ol class="border border-gray-200 rounded-lg divide-y divide-gray-100 overflow-hidden" data-testid="board-table">
@@ -47,16 +49,45 @@
           </span>
           <span class="text-right shrink-0">
             <span class="block text-sm font-semibold text-gray-900 tabular-nums">{{ row.score|digit_groups }}<span class="text-xs font-normal text-gray-500"> pts</span></span>
-            <span class="block text-xs text-gray-500 tabular-nums">{% if row.headline_accuracy is not None %}{% widthratio row.headline_accuracy 1 100 %}%{% else %}<span class="text-gray-500">&mdash;</span>{% endif %} <span class="text-gray-500">{{ row.headline_label }}</span></span>
+            <span class="flex items-center justify-end gap-1.5 text-xs text-gray-500 tabular-nums">
+              {% include "beetles/includes/game_rank_bars.html" with cells=row.bars label=bars_label %}
+              <span>{% if row.headline_accuracy is not None %}{% widthratio row.headline_accuracy 1 100 %}%{% else %}<span class="text-gray-500">&mdash;</span>{% endif %} <span class="text-gray-500">{{ row.headline_label }}</span></span>
+            </span>
           </span>
           <i class="fi fi-rr-angle-small-down text-gray-400 shrink-0 transition-transform group-open:rotate-180" aria-hidden="true"></i>
         </summary>
-        <div class="px-3 pb-3 pt-1 border-t border-gray-100 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-          <div><span class="block text-gray-500">Name</span><span class="tabular-nums" data-testid="id-accuracy">{% if row.id_accuracy is not None %}{% widthratio row.id_accuracy 1 100 %}%{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}</span></div>
-          <div><span class="block text-gray-500">Sim.</span><span class="tabular-nums" data-testid="sim-accuracy">{% if row.sim_accuracy is not None %}{% widthratio row.sim_accuracy 1 100 %}%{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}</span></div>
-          <div><span class="block text-gray-500">Odd</span><span class="tabular-nums" data-testid="odd-accuracy">{% if row.odd_accuracy is not None %}{% widthratio row.odd_accuracy 1 100 %}%{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}</span></div>
-          <div><span class="block text-gray-500">Find</span><span class="tabular-nums" data-testid="select-accuracy">{% if row.select_accuracy is not None %}{% widthratio row.select_accuracy 1 100 %}%{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}</span></div>
-          <div class="col-span-2 sm:col-span-4 text-gray-500">Beetles seen: <span class="tabular-nums text-gray-700">{{ row.viewed|digit_groups }}</span></div>
+        <div class="px-3 pb-3 pt-2 border-t border-gray-100 text-xs grid sm:grid-cols-2 gap-x-6 gap-y-3 items-start">
+          <!-- Accuracy by rank, counted as on the player's report: naming and telling apart, subfamily to species -->
+          <table class="w-full" data-testid="by-rank">
+            <thead>
+              <tr class="text-gray-500">
+                <th scope="col" class="text-left font-normal pb-1">By rank</th>
+                {% for r in row.by_rank %}<th scope="col" class="text-right font-normal pb-1 pl-1">{{ r.rank|capfirst }}</th>{% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row" class="text-left font-normal text-gray-500 py-0.5" title="Naming and Find Them All">Naming</th>
+                {% for r in row.by_rank %}{% include "beetles/includes/game_rank_cell.html" with c=r.naming %}{% endfor %}
+              </tr>
+              {% if row.by_rank_has_distinction %}
+              <tr data-testid="by-rank-apart">
+                <th scope="row" class="text-left font-normal text-gray-500 py-0.5" title="Similarity and Odd One Out">Telling apart</th>
+                {% for r in row.by_rank %}{% include "beetles/includes/game_rank_cell.html" with c=r.distinction %}{% endfor %}
+              </tr>
+              {% endif %}
+            </tbody>
+          </table>
+          <div>
+            <p class="text-gray-500 mb-1">By game, all ranks</p>
+            <div class="grid grid-cols-4 gap-2">
+              <div><span class="block text-gray-500">Name</span><span class="tabular-nums" data-testid="id-accuracy">{% if row.id_accuracy is not None %}{% widthratio row.id_accuracy 1 100 %}%{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}</span></div>
+              <div><span class="block text-gray-500">Sim.</span><span class="tabular-nums" data-testid="sim-accuracy">{% if row.sim_accuracy is not None %}{% widthratio row.sim_accuracy 1 100 %}%{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}</span></div>
+              <div><span class="block text-gray-500">Odd</span><span class="tabular-nums" data-testid="odd-accuracy">{% if row.odd_accuracy is not None %}{% widthratio row.odd_accuracy 1 100 %}%{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}</span></div>
+              <div><span class="block text-gray-500">Find</span><span class="tabular-nums" data-testid="select-accuracy">{% if row.select_accuracy is not None %}{% widthratio row.select_accuracy 1 100 %}%{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}</span></div>
+            </div>
+            <p class="mt-2 text-gray-500">Beetles seen: <span class="tabular-nums text-gray-700">{{ row.viewed|digit_groups }}</span></p>
+          </div>
         </div>
       </details>
     </li>

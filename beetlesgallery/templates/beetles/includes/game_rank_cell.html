@@ -1,0 +1,2 @@
+{% load beetle_tags %}{# One cell of the leaderboard's accuracy by rank. c: {ok, n, accuracy, step} (game_board.with_by_rank) #}
+<td class="text-right tabular-nums py-0.5 pl-1"{% if c.n %} title="{{ c.ok|digit_groups_text }} of {{ c.n|digit_groups_text }} right"{% endif %}>{% if c.n %}<span class="block font-semibold scale-{{ c.step }}">{% widthratio c.accuracy 1 100 %}%</span><span class="block text-gray-500">of {{ c.n|digit_groups }}</span>{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}</td>
