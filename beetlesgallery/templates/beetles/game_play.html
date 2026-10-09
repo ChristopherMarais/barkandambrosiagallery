@@ -470,6 +470,22 @@
   :is(#photos, #previous-photos) .cell.has-names > .rv-names { padding-bottom: 2.25rem; }
   :is(#photos, #previous-photos)[data-size="16"] .cell.has-names > .rv-names { padding-bottom: 1.75rem; }
   :is(#photos, #previous-photos)[data-size="25"] .cell.has-names > .rv-names { padding-bottom: 1.5rem; }
+  /* A grid's photo after the answer: one name, at the grid's rank, centred and a little bigger (rankLabel); a long
+     one wraps. How sure IBBI-AI (blue) or the players (purple) are follows it, in a light tint of their colour. */
+  #game :is(#photos, #previous-photos) .cell > .rv-names.at-rank { font-size: 0.9375rem; line-height: 1.2; }
+  #game :is(#photos, #previous-photos)[data-size="9"] .cell > .rv-names.at-rank { font-size: 0.875rem; }
+  #game :is(#photos, #previous-photos)[data-size="16"] .cell > .rv-names.at-rank { font-size: 0.75rem; }
+  #game :is(#photos, #previous-photos)[data-size="25"] .cell > .rv-names.at-rank { font-size: 0.6875rem; }
+  .rv-names.at-rank > span { display: block; text-align: center; overflow-wrap: break-word; }
+  .rv-names.at-rank .nm { white-space: normal; }
+  .rv-names.at-rank .sure { font-size: 0.85em; font-weight: 600; white-space: nowrap; }
+  .rv-names.at-rank .sure.ai { color: #bfdbfe; }
+  .rv-names.at-rank .sure.players { color: #e9d5ff; }
+  @media (min-width: 640px) {
+    #game :is(#photos, #previous-photos)[data-size="9"] .cell > .rv-names.at-rank { font-size: 1rem; }
+    #game :is(#photos, #previous-photos)[data-size="16"] .cell > .rv-names.at-rank { font-size: 0.875rem; }
+    #game :is(#photos, #previous-photos)[data-size="25"] .cell > .rv-names.at-rank { font-size: 0.8125rem; }
+  }
   :is(#photos, #previous-photos) .cell > .rv-whole { top: auto; right: auto; bottom: 0.375rem; left: 0.375rem; }
   :is(#photos, #previous-photos)[data-size="16"] .cell > .rv-whole { bottom: 0.25rem; left: 0.25rem; }
   :is(#photos, #previous-photos)[data-size="25"] .cell > .rv-whole { bottom: 0.125rem; left: 0.125rem; }
@@ -2438,6 +2454,8 @@
   }
   // ``full``: for the whole photo opened from a review, under the photo: every rank by name, nothing cut short
   function namesLabel(b, review, full) {
+    const at = !full && review && review.grid && review.grid.rank;
+    if (at) return rankLabel(b, at);
     const box = node("div", full ? "lb-names" : "rv-names");
     box.dataset.testid = "beetle-names";
     if (full) box.dataset.testid = "photo-names";
@@ -2460,6 +2478,30 @@
       // the columns as one group, which moves under the name when the row is narrow (round 7)
       box.append(node("span", "", node("span", "lead", ...dots), rk, nm, idType, cells.length ? node("span", "cols", ...cells) : null));
     });
+    return box;
+  }
+  // A grid's photo (Odd One Out, Find Them All) after the answer and under Back: only its name at the grid's rank
+  // (owner: the rest cluttered the grid). A validated beetle's name alone; a name from IBBI-AI or the players has how
+  // sure they are after it, in their colour (blue IBBI-AI, purple the players). Every rank and both sources are on the
+  // whole photo.
+  const SURE_BY = { ai: "IBBI-AI", players: "the players" };
+  function rankLabel(b, rank) {
+    const box = node("div", "rv-names at-rank");
+    box.dataset.testid = "beetle-names";
+    const r = (b.ranks || []).find((x) => x.rank === rank) || {};
+    if (!r.name) {
+      box.append(node("span", "", node("span", "nm none", "Not named yet")));
+      return box;
+    }
+    const line = node("span", "", node("span", "nm", taxonName(r.name, rank)));
+    line.title = rank + ": " + r.name + (b.validated ? " (validated)" : "");
+    if (!b.validated && r.sure != null && SURE_BY[r.source]) {
+      const sure = node("span", "sure " + r.source, r.sure + "%");
+      sure.title = SURE_BY[r.source] + ": " + r.sure + "% sure";
+      sure.setAttribute("aria-label", sure.title);
+      line.append(" ", sure);
+    }
+    box.append(line);
     return box;
   }
   function nameTiles(cells, review) {
