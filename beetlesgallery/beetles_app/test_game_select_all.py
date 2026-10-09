@@ -68,6 +68,7 @@ class BuildTests(SelectCase):
                 photos = game.Beetles.objects.filter(id__in=item["tiles"]).values_list("image_asset_id", flat=True)
                 self.assertEqual(len(set(photos)), 9)
 
+    @override_settings(GAME_SELECT_FEWER_SHARE=0)   # a grid with fewer AI beetles may leave them out (test_grid_vary)
     def test_every_grid_has_a_sure_and_an_unsure_ai_beetle_besides_validated_ones(self):
         self.at("species")
         # only Xyleborus affinis has three validated beetles, so only it can be the group of nine; two each of the others

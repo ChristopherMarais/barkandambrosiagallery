@@ -79,6 +79,14 @@ GROUPS = [
            "1 is 4 beetles at subfamily; 16 is 25 beetles at species in Find Them All (40 in Odd One Out), and a "
            "higher number stops at a game's last step. Every player has a step in each grid game.",
            1, 40, 1),
+        _t("GAME_ODD_FEWER_SHARE", "Odd One Out: grids hiding fewer odd ones", 0.5,
+           "Where a step hides several odd ones, this share of its grids hides fewer (evenly, at least one), so the "
+           "number to find isn't always the same. The page asks for each grid's own number, and its points and the "
+           "ladder go by it. 0 turns it off.", 0, 1, 0.05),
+        _t("GAME_SELECT_FEWER_SHARE", "Find Them All: grids with fewer AI beetles", 0.3,
+           "This share of the grids holds fewer AI beetles (evenly, down to none) and more beetles of other groups, so "
+           "how many belong to the group isn't always the same. Fewer AI beetles also means fewer taps on them to "
+           "learn from. 0 turns it off.", 0, 1, 0.05),
         _t("GAME_ODD_OPEN_SHARE_START", "Odd One Out: AI beetles among the rest at level 1", 0.25,
            "This share of the beetles that share the group are ones nobody has validated that IBBI-AI puts in it...",
            0, 1, 0.05),

@@ -24,6 +24,8 @@ TREE = [
 ]
 
 
+# Grids ask for their step's number here, so a test can count on it; test_grid_vary.py turns the variation on
+@override_settings(GAME_ODD_FEWER_SHARE=0, GAME_SELECT_FEWER_SHARE=0)
 class GridCase(GameCase):
     """A seeded tree with enough validated beetles of every species, each on its own photo, for a grid of 25."""
 

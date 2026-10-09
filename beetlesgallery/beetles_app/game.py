@@ -802,9 +802,21 @@ def odd_open_count(level, tiles, odds=1):
     return max(0, min(tiles - odds - 1, round((tiles - odds) * share)))
 
 
+def odd_count(wanted):
+    """
+    How many odd ones one Odd One Out grid hides when its step hides ``wanted``: that many, or in GAME_ODD_FEWER_SHARE
+    of the grids evenly fewer (never none), so the number to find isn't always the step's. A grid's points, its review
+    and the ladder all go by its own odd ones.
+    """
+    share = float(game_setting("GAME_ODD_FEWER_SHARE", 0.5)) if wanted > 1 else 0.0
+    return random.randint(1, wanted - 1) if share > 0 and random.random() < share else wanted
+
+
 # Select all by the grid's size: the fewest and most validated members (about a quarter to under half of the grid),
 # and its AI beetles at level 1 and at the top level. Validated non-members are never fewer than the members, so
 # tapping everything loses while a wrong tap costs more than a member earns (k above 1: GAME_POINTS_CONFIDENCE over 50%).
+# A share of the grids (GAME_SELECT_FEWER_SHARE) holds fewer AI beetles and more of other groups, so how many beetles
+# belong to the group varies from grid to grid; there is always at least one validated member to find.
 SELECT_MEMBERS = {4: (1, 2), 9: (3, 4), 16: (5, 7), 25: (7, 10)}
 SELECT_AI = {4: (1, 1), 9: (1, 3), 16: (2, 4), 25: (3, 6)}
 
@@ -817,18 +829,27 @@ def select_open_count(level, size):
     return low + round((high - low) * (level - 1) / (len(LEVELS) - 1))
 
 
-def select_mix(size, members, opens, others, ai):
+def select_fewer():
+    """Whether one Find Them All grid holds fewer of the group, fewer AI beetles: GAME_SELECT_FEWER_SHARE of them."""
+    share = float(game_setting("GAME_SELECT_FEWER_SHARE", 0.3))
+    return share > 0 and random.random() < share
+
+
+def select_mix(size, members, opens, others, ai, fewer=False):
     """
     (members, AI beetles, others) for a Select all grid of ``size`` from the beetles found: at most ``ai`` AI beetles,
     members within SELECT_MEMBERS, and never fewer others than members. None when what was found can't make one.
+    With ``fewer`` it holds evenly fewer AI beetles (down to none, more if the others found are short) and so fewer of
+    the group; beside fewer AI beetles the members reach the top of their range.
     """
     low, high = SELECT_MEMBERS[size]
-    a = min(opens, ai)
-    fits = [m for m in range(low, min(high, members) + 1) if m <= size - m - a <= others]
-    if not fits:
-        return None
-    m = random.choice(fits)
-    return m, a, size - m - a
+    most = min(opens, ai)
+    for a in range(random.randrange(most) if fewer and most else most, most + 1):
+        fits = [m for m in range(low, min(high, members) + 1) if m <= size - m - a <= others]
+        if fits:
+            m = random.choice(fits)
+            return m, a, size - m - a
+    return None
 
 
 def lineage(taxon, rank):
@@ -1040,6 +1061,8 @@ class _Grids:
         game_ai_calls.refresh()   # IBBI-AI's calls, read again if predictions were uploaded since
         self.prefer_ai = ai_preferred()
         self.pairs = {}   # rank: whether IBBI-AI's predictions could give a grid there a sure and an unsure beetle
+        # What the grid being built asks for, drawn for each (item): how many odd ones, or whether fewer of the group
+        self.odds, self.fewer = self.plan.get("odds", 1), False
 
     @property
     def open_ids(self):
@@ -1060,6 +1083,10 @@ class _Grids:
 
     def item(self):
         """One grid (build), without the beetles shown in this game before if it can be."""
+        if self.game == "odd":   # the number to find varies from grid to grid (odd_count, select_fewer)
+            self.odds = odd_count(self.plan.get("odds", 1))
+        else:
+            self.fewer = select_fewer()
         if self.later:
             avoid, self.avoid = self.avoid, self.avoid | self.later
             try:
@@ -1072,10 +1099,11 @@ class _Grids:
 
     def build(self):
         """
-        One grid at the player's step. When the beetles for it are short, in turn: the same grid without the pair of AI
-        beetles, a smaller one at that rank, the nearest other ranks (the shallower first). None when there is nothing.
+        One grid at the player's step, hiding ``self.odds`` odd ones in Odd One Out. When the beetles for it are short,
+        in turn: the same grid without the pair of AI beetles, a smaller one at that rank, the nearest other ranks (the
+        shallower first). None when there is nothing.
         """
-        size, odds = self.plan["size"], self.plan.get("odds", 1)
+        size, odds = self.plan["size"], self.odds
         for rank in self.plan["ranks"]:
             pair = self.pair_wanted(rank)
             best = None
@@ -1139,8 +1167,9 @@ class _Grids:
 
     def odd(self, anchor, rank, pair):
         """
-        The biggest Odd One Out grid up to the step's size and number of odd ones around ``anchor``'s group at
-        ``rank``, or None. Short of beetles it hides fewer odd ones first, then shrinks: the ladder's order (#540).
+        The biggest Odd One Out grid up to the step's size and this grid's number of odd ones (``self.odds``) around
+        ``anchor``'s group at ``rank``, or None. Short of beetles it hides fewer odd ones first, then shrinks: the
+        ladder's order (#540).
         """
         from .game_grid_ladder import most_odds
 
@@ -1149,7 +1178,7 @@ class _Grids:
             return None
         value = group[rank]
         photos = {anchor.image_asset_id}
-        most, wanted = self.plan["size"], self.plan.get("odds", 1)
+        most, wanted = self.plan["size"], self.odds
         # The odd ones: validated, so there is always a known answer, each outside the group (they may share another);
         # near relatives (the same parent) on harder rounds
         same, named = _in_group(rank, value), _named_test(rank)
@@ -1208,7 +1237,7 @@ class _Grids:
         rest += _distinct_photos(self.checks.sample(others, (want - len(rest)) * 3, self.target,
                                                     self.avoid | set(rest)), photos, want - len(rest))
         for size in self.sizes():
-            mix = select_mix(size, len(members), len(opens), len(rest), self.select_ai(size, pair))
+            mix = select_mix(size, len(members), len(opens), len(rest), self.select_ai(size, pair), self.fewer)
             if mix:
                 m, a, k = mix
                 return {"a": anchor.id, "tiles": [*members[:m], *opens[:a], *rest[:k]], "group": group, "size": size,
@@ -1227,7 +1256,8 @@ def build_odd_items(player, size, fresh_only=False, avoid=()):
     the player picks the ones that don't belong. The size, the number of odd ones and the rank follow the player's step
     on the grid ladder (game_grid_ladder): at each rank the grids grow first, then hide more odd ones (#540), then go a
     rank deeper, from subfamily to species; on harder rounds the odd ones are near relatives (the same tribe, say, but
-    another genus). The item's "a" is the first odd one and "odds" all of them.
+    another genus). The step's number of odd ones is the most a grid hides: some hide fewer (odd_count), so the number
+    to find isn't always the same. The item's "a" is the first odd one and "odds" all of them.
 
     The odd ones and at least one of the rest are always validated, so every item has a known answer. Of the rest, when
     IBBI-AI's predictions allow, one is a beetle it is sure belongs and one it is unsure about (ai_bands), more as the
@@ -1243,8 +1273,8 @@ def build_select_items(player, size, fresh_only=False, avoid=()):
     player's step on the grid ladder like Odd One Out. About a quarter to under half are validated members
     (SELECT_MEMBERS), validated beetles of other groups at least as many (near relatives on harder rounds), plus beetles
     nobody has validated that IBBI-AI puts in the group (SELECT_AI): a sure and an unsure one when its predictions
-    allow. Taps on those are recorded, never scored. Beetles whose names the player has just been shown wait a while
-    (held_back_ids).
+    allow. Taps on those are recorded, never scored. Some grids hold fewer of those (select_fewer), so how many beetles
+    to find varies. Beetles whose names the player has just been shown wait a while (held_back_ids).
     """
     return build_grid_items("select", player, size, avoid)
 

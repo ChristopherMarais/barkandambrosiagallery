@@ -561,3 +561,19 @@ that tribe and its subfamily too (`game_trust.skill_counts`, `grid_claims`).
   already judges every shared rank; Odd One Out (telling apart within a group) stays at its own rank. The player
   report may now show the higher names a grid gave the player. `recompute_game_scores` brings existing skills up to
   date at once (otherwise each player's catch up after their next batch).
+
+## Update: the number to find varies
+
+The owner: "the number you have to select can also vary so that it isn't always the same amount that you should
+select." Each grid draws its own number when it is built (`game.odd_count`, `game.select_fewer`).
+
+- **Odd One Out:** a step's odd ones are now the most its grids hide. `GAME_ODD_FEWER_SHARE` (0.5) of the grids at a
+  step with several hide evenly fewer, never none: at 25 beetles and four odd ones, half hide four and the rest one,
+  two or three. Steps with one odd one stay at one. The page asks for the grid's own number ("Which 2 are …"), and
+  the server, the points (a grid is worth the same, split over its own odd ones), the review and the ladder all go
+  by it.
+- **Find Them All:** `GAME_SELECT_FEWER_SHARE` (0.3) of the grids hold evenly fewer AI beetles (down to none) and
+  more validated beetles of other groups, so how many beetles belong to the group varies; beside fewer AI beetles the
+  validated members reach the top of their range (4: 1–2, 9: 3–4, 16: 5–7, 25: 7–10). Validated non-members are still
+  never fewer than members and every grid has a member to find, so neither tapping everything nor tapping nothing
+  wins. Fewer AI beetles means fewer taps on them, hence the lower share; 0 turns either off.

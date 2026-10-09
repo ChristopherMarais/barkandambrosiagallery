@@ -15,6 +15,9 @@ odd ones stay at most about a sixth of the grid (three in 16, four in 25):
     odd    1    1    1    1    2    2    2    3    3    4
     rank   subfamily                                          tribe       genus       species
 
+A step's odd ones are the most its grids hide: GAME_ODD_FEWER_SHARE of them hide fewer (game.odd_count), so the number
+to find isn't always the same. The page asks for each grid's own number, and its points and outcome go by it.
+
 A player starts on GAME_GRID_START_STEP, goes up a step after GAME_GRID_UP_AFTER good grids in a row and down one
 after a poor grid (outcome says which is which; skips and grids ended by flags are neither). No step goes deeper than
 the ranks the player has open (game_levels.rank_unlock). game.py builds each grid at the player's step, or the nearest
@@ -78,11 +81,11 @@ def current(player, game_key):
 
 def plan(player, game_key, open_rank, focus=None):
     """
-    What the player's next grid should be: {"step", "size", "rank", "odds", "ranks"}. ``odds`` is how many odd ones an
-    Odd One Out grid hides (1 in Select all). ``ranks`` are the ranks to build at, in turn while the beetles for one
-    are short: the step's rank, then the nearest others (the shallower first). Only ranks the player has open and,
-    with a focus (a chosen subfamily, tribe or genus), only ranks below it: every beetle shown is in it, so nothing at
-    or above it can tell them apart.
+    What the player's next grid should be: {"step", "size", "rank", "odds", "ranks"}. ``odds`` is the most odd ones an
+    Odd One Out grid hides (1 in Select all; game.odd_count draws each grid's). ``ranks`` are the ranks to build at, in
+    turn while the beetles for one are short: the step's rank, then the nearest others (the shallower first). Only
+    ranks the player has open and, with a focus (a chosen subfamily, tribe or genus), only ranks below it: every beetle
+    shown is in it, so nothing at or above it can tell them apart.
     """
     step = current(player, game_key)
     size, rank, odds = steps(game_key)[min(step, top_step(open_rank, game_key)) - 1]
