@@ -8,7 +8,9 @@ comfortably. Select all has sixteen steps, the grid's size first and then its ra
     rank   subfamily           tribe       genus       species
 
 Odd One Out has 40 (#540): at each rank the grid grows first, then hides more odd ones, then the next rank comes. The
-odd ones stay at most about a sixth of the grid (three in 16, four in 25):
+odd ones stay at most about a sixth of the grid (three in 16, four in 25). The number is the step's on average: each
+grid hides one fewer to one more (game.odd_count, within most_odds), so a player can't count on it; the question says
+how many to pick:
 
     step   1    2    3    4    5    6    7    8    9    10     11 ... 20   21 ... 30   31 ... 40
     size   4    9    16   25   9    16   25   16   25   25     as 1-10     as 1-10     as 1-10
