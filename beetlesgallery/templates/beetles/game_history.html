@@ -1,19 +1,37 @@
 {% extends "base.html" %}
 {% load beetle_tags static %}
 
+{% block extra_css %}
+<style>
+  /* A computer (lg, 64rem and up), as the game home: the filters and the summary in a column on the left, the
+     sessions (or the curators' reviews, two to a row) on the right. Below lg the wrappers are plain blocks and the
+     page is the phone's, one column in the same order. */
+  @media (min-width: 64rem) {
+    #game-history { max-width: 72rem; }
+    #game-history .his-tabs { max-width: 32rem; }
+    #game-history .his-cols { display: grid; grid-template-columns: 18rem minmax(0, 1fr); column-gap: 2.5rem; align-items: start; }
+    #game-history .his-side { position: sticky; top: 1rem; }
+    #game-history .his-main .checked-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
+    #game-history .his-main .checked-list > li { margin: 0; }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-xl mx-auto">
+<div id="game-history" class="max-w-xl mx-auto">
   {% url 'game_home' as back_url %}{% include "beetles/includes/back_link.html" with url=back_url label=game_name %}
   <h1 class="page-title">History</h1>
 
-  <div class="flex p-1 mb-5 bg-gray-100 rounded-xl text-sm font-semibold" role="tablist">
+  <div class="his-tabs flex p-1 mb-5 bg-gray-100 rounded-xl text-sm font-semibold" role="tablist">
     <a href="?tab=sessions{% if filters %}&amp;{{ filters }}{% endif %}" role="tab" aria-selected="{% if tab == 'sessions' %}true{% else %}false{% endif %}"
       class="flex-1 py-2 text-center rounded-lg {% if tab == 'sessions' %}bg-white shadow-xs text-gray-900{% else %}text-gray-500{% endif %}">Sessions</a>
     <a href="?tab=checked" role="tab" aria-selected="{% if tab == 'checked' %}true{% else %}false{% endif %}" data-testid="checked-tab"
       class="flex-1 py-2 text-center rounded-lg {% if tab == 'checked' %}bg-white shadow-xs text-gray-900{% else %}text-gray-500{% endif %}">Reviewed by curators{% if checked_total %} <span class="font-normal text-gray-500">({{ checked_total|digit_groups }})</span>{% endif %}{% if new_checked and tab != 'checked' %} <span class="inline-block w-2 h-2 rounded-full bg-gray-900 align-middle" title="{{ new_checked }} new" data-testid="checked-new-dot"></span>{% endif %}</a>
   </div>
 
+  <div class="his-cols">
   {% if tab == 'sessions' %}
+  <div class="his-side">
   <!-- Narrow to one game and/or a day (#574); the game home's cards open these. On a phone, two selects side by
        side, not pills that wrap to three lines (#his-filters); from a tablet up, the pills.
        The onchange navigates to the chosen option's value, which `choices()` always builds as "?...". safeFilterNav
@@ -50,6 +68,8 @@
     {% if summary.game %}<p class="text-xs text-gray-500 tabular-nums" data-testid="game-summary">{{ game_label }} all time: {% if summary.game.accuracy is not None %}{% widthratio summary.game.accuracy 1 100 %}% accuracy{% else %}no accuracy yet{% endif %} &middot; {{ summary.game.points|digit_groups }} pts</p>{% endif %}
   </div>
   {% endif %}
+  </div>
+  <div class="his-main">
   {% if sessions.paginator.count %}
   <ul class="border border-gray-200 rounded-2xl divide-y divide-gray-100 overflow-hidden" data-testid="sessions">
     {% for r in sessions %}
@@ -93,10 +113,14 @@
   {% include "beetles/includes/empty_state.html" with icon="fi-rr-time-past" text="No sessions yet. Each round you play will appear here." action_url=play_url action_label="Play" %}
   {% endif %}
   {% endif %}
+  </div>
 
   {% else %}
+  <div class="his-side">
   <p class="text-sm text-gray-500 mb-3">Beetles curators reviewed after you answered them: what you said, what they are, and the points that moved.</p>
   {% if new_gain > 0 %}<p class="mb-3 text-sm font-semibold text-gray-900" data-testid="new-later-points">+{{ new_gain|floatformat:1 }} pts came in later</p>{% endif %}
+  </div>
+  <div class="his-main">
   {% if checked.paginator.count %}
   {% include "beetles/includes/game_checked_list.html" %}
   {% include "beetles/includes/game_history_pager.html" with page=checked %}
@@ -104,7 +128,9 @@
   {% url 'game_play' 'mixed' as play_url %}
   {% include "beetles/includes/empty_state.html" with icon="fi-rr-shield-check" text="No curator reviews yet. Beetles you name that nobody has checked will appear here once curators check them." action_url=play_url action_label="Play" %}
   {% endif %}
+  </div>
   {% endif %}
+  </div>
 </div>
 {% endblock %}
 

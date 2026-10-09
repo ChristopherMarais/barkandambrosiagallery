@@ -1,10 +1,26 @@
 {% extends "base.html" %}
 {% load beetle_tags %}
 
+{% block extra_css %}
+<style>
+  /* A computer (lg, 64rem and up): the board on the left and the Specialists beside it, not under a long list.
+     Below lg the wrappers are plain blocks and the page is the phone's, one column in the same order. */
+  @media (min-width: 64rem) {
+    #game-board { max-width: 72rem; }
+    #game-board .lb-cols { display: grid; grid-template-columns: minmax(0, 1fr) 24rem; column-gap: 2.5rem; align-items: start; }
+    #game-board .lb-side { position: sticky; top: 1rem; }
+    #game-board .lb-side > h2:first-child { margin-top: 0; }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-4xl mx-auto">
+<div id="game-board" class="max-w-4xl mx-auto">
   {% url 'game_home' as back_url %}{% include "beetles/includes/back_link.html" with url=back_url label=game_name %}
   <h1 class="page-title">Leaderboard</h1>
+
+  <div class="lb-cols">
+  <div class="lb-main">
 
   <form method="get" class="flex flex-wrap items-center gap-2 mb-4" role="search">
     <input type="search" name="q" value="{{ q }}" placeholder="Search players&hellip;" aria-label="Search players"
@@ -65,8 +81,10 @@
     {% endfor %}
   </ol>
   {% if period == 'week' and last_week %}{% include "beetles/includes/game_last_week.html" %}{% endif %}
+  </div>
 
   <!-- Specialists -->
+  <div class="lb-side">
   <h2 class="text-lg font-semibold text-gray-900 mt-10 mb-1">Specialists</h2>
   <p class="text-sm text-gray-600 mb-3">The best players inside one part of the tree: for a genus, how well they name its species; for a tribe, its genera; for a subfamily, its tribes.</p>
   <form method="get" class="flex flex-wrap items-end gap-2 mb-4" id="branch-form" data-taxa-url="{% url 'game_taxa' %}">
@@ -106,6 +124,8 @@
     </table>
   </div>
   {% endif %}
+  </div>
+  </div>
 </div>
 {% endblock %}
 

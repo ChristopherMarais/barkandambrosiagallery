@@ -1,5 +1,5 @@
 {# Checked beetles (game_checked.items): the crop, what you said, what it is, and the points. Needs the crop script below. #}
-<ul class="space-y-2">
+<ul class="checked-list space-y-2">
   {% for c in checked %}
   <li class="flex gap-3 p-3 bg-white border {% if c.change >= 0 %}border-green-200{% else %}border-red-200{% endif %} rounded-2xl{% if c.new %} checked-new{% endif %}" data-testid="checked-item">
     <div class="flex gap-1 shrink-0">

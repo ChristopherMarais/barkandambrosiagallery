@@ -581,6 +581,12 @@
     /* the grids: a little more room round the tiles than on a phone */
     #game:is([data-mode="odd"], [data-mode="select"]) #photos { --pad: 0.75rem; }
     #game #photos:is([data-size="16"], [data-size="25"]) { --pad: 0.5rem; }
+    /* ...and their question at the top of the answer column (placePrompts moves it there), so the grid has the
+       whole height on the left: no band kept for it above the first row */
+    #game:is([data-mode="odd"], [data-mode="select"]) #photos { --prompt: 0px; }
+    #panel > :is(#odd, #select) { position: static; height: auto; padding: 0 0 0.75rem; margin-bottom: 0.75rem; background: none;
+        border-bottom: 1px solid #e5e7eb; justify-content: flex-start; }
+    #panel > :is(#odd, #select) p { white-space: normal; font-size: 1.25rem; line-height: 1.4; }
     /* Back: the photos on the left and the card on the right, as in play */
     #previous:not(.hidden) { display: grid; grid-template-columns: minmax(0, 1fr) var(--side); grid-template-rows: auto minmax(0, 1fr); }
     #previous > :first-child { grid-column: 1 / -1; }
@@ -1857,6 +1863,16 @@
     if (stacked > side) holder.dataset.stack = "1";
   }
   window.addEventListener("resize", () => { if (item && MODE === "pair") pairStack($("photos"), item.images.map((im) => im.ar)); });
+
+  // The grid games' question: on a computer (lg) at the top of the answer column, so the grid gets the full height on
+  // the left; on a phone in its band above the photos, as before
+  function placePrompts() {
+    const prompts = [$("odd"), $("select")];
+    if (WIDE_SCREEN.matches) $("panel").prepend(...prompts);
+    else $("photo-area").prepend(...prompts);
+  }
+  placePrompts();
+  WIDE_SCREEN.addEventListener("change", placePrompts);
 
   // Lay the tiles (#602): the new beetle's empty tiles go down at once, quickly one after another, and each photo
   // lands in its tile as soon as it is decoded (the small crop, then the sharp one). Usually the photos are in already
