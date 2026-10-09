@@ -163,7 +163,7 @@ class SuggestionTests(NegativeCase):
 
     def test_a_validated_beetles_grid_labels_do_not_count_for_it(self):
         for p in self.players[1:3]:
-            self.select(p, picks=[0, 2, 3])   # known[1] left untapped: recorded, but it is validated
+            self.select(p, picks=[0, 1, 3])   # tile 2, known[1], left untapped: recorded, but it is validated
         self.assertEqual(NegativeLabel.objects.filter(roi=self.known[1]).count(), 2)
         self.assertEqual(game_negatives.against([self.known[1].id]), {})
 
