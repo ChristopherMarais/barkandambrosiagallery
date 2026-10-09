@@ -200,12 +200,12 @@ class RoundReviewTests(GameCase):
         self.client.force_login(self.user)
         return self.client.get(reverse("game_round_review", args=[rnd.id])).content.decode()
 
-    def test_fully_correct_answers_collapse_to_one_line(self):
-        # every answer was a full card, ~33 screens for a round (#rev-collapse); a fully correct one is now one line
+    def test_fully_correct_answers_fold_away_as_whole_cards(self):
+        # every answer was a full card, ~33 screens for a round (#rev-collapse); a fully correct one folds away, still
+        # with its photos
         page = self.page()
         self.assertIn("function isCorrect(item)", page)
-        self.assertIn('li.dataset.testid = "item-row-correct"', page)
-        self.assertIn('li.dataset.testid = "item-card"', page)
+        self.assertIn('li.dataset.testid = right ? "item-row-correct" : "item-card";', page)
 
     def test_points_and_the_hardness_note_are_on_two_lines(self):
         # "#2 −48.8 pts (−75 missed) ×1.25 easier beetle" crowded one line with a pill that wrapped (#rev-header)
