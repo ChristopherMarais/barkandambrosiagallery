@@ -7,7 +7,6 @@ loading screen takes turns between short lines; and no Beta pill anywhere.
 import re
 from pathlib import Path
 
-from django.utils.html import escape
 from django.conf import settings
 from django.contrib.staticfiles import finders
 from django.template.loader import get_template
@@ -135,7 +134,7 @@ class RecapTests(PlayPageCase):
     def test_the_recap_leads_to_the_games_home(self):
         page = self.play_page()
         self.assertIn(f'<a href="{reverse("game_home")}" class="px-6 py-3.5 text-base font-medium text-gray-700 border '
-                      f'border-gray-300 rounded-xl" data-testid="recap-home">{escape(settings.GAME_DISPLAY_NAME)} home</a>', page)
+                      f'border-gray-300 rounded-xl" data-testid="recap-home">Exit</a>', page)
         self.assertNotIn("See my stats and the leaderboard", page)
 
 
