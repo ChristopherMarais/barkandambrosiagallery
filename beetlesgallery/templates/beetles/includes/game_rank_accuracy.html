@@ -1,0 +1,25 @@
+{% load beetle_tags %}
+{% comment %}
+One player's accuracy rank by rank, from a board row's ``by_rank`` (game_board.rank_accuracy): Naming (naming the
+beetle) and Telling apart (Similarity, Odd One Out, Find Them All) kept apart, each cell coloured by its own step on
+the site's scale with how many answers it rests on, a dash where there are none.
+{% endcomment %}
+<table class="w-full text-xs tabular-nums" data-testid="rank-accuracy">
+  <caption class="text-left font-medium text-gray-700">Rank by rank</caption>
+  <thead class="text-gray-500">
+    <tr>
+      <th class="py-1 pr-2 text-left font-medium"><span class="sr-only">Rank</span></th>
+      <th class="py-1 px-2 text-right font-medium" title="Naming the beetle">Naming</th>
+      <th class="py-1 pl-2 text-right font-medium" title="Similarity, Odd One Out and Find Them All">Telling apart</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in by_rank %}
+    <tr class="border-t border-gray-100" data-rank="{{ r.rank }}">
+      <th class="py-1 pr-2 text-left font-normal text-gray-600">{{ r.title }}</th>
+      {% with c=r.naming %}<td class="py-1 px-2 text-right" data-testid="rank-naming">{% if c.n %}<span class="font-semibold scale-{{ c.step }}">{% widthratio c.accuracy 1 100 %}%</span> <span class="text-gray-500">of {{ c.n|digit_groups }}</span>{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}</td>{% endwith %}
+      {% with c=r.apart %}<td class="py-1 pl-2 text-right" data-testid="rank-apart">{% if c.n %}<span class="font-semibold scale-{{ c.step }}">{% widthratio c.accuracy 1 100 %}%</span> <span class="text-gray-500">of {{ c.n|digit_groups }}</span>{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}</td>{% endwith %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

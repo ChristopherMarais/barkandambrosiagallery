@@ -101,7 +101,8 @@ def game_home(request):
         "score": game_scoring.score_for(request.user),
         "rewards": rewards,
         "board": board, "last_week": [] if board else game_board.last_week_top(),
-        "standing": game_board.accuracy_standing(request.user),
+        # one accuracy plot per rank (subfamily, tribe, genus, species), not one for everything together
+        "rank_standing": game_board.rank_standing(request.user),
         "goal_floor": game_rewards.daily_goal(),
         "games": games_stats,
         # the public address in production (SITE_URL), this server's own when developing
@@ -327,9 +328,12 @@ def game_leaderboard(request):
                     "odd": "odd_accuracy", "select": "select_accuracy"}.get(sort, "id_accuracy")
     headline_label = {"id_accuracy": "Naming", "sim_accuracy": "Similarity",
                        "odd_accuracy": "Odd One Out", "select_accuracy": "Find Them All"}[headline_key]
+    # The headline averages every rank of that one game; the row opens on the numbers rank by rank.
+    headline_title = f"{headline_label} accuracy: subfamily, tribe, genus and species together"
     for row in rows:
         row["headline_accuracy"] = row.get(headline_key)
         row["headline_label"] = headline_label
+        row["headline_title"] = headline_title
     return render(request, "beetles/game_leaderboard.html", {
         "rows": rows,
         "branch_rows": game_board.branch_board(branch_rank, branch_value) if branch_rank and branch_value else None,
