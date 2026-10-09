@@ -101,11 +101,11 @@ class FlagTests(ZoomFlagCase):
         photo = page[page.index('<div id="lb-photo"'):page.index('id="lb-light"')]
         self.assertLess(photo.index('id="lb-frame"'), photo.index('id="report-cog"'))   # beside the zoom, not in it
         self.assertIn('id="report-cog" class="report-chip"', photo)
-        self.assertIn('id="report-menu"', photo)
+        # one menu of reasons for every Flag, opened next to the Flag tapped (test_flag_menu_exit)
+        menu = page[page.index('<div id="report-menu"'):]
         for value, label in FEED_REPORT_REASONS:
-            self.assertIn(f'data-reason="{value}"', photo)
+            self.assertIn(f'data-reason="{value}"', menu)
         self.assertIn("#report-cog { left: 0.5rem; bottom: 0.5rem; }", page)
-        self.assertIn("#report-menu { left: 0.5rem; bottom: 2.75rem;", page)
         self.assertIn('data-report-url="' + reverse("game_report_item") + '"', page)   # the same endpoint
 
     def test_nothing_else_takes_a_bottom_left_corner(self):

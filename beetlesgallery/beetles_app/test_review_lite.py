@@ -108,7 +108,8 @@ class PageTests(ReviewCase):
         page = self.page()
         self.assertIn("if (im) openLightbox(im.url, im.box, i, null, previous.where);", page)
         self.assertIn('reviewPhotos($("previous-photos"));', page)
-        self.assertIn("if (lightboxReview) {", page)
+        self.assertIn("if (t.review) {", page)
+        self.assertIn("review: lightboxReview", page)
 
     def test_the_headline_dot_and_short_odd_question(self):
         page = self.page()
