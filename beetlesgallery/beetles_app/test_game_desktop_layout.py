@@ -120,5 +120,5 @@ class GameHomeTests(SimpleTestCase):
         self.assertLess(home.index('<div class="gh-cols">'), main)
         for left in ('data-testid="last-session"', 'data-testid="play"', 'data-testid="daily-goal"', "game_split.html"):
             self.assertTrue(main < home.index(left) < side, left)
-        for right in ("game_accuracy.html", 'data-testid="checked-recap"', 'aria-label="More"', 'data-testid="home-board"', 'data-testid="share-qr"'):
+        for right in ("game_accuracy_ranks.html", 'data-testid="checked-recap"', 'aria-label="More"', 'data-testid="home-board"', 'data-testid="share-qr"'):
             self.assertLess(side, home.index(right), right)
