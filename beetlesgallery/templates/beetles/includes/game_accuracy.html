@@ -1,47 +1,54 @@
+{% load beetle_tags %}
 {% comment %}
-Accuracy among all players: a histogram, the average, you and your rank. Needs ``standing`` from game_board.accuracy_standing.
-One number, one colour (#site-meaning-85): the accuracy is coloured only by its own step on the site's scale
-(game_scale.value_step); the comparison with other players is only a grey rank chip ("Top 20%", r7 E12).
+Naming accuracy among all players, one small histogram per rank (subfamily, tribe, genus, species): the average,
+you, your rank and how many players there are. Needs ``standing`` from game_board.accuracy_standing_by_rank.
+Two by two on a phone, a row of four from a tablet up; 5% bins, ticks every 25%.
+One number, one colour (#site-meaning-85): each accuracy is coloured only by its own step on the site's scale
+(game_scale.value_step); the comparison with other players is only a grey rank ("Top 20%", r7 E12), as text
+beside the number of players so it fits a quarter of the card.
 {% endcomment %}
-{% with me=standing.me %}
 <div class="p-4 bg-gray-50 border border-gray-100 rounded-2xl" data-testid="accuracy-standing">
   <div class="flex items-center gap-2 mb-3">
-    <span class="font-semibold text-gray-900">Accuracy</span>
-    {% if me %}
-    {% if me.rank %}<span class="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[11px] leading-none text-center font-semibold bg-gray-100 text-gray-700 border border-gray-200" data-testid="accuracy-rank">{{ me.rank }}</span>{% endif %}
-    <span class="ml-auto text-sm font-semibold tabular-nums scale-{{ me.step }}" data-testid="accuracy-value">{% widthratio me.accuracy 1 100 %}%</span>
-    {% endif %}
+    <span class="font-semibold text-gray-900">Accuracy by rank</span>
+    {% if standing.players %}<span class="ml-auto inline-flex items-center gap-1.5 text-xs text-gray-500" data-testid="accuracy-average"><span class="h-3 border-l border-dashed border-gray-500" aria-hidden="true"></span>Average</span>{% endif %}
   </div>
   {% if standing.players %}
-  {# The labels sit above the plot; the average and You lines run the plot's full height (5% bins, ticks every 20%). #}
-  <div class="relative h-8">
-    {% if standing.average is not None %}<span class="absolute top-0 -translate-x-1/2 whitespace-nowrap text-[11px] font-medium text-gray-500" style="left: {% widthratio standing.average 1 100 %}%" data-testid="accuracy-average-label">average {% widthratio standing.average 1 100 %}%</span>{% endif %}
-    {% if me %}<span class="absolute top-4 -translate-x-1/2 whitespace-nowrap text-[11px] font-semibold text-gray-900" style="left: {% widthratio me.accuracy 1 100 %}%" data-testid="accuracy-you-label">You</span>{% endif %}
-  </div>
-  <div class="relative h-24 border-b border-gray-500" data-testid="accuracy-plot">
-    <div class="absolute inset-0 flex items-end gap-0.5" aria-hidden="true">
-      {% for b in standing.bins %}
-      <div class="flex-1 rounded-t-sm {% if me and forloop.counter0 == me.bin %}{% if me.step == 'none' %}bg-gray-500{% else %}scale-fill-{{ me.step }}{% endif %}{% else %}bg-gray-300{% endif %}"
-        style="height: {{ b.height }}%; min-height: {% if b.count %}3px{% else %}1px{% endif %}"></div>
-      {% endfor %}
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3" data-testid="accuracy-ranks">
+    {% for s in standing.ranks %}{% with me=s.me %}
+    <div class="min-w-0" data-testid="accuracy-rank-plot" data-rank="{{ s.rank }}">
+      <div class="flex items-baseline gap-1">
+        <span class="card-label" data-testid="accuracy-rank-name">{{ s.rank|capfirst }}</span>
+        {% if me %}<span class="ml-auto text-sm font-semibold tabular-nums scale-{{ me.step }}" data-testid="accuracy-value">{% widthratio me.accuracy 1 100 %}%</span>
+        {% else %}<span class="ml-auto text-sm font-semibold text-gray-500" data-testid="accuracy-value">&mdash;</span>{% endif %}
+      </div>
+      {# The You label sits above the plot; the average and You lines run the plot's full height. #}
+      <div class="relative h-4">
+        {% if me %}<span class="absolute top-0 -translate-x-1/2 whitespace-nowrap text-[11px] font-semibold text-gray-900" style="left: {% widthratio me.accuracy 1 100 %}%" data-testid="accuracy-you-label">You</span>{% endif %}
+      </div>
+      <div class="relative h-14 border-b border-gray-500" data-testid="accuracy-plot">
+        <div class="absolute inset-0 flex items-end gap-0.5" aria-hidden="true">
+          {% for b in s.bins %}
+          <div class="flex-1 rounded-t-sm {% if me and forloop.counter0 == me.bin %}{% if me.step == 'none' %}bg-gray-500{% else %}scale-fill-{{ me.step }}{% endif %}{% else %}bg-gray-300{% endif %}"
+            style="height: {{ b.height }}%; min-height: {% if b.count %}3px{% else %}1px{% endif %}"></div>
+          {% endfor %}
+        </div>
+        {% if s.average is not None %}<div class="absolute inset-y-0 border-l border-dashed border-gray-500" style="left: {% widthratio s.average 1 100 %}%" title="Average {% widthratio s.average 1 100 %}%" aria-hidden="true" data-testid="accuracy-average-line"></div>{% endif %}
+        {% if me %}<div class="absolute inset-y-0 w-0.5 -translate-x-1/2 bg-gray-900" style="left: {% widthratio me.accuracy 1 100 %}%" aria-hidden="true" data-testid="accuracy-you-line"></div>{% endif %}
+      </div>
+      <div class="relative h-5 text-[11px] text-gray-500 tabular-nums" aria-hidden="true" data-testid="accuracy-ticks">
+        <span class="absolute top-0 left-0 border-l border-gray-500 h-1"></span><span class="absolute top-1 left-0">0%</span>
+        <span class="absolute top-0 border-l border-gray-500 h-1" style="left: 25%"></span>
+        <span class="absolute top-0 border-l border-gray-500 h-1" style="left: 50%"></span><span class="absolute top-1 -translate-x-1/2" style="left: 50%">50%</span>
+        <span class="absolute top-0 border-l border-gray-500 h-1" style="left: 75%"></span>
+        <span class="absolute top-0 right-0 border-r border-gray-500 h-1"></span><span class="absolute top-1 right-0">100%</span>
+      </div>
+      <p class="text-[11px] text-gray-500 tabular-nums">
+        {% if me.rank %}<span class="font-semibold text-gray-700" data-testid="accuracy-rank">{{ me.rank }}</span> &middot; {% endif %}<span data-testid="accuracy-players">{% if s.players %}{{ s.players|digit_groups }} player{{ s.players|pluralize }}{% else %}No players yet{% endif %}</span>{% if s.average is not None %}<span class="sr-only">, average {% widthratio s.average 1 100 %}%</span>{% endif %}
+      </p>
     </div>
-    {% if standing.average is not None %}<div class="absolute inset-y-0 border-l border-dashed border-gray-500" style="left: {% widthratio standing.average 1 100 %}%" aria-hidden="true" data-testid="accuracy-average-line"></div>{% endif %}
-    {% if me %}<div class="absolute inset-y-0 w-0.5 -translate-x-1/2 bg-gray-900" style="left: {% widthratio me.accuracy 1 100 %}%" aria-hidden="true" data-testid="accuracy-you-line"></div>{% endif %}
+    {% endwith %}{% endfor %}
   </div>
-  <div class="relative h-6 text-[11px] text-gray-500 tabular-nums" aria-hidden="true" data-testid="accuracy-ticks">
-    <span class="absolute top-0 left-0 border-l border-gray-500 h-1"></span><span class="absolute top-1.5 left-0">0%</span>
-    <span class="absolute top-0 border-l border-gray-500 h-1" style="left: 20%"></span><span class="absolute top-1.5 -translate-x-1/2" style="left: 20%">20%</span>
-    <span class="absolute top-0 border-l border-gray-500 h-1" style="left: 40%"></span><span class="absolute top-1.5 -translate-x-1/2" style="left: 40%">40%</span>
-    <span class="absolute top-0 border-l border-gray-500 h-1" style="left: 60%"></span><span class="absolute top-1.5 -translate-x-1/2" style="left: 60%">60%</span>
-    <span class="absolute top-0 border-l border-gray-500 h-1" style="left: 80%"></span><span class="absolute top-1.5 -translate-x-1/2" style="left: 80%">80%</span>
-    <span class="absolute top-0 right-0 border-r border-gray-500 h-1"></span><span class="absolute top-1.5 right-0">100%</span>
-  </div>
-  <p class="text-center text-xs font-medium text-gray-600" data-testid="accuracy-axis-title">Accuracy</p>
   {% endif %}
-  <p class="mt-2 text-xs text-gray-500">
-    {% if me and me.percentile is not None %}{% if standing.average is not None %}<span data-testid="accuracy-average">Average {% widthratio standing.average 1 100 %}%</span>{% endif %}
-    {% elif me %}Not enough players yet to compare.
-    {% else %}{{ standing.needed }} more answers on checked beetles to see where you stand.{% endif %}
-  </p>
+  {% if not standing.me %}<p class="mt-3 text-xs text-gray-500" data-testid="accuracy-needed">Name {{ standing.needed }} more checked beetle{{ standing.needed|pluralize }} to see where you stand.</p>
+  {% elif standing.players == 1 %}<p class="mt-3 text-xs text-gray-500">Not enough players yet to compare.</p>{% endif %}
 </div>
-{% endwith %}

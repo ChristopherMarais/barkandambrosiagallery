@@ -107,14 +107,16 @@ class RenderedTests(SimpleTestCase):
 
     def test_accuracy_standing_colours_the_number_by_its_own_step(self):
         # one number, one colour (#site-meaning-85): the step of the value, and the rank among players in grey
-        standing = {"players": 3, "bins": [], "average": 0.6,
-                    "me": {"accuracy": 0.8, "percentile": 80, "rank": "Top 20%", "step": "great", "bin": 8}}
+        # (one plot per rank now: accuracy_standing_by_rank)
+        me = {"accuracy": 0.8, "percentile": 80, "rank": "Top 20%", "step": "great", "bin": 16}
+        standing = {"players": 3, "me": True, "ranks": [{"rank": "genus", "players": 3, "bins": [], "average": 0.6, "me": me}]}
         html = render_to_string("beetles/includes/game_accuracy.html", {"standing": standing})
         self.assertIn("scale-great", html)
         self.assertIn('data-testid="accuracy-rank">Top 20%<', html)
         self.assertNotIn("scale-chip-", html)
-        standing["me"].update(percentile=None, rank=None)
-        self.assertNotIn("accuracy-rank", render_to_string("beetles/includes/game_accuracy.html", {"standing": standing}))
+        me.update(percentile=None, rank=None)
+        self.assertNotIn('data-testid="accuracy-rank"',
+                         render_to_string("beetles/includes/game_accuracy.html", {"standing": standing}))
 
     def test_accuracy_has_no_percentile_tiers(self):
         self.assertFalse(hasattr(game_board, "ACCURACY_TIERS"))

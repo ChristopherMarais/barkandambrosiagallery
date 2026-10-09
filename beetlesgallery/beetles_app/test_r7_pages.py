@@ -1,8 +1,9 @@
 """
 Round 7 page fixes: the accuracy plot (5% bins, full-height You/average lines, an axis title and ticks, only "Top N%"
-in the chip), the settings page's open reports sorted and paged by the database, the expertise key always shown,
-the invite QR code behind a button, the home page's footer at the bottom and its beetle growing on hover, the
-annotator's old box colours with the floating delete button, centred pills, and Interactions last in the menu.
+in the chip; one small plot per rank since, so ticks every 25% and the card's title for the axis), the settings
+page's open reports sorted and paged by the database, the expertise key always shown, the invite QR code behind a
+button, the home page's footer at the bottom and its beetle growing on hover, the annotator's old box colours with the
+floating delete button, centred pills, and Interactions last in the menu.
 """
 import re
 from pathlib import Path
@@ -14,8 +15,8 @@ from django.template.loader import render_to_string
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
-from beetlesgallery.beetles_app import game_board
-from beetlesgallery.beetles_app.models import GameReport, PlayerScore
+from beetlesgallery.beetles_app import game, game_board
+from beetlesgallery.beetles_app.models import GameReport, PlayerSkill
 from beetlesgallery.beetles_app.test_game import GameCase
 from beetlesgallery.beetles_app.test_game_scoring import ScoringCase
 
@@ -27,20 +28,26 @@ def read(*parts):
 
 
 def standing_html(me=True):
-    standing = {"players": 3, "average": 0.6, "bins": [{"from": i / 20, "count": 1, "height": 50} for i in range(20)],
-                "me": {"accuracy": 0.85, "percentile": 70, "rank": "Top 30%", "step": "excellent", "bin": 17} if me else None,
-                "needed": 4}
+    """The card with one plot per rank (accuracy_standing_by_rank); with ``me``, the player is rated at each."""
+    bins = [{"from": i / 20, "count": 1, "height": 50} for i in range(20)]
+    mine = {"accuracy": 0.85, "percentile": 70, "rank": "Top 30%", "step": "excellent", "bin": 17} if me else None
+    standing = {"players": 3, "me": me, "needed": 4, "ranks": [{"rank": rank, "players": 3, "average": 0.6, "bins": bins,
+                                                                 "me": mine} for rank in game.RANKS]}
     return render_to_string("beetles/includes/game_accuracy.html", {"standing": standing})
+
+
+def skill(player, correct, judged=100, rank="species"):
+    return PlayerSkill.objects.create(player=player, rank=rank, branch="Xyleborus", correct=correct, judged=judged)
 
 
 class AccuracyPlotTests(ScoringCase):
     """D1 and E12."""
 
     def test_twenty_bins_of_five_percent(self):
-        for i, acc in enumerate([0.02, 0.07, 0.33, 0.34, 0.99, 1.0]):
-            PlayerScore.objects.create(player=self.player(f"p{i}"), accuracy=acc, judged=20)
-        PlayerScore.objects.create(player=self.user, accuracy=0.5, judged=20)
-        s = game_board.accuracy_standing(self.user)
+        for i, ok in enumerate([2, 7, 33, 34, 99, 100]):
+            skill(self.player(f"p{i}"), ok)
+        skill(self.user, 50)
+        s = game_board.accuracy_standing_by_rank(self.user)["ranks"][3]   # species
         counts = [b["count"] for b in s["bins"]]
         self.assertEqual(len(counts), 20)
         self.assertEqual((counts[0], counts[1], counts[6], counts[10], counts[19]), (1, 1, 2, 1, 2))   # 1.0 joins the top bin
@@ -49,11 +56,12 @@ class AccuracyPlotTests(ScoringCase):
         self.assertEqual(s["players"], 7)
 
     def test_the_counting_is_done_by_the_database_in_a_few_queries(self):
+        # the database adds up each player's skills per rank, in one grouped query; the bins are counted from it
         for i in range(30):
-            PlayerScore.objects.create(player=self.player(f"q{i}"), accuracy=i / 30, judged=20)
-        PlayerScore.objects.create(player=self.user, accuracy=0.5, judged=20)
+            skill(self.player(f"q{i}"), i, 30)
+        skill(self.user, 15, 30)
         with CaptureQueriesContext(connection) as queries:
-            game_board.accuracy_standing(self.user)
+            game_board.accuracy_standing_by_rank(self.user)
         self.assertLessEqual(len(queries), 8)   # never one per player
 
     def test_the_lines_run_the_full_height_of_the_plot(self):
@@ -66,19 +74,23 @@ class AccuracyPlotTests(ScoringCase):
         self.assertEqual(plot.count("flex-1 rounded-t-sm"), 20)
 
     def test_an_axis_title_and_ticks_every_20_percent(self):
+        # four small plots now: ticks every 25%, labelled at 0, 50 and 100%, and the card's title names the axis
         html = standing_html()
-        ticks = html[html.index('data-testid="accuracy-ticks"'):html.index('data-testid="accuracy-axis-title"')]
-        for pct in ("0%", "20%", "40%", "60%", "80%", "100%"):
+        ticks = html[html.index('data-testid="accuracy-ticks"'):]
+        ticks = ticks[:ticks.index("</div>")]
+        for pct in ("0%", "50%", "100%"):
             self.assertIn(f">{pct}<", ticks)
-        self.assertIn('data-testid="accuracy-axis-title">Accuracy<', html)
+        for left in ("25%", "50%", "75%"):
+            self.assertIn(f'border-l border-gray-500 h-1" style="left: {left}"', ticks)
+        self.assertIn(">Accuracy by rank<", html)
 
     def test_the_chip_says_only_top_n_and_the_average_stays(self):
+        # one plot per rank: the rank is grey text beside the players, and the average each dashed line's
         html = standing_html()
         self.assertNotIn("Better than", html)
-        chip = re.search(r'<span[^>]*data-testid="accuracy-rank"[^>]*>', html).group(0)
-        for centred in ("inline-flex", "items-center", "justify-center", "leading-none"):
-            self.assertIn(centred, chip)
-        self.assertIn('data-testid="accuracy-average">Average 60%<', html)
+        self.assertEqual(html.count('data-testid="accuracy-rank">Top 30%<'), 4)
+        self.assertEqual(html.count('title="Average 60%"'), 4)
+        self.assertIn(">Average</span>", html)
 
 
 class SettingsPagingTests(GameCase):

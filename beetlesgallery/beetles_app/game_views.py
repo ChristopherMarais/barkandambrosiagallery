@@ -101,7 +101,7 @@ def game_home(request):
         "score": game_scoring.score_for(request.user),
         "rewards": rewards,
         "board": board, "last_week": [] if board else game_board.last_week_top(),
-        "standing": game_board.accuracy_standing(request.user),
+        "standing": game_board.accuracy_standing_by_rank(request.user),
         "goal_floor": game_rewards.daily_goal(),
         "games": games_stats,
         # the public address in production (SITE_URL), this server's own when developing

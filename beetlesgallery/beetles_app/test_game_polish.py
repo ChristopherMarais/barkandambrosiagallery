@@ -2,17 +2,18 @@
 from django.urls import reverse
 
 from beetlesgallery.beetles_app import game_board, game_levels, game_rewards, game_scoring
-from beetlesgallery.beetles_app.models import AnswerPoints, GameReport, PlayerScore
+from beetlesgallery.beetles_app.models import AnswerPoints, GameReport, PlayerScore, PlayerSkill
 from beetlesgallery.beetles_app.test_game import AFFINIS
 from beetlesgallery.beetles_app.test_game_scoring import ScoringCase
 
 
 class StandingTests(ScoringCase):
     def test_where_you_stand_among_players(self):
-        for i, acc in enumerate([0.3, 0.5, 0.6, 0.7, 0.9]):
-            PlayerScore.objects.create(player=self.player(f"p{i}"), accuracy=acc, judged=20)
-        PlayerScore.objects.create(player=self.user, accuracy=0.95, judged=20)
-        s = game_board.accuracy_standing(self.user)
+        # at each rank now (accuracy_standing_by_rank): here the subfamily
+        for i, ok in enumerate([6, 10, 12, 14, 18]):
+            PlayerSkill.objects.create(player=self.player(f"p{i}"), rank="subfamily", branch="", correct=ok, judged=20)
+        PlayerSkill.objects.create(player=self.user, rank="subfamily", branch="", correct=19, judged=20)
+        s = game_board.accuracy_standing_by_rank(self.user)["ranks"][0]
         self.assertEqual(s["players"], 6)
         self.assertEqual(s["me"]["percentile"], 100)
         self.assertEqual((s["me"]["step"], s["me"]["rank"]), ("excellent", "Top 1%"))
@@ -20,8 +21,8 @@ class StandingTests(ScoringCase):
         self.assertAlmostEqual(s["average"], (0.3 + 0.5 + 0.6 + 0.7 + 0.9 + 0.95) / 6)
 
     def test_not_enough_answers_yet(self):
-        s = game_board.accuracy_standing(self.user)
-        self.assertIsNone(s["me"])
+        s = game_board.accuracy_standing_by_rank(self.user)
+        self.assertFalse(s["me"])
         self.assertEqual(s["needed"], 10)
 
     def test_the_home_shows_it_and_a_qr_code_to_share(self):

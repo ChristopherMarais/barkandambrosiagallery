@@ -15,7 +15,7 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 
 from beetlesgallery.beetles_app import game_board, game_scale
-from beetlesgallery.beetles_app.models import PlayerScore
+from beetlesgallery.beetles_app.models import PlayerSkill
 from beetlesgallery.beetles_app.test_details_photo_controls import Outline
 from beetlesgallery.beetles_app.testing import PageBehaviourCase, make_beetle, make_image, make_taxon
 
@@ -27,21 +27,24 @@ class AccuracyOneColourTests(PageBehaviourCase):
 
     def test_the_step_is_the_values_own_not_the_percentile(self):
         User = get_user_model()
-        for i, acc in enumerate([0.95, 0.96, 0.97, 0.98]):
-            PlayerScore.objects.create(player=User.objects.create_user(f"p{i}"), accuracy=acc, judged=20)
-        PlayerScore.objects.create(player=self.user, accuracy=0.4, judged=20)
-        me = game_board.accuracy_standing(self.user)["me"]
+        for i, ok in enumerate([95, 96, 97, 98]):
+            PlayerSkill.objects.create(player=User.objects.create_user(f"p{i}"), rank="species", branch="Ips",
+                                       correct=ok, judged=100)
+        PlayerSkill.objects.create(player=self.user, rank="species", branch="Ips", correct=40, judged=100)
+        me = game_board.accuracy_standing_by_rank(self.user)["ranks"][3]["me"]   # species, one plot per rank now
         self.assertEqual(me["percentile"], 0)
         self.assertEqual(me["step"], game_scale.value_step(0.4))   # "decent", the same as everywhere else
         self.assertEqual(me["rank"], "Top 100%")
         self.assertNotIn("tier", me)
 
     def test_the_chip_is_a_grey_rank_and_the_number_has_the_colour(self):
-        standing = {"players": 3, "bins": [], "average": 0.6,
-                    "me": {"accuracy": 0.85, "percentile": 29, "rank": "Top 71%", "step": "excellent", "bin": 8}}
+        # four small plots now: the rank is grey text beside the number of players, not a chip, so it fits
+        me = {"accuracy": 0.85, "percentile": 29, "rank": "Top 71%", "step": "excellent", "bin": 17}
+        standing = {"players": 3, "me": True,
+                    "ranks": [{"rank": "tribe", "players": 3, "bins": [], "average": 0.6, "me": me}]}
         html = render_to_string("beetles/includes/game_accuracy.html", {"standing": standing})
         chip = re.search(r'<span[^>]*data-testid="accuracy-rank"[^>]*>', html).group(0)
-        self.assertIn("bg-gray-100", chip)
+        self.assertIn("text-gray-700", chip)
         self.assertNotIn("scale-", chip)
         self.assertIn('data-testid="accuracy-rank">Top 71%<', html)
         value = re.search(r'<span[^>]*data-testid="accuracy-value"[^>]*>', html).group(0)

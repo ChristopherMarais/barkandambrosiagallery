@@ -90,12 +90,15 @@ class HomeLeaderboardTableTests(GameCase):
 
 class HomeAccuracyChartTests(GameCase):
     def test_the_chart_labels_the_average_and_you(self):
-        # a dashed line and an orange bar with no legend (#gh-chart); now both are labelled
+        # a dashed line and an orange bar with no legend (#gh-chart); now both are labelled. Four small plots
+        # (one per rank) share one key for the dashed line, and each line says its average when pointed at.
         from django.template.loader import render_to_string
-        standing = {"players": 3, "bins": [{"count": 1, "height": 50}] * 5, "average": 0.6,
-                    "me": {"accuracy": 0.8, "percentile": 80, "rank": "Top 20%", "step": "great", "bin": 4}}
+        me = {"accuracy": 0.8, "percentile": 80, "rank": "Top 20%", "step": "great", "bin": 4}
+        standing = {"players": 3, "me": True, "ranks": [
+            {"rank": "subfamily", "players": 3, "bins": [{"count": 1, "height": 50}] * 5, "average": 0.6, "me": me}]}
         html = render_to_string("beetles/includes/game_accuracy.html", {"standing": standing})
-        self.assertIn("average 60%", html)
+        self.assertIn('title="Average 60%"', html)
+        self.assertIn(">Average</span>", html)
         self.assertIn('data-testid="accuracy-you-label">You<', html)
         self.assertIn("text-xs text-gray-500", html)   # 12px, gray-500 (not the old text-[10px] text-gray-400)
         self.assertNotIn("text-[10px] text-gray-400", html)
