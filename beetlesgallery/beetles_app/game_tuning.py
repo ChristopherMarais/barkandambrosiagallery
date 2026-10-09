@@ -122,6 +122,10 @@ GROUPS = [
            "applies to 'not in' tips.", 0.5, 1, 0.05),
         _t("GAME_TIP_MIN_NOT_VOTES", "Players needed for a 'not in' tip", 2,
            "Curators see 'Players are confident it is not in genus X' once at least this many say so.", 1, 50, 1),
+        _t("GAME_NOT_MIN_PLAYERS", "Players needed to rule a name out", 2,
+           "A name is never the game's suggestion for a beetle once at least this many players said it is not that "
+           "name (an untapped beetle, an odd one picked, a Similarity 'not the same'), and they outweigh the votes "
+           "for it. Fewer only lower its share of the vote.", 1, 50, 1),
         _t("GAME_AUTO_APPLY_MIN_EXPERTS", "Naming experts who must agree to write a name in", 2,
            "Naming experts who must give the same species before it is written onto an unnamed beetle as "
            "an Expert ID (still unvalidated, for a curator to confirm).", 1, 10, 1),

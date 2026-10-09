@@ -1497,6 +1497,40 @@ class AnswerPoints(models.Model):
         verbose_name_plural = "Answer Points"
 
 
+class NegativeLabel(models.Model):
+    """
+    What one game answer says a beetle is *not*: ``roi`` is not ``value`` at ``rank`` (species values are
+    "Genus species"). Written when the answer is saved (game_negatives), one row per beetle and rank:
+
+    * Find Them All: every beetle left untapped (and not flagged) is not the grid's group at its rank.
+    * Odd One Out: every beetle picked as odd is not the rest's group at the grid's rank.
+    * Similarity: "same tribe" next to a validated beetle says not its genus; "different" says not its subfamily.
+    * Naming: none. A name is already a vote against every other name at its rank (game.consensus).
+
+    Validated beetles get rows too (it is what the player said); the readers decide which beetles they care about.
+    """
+
+    answer = models.ForeignKey(GameAnswer, on_delete=models.CASCADE, related_name="negatives")
+    player = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="negative_labels")
+    roi = models.ForeignKey(Beetles, on_delete=models.CASCADE, related_name="negative_labels")
+    mode = models.CharField(max_length=10, choices=GameRound.Mode.choices)
+    rank = models.CharField(max_length=10)
+    value = models.CharField(max_length=201)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "game_negative_label"
+        verbose_name = "Negative Label"
+        verbose_name_plural = "Negative Labels"
+        constraints = [
+            models.UniqueConstraint(fields=["answer", "roi", "rank"], name="game_negative_label_uniq"),
+        ]
+        indexes = [models.Index(fields=["roi", "rank"], name="game_negative_label_roi_idx")]
+
+    def __str__(self):
+        return f"{self.roi_id} is not {self.rank} {self.value}"
+
+
 class PlayerScore(models.Model):
     """
     A player's running totals, recomputed from AnswerPoints (and their scored answers) so lists are fast.

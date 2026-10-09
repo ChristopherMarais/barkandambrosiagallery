@@ -3,7 +3,7 @@ from django.utils.html import format_html, mark_safe
 from .models import (
     UploadBatch, UpdateBatch, Beetles, ImageAsset, DownloadJob, ImageLock,
     Taxon, Synonym, CategoryMapping, GameRound, GameAnswer, GridStep,
-    PlayerSkill, SpeciesDiscovery, RetroCredit, AnswerPoints, PlayerScore, GamePreference, LabelReview, RoiDifficulty, GameReport, ModelPrediction, PathogenInteraction, AccessRequest, InteractionProposal, AreaGrant, SiteNotice, GameTuning, PredictionUpload, RoiName,
+    PlayerSkill, SpeciesDiscovery, RetroCredit, AnswerPoints, NegativeLabel, PlayerScore, GamePreference, LabelReview, RoiDifficulty, GameReport, ModelPrediction, PathogenInteraction, AccessRequest, InteractionProposal, AreaGrant, SiteNotice, GameTuning, PredictionUpload, RoiName,
 )
 from simple_history.admin import SimpleHistoryAdmin
 
@@ -867,6 +867,19 @@ class AnswerPointsAdmin(admin.ModelAdmin):
     list_display = ("answer", "points", "basis", "computed_at")
     list_filter = ("basis",)
     readonly_fields = ("answer", "points", "basis", "detail", "computed_at")
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(NegativeLabel)
+class NegativeLabelAdmin(admin.ModelAdmin):
+    """Read-only: what each game answer says a beetle is not, written with the answer (game_negatives)."""
+    list_display = ("roi", "rank", "value", "mode", "player", "created_at")
+    list_filter = ("mode", "rank")
+    search_fields = ("value",)
+    raw_id_fields = ("answer", "player", "roi")
+    readonly_fields = ("answer", "player", "roi", "mode", "rank", "value", "created_at")
 
     def has_add_permission(self, request):
         return False
