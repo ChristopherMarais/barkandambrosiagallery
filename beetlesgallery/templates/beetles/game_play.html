@@ -690,7 +690,7 @@
     </div>
     <div class="flex flex-col gap-3 max-w-sm mx-auto">
       <a id="review-link" href="#" class="btn-primary px-6 py-3.5 text-base rounded-xl"><i class="fi fi-rr-list-check"></i> See the answers</a>
-      <a href="{% url 'game_home' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl">Back to the game home</a>
+      <a href="{% url 'game_home' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl" data-testid="caughtup-exit">Exit</a>
     </div>
   </div>
 
@@ -773,7 +773,7 @@
     <div class="flex flex-col gap-3">
       <button type="button" id="recap-more" class="btn-main px-6 py-3.5 text-base">Keep playing</button>
       <a href="{% url 'game_report' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl" data-testid="recap-learn"><i class="fi fi-rr-bulb"></i> Where I lost points</a>
-      <a href="{% url 'game_home' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl" data-testid="recap-home">{{ game_name }} home</a>
+      <a href="{% url 'game_home' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl" data-testid="recap-home">Exit</a>
     </div>
     <a href="{{ discussions }}" target="_blank" rel="noopener" class="mt-6 inline-block text-sm text-gray-500 underline hover:text-gray-800" data-testid="discussions-link">Bug or idea? Tell us on GitHub Discussions</a>
   </div>
