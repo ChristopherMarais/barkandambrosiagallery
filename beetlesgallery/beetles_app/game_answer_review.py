@@ -497,7 +497,8 @@ def _grid_views(tiles, opinions, rank, target):
     """
     {place: {"players", "ai", "in"}} for a grid's beetles nobody has validated: what the other players and IBBI-AI
     call each at the grid's rank, and whether that puts it in the group ("in" True or False; None when nobody sure
-    says, or they disagree). IBBI-AI counts from GAME_FEEDBACK_AI_MIN, the players from half their weighted vote.
+    says, or they disagree). IBBI-AI counts from GAME_FEEDBACK_AI_MIN, the players from a support of 0.5 (lowered by
+    the answers that rule the name out: game.consensus).
     """
     open_tiles = {i: t for i, t in enumerate(tiles) if t is not None and not game_scoring.is_truth(t)}
     if not open_tiles:

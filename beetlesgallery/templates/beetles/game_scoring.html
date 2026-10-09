@@ -234,7 +234,8 @@ answer = max(0, Σ points)   (Naming answers then × weight {{ v.GAME_POINTS_CLA
       <pre class="mt-3 text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto scroll-fade">at each rank, for each name given:
   weight(player, rank) = (correct + 1) / (judged + 2)      on validated beetles at that rank: a newcomer counts as a coin flip
   tally[name]          = Σ weight × vote                    (vote = 1, or {{ v.GAME_SELECT_TAP_WEIGHT|floatformat:"-2" }} for a tap)
-  support              = tally[leading name] / Σ tally       0 to 1</pre>
+  against[name]        = Σ weight × vote                    over the answers that rule the name out (below)
+  support              = tally / (tally + against)           for the leading name: 0 to 1</pre>
       <ul class="list-disc pl-5 mt-2 space-y-1">
         <li><b>Trusted</b> at a rank: a Naming expert for that part of the tree supports the name and no trusted player disagrees. Taps alone never make a name trusted.</li>
         <li><b>Curator tip</b> on the Image Annotation page: the deepest rank that is trusted, or has at least {{ v.GAME_TIP_MIN_VOTES }} players and {{ v.GAME_TIP_MIN_SUPPORT|floatformat:"-2" }} support ("3 reliable players say genus <i>Xyleborus</i>"), flagged when it disagrees with the current label.</li>
@@ -246,14 +247,16 @@ answer = max(0, Σ points)   (Naming answers then × weight {{ v.GAME_POINTS_CLA
     <div class="pt-2 text-sm">
       <h3 class="font-semibold text-gray-900 mb-2">What it is not</h3>
       <div class="table-scroll"><table class="table-cards w-full">
-        <thead class="text-xs uppercase text-gray-500"><tr><th class="text-left pr-3 pb-1">Answer</th><th class="text-left pr-3 pb-1">Says the beetle is not</th></tr></thead>
+        <thead class="text-xs uppercase text-gray-500"><tr><th class="text-left pr-3 pb-1">Answer</th><th class="text-left pr-3 pb-1">Says the beetle is not</th><th class="text-right pb-1">Counts</th></tr></thead>
         <tbody class="divide-y divide-gray-100">
-          <tr><td class="pr-3 py-1.5">Similarity, a rung short of a validated partner</td><td>in the partner's next rank ("same tribe" with a <i>Xyleborus</i> → not genus <i>Xyleborus</i>)</td></tr>
-          <tr><td class="pr-3 py-1.5">Odd One Out, picked as the odd one</td><td>in the group of the rest, at the round's rank</td></tr>
-          <tr><td class="pr-3 py-1.5">Find Them All, left untapped (when the player tapped something)</td><td>in the grid's group</td></tr>
+          <tr><td class="pr-3 py-1.5">Naming</td><td class="pr-3">any other name at each rank named (<i>Platypus</i> → not genus <i>Xyleborus</i>)</td><td class="text-right">its vote</td></tr>
+          <tr><td class="pr-3 py-1.5">Similarity, a rung short of a validated partner</td><td class="pr-3">in the partner's next rank ("same tribe" with a <i>Xyleborus</i> → not genus <i>Xyleborus</i>)</td><td class="text-right">1 vote</td></tr>
+          <tr><td class="pr-3 py-1.5">Odd One Out, picked as the odd one</td><td class="pr-3">in the group of the rest, at the round's rank</td><td class="text-right">{{ v.GAME_SELECT_TAP_WEIGHT|floatformat:"-2" }} of a vote</td></tr>
+          <tr><td class="pr-3 py-1.5">Find Them All, left untapped (when the player tapped something)</td><td class="pr-3">in the grid's group</td><td class="text-right">{{ v.GAME_SELECT_TAP_WEIGHT|floatformat:"-2" }} of a vote</td></tr>
         </tbody>
       </table></div>
-      <p class="mt-2">A <b>"not in" tip</b> ("Players are confident it is not in genus <i>Xyleborus</i>", or "Naming experts and players…") appears once at least {{ v.GAME_TIP_MIN_NOT_VOTES }} players say so and they are at least {{ v.GAME_TIP_MIN_SUPPORT|floatformat:"-2" }} of everyone who spoke to that group either way. It helps a curator rule names out, and flags a current label that players reject.</p>
+      <p class="mt-2">Each one lowers the <b>support</b> of the name it rules out and of every name under it ("not Scolytinae" counts against genus <i>Xyleborus</i> too), weighted like a vote. It never changes which name leads or whether it is trusted.</p>
+      <p class="mt-2">A <b>"not in" tip</b> ("Players are confident it is not in genus <i>Xyleborus</i>", or "Naming experts and players…") appears for a name somebody ruled out, once at least {{ v.GAME_TIP_MIN_NOT_VOTES }} players say so (naming something else counts) and they are at least {{ v.GAME_TIP_MIN_SUPPORT|floatformat:"-2" }} of everyone who spoke to that group either way. It helps a curator rule names out, and flags a current label that players reject.</p>
     </div>
 
     <div class="pt-2 text-sm">

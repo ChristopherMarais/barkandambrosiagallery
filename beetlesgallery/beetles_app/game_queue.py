@@ -4,9 +4,9 @@ curator, and how confident each is, so the page can filter to them and sort from
 
 Confidence of one beetle's proposal, from most to least important:
   1. how far down proven experts back it (subfamily .. species, game_trust),
-  2. how far down reliable players agree (at least GAME_TIP_MIN_SUPPORT of the weighted vote from
-     at least two players),
-  3. the share of the vote at that rank, then how many players answered.
+  2. how far down reliable players agree (a support of at least GAME_TIP_MIN_SUPPORT from at least two players;
+     answers that rule the name out lower it, game.consensus),
+  3. the support at that rank, then how many players answered.
 An image takes the confidence of its most confident beetle. A proposal a curator already accepted or dismissed
 drops out until new answers come in. Cached for GAME_QUEUE_CACHE_SECONDS; reviewing a proposal clears it.
 """

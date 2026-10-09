@@ -561,3 +561,29 @@ that tribe and its subfamily too (`game_trust.skill_counts`, `grid_claims`).
   already judges every shared rank; Odd One Out (telling apart within a group) stays at its own rank. The player
   report may now show the higher names a grid gave the player. `recompute_game_scores` brings existing skills up to
   date at once (otherwise each player's catch up after their next batch).
+
+## Update: negative labels from every game
+
+Every game now records what a beetle is *not*, and that lowers the players' confidence in a name. One place lists
+the claims (`game.ruled_out`), one rule says what each claim rules out (`game.rules_out`), and both the confidence
+(`game.consensus`) and the curators' "not in" tips (`game_tips`) read them from `game.evidence`.
+
+- **Find Them All:** a beetle left untapped is not of the grid's group, at the grid's rank ("select all Scolytinae":
+  the others are not Scolytinae). Only when the player tapped something; a flagged photo says nothing.
+- **Odd One Out:** each beetle picked as an odd one is not of the rest's group.
+- **Similarity:** next to a validated partner, the partner's name one rank below the deepest shared one ("same
+  tribe": not its genus; "different subfamily": not its subfamily).
+- **Naming:** a name rules out every other name at each rank it gives. That is the name itself, so it is counted
+  once: a name for another value was already weight against the leader. New is that a name which stops higher, in
+  another branch, now counts against the names under this one ("Platypodinae" against genus *Xyleborus*).
+- **Confidence:** at each rank, `support = for / (for + against)` for the leading name. Each claim weighs the
+  player's reliability at that rank times its own weight (1 for Naming and Similarity, `GAME_SELECT_TAP_WEIGHT` for
+  a grid). A claim against a name counts against every name under it ("not Scolytinae" lowers genus *Xyleborus*);
+  "not genus *Xyleborus*" says nothing about its tribe. With names alone this is the old share of the vote. The
+  review card, the grids' review, the proposal queue, the staff table and its CSV all read this support.
+- **Unchanged:** which name leads, its vote count, the trusted verdict and the expert labels written in, points and
+  judges (`game_scoring.votes_on` reads names only), and the answers/players counts (so a negative never reopens a
+  reviewed proposal). A beetle that is only ruled out proposes nothing.
+- **"Not in" tips:** a name somebody ruled out, once at least `GAME_TIP_MIN_NOT_VOTES` players say it is not that
+  and they are at least `GAME_TIP_MIN_SUPPORT` of those who spoke to it. A player who named something else now counts
+  as one more against. Similarity answers on validated beetles no longer make tips (like the other games).

@@ -1919,32 +1919,145 @@ def tap_votes(roi_ids=None, voters=None):
     return [(uuid.UUID(r), pid, Vote(labels, weight)) for r, pid, labels in rows if r in open_ids]
 
 
-def grid_exclusions(answer):
+# ---------------------------------------------------------------------------
+# What answers say a beetle is not (negative labels)
+# ---------------------------------------------------------------------------
+class Ruled(dict):
     """
-    [(roi_id, rank, value)] a grid answer says beetles nobody has validated are *not* in: in Odd One Out the picked
-    beetles are not of the rest's group; in Select all the beetles left untapped are not of the grid's group (a photo
-    the player flagged says nothing).
+    What one answer says a beetle is *not*: the name at ``rank``, held with the names above it ({rank: value} from
+    subfamily down to ``rank``, species as "Genus species"), and how much it counts, like a Vote.
+    """
+
+    def __init__(self, names, rank, weight=1.0):
+        super().__init__(names)
+        self.rank, self.weight = rank, weight
+
+    @property
+    def value(self):
+        return self[self.rank]
+
+
+def rules_out(claim, name):
+    """
+    Whether one claim says a beetle is not ``name`` ({rank: value} from subfamily down to the rank in question).
+
+    A Ruled claim rules out its own name and everything under it: "not subfamily Scolytinae" rules out tribe
+    Xyleborini and genus Xyleborus too, while "not genus Xyleborus" says nothing about tribe Xyleborini.
+    A name from any game (a Vote, or implied_labels) rules out every other name at each rank it gives, and so
+    everything under those: "Platypodinae" rules out genus Xyleborus, "Xyleborus ferrugineus" rules out "Xyleborus
+    affinis". It says nothing below where it stops: "Xyleborus" is silent about which Xyleborus.
+    """
+    if isinstance(claim, Ruled):
+        mine = name.get(claim.rank)
+        return bool(mine) and mine.lower() == claim.value.lower()
+    return any(claim.get(r) and v and claim[r].lower() != v.lower() for r, v in name.items())
+
+
+def taxon_names(taxon, rank):
+    """{rank: name} of a Taxon from subfamily down to ``rank``, blank ranks left out (species as "Genus species")."""
+    values = {
+        "subfamily": taxon.subfamily, "tribe": taxon.tribe, "genus": taxon.genus,
+        "species": f"{taxon.genus} {taxon.species}" if taxon.genus and taxon.species else "",
+    }
+    return {r: values[r] for r in RANKS[: RANKS.index(rank) + 1] if values[r]}
+
+
+def pair_ruled(answer):
+    """
+    What a Similarity answer says its beetle is not, as a Ruled (or None): the validated partner's name one rank below
+    the deepest the player says they share. "Same tribe" next to a Xyleborus affinis: not genus Xyleborus; "different
+    subfamily": not subfamily Scolytinae. "Same species" and "not sure" rule nothing out.
+    """
+    from .game_scoring import is_truth
+
+    if answer.mode != "pair" or answer.skipped or not is_truth(answer.roi_b):
+        return None
+    depth = PAIR_DEPTH.get(answer.pair_answer)
+    if depth is None or depth >= len(RANKS) - 1:
+        return None
+    rank = RANKS[depth + 1]
+    names = taxon_names(answer.roi_b.taxon, rank)
+    return Ruled(names, rank) if names.get(rank) else None
+
+
+def _grid_ruled(answer, weight):
+    """
+    ([tile id, ...], Ruled) a grid answer rules out, before asking which of those beetles are still open: in Odd One Out
+    the beetles picked are not of the rest's group; in Select all the beetles left untapped are not of the grid's group,
+    when the player tapped something (tapping nothing says too little about each beetle). A photo the player flagged
+    says nothing. ([], None) when it rules nothing out.
     """
     if answer.skipped or answer.mode not in ("odd", "select") or answer.grid_rank not in RANKS or not answer.grid_group:
+        return [], None
+    rank = answer.grid_rank
+    names = {r: answer.grid_group[r] for r in RANKS[: RANKS.index(rank) + 1] if answer.grid_group.get(r)}
+    if not names.get(rank):
+        return [], None
+    tiles, flagged, picked = [str(t) for t in answer.tiles or []], set(answer.flagged or []), set(answer.picks or [])
+    if answer.mode == "odd" and not picked:   # one pick, from before several odd ones (#540)
+        ids = [str(answer.roi_id)]
+    elif answer.mode == "odd":
+        ids = [t for i, t in enumerate(tiles) if i in picked and i not in flagged]
+    elif picked:
+        ids = [t for i, t in enumerate(tiles) if i not in picked and i not in flagged]
+    else:
+        return [], None
+    return ids, Ruled(names, rank, weight)
+
+
+def grid_exclusions(answer):
+    """[(roi_id, rank, value)]: what one grid answer says beetles nobody has validated are *not* (_grid_ruled)."""
+    ids, ruled = _grid_ruled(answer, tap_weight())
+    if not ids:
         return []
-    value = answer.grid_group.get(answer.grid_rank)
-    if not value:
-        return []
-    if answer.mode == "odd" and not answer.picks:   # one pick, from before several odd ones (#540)
-        roi = answer.roi
-        return [(roi.id, answer.grid_rank, value)] if roi is not None and not roi.bbox_is_validated else []
-    if answer.mode == "odd":
-        tiles = answer.tiles or []
-        picked = [tiles[i] for i in answer.picks if isinstance(i, int) and 0 <= i < len(tiles)]
-        open_ids = Beetles.objects.filter(id__in=picked, bbox_is_validated=False, is_deleted=False).values_list("id", flat=True)
-        return [(rid, answer.grid_rank, value) for rid in open_ids]
-    picked = set(answer.picks or [])
-    if not picked:   # tapped nothing: says too little about each beetle
-        return []
-    left_out = picked | set(answer.flagged or [])
-    untapped = [t for i, t in enumerate(answer.tiles or []) if i not in left_out]
-    open_ids = Beetles.objects.filter(id__in=untapped, bbox_is_validated=False, is_deleted=False).values_list("id", flat=True)
-    return [(rid, answer.grid_rank, value) for rid in open_ids]
+    open_ids = Beetles.objects.filter(id__in=ids, bbox_is_validated=False, is_deleted=False).values_list("id", flat=True)
+    return [(rid, ruled.rank, ruled.value) for rid in open_ids]
+
+
+def ruled_out(roi_ids=None, voters=None):
+    """
+    [(roi_id, player_id, Ruled)]: every claim the answers make that a beetle nobody has validated is *not* something,
+    the one place for every game:
+
+    * Find Them All: a beetle left untapped is not of the grid's group, at the grid's rank (only when the player
+      tapped something; a photo they flagged says nothing).
+    * Odd One Out: each beetle picked as an odd one is not of the rest's group.
+    * Similarity: next to a validated partner, the partner's name one rank below the deepest shared one ("same tribe":
+      not its genus; "different subfamily": not its subfamily).
+    * Naming: a name rules out every other name at each rank it gives. That is the name itself (implied_labels), so it
+      is not listed again here: rules_out reads it from the name, and consensus counts it once.
+
+    A grid claim counts tap_weight(), like a tap; a Similarity claim 1, like a Similarity name. Like the names
+    (consensus), Similarity counts answers given while the beetle was open, and the grids beetles still open.
+    ``voters``, when given, limits it to those players' answers.
+    """
+    rows = []
+    pairs = (GameAnswer.objects.filter(mode="pair", is_check=False, skipped=False)
+             .exclude(pair_answer__in=["species", "unsure", ""]).select_related("roi_b__taxon"))
+    if roi_ids is not None:
+        pairs = pairs.filter(roi_id__in=list(roi_ids))
+    if voters is not None:
+        pairs = pairs.filter(player_id__in=list(voters))
+    for ans in pairs:
+        ruled = pair_ruled(ans)
+        if ruled:
+            rows.append((ans.roi_id, ans.player_id, ruled))
+
+    grids = GameAnswer.objects.filter(mode__in=["odd", "select"], skipped=False).filter(Q(mode="odd") | ~Q(picks=[]))
+    if roi_ids is not None:
+        grids = grids.filter(showing(roi_ids))
+    if voters is not None:
+        grids = grids.filter(player_id__in=list(voters))
+    weight, wanted, found = tap_weight(), {str(r) for r in roi_ids} if roi_ids is not None else None, []
+    for ans in grids.only("player_id", "mode", "roi_id", "skipped", "tiles", "picks", "flagged", "grid_rank",
+                          "grid_group"):
+        ids, ruled = _grid_ruled(ans, weight)
+        found += [(t, ans.player_id, ruled) for t in ids if wanted is None or t in wanted]
+    if found:
+        open_ids = {str(i) for i in Beetles.objects.filter(id__in={t for t, _, _ in found}, bbox_is_validated=False,
+                                                           is_deleted=False).values_list("id", flat=True)}
+        rows += [(uuid.UUID(t), pid, ruled) for t, pid, ruled in found if t in open_ids]
+    return rows
 
 
 def implied_labels(answer):
@@ -1954,8 +2067,8 @@ def implied_labels(answer):
     Classify: what the player picked. Pair: the ranks the player says the unvalidated
     ROI shares with its validated partner, taken from the partner's taxon. "Different
     subfamily" and "not sure" say nothing positive, so they imply nothing, and nor does a grid answer here: it is about
-    other beetles than its own ``roi`` (what a grid says a beetle is counts through tap_votes, what it says a beetle is
-    not through grid_exclusions).
+    other beetles than its own ``roi`` (what a grid says a beetle is counts through tap_votes, what any answer says a
+    beetle is not through ruled_out).
     Species values are "Genus species".
     """
     if answer.skipped or answer.mode in ("odd", "select"):
@@ -1970,26 +2083,20 @@ def implied_labels(answer):
     partner = answer.roi_b.taxon if answer.roi_b_id and answer.roi_b else None
     if depth < 0 or partner is None:
         return {}
-    values = {
-        "subfamily": partner.subfamily, "tribe": partner.tribe, "genus": partner.genus,
-        "species": f"{partner.genus} {partner.species}" if partner.genus and partner.species else "",
-    }
-    return {r: values[r] for r in RANKS[: depth + 1] if values[r]}
+    return taxon_names(partner, RANKS[depth])
 
 
-def consensus(limit=None, roi_ids=None, voters=None):
+def evidence(roi_ids=None, voters=None):
     """
-    Reliability-weighted votes for each unvalidated ROI that has answers, with the
-    trusted-expert verdict from game_trust.
-
-    Returns a list of dicts sorted by number of answers (most first):
-    {"roi", "answers", "players", "ranks": {rank: {"value", "support", "votes",
-    "trusted", "trusted_votes"}}, "trusted_rank", "taxon"}
-    ``support`` is the winning value's share of the total vote weight at that rank.
-    ``voters``, when given, limits it to the answers of those players (see game_levels.suggestion_voters).
+    {roi_id: {"roi", "answers", "players", "votes", "ruled"}}: what the answers say about each beetle nobody has
+    validated, read in one place for consensus and the curators' "not in" tips (game_tips), so both weigh the same
+    claims. ``votes`` [(player_id, labels)] say what the beetle is: the Naming and Similarity answers on it
+    (implied_labels) and the grid games' taps (tap_votes, a Vote with its weight). ``ruled`` [(player_id, Ruled)] say
+    what it is not (ruled_out). ``answers`` counts the answers on the beetle and the taps, ``players`` (a set) who gave
+    them; what a beetle is not adds to neither, so a proposal a curator reviewed comes back only for new names
+    (game_queue). A beetle that is only ruled out has ``roi`` None and nothing but ``ruled``.
+    ``voters``, when given, limits it to those players' answers (see game_levels.suggestion_voters).
     """
-    from .game_trust import TrustContext
-
     answers = (
         GameAnswer.objects.filter(is_check=False, skipped=False).exclude(mode__in=["odd", "select"])   # not names
         .select_related("roi", "roi__taxon", "roi_b__taxon")
@@ -1999,65 +2106,107 @@ def consensus(limit=None, roi_ids=None, voters=None):
         answers = answers.filter(roi_id__in=list(roi_ids))
     if voters is not None:
         answers = answers.filter(player_id__in=list(voters))
-    answers = list(answers)
-    player_ids = {a.player_id for a in answers}
-    reliability = player_reliability(player_ids)
-    trust = TrustContext(player_ids)
+    found = {}
 
-    per_roi = {}
+    def entry(roi_id, roi):
+        return found.setdefault(roi_id, {"roi": roi, "answers": 0, "players": set(), "votes": [], "ruled": []})
+
     for ans in answers:
-        entry = per_roi.setdefault(ans.roi_id, {
-            "roi": ans.roi, "answers": 0, "players": set(), "votes": [],
-        })
-        entry["answers"] += 1
-        entry["players"].add(ans.player_id)
+        about = entry(ans.roi_id, ans.roi)
+        about["answers"] += 1
+        about["players"].add(ans.player_id)
         labels = implied_labels(ans)
         if labels:
-            entry["votes"].append((ans.player_id, labels))
+            about["votes"].append((ans.player_id, labels))
     # The grid games (Select all taps, the rest of a solved Odd One Out grid): a little lighter than a name
     # (tap_weight), and never enough for an expert's verdict
     taps = tap_votes(roi_ids, voters)
     if taps:
         tapped = Beetles.objects.select_related("taxon").in_bulk({r for r, _, _ in taps})
-        reliability.update(player_reliability({p for _, p, _ in taps} - set(reliability)))
         for roi_id, pid, vote in taps:
             if roi_id not in tapped:
                 continue
-            entry = per_roi.setdefault(roi_id, {"roi": tapped[roi_id], "answers": 0, "players": set(), "votes": []})
-            entry["answers"] += 1
-            entry["players"].add(pid)
-            entry["votes"].append((pid, vote))
+            about = entry(roi_id, tapped[roi_id])
+            about["answers"] += 1
+            about["players"].add(pid)
+            about["votes"].append((pid, vote))
+    for roi_id, pid, ruled in ruled_out(roi_ids, voters):
+        entry(roi_id, None)["ruled"].append((pid, ruled))
+    return found
+
+
+def _rank_vote(votes, ruled, rank, reliability):
+    """
+    The players' name for one beetle at one rank, and how sure they are of it (see consensus), or None when no claim
+    names that rank.
+    """
+    def weight(pid, claim):
+        weights = reliability.get(pid, {}).get("all") or default_weight()
+        return weights[rank]["weight"] * getattr(claim, "weight", 1.0)
+
+    tally, count, display, names = defaultdict(float), defaultdict(int), {}, {}
+    for pid, labels in votes:
+        if rank not in labels:
+            continue
+        key = labels[rank].lower()
+        if key not in display:
+            display[key] = labels[rank]
+            names[key] = {r: labels[r] for r in RANKS[: RANKS.index(rank) + 1] if labels.get(r)}
+        tally[key] += weight(pid, labels)
+        count[key] += 1
+    if not tally:
+        return None
+    key = max(tally, key=tally.get)
+    against, n_against = 0.0, 0
+    for pid, claim in [*votes, *ruled]:
+        if not isinstance(claim, Ruled) and (claim.get(rank) or "").lower() == key:
+            continue   # a claim for it
+        if rules_out(claim, names[key]):
+            against += weight(pid, claim)
+            n_against += 1
+    return {"value": display[key], "support": tally[key] / (tally[key] + against), "votes": count[key],
+            "against": n_against}
+
+
+def consensus(limit=None, roi_ids=None, voters=None, found=None):
+    """
+    Reliability-weighted votes for each unvalidated ROI that has answers, with the
+    trusted-expert verdict from game_trust.
+
+    Returns a list of dicts sorted by number of answers (most first):
+    {"roi", "answers", "players", "ranks": {rank: {"value", "support", "votes", "against",
+    "trusted", "trusted_votes"}}, "votes", "ruled", "trusted_rank", "taxon"}
+
+    At each rank the winning ``value`` is the one with the most weight for it, and ``votes`` counts the claims for it,
+    from the names alone (as before negative labels: the trusted verdict reads only these). ``support`` is how sure
+    the players are of it: the weight for it over the weight for and against it. Every claim weighs the player's
+    reliability at that rank (player_reliability) times its own weight: 1 for a Naming or Similarity answer,
+    tap_weight() for what a grid says. A claim is against the value when it rules it out (rules_out): a name for
+    something else at that rank or above (the "not" of a Naming answer, so with names alone this is the winner's share
+    of the vote, as before), or a negative label (ruled_out: left untapped, picked as an odd one, a Similarity rung
+    short of the partner), whose "not subfamily Scolytinae" counts against every Scolytinae name below it too.
+    ``against`` counts those claims. A beetle that is only ruled out has no entry: there is no name to propose.
+    ``voters``, when given, limits it to the answers of those players (see game_levels.suggestion_voters); ``found``
+    is evidence() already read for the same beetles and voters.
+    """
+    from .game_trust import TrustContext
+
+    if found is None:
+        found = evidence(roi_ids, voters)
+    entries = [e for e in found.values() if e["answers"]]
+    reliability = player_reliability({pid for e in entries for pid, _ in [*e["votes"], *e["ruled"]]})
+    trust = TrustContext({pid for e in entries for pid, labels in e["votes"] if getattr(labels, "weight", 1.0) == 1.0})
 
     results = []
-    for entry in per_roi.values():
-        ranks = {}
-        for r in RANKS:
-            tally, count = defaultdict(float), defaultdict(int)
-            display = {}
-            for pid, labels in entry["votes"]:
-                if r not in labels:
-                    continue
-                key = labels[r].lower()
-                display.setdefault(key, labels[r])
-                weights = reliability.get(pid, {}).get("all") or default_weight()
-                tally[key] += weights[r]["weight"] * getattr(labels, "weight", 1.0)
-                count[key] += 1
-            if not tally:
-                ranks[r] = None
-                continue
-            key = max(tally, key=tally.get)
-            ranks[r] = {
-                "value": display[key],
-                "support": tally[key] / sum(tally.values()),
-                "votes": count[key],
-            }
+    for entry in entries:
+        ranks = {r: _rank_vote(entry["votes"], entry["ruled"], r, reliability) for r in RANKS}
         verdict = trust.verdict([(p, l) for p, l in entry["votes"] if getattr(l, "weight", 1.0) == 1.0], ranks)
         for r in RANKS:
             if ranks[r]:
                 ranks[r].update(verdict["ranks"][r])
         results.append({
             "roi": entry["roi"], "answers": entry["answers"],
-            "players": len(entry["players"]), "ranks": ranks, "votes": entry["votes"],
+            "players": len(entry["players"]), "ranks": ranks, "votes": entry["votes"], "ruled": entry["ruled"],
             "rank_list": [(r, ranks[r]) for r in RANKS],
             "trusted_rank": verdict["trusted_rank"],
             "taxon": verdict["taxon"],
