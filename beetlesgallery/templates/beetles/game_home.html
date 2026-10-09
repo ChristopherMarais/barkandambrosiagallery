@@ -2,8 +2,19 @@
 {% load beetle_tags %}
 {% load static %}
 
+{% block extra_css %}
+<style>
+  /* A computer's screen (the site's lg, 1024px): two columns, playing and your progress on the left, the curators'
+     checks, the week's top players and the rest on the right. A phone keeps the one column, in the same order. */
+  @media (min-width: 1024px) {
+    .game-home { max-width: 64rem; }
+    .game-home-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 2rem; align-items: start; }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-xl mx-auto">
+<div class="max-w-xl mx-auto game-home">
 
   <div class="flex items-center justify-between gap-3 mb-5">
     <h1 class="page-title"><span class="inline-flex items-center gap-2">{{ game_name }}</span></h1>
@@ -33,6 +44,8 @@
   {% endwith %}
   {% endif %}
 
+  <div class="game-home-cols" data-testid="home-cols">
+  <div>
   <!-- One button: the feed mixes both games -->
   <a href="{% url 'game_play' 'mixed' %}" data-testid="play"
     class="btn-main flex w-full py-6 mb-2 text-2xl rounded-2xl">
@@ -70,6 +83,8 @@
   <div class="mb-3">{% include "beetles/includes/game_split.html" with link=True %}</div>
   <div class="mb-5">{% include "beetles/includes/game_accuracy.html" %}</div>
 
+  </div>
+  <div>
   {% if checked %}
   <!-- Beetles checked by a curator since last time: what you said, what it is -->
   <section class="mb-5" data-testid="checked-recap">
@@ -136,6 +151,8 @@
   </script>
 
   {% include "beetles/includes/game_discussions.html" %}
+  </div>
+  </div>
 
   {% if discoveries %}
   <div id="discovery" class="fixed inset-0 z-96 flex items-center justify-center p-4 bg-black/40" role="dialog" aria-modal="true" aria-labelledby="discovery-title" data-testid="discovery-popup">

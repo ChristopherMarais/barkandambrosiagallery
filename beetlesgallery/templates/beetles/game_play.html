@@ -512,6 +512,49 @@
   /* On a wide screen keep the answer buttons a comfortable width in the middle */
   @media (min-width: 700px) { #panel { padding-left: calc((100% - 38rem) / 2); padding-right: calc((100% - 38rem) / 2); } }
   @media (prefers-reduced-motion: reduce) { #photos canvas { transition: none; } #chip.pop { animation: none; } }
+  /* A computer's screen (the site's lg, 1024px, and wider than tall): the answer panel and its card become a column
+     on the right, so the photos get the screen's full height and nothing under them moves between answer and review.
+     The buttons stay at the bottom of that column. Phones, and tablets held upright, keep the layout above. */
+  @media (min-width: 1024px) and (orientation: landscape) {
+    #game { --side: clamp(22.5rem, 27vw, 27rem); }
+    #stage { flex-direction: row; }
+    #photo-area { min-width: 0; }
+    #panel { flex: 0 0 var(--side); width: var(--side); max-height: none; display: flex; flex-direction: column;
+             padding: 1rem 1rem 0; border-top: 0; border-left: 1px solid #e5e7eb; }
+    #stage:has(#photos:is([data-size="16"], [data-size="25"])) #panel { max-height: none; }
+    #panel > * { flex-shrink: 0; }
+    #actions { margin-top: auto; padding-top: 0.5rem; grid-template-columns: 1fr 1fr 1.5fr; }   /* room for the key caps */
+    #panel > #submit-hint:not(.hidden) { margin-top: auto; }
+    #panel > #submit-hint:not(.hidden) + #actions { margin-top: 0; }
+    /* Naming: the photo as big as the room allows (the whole height), in its own shape, above a strip that keeps
+       Lighting and "Named by" clear of it */
+    #game[data-mode="classify"] #photos { flex: 1 1 0; max-height: none; padding-bottom: 2.75rem; }
+    #game[data-mode="classify"] #photos .cell { width: min(100%, (100cqh - 3.25rem) * (var(--photo-ar, 4 / 3))); max-height: 100%; }
+    /* Similarity: side by side while both photos fit at half the height, else one above the other (each photo's
+       shape, --photo-ar, as it lands): wide photos stack, tall ones sit side by side, whichever shows them bigger */
+    #game[data-mode="pair"] #photos { flex-wrap: wrap; align-content: stretch; }
+    #game[data-mode="pair"] #photos .cell { flex: 1 1 calc((100cqh - 1.5rem) / 2 * (var(--photo-ar, 1))); height: auto;
+        align-self: stretch; contain: size; }
+    /* The grids: as tall as the room allows, and wider than square where the width allows (up to 16:9): a beetle
+       lies across its photo more often than not, so it gets more of its tile */
+    #game:is([data-mode="odd"], [data-mode="select"]) #photos {
+        --tile-w: calc((100cqw - 2 * var(--pad) - (var(--grid-cols, 2) - 1) * var(--gap)) / var(--grid-cols, 2));
+        grid-template-columns: repeat(var(--grid-cols, 2), minmax(0, min(var(--tile-w), var(--tile) * 16 / 9))); }
+    /* Back: the photos on the left, the card and its button in the same column as the answer panel */
+    #previous:not(.hidden) { display: grid; grid-template-columns: minmax(0, 1fr) var(--side); grid-template-rows: auto minmax(0, 1fr); }
+    #previous > :first-child { grid-column: 1 / -1; }
+    #previous > :has(#previous-review) { display: flex; flex-direction: column; max-height: none; border-left: 1px solid #e5e7eb; }
+    #previous-done { margin-top: auto; }
+    /* How to play and Focus: a readable width, not one line across the screen */
+    #help-sheet > :last-child, #focus-sheet > :last-child { width: 100%; max-width: 40rem; margin-inline: auto; }
+    /* The recap: the four numbers in a row, the badges two by two, the ways on side by side */
+    #recap > div { max-width: 48rem; }
+    #recap-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    #recap-badges { display: grid; grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); gap: 0.5rem; }
+    #recap-badges > * { margin: 0; }
+    #recap-badges + div { flex-flow: row wrap; }
+    #recap-badges + div > * { flex: 1 1 auto; white-space: nowrap; }
+  }
   /* More photos of the same beetle (an unlock): a chip on the photo, and arrows in the photo viewer */
   /* The box on the whole photo: white with a dark edge so it shows on light and dark photos, the rest dimmed */
   /* the photo to name, when a beetle's other photos are open too */
@@ -1837,6 +1880,8 @@
       });
       frame.appendChild(canvas);
       if (MODE === "pair") {
+        // On a computer's screen the photo's shape decides side by side or one above the other (the desktop CSS)
+        loads[i].then((got) => { if (got && canvas.isConnected) cell.style.setProperty("--photo-ar", canvas.width + " / " + canvas.height); });
         const tag = document.createElement("span");
         tag.className = "ab-tag";
         tag.dataset.testid = "ab-tag";
