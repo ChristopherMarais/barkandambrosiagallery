@@ -137,7 +137,7 @@ class PointsTests(GridCase):
         page = self.client.get(reverse("game_scoring")).content.decode()
         self.assertIn('name="GAME_GRID_SIZE_FACTOR.25"', page)
         self.assertIn("Odd One Out has 40", page)
-        self.assertIn("25: 7–10", page)
+        self.assertIn("25: 6–11", page)
 
 
 class PageTests(GridCase):
