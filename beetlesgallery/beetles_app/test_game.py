@@ -55,8 +55,9 @@ class ScoringTests(SimpleTestCase):
         self.assertTrue(game.shared_ranks(a, b)["tribe"])
 
 
-# Most game tests answer at species with a brand-new player: every rank open (the rank steps have their own tests)
-@override_settings(GAME_RANK_UNLOCK_ANSWERS={"tribe": 0, "genus": 0, "species": 0})
+# Most game tests answer at species with a brand-new player: every rank open (the rank steps have their own tests).
+# Odd One Out grids hide the step's number of odd ones, not one drawn around it (test_grid_pick_count tests that).
+@override_settings(GAME_RANK_UNLOCK_ANSWERS={"tribe": 0, "genus": 0, "species": 0}, GAME_GRID_VARY_COUNT=False)
 class GameCase(PageBehaviourCase):
     def setUp(self):
         super().setUp()
@@ -173,7 +174,8 @@ class ClassifyApiTests(GameCase):
 
         # The payload must not say which ROI this is or whether it is scored.
         self.assertEqual(set(item), {"index", "mode", "position", "total", "images", "prefetch"})
-        self.assertEqual(set(item["images"][0]), {"url", "box", "thumb", "small", "large"})   # the crops: #494; thumb #601
+        # the crops: #494; thumb #601; ar is only the crop's shape, so the tile never reshapes
+        self.assertEqual(set(item["images"][0]), {"url", "box", "thumb", "small", "large", "ar"})
         self.assertNotIn(str(check.id), json.dumps(item))
         self.assertEqual(len(item["prefetch"]), 2)  # the other item's crops, small and large
 

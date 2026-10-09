@@ -101,7 +101,8 @@ def game_home(request):
         "score": game_scoring.score_for(request.user),
         "rewards": rewards,
         "board": board, "last_week": [] if board else game_board.last_week_top(),
-        "standing": game_board.accuracy_standing(request.user),
+        # one accuracy plot per rank (subfamily, tribe, genus, species), not one for everything together
+        "rank_standing": game_board.rank_standing(request.user),
         "goal_floor": game_rewards.daily_goal(),
         "games": games_stats,
         # the public address in production (SITE_URL), this server's own when developing
@@ -327,9 +328,12 @@ def game_leaderboard(request):
                     "odd": "odd_accuracy", "select": "select_accuracy"}.get(sort, "id_accuracy")
     headline_label = {"id_accuracy": "Naming", "sim_accuracy": "Similarity",
                        "odd_accuracy": "Odd One Out", "select_accuracy": "Find Them All"}[headline_key]
+    # The headline averages every rank of that one game; the row opens on the numbers rank by rank.
+    headline_title = f"{headline_label} accuracy: subfamily, tribe, genus and species together"
     for row in rows:
         row["headline_accuracy"] = row.get(headline_key)
         row["headline_label"] = headline_label
+        row["headline_title"] = headline_title
     return render(request, "beetles/game_leaderboard.html", {
         "rows": rows,
         "branch_rows": game_board.branch_board(branch_rank, branch_value) if branch_rank and branch_value else None,
@@ -704,13 +708,14 @@ def _crop_url(rnd, index, image, roi, size):
 def _item_images(rnd, index, extras=False):
     """
     The photos of one item: the whole photo ("url", for the whole-photo view), its box, and the crop the feed shows
-    ("small" at once, "large" swapped in when it arrives; #494). With ``extras``, each also says how many other photos
+    ("small" at once, "large" swapped in when it arrives; #494) with its shape ("ar", so its tile never reshapes). With ``extras``, each also says how many other photos
     there are of that same beetle ("more"), and lists them ("photos") once the player has unlocked them
     (game_levels.SPECIMEN_PHOTOS). Odd One Out shows its beetles in a grid, each on its own (no other photos of them).
     """
     rois = _shown_rois(rnd.items[index])
     images = [{"url": r.display_url, "box": _box(r), "thumb": game_answer_review.thumb_url(r),
-               "small": _crop_url(rnd, index, i, r, "small"), "large": _crop_url(rnd, index, i, r, "large")}
+               "small": _crop_url(rnd, index, i, r, "small"), "large": _crop_url(rnd, index, i, r, "large"),
+               "ar": game_crops.aspect(r)}
               for i, r in enumerate(rois)]
     if rnd.items[index].get("tiles"):
         return images

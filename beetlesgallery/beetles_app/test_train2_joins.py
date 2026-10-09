@@ -127,7 +127,7 @@ class AheadLeavesOutSpecimenMatesTests(GridCase):
 class HelpTests(GridCase):
     def test_how_it_works_says_bigger_grids_hide_more_odd_ones(self):
         how = " ".join(strip_tags(self.client.get(reverse("game_how")).content.decode()).split()).replace("’", "'")
-        self.assertIn("bigger grids hide two to four odd ones, and you pick that many", how)
+        self.assertIn("bigger grids hide one to four odd ones, a different number each time, and you pick that many", how)
         self.assertIn("(in Odd One Out, then with two, three and four odd ones)", how)
         self.assertIn("in Similarity and Odd One Out, makes you a Distinction expert", how)
         self.assertNotIn("Imposter Picker", how)

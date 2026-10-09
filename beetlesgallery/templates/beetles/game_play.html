@@ -24,10 +24,12 @@
   #photos.fade canvas { opacity: 0; }
   #photos canvas { transition: opacity 0.15s ease; }
   /* Naming shows one photo: size the image area to it, not a tall grey band of empty space (#play-space). The cell
-     takes the photo's own aspect ratio (--photo-ar, set once it loads), capped at 45% of the screen's height. */
+     takes the photo's own aspect ratio (--photo-ar, and --ar as a number: sent with the item, so the empty tile already
+     has it), as wide as fits under 45% of the screen's height (less the padding) and the room above the panel. Its
+     size is set here, never taken from the canvas, so the photo doesn't move when it lands or turns sharp. */
   #game[data-mode="classify"] #photos { flex: 0 1 auto; max-height: 45vh; width: 100%; background: none; }
-  #game[data-mode="classify"] #photos .cell { flex: 0 1 auto; width: auto; height: auto; max-width: 100%; max-height: 100%;
-      aspect-ratio: var(--photo-ar, 4 / 3); }
+  #game[data-mode="classify"] #photos .cell { flex: 0 1 auto; height: auto; max-width: 100%; max-height: none;
+      width: min(100%, calc((min(45vh, 100cqh) - 1rem) * var(--ar, 1.3333))); aspect-ratio: var(--photo-ar, 4 / 3); }
   /* ...and centred in the room above the answer panel, the same space above and below it, not pushed to the top (r7) */
   #game[data-mode="classify"] #photo-area { justify-content: center; }
   /* Lay the tiles (#602): the new beetle's empty tiles go down at once, one after another (--i, --lay-step), and each
@@ -214,6 +216,8 @@
   @media (hover: hover) { #game:is([data-mode="odd"], [data-mode="select"]) #photos .cell:hover > :is(.report-chip, .more-chip) { opacity: 1; pointer-events: auto; } }
   #game:is([data-mode="odd"], [data-mode="select"]) #photos .cell:is(.chips-on, .key-cursor) > :is(.report-chip, .more-chip),
   #game:is([data-mode="odd"], [data-mode="select"]) #photos .cell > :is(.report-chip, .more-chip):focus-visible { opacity: 1; pointer-events: auto; }
+  /* the Flag whose reasons are open stays in view while they are */
+  #game:is([data-mode="odd"], [data-mode="select"]) #photos .cell > .report-chip.menu-open { opacity: 1; pointer-events: auto; }
   #game:is([data-mode="odd"], [data-mode="select"]) #photos .more-chip { top: auto; right: 0.375rem; bottom: 0.375rem; }
   #game:is([data-mode="odd"], [data-mode="select"]) #photos .more-chip .more-word { display: none; }
   #game:is([data-mode="odd"], [data-mode="select"]) #photos .report-chip { width: 2rem; height: 2rem; font-size: 0.875rem; }
@@ -238,9 +242,10 @@
   .rank-row.cursor { box-shadow: 0 0 0 2px #9ca3af; }
   /* The whole photo: zoom like the crops, and lighting */
   #lb-zoom { transform-origin: 0 0; }
-  /* The Flag sits at the photo's bottom left, as on the photos in play, and its reasons open above it */
+  /* The Flag sits at the photo's bottom left, as on the photos in play. Its reasons (#report-menu, one menu for every
+     Flag) open right next to whichever Flag was tapped, over the whole photo too, and always inside the screen. */
   #report-cog { left: 0.5rem; bottom: 0.5rem; }
-  #report-menu { left: 0.5rem; bottom: 2.75rem; z-index: 4; }
+  #report-menu { left: 0; top: 0; z-index: 110; max-height: calc(100vh - 1rem); overflow-y: auto; }
   #lightbox #light-panel { position: fixed; left: auto; right: 0.75rem; bottom: 4rem; z-index: 101; }
   /* Swipes (#603): the review card and Back's card take a sideways finger (the panel still scrolls up and down) */
   #game[data-phase="review"] :is(#photos, #panel), #previous { touch-action: pan-y; }
@@ -362,7 +367,7 @@
   :is(#photos, #previous-photos)[data-size="25"] :is(.rv-num, .rv-badge) { font-size: 0.5625rem; top: 0.125rem; height: 1rem; }
   :is(#photos, #previous-photos)[data-size="25"] .rv-num { left: 0.125rem; min-width: 1rem; padding: 0 0.2rem; }
   :is(#photos, #previous-photos)[data-size="25"] .rv-badge { left: 1.25rem; padding: 0 0.25rem; }
-  /* On a phone the small tiles of 16 and 25 keep only the points: "missed" and "vote" would run into the tile's
+  /* On a phone the small tiles of 16 and 25 keep only the points: "missed" would run into the tile's
      number, and the dashed and grey rings already say them (the card lists them too) */
   @media (max-width: 639px) { :is(#photos, #previous-photos):is([data-size="16"], [data-size="25"]) .rv-badge.flat { display: none; } }
   /* the photo's own buttons and tags stay on top of the names */
@@ -468,6 +473,23 @@
   :is(#photos, #previous-photos) .cell.has-names > .rv-names { padding-bottom: 2.25rem; }
   :is(#photos, #previous-photos)[data-size="16"] .cell.has-names > .rv-names { padding-bottom: 1.75rem; }
   :is(#photos, #previous-photos)[data-size="25"] .cell.has-names > .rv-names { padding-bottom: 1.5rem; }
+  /* A grid's photo after the answer: one name, at the grid's rank, centred and a little bigger (rankLabel); a long
+     one wraps. A beetle IBBI-AI (blue) or the players (purple) named has their dot before the name and how sure they are after it. */
+  #game :is(#photos, #previous-photos) .cell > .rv-names.at-rank { font-size: 0.9375rem; line-height: 1.2; }
+  #game :is(#photos, #previous-photos)[data-size="9"] .cell > .rv-names.at-rank { font-size: 0.875rem; }
+  #game :is(#photos, #previous-photos)[data-size="16"] .cell > .rv-names.at-rank { font-size: 0.75rem; }
+  #game :is(#photos, #previous-photos)[data-size="25"] .cell > .rv-names.at-rank { font-size: 0.6875rem; }
+  .rv-names.at-rank > span { display: block; text-align: center; overflow-wrap: break-word; }
+  .rv-names.at-rank .nm { white-space: normal; }
+  .rv-names.at-rank .sure { font-size: 0.85em; font-weight: 600; white-space: nowrap; }
+  .rv-names.at-rank .sure.ai { color: #93c5fd; }
+  .rv-names.at-rank .sure.players { color: #d8b4fe; }
+  .rv-names.at-rank .rv-dot { box-shadow: 0 0 0 1.5px #fff; }
+  @media (min-width: 640px) {
+    #game :is(#photos, #previous-photos)[data-size="9"] .cell > .rv-names.at-rank { font-size: 1rem; }
+    #game :is(#photos, #previous-photos)[data-size="16"] .cell > .rv-names.at-rank { font-size: 0.875rem; }
+    #game :is(#photos, #previous-photos)[data-size="25"] .cell > .rv-names.at-rank { font-size: 0.8125rem; }
+  }
   :is(#photos, #previous-photos) .cell > .rv-whole { top: auto; right: auto; bottom: 0.375rem; left: 0.375rem; }
   :is(#photos, #previous-photos)[data-size="16"] .cell > .rv-whole { bottom: 0.25rem; left: 0.25rem; }
   :is(#photos, #previous-photos)[data-size="25"] .cell > .rv-whole { bottom: 0.125rem; left: 0.125rem; }
@@ -545,6 +567,57 @@
   :is(#game, #lightbox, #recap, #toasts, .level-pop) .fi::before { display: block; line-height: 1; }
   #light-btn, .more-chip, #chip, #combo, #level-chip, #focus-btn, #lb-light, .flag-badge, .rv-seen { justify-content: center; }
   #lightbox > button[aria-label="Close"], .lb-nav { display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+
+  /* A computer (lg, 64rem and up: the lg breakpoint changes structure). The phone's column, photos over the answer,
+     became a narrow strip in the middle of a wide screen; here the photos take the screen's width and height on the
+     left and the answer is a column on the right (--side), its buttons at its foot. The column has a width of its
+     own, so nothing the answer or the review puts in it moves the photos, and the buttons stay where they are from
+     the first beetle to the review. Below lg none of this applies: the phone and tablet layout is the one above. */
+  @media (min-width: 64rem) {
+    #game { --side: clamp(24rem, 30vw, 30rem); }
+    #stage { flex-direction: row; }
+    #photo-area { flex: 1 1 0; min-width: 0; }
+    #panel, #game #stage:has(#photos) #panel { flex: 0 0 var(--side); width: var(--side); max-height: none; display: flex; flex-direction: column;
+             padding: 1rem 1rem 0; border-top: 0; border-left: 1px solid #e5e7eb; }
+    /* the tip and the buttons at the foot of the column, whether the tip is there (answering) or not (the review) */
+    #submit-hint { margin-top: auto; padding-top: 0.75rem; }
+    #submit-hint.hidden + #actions { margin-top: auto; }
+    #actions { padding-bottom: calc(1rem + env(safe-area-inset-bottom)); }
+    /* Naming and Similarity: the photos as big as the room allows, a strip at the bottom kept for Lighting */
+    #game:is([data-mode="classify"], [data-mode="pair"]) #photos { --pad: 0.75rem; --light: 2.25rem; padding: var(--pad) var(--pad) calc(var(--pad) + var(--light)); }
+    #game[data-mode="classify"] #photos { flex: 1 1 0; max-height: none; height: 100%; }
+    #game[data-mode="classify"] #photos .cell { width: min(100%, calc((100cqh - 2 * var(--pad) - var(--light)) * var(--ar, 1.3333))); }
+    /* Similarity: each tile has its photo's own shape (--ar, from the item) and is as big as fits in its half, so the
+       letter, the Flag and the chips sit on the photo's corners; two wide photos show bigger one above the other
+       (pairStack) */
+    #game[data-mode="pair"] #photos { gap: 0.75rem; }
+    #game[data-mode="pair"] #photos .cell { flex: 0 1 auto; height: auto; aspect-ratio: var(--photo-ar, 4 / 3);
+        width: min((100% - 0.75rem) / 2, (100cqh - 2 * var(--pad) - var(--light)) * var(--ar, 1.3333)); }
+    #game[data-mode="pair"] #photos[data-stack] { flex-direction: column; }
+    #game[data-mode="pair"] #photos[data-stack] .cell { width: min(100%, (100cqh - 2 * var(--pad) - var(--light) - 0.75rem) / 2 * var(--ar, 1.3333)); }
+    /* the names on a big photo: bigger, with room for both columns */
+    #game:is([data-mode="classify"], [data-mode="pair"]) #photos .rv-names { font-size: 1.25rem; }
+    #game:is([data-mode="classify"], [data-mode="pair"]) #photos .rv-names > span { max-width: 32rem; }
+    /* the grids: a little more room round the tiles than on a phone */
+    #game:is([data-mode="odd"], [data-mode="select"]) #photos { --pad: 0.75rem; }
+    #game #photos:is([data-size="16"], [data-size="25"]) { --pad: 0.5rem; }
+    /* ...and their question at the top of the answer column (placePrompts moves it there), so the grid has the
+       whole height on the left: no band kept for it above the first row */
+    #game:is([data-mode="odd"], [data-mode="select"]) #photos { --prompt: 0px; }
+    #panel > :is(#odd, #select) { position: static; height: auto; padding: 0 0 0.75rem; margin-bottom: 0.75rem; background: none;
+        border-bottom: 1px solid #e5e7eb; justify-content: flex-start; }
+    #panel > :is(#odd, #select) p { white-space: normal; font-size: 1.25rem; line-height: 1.4; }
+    /* Back: the photos on the left and the card on the right, as in play */
+    #previous:not(.hidden) { display: grid; grid-template-columns: minmax(0, 1fr) var(--side); grid-template-rows: auto minmax(0, 1fr); }
+    #previous > :first-child { grid-column: 1 / -1; }
+    #previous-photos { gap: 0.75rem; padding: 0.75rem; }
+    #previous #previous-side { max-height: none; border-left: 1px solid #e5e7eb; }
+    /* the sheets over the game (How to play, Focus): a readable line, not the whole width */
+    #help-sheet > div + div, #focus-sheet > div + div { width: 100%; max-width: 40rem; margin: 0 auto; }
+    /* the recap: the four numbers in a row */
+    #recap > div { max-width: 40rem; }
+    #recap-stats:not(.hidden) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  }
 </style>
 {% endblock %}
 
@@ -727,7 +800,7 @@
       <h2 class="font-semibold text-gray-900">Your last beetle</h2>
     </div>
     <div id="previous-photos"></div>
-    <div class="p-4 space-y-3 overflow-y-auto max-h-[60%]">
+    <div id="previous-side" class="p-4 space-y-3 overflow-y-auto max-h-[60%]">
       <div id="previous-review" data-testid="previous-review"></div>
       <button type="button" id="previous-done" class="btn-primary w-full h-12 text-base rounded-xl">Current beetle</button>
     </div>
@@ -773,7 +846,7 @@
     <div class="flex flex-col gap-3">
       <button type="button" id="recap-more" class="btn-main px-6 py-3.5 text-base">Keep playing</button>
       <a href="{% url 'game_report' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl" data-testid="recap-learn"><i class="fi fi-rr-bulb"></i> Where I lost points</a>
-      <a href="{% url 'game_home' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl" data-testid="recap-home">{{ game_name }} home</a>
+      <a href="{% url 'game_home' %}" class="px-6 py-3.5 text-base font-medium text-gray-700 border border-gray-300 rounded-xl" data-testid="recap-home">Exit</a>
     </div>
     <a href="{{ discussions }}" target="_blank" rel="noopener" class="mt-6 inline-block text-sm text-gray-500 underline hover:text-gray-800" data-testid="discussions-link">Bug or idea? Tell us on GitHub Discussions</a>
   </div>
@@ -795,18 +868,19 @@
     </div>
     <!-- Flag a photo that looks wrong: bottom left of the photo, the same corner as on the photos in play -->
     <button type="button" id="report-cog" class="report-chip" aria-label="Flag this photo" title="Flag a bad photo"><i class="fi fi-rr-flag"></i><span class="sr-only">Flag</span></button>
-    <div id="report-menu" class="hidden absolute p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Flag this photo">
-      <div class="px-2 py-1 text-xs font-semibold text-gray-500">Flag this photo</div>
-      {% for value, label, hint in report_reasons %}
-      <button type="button" class="report-reason block w-full text-left px-2 py-2 rounded-lg hover:bg-gray-100" data-reason="{{ value }}" role="menuitem">{{ label }}{% if hint %}<span class="block text-xs text-gray-500">{{ hint }}</span>{% endif %}</button>
-      {% endfor %}
-    </div>
   </div>
   <div id="lb-names" class="hidden"></div>
   <button type="button" id="lb-light" class="hidden absolute bottom-3 right-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white text-gray-900 text-sm font-semibold shadow-lg" aria-label="Lighting" data-testid="lightbox-lighting"><i class="fi fi-rr-brightness"></i><span>Lighting</span></button>
   <button type="button" id="lb-prev" class="lb-nav hidden" aria-label="Previous photo of this beetle"><i class="fi fi-rr-angle-left"></i></button>
   <button type="button" id="lb-next" class="lb-nav hidden" aria-label="Next photo of this beetle"><i class="fi fi-rr-angle-right"></i></button>
   <div id="lb-count" class="hidden" data-testid="gallery-count"></div>
+</div>
+<!-- The reasons for a Flag: opened right next to the Flag tapped (on a photo in play, or on the whole photo) -->
+<div id="report-menu" class="hidden fixed p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Flag this photo" data-testid="report-menu">
+  <div class="px-2 py-1 text-xs font-semibold text-gray-500">Flag this photo</div>
+  {% for value, label, hint in report_reasons %}
+  <button type="button" class="report-reason block w-full text-left px-2 py-2 rounded-lg hover:bg-gray-100" data-reason="{{ value }}" role="menuitem">{{ label }}{% if hint %}<span class="block text-xs text-gray-500">{{ hint }}</span>{% endif %}</button>
+  {% endfor %}
 </div>
 
 {% include "beetles/includes/game_tour.html" %}
@@ -1231,7 +1305,7 @@
     showPhoto(gallery[galleryAt]);
     showCount();
     $("lb-primary").classList.toggle("hidden", galleryAt !== 0);   // the photo to name, among its other photos
-    $("report-menu").classList.add("hidden");
+    closeReportMenu();
   }
   // A photo opened from a review (after the answer, or under Back) is already answered: its Flag only sends the report,
   // it never skips or re-answers (#569). ``lightboxReview``: that answer's {round, index}, else null.
@@ -1245,7 +1319,7 @@
     const own = from && from.url === url ? from : null;
     gallery = photos || galleryOf(own);
     galleryAt = 0;
-    $("report-menu").classList.add("hidden");
+    closeReportMenu();
     $("report-cog").classList.remove("hidden");
     $("lightbox-img").removeAttribute("src");   // never the last beetle's photo while this one loads
     $("lb-soft-img").removeAttribute("src");
@@ -1298,29 +1372,77 @@
     if (e.key === "ArrowRight") stepGallery(1);
   });
   $("lightbox").addEventListener("click", () => $("lightbox").classList.add("hidden"));
-  $("report-cog").addEventListener("click", (e) => { e.stopPropagation(); $("report-menu").classList.toggle("hidden"); });
+  // ---------- the Flag's reasons: one menu, opened right next to the Flag tapped (owner: no whole photo first) ----------
+  // ``reportTarget``: the photo being flagged, {image, photo, review}: which photo of the item (A = 0, B = 1, or the
+  // tile), which of the beetle's photos (0 = the one in play), and for an answered beetle its {round, index}, else null
+  let reportTarget = null;
+  let reportAnchor = null;   // the Flag the menu is open at
+  function reviewWhere() { return phase === "review" || phase === "next" ? (previous && previous.where) || null : null; }
+  function closeReportMenu() {
+    $("report-menu").classList.add("hidden");
+    if (reportAnchor) reportAnchor.classList.remove("menu-open");
+    reportAnchor = null;
+  }
+  // Next to the Flag: above it, else below; its left edge on the Flag's, moved in so it stays inside the screen
+  function placeReportMenu() {
+    const menu = $("report-menu");
+    if (!reportAnchor || menu.classList.contains("hidden")) return;
+    const a = reportAnchor.getBoundingClientRect(), gap = 6, edge = 8;
+    const w = menu.offsetWidth, h = menu.offsetHeight;
+    let top = a.top - gap - h;
+    if (top < edge) top = a.bottom + gap;
+    top = Math.max(edge, Math.min(top, window.innerHeight - h - edge));
+    const left = Math.max(edge, Math.min(a.left, window.innerWidth - w - edge));
+    menu.style.left = Math.round(left) + "px";
+    menu.style.top = Math.round(top) + "px";
+  }
+  // ``toggle``: a second tap on the same Flag (or a second R) closes the menu again
+  function openReportMenu(anchor, target, toggle) {
+    if (toggle && reportAnchor === anchor && !$("report-menu").classList.contains("hidden")) { closeReportMenu(); return; }
+    closeReportMenu();
+    reportTarget = target;
+    reportAnchor = anchor;
+    anchor.classList.add("menu-open");
+    $("report-menu").classList.remove("hidden");
+    placeReportMenu();
+  }
+  // the whole photo's own Flag: the photo open there, whichever of the beetle's photos it is
+  function openLightboxReport(toggle) {
+    openReportMenu($("report-cog"), { image: lightboxImage, photo: galleryAt, review: lightboxReview }, toggle);
+  }
+  $("report-cog").addEventListener("click", (e) => { e.stopPropagation(); openLightboxReport(true); });
   $("report-menu").addEventListener("click", (e) => e.stopPropagation());
+  // a tap anywhere else closes it (the Flag it is open at toggles it itself)
+  document.addEventListener("pointerdown", (e) => {
+    if ($("report-menu").classList.contains("hidden")) return;
+    if ($("report-menu").contains(e.target) || (reportAnchor && reportAnchor.contains(e.target))) return;
+    closeReportMenu();
+  }, true);
+  window.addEventListener("resize", placeReportMenu);
+  window.addEventListener("scroll", placeReportMenu, true);
   document.querySelectorAll(".report-reason").forEach((btn) => btn.addEventListener("click", async () => {
+    const t = reportTarget;
+    if (!t) return;
+    closeReportMenu();
     try {
-      if (lightboxReview) {
-        await api(root.dataset.reportUrl, { round: lightboxReview.round, index: lightboxReview.index, image: lightboxImage, photo: galleryAt, reason: btn.dataset.reason });
+      if (t.review) {
+        await api(root.dataset.reportUrl, { round: t.review.round, index: t.review.index, image: t.image, photo: t.photo, reason: btn.dataset.reason });
         $("lightbox").classList.add("hidden");
         toast({ kind: "report", title: "Thanks!", text: "Sent to the curators to check." });
         return;
       }
-      // galleryAt > 0: one of the beetle's other photos (the server finds it the same way it listed them)
-      const data = await api(root.dataset.reportUrl, { round: roundId, index: item.index, image: lightboxImage, photo: galleryAt, reason: btn.dataset.reason });
+      // photo > 0: one of the beetle's other photos (the server finds it the same way it listed them)
+      const data = await api(root.dataset.reportUrl, { round: roundId, index: item.index, image: t.image, photo: t.photo, reason: btn.dataset.reason });
       $("lightbox").classList.add("hidden");
       if (data.flagged && !data.end) {
         // a grid carries on without that photo, until half of them are flagged (#489)
-        flagTile(lightboxImage);
+        flagTile(t.image);
         toast({ kind: "report", title: "Thanks!", text: "Sent to the curators. Carry on with the rest." });
         return;
       }
       toast({ kind: "report", title: "Thanks!", text: "Sent to the curators to check." });
       send(Object.assign({ skipped: true, reported: true }, data.flagged ? { flagged: data.flagged } : {}));   // on to the next beetle, no points lost
     } catch (err) {
-      $("report-menu").classList.add("hidden");
       toast({ kind: "report", title: "Couldn't send", text: err.message });
     }
   }));
@@ -1789,6 +1911,38 @@
     }
   }
 
+  // A Naming tile's shape: the CSS's aspect ratio and the number its width is worked out from
+  function photoShape(cell, ar) {
+    cell.style.setProperty("--photo-ar", String(ar));
+    cell.style.setProperty("--ar", String(ar));
+  }
+
+  // Similarity on a computer (lg): A and B side by side, or one above the other where that shows the smaller of the
+  // two bigger (two wide photos next to the answer column). Chosen from the shapes the item sends, before the photos
+  // land, so they never move once they are on screen; a phone keeps its own layout (the CSS applies only from lg).
+  const WIDE_SCREEN = window.matchMedia("(min-width: 64rem)");
+  function pairStack(holder, ars) {
+    delete holder.dataset.stack;
+    if (MODE !== "pair" || !WIDE_SCREEN.matches || ars.length !== 2 || !ars.every((ar) => ar > 0)) return;
+    const box = $("photo-area").getBoundingClientRect();   // the first beetle: the stage is still hidden, so roughly
+    const W = (box.width || innerWidth * 0.7) - 36, H = (box.height || innerHeight - 64) - 60;
+    const shown = (w, h, ar) => { const ht = Math.min(h, w / ar); return ht * ht * ar; };   // a photo's area in its cell
+    const side = Math.min(...ars.map((ar) => shown(W / 2, H, ar)));
+    const stacked = Math.min(...ars.map((ar) => shown(W, H / 2, ar)));
+    if (stacked > side) holder.dataset.stack = "1";
+  }
+  window.addEventListener("resize", () => { if (item && MODE === "pair") pairStack($("photos"), item.images.map((im) => im.ar)); });
+
+  // The grid games' question: on a computer (lg) at the top of the answer column, so the grid gets the full height on
+  // the left; on a phone in its band above the photos, as before
+  function placePrompts() {
+    const prompts = [$("odd"), $("select")];
+    if (WIDE_SCREEN.matches) $("panel").prepend(...prompts);
+    else $("photo-area").prepend(...prompts);
+  }
+  placePrompts();
+  WIDE_SCREEN.addEventListener("change", placePrompts);
+
   // Lay the tiles (#602): the new beetle's empty tiles go down at once, quickly one after another, and each photo
   // lands in its tile as soon as it is decoded (the small crop, then the sharp one). Usually the photos are in already
   // (loaded ahead); otherwise the laying covers the wait. The answer opens once every photo is in.
@@ -1812,6 +1966,7 @@
     holder.style.setProperty("--grid-cols", String(Math.ceil(Math.sqrt(item.images.length))));
     if (grid) holder.dataset.size = String(item.images.length);
     else delete holder.dataset.size;
+    pairStack(holder, item.images.map((im) => im.ar));
     item.images.forEach((im, i) => {
       const cell = document.createElement("div");
       cell.className = "cell slot";
@@ -1826,11 +1981,15 @@
           loadImage(im.large).then((big) => { if (canvas.isConnected) drawCrop(canvas, big, im.box, true); }).catch(() => {});
         }
       });
+      // Naming: the tile takes this photo's own shape, not a fixed box (#play-space), from the item when it says
+      if (MODE === "classify" && im.ar) photoShape(cell, im.ar);
+      if (MODE === "pair" && im.ar) photoShape(cell, im.ar);   // Similarity's tiles take it on a computer (lg)
       loads[i].then((got) => {   // the photo lands in its tile (if this beetle is still on screen), then the sharp one
         if (!got || !canvas.isConnected) return;
         drawCrop(canvas, got.img, im.box, got.cut);
-        // Naming: size the tile to this photo's own shape, not a fixed box (#play-space)
-        if (MODE === "classify") cell.style.setProperty("--photo-ar", canvas.width + " / " + canvas.height);
+        // ...or from the photo itself, where the item didn't say or said otherwise (a photo stored on its side)
+        const ar = canvas.width / canvas.height;
+        if ((MODE === "classify" || MODE === "pair") && (!im.ar || Math.abs(ar - im.ar) > 0.02 * im.ar)) photoShape(cell, ar);
         cell.classList.add("landed");
         moved();
         if (!sharpOnZoom) sharpen();
@@ -1894,10 +2053,10 @@
       peers.textContent = "Named by " + item.others + (item.others === 1 ? " other" : " others");
       holder.appendChild(peers);
     }
-    // A Flag on each photo (bottom left): opens that photo with the reasons ready to pick, at the same corner. On a
-    // grid tile it shows while the pointer is on the tile, or on the tile last tapped, so a small tile stays clear (r7)
+    // A Flag on each photo (bottom left): its reasons open right next to it, the photo staying where it is (owner). On
+    // a grid tile it shows while the pointer is on the tile, or on the tile last tapped, so a small tile stays clear (r7)
+    closeReportMenu();   // a menu still open for the beetle before
     holder.querySelectorAll(".cell").forEach((cell, i) => {
-      const im = item.images[i];
       const report = document.createElement("button");
       report.type = "button";
       report.className = "report-chip";
@@ -1908,8 +2067,7 @@
       report.innerHTML = '<i class="fi fi-rr-flag"></i><span class="sr-only">Flag</span>';
       report.addEventListener("click", (e) => {
         e.stopPropagation();
-        openLightbox(im.url, im.box, i);
-        $("report-menu").classList.remove("hidden");
+        openReportMenu(report, { image: i, photo: 0, review: reviewWhere() }, true);
       });
       cell.appendChild(report);
     });
@@ -2145,7 +2303,11 @@
     // Under the headline at most one short line of what matters (#569): the names are on the photos, the points on
     // the tiles, and the rings and dots need no legend
     const line = r.classify ? classifyLine(r.classify) : r.pair ? pairLine(r.pair) : r.grid ? parts(r.grid.note || []) : [];
-    holder.replaceChildren(head, ...(line.length ? [node("p", "rv-line", ...line)] : []));
+    const votes = r.grid ? (r.grid.tiles || []).filter((t) => t && (t.state === "vote" || t.state === "pick")).length : 0;
+    const voted = votes ? [node("p", "rv-line", votes === 1 ? "1 of your picks counts as a vote: no one knows this one yet."
+                                                 : votes + " of your picks count as votes: no one knows these yet.")] : [];
+    voted.forEach((p) => { p.dataset.testid = "vote-line"; });
+    holder.replaceChildren(head, ...(line.length ? [node("p", "rv-line", ...line)] : []), ...voted);
   }
 
   // Where a name comes from, as a coloured dot (#569): green validated, blue IBBI-AI, purple the players, glowing
@@ -2251,8 +2413,8 @@
     const by = ring === "ring-open" || ring === "ring-unknown" ? callBy(t) : null;
     if (by) cellEl.classList.add("by-" + by);
     if (!cellEl.querySelector(".rv-num")) cellEl.appendChild(node("span", "rv-num", String(i + 1)));   // numbered at Submit
-    const badge = t.points ? [pts(t.points), t.points > 0 ? "up" : "down"] : t.state === "missed" ? ["missed", "flat"]
-                : t.state === "vote" || t.state === "pick" ? ["vote", "flat"] : null;
+    // a pick nobody can check yet has no tag: its grey ring says so, and the line under the result counts them
+    const badge = t.points ? [pts(t.points), t.points > 0 ? "up" : "down"] : t.state === "missed" ? ["missed", "flat"] : null;
     if (badge) cellEl.appendChild(node("span", "rv-badge " + badge[1], badge[0]));
     if ((g.seen || []).includes(i)) cellEl.appendChild(seenMark("tile-seen"));   // this very tile was seen before (#600)
   }
@@ -2348,6 +2510,8 @@
   }
   // ``full``: for the whole photo opened from a review, under the photo: every rank by name, nothing cut short
   function namesLabel(b, review, full) {
+    const at = !full && review && review.grid && review.grid.rank;
+    if (at) return rankLabel(b, at);
     const box = node("div", full ? "lb-names" : "rv-names");
     box.dataset.testid = "beetle-names";
     if (full) box.dataset.testid = "photo-names";
@@ -2370,6 +2534,31 @@
       // the columns as one group, which moves under the name when the row is narrow (round 7)
       box.append(node("span", "", node("span", "lead", ...dots), rk, nm, idType, cells.length ? node("span", "cols", ...cells) : null));
     });
+    return box;
+  }
+  // A grid's photo (Odd One Out, Find Them All) after the answer and under Back: only its name at the grid's rank
+  // (owner: the rest cluttered the grid). A validated beetle's name alone; a name from IBBI-AI or the players has how
+  // sure they are after it, in their colour (blue IBBI-AI, purple the players). Every rank and both sources are on the
+  // whole photo.
+  const SURE_BY = { ai: "IBBI-AI", players: "the players" };
+  function rankLabel(b, rank) {
+    const box = node("div", "rv-names at-rank");
+    box.dataset.testid = "beetle-names";
+    const r = (b.ranks || []).find((x) => x.rank === rank) || {};
+    if (!r.name) {
+      box.append(node("span", "", node("span", "nm none", "Not named yet")));
+      return box;
+    }
+    const line = node("span", "", node("span", "nm", taxonName(r.name, rank)));
+    line.title = rank + ": " + r.name + (b.validated ? " (validated)" : "");
+    if (!b.validated && SURE_BY[r.source]) line.prepend(sourceDot(r.source));
+    if (!b.validated && r.sure != null && SURE_BY[r.source]) {
+      const sure = node("span", "sure " + r.source, r.sure + "%");
+      sure.title = SURE_BY[r.source] + ": " + r.sure + "% sure";
+      sure.setAttribute("aria-label", sure.title);
+      line.append(" ", sure);
+    }
+    box.append(line);
     return box;
   }
   function nameTiles(cells, review) {
@@ -3006,9 +3195,12 @@
     $("submit").classList.toggle("next-busy", waitingNext);
     $("submit").setAttribute("aria-busy", waitingNext ? "true" : "false");
     $("submit-spin").classList.toggle("hidden", !waitingNext);
+    // While answering, its line stays when there is nothing to say (a pick made, the photos still coming), so the
+    // photos above never move as it comes and goes; on the review it is gone
     const hint = !onReview && !busy && !ready ? submitHint() : "";
-    $("submit-hint").textContent = hint;
-    $("submit-hint").classList.toggle("hidden", !hint);
+    $("submit-hint").textContent = hint || "\u00a0";
+    $("submit-hint").classList.toggle("hidden", onReview);
+    $("submit-hint").classList.toggle("invisible", !onReview && !hint);
   }
 
   function resetAnswer() {
@@ -3025,7 +3217,8 @@
 
   // Close whatever sits on top of the game. True if something was open.
   function closeOverlays() {
-    const open = [["lightbox"], ["focus-sheet"], ["help-sheet"], ["previous"]].filter(([id]) => $(id) && !$(id).classList.contains("hidden"));
+    const open = [["report-menu"], ["lightbox"], ["focus-sheet"], ["help-sheet"], ["previous"]].filter(([id]) => $(id) && !$(id).classList.contains("hidden"));
+    closeReportMenu();
     hidePrevious();
     if (finding) { open.push(["finder"]); closeFinder(); }
     $("lightbox").classList.add("hidden");
@@ -3106,6 +3299,7 @@
   window.addEventListener("blur", () => { ctrlAlone = false; });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
+      if (!$("report-menu").classList.contains("hidden")) { closeReportMenu(); return; }   // the Flag's reasons first
       if (!$("recap").classList.contains("hidden")) return;
       if (!$("light-panel").classList.contains("hidden")) { toggleLight(false); return; }
       if (!$("progress-pop").classList.contains("hidden")) { toggleProgress(false); return; }
@@ -3130,7 +3324,7 @@
     if (!$("lightbox").classList.contains("hidden")) {
       if (key === "a" || key === "d") stepGallery(key === "a" ? -1 : 1);
       else if (is("light", key) && !$("lb-light").classList.contains("hidden")) toggleLight();
-      else if (is("report", key)) $("report-menu").classList.toggle("hidden");
+      else if (is("report", key)) openLightboxReport(true);
       else if (is("photo", key)) { $("lightbox").classList.add("hidden"); toggleLight(false); }
       return;
     }
@@ -3156,10 +3350,14 @@
       // the photo on screen; in Odd One Out with one odd one the one you picked (or the first)
       const lone = MODE === "odd" && !multiPick() && oddPicks.size ? Array.from(oddPicks)[0] : null;
       const at = lone !== null ? lone : multiPick() && keyCursor !== null ? keyCursor : 0;
-      if (item && item.images[at]) {
+      // the Flag: its reasons next to that photo's Flag, the photo staying where it is; while the answer shows that
+      // Flag steps aside, so they open on the whole photo as before
+      const chip = pressed === "report" ? $("report-chip-" + at) : null;
+      if (chip && chip.getClientRects().length && getComputedStyle(chip).visibility !== "hidden") openReportMenu(chip, { image: at, photo: 0, review: reviewWhere() }, true);
+      else if (item && item.images[at]) {
         if (MODE === "odd" || MODE === "select") openTile(at);
         else openLightbox(item.images[at].url, item.images[at].box, at);
-        if (pressed === "report") $("report-menu").classList.remove("hidden");
+        if (pressed === "report") openLightboxReport(false);
       }
     }
     else if (pressed === "light") { if (!$("light-btn").classList.contains("hidden")) toggleLight(); }

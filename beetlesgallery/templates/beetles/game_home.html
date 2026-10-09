@@ -2,14 +2,28 @@
 {% load beetle_tags %}
 {% load static %}
 
+{% block extra_css %}
+<style>
+  /* A computer (lg, 64rem and up: the lg breakpoint changes structure): two columns, playing on the left and the
+     rest on the right, not a phone's column in the middle of the screen. Below lg the wrappers are plain blocks and
+     the page is the phone's, one column in the same order. */
+  @media (min-width: 64rem) {
+    #game-home { max-width: 72rem; }
+    #game-home .gh-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 2.5rem; align-items: start; }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-xl mx-auto">
+<div id="game-home" class="max-w-xl mx-auto">
 
   <div class="flex items-center justify-between gap-3 mb-5">
     <h1 class="page-title"><span class="inline-flex items-center gap-2">{{ game_name }}</span></h1>
     <a href="{% url 'game_how' %}" class="text-sm text-gray-500 underline hover:text-gray-900 hit-area">How it works</a>
   </div>
 
+  <div class="gh-cols">
+  <div class="gh-main">
   {% if last_session %}
   <!-- The recap the game shows when you leave, once, when the page was closed or put away before it could show it -->
   {% with r=last_session %}
@@ -68,7 +82,9 @@
   </div>
 
   <div class="mb-3">{% include "beetles/includes/game_split.html" with link=True %}</div>
-  <div class="mb-5">{% include "beetles/includes/game_accuracy.html" %}</div>
+  </div>
+  <div class="gh-side">
+  <div class="mb-5">{% include "beetles/includes/game_accuracy_ranks.html" %}</div>
 
   {% if checked %}
   <!-- Beetles checked by a curator since last time: what you said, what it is -->
@@ -155,6 +171,8 @@
     <i class="fi fi-rr-settings"></i> Superuser: Game settings
   </a>
   {% endif %}
+  </div>
+  </div>
 </div>
 {% load game_podium_tags %}{% podium_popup %}
 {% endblock %}

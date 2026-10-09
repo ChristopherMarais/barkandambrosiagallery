@@ -10,6 +10,7 @@ identify what is in it, which is where people specialise and compete.
 from datetime import datetime, timedelta
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.db.models import Avg, Count, F, Q, Sum
 from django.db.models.functions import Floor, TruncWeek
 from django.utils import timezone
@@ -191,7 +192,12 @@ def board(sort="score", period="week", q="", limit=50):
         rows.sort(key=lambda r: (-r["score"], r["username"]))
     for i, row in enumerate(rows, start=1):
         row["position"] = i
-    return rows[:limit] if limit else rows
+    rows = rows[:limit] if limit else rows
+    # each shown player's accuracy rank by rank, naming and telling apart kept apart: one query for the page
+    by_rank = rank_accuracy([row["player_id"] for row in rows], since=since)
+    for row in rows:
+        row["by_rank"] = by_rank.get(row["player_id"], [])
+    return rows
 
 
 def branch_board(rank, value, limit=50):
@@ -280,3 +286,116 @@ def accuracy_standing(player, bins=20):
         judged = PlayerScore.objects.filter(player=player).values_list("judged", flat=True).first() or 0
         out["needed"] = max(0, min_judged - judged)
     return out
+
+
+# ---------------------------------------------------------------------------
+# Accuracy rank by rank (subfamily, tribe, genus, species)
+# ---------------------------------------------------------------------------
+RANK_TITLES = {"subfamily": "Subfamily", "tribe": "Tribe", "genus": "Genus", "species": "Species"}
+# Naming is recognising a named group: the Naming game, and Find Them All, whose grid names a group and asks for its
+# members (as the player report counts it, #543). Telling apart is comparing beetles: Similarity and Odd One Out.
+NAMING_GAMES = ("classify", "select")
+TELLING_APART_GAMES = ("pair", "odd")
+RANK_POPULATION_CACHE = "game:board:rank-accuracy:v1"
+
+
+def _judged_answers():
+    """Answers that count towards accuracy, as in mode_stats and the overall rating: checked beetles, first sight."""
+    return GameAnswer.objects.filter(Q(is_check=True) | Q(validated_later=True), mode__in=GAMES, is_retry=False,
+                                     seen_before=False, skipped=False, score_hold=False)
+
+
+def _rank_counts(games=None, prefix=""):
+    """Aggregates ``<prefix><rank>_ok`` and ``<prefix><rank>_n``: the correct and the judged ranks (of ``games`` only)."""
+    only = Q(mode__in=games) if games else Q()
+    out = {}
+    for r in game.RANKS:
+        out[f"{prefix}{r}_ok"] = Count("pk", filter=only & Q(**{f"correct_{r}": True}))
+        out[f"{prefix}{r}_n"] = Count("pk", filter=only & Q(**{f"correct_{r}__isnull": False}))
+    return out
+
+
+def _rank_population():
+    """
+    {rank: {player_id: accuracy}} for the players with GAME_MIN_JUDGED_FOR_ACCURACY judged answers at that rank.
+    One grouped query over the judged answers, kept for GAME_RANK_STANDING_CACHE_SECONDS: everyone else's numbers
+    may be a few minutes old, the player's own never are (rank_standing works theirs out fresh).
+    """
+    table = cache.get(RANK_POPULATION_CACHE)
+    if table is not None:
+        return table
+    min_judged = game.game_setting("GAME_MIN_JUDGED_FOR_ACCURACY", 10)
+    table = {r: {} for r in game.RANKS}
+    for row in _judged_answers().values("player").annotate(**_rank_counts()).order_by():
+        for r in game.RANKS:
+            if row[f"{r}_n"] >= min_judged:
+                table[r][row["player"]] = row[f"{r}_ok"] / row[f"{r}_n"]
+    cache.set(RANK_POPULATION_CACHE, table, game.game_setting("GAME_RANK_STANDING_CACHE_SECONDS", 300))
+    return table
+
+
+def forget_rank_population():
+    cache.delete(RANK_POPULATION_CACHE)
+
+
+def rank_standing(player, bins=20):
+    """
+    The game home's accuracy plot, once per rank (subfamily, tribe, genus, species): [{"rank", "title", "judged",
+    "empty", and what accuracy_standing gives}], every game together, counted as for the overall accuracy.
+    A rank the player has no answers at is ``empty`` (no You line, never a misleading 0%); with fewer than
+    GAME_MIN_JUDGED_FOR_ACCURACY there, ``needed`` says how many more. Two queries at most: the player's own counts,
+    and everyone's (cached, _rank_population).
+    """
+    min_judged = game.game_setting("GAME_MIN_JUDGED_FOR_ACCURACY", 10)
+    population = _rank_population()
+    own = _judged_answers().filter(player=player).aggregate(**_rank_counts())
+    out = []
+    for r in game.RANKS:
+        ok, n = own[f"{r}_ok"] or 0, own[f"{r}_n"] or 0
+        mine = ok / n if n >= min_judged else None
+        others = [a for pid, a in population[r].items() if pid != player.id]
+        values = others + ([mine] if mine is not None else [])
+        counts = [0] * bins
+        for a in values:
+            counts[max(0, min(bins - 1, int(a * bins)))] += 1
+        top = max(counts) or 1
+        s = {
+            "rank": r, "title": RANK_TITLES[r], "judged": n, "empty": n == 0, "players": len(values),
+            "bins": [{"from": i / bins, "count": c, "height": round(100 * c / top)} for i, c in enumerate(counts)],
+            "average": sum(values) / len(values) if values else None, "me": None,
+        }
+        if mine is not None:
+            s["me"] = {"accuracy": mine, "percentile": None, "rank": None, "step": value_step(mine),
+                       "bin": min(bins - 1, int(mine * bins))}
+            if others:   # as accuracy_standing: the players below, half of those level with them
+                below = sum(1 for a in others if a < mine) + 0.5 * sum(1 for a in others if a == mine)
+                pct = round(100 * below / len(others))
+                s["me"].update(percentile=pct, rank=f"Top {max(1, 100 - pct)}%")
+        else:
+            s["needed"] = max(0, min_judged - n)
+        out.append(s)
+    return out
+
+
+def rank_accuracy(player_ids, since=None):
+    """
+    {player_id: [{"rank", "title", "naming", "apart"}]}, a row per rank, each cell {"ok", "n", "accuracy", "step"}
+    (accuracy None when nothing was judged there). Naming is the Naming game; apart is telling beetles apart
+    (Similarity, Odd One Out). One query for every player on the page; ``since``: a board period.
+    """
+    ids = list(player_ids)
+    if not ids:
+        return {}
+    answers = _judged_answers().filter(player_id__in=ids)
+    if since is not None:
+        answers = answers.filter(answered_at__gte=since)
+    rows = {row["player"]: row for row in answers.values("player").annotate(
+        **_rank_counts(NAMING_GAMES, "naming_"), **_rank_counts(TELLING_APART_GAMES, "apart_")).order_by()}
+
+    def cell(row, kind, r):
+        ok, n = (row[f"{kind}_{r}_ok"], row[f"{kind}_{r}_n"]) if row else (0, 0)
+        accuracy = ok / n if n else None
+        return {"ok": ok, "n": n, "accuracy": accuracy, "step": value_step(accuracy)}
+
+    return {pid: [{"rank": r, "title": RANK_TITLES[r], "naming": cell(rows.get(pid), "naming", r),
+                   "apart": cell(rows.get(pid), "apart", r)} for r in game.RANKS] for pid in ids}

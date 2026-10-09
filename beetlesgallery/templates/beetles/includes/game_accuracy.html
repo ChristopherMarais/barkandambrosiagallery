@@ -1,12 +1,14 @@
 {% comment %}
-Accuracy among all players: a histogram, the average, you and your rank. Needs ``standing`` from game_board.accuracy_standing.
+Accuracy among all players: a histogram, the average, you and your rank. Needs ``standing`` from game_board.accuracy_standing
+or one rank of game_board.rank_standing; ``title`` names the plot (default "Accuracy") and ``compact`` makes it smaller for
+the game home's four plots, one per rank (there the axis title is said once, above them).
 One number, one colour (#site-meaning-85): the accuracy is coloured only by its own step on the site's scale
 (game_scale.value_step); the comparison with other players is only a grey rank chip ("Top 20%", r7 E12).
 {% endcomment %}
 {% with me=standing.me %}
-<div class="p-4 bg-gray-50 border border-gray-100 rounded-2xl" data-testid="accuracy-standing">
-  <div class="flex items-center gap-2 mb-3">
-    <span class="font-semibold text-gray-900">Accuracy</span>
+<div class="{% if compact %}p-3{% else %}p-4{% endif %} bg-gray-50 border border-gray-100 rounded-2xl" data-testid="accuracy-standing"{% if standing.rank %} data-rank="{{ standing.rank }}"{% endif %}>
+  <div class="flex items-center gap-2 {% if compact %}mb-1{% else %}mb-3{% endif %}">
+    <span class="font-semibold text-gray-900">{{ title|default:"Accuracy" }}</span>
     {% if me %}
     {% if me.rank %}<span class="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[11px] leading-none text-center font-semibold bg-gray-100 text-gray-700 border border-gray-200" data-testid="accuracy-rank">{{ me.rank }}</span>{% endif %}
     <span class="ml-auto text-sm font-semibold tabular-nums scale-{{ me.step }}" data-testid="accuracy-value">{% widthratio me.accuracy 1 100 %}%</span>
@@ -18,7 +20,7 @@ One number, one colour (#site-meaning-85): the accuracy is coloured only by its 
     {% if standing.average is not None %}<span class="absolute top-0 -translate-x-1/2 whitespace-nowrap text-[11px] font-medium text-gray-500" style="left: {% widthratio standing.average 1 100 %}%" data-testid="accuracy-average-label">average {% widthratio standing.average 1 100 %}%</span>{% endif %}
     {% if me %}<span class="absolute top-4 -translate-x-1/2 whitespace-nowrap text-[11px] font-semibold text-gray-900" style="left: {% widthratio me.accuracy 1 100 %}%" data-testid="accuracy-you-label">You</span>{% endif %}
   </div>
-  <div class="relative h-24 border-b border-gray-500" data-testid="accuracy-plot">
+  <div class="relative {% if compact %}h-16{% else %}h-24{% endif %} border-b border-gray-500" data-testid="accuracy-plot">
     <div class="absolute inset-0 flex items-end gap-0.5" aria-hidden="true">
       {% for b in standing.bins %}
       <div class="flex-1 rounded-t-sm {% if me and forloop.counter0 == me.bin %}{% if me.step == 'none' %}bg-gray-500{% else %}scale-fill-{{ me.step }}{% endif %}{% else %}bg-gray-300{% endif %}"
@@ -36,11 +38,12 @@ One number, one colour (#site-meaning-85): the accuracy is coloured only by its 
     <span class="absolute top-0 border-l border-gray-500 h-1" style="left: 80%"></span><span class="absolute top-1.5 -translate-x-1/2" style="left: 80%">80%</span>
     <span class="absolute top-0 right-0 border-r border-gray-500 h-1"></span><span class="absolute top-1.5 right-0">100%</span>
   </div>
-  <p class="text-center text-xs font-medium text-gray-600" data-testid="accuracy-axis-title">Accuracy</p>
+  {% if not compact %}<p class="text-center text-xs font-medium text-gray-600" data-testid="accuracy-axis-title">Accuracy</p>{% endif %}
   {% endif %}
-  <p class="mt-2 text-xs text-gray-500">
+  <p class="{% if compact %}mt-1{% else %}mt-2{% endif %} text-xs text-gray-500">
     {% if me and me.percentile is not None %}{% if standing.average is not None %}<span data-testid="accuracy-average">Average {% widthratio standing.average 1 100 %}%</span>{% endif %}
     {% elif me %}Not enough players yet to compare.
+    {% elif standing.empty %}<span data-testid="accuracy-empty">No answers at this rank yet.</span>
     {% else %}{{ standing.needed }} more answers on checked beetles to see where you stand.{% endif %}
   </p>
 </div>

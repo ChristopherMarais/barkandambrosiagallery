@@ -10,6 +10,18 @@
      dark photos), and the rest of the photo dimmed so the beetle of this answer stands out, as on that page. */
 {% include "beetles/includes/roi_box_css.html" %}
   #lightbox-box { box-shadow: 0 0 0 1px rgb(0 0 0 / 0.4), inset 0 0 0 1px rgb(0 0 0 / 0.4), 0 0 0 9999px rgb(0 0 0 / 0.35); }
+  /* A computer (lg, 64rem and up): the summary and where points went in a column on the left, the answer cards two
+     to a row on the right. Below lg the wrappers are plain blocks and the page is the phone's, one column. */
+  @media (min-width: 64rem) {
+    #review { max-width: 76rem; }
+    #review .rv-cols { display: grid; grid-template-columns: 20rem minmax(0, 1fr); column-gap: 2.5rem; align-items: start; }
+    #review .rv-side { position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow-y: auto; }
+    #review :is(#items, #items-correct) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; align-items: start; }
+    #review #items-correct { gap: 0.5rem; }
+    #review :is(#items, #items-correct) > li { margin: 0; }
+    /* a half-width card: the buttons keep their one line, the beetle's name wraps instead */
+    #review #items :is([data-report], [data-testid="open-in-annotator"]) { white-space: nowrap; flex-shrink: 0; }
+  }
 </style>
 {% endblock %}
 
@@ -17,6 +29,8 @@
 <div id="review" class="max-w-2xl mx-auto" data-report-url="{% url 'game_report_roi' %}" data-round="{{ round.id }}">
 
   {% url 'game_home' as back_url %}{% include "beetles/includes/back_link.html" with url=back_url label=game_name %}
+  <div class="rv-cols">
+  <div class="rv-side">
   <div class="mb-4">
     <div>
       <h1 class="page-title">Your answers</h1>
@@ -42,6 +56,8 @@
   </div>
 
   {% if feedback.losses.answers %}<div class="mb-4">{% include "beetles/includes/game_losses.html" with losses=feedback.losses %}</div>{% endif %}
+  </div>
+  <div class="rv-main">
 
   {% comment %}
   A long round (site-long, #618): the box above sums it up, the answers to look at come first as full cards, the
@@ -70,6 +86,8 @@
     <a href="{% url 'game_play' round.mode %}" class="btn-main px-6 py-3.5 text-base">Keep playing</a>
     {% endif %}
     <a href="{% url 'game_report' %}" class="px-6 py-3.5 text-center text-base font-medium text-gray-700 border border-gray-200 rounded-xl">My performance</a>
+  </div>
+  </div>
   </div>
 </div>
 

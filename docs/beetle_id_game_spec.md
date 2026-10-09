@@ -322,6 +322,12 @@ from players whose labels reach curators count (`game_levels.suggestion_voters`)
 * *Not in*: a Family Ties answer against a validated beetle also says what the other beetle is not ("same tribe"
   means not the partner's genus; "different subfamily" means not its subfamily). Shown when at least
   `GAME_TIP_MIN_NOT_VOTES` (2) players say so and at least 75% of those who spoke to it agree.
+* *Negative labels* (`NegativeLabel`, `game_negatives.py`): every answer writes down what it says a beetle is not:
+  Find Them All the untapped beetles (not the grid's group), Odd One Out the picked ones (not the rest's group),
+  Similarity next to a validated beetle (as above). Naming writes none: a name already counts against every rival
+  name at its rank. In the consensus a "not" weighs against that name (support = votes for it / (all votes + weight
+  against it)); once `GAME_NOT_MIN_PLAYERS` (2) players rule a name out and outweigh its votes, it is never the
+  suggestion. `manage.py backfill_negative_labels` writes them for answers given before.
 
 **Help and feedback.** `/game/how-it-works/` opens with a 30-second guide, then scoring, levels, where labels go,
 experts and the leaderboard. A link to the game's GitHub Discussions category (`GAME_DISCUSSIONS_URL`) is on the

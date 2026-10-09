@@ -21,7 +21,7 @@ def between(start, end):
 class RecapHomeLinkTests(SimpleTestCase):   # C1
     def test_the_link_names_the_games_home_not_just_the_game(self):
         link = between('data-testid="recap-home"', "</a>")
-        self.assertIn("{{ game_name }} home", link)
+        self.assertIn(">Exit", link)   # it now just says Exit (owner; test_flag_menu_exit), still to the game's home
         self.assertIn("{% url 'game_home' %}\" class=\"px-6 py-3.5", PAGE)   # where it goes: the game's home, /game/
 
 
