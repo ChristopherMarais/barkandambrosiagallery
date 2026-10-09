@@ -241,6 +241,11 @@
   /* The Flag sits at the photo's bottom left, as on the photos in play, and its reasons open above it */
   #report-cog { left: 0.5rem; bottom: 0.5rem; }
   #report-menu { left: 0.5rem; bottom: 2.75rem; z-index: 4; }
+  /* A Flag on a photo in play brings up the same reasons right at it, without the whole photo (owner): above the Flag,
+     or below it when there is no room above, always on the screen (placeFlagMenu); a thin grey edge, as it sits on the
+     white page. Its Flag stays clear while the reasons are open (a grid tile's too, and under a mouse). */
+  #flag-menu { position: fixed; z-index: 70; max-width: calc(100vw - 1rem); max-height: calc(100vh - 1rem); overflow-y: auto; border: 1px solid #e5e7eb; }
+  #game[data-mode] #photos .cell > .report-chip[aria-expanded="true"] { opacity: 1; pointer-events: auto; }
   #lightbox #light-panel { position: fixed; left: auto; right: 0.75rem; bottom: 4rem; z-index: 101; }
   /* Swipes (#603): the review card and Back's card take a sideways finger (the panel still scrolls up and down) */
   #game[data-phase="review"] :is(#photos, #panel), #previous { touch-action: pan-y; }
@@ -809,6 +814,14 @@
   <div id="lb-count" class="hidden" data-testid="gallery-count"></div>
 </div>
 
+<!-- The same reasons, brought up right at a photo's Flag in play: the photo stays as it is (placeFlagMenu) -->
+<div id="flag-menu" class="hidden p-2 bg-white rounded-xl shadow-xl text-sm text-gray-800 whitespace-nowrap" role="menu" aria-label="Flag this photo" data-testid="flag-menu">
+  <div class="px-2 py-1 text-xs font-semibold text-gray-500">Flag this photo</div>
+  {% for value, label, hint in report_reasons %}
+  <button type="button" class="report-reason block w-full text-left px-2 py-2 rounded-lg hover:bg-gray-100" data-reason="{{ value }}" role="menuitem">{{ label }}{% if hint %}<span class="block text-xs text-gray-500">{{ hint }}</span>{% endif %}</button>
+  {% endfor %}
+</div>
+
 {% include "beetles/includes/game_tour.html" %}
 {% endblock %}
 
@@ -1236,10 +1249,12 @@
   // A photo opened from a review (after the answer, or under Back) is already answered: its Flag only sends the report,
   // it never skips or re-answers (#569). ``lightboxReview``: that answer's {round, index}, else null.
   let lightboxReview = null;
+  // The answer whose review is on screen, for a photo opened (or flagged) from it; null while answering
+  function reviewShown() { return phase === "review" || phase === "next" ? (previous && previous.where) || null : null; }
   // Every photo of the beetle by default (#601): ``photos`` only to give them some other way; else they come from the
   // beetle on screen, or from the review the photo was opened from.
   function openLightbox(url, box, which, photos, review) {
-    lightboxReview = review || (phase === "review" || phase === "next" ? (previous && previous.where) || null : null);
+    lightboxReview = review || reviewShown();
     lightboxImage = which || 0;
     const from = lightboxReview ? previous && (previous.images || [])[lightboxImage] : item && item.images[lightboxImage];
     const own = from && from.url === url ? from : null;
@@ -1300,17 +1315,20 @@
   $("lightbox").addEventListener("click", () => $("lightbox").classList.add("hidden"));
   $("report-cog").addEventListener("click", (e) => { e.stopPropagation(); $("report-menu").classList.toggle("hidden"); });
   $("report-menu").addEventListener("click", (e) => e.stopPropagation());
+  // A reason, picked in the whole photo's menu or in the small one at a photo's Flag (openFlagMenu): the same report
   document.querySelectorAll(".report-reason").forEach((btn) => btn.addEventListener("click", async () => {
     try {
       if (lightboxReview) {
         await api(root.dataset.reportUrl, { round: lightboxReview.round, index: lightboxReview.index, image: lightboxImage, photo: galleryAt, reason: btn.dataset.reason });
         $("lightbox").classList.add("hidden");
+        closeFlagMenu();
         toast({ kind: "report", title: "Thanks!", text: "Sent to the curators to check." });
         return;
       }
       // galleryAt > 0: one of the beetle's other photos (the server finds it the same way it listed them)
       const data = await api(root.dataset.reportUrl, { round: roundId, index: item.index, image: lightboxImage, photo: galleryAt, reason: btn.dataset.reason });
       $("lightbox").classList.add("hidden");
+      closeFlagMenu();
       if (data.flagged && !data.end) {
         // a grid carries on without that photo, until half of them are flagged (#489)
         flagTile(lightboxImage);
@@ -1321,9 +1339,62 @@
       send(Object.assign({ skipped: true, reported: true }, data.flagged ? { flagged: data.flagged } : {}));   // on to the next beetle, no points lost
     } catch (err) {
       $("report-menu").classList.add("hidden");
+      closeFlagMenu();
       toast({ kind: "report", title: "Couldn't send", text: err.message });
     }
   }));
+
+  // ---------- the small Flag menu: a photo's Flag in play brings up the reasons right at it (owner) ----------
+  // No whole photo to open first. It reports what the whole photo's Flag would: photo ``i`` of the beetle as shown
+  // (the first of its photos), from the review on screen if there is one. A tap outside it, Esc, Back or the next
+  // beetle closes it.
+  let flagChip = null;   // the Flag whose reasons are open
+  function openFlagMenu(i, keys) {
+    const chip = $("report-chip-" + i);
+    if (!chip || flagged.has(i)) return false;
+    closeFlagMenu();
+    lightboxReview = reviewShown();
+    lightboxImage = i;
+    galleryAt = 0;
+    flagChip = chip;
+    chip.setAttribute("aria-expanded", "true");
+    $("flag-menu").classList.remove("hidden");
+    placeFlagMenu();
+    if (keys) $("flag-menu").querySelector(".report-reason").focus({ preventScroll: true });   // the R key: on to the reasons
+    return true;
+  }
+  // Above its Flag, or below it when there is no room above; never off the screen's edges (8px clear)
+  function placeFlagMenu() {
+    if (!flagChip) return;
+    const menu = $("flag-menu"), at = flagChip.getBoundingClientRect(), edge = 8, gap = 6;
+    const w = document.documentElement.clientWidth, h = window.innerHeight;
+    const above = at.top - gap - menu.offsetHeight;
+    menu.style.left = Math.round(Math.max(edge, Math.min(at.left, w - edge - menu.offsetWidth))) + "px";
+    menu.style.top = Math.round(Math.max(edge, Math.min(above >= edge ? above : at.bottom + gap, h - edge - menu.offsetHeight))) + "px";
+  }
+  function closeFlagMenu() {
+    if (!flagChip) return;
+    const chip = flagChip;
+    flagChip = null;
+    chip.setAttribute("aria-expanded", "false");
+    if ($("flag-menu").contains(document.activeElement)) chip.focus({ preventScroll: true });
+    $("flag-menu").classList.add("hidden");
+  }
+  // A tap outside it only closes it: the click it ends in is eaten, so it never picks a photo or presses a button
+  let eatClick = false;
+  document.addEventListener("pointerdown", (e) => {
+    eatClick = !!flagChip && !$("flag-menu").contains(e.target) && !flagChip.contains(e.target);
+    if (eatClick) closeFlagMenu();
+  }, true);
+  document.addEventListener("keydown", () => { eatClick = false; }, true);
+  document.addEventListener("click", (e) => {
+    if (!eatClick) return;
+    eatClick = false;
+    e.stopPropagation();
+    e.preventDefault();
+  }, true);
+  window.addEventListener("resize", placeFlagMenu);
+  document.addEventListener("scroll", placeFlagMenu, true);   // it stays with its Flag
 
   // Load the coming crops while this beetle is answered: the next beetle's (small ones first), and the small ones of
   // the beetle after it; on the last beetle of a batch, the next batch's first (#542). Decoded off the main thread.
@@ -1802,6 +1873,7 @@
     sweepStop();
     setMode(item.mode || PAGE_MODE);
     endReview();
+    closeFlagMenu();   // the beetle changes: no reasons left open at the last one's Flag
     const holder = $("photos");
     holder.innerHTML = "";
     holder.classList.remove("revealing");
@@ -1894,10 +1966,9 @@
       peers.textContent = "Named by " + item.others + (item.others === 1 ? " other" : " others");
       holder.appendChild(peers);
     }
-    // A Flag on each photo (bottom left): opens that photo with the reasons ready to pick, at the same corner. On a
-    // grid tile it shows while the pointer is on the tile, or on the tile last tapped, so a small tile stays clear (r7)
+    // A Flag on each photo (bottom left): brings up the reasons right at it, the photo staying as it is (openFlagMenu).
+    // On a grid tile it shows while the pointer is on the tile, or on the tile last tapped, so a small tile stays clear (r7)
     holder.querySelectorAll(".cell").forEach((cell, i) => {
-      const im = item.images[i];
       const report = document.createElement("button");
       report.type = "button";
       report.className = "report-chip";
@@ -1906,10 +1977,13 @@
       report.setAttribute("aria-label", "Flag this photo");
       report.title = "Flag a bad photo";
       report.innerHTML = '<i class="fi fi-rr-flag"></i><span class="sr-only">Flag</span>';
+      report.setAttribute("aria-haspopup", "menu");
+      report.setAttribute("aria-controls", "flag-menu");
+      report.setAttribute("aria-expanded", "false");
       report.addEventListener("click", (e) => {
         e.stopPropagation();
-        openLightbox(im.url, im.box, i);
-        $("report-menu").classList.remove("hidden");
+        if (flagChip === report) closeFlagMenu();
+        else openFlagMenu(i);
       });
       cell.appendChild(report);
     });
@@ -1984,6 +2058,7 @@
     busy = p !== "answer";
     root.classList.toggle("answer-locked", busy);
     root.dataset.phase = p;
+    if (busy) closeFlagMenu();   // the answer is in (Submit or Skip): no reasons left open at a Flag
     if (busy && document.activeElement && $("panel").contains(document.activeElement)) document.activeElement.blur();
     waiting(p === "send" || p === "next");
     setOff($("skip"), busy);
@@ -2459,6 +2534,7 @@
     markTiles(cells, previous);
     nameTiles(cells, previous);
     renderReview(previous, $("previous-review"));
+    closeFlagMenu();   // your last beetle comes over this one: its Flag's reasons go
     $("previous").classList.remove("hidden");
     return true;
   }
@@ -3025,8 +3101,9 @@
 
   // Close whatever sits on top of the game. True if something was open.
   function closeOverlays() {
-    const open = [["lightbox"], ["focus-sheet"], ["help-sheet"], ["previous"]].filter(([id]) => $(id) && !$(id).classList.contains("hidden"));
+    const open = [["lightbox"], ["focus-sheet"], ["help-sheet"], ["previous"], ["flag-menu"]].filter(([id]) => $(id) && !$(id).classList.contains("hidden"));
     hidePrevious();
+    closeFlagMenu();
     if (finding) { open.push(["finder"]); closeFinder(); }
     $("lightbox").classList.add("hidden");
     if ($("focus-sheet")) openFocus(false);
@@ -3134,6 +3211,18 @@
       else if (is("photo", key)) { $("lightbox").classList.add("hidden"); toggleLight(false); }
       return;
     }
+    if (flagChip) {
+      // the small Flag menu: up and down (or W and S) go through its reasons, Enter or Space picks one, R closes it
+      const reasons = [...$("flag-menu").querySelectorAll(".report-reason")];
+      const now = reasons.indexOf(document.activeElement);
+      if (is("report", key)) { e.preventDefault(); closeFlagMenu(); }
+      else if (is("up", key) || is("down", key)) {
+        e.preventDefault();
+        const to = now < 0 ? (is("down", key) ? 0 : reasons.length - 1) : (now + (is("down", key) ? 1 : -1) + reasons.length) % reasons.length;
+        reasons[to].focus({ preventScroll: true });
+      }
+      return;
+    }
     if (document.querySelector("[data-overlay-open]")) return;
     if ($("stage").classList.contains("hidden") || ($("focus-sheet") && $("focus-sheet").classList.contains("flex"))) return;
     // a focused list keeps its letters (search) and its own arrows
@@ -3156,6 +3245,8 @@
       // the photo on screen; in Odd One Out with one odd one the one you picked (or the first)
       const lone = MODE === "odd" && !multiPick() && oddPicks.size ? Array.from(oddPicks)[0] : null;
       const at = lone !== null ? lone : multiPick() && keyCursor !== null ? keyCursor : 0;
+      // R while answering: that photo's reasons at its Flag, as a tap on it brings up (else in the whole photo)
+      if (pressed === "report" && phase === "answer" && openFlagMenu(at, true)) return;
       if (item && item.images[at]) {
         if (MODE === "odd" || MODE === "select") openTile(at);
         else openLightbox(item.images[at].url, item.images[at].box, at);
