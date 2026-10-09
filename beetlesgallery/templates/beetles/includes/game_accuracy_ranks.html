@@ -1,0 +1,13 @@
+{% comment %}
+The game home's accuracy: one small plot per rank (subfamily, tribe, genus, species), each with you, the average and
+how all players spread at that rank. Needs ``rank_standing`` from game_board.rank_standing. One column on a phone,
+two by two from sm up (the home is max-w-xl, too narrow for four in a row).
+{% endcomment %}
+<section data-testid="accuracy-by-rank">
+  <h2 class="mb-2 font-semibold text-gray-900">Accuracy <span class="text-xs font-normal text-gray-500">by rank, all games</span></h2>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+    {% for standing in rank_standing %}
+    {% include "beetles/includes/game_accuracy.html" with standing=standing title=standing.title compact=True %}
+    {% endfor %}
+  </div>
+</section>

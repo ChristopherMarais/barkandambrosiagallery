@@ -63,16 +63,19 @@
           </span>
           <span class="text-right shrink-0">
             <span class="block text-sm font-semibold text-gray-900 tabular-nums">{{ row.score|digit_groups }}<span class="text-xs font-normal text-gray-500"> pts</span></span>
-            <span class="block text-xs text-gray-500 tabular-nums">{% if row.headline_accuracy is not None %}{% widthratio row.headline_accuracy 1 100 %}%{% else %}<span class="text-gray-500">&mdash;</span>{% endif %} <span class="text-gray-500">{{ row.headline_label }}</span></span>
+            <span class="block text-xs text-gray-500 tabular-nums" title="{{ row.headline_title }}" data-testid="headline-accuracy">{% if row.headline_accuracy is not None %}{% widthratio row.headline_accuracy 1 100 %}%{% else %}<span class="text-gray-500">&mdash;</span>{% endif %} <span class="text-gray-500">{{ row.headline_label }}, all ranks</span></span>
           </span>
           <i class="fi fi-rr-angle-small-down text-gray-400 shrink-0 transition-transform group-open:rotate-180" aria-hidden="true"></i>
         </summary>
         <div class="px-3 pb-3 pt-1 border-t border-gray-100 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+          <div class="col-span-2 sm:col-span-4 font-medium text-gray-700">Each game, all ranks together</div>
           <div><span class="block text-gray-500">Name</span><span class="tabular-nums" data-testid="id-accuracy">{% if row.id_accuracy is not None %}{% widthratio row.id_accuracy 1 100 %}%{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}</span></div>
           <div><span class="block text-gray-500">Sim.</span><span class="tabular-nums" data-testid="sim-accuracy">{% if row.sim_accuracy is not None %}{% widthratio row.sim_accuracy 1 100 %}%{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}</span></div>
           <div><span class="block text-gray-500">Odd</span><span class="tabular-nums" data-testid="odd-accuracy">{% if row.odd_accuracy is not None %}{% widthratio row.odd_accuracy 1 100 %}%{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}</span></div>
           <div><span class="block text-gray-500">Find</span><span class="tabular-nums" data-testid="select-accuracy">{% if row.select_accuracy is not None %}{% widthratio row.select_accuracy 1 100 %}%{% else %}<span class="text-gray-500">&mdash;</span>{% endif %}</span></div>
           <div class="col-span-2 sm:col-span-4 text-gray-500">Beetles seen: <span class="tabular-nums text-gray-700">{{ row.viewed|digit_groups }}</span></div>
+          {# The numbers above average every rank; rank by rank they differ, and naming differs from telling apart. #}
+          {% if row.by_rank %}<div class="col-span-2 sm:col-span-4 mt-1">{% include "beetles/includes/game_rank_accuracy.html" with by_rank=row.by_rank %}</div>{% endif %}
         </div>
       </details>
     </li>
