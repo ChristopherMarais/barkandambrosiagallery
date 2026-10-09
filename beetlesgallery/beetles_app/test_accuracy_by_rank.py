@@ -137,12 +137,12 @@ class RankAccuracyTableTests(RankCase):
         self.answers(self.user, 1, mode="select", tribe=True)
         rows = {r["rank"]: r for r in game_board.rank_accuracy([self.user.id])[self.user.id]}
         self.assertEqual((rows["subfamily"]["naming"]["ok"], rows["subfamily"]["naming"]["n"]), (5, 5))
-        self.assertEqual((rows["tribe"]["naming"]["ok"], rows["tribe"]["naming"]["n"]), (4, 5))
-        self.assertEqual(rows["tribe"]["naming"]["step"], game_board.value_step(0.8))
+        self.assertEqual((rows["tribe"]["naming"]["ok"], rows["tribe"]["naming"]["n"]), (5, 6))   # Find Them All names
+        self.assertEqual(rows["tribe"]["naming"]["step"], game_board.value_step(5 / 6))
         self.assertEqual((rows["genus"]["naming"]["ok"], rows["genus"]["naming"]["n"]), (0, 4))
         self.assertEqual(rows["genus"]["naming"]["accuracy"], 0.0)   # answered and wrong: a real 0%
         self.assertEqual((rows["genus"]["apart"]["ok"], rows["genus"]["apart"]["n"]), (2, 3))
-        self.assertEqual((rows["tribe"]["apart"]["ok"], rows["tribe"]["apart"]["n"]), (1, 1))
+        self.assertEqual(rows["tribe"]["apart"]["n"], 0)
         self.assertEqual(rows["subfamily"]["apart"], {"ok": 0, "n": 0, "accuracy": None, "step": "none"})
         self.assertEqual(rows["species"]["naming"]["n"], 0)
 
@@ -191,7 +191,7 @@ class RankAccuracyTableTests(RankCase):
         table = table[:table.index("</table>")]
         self.assertIn("Naming", table)
         self.assertIn("Telling apart", table)
-        self.assertIn(f'scale-{game_board.value_step(0.5)}">50%</span> <span class="text-gray-500">of 10', table)
+        self.assertIn(f'scale-{game_board.value_step(0.5)}">50%</span> <span class="text-gray-500">of <span class="digit-group">10</span>', table)
         self.assertIn("100%", table)
         self.assertIn("&mdash;", table)   # nothing told apart yet
         self.assertIn("Naming, all ranks", page)

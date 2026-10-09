@@ -292,10 +292,10 @@ def accuracy_standing(player, bins=20):
 # Accuracy rank by rank (subfamily, tribe, genus, species)
 # ---------------------------------------------------------------------------
 RANK_TITLES = {"subfamily": "Subfamily", "tribe": "Tribe", "genus": "Genus", "species": "Species"}
-# Naming is the game where the player names the beetle; telling apart is every game where they compare beetles at a
-# rank (Similarity, Odd One Out, Find Them All).
-NAMING_GAMES = ("classify",)
-TELLING_APART_GAMES = ("pair", "odd", "select")
+# Naming is recognising a named group: the Naming game, and Find Them All, whose grid names a group and asks for its
+# members (as the player report counts it, #543). Telling apart is comparing beetles: Similarity and Odd One Out.
+NAMING_GAMES = ("classify", "select")
+TELLING_APART_GAMES = ("pair", "odd")
 RANK_POPULATION_CACHE = "game:board:rank-accuracy:v1"
 
 
@@ -381,7 +381,7 @@ def rank_accuracy(player_ids, since=None):
     """
     {player_id: [{"rank", "title", "naming", "apart"}]}, a row per rank, each cell {"ok", "n", "accuracy", "step"}
     (accuracy None when nothing was judged there). Naming is the Naming game; apart is telling beetles apart
-    (Similarity, Odd One Out, Find Them All). One query for every player on the page; ``since``: a board period.
+    (Similarity, Odd One Out). One query for every player on the page; ``since``: a board period.
     """
     ids = list(player_ids)
     if not ids:

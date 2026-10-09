@@ -1,7 +1,7 @@
 {% load beetle_tags %}
 {% comment %}
 One player's accuracy rank by rank, from a board row's ``by_rank`` (game_board.rank_accuracy): Naming (naming the
-beetle) and Telling apart (Similarity, Odd One Out, Find Them All) kept apart, each cell coloured by its own step on
+beetle, Find Them All) and Telling apart (Similarity, Odd One Out) kept apart, each cell coloured by its own step on
 the site's scale with how many answers it rests on, a dash where there are none.
 {% endcomment %}
 <table class="w-full text-xs tabular-nums" data-testid="rank-accuracy">
@@ -9,8 +9,8 @@ the site's scale with how many answers it rests on, a dash where there are none.
   <thead class="text-gray-500">
     <tr>
       <th class="py-1 pr-2 text-left font-medium"><span class="sr-only">Rank</span></th>
-      <th class="py-1 px-2 text-right font-medium" title="Naming the beetle">Naming</th>
-      <th class="py-1 pl-2 text-right font-medium" title="Similarity, Odd One Out and Find Them All">Telling apart</th>
+      <th class="py-1 px-2 text-right font-medium" title="Naming and Find Them All">Naming</th>
+      <th class="py-1 pl-2 text-right font-medium" title="Similarity and Odd One Out">Telling apart</th>
     </tr>
   </thead>
   <tbody>
