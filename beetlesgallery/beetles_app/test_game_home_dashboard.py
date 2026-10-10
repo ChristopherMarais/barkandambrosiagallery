@@ -70,8 +70,8 @@ class DashboardLayoutTests(SimpleTestCase):
         self.assertEqual(HOME[HOME.index('aria-label="More"'):HOME.index("</nav>")].count("<a "), 5)
 
     def test_play_fills_its_column(self):
-        self.assertIn("#game-home .gh-play { grid-area: play; display: flex; flex-direction: column; }", self.lg)
-        self.assertIn("#game-home .gh-play > a { flex: 1 1 auto;", self.lg)
+        self.assertIn("#game-home .gh-play { grid-area: play; display: flex; flex-direction: column; justify-content: center; }", self.lg)
+        self.assertIn("#game-home .gh-play > a { flex: none; min-height: 5.5rem;", self.lg)
 
 
 class DashboardMarkupTests(SimpleTestCase):
