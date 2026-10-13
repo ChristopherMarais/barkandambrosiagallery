@@ -124,12 +124,12 @@ class SiteLongTests(SimpleTestCase):
         self.assertIn('data-testid="review-toc"', page)
         self.assertIn('aria-label="Jump to answer" data-jump-to>', page)
         self.assertIn('<details id="correct-group"', page)
-        self.assertIn('correctList.appendChild(li);', page)
+        self.assertIn('(right ? correctList : list).appendChild(li);', page)
         self.assertIn("li.id = `answer-${n + 1}`;", page)
-        # what it already did is kept: the long press, the boxed whole photo, the one-line correct answers
+        # what it already did is kept: the long press, the boxed whole photo, the folded correct answers
         self.assertIn('window.onLongPress($("items"), ".review-photo",', page)
         self.assertIn('{% include "beetles/includes/roi_box_css.html" %}', page)
-        self.assertIn('li.dataset.testid = "item-row-correct"', page)
+        self.assertIn('li.dataset.testid = right ? "item-row-correct" : "item-card";', page)   # whole cards, in the fold
 
 
 class SiteProgressTests(SimpleTestCase):
