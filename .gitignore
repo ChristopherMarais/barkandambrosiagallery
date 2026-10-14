@@ -43,3 +43,7 @@ Thumbs.db
 upload_pipeline.lock
 
 .lighthouseci/
+
+# --- 8. Personal handoff notes ---
+# Each developer keeps their own notes for the next AI chat; never shared
+NEXT_CHAT.md
