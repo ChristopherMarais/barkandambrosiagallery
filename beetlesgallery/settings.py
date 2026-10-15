@@ -229,6 +229,15 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "no
 # The AI classifier service (used by the classifier page and "Generate AI recommendation" on the annotation page)
 MODAL_API_URL = os.environ.get("MODAL_API_URL", "https://christophermarais--ibbi-api-fastapi-app.modal.run/analyze")
 
+# Error reports to Sentry (beetlesgallery/sentry_setup.py, docs/sentry.md). Only the servers set SENTRY_DSN (in
+# .env.prod and .env.staging); without it nothing is sent. SENTRY_ENVIRONMENT: "production" or "staging".
+SENTRY_DSN = os.environ.get("SENTRY_DSN", "").strip()
+SENTRY_ENVIRONMENT = os.environ.get("SENTRY_ENVIRONMENT", "production").strip()
+if SENTRY_DSN and "test" not in sys.argv:
+    from beetlesgallery import sentry_setup
+    sentry_setup.init(SENTRY_DSN, SENTRY_ENVIRONMENT, APP_VERSION,
+                      float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0") or 0))
+
 # Beetle ID game (beetles_app/game.py)
 GAME_ROUND_SIZE = 10                  # items per round
 GAME_FIRST_ITEMS = 2                  # a batch built while the player waits starts with these, the rest later (0: whole)

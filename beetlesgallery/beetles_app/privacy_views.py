@@ -7,4 +7,5 @@ from django.shortcuts import render
 
 
 def privacy(request):
-    return render(request, "privacy.html", {"privacy_contact_email": settings.PRIVACY_CONTACT_EMAIL})
+    return render(request, "privacy.html", {"privacy_contact_email": settings.PRIVACY_CONTACT_EMAIL,
+                                            "error_reports": bool(settings.SENTRY_DSN)})   # Sentry, only when it is on
