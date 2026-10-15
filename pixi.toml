@@ -14,7 +14,7 @@ install-js = "npm install"
 build-css = "node node_modules/@tailwindcss/cli/dist/index.mjs -i ./beetlesgallery/static/css/input.css -o ./beetlesgallery/static/css/style.css --minify"
 
 # Run this in a separate terminal while developing
-watch-css = "node node_modules/@tailwindcss/cli/dist/index.mjs -i ./beetlesgallery/static/css/input.css -o ./beetlesgallery/static/css/style.css --watch"
+watch-css = "node node_modules/@tailwindcss/cli/dist/index.mjs -i ./beetlesgallery/static/css/input.css -o ./beetlesgallery/static/css/style.css --minify --watch"
 
 # Development server inside the web container (docker-compose.yml runs it)
 start = "python manage.py runserver 0.0.0.0:8000"
