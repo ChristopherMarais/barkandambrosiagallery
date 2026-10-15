@@ -26,7 +26,9 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-beetles_user}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-devpass}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-beetles_user} -d ${POSTGRES_DB:-beetles_db}"]
+      # -h 127.0.0.1: on a brand-new volume Postgres first runs a temporary server on its socket only, then restarts;
+      # asking over TCP waits for the real one, so `up --wait db` and migrate never meet it mid-restart
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER:-beetles_user} -d ${POSTGRES_DB:-beetles_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
