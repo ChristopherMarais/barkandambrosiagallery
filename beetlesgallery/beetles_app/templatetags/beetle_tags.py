@@ -241,7 +241,7 @@ def _nav_sections(context):
     return (
         ("/beetles/", "Image Browser"),
         ("/taxonomy/", "Taxonomy Browser"),
-        ("/interactions/", "Interactions"),
+        ("/interactions/", "Pathogens"),
         ("/tools/classify/", "AI Identification"),
         ("/tools/annotate/", "Image Annotation"),
         ("/game/", game_name),
