@@ -36,4 +36,4 @@ class GameHomeSloganTests(GameCase):
         self.assertIn("Center for World University Rankings", text)
 
     def test_the_swap_script_is_there(self):
-        self.assertIn('querySelectorAll("#game-home .gh-slogan > p")', self.home())
+        self.assertIn('querySelectorAll("#game-home .slogans > p")', self.home())
