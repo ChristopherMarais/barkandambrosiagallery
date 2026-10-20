@@ -59,6 +59,35 @@ port. Production would refuse it, because the address is not in its `ALLOWED_HOS
 
 Check it with `curl -sI https://staging.barkandambrosiagallery.org/`. It should answer with a redirect to `/accounts/login/`.
 
+### Only Cloudflare reaches staging
+
+Port 8080 is open to the internet, so anyone (in practice, bots scanning addresses) can call
+`http://<server IP>:8080/` and reach staging without going through Cloudflare. Django refuses them (wrong host), but
+it is better that they never get there. `scripts/staging_firewall.sh` drops everything on port 8080 that doesn't come
+from Cloudflare's published address ranges (IPv4 and IPv6), and `scripts/staging-firewall.service` applies it again at
+every boot. Docker publishes ports underneath ufw, so a ufw rule would not do this; the script uses the `DOCKER-USER`
+chain Docker keeps for such rules. It only affects port 8080: production (port 80) and SSH are untouched.
+
+Once, on the server (after the staging checkout has this script, i.e. after the next staging deploy):
+
+```
+sudo apt-get install -y ipset
+cd /opt/barkandambrosia_staging/app
+sudo bash scripts/staging_firewall.sh
+sudo cp scripts/staging-firewall.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now staging-firewall
+```
+
+Check it:
+- `sudo bash scripts/staging_firewall.sh --status` lists the two rules and the number of Cloudflare ranges;
+- from your own computer, `curl -m 10 http://<server IP>:8080/` now times out;
+- https://staging.barkandambrosiagallery.org still opens (it comes through Cloudflare).
+
+Cloudflare's ranges rarely change; `sudo systemctl restart staging-firewall` fetches them again (so does a reboot).
+To undo: `sudo systemctl disable --now staging-firewall` (it runs `--off`), then
+`sudo rm /etc/systemd/system/staging-firewall.service`.
+
 ### Staging's AI service
 
 Staging has its own copy of the AI classifier on Modal (`ibbi-api-staging`), so a change to the classifier can be

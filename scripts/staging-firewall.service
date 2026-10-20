@@ -1,0 +1,16 @@
+# Applies scripts/staging_firewall.sh at every boot, after Docker (firewall rules don't survive a reboot on their
+# own). Install: docs/staging.md, "Only Cloudflare reaches staging".
+[Unit]
+Description=Only Cloudflare may reach staging (port 8080)
+After=docker.service network-online.target
+Wants=network-online.target
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash /opt/barkandambrosia_staging/app/scripts/staging_firewall.sh
+ExecStop=/bin/bash /opt/barkandambrosia_staging/app/scripts/staging_firewall.sh --off
+
+[Install]
+WantedBy=multi-user.target
