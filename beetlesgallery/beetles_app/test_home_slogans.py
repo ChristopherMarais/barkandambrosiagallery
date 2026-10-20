@@ -1,7 +1,7 @@
 """
 The website's home page says what the site is for, one line at a time (#660, #665): better bark and ambrosia beetle
-data, open to everyone, and each of the things the site does, each line a link to it, the game included. They take
-turns, pause while pointed at or focused, and the game home has none.
+data, open to everyone, and what the site offers, each line a link to it, the game included. They take turns, pause
+while pointed at or focused, and the game home has none. The Pathogens page stays out while it is in preview.
 """
 import re
 
@@ -24,17 +24,21 @@ class HomeSloganTests(TestCase):
     def test_each_line_links_to_what_it_names(self):
         links = [href for _, href, _ in self.lines()]
         self.assertEqual(links, [reverse("team"), reverse("beetles_image_browser"), reverse("tool_classify"),
-                                 reverse("taxonomy_browser"), reverse("interactions_preview"), reverse("game_home")])
+                                 reverse("taxonomy_browser"), reverse("game_home")])
 
     def test_it_opens_on_what_the_site_is_for_and_ends_on_the_game(self):
         texts = [text for _, _, text in self.lines()]
         self.assertIn("open to everyone who studies bark and ambrosia beetles", texts[0])
+        self.assertIn("largest and best-annotated collection", texts[1])
         self.assertIn("IBBI-AI", texts[2])
-        self.assertIn("pathogens", texts[4])
-        self.assertIn("Bark &amp; Ambrosia Detective", texts[5])   # the game, by its name (GAME_DISPLAY_NAME)
+        self.assertIn("Explore every beetle", texts[3])
+        self.assertIn("Bark &amp; Ambrosia Detective", texts[4])   # the game, by its name (GAME_DISPLAY_NAME)
+
+    def test_the_pathogens_page_is_not_advertised_while_in_preview(self):
+        self.assertNotIn(reverse("interactions_preview"), [href for _, href, _ in self.lines()])
 
     def test_only_the_first_shows_until_the_script_swaps_them(self):
-        self.assertEqual([bool(on) for on, _, _ in self.lines()], [True, False, False, False, False, False])
+        self.assertEqual([bool(on) for on, _, _ in self.lines()], [True, False, False, False, False])
 
     def test_the_script_takes_turns_and_holds_still_when_pointed_at(self):
         page = self.home()

@@ -31,14 +31,14 @@
       </p>
       {% comment %}
       Better data, open to everyone, for studying bark and ambrosia beetles: each line names one thing the site does
-      and links to it, and they take turns (#660, #665). They pause while pointed at or focused, so a link can be used.
+      and links to it, and they take turns (#660, #665). They pause while pointed at or focused, so a link
+      can be used. The Pathogens page joins them once it is out of preview.
       {% endcomment %}
       <div class="home-slogans" data-testid="home-slogans">
         <p data-on><a href="{% url 'team' %}">Better beetle data, open to everyone who studies bark and ambrosia beetles.</a></p>
-        <p><a href="{% url 'beetles_image_browser' %}">Browse real specimens, with the collection data behind every photo.</a></p>
+        <p><a href="{% url 'beetles_image_browser' %}">Browse the largest and best-annotated collection of bark and ambrosia beetle images.</a></p>
         <p><a href="{% url 'tool_classify' %}">Identify a beetle from a photo with IBBI-AI.</a></p>
-        <p><a href="{% url 'taxonomy_browser' %}">Explore every name, from subfamily to species, in the taxonomy browser.</a></p>
-        <p><a href="{% url 'interactions_preview' %}">Look up the pathogens each beetle carries, and the papers that report them.</a></p>
+        <p><a href="{% url 'taxonomy_browser' %}">Explore every beetle, from subfamily to species, in the taxonomy browser.</a></p>
         <p><a href="{% url 'game_home' %}">Train your eye with {{ game_name }}, and help label the collection.</a></p>
       </div>
     </header>
