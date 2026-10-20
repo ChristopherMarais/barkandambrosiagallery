@@ -43,12 +43,6 @@
     #game-home .gh-more > * { margin: 0 0 1rem; }
     #game-home .gh-more summary { display: flex; width: 100%; }
   }
-  /* The slogans share one grid cell, so the tallest sets the height and the page never jumps as they swap. */
-  #game-home .slogans { display: grid; margin: -0.5rem 0 1.25rem; text-align: center; }
-  #game-home .slogans > p { grid-area: 1 / 1; margin: 0; font-size: 0.875rem; line-height: 1.4; color: #4b5563;
-    opacity: 0; visibility: hidden; transition: opacity 0.6s ease, visibility 0.6s; }
-  #game-home .slogans > p[data-on] { opacity: 1; visibility: visible; }
-  @media (prefers-reduced-motion: reduce) { #game-home .slogans > p { transition: none; } }
 </style>
 {% endblock %}
 
@@ -58,15 +52,6 @@
   <div class="flex items-center justify-between gap-3 mb-5">
     <h1 class="page-title"><span class="inline-flex items-center gap-2">{{ game_name }}</span></h1>
     <a href="{% url 'game_how' %}" class="text-sm text-gray-500 underline hover:text-gray-900 hit-area">How it works</a>
-  </div>
-
-  <!-- Why playing matters: five lines that take turns. Without JavaScript the first one just stays. -->
-  <div class="slogans" data-testid="slogan">
-    <p data-on>Contribute to Scientific Discovery through UF’s Entomology and Nematology Program—ranked No. 1 in the world by the Center for World University Rankings.</p>
-    <p>Play with Purpose. Advance Science.</p>
-    <p>Classify Beetles. Support Research.</p>
-    <p>Every Classification Makes a Difference.</p>
-    <p>Help Scientists Protect Agriculture—One Beetle at a Time.</p>
   </div>
 
   <div class="gh-grid">
@@ -197,19 +182,6 @@
     if (!window.QRCode || !box) { if (box) box.closest("section").classList.add("hidden"); return; }
     new QRCode(box, { text: box.dataset.url, width: 248, height: 248, colorDark: "#111827", colorLight: "#ffffff",
                       correctLevel: QRCode.CorrectLevel.M });
-  })();
-  </script>
-
-  <script>
-  (function () {
-    const lines = document.querySelectorAll("#game-home .slogans > p");
-    if (lines.length < 2) return;
-    let on = 0, timer = null;
-    function show(i) { lines[on].removeAttribute("data-on"); on = i; lines[on].setAttribute("data-on", ""); }
-    function start() { if (!timer) timer = setInterval(function () { show((on + 1) % lines.length); }, 7000); }
-    function stop() { clearInterval(timer); timer = null; }
-    document.addEventListener("visibilitychange", function () { document.hidden ? stop() : start(); });
-    start();
   })();
   </script>
 
