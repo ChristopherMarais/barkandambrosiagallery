@@ -91,6 +91,16 @@
       or anything you type into the site from us.</p>
   </div>
 
+  {% if error_reports %}
+  <div class="space-y-2" data-testid="privacy-error-reports">
+    <h2 class="font-bold">Error reports</h2>
+    <p>When something on the site breaks, an error report goes to Sentry, a service that helps us find and fix the
+      fault. A report holds the page, the error and the browser and system the page ran on. It holds no IP address,
+      no cookies, no user name and nothing you typed. Sentry keeps reports for at most 90 days. This is part of
+      keeping the site working, so it does not depend on your cookie choice.</p>
+  </div>
+  {% endif %}
+
   <div class="space-y-2">
     <h2 class="font-bold">How long we keep it</h2>
     <ul class="list-disc pl-5 space-y-1">
