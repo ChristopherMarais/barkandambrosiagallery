@@ -42,8 +42,8 @@ PAGES = [
         (PREDICTIONS, "Model predictions", "Upload AI model predictions for many images."),
         (SPECIES, "Species tables", "Upload and download the accepted species and the synonyms and old names."),
     ]),
-    ("Interactions", [
-        (INTERACTIONS, "Ecological interactions", "Review proposed interactions, and upload or update interactions."),
+    ("Pathogens", [
+        (INTERACTIONS, "Pathogen records", "Review proposed records, and upload or update records."),
     ]),
     ("Site", [
         (NOTICE, "Site notice", "Switch the notice at the top of every page on and off."),
