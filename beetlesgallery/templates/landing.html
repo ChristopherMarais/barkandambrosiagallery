@@ -7,6 +7,16 @@
 <style>
   /* 100vh less base.html's main padding (py-8, 4rem) and the site footer below it (about 3.25rem) */
   @media (min-width: 1024px) { #landing-section { min-height: calc(100vh - 7.25rem); } }
+  /* What the site is for, one line at a time (#660, #665): the lines share one grid cell, so the tallest sets the
+     height and the page never jumps as they take turns. Without JavaScript the first one stays. */
+  .home-slogans { display: grid; max-width: 48rem; margin-left: auto; margin-right: auto; }
+  .home-slogans > p { grid-area: 1 / 1; margin: 0; font-size: 1rem; line-height: 1.5; opacity: 0; visibility: hidden;
+    transition: opacity 0.6s ease, visibility 0.6s; }
+  .home-slogans > p[data-on] { opacity: 1; visibility: visible; }
+  .home-slogans a { color: #374151; font-weight: 600; text-decoration: underline; text-decoration-color: #d1d5db;
+    text-underline-offset: 4px; }
+  .home-slogans a:hover, .home-slogans a:focus-visible { color: #111827; text-decoration-color: #111827; }
+  @media (prefers-reduced-motion: reduce) { .home-slogans > p { transition: none; } }
 </style>
 <section id="landing-section" class="relative flex flex-col w-full bg-white">
 
@@ -19,6 +29,18 @@
       <p class="text-base mt-6 md:text-lg md:leading-7 text-gray-600 max-w-3xl mx-auto leading-relaxed text-balance">
         The world's largest collection of bark and ambrosia beetle images and specimen data.
       </p>
+      {% comment %}
+      Better data, open to everyone, for studying bark and ambrosia beetles: each line names one thing the site does
+      and links to it, and they take turns (#660, #665). They pause while pointed at or focused, so a link
+      can be used. The Pathogens page joins them once it is out of preview.
+      {% endcomment %}
+      <div class="home-slogans" data-testid="home-slogans">
+        <p data-on><a href="{% url 'team' %}">Better beetle data, open to everyone who studies bark and ambrosia beetles.</a></p>
+        <p><a href="{% url 'beetles_image_browser' %}">Browse the largest and best-annotated collection of bark and ambrosia beetle images.</a></p>
+        <p><a href="{% url 'tool_classify' %}">Identify a beetle from a photo with IBBI-AI.</a></p>
+        <p><a href="{% url 'taxonomy_browser' %}">Explore every beetle, from subfamily to species, in the taxonomy browser.</a></p>
+        <p><a href="{% url 'game_home' %}">Train your eye with {{ game_name }}, and help label the collection.</a></p>
+      </div>
     </header>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-16 items-center px-4 pb-10">
@@ -129,4 +151,24 @@
   </footer>
 
 </section>
+
+<script>
+(function () {
+  const box = document.querySelector(".home-slogans");
+  const lines = box ? box.querySelectorAll(":scope > p") : [];
+  if (lines.length < 2) return;
+  let on = 0, timer = null, held = false;
+  function show(i) { lines[on].removeAttribute("data-on"); on = i; lines[on].setAttribute("data-on", ""); }
+  function start() { if (!timer && !held && !document.hidden) timer = setInterval(function () { show((on + 1) % lines.length); }, 6000); }
+  function stop() { clearInterval(timer); timer = null; }
+  function hold(h) { held = h; h ? stop() : start(); }
+  // a line being read or clicked stays put; so does everything in a background tab
+  box.addEventListener("mouseenter", function () { hold(true); });
+  box.addEventListener("mouseleave", function () { hold(false); });
+  box.addEventListener("focusin", function () { hold(true); });
+  box.addEventListener("focusout", function () { hold(false); });
+  document.addEventListener("visibilitychange", function () { document.hidden ? stop() : start(); });
+  start();
+})();
+</script>
 {% endblock %}
