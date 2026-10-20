@@ -10,7 +10,7 @@ from django.urls import reverse
 from beetlesgallery.beetles_app import areas
 
 TEMPLATES = Path(__file__).resolve().parent.parent / "templates"
-ICON = '{% include "beetles/includes/icon_dead_beetle.html" %}'
+ICON = '<i class="fi fi-rr-bug-slash text-xl text-gray-700 w-8 text-center"></i>'
 
 
 def read(name):
@@ -40,14 +40,10 @@ class PathogensNameTests(SimpleTestCase):
         self.assertIn('(INTERACTIONS, "Pathogen records",', source)
 
 
-class DeadBeetleIconTests(SimpleTestCase):
+class CrossedOutBeetleIconTests(SimpleTestCase):
     def test_both_menus_and_the_about_box_use_it(self):
         self.assertEqual(read("base.html").count(ICON), 2)
-        self.assertIn(ICON, read("beetles/interactions_preview.html"))
-        self.assertNotIn("fi-rr-diagram-project", read("base.html") + read("beetles/interactions_preview.html"))
-
-    def test_it_is_an_outline_in_the_text_colour_hidden_from_screen_readers(self):
-        svg = read("beetles/includes/icon_dead_beetle.html")
-        for part in ('viewBox="0 0 24 24"', 'fill="none"', 'stroke="currentColor"', 'aria-hidden="true"',
-                     'data-testid="icon-dead-beetle"'):
-            self.assertIn(part, svg)
+        self.assertIn('<i class="fi fi-rr-bug-slash text-xl text-gray-700"></i>', read("beetles/interactions_preview.html"))
+        for name in ("base.html", "beetles/interactions_preview.html"):
+            self.assertNotIn("fi-rr-diagram-project", read(name))
+            self.assertNotIn("icon_dead_beetle", read(name))
