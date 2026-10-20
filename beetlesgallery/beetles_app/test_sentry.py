@@ -34,6 +34,13 @@ class SentrySetupTests(SimpleTestCase):
         self.assertEqual(options["traces_sample_rate"], 0.0)   # errors only unless the server asks for tracing
         self.assertTrue({"django", "celery"} <= set(client.integrations))
 
+    def test_requests_for_other_hosts_are_refused_but_not_reported(self):
+        # bots that call the server by its IP address are turned away (DisallowedHost), and that is no error to report
+        from sentry_sdk.integrations import logging as sentry_logging
+
+        sentry_setup.init("https://public@sentry.example.invalid/1")
+        self.assertIn("django.security.DisallowedHost", sentry_logging._IGNORED_LOGGERS)
+
     def test_settings_start_it_only_from_the_environment_and_never_in_tests(self):
         settings_py = (ROOT / "beetlesgallery" / "settings.py").read_text(encoding="utf-8")
         self.assertIn('SENTRY_DSN = os.environ.get("SENTRY_DSN", "").strip()', settings_py)

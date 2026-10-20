@@ -26,6 +26,8 @@ The release on each report is `APP_VERSION`, which the deploy already writes (`.
 - Not sent: IP addresses, cookies, user names, request bodies (`send_default_pii=False`); Sentry's scrubber also
   removes anything named like a password, token or key.
 - The privacy notice (`/privacy/`) shows an "Error reports" section only while `SENTRY_DSN` is set.
+- Not reported: requests for a host the site doesn't serve (Django's `DisallowedHost`, e.g. bots calling the server
+  by its IP address). Django still refuses them; they are expected and would only bury real errors.
 
 ## Checking it works
 
