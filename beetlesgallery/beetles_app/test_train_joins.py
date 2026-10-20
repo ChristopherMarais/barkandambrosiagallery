@@ -28,8 +28,17 @@ class FlaggedTilesInTheReviewTests(FlagCase):
         self.assertEqual(review["grid"]["tiles"][odd]["state"], "right")
 
     def test_a_flagged_member_is_no_mistake_to_come_back(self):
-        self.start("select")
+        # one flagged, one tapped, one left out: the grid holds the most members it may (their number varies, #646)
+        real_mix = game.select_mix
+
+        def most_members(*args):
+            with mock.patch.object(game.random, "choice", max):
+                return real_mix(*args)
+
+        with mock.patch.object(game, "select_mix", most_members):
+            self.start("select")
         members = self.places(member=True)
+        self.assertGreaterEqual(len(members), 3)
         self.flag(members[0])
         self.answer(picks=members[1:-1], flagged=[members[0]])   # the last member left out: a real mistake
         mistakes = {str(b) for b in game_relearn.open_mistakes(self.user)}
