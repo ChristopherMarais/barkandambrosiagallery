@@ -6,7 +6,7 @@
 <style>
   /* A computer (lg, 64rem and up: the lg breakpoint changes structure): a play-first dashboard on six columns.
      A top band (last session | Play | level, streak, goal), the four games in a row, the four accuracy plots in a
-     row, then this week's top players (wide) beside the shortcuts, Invite and feedback. Below lg the wrappers are
+     row, then the top players of all time (wide) beside the shortcuts, Invite and feedback. Below lg the wrappers are
      plain blocks and the page is the phone's, one column in the same order: grid areas only place things here. */
   @media (min-width: 64rem) {
     #game-home { max-width: 80rem; }
@@ -147,17 +147,16 @@
     <a href="{% url 'game_history' %}" class="py-3 rounded-2xl border border-gray-200 hover:bg-gray-50" data-testid="history-link"><i class="fi fi-rr-time-past block text-xl text-gray-600"></i>History</a>
   </nav>
 
-  <!-- This week's top players, never all time; an empty week shows last week's top three -->
+  <!-- The top players of all time; "All" opens the full leaderboard on the same period -->
   <div class="gh-board mb-6" data-testid="home-board">
     <div class="flex items-baseline justify-between mb-2">
-      <h2 class="text-lg font-semibold text-gray-900">Top players this week</h2>
-      <a href="{% url 'game_leaderboard' %}" class="text-sm underline text-gray-600 hover:text-gray-900 hit-area">All</a>
+      <h2 class="text-lg font-semibold text-gray-900">Top players of all time</h2>
+      <a href="{% url 'game_leaderboard' %}?period=all" class="text-sm underline text-gray-600 hover:text-gray-900 hit-area">All</a>
     </div>
     {% if board %}
     {% include "beetles/includes/game_board_table.html" with rows=board %}
     {% else %}
-    <p class="p-4 text-sm text-gray-500 border border-gray-200 rounded-lg" data-testid="home-board-empty">No scores yet this week.</p>
-    {% if last_week %}{% include "beetles/includes/game_last_week.html" %}{% endif %}
+    <p class="p-4 text-sm text-gray-500 border border-gray-200 rounded-lg" data-testid="home-board-empty">No scores yet.</p>
     {% endif %}
   </div>
 

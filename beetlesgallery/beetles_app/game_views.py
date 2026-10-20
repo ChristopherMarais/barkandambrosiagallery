@@ -83,8 +83,8 @@ def game_home(request):
     last_session = _pop_last_session(request, left_at)
     game_discoveries.find([request.user.id])
     checked, checked_new, checked_change = game_checked.pop_unseen(request.user)
-    # this week's top players (#497); while the week is empty, the home says so and shows last week's top three
-    board = game_board.board(limit=5)
+    # the top players of all time (owner, 2026-10-19; it was this week's, #497); the full board keeps its periods
+    board = game_board.board(period="all", limit=5)
     rewards = game_rewards.progress(request.user)
     # Locked games (not yet unlocked by level) look the same as unplayed ones without this: both show "–"
     # and "0 pts" (gh-locked). Mark each game's stats so the card can tell the two apart.
@@ -100,7 +100,7 @@ def game_home(request):
         "discoveries": game_discoveries.pop_unseen(request.user),
         "score": game_scoring.score_for(request.user),
         "rewards": rewards,
-        "board": board, "last_week": [] if board else game_board.last_week_top(),
+        "board": board,
         # one accuracy plot per rank (subfamily, tribe, genus, species), not one for everything together
         "rank_standing": game_board.rank_standing(request.user),
         "goal_floor": game_rewards.daily_goal(),
