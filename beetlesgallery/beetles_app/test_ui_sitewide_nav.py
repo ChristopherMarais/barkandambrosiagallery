@@ -73,7 +73,8 @@ class NavFocusWithinTests(SimpleTestCase):
 class NavIconMapTests(SimpleTestCase):
     def test_image_browser_uses_the_picture_icon_not_the_bug(self):
         self.assertIn("fi-rr-picture", BASE_HTML)
-        self.assertNotIn("fi-rr-bug", BASE_HTML)
+        # the plain bug is not the Image Browser's; the crossed-out one is the Pathogens page's (fi-rr-bug-slash)
+        self.assertNotRegex(BASE_HTML, r"fi-rr-bug(?!-slash)")
 
     def test_the_game_uses_the_play_icon_not_the_gamepad(self):
         self.assertIn("fi-rr-play", BASE_HTML)
