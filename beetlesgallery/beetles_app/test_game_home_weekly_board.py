@@ -1,7 +1,8 @@
 """
-The game home shows this week's top players, never all time (#497). While nobody has played this week it says so in
-one line, with last week's top three beneath. Everyone takes part: there are no privacy settings any more, so every
-player shows under their own name, and the Unlocks page has no Leaderboards card.
+The game home shows the top players of all time (owner, 2026-10-19; it showed this week's, #497), and its "All" link
+opens the full leaderboard on all time. The full leaderboard keeps its periods and last week's top three. Everyone
+takes part: there are no privacy settings any more, so every player shows under their own name, and the Unlocks page
+has no Leaderboards card.
 """
 from datetime import timedelta
 
@@ -35,45 +36,30 @@ class BoardCase(ScoringCase):
         return self.client.get(reverse("game_home"))
 
 
-class WeeklyHomeBoardTests(BoardCase):
-    def test_the_home_board_counts_this_week_only(self):
-        self.points(self.bob, 40, self.this_week + timedelta(hours=1))
-        self.points(self.ann, 900, self.this_week - timedelta(days=3))   # last week
+class AllTimeHomeBoardTests(BoardCase):
+    def test_the_home_board_is_all_time(self):
+        self.points(self.bob, 40, self.this_week + timedelta(hours=1))   # bob leads this week; ann leads all time
         response = self.home()
-        self.assertEqual([(r["username"], r["score"]) for r in response.context["board"]], [("bob", 40)])
+        rows = response.context["board"]
+        self.assertEqual(rows[0]["username"], "ann")
+        self.assertEqual(rows[0]["score"], 50000)
         page = response.content.decode()
-        self.assertIn("Top players this week", page)
-        self.assertNotIn("of all time", page)
+        self.assertIn("Top players of all time", page)
+        self.assertNotIn("Top players this week", page)
+        self.assertIn(f'href="{reverse("game_leaderboard")}?period=all"', page)   # "All" opens the same period
         self.assertNotIn('data-testid="home-board-empty"', page)
-        self.assertNotIn('data-testid="last-week"', page)   # last week's line is only for an empty week
+        self.assertNotIn('data-testid="last-week"', page)   # last week's line lives on the full leaderboard
 
-    def test_an_empty_week_says_so_and_shows_last_weeks_top_three(self):
-        for player, pts in ((self.ann, 30), (self.bob, 1234), (self.cy, 20), (self.dee, 5)):
-            self.points(player, pts, self.last_week + timedelta(days=2))
-        self.points(self.dee, 9999, self.last_week - timedelta(days=2))   # the week before: not last week's
+    def test_with_no_scores_at_all_it_says_so(self):
+        PlayerScore.objects.all().delete()   # nobody has played yet
         response = self.home()
         self.assertEqual(response.context["board"], [])
-        self.assertEqual([(w["position"], w["username"], w["points"]) for w in response.context["last_week"]],
-                         [(1, "bob", 1234), (2, "ann", 30), (3, "cy", 20)])
         page = response.content.decode()
-        self.assertIn("Top players this week", page)
-        self.assertIn('data-testid="home-board-empty"', page)
-        self.assertIn("No scores yet this week.", page)
-        self.assertIn('data-testid="last-week"', page)
-        self.assertIn(f"({digit_groups(1234)})", page)   # grouped in threes
-        self.assertIn(f'href="{reverse("game_profile", args=[self.bob.id])}"', page)
-        self.assertIn("Leaderboard</a>", page)   # the way to the full board is always there (a full word, #gh-icons-row)
-        self.assertIn('data-testid="podium"', page)   # and last week's podium still pops up
+        self.assertIn("No scores yet.", page)
+        self.assertIn("Leaderboard</a>", page)   # the way to the full board is always there (#gh-icons-row)
 
-    def test_after_a_quiet_week_just_the_line(self):
-        self.points(self.ann, 500, self.last_week - timedelta(days=3))   # two weeks ago
-        response = self.home()
-        self.assertEqual((response.context["board"], response.context["last_week"]), ([], []))
-        page = response.content.decode()
-        self.assertIn("No scores yet this week.", page)
-        self.assertNotIn('data-testid="last-week"', page)
-        self.assertIn("Leaderboard</a>", page)
 
+class LastWeekTests(BoardCase):
     def test_last_weeks_top_matches_the_weekly_winners(self):
         for player, pts in ((self.cy, 40), (self.bob, 40), (self.ann, 60), (self.dee, -5)):
             self.points(player, pts, self.last_week + timedelta(hours=3))
