@@ -32,7 +32,7 @@ class HomeSloganTests(TestCase):
         self.assertIn("largest and best-annotated collection", texts[1])
         self.assertIn("IBBI-AI", texts[2])
         self.assertIn("Explore every beetle", texts[3])
-        self.assertIn("Bark &amp; Ambrosia Detective", texts[4])   # the game, by its name (GAME_DISPLAY_NAME)
+        self.assertIn("Beetle Detective", texts[4])   # the game, by its name (GAME_DISPLAY_NAME)
 
     def test_the_pathogens_page_is_not_advertised_while_in_preview(self):
         self.assertNotIn(reverse("interactions_preview"), [href for _, href, _ in self.lines()])
