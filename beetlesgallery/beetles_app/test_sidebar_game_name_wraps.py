@@ -1,6 +1,7 @@
-"""The game's name, Bark & Ambrosia Detective, was cut off in the sidebar ("Bark & Ambrosia Detect"): in Chromium it is
-204px on one line, and the open sidebar leaves its label 164px (175px in the phone menu). It now wraps onto a second
-line at a fixed 10rem, so it wraps the same while the rail opens and the rows under it never move."""
+"""The game's old name, Bark & Ambrosia Detective, was cut off in the sidebar ("Bark & Ambrosia Detect"): in Chromium
+it is 204px on one line, and the open sidebar leaves its label 164px (175px in the phone menu). It now wraps onto a second
+line at a fixed 10rem, so it wraps the same while the rail opens and the rows under it never move.
+The name is now Beetle Detective, which fits on one line; the rule stays in case it changes again."""
 from django.conf import settings
 from django.test import SimpleTestCase
 from django.urls import reverse
@@ -15,7 +16,7 @@ class GameNameEntryTests(PageBehaviourCase):
     def test_the_name_wraps_in_the_phone_menu_and_the_sidebar(self):
         for entry in game_entries(self.client.get(reverse("image_browser")).content.decode()):
             self.assertIn('<span class="nav-game-name block font-medium text-gray-700">'
-                          'Bark &amp; Ambrosia Detective</span>', entry)
+                          'Beetle Detective</span>', entry)
 
 
 class GameNameRuleTests(SimpleTestCase):
