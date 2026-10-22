@@ -75,7 +75,11 @@ equal padding, and its icon is a flex box of its own, so the icon font's line he
                             <i class="fi fi-rr-angle-small-down text-lg"></i>
                         </div>
                     </div>
-                    <p class="text-xs text-gray-500 mt-2" data-testid="model-help">All models find and name bark beetles.</p>
+                    {# What the picked model can name; "See which" opens its tree (subfamily to species) #}
+                    <p class="text-xs text-gray-500 mt-2" data-testid="model-help">
+                        <span id="modelSummary" data-testid="model-summary">{{ model_summary }}</span>
+                        <button type="button" id="showModelTaxa" class="underline text-gray-600 hover:text-gray-800" aria-haspopup="dialog" data-testid="show-model-taxa">See which</button>
+                    </p>
                 </div>
 
                 <label class="flex items-start gap-2 text-xs text-gray-700 cursor-pointer">
@@ -251,6 +255,37 @@ equal padding, and its icon is a flex box of its own, so the icon font's line he
   </div>
 </div>
 
+{% comment %} What the picked model can name: a tree like the Taxonomy Browser's, folded to the subfamilies, with a
+   filter. Built from model-taxa (ibbi_species.page_data) when it opens. {% endcomment %}
+<div id="taxaModal" class="hidden fixed inset-0 z-100 flex items-center justify-center p-4 bg-gray-900/60" role="dialog" aria-modal="true" aria-labelledby="taxaTitle" data-testid="model-taxa">
+  <div class="w-full max-w-lg max-h-[85vh] flex flex-col rounded-xl bg-white shadow-xl">
+    <div class="flex items-start justify-between gap-3 px-5 pt-5">
+      <div class="min-w-0">
+        <h2 id="taxaTitle" class="text-lg font-semibold text-gray-900">What <span id="taxaModel"></span> can name</h2>
+        <p id="taxaCounts" class="text-xs text-gray-500 mt-1" data-testid="model-taxa-counts"></p>
+      </div>
+      <button type="button" id="taxaClose" class="shrink-0 h-8 w-8 inline-flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-800" aria-label="Close"><i class="fi fi-rr-cross-small text-lg leading-none"></i></button>
+    </div>
+    <div class="px-5 pt-3">
+      <input type="search" id="taxaFilter" placeholder="Filter by name…" autocomplete="off" aria-label="Filter the names" class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500" data-testid="model-taxa-filter">
+    </div>
+    <div id="taxaTree" class="taxa-tree mt-2 px-5 pb-2 overflow-y-auto text-sm text-gray-700" data-testid="model-taxa-tree"></div>
+    <p id="taxaNote" class="px-5 pt-2 pb-5 border-t border-gray-100 text-xs text-gray-500"></p>
+  </div>
+</div>
+<style>
+  .taxa-tree details > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 0.375rem; padding: 0.125rem 0; }
+  .taxa-tree details > summary::-webkit-details-marker { display: none; }
+  .taxa-tree details > summary::before { content: "+"; width: 0.75rem; flex-shrink: 0; color: #6b7280; font-weight: 600; }
+  .taxa-tree details[open] > summary::before { content: "\2212"; }
+  .taxa-tree .taxa-children { margin-left: 0.375rem; padding-left: 0.75rem; border-left: 1px solid #e5e7eb; }
+  .taxa-tree .taxa-count { color: #6b7280; font-size: 0.75rem; }
+  .taxa-tree .taxa-species { display: block; padding: 0.125rem 0 0.125rem 1.125rem; font-style: italic; }
+  .taxa-tree [hidden] { display: none; }
+  .taxa-tree a { color: inherit; }
+  .taxa-tree a:hover { text-decoration: underline; }
+</style>
+{{ model_taxa|json_script:"model-taxa" }}
 {% if gallery_photo %}{{ gallery_photo|json_script:"gallery-photo" }}{% endif %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -1255,6 +1290,109 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!data && GATEWAY.includes(response.status)) return { waking: true, message: MESSAGES.stillWaking };
         return { message: (data && data.message) || MESSAGES.failed };
     }
+
+    // --- What the picked model can name: the line under the picker, and "See which" (a tree from subfamily to species) ---
+    (function modelTaxa() {
+        const data = JSON.parse(document.getElementById('model-taxa').textContent);
+        const modal = document.getElementById('taxaModal');
+        const treeEl = document.getElementById('taxaTree');
+        const filter = document.getElementById('taxaFilter');
+        const openBtn = document.getElementById('showModelTaxa');
+        const taxonomyUrl = "{% url 'taxonomy_browser' %}";
+        const group = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+        const plural = (n, one, many) => `${group(n)} ${n === 1 ? one : many}`;
+        let builtFor = null;
+
+        const model = () => data.models[ui.modelSelect.value] || Object.values(data.models)[0];
+        const list = () => data.lists[model().list];
+
+        function updateSummary() {
+            const c = list().counts;
+            document.getElementById('modelSummary').textContent = `Names ${group(c.species)} species in ${plural(c.genus, 'genus', 'genera')}.`;
+        }
+
+        function speciesCount(node) {
+            return node.children ? node.children.reduce((n, child) => n + speciesCount(child), 0) : 1;
+        }
+
+        function build(nodes, ancestors) {
+            const frag = document.createDocumentFragment();
+            nodes.forEach(node => {
+                if (!node.children) {   // a species: links to the Taxonomy Browser when the gallery has it
+                    const el = document.createElement(node.id ? 'a' : 'span');
+                    el.className = 'taxa-species';
+                    el.textContent = node.name;
+                    if (node.id) {
+                        el.href = `${taxonomyUrl}?species=${encodeURIComponent(node.id)}`;
+                        el.target = '_blank';
+                        el.rel = 'noopener';
+                    }
+                    el.dataset.search = [...ancestors, node.name].join(' ').toLowerCase();
+                    frag.appendChild(el);
+                    return;
+                }
+                const details = document.createElement('details');
+                const summary = document.createElement('summary');
+                summary.innerHTML = '<span class="taxa-name"></span><span class="taxa-count"></span>';
+                summary.firstChild.textContent = node.name;
+                summary.lastChild.textContent = `(${group(speciesCount(node))})`;
+                const children = document.createElement('div');
+                children.className = 'taxa-children';
+                children.appendChild(build(node.children, [...ancestors, node.name]));
+                details.append(summary, children);
+                frag.appendChild(details);
+            });
+            return frag;
+        }
+
+        function render() {
+            const m = model(), l = list(), c = l.counts;
+            document.getElementById('taxaModel').textContent = m.label;
+            document.getElementById('taxaCounts').textContent = [plural(c.subfamily, 'subfamily', 'subfamilies'),
+                plural(c.tribe, 'tribe', 'tribes'), plural(c.genus, 'genus', 'genera'), plural(c.species, 'species', 'species')].join(' · ');
+            document.getElementById('taxaNote').textContent = (m.kind === 'pipeline'
+                ? 'It names one of these species, or stops at the genus, tribe or subfamily when it is not sure.'
+                : 'It names one of these species.') + ' Species in the gallery link to the Taxonomy Browser.';
+            treeEl.replaceChildren(build(l.tree, []));
+            const empty = document.createElement('p');
+            empty.id = 'taxaEmpty';
+            empty.className = 'hidden py-2 text-gray-500';
+            empty.textContent = 'No names match.';
+            treeEl.appendChild(empty);
+            builtFor = ui.modelSelect.value;
+            filter.value = '';
+        }
+
+        // A match on any rank shows the species under it, with their branches opened; an empty filter folds it all
+        function applyFilter() {
+            const q = filter.value.trim().toLowerCase();
+            treeEl.querySelectorAll('.taxa-species').forEach(el => { el.hidden = !!q && !el.dataset.search.includes(q); });
+            [...treeEl.querySelectorAll('details')].reverse().forEach(d => {
+                const shown = !!d.querySelector('.taxa-species:not([hidden])');
+                d.hidden = !shown;
+                d.open = !!q && shown;
+            });
+            document.getElementById('taxaEmpty').classList.toggle('hidden', !q || !!treeEl.querySelector('.taxa-species:not([hidden])'));
+        }
+
+        function open() {
+            if (builtFor !== ui.modelSelect.value) render();
+            modal.classList.remove('hidden');
+            filter.focus();
+        }
+        function close() {
+            modal.classList.add('hidden');
+            openBtn.focus();
+        }
+
+        openBtn.addEventListener('click', open);
+        document.getElementById('taxaClose').addEventListener('click', close);
+        modal.addEventListener('click', e => { if (e.target === modal) close(); });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) close(); });
+        filter.addEventListener('input', applyFilter);
+        ui.modelSelect.addEventListener('change', updateSummary);
+        updateSummary();
+    })();
 
     // --- Wake IBBI-AI as the page opens (and for another model when one is picked), so a photo finds it ready ---
     function warmUp() {

@@ -4,12 +4,15 @@ The IBBI models the site offers, and how their output becomes the classifier ser
 Shared by the Modal service (modal_ibbi_api.py, which ships this file with it) and the site (the classifier page,
 "Generate AI recommendation" on the annotation page), so the model list lives in one place. Plain Python, no dependencies.
 
-Two kinds of model (ibbi 0.3.2; on a GPU it decodes, crops and classifies on the GPU by itself):
+Two kinds of model (ibbi 0.4.0; on a GPU it decodes, crops and classifies on the GPU by itself):
 
 * "pipeline": the arthropod detector finds every specimen, then a hierarchical classifier names it rank by rank
   (subfamily, tribe, genus, species) with a probability at each rank, and says how deep it is sure
-  ("Xyleborus sp. (species undetermined)"). Recommended.
+  ("Xyleborus sp. (species undetermined)"). Recommended; the 400-species DINOv3 classifier is the default.
 * "detector": a one-step detector that names one of the 65 trained species directly, with one confidence.
+
+Each model's "species_list" names the file in beetlesgallery/data/ibbi_species/ with the species it knows (shown on the
+IBBI-AI page; scripts/ibbi_species_lists.py rebuilds and checks them).
 
 The answer, per image:
     {"status": "success", "model_used": key, "model_name": "...", "detections": [...],
@@ -23,7 +26,7 @@ and per detection:
      "candidates": [{"name", "prob"}] (species, best first), "probs": [...] (aligned with class_names)}
 """
 
-IBBI_VERSION = "0.3.2"
+IBBI_VERSION = "0.4.0"
 LEVELS = ("subfamily", "tribe", "genus", "species")
 
 # key -> what the site shows and which ibbi models it runs. Order = the order of the options; the first is the default.
@@ -31,12 +34,16 @@ LEVELS = ("subfamily", "tribe", "genus", "species")
 # "recommended", see templatetags/ibbi_tags.py).
 IBBI_DOCS_URL = "https://gcmarais.com/IBBI/"   # model descriptions and benchmark scores
 MODELS = {
+    "ibbi_dinov3_400": {
+        "label": "DINOv3 · 400 species", "kind": "pipeline", "species_list": "400_species",
+        "detector": "yolo11x_arthropod_detector", "classifier": "dinov3_400species_hierarchical_classifier",
+    },
     "ibbi_dinov3": {
-        "label": "DINOv3", "kind": "pipeline",
+        "label": "DINOv3 · 65 species", "kind": "pipeline", "species_list": "65_species",
         "detector": "yolo11x_arthropod_detector", "classifier": "dinov3_hierarchical_classifier",
     },
     "ibbi_bioclip2": {
-        "label": "BioCLIP 2", "kind": "pipeline",
+        "label": "BioCLIP 2", "kind": "pipeline", "species_list": "65_species",
         "detector": "yolo11x_arthropod_detector", "classifier": "bioclip2_hierarchical_classifier",
     },
     "rtdetrx": {"label": "RT-DETR", "kind": "detector", "detector": "rtdetrx_species_detector"},
@@ -46,17 +53,20 @@ MODELS = {
     "yolov9e": {"label": "YOLOv9", "kind": "detector", "detector": "yolov9e_species_detector"},
     "yolov8x": {"label": "YOLOv8", "kind": "detector", "detector": "yolov8x_species_detector"},
 }
-DEFAULT = "ibbi_dinov3"
+# The one-step detectors all know the benchmark's 65 species
+for _spec in MODELS.values():
+    _spec.setdefault("species_list", "65_species")
+DEFAULT = "ibbi_dinov3_400"
 # The names used before ibbi 0.3, still accepted (saved links, API clients)
 LEGACY = {"rtdetr": "rtdetrx", "yolov12": "yolo12x", "yolov11": "yolo11x", "yolov10": "yolov10x",
           "yolov9": "yolov9e", "yolov8": "yolov8x"}
 
 
-# Which model's suggestion the site shows and keeps when several named the same beetle, best first: the hierarchical
-# DINOv3 pipeline, other hierarchical pipelines, then the one-step detectors. A model name, an IBBI-AI run
-# ("annotator:ibbi_dinov3") or an uploaded model ("ibbi-detect-M2-yolo11x+cls-dinov3L-hier"), ranks by the first
-# pattern it contains, case ignored; a name that contains none comes last. Reorder or add patterns to tune it.
-MODEL_PREFERENCE = ("dinov3", "bioclip", "hier", "rtdetr", "yolo")
+# Which model's suggestion the site shows and keeps when several named the same beetle, best first: the 400-species
+# DINOv3 pipeline, the other DINOv3 ones, other hierarchical pipelines, then the one-step detectors. A model name, an
+# IBBI-AI run ("annotator:ibbi_dinov3") or an uploaded model ("ibbi-detect-M2-yolo11x+cls-dinov3L-hier"), ranks by the
+# first pattern it contains, case ignored; a name that contains none comes last. Reorder or add patterns to tune it.
+MODEL_PREFERENCE = ("dinov3_400", "dinov3", "bioclip", "hier", "rtdetr", "yolo")
 
 
 def preference(model_name):

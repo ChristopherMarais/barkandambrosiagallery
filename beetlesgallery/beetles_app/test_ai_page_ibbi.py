@@ -40,9 +40,9 @@ class AiPageTests(PageBehaviourCase):
         picker = picker[:picker.index("</select>")]
         options = re.findall(r'<option value="([^"]+)"( selected)?>([^<]+)</option>', picker)
         self.assertEqual([value for value, _, _ in options], list(ibbi_models.MODELS))   # the values are unchanged
-        self.assertEqual(options[0], ("ibbi_dinov3", " selected", "DINOv3 (recommended)"))
+        self.assertEqual(options[0], ("ibbi_dinov3_400", " selected", "DINOv3 · 400 species (recommended)"))
         self.assertEqual([label for _, _, label in options[1:]],
-                         ["BioCLIP 2", "RT-DETR", "YOLO12", "YOLO11", "YOLOv10", "YOLOv9", "YOLOv8"])
+                         ["DINOv3 · 65 species", "BioCLIP 2", "RT-DETR", "YOLO12", "YOLO11", "YOLOv10", "YOLOv9", "YOLOv8"])
         self.assertEqual([selected for _, selected, _ in options].count(" selected"), 1)
         self.assertEqual(picker.count("recommended"), 1)
         self.assertNotRegex(picker.lower(), "classifier|detector")
@@ -52,7 +52,7 @@ class AiPageTests(PageBehaviourCase):
         page = self.page()
         help_text = page[page.index('data-testid="model-help"'):]
         help_text = help_text[:help_text.index("</p>")]
-        self.assertIn("All models find and name bark beetles.", help_text)   # the picker marks the recommended one (#534)
+        self.assertIn("Names 400 species in 115 genera.", help_text)   # the picker marks the recommended one (#534)
         self.assertNotIn("Species classifier", page)
         self.assertNotIn("Species detector", page)
 
@@ -185,11 +185,11 @@ class SavedPhotoTests(ClassifyCase):
 
 
 class ReadableModelNameTests(PageBehaviourCase):
-    """People read "IBBI-AI · DINOv3", not "annotator:ibbi_dinov3"; other models' names are shown as they came."""
+    """People read "IBBI-AI · DINOv3 · 65 species", not "annotator:ibbi_dinov3"; other models' names are shown as they came."""
 
     def test_ibbi_ai_runs_read_as_ibbi_ai_and_the_model(self):
         for stored, shown in (
-            ("annotator:ibbi_dinov3", "IBBI-AI · DINOv3"), ("annotator:ibbi_bioclip2", "IBBI-AI · BioCLIP 2"),
+            ("annotator:ibbi_dinov3", "IBBI-AI · DINOv3 · 65 species"), ("annotator:ibbi_bioclip2", "IBBI-AI · BioCLIP 2"),
             ("annotator:yolo12x", "IBBI-AI · YOLO12"),
             ("annotator:rtdetr", "IBBI-AI · RT-DETR"), ("annotator:yolov8", "IBBI-AI · YOLOv8"),   # names from before ibbi 0.3
             ("annotator:ibbi-test", "IBBI-AI · ibbi-test"),                                        # a key the site no longer lists
@@ -203,14 +203,14 @@ class ReadableModelNameTests(PageBehaviourCase):
         ModelPrediction.objects.create(roi=roi, valid_species_id="2210", taxon=taxon, confidence=0.9,
                                        model_name="annotator:ibbi_dinov3")
         [s] = suggestions_for([roi])[roi.id]
-        self.assertEqual((s["model_name"], s["model_key"]), ("IBBI-AI · DINOv3", "annotator:ibbi_dinov3"))
+        self.assertEqual((s["model_name"], s["model_key"]), ("IBBI-AI · DINOv3 · 65 species", "annotator:ibbi_dinov3"))
         self.client.force_login(self.staff)
         detail = self.client.get(reverse("beetle_detail", args=[roi.id])).content.decode()
         block = detail[detail.index('data-testid="ai-suggestion"'):]
-        self.assertIn("IBBI-AI · DINOv3", block)
+        self.assertIn("IBBI-AI · DINOv3 · 65 species", block)
         self.assertNotIn("annotator:", detail)
         ai = self.client.get(reverse("game_proposals"), {"image_asset": str(roi.image_asset_id)}).json()["ai"]
-        self.assertEqual(ai[str(roi.id)][0]["model_name"], "IBBI-AI · DINOv3")   # what aiSuggestionHtml shows
+        self.assertEqual(ai[str(roi.id)][0]["model_name"], "IBBI-AI · DINOv3 · 65 species")   # what aiSuggestionHtml shows
 
 
 class OldAiPagePhotosTests(PageBehaviourCase):

@@ -1,6 +1,6 @@
 """
 The AI classifier service on Modal (GPU). The site posts an image and a model key; the answer is described in
-ibbi_models.py, which also lists the models (ibbi 0.3.2).
+ibbi_models.py, which also lists the models (ibbi 0.4.0).
 
     Deploy:        pixi run modal deploy beetlesgallery/tools/modal_ibbi_api.py
                    (automatic: "Deploy App" on a release when this code changed, or by hand with target modal)
