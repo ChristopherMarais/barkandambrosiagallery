@@ -35,13 +35,13 @@ def pipeline_output(*records):
 
 class CatalogueTests(ClassifyCase):
     def test_the_models_and_the_old_names(self):
-        self.assertEqual(ibbi_models.IBBI_VERSION, "0.3.2")   # pinned in the Modal image
-        self.assertEqual(ibbi_models.DEFAULT, "ibbi_dinov3")
+        self.assertEqual(ibbi_models.IBBI_VERSION, "0.4.0")   # pinned in the Modal image
+        self.assertEqual(ibbi_models.DEFAULT, "ibbi_dinov3_400")
         self.assertEqual(ibbi_models.resolve("rtdetr"), "rtdetrx")
         self.assertEqual(ibbi_models.resolve("yolov8"), "yolov8x")
         self.assertIsNone(ibbi_models.resolve("yolov99"))
         self.assertEqual(ibbi_models.model_name("ibbi_dinov3"), "yolo11x_arthropod_detector+dinov3_hierarchical_classifier")
-        self.assertEqual(len(ibbi_models.all_ibbi_models()), 9)   # 1 arthropod detector, 2 classifiers, 6 detectors
+        self.assertEqual(len(ibbi_models.all_ibbi_models()), 10)   # 1 arthropod detector, 3 classifiers, 6 detectors
 
     def test_a_pipeline_answer(self):
         dets = ibbi_models.from_pipeline(pipeline_output(record(), record(depth=3)))
@@ -95,7 +95,7 @@ class ClassifyWithThePipelineTests(ClassifyCase):
 class PagesListTheModelsTests(ClassifyCase):
     def test_both_pickers_offer_the_new_models_with_the_recommended_one_first(self):
         page = self.client.get("/tools/classify/").content.decode()
-        self.assertIn('<option value="ibbi_dinov3" selected>DINOv3 (recommended)</option>', page)
+        self.assertIn('<option value="ibbi_dinov3_400" selected>DINOv3 · 400 species (recommended)</option>', page)
         self.assertIn('<option value="yolov8x">YOLOv8</option>', page)
         self.assertNotIn('value="rtdetr"', page)
         self.assertIn('data-testid="ranks-panel"', page)
@@ -104,7 +104,7 @@ class PagesListTheModelsTests(ClassifyCase):
 
     def test_the_classifier_page_sends_the_chosen_model_or_the_default(self):
         from django.core.files.uploadedfile import SimpleUploadedFile
-        for sent, expected in (("ibbi_bioclip2", "ibbi_bioclip2"), ("yolov11", "yolo11x"), ("nonsense", "ibbi_dinov3")):
+        for sent, expected in (("ibbi_bioclip2", "ibbi_bioclip2"), ("yolov11", "yolo11x"), ("nonsense", "ibbi_dinov3_400")):
             with mock.patch("requests.post", return_value=fake_response([])) as post:
                 self.client.post("/tools/classify/", {"image": SimpleUploadedFile("a.jpg", b"x", "image/jpeg"),
                                                       "architecture": sent})

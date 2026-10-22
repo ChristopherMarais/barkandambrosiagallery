@@ -1574,9 +1574,13 @@ def tool_classify(request):
         gallery_photo = {"id": str(asset.id), "url": asset.display_url,
                          "thumb": asset.thumb_small.url if asset.thumb_small else "",
                          "width": asset.image_width, "height": asset.image_height}
+    from . import ibbi_species
+
     return render(request, 'beetles/tool_classify.html', {
         'examples': _classifier_examples(), 'ibbi_docs_url': ibbi_models.IBBI_DOCS_URL, 'gallery_photo': gallery_photo,
         'keep_threshold': classify_assist.KEEP_THRESHOLD, 'lowest_threshold': classify_assist.LOWEST_THRESHOLD,
+        # what each model can name ("See which" under the model picker)
+        'model_taxa': ibbi_species.page_data(), 'model_summary': ibbi_species.summary(ibbi_models.DEFAULT),
     })
 
 

@@ -38,7 +38,7 @@ The platform code is MIT-licensed (see [LICENSE](LICENSE)).
 The AI service (`beetlesgallery/tools/modal_ibbi_api.py`) is deployed separately from the web app. It installs the
 [`ibbi`](https://github.com/ChristopherMarais/IBBI) package together with
 [Ultralytics](https://github.com/ultralytics/ultralytics), which is AGPL-3.0, and runs IBBI model weights under their
-own licences: AGPL-3.0 for the Ultralytics-trained detectors, the DINOv3 License for the DINOv3 classifier and MIT for
+own licences: AGPL-3.0 for the Ultralytics-trained detectors, the DINOv3 License for the DINOv3 classifiers and MIT for
 the BioCLIP 2 classifier (see [IBBI's licences](https://github.com/ChristopherMarais/IBBI#licences)).
 
 Images in the gallery keep the licence given by their contributor, shown on each specimen record.

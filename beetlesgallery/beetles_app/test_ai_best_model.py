@@ -38,11 +38,12 @@ def answer_from(model_used, detections=(DETECTION,)):
 
 class PreferenceTests(ClassifyCase):
     def test_the_dinov3_pipeline_first_then_other_pipelines_then_detectors(self):
-        ranked = ["annotator:ibbi_dinov3", DINO_UPLOAD, "annotator:ibbi_bioclip2", "cls-effnet-hier",
+        ranked = ["annotator:ibbi_dinov3_400", "annotator:ibbi_dinov3", DINO_UPLOAD, "annotator:ibbi_bioclip2", "cls-effnet-hier",
                   "annotator:rtdetrx", "annotator:yolo11x", "some-new-model"]
         ranks = [ibbi_models.preference(name) for name in ranked]
         self.assertEqual(ranks, sorted(ranks))
-        self.assertEqual(ranks[0], ranks[1])                                  # an IBBI-AI run or an upload of it
+        self.assertLess(ranks[0], ranks[1])                                   # the 400-species model first
+        self.assertEqual(ranks[1], ranks[2])                                  # an IBBI-AI run or an upload of it
         self.assertLess(ibbi_models.preference(DINO_UPLOAD), ibbi_models.preference("annotator:rtdetrx"))
         self.assertEqual(ibbi_models.preference("SOME-NEW-MODEL"), len(ibbi_models.MODEL_PREFERENCE))
         self.assertTrue(outranked("annotator:rtdetrx", [DINO_UPLOAD]))
@@ -102,7 +103,7 @@ class SavingTests(ClassifyCase):
         self.assertEqual(self.run_annotation_page("ibbi_dinov3")["attached"], 1)
         self.assertEqual(ModelPrediction.objects.filter(roi=roi).count(), 2)
         [shown] = suggestions_for([roi])[roi.id]
-        self.assertEqual(shown["model_name"], "IBBI-AI · DINOv3")
+        self.assertEqual(shown["model_name"], "IBBI-AI · DINOv3 · 65 species")
 
     def test_the_ai_page_names_a_gallery_photo_only_with_a_better_model(self):
         self.client.logout()
@@ -165,7 +166,7 @@ class PageTextTests(ClassifyCase):
         page = self.page()
         help_text = page[page.index('data-testid="model-help"'):]
         help_text = help_text[:help_text.index("</p>")]
-        self.assertIn("All models find and name bark beetles.", help_text)
+        self.assertIn("Names 400 species in 115 genera.", help_text)
         self.assertNotIn("is recommended", help_text)
         # the link sits next to the select as "Compare models" (14px), not buried in the tiny help line (#618)
         marker = page.index('data-testid="ibbi-link"')
