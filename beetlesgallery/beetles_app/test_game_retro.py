@@ -94,13 +94,13 @@ class AgreementLaterTests(ScoringCase):
 
 
 class SiteTests(ScoringCase):
-    def test_the_sidebar_shows_the_player_and_links_the_game(self):
+    def test_the_sidebar_links_the_game_without_the_players_points(self):
         PlayerScore.objects.create(player=self.user, score=420, rating=0.55)
         self.client.force_login(self.user)
         page = self.client.get("/").content.decode()
-        self.assertIn('data-testid="sidebar-player"', page)
-        self.assertIn(self.user.username, page)
-        self.assertIn("420 pts", page)
+        self.assertNotIn('data-testid="sidebar-player"', page)   # too much in the sidebar (owner, 2026-10-22)
+        self.assertNotIn("420 pts", page)
+        self.assertIn('href="/game/"', page)
         self.assertNotIn('data-testid="game-invite"', page)    # no coloured pop-up on the home page
         self.assertNotIn('data-testid="beta"', page)           # out of beta (#538): no pill
 

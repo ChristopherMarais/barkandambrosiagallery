@@ -76,9 +76,9 @@ class NavIconMapTests(SimpleTestCase):
         # the plain bug is not the Image Browser's; the crossed-out one is the Pathogens page's (fi-rr-bug-slash)
         self.assertNotRegex(BASE_HTML, r"fi-rr-bug(?!-slash)")
 
-    def test_the_game_uses_the_play_icon_not_the_gamepad(self):
-        self.assertIn("fi-rr-play", BASE_HTML)
-        self.assertNotIn("fi-rr-gamepad", BASE_HTML)
+    def test_the_game_uses_the_gamepad_not_the_play_icon(self):
+        self.assertIn("fi-rr-gamepad", BASE_HTML)
+        self.assertNotIn("fi-rr-play", BASE_HTML)
 
 
 class MobileTopBarTests(PageBehaviourCase):
