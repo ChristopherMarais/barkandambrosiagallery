@@ -164,11 +164,14 @@ class SiteProgressTests(SimpleTestCase):
 
 
 class SiteIconsTests(SimpleTestCase):
-    def test_the_game_is_the_play_icon_everywhere(self):
+    def test_the_game_is_the_gamepad_everywhere(self):
+        # the gamepad again (owner, 2026-10-22); the play icon is left only for the game home's Play button
         for path in site_templates():
             with self.subTest(template=path.name):
-                self.assertNotIn("fi-rr-gamepad", path.read_text(encoding="utf-8"))
-        self.assertGreaterEqual(template("beetles/tool_annotate.html").count("fi-rr-play"), 3)
+                text = path.read_text(encoding="utf-8")
+                self.assertEqual(text.count("fi-rr-play"), 1 if path.name == "game_home.html" else 0)
+        self.assertIn('<i class="fi fi-rr-play"></i> Play', template("beetles/game_home.html"))
+        self.assertGreaterEqual(template("beetles/tool_annotate.html").count("fi-rr-gamepad"), 3)
 
     def test_icons_are_not_nudged_with_margins(self):
         nudge = re.compile(r'<i class="fi [^"]*\bmt-[0-9.]+')
