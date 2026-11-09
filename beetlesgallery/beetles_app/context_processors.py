@@ -32,8 +32,8 @@ def species_ref_status(request):
 
 def game_player(request):
     """
-    The signed-in user's game level and score for the sidebar and the home page, so the game is always one tap
-    away. Read from the stored totals only (no recomputing), so it costs one small query per page.
+    The game's name for every page, and the signed-in user's game level and score (shown on My account; the sidebar
+    shows only the game's name). Read from the stored totals only (no recomputing): one small query per page.
     """
     name = {"game_name": getattr(settings, "GAME_DISPLAY_NAME", "Beetle Detective")}
     user = getattr(request, "user", None)

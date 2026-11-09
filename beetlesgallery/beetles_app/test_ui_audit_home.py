@@ -212,11 +212,11 @@ class HomeCardIconTests(HomeTestCase):
 
     def test_the_cards_use_the_sidebar_icons(self):
         hero = self.hero()
-        for icon in ("fi-rr-picture", "fi-rr-sparkles", "fi-rr-play"):
+        for icon in ("fi-rr-picture", "fi-rr-sparkles", "fi-rr-gamepad"):
             with self.subTest(icon=icon):
                 self.assertIn(icon, hero)
         self.assertNotIn("fi-rr-bug", hero)
-        self.assertNotIn("fi-rr-gamepad", hero)
+        self.assertNotIn("fi-rr-play", hero)
 
     def test_the_cards_use_the_sidebar_names(self):
         hero = self.hero()

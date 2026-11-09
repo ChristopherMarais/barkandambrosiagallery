@@ -24,12 +24,12 @@ class AmbrosiaArchiveTests(GameCase):
                          ["fi-rr-pickaxe", "fi-rr-route", "fi-rr-mushroom", "fi-rr-shield", "fi-rr-house-tree"])
         self.assertEqual(len(game_levels.LEVEL_ICONS), len(game_levels.LEVELS))
 
-    def test_one_sidebar_entry_for_the_game_carries_the_players_level_and_points(self):
+    def test_one_sidebar_entry_for_the_game_with_just_its_name(self):
+        # the player's level and points left the sidebar (owner, 2026-10-22: too much clutter)
         PlayerScore.objects.create(player=self.user, score=1234, rating=0.65)
         self.client.force_login(self.user)
         page = self.client.get("/").content.decode()
-        self.assertEqual(page.count('data-testid="sidebar-player"'), 2)   # phone menu and desktop sidebar, inside the game entry
-        for chunk in page.split('data-testid="sidebar-player"')[1:]:
-            self.assertIn("pts", chunk[:400])
-        entry = page[page.rfind('<a href="/game/"', 0, page.index('data-testid="sidebar-player"')):]
-        self.assertIn("Beetle Detective", entry[:entry.index('data-testid="sidebar-player"')])
+        self.assertNotIn('data-testid="sidebar-player"', page)
+        name = '<span class="nav-game-name block font-medium text-gray-700">Beetle Detective</span>'
+        self.assertEqual(page.count(name),
+                         2)   # phone menu and desktop sidebar

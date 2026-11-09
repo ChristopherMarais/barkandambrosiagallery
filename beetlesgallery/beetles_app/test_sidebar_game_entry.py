@@ -1,9 +1,9 @@
-"""Issue #500: the sidebar's game entry always shows its icon, and a signed-in player's level badge, level
-and points sit on a line under the game's name. The closed sidebar's icons sit in the middle of their shading, and the
-staging bar is red.
+"""Issue #500: the sidebar's game entry always shows its icon. The closed sidebar's icons sit in the middle of their
+shading, and the staging bar is red.
 
-The icon is the play icon, not the gamepad (nav-play-icon, #618): the game itself already uses a play button, so the
-sidebar and home card match it."""
+The icon is the gamepad again (owner, 2026-10-22: it says plainly that this is a game; #618 had made it the play icon),
+and the entry shows only the game's name: the player's level badge, level and points were too much in the sidebar
+(they stay on My account and in the game)."""
 import re
 
 from django.conf import settings
@@ -11,11 +11,10 @@ from django.test import SimpleTestCase, override_settings
 from django.urls import reverse
 
 from beetlesgallery.beetles_app.models import PlayerScore
-from beetlesgallery.beetles_app.templatetags.beetle_tags import digit_groups_text
 from beetlesgallery.beetles_app.testing import PageBehaviourCase
 
 BASE = settings.BASE_DIR / "beetlesgallery" / "templates" / "base.html"
-PLAY_ICON = '<i class="fi fi-rr-play text-xl text-gray-700 w-8 text-center"></i>'
+GAMEPAD_ICON = '<i class="fi fi-rr-gamepad text-xl text-gray-700 w-8 text-center"></i>'
 
 
 def game_entries(page):
@@ -34,39 +33,24 @@ class GameEntryTests(PageBehaviourCase):
         PlayerScore.objects.create(player=self.user, score=score, rating=rating)
         self.client.force_login(self.user)
 
-    def assert_play_icon_first(self, entry):
-        self.assertTrue(entry[entry.index(">") + 1:].lstrip().startswith(PLAY_ICON), entry)
+    def assert_gamepad_first(self, entry):
+        self.assertTrue(entry[entry.index(">") + 1:].lstrip().startswith(GAMEPAD_ICON), entry)
 
-    def test_signed_out_it_is_the_play_icon_and_the_games_name(self):
+    def test_signed_out_it_is_the_gamepad_and_the_games_name(self):
         for entry in self.entries():
-            self.assert_play_icon_first(entry)
+            self.assert_gamepad_first(entry)
             self.assertIn("Beetle Detective", entry)
             self.assertNotIn('data-testid="level-badge"', entry)
             self.assertNotIn('data-testid="sidebar-player"', entry)
 
-    def test_signed_in_the_level_badge_level_and_points_sit_under_the_games_name(self):
+    def test_signed_in_it_is_still_only_the_gamepad_and_the_games_name(self):
         self.sign_in(1234, 0.65)   # level 5, Tunnel master
-        phone, desktop = self.entries()
-        for entry in (phone, desktop):
-            self.assert_play_icon_first(entry)   # the badge is no longer the icon
-            name = entry.index("Beetle Detective")
-            badge = entry.index('data-testid="level-badge"')
-            level = entry.index(">Tunnel master</span>")
-            points = entry.index(" pts</span>")
-            self.assertTrue(name < badge < level < points, entry)
-            self.assertIn('title="Level 5: Tunnel master"', entry)
-            self.assertEqual(entry.count('data-testid="sidebar-player"'), 1)
-        self.assertIn(f"&middot; {digit_groups_text(1234)} pts", desktop)
-        self.assertIn('<span class="digit-group">1</span><span class="digit-group" style="margin-left:0.4em">234</span> pts',
-                      phone)
-        self.assertIn(f'title="Beetle Detective: user, level 5 (Tunnel master), {digit_groups_text(1234)} pts"', desktop)
-        self.assertNotIn(">Beta</span>", phone)   # out of beta (#538): the phone menu's pill is gone too
-
-    def test_a_long_level_name_is_shortened_but_never_the_points(self):
-        self.sign_in(30000, 0.95)   # level 10, King of Bark and Ambrosia
         for entry in self.entries():
-            self.assertIn('<span class="truncate">King of Bark and Ambrosia</span><span class="shrink-0">&nbsp;&middot; ',
-                          entry)
+            self.assert_gamepad_first(entry)
+            self.assertIn("Beetle Detective", entry)
+            for clutter in ('data-testid="level-badge"', 'data-testid="sidebar-player"', "Tunnel master", "pts",
+                            "title="):
+                self.assertNotIn(clutter, entry)
 
 
 class StagingBarTests(PageBehaviourCase):
