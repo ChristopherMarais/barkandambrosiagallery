@@ -1,8 +1,11 @@
 services:
   web:
     build: .
+    # --max-requests: each worker is replaced after about 2000 requests (the jitter staggers them), so a worker with
+    # stuck threads can't sit there for weeks; gunicorn's --timeout doesn't see stuck threads in gthread workers.
+    # Only Cloudflare should reach this port: scripts/prod_firewall.sh (docs/production_setup.md).
     command: >
-      sh -c "pixi run gunicorn --workers 9 --timeout 600"
+      sh -c "pixi run gunicorn --workers 9 --timeout 600 --max-requests 2000 --max-requests-jitter 200"
     restart: always
     ports:
       - "80:8000"

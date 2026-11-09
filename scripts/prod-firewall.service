@@ -1,0 +1,16 @@
+# Applies scripts/prod_firewall.sh at every boot, after Docker (firewall rules don't survive a reboot on their own).
+# Install: docs/production_setup.md, "Only Cloudflare reaches the site".
+[Unit]
+Description=Only Cloudflare may reach the live site (port 80; port 8000 closed)
+After=docker.service network-online.target
+Wants=network-online.target
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash /opt/barkandambrosiagallery/scripts/prod_firewall.sh
+ExecStop=/bin/bash /opt/barkandambrosiagallery/scripts/prod_firewall.sh --off
+
+[Install]
+WantedBy=multi-user.target
