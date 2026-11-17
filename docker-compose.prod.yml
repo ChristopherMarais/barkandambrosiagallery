@@ -21,6 +21,9 @@ services:
   db:
     image: postgres:15
     command: postgres -c shared_buffers=512MB -c work_mem=64MB -c effective_cache_size=2GB
+    # Postgres's parallel queries share memory through /dev/shm, which Docker keeps at 64 MB unless told otherwise:
+    # a big search then fails with "could not resize shared memory segment ... No space left on device" (2026-11-17).
+    shm_size: 1g
     restart: always
     volumes:
       - /opt/barkandambrosia_data/postgres:/var/lib/postgresql/data

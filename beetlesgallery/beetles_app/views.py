@@ -439,79 +439,71 @@ def upload_file(request):
     return redirect("data_management")
 
 
+def _filter_options_aggregates(cfg):
+    """
+    The aggregates that give one dropdown its options and whether it has blank rows, as {alias: aggregate}.
+    "o_<param>" is the distinct, sorted values (sorted by the database, as before); "n_<param>" counts the blank rows.
+    """
+    from django.contrib.postgres.aggregates import ArrayAgg
+    from django.db.models import Count, Q
+
+    param, kind = cfg["param"], cfg["type"]
+    if kind == "db":
+        field = cfg["field"]
+        blank = Q(**{f"{field}__isnull": True})
+        if field not in ("image_asset__image_date_taken", "image_asset__resolution_in_ppmm"):   # text: "" is blank too
+            blank |= Q(**{field: ""})
+        return {f"o_{param}": ArrayAgg(field, distinct=True, order_by=field, filter=~blank),
+                f"n_{param}": Count("pk", filter=blank)}
+    if kind == "ref":
+        field = f"taxon__{cfg['field']}"
+        blank = Q(taxon__isnull=True) | Q(**{f"{field}__isnull": True}) | Q(**{field: ""})
+        return {f"o_{param}": ArrayAgg(field, distinct=True, order_by=field, filter=~blank),
+                f"n_{param}": Count("pk", filter=blank)}
+    if kind == "bool":
+        return {f"n_{param}": Count("pk", filter=Q(**{f"{cfg['field']}__isnull": True}))}
+    return {}
+
+
 def _build_gallery_filter_context(base_search_qs, active_filters):
     """Build the filter dropdown categories and options.
-    Expensive on large datasets (~44 queries) -- cached on the default view by gallery().
+
+    Each dropdown lists the values found among the results of the search and of every *other* active filter (its own
+    is left out, so ticking one country still lists the others). All the dropdowns whose filter isn't active see the
+    same rows, so they are worked out together in one query; each active filter needs one more query of its own.
+    This used to be two queries per dropdown (~44), each repeating the whole search, so a search took ~30 s.
     """
     from collections import defaultdict
-    from django.db.models import Q
     from .utils import filter_beetles_queryset, FILTERS_CONFIG
 
-    grouped_filters = defaultdict(list)
-    categories = []
-    seen_cats = set()
-    for cfg in FILTERS_CONFIG:
-        if cfg["category"] not in seen_cats:
-            categories.append(cfg["category"])
-            seen_cats.add(cfg["category"])
+    categories = list(dict.fromkeys(cfg["category"] for cfg in FILTERS_CONFIG))
 
+    # Which rows each dropdown looks at: None for "every active filter" (shared), or its own param
+    groups = defaultdict(list)
+    for cfg in FILTERS_CONFIG:
+        groups[cfg["param"] if cfg["param"] in active_filters else None].append(cfg)
+
+    results = {}
+    for exclude_param, cfgs in groups.items():
+        aggregates = {}
+        for cfg in cfgs:
+            aggregates.update(_filter_options_aggregates(cfg))
+        if aggregates:
+            ctx_qs = filter_beetles_queryset(base_search_qs, active_filters, exclude_param=exclude_param)
+            results.update(ctx_qs.order_by().aggregate(**aggregates))
+
+    grouped_filters = defaultdict(list)
     for cfg in FILTERS_CONFIG:
         param = cfg["param"]
-        ctx_qs = filter_beetles_queryset(base_search_qs, active_filters, exclude_param=param)
         options = []
-        has_na = False
-
-        if cfg["type"] == "db":
-            field = cfg['field']
-            is_strict_type = field in ["image_asset__image_date_taken", "image_asset__resolution_in_ppmm"]
-            if is_strict_type:
-                raw_options = ctx_qs.exclude(**{f"{field}__isnull": True}) \
-                                    .values_list(field, flat=True) \
-                                    .distinct().order_by(field)
-            else:
-                raw_options = ctx_qs.exclude(**{f"{field}__isnull": True}) \
-                                    .exclude(**{f"{field}": ""}) \
-                                    .values_list(field, flat=True) \
-                                    .distinct().order_by(field)
-
-            for o in raw_options:
+        if cfg["type"] in ("db", "ref"):
+            for o in results.get(f"o_{param}") or []:
                 val = o.strftime("%Y-%m-%d") if hasattr(o, "strftime") else str(o).strip()
                 if val and val not in options:
                     options.append(val)
-
-            if is_strict_type:
-                has_na = ctx_qs.filter(**{f"{field}__isnull": True}).exists()
-            else:
-                has_na = ctx_qs.filter(
-                    Q(**{f"{field}__isnull": True}) | 
-                    Q(**{f"{field}": ""})
-                ).exists()
-
-        elif cfg["type"] == "bool":
+        elif cfg["type"] in ("bool", "custom_has_type_status"):
             options = ["Yes", "No"]
-            has_na = ctx_qs.filter(**{f"{cfg['field']}__isnull": True}).exists()
-
-        elif cfg["type"] == "custom_has_type_status":
-            options = ["Yes", "No"]
-
-        elif cfg["type"] == "ref":
-            field_name = f"taxon__{cfg['field']}"
-            raw_options = ctx_qs.exclude(taxon__isnull=True) \
-                                .exclude(**{f"{field_name}__isnull": True}) \
-                                .exclude(**{f"{field_name}": ""}) \
-                                .values_list(field_name, flat=True) \
-                                .distinct().order_by(field_name)
-
-            for o in raw_options:
-                val = str(o).strip()
-                if val and val not in options:
-                    options.append(val)
-
-            has_na = ctx_qs.filter(
-                Q(taxon__isnull=True) | 
-                Q(**{f"{field_name}__isnull": True}) | 
-                Q(**{f"{field_name}": ""})
-            ).exists()
+        has_na = bool(results.get(f"n_{param}"))
 
         if has_na:
             options.insert(0, "None")
