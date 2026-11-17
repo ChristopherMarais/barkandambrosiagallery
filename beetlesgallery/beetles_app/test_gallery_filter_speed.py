@@ -100,6 +100,14 @@ class FilterDropdownTests(TestCase):
         ("", {"species": ["None"], "multiple": ["No"]}),
         ("nothing-matches-this", {}),
         ("Ips", {"photographer": ["Ana"], "institution": ["UF", "BYU"]}),
+        # the filters that join an image's other specimens (rows can repeat), and the search operators
+        ("", {"has_rois": ["No"]}),
+        ("", {"all_rois_val": ["Yes"]}),
+        ("", {"all_rois_val": ["No"], "sex": ["male", "None"]}),
+        ("Ips OR Xyleborus", {"aspect": ["dorsal"]}),
+        ("Ips NOT typographus", {}),
+        ("country:Brazil", {"type_status": ["None"]}),
+        ("genus:Ips", {"usage": ["None", "CC BY"], "state": ["Bahia"]}),
     ]
 
     def test_the_dropdowns_are_the_same_as_before(self):
