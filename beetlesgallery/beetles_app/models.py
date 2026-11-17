@@ -2,7 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from django.db.models.functions import Lower, Trim, Upper
-from django.contrib.postgres.indexes import GinIndex
+from django.contrib.postgres.indexes import GinIndex, OpClass
 
 import uuid
 import json
@@ -24,6 +24,11 @@ def record_roi_history(roi_ids, user, reason):
     if roi_ids:
         Beetles.history.bulk_history_create(list(Beetles.objects.filter(id__in=roi_ids)), update=True,
                                             default_user=user, default_change_reason=reason)
+
+
+def search_index(table, field):
+    """A trigram index for the search bar's "contains" (Django's icontains is UPPER(field) LIKE UPPER('%text%'))."""
+    return GinIndex(OpClass(Upper(field), name="gin_trgm_ops"), name=f"{table}_trgm_{field}"[:30])
 
 
 class ImageAsset(models.Model):
@@ -93,6 +98,12 @@ class ImageAsset(models.Model):
     deleted_at = models.DateTimeField(null=True, blank=True)
     
     history = HistoricalRecords()
+
+    class Meta:
+        # The search bar's free text (utils.FREE_TEXT_IMAGE_FIELDS): "contains" in any letter case, so
+        # trigram indexes on UPPER(field), the form Django's icontains asks in (migration 0058)
+        indexes = [search_index("image_asset", f) for f in (
+            "image_institution", "photographer", "image_email", "photo_usage_statement", "image_notes")]
 
     def delete(self, using=None, keep_parents=False, deleted_by=None):
         """Soft delete the image and cascade soft-delete to all its ROIs."""
@@ -375,6 +386,11 @@ class Beetles(models.Model):
             models.Index(fields=["image_asset", "id"], name="beetles_asset_id_idx"),
             # same_specimen (game, #386) looks photos up by Lower(Trim(depicts_specimen)) on every batch and review
             models.Index(Lower(Trim("depicts_specimen")), name="beetles_lower_specimen_idx"),
+            # the search bar's free text (utils.FREE_TEXT_BEETLE_FIELDS): see search_index()
+            *[search_index("beetles", f) for f in (
+                "alias_id", "depicts_specimen", "depicts_valid_name_id", "depicts_described_name_id",
+                "depicts_name_verbatim", "collection_country", "collection_stateProvince", "specimen_type_status",
+                "specimen_notes", "aspect", "specimen_sex")],
         ]
 
     def __str__(self):

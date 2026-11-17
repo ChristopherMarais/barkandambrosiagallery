@@ -274,6 +274,32 @@ def _clause_to_q(field_label: str, value: str, ignored):
 
     return Q(**{f"{model_field}__icontains": value})
 
+FREE_TEXT_BEETLE_FIELDS = [f for f in FREE_TEXT_FIELDS if "__" not in f]
+FREE_TEXT_IMAGE_FIELDS = [f.split("__", 1)[1] for f in FREE_TEXT_FIELDS if f.startswith("image_asset__")]
+FREE_TEXT_TAXON_FIELDS = [f.split("__", 1)[1] for f in FREE_TEXT_FIELDS if f.startswith("taxon__")]
+
+
+def free_text_q(val):
+    """
+    Specimens with ``val`` in any of FREE_TEXT_FIELDS (any letter case). The same rows as one big
+    "field1 contains OR image.field2 contains OR taxon.field3 contains ..." condition, but asked of each table on its
+    own: Postgres can't use indexes for an OR that spans three tables, so that read every specimen for every search.
+    Each table's own OR can use its trigram indexes (models.search_index, migration 0058). Texts shorter than three
+    letters are too short for the indexes and are still found, just by reading the table.
+    """
+    from .models import Beetles, ImageAsset, Taxon
+
+    def any_field(fields):
+        q = Q()
+        for f in fields:
+            q |= Q(**{f"{f}__icontains": val})
+        return q
+
+    return (Q(pk__in=Beetles.objects.filter(any_field(FREE_TEXT_BEETLE_FIELDS)).values("pk"))
+            | Q(image_asset__in=ImageAsset.objects.filter(any_field(FREE_TEXT_IMAGE_FIELDS)).values("pk"))
+            | Q(taxon__in=Taxon.objects.filter(any_field(FREE_TEXT_TAXON_FIELDS)).values("pk")))
+
+
 def build_query_q(user_qs: str):
     parts = _tokenize_query(user_qs or "")
 
@@ -310,11 +336,7 @@ def build_query_q(user_qs: str):
                 stack.append((a & b) if op == "AND" else (a | b))
 
         elif "free_text" in node:
-            val = node["free_text"]
-            q_any = Q()
-            for f in FREE_TEXT_FIELDS:
-                q_any |= Q(**{f"{f}__icontains": val})
-            stack.append(q_any)
+            stack.append(free_text_q(node["free_text"]))
 
         else:
             q = _clause_to_q(node.get("field", ""), node.get("value", ""), ignored)
