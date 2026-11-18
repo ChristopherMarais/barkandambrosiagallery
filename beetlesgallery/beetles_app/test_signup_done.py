@@ -101,7 +101,7 @@ class SignUpDoneTests(PageBehaviourCase):
         self.user.email = "user@example.org"
         self.user.save()
         self.client.force_login(self.user)
-        data = {k: v for k, v in form_data(email="user@example.org", areas=["annotate"]).items()
+        data = {k: v for k, v in form_data(email="user@example.org", reason="Drawing boxes").items()
                 if k not in ("username", "password1", "password2")}
         page = self.client.post(reverse("request_access"), data, follow=True)
         self.assertEqual(page.redirect_chain, [(reverse("request_access_sent"), 302)])

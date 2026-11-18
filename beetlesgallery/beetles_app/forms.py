@@ -2,7 +2,6 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm, PasswordChangeForm
 from django.contrib.auth import get_user_model
 
-from . import access
 
 User = get_user_model()
 
@@ -99,20 +98,15 @@ class UpdateBatchUploadForm(forms.Form):
         return f
 
 class AccessRequestForm(forms.Form):
-    """The Sign up form; signed in, it asks for more access (see beetles_app/access.py)."""
+    """The Sign up form; signed in, it asks for more access with a short note (see beetles_app/access.py)."""
 
     name = forms.CharField(label="Your name", max_length=200)
     email = forms.EmailField(label="Email", max_length=254)
     affiliation = forms.CharField(label="Institution or affiliation", max_length=200)
-    # Every account is Basic once the email is confirmed; these are the extras a curator reviews (optional).
-    areas = forms.MultipleChoiceField(
-        label="Anything more you'd like?",
-        choices=[(key, label) for key, label, _ in access.AREAS],
-        widget=forms.CheckboxSelectMultiple, required=False,
-    )
-    reason = forms.CharField(
-        label="What will you use it for?", max_length=2000, widget=forms.Textarea(attrs={"rows": 4}), required=False,
-    )
+    # Signed in only: what they would like to help with, in their own words. Signing up asks nothing of the sort:
+    # every account gets the same read-and-download access (areas.BASIC_AREAS).
+    reason = forms.CharField(label="What would you like to help with?", max_length=2000,
+                             widget=forms.Textarea(attrs={"rows": 4}))
     # Someone without an account chooses their own (they are left out when asking while signed in).
     username = forms.CharField(label="Username", max_length=150, required=False)
     password1 = forms.CharField(label="Password", widget=forms.PasswordInput, required=False)
@@ -123,9 +117,8 @@ class AccessRequestForm(forms.Form):
     def __init__(self, *args, signed_in=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.signed_in = signed_in
-        if signed_in:
-            for name in ("username", "password1", "password2"):
-                del self.fields[name]
+        for name in (("username", "password1", "password2") if signed_in else ("reason",)):
+            del self.fields[name]
 
     def clean_username(self):
         username = self.cleaned_data.get("username", "").strip()

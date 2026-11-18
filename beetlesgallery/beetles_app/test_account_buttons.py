@@ -187,8 +187,8 @@ class RequestAccessExplainsTheReviewTests(ReadsPages, PageBehaviourCase):
                 words = " ".join(re.sub(r"<[^>]+>", " ", main).split())
                 for talk in ("review", "approv", "decision", "wait"):
                     self.assertNotIn(talk, words.lower())
-                if name == "request_access":   # the form says what to tick; the sent page says thank you
-                    self.assertIn("Tick anything else you'd like to help with below.", words)
+                if name == "request_access":   # the form asks what they'd like to help with; the sent page says thank you
+                    self.assertIn("Tell us what else you'd like to help with", words)
                 else:
                     self.assertIn("We have your request.", words)
 

@@ -39,7 +39,8 @@ def request_access(request):
         if signed_in:
             initial = {"name": request.user.get_full_name(), "email": request.user.email}
         form = AccessRequestForm(initial=initial, signed_in=signed_in)
-    return render(request, "accounts/request_access.html", {"form": form, "areas": access.AREAS, "signed_in": signed_in})
+    return render(request, "accounts/request_access.html", {"form": form, "signed_in": signed_in,
+                                                            "basic_summary": access.BASIC_SUMMARY})
 
 
 def request_access_sent(request):

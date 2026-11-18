@@ -338,7 +338,7 @@
                 {% if request.user.is_superuser %}
                 <div class="border rounded-md p-3 bg-gray-50">
                     <span class="text-sm font-medium text-gray-900">Permissions</span>
-                    <p class="text-xs text-gray-500 mb-2">Grouped by page. Superusers have all of them.</p>
+                    <p class="text-xs text-gray-500 mb-2">Grouped by page. Superusers have all of them. Every account can open specimen pages and download without any of these.</p>
                     {% for group in permission_pages %}
                     <fieldset class="mb-2" data-testid="permission-page">
                       <legend class="text-xs font-bold uppercase text-gray-500 mt-1">{{ group.page }}</legend>

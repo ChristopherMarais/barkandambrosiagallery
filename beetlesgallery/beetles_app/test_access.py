@@ -1,6 +1,7 @@
 """
-Asking for an account: choosing a username and password, confirming the email (which opens a Basic account at once),
-a superuser granting extra areas one by one, signing in and password reset.
+Asking for an account: choosing a username and password, confirming the email (which opens a Basic account at once:
+everything to read and download, nothing to choose), someone signed in asking for more with a short note, a superuser
+granting editing areas one by one (never the Admin ones through a request), signing in and password reset.
 """
 import re
 from datetime import timedelta
@@ -25,7 +26,7 @@ LINK = r"http://testserver/accounts/[a-z-]+/\S+"
 def form_data(**changes):
     data = {
         "name": "Ada Lovelace", "email": "Ada@Example.org", "affiliation": "University of Somewhere",
-        "areas": ["details", "download"], "reason": "I study ambrosia beetles.", "leave_blank": "",
+        "leave_blank": "",
         "username": "ada", "password1": STRONG, "password2": STRONG,
     }
     data.update(changes)
@@ -44,9 +45,20 @@ class AccessCase(PageBehaviourCase):
         return self.client.get(link)
 
     def apply_and_confirm(self, **changes):
+        self.client.logout()   # signing up is for people not signed in
         self.send(**changes)
         self.confirm()
         return AccessRequest.objects.get(user__username=changes.get("username", "ada"))
+
+    def ask_for_more(self, reason="I study ambrosia beetles and would like to draw bounding boxes."):
+        """Sign up as ada, confirm, then ask for more while signed in: the request the approvers decide."""
+        self.apply_and_confirm()
+        ada = User.objects.get(username="ada")
+        self.client.force_login(ada)
+        self.client.post(reverse("request_access"), {"name": "Ada Lovelace", "email": "ada@example.org",
+                                                     "affiliation": "University of Somewhere", "reason": reason,
+                                                     "leave_blank": ""})
+        return AccessRequest.objects.get(user=ada, status="pending")
 
     def decide(self, access_request, decision, note="", user=None, areas=()):
         self.client.force_login(user or self.superuser)
@@ -65,9 +77,13 @@ class RequestFormTests(AccessCase):
         response = self.client.get(reverse("request_access"))
         self.assertContains(response, 'name="username"')
         self.assertContains(response, 'name="password1"')
+        # nothing to choose: no permissions, no reason (owner, 2026-11-18)
+        self.assertNotContains(response, 'name="areas"')
+        self.assertNotContains(response, 'name="reason"')
         for _, label, _ in access.AREAS:
-            self.assertContains(response, label)
+            self.assertNotContains(response, label)
         self.assertContains(response, 'data-testid="basic-summary"')
+        self.assertContains(response, "every specimen's page, downloads")
 
     def test_submitting_makes_an_inactive_account_and_only_emails_the_applicant(self):
         response = self.send()
@@ -135,10 +151,13 @@ class RequestFormTests(AccessCase):
         page = self.client.get(reverse("request_access"))
         self.assertContains(page, "user@example.org")
         self.assertNotContains(page, 'name="password1"')
-        self.client.post(reverse("request_access"), {k: v for k, v in form_data(email="user@example.org", areas=["annotate"]).items()
+        self.assertContains(page, 'name="reason"')
+        self.assertNotContains(page, 'name="areas"')
+        self.client.post(reverse("request_access"), {k: v for k, v in form_data(email="user@example.org", reason="Boxes, please").items()
                                                       if k not in ("username", "password1", "password2")})
         saved = AccessRequest.objects.get()
-        self.assertEqual((saved.user, saved.email_verified_at is not None), (self.user, True))
+        self.assertEqual((saved.user, saved.email_verified_at is not None, saved.reason, saved.areas),
+                         (self.user, True, "Boxes, please", []))
         self.assertEqual(sorted(mail.outbox[0].to), sorted(APPROVERS))   # already confirmed: the approvers hear at once
 
 
@@ -162,17 +181,19 @@ class EmailFormatTests(AccessCase):
         self.assertIn("Hello Ada <b>Lovelace</b>", verify.body)          # plain text is not escaped
         self.assertIn("Ada &lt;b&gt;Lovelace&lt;/b&gt;", self.html(verify))  # the formatted one is
         self.assertIn("Confirm my email", self.html(verify))
-        waiting = AccessRequest.objects.get()
         self.confirm()
-        self.assertIn("Review the request", self.html(self.to(APPROVERS)))
         welcome = self.to("ada@example.org")
         self.assertEqual(welcome.subject, "Welcome to the Bark & Ambrosia Beetle Gallery!")
-        for text in ("Sign in", "<strong>ada</strong>", "Specimen pages", reverse("password_reset")):
+        for text in ("Sign in", "<strong>ada</strong>", "page, downloads", reverse("password_reset")):
             self.assertIn(text, self.html(welcome))
-        self.decide(waiting, "grant", note="Glad to have you", areas=["details"])
+        self.client.force_login(User.objects.get(username="ada"))
+        self.client.post(reverse("request_access"), {"name": "Ada", "email": "ada@example.org", "affiliation": "X",
+                                                     "reason": "Boxes", "leave_blank": ""})
+        self.assertIn("Review the request", self.html(self.to(APPROVERS)))
+        self.decide(AccessRequest.objects.get(status="pending"), "grant", note="Glad to have you", areas=["boxes"])
         granted = mail.outbox[-1]
         self.assertEqual(granted.subject, "Your Bark & Ambrosia Beetle Gallery access")
-        for text in ("Specimen pages", "Glad to have you"):
+        for text in ("Edit bounding boxes", "Glad to have you"):
             self.assertIn(text, self.html(granted))
 
     def test_the_password_reset_email_is_formatted_too(self):
@@ -183,9 +204,17 @@ class EmailFormatTests(AccessCase):
         self.assertIn("Choose a new password", html)
         self.assertRegex(html, r'href="http://testserver/accounts/set-password/[^"]+"')
 
+    def test_asking_for_more_while_signed_in_needs_a_note(self):
+        self.apply_and_confirm()
+        self.client.force_login(User.objects.get(username="ada"))
+        response = self.client.post(reverse("request_access"), {"name": "Ada", "email": "ada@example.org",
+                                                                "affiliation": "X", "reason": "", "leave_blank": ""})
+        self.assertContains(response, "This field is required")
+        self.assertFalse(AccessRequest.objects.filter(status="pending").exists())
+
 
 class ConfirmEmailTests(AccessCase):
-    def test_confirming_tells_the_approvers_once(self):
+    def test_confirming_opens_the_account_and_bothers_nobody(self):
         self.send()
         self.assertEqual(len(mail.outbox), 1)
         link = re.search(LINK, mail.outbox[0].body).group(0)
@@ -193,22 +222,17 @@ class ConfirmEmailTests(AccessCase):
         self.assertContains(response, "Email confirmed")
         self.assertContains(response, "Your account is ready")
         self.assertIsNotNone(AccessRequest.objects.get().email_verified_at)
-        self.assertTrue(User.objects.get(username="ada").is_active)        # Basic straight away
-        approvers_mail = self.to(APPROVERS)
-        self.assertEqual(approvers_mail.reply_to, ["ada@example.org"])
-        for text in ("Ada Lovelace", "University of Somewhere", "Specimen pages", "I study ambrosia beetles.", "/tools/access-requests/"):
-            self.assertIn(text, approvers_mail.body)
-        self.assertIn("We have your request and will email you about it.", self.to("ada@example.org").body)
         self.client.get(link)  # opening the link again changes nothing
-        self.assertEqual(len(mail.outbox), 3)   # the link, the approvers, the welcome
+        self.assertEqual(len(mail.outbox), 2)   # the link and the welcome
 
-    def test_asking_for_nothing_more_is_approved_as_basic_without_bothering_anyone(self):
-        self.send(areas=[])
+    def test_signing_up_is_approved_as_basic_without_bothering_anyone(self):
+        self.send()
         self.confirm()
         done = AccessRequest.objects.get()
         self.assertEqual((done.status, done.granted_role, done.decided_by), ("approved", "basic", None))
         self.assertTrue(User.objects.get(username="ada").is_active)
         self.assertEqual([m.to for m in mail.outbox], [["ada@example.org"], ["ada@example.org"]])   # no approvers
+        self.assertNotIn("We have your request", mail.outbox[-1].body)
         self.client.force_login(self.superuser)
         self.assertNotContains(self.client.get(reverse("access_requests")), 'name="request_id" value="' + str(done.id))
 
@@ -227,9 +251,8 @@ class ConfirmEmailTests(AccessCase):
 
     @override_settings(ACCESS_REQUEST_RECIPIENTS=[])
     def test_with_no_approvers_configured_the_request_is_still_listed(self):
-        self.send()
-        self.confirm()
-        self.assertIn("No approvers", AccessRequest.objects.get().notify_error)
+        self.ask_for_more()
+        self.assertIn("No approvers", AccessRequest.objects.get(status="pending").notify_error)
         self.client.force_login(self.superuser)
         self.assertContains(self.client.get(reverse("access_requests")), "Ada Lovelace")
 
@@ -238,14 +261,17 @@ class ConfirmEmailTests(AccessCase):
         self.superuser.save()
         User.objects.create_superuser("gone", email="gone@example.org", password="pw", is_active=False)
         User.objects.create_superuser("dup", email="HULCR@example.org", password="pw")
-        self.send()
-        self.confirm()
-        self.assertEqual(sorted(mail.outbox[-2].to), sorted(APPROVERS + ["boss@example.org"]))
+        self.ask_for_more()
+        approvers_mail = mail.outbox[-1]
+        self.assertEqual(sorted(approvers_mail.to), sorted(APPROVERS + ["boss@example.org"]))
+        self.assertEqual(approvers_mail.reply_to, ["ada@example.org"])
+        for text in ("Ada Lovelace", "University of Somewhere", "would like to draw bounding boxes", "/tools/access-requests/"):
+            self.assertIn(text, approvers_mail.body)
 
 
 class ReviewPageTests(AccessCase):
     def test_only_superusers_can_open_it_or_decide(self):
-        waiting = self.apply_and_confirm()
+        waiting = self.ask_for_more()
         url = reverse("access_requests")
         self.assertRedirectsToLogin(self.client.get(url))
         for account in (self.user, self.staff):
@@ -257,16 +283,16 @@ class ReviewPageTests(AccessCase):
         self.assertFalse(User.objects.get(username="ada").area_grants.exists())
 
     def test_it_shows_the_request_the_account_they_chose_and_what_they_want(self):
-        self.apply_and_confirm()
+        self.ask_for_more()
         self.client.force_login(self.superuser)
         page = self.client.get(reverse("access_requests"))
-        # The 14 areas are grouped (Viewing / Editing / Admin, #618); what was asked for gets a "Requested" pill.
-        for text in ("Ada Lovelace", "<strong>ada</strong>", "Specimen pages", "Viewing", "Editing", "Admin",
-                     "Requested", "I study ambrosia beetles.",
-                     'value="details" class="mt-0.5 rounded-sm border-gray-300" checked', "working as Basic"):
+        for text in ("Ada Lovelace", "<strong>ada</strong>", "What they'd like to help with",
+                     "would like to draw bounding boxes", "Editing", "Edit bounding boxes", "working as Basic"):
             self.assertContains(page, text)
-        self.assertContains(page, 'value="upload" class="mt-0.5 rounded-sm border-gray-300" >')   # not asked for: not ticked
-        self.assertNotContains(page, "(asked)")   # replaced by the "Requested" pill
+        self.assertContains(page, 'value="boxes" class="mt-0.5 rounded-sm border-gray-300" >')   # nothing ticked for them
+        # specimen pages and downloads are in every account, and the Admin areas can't be given through a request
+        for key in ("details", "download", "predictions", "species_tables", "site_notice"):
+            self.assertNotContains(page, f'value="{key}"')
         self.assertNotContains(page, "already has an account")   # their own new account is not a duplicate
         self.assertContains(self.client.get(reverse("my_account")), 'data-testid="pending-access-count">1</span>')
         self.assertNotContains(self.client.get(reverse("data_management")), "Review Access Requests")
@@ -274,54 +300,59 @@ class ReviewPageTests(AccessCase):
 
 class ApprovalTests(AccessCase):
     def test_granting_adds_the_ticked_areas_and_tells_them(self):
-        waiting = self.apply_and_confirm()
-        self.decide(waiting, "grant", note="Welcome aboard", areas=["details", "upload"])
+        waiting = self.ask_for_more()
+        self.decide(waiting, "grant", note="Welcome aboard", areas=["boxes", "upload"])
         waiting.refresh_from_db()
         user = User.objects.get(username="ada")
         self.assertEqual((waiting.status, waiting.granted_role, waiting.granted_areas, waiting.decided_by),
-                         ("approved", "areas", ["details", "upload"], self.superuser))
-        self.assertEqual(set(user.area_grants.values_list("area", flat=True)), {"details", "upload"})
+                         ("approved", "areas", ["boxes", "upload"], self.superuser))
+        self.assertEqual(set(user.area_grants.values_list("area", flat=True)), {"boxes", "upload"})
         self.assertEqual((user.is_active, user.is_staff, user.is_superuser), (True, False, False))
         message = mail.outbox[-1]
         self.assertEqual(message.to, ["ada@example.org"])
-        for text in ("Specimen pages, Upload new images", "Welcome aboard", reverse("password_reset")):
+        for text in ("Edit bounding boxes, Upload new images", "Welcome aboard", reverse("password_reset")):
             self.assertIn(text, message.body)
         self.assertNotIn(STRONG, message.body)
         self.client.logout()
         self.assertTrue(self.client.login(username="ada", password=STRONG))
 
     def test_granting_nothing_leaves_them_basic(self):
-        waiting = self.apply_and_confirm()
+        waiting = self.ask_for_more()
         self.decide(waiting, "grant")
         waiting.refresh_from_db()
         self.assertEqual((waiting.status, waiting.granted_role), ("approved", "basic"))
         self.assertFalse(User.objects.get(username="ada").area_grants.exists())
 
-    def test_a_request_never_makes_staff_or_a_superuser_and_never_takes_anything_away(self):
+    def test_a_request_never_gives_admin_areas_staff_or_superuser_and_never_takes_anything_away(self):
         self.client.force_login(self.staff)
         self.client.post(reverse("request_access"), {"name": "S", "email": "s@example.org", "affiliation": "Y",
-                                                     "areas": ["species_tables"], "reason": "Z", "leave_blank": ""})
+                                                     "reason": "Z", "leave_blank": ""})
         before = set(self.staff.area_grants.values_list("area", flat=True))
-        self.decide(AccessRequest.objects.get(user=self.staff), "grant", areas=["species_tables"])
+        self.decide(AccessRequest.objects.get(user=self.staff), "grant",
+                    areas=["species_tables", "predictions", "site_notice", "bulk_validate", "superuser", "is_staff"])
         self.staff.refresh_from_db()
-        self.assertEqual(set(self.staff.area_grants.values_list("area", flat=True)), before | {"species_tables"})
+        self.assertEqual(set(self.staff.area_grants.values_list("area", flat=True)), before | {"bulk_validate"})
         self.assertFalse(self.staff.is_superuser)
+        waiting = self.ask_for_more()
+        self.decide(waiting, "grant", areas=["species_tables", "site_notice"])
+        ada = User.objects.get(username="ada")
+        self.assertEqual((ada.is_staff, ada.is_superuser, ada.area_grants.exists()), (False, False, False))
 
     def test_an_unconfirmed_request_cannot_be_approved(self):
         self.send()
         waiting = AccessRequest.objects.get()
-        response = self.decide(waiting, "grant", areas=["details"])
+        response = self.decide(waiting, "grant", areas=["boxes"])
         self.assertContains(response, "has not confirmed their email")
         self.assertFalse(User.objects.get(username="ada").is_active)
 
     def test_a_request_can_only_be_decided_once(self):
-        waiting = self.apply_and_confirm()
+        waiting = self.ask_for_more()
         self.decide(waiting, "deny")
-        response = self.decide(waiting, "grant", areas=["details"])
+        response = self.decide(waiting, "grant", areas=["boxes"])
         self.assertContains(response, "already denied")
 
     def test_an_unknown_decision_or_request_changes_nothing(self):
-        waiting = self.apply_and_confirm()
+        waiting = self.ask_for_more()
         self.assertContains(self.decide(waiting, "superuser"), "Choose what to grant, or Deny")
         self.assertContains(self.decide(mock.Mock(id="not-a-uuid"), "grant"), "no longer exists")
         self.decide(waiting, "grant", areas=["superuser", "is_staff"])   # unknown areas are ignored
@@ -329,16 +360,16 @@ class ApprovalTests(AccessCase):
         self.assertEqual(waiting.granted_role, "basic")
 
     def test_if_the_applicant_cannot_be_emailed_the_approver_is_told(self):
-        waiting = self.apply_and_confirm()
+        waiting = self.ask_for_more()
         with mock.patch("beetlesgallery.beetles_app.access.EmailMultiAlternatives.send", side_effect=OSError("no route")):
-            response = self.decide(waiting, "grant", areas=["details"])
+            response = self.decide(waiting, "grant", areas=["boxes"])
         self.assertContains(response, "could not be emailed")
         self.assertContains(response, "username ada")
 
 
 class DenialTests(AccessCase):
     def test_denying_keeps_their_basic_account_and_tells_them(self):
-        waiting = self.apply_and_confirm()
+        waiting = self.ask_for_more()
         self.decide(waiting, "deny", note="Please apply with your institutional address.")
         waiting.refresh_from_db()
         self.assertEqual(waiting.status, "denied")
@@ -442,7 +473,8 @@ class PasswordResetTests(AccessCase):
 
 class ExtrasTests(AccessCase):
     def test_only_areas_beyond_basic_need_a_review(self):
-        self.assertEqual(access.extras(["browse", "game", "details", "upload"]), ["details", "upload"])
+        # specimen pages and downloads are in every account; the Admin areas can't be asked for
+        self.assertEqual(access.extras(["browse", "game", "details", "download", "upload", "species_tables"]), ["upload"])
         self.assertEqual(access.extras([]), [])
 
 

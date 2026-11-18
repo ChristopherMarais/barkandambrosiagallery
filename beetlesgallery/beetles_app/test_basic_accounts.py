@@ -1,7 +1,8 @@
 """
 Basic accounts and access granted area by area: a Basic account (approved automatically on email confirmation) has
-the image browser without specimen pages, the taxonomy browser, the interactions page, the classifier and the game;
-everything else is an area a superuser grants, to staff and non-staff alike.
+everything to read and download: the image browser with every specimen's page, downloads, the taxonomy browser, the
+interactions page, the classifier and the game (owner, 2026-11-18). Everything that changes something is an area a
+superuser grants, to staff and non-staff alike.
 """
 import importlib
 
@@ -28,20 +29,38 @@ class BasicAccountTests(PageTestCase):
             with self.subTest(page=name):
                 self.assertEqual(self.client.get(reverse(name)).status_code, 200)
 
-    def test_specimen_pages_and_downloads_need_their_area(self):
+    def test_specimen_pages_and_downloads_need_no_grant(self):
         beetle = make_beetle(image=make_image())
-        res = self.client.get(reverse("beetle_detail", args=[beetle.id]))
-        self.assertContains(res, 'data-testid="needs-access"', status_code=403)
-        self.assertContains(res, reverse("request_access"), status_code=403)
-        self.assertEqual(self.client.post(reverse("start_batch_download"), {"selection_mode": "ids"}).status_code, 403)
-        AreaGrant.objects.create(user=self.basic, area=areas.DETAILS)
+        self.assertFalse(AreaGrant.objects.filter(user=self.basic).exists())
         self.assertEqual(self.client.get(reverse("beetle_detail", args=[beetle.id])).status_code, 200)
+        self.assertNotEqual(self.client.post(reverse("start_batch_download"), {"selection_mode": "ids"}).status_code, 403)
+        for key in (areas.DETAILS, areas.DOWNLOAD):
+            self.assertTrue(areas.has_area(self.basic, key), key)
 
-    def test_the_gallery_offers_no_specimen_links_or_downloads_to_basic_accounts(self):
+    def test_editing_still_needs_its_area(self):
+        beetle = make_beetle(image=make_image())
+        for key in areas.KEYS:
+            self.assertFalse(areas.has_area(self.basic, key), key)
+        self.assertEqual(self.client.get(reverse("upload")).status_code, 403)
+        self.assertNotEqual(self.client.get(reverse("beetle_detail", args=[beetle.id])).status_code, 403)
+
+    def test_signed_out_and_switched_off_accounts_get_neither(self):
+        self.basic.is_active = False
+        self.basic.save()
+        from django.contrib.auth.models import AnonymousUser
+        for who in (self.basic, AnonymousUser()):
+            for key in (areas.DETAILS, areas.DOWNLOAD):
+                self.assertFalse(areas.has_area(who, key))
+        self.client.logout()
+        beetle = make_beetle(image=make_image())
+        self.assertEqual(self.client.get(reverse("beetle_detail", args=[beetle.id])).status_code, 302)   # sign in first
+
+    def test_the_gallery_links_basic_accounts_to_specimen_pages(self):
+        from django.core.cache import cache
+        cache.clear()   # the browser keeps its result count; another test's count must not hide this card
         beetle = make_beetle(image=make_image())
         page = self.client.get(reverse("beetles_image_browser")).content.decode()
-        self.assertNotIn(reverse("beetle_detail", args=[beetle.id]), page)
-        self.assertNotIn("Download All", page)
+        self.assertIn(f'href="{reverse("beetle_detail", args=[beetle.id])}"', page)
 
 
 class GranularStaffTests(PageTestCase):
@@ -82,7 +101,7 @@ class ExistingAccountsKeepTheirAccessTests(PageTestCase):
         migration.grant(apps, None)
         migration.grant(apps, None)   # running it again adds nothing twice
         have = lambda u: sorted(AreaGrant.objects.filter(user=u).values_list("area", flat=True))   # noqa: E731
-        self.assertEqual(have(member), sorted(areas.MEMBER_AREAS))
+        self.assertEqual(have(member), sorted(migration.MEMBER_AREAS))
         self.assertEqual(have(curator), sorted(migration.CURATOR_AREAS))
         self.assertNotIn(areas.SPECIES, have(curator))
         self.assertEqual((have(waiting), have(boss)), ([], []))

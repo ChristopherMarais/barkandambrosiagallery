@@ -127,7 +127,7 @@ class AccountPageTests(AreaCase):
     def test_a_users_grants_are_passed_to_the_edit_dialog(self):
         self.grant(self.user, "upload", "annotate")
         self.client.force_login(self.superuser)
-        self.assertContains(self.client.get(reverse("my_account")), "'annotate,details,download,upload'")
+        self.assertContains(self.client.get(reverse("my_account")), "'annotate,upload'")
 
 
 class EditingUsersIsForSuperusersTests(AreaCase):
