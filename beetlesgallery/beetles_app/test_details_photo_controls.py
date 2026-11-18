@@ -191,6 +191,6 @@ class DetailsPhotoControlsTests(PageBehaviourCase):
         self.assertEqual(flag().json(), {"status": "open", "already": True})
         report = GameReport.objects.get()
         self.assertEqual((report.roi_id, report.reporter, report.reason), (self.roi.id, member, "bad_box"))
-        # a Basic account can't open specimen pages; it flags beetles in the game
+        # a Basic account opens specimen pages too (owner, 2026-11-18), so it can flag from here as well
         self.client.force_login(self.account())
-        self.assertEqual(self.client.get(reverse("beetle_detail", args=[self.roi.id])).status_code, 403)
+        self.assertEqual(self.client.get(reverse("beetle_detail", args=[self.roi.id])).status_code, 200)

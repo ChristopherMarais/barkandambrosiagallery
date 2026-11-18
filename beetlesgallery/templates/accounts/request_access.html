@@ -7,9 +7,10 @@
 <section class="max-w-2xl">
   {% if not signed_in %}{% url 'login' as back_url %}{% include "beetles/includes/back_link.html" with url=back_url label="Sign in" %}{% endif %}
   <h1 class="page-title">{% if signed_in %}Ask for more access{% else %}Sign up{% endif %}</h1>
-  <p class="text-gray-600 mb-8">
-    {% if signed_in %}Your account already works. Tick anything else you'd like to help with below.{% else %}Choose a username and password and tell us who you are. Confirm your email and your account works straight away.{% endif %}
+  <p class="text-gray-600 mb-2">
+    {% if signed_in %}Your account already works. Tell us what else you'd like to help with, such as drawing bounding boxes or checking names, and we'll get back to you.{% else %}Choose a username and password and tell us who you are. Confirm your email and your account works straight away.{% endif %}
   </p>
+  <p class="text-sm text-gray-500 mb-8" data-testid="basic-summary">Every account can view and download everything on the site: the image browser with every specimen's page, downloads, the taxonomy browser, the pathogens page, IBBI-AI and {{ game_name }}.</p>
 
   <form method="post" novalidate data-testid="signup-form" data-ga-start="sign_up_started" class="bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-xs space-y-5">
     {% csrf_token %}
@@ -70,30 +71,14 @@
       {% for error in form.affiliation.errors %}<p class="text-sm text-red-700 mt-1">{{ error }}</p>{% endfor %}
     </div>
 
-    <fieldset>
-      <legend class="block text-sm font-semibold text-gray-700 mb-1">I'd also like <span class="font-normal text-gray-500">(optional)</span></legend>
-      <p class="text-sm text-gray-500 mb-2" data-testid="basic-summary">Every account can use the image browser, the taxonomy browser, the pathogens page, IBBI-AI and {{ game_name }}.</p>
-      <div class="space-y-2">
-        {% for key, label, description in areas %}
-        <label class="flex items-start gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 cursor-pointer hover:bg-gray-50">
-          <input type="checkbox" name="areas" value="{{ key }}" class="mt-1 rounded-sm border-gray-300"
-            {% if key in form.areas.value %}checked{% endif %}>
-          <span>
-            <span class="block text-sm font-semibold text-gray-900">{{ label }}</span>
-            <span class="block text-sm text-gray-500">{{ description }}</span>
-          </span>
-        </label>
-        {% endfor %}
-      </div>
-      {% for error in form.areas.errors %}<p class="text-sm text-red-700 mt-1">{{ error }}</p>{% endfor %}
-    </fieldset>
-
+    {% if signed_in %}
     <div>
-      <label for="id_reason" class="block text-sm font-semibold text-gray-700 mb-2">What will you use it for? <span class="font-normal text-gray-500">(optional)</span></label>
-      <textarea id="id_reason" name="reason" rows="4" maxlength="2000"
+      <label for="id_reason" class="block text-sm font-semibold text-gray-700 mb-2">What would you like to help with?</label>
+      <textarea id="id_reason" name="reason" rows="4" maxlength="2000" required
         class="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700">{{ form.reason.value|default:'' }}</textarea>
       {% for error in form.reason.errors %}<p class="text-sm text-red-700 mt-1">{{ error }}</p>{% endfor %}
     </div>
+    {% endif %}
 
     <button type="submit" class="btn-main" data-testid="signup-submit">
       {% if signed_in %}<i class="fi fi-rr-paper-plane"></i><span>Send request</span>{% else %}<i class="fi fi-rr-user-add"></i><span>Sign up</span>{% endif %}

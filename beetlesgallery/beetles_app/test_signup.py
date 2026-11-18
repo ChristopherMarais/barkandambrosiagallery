@@ -49,10 +49,12 @@ class SignUpTests(PageBehaviourCase):
         text = re.sub(r"<fieldset\b.*?</fieldset>", " ", page.content.decode(), flags=re.S)
         self.assertIsNone(REVIEW_WORDS.search(words_of(text)), words_of(text))
 
-    def test_the_extra_access_ticks_are_still_there_quietly(self):
+    def test_there_is_nothing_to_choose(self):
+        # every account gets the same read-and-download access (owner, 2026-11-18)
         page = self.client.get(reverse("signup"))
-        self.assertContains(page, "I'd also like")
-        self.assertContains(page, 'type="checkbox" name="areas"', count=len(access.AREAS))
+        self.assertNotContains(page, "I'd also like")
+        self.assertNotContains(page, 'name="areas"')
+        self.assertNotContains(page, 'name="reason"')
 
     def test_the_main_button_says_sign_up(self):
         page = self.client.get(reverse("signup")).content.decode()
@@ -61,10 +63,10 @@ class SignUpTests(PageBehaviourCase):
         self.assertEqual(" ".join(re.sub(r"<[^>]+>", " ", button.group(1)).split()), "Sign up")
 
     def test_signing_up_still_makes_the_request_and_sends_a_friendly_email(self):
-        response = self.client.post(reverse("signup"), form_data(areas=["upload"]))
+        response = self.client.post(reverse("signup"), form_data(areas=["upload"]))   # a ticked area sent anyway is ignored
         self.assertRedirects(response, reverse("request_access_sent"))
         saved = AccessRequest.objects.get()
-        self.assertEqual((saved.user.username, saved.areas), ("ada", ["upload"]))
+        self.assertEqual((saved.user.username, saved.areas), ("ada", []))
         email = mail.outbox[-1]
         self.assertIn("To finish signing up", email.body)
         self.assertIsNone(REVIEW_WORDS.search(email.body), email.body)

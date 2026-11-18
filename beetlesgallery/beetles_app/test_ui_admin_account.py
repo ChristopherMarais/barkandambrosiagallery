@@ -27,14 +27,17 @@ PASSWORD = "Correct-Horse-9-Staple"
 
 
 class AreaGroupingTests(PageBehaviourCase):
-    """areas.grouped_areas (acc-groups): every area in exactly one of Viewing / Editing / Admin, requested first."""
+    """areas.grouped_areas (acc-groups): the areas a request can give, each once, requested first. Viewing is in every
+    account and the Admin areas are never given through a request (owner, 2026-11-18)."""
 
     def test_every_area_is_in_exactly_one_group(self):
+        self.assertEqual(sorted(areas.GROUP_OF), sorted(areas.KEYS))
         grouped = areas.grouped_areas()
         keys = [a["key"] for g in grouped for a in g["areas"]]
-        self.assertEqual(sorted(keys), sorted(areas.KEYS))
+        self.assertEqual(sorted(keys), sorted(areas.REQUESTABLE))
         self.assertEqual(len(keys), len(set(keys)))
-        self.assertEqual([g["group"] for g in grouped], ["Viewing", "Editing", "Admin"])
+        self.assertEqual([g["group"] for g in grouped], ["Editing"])
+        self.assertFalse({areas.PREDICTIONS, areas.SPECIES, areas.NOTICE} & set(areas.REQUESTABLE))
 
     def test_requested_areas_are_ticked_and_sort_first_in_their_group(self):
         grouped = access.grouped({areas.UPDATE, areas.UPLOAD})

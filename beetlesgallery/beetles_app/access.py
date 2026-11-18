@@ -1,14 +1,15 @@
 """
 Accounts and requests for more access.
 
-Someone fills in the Sign up page (/accounts/signup/; the old /accounts/request-access/ still works) with who they are, the username and password they want and, optionally,
-what more than a Basic account they would like (and why). They get an inactive account and an email with a link to
-confirm their address. Confirming it **activates the account straight away as Basic** (areas.py): the image
-browser, taxonomy browser, interactions page, IBBI-AI and the game (Beetle Detective).
+Someone fills in the Sign up page (/accounts/signup/; the old /accounts/request-access/ still works) with who they
+are and the username and password they want; nothing else to choose (owner, 2026-11-18). They get an inactive
+account and an email with a link to confirm their address. Confirming it **activates the account straight away as
+Basic** (areas.py): everything there is to read or download (specimen pages and downloads included), IBBI-AI and the
+game (Beetle Detective).
 
-If they asked for more, the request stays open for a superuser on My Account -> Access Requests, who grants the
-areas they think right, one by one (or none). Their Basic account works meanwhile. Someone already signed in can
-ask for more the same way; the approvers are told straight away. Superuser is never granted through a request.
+Someone signed in can ask for more with a short note ("What would you like to help with?"). The approvers are told
+straight away and grant what they think right on My Account -> Access Requests, from the editing areas only
+(areas.REQUESTABLE): never the Admin areas, staff or superuser.
 """
 import logging
 from datetime import timedelta
@@ -33,7 +34,8 @@ logger = logging.getLogger(__name__)
 from . import areas as site_areas
 
 BASIC, DENY = "basic", "deny"
-BASIC_SUMMARY = f"the image browser, the taxonomy browser, the interactions page, IBBI-AI and the game ({settings.GAME_DISPLAY_NAME})"
+BASIC_SUMMARY = (f"the image browser with every specimen's page, downloads, the taxonomy browser, the pathogens page, IBBI-AI "
+                 f"and the game ({settings.GAME_DISPLAY_NAME})")
 # What can be asked for beyond Basic: the areas (key, label, description)
 AREAS = site_areas.AREAS
 AREA_LABELS = dict(site_areas.LABELS)
@@ -55,8 +57,8 @@ def area_labels(keys):
 
 
 def extras(keys):
-    """The requested areas a superuser has to decide on (everything beyond Basic)."""
-    return [k for k in keys if k in site_areas.KEYS]
+    """The requested areas a superuser has to decide on: the ones a request can give (old requests may name others)."""
+    return [k for k in keys if k in site_areas.REQUESTABLE]
 
 
 def grouped(wanted):
@@ -144,8 +146,8 @@ def submit_request(request, data):
                 user.save()
                 verified = None
             access_request = AccessRequest.objects.create(
-                name=data["name"], email=data["email"], affiliation=data["affiliation"], reason=data["reason"],
-                areas=list(data["areas"]), user=user, email_verified_at=verified,
+                name=data["name"], email=data["email"], affiliation=data["affiliation"], reason=data.get("reason", ""),
+                areas=[], user=user, email_verified_at=verified,
             )
     except IntegrityError:
         waiting = AccessRequest.objects.filter(
@@ -314,13 +316,13 @@ def _discard_unused_account(access_request):
 
 def decide(request_id, choice, decided_by, note, absolute_uri, areas=None):
     """
-    Decide an open request: ``choice`` "grant" gives the account the chosen ``areas`` (any of areas.KEYS; none means
+    Decide an open request: ``choice`` "grant" gives the account the chosen ``areas`` (any of areas.REQUESTABLE; none means
     it stays Basic), "deny" gives nothing more (a working account stays Basic). Then the applicant is emailed.
     ``absolute_uri`` is request.build_absolute_uri. Raises AccessError with a message for the approver.
     """
     if choice not in ("grant", DENY):
         raise AccessError("Choose what to grant, or Deny.")
-    areas = [a for a in (areas or []) if a in site_areas.KEYS]
+    areas = [a for a in (areas or []) if a in site_areas.REQUESTABLE]   # never the Admin areas through a request
     note = (note or "").strip()[:1000]
 
     with transaction.atomic():

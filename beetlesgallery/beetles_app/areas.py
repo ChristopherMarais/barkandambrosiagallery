@@ -2,16 +2,18 @@
 What each person may use beyond a Basic account, set per person on the My Account page (and when approving an
 access request).
 
-* Basic (every account, approved automatically once the email is confirmed): the image browser (without specimen
-  pages), the taxonomy browser, the interactions page, IBBI-AI and the game (Beetle Detective).
-* Each area below is granted on its own (AreaGrant), to anyone, staff or not, so two curators can have different
+* Basic (every account, approved automatically once the email is confirmed): the image browser with every specimen's
+  page, downloads, the taxonomy browser, the interactions page, IBBI-AI and the game (Beetle Detective). Everything
+  there is to read or download (owner, 2026-11-18: signing up should be simple, nobody picks permissions).
+* Each area below (all of them change something) is granted on its own (AreaGrant), to anyone, staff or not, so two curators can have different
   access. Superusers have everything. "Staff" is only a preset that ticks the usual curator areas (and lets someone
   into Django's own admin pages).
 * Validation is separate from editing: VALIDATE for one record at a time, BULK_VALIDATE for many at once. New
   uploads always arrive unvalidated.
 
-Accounts that existed before this split keep what they had: members got "details" and "download", curators every
-area except the species tables (migration 0037).
+Specimen pages ("details") and downloads ("download") used to be granted one by one too; they are now part of every
+account (BASIC_AREAS), so old grants of them change nothing. Someone signed in can ask for more with a short note;
+an approver picks from REQUESTABLE, which never includes the Admin areas.
 """
 from functools import wraps
 
@@ -23,12 +25,15 @@ BOXES, ANNOTATE, VALIDATE, AI_RECOMMEND = "boxes", "annotate", "validate", "ai_r
 UPLOAD, UPDATE, BULK_VALIDATE, PREDICTIONS, SPECIES = "upload", "update", "bulk_validate", "predictions", "species_tables"
 INTERACTIONS, NOTICE = "interactions", "site_notice"
 
+# Part of every account: nothing to grant (has_area is True for any signed-in, active account)
+BASIC_AREAS = [
+    (DETAILS, "Specimen pages", "Open each specimen's page with all its details."),
+    (DOWNLOAD, "Downloads", "Download images and their metadata in batches."),
+]
+BASIC_KEYS = {key for key, _, _ in BASIC_AREAS}
+
 # What can be granted, grouped by the page it is used on: (page, [(key, label, description), ...])
 PAGES = [
-    ("Image browser", [
-        (DETAILS, "Specimen pages", "Open each specimen's page with all its details."),
-        (DOWNLOAD, "Downloads", "Download images and their metadata in batches."),
-    ]),
     ("Image annotation", [
         (BOXES, "Edit bounding boxes", "Draw, move and remove boxes (not names or other details)."),
         (ANNOTATE, "Edit names and records", "Change species names and image and ROI details (includes editing boxes)."),
@@ -51,22 +56,22 @@ PAGES = [
 ]
 AREAS = [area for _, items in PAGES for area in items]
 KEYS = [key for key, _, _ in AREAS]
-LABELS = {key: label for key, label, _ in AREAS}
-# The same areas, grouped for a request's one long list (acc-groups, #618): what you look at (Viewing), what you
-# change (Editing), and site-level configuration (Admin). Order matters: that's the order shown.
-GROUP_ORDER = ["Viewing", "Editing", "Admin"]
+LABELS = {key: label for key, label, _ in AREAS + BASIC_AREAS}
+# The same areas, grouped (acc-groups, #618): what you change (Editing) and site-level configuration (Admin).
+GROUP_ORDER = ["Editing", "Admin"]
 GROUP_OF = {
-    DETAILS: "Viewing", DOWNLOAD: "Viewing",
     BOXES: "Editing", ANNOTATE: "Editing", VALIDATE: "Editing", AI_RECOMMEND: "Editing",
     UPLOAD: "Editing", UPDATE: "Editing", BULK_VALIDATE: "Editing", INTERACTIONS: "Editing",
     PREDICTIONS: "Admin", SPECIES: "Admin", NOTICE: "Admin",
 }
+# What an approver can give through an access request: never the Admin areas (owner, 2026-11-18). A superuser can
+# still give those to someone by hand on the Account page.
+REQUESTABLE = [key for key in KEYS if GROUP_OF[key] != "Admin"]
 # Areas that come with another one: editing names and records includes boxes; bulk validation includes validating one at a time
 INCLUDED = {BOXES: {ANNOTATE}, VALIDATE: {BULK_VALIDATE}}
 # The "Staff" preset on the account page (what a curator usually needs); every box can still be changed one by one.
 # Before areas were granted one by one, a curator ("staff") had these.
-CURATOR_AREAS = [DETAILS, DOWNLOAD, BOXES, ANNOTATE, VALIDATE, AI_RECOMMEND, UPLOAD, UPDATE, INTERACTIONS]
-MEMBER_AREAS = [DETAILS, DOWNLOAD]
+CURATOR_AREAS = [BOXES, ANNOTATE, VALIDATE, AI_RECOMMEND, UPLOAD, UPDATE, INTERACTIONS]
 
 
 def granted_areas(user):
@@ -81,11 +86,11 @@ def granted_areas(user):
 
 
 def has_area(user, area):
-    """Superusers have every area; anyone else (staff included) has the areas granted to them, plus the ones those
-    include (INCLUDED)."""
+    """Superusers have every area; every account has the BASIC_AREAS; anyone else (staff included) has the areas granted
+    to them, plus the ones those include (INCLUDED)."""
     if not (getattr(user, "is_authenticated", False) and user.is_active):
         return False
-    if user.is_superuser:
+    if user.is_superuser or area in BASIC_KEYS:
         return True
     granted = granted_areas(user)
     return area in granted or bool(INCLUDED.get(area, set()) & granted)
@@ -111,7 +116,7 @@ def area_required(area):
 def areas_for_templates(request):
     """{'areas': {'annotate': bool, ...}} for templates, e.g. {% if areas.annotate %}."""
     user = getattr(request, "user", None)
-    return {"areas": {key: has_area(user, key) for key in KEYS}}
+    return {"areas": {key: has_area(user, key) for key in [*BASIC_KEYS, *KEYS]}}
 
 
 def page_groups(granted=()):
@@ -122,7 +127,7 @@ def page_groups(granted=()):
 
 
 def grouped_areas(wanted=()):
-    """AREAS grouped into Viewing / Editing / Admin (GROUP_ORDER), each tagged with whether it was asked for.
+    """The REQUESTABLE areas grouped by GROUP_ORDER (so only Editing), each tagged with whether it was asked for.
 
     Requested areas are listed first within their group (acc-groups, acc-asked, #618), so a reviewer sees what was
     asked for without hunting through every box.
@@ -130,9 +135,11 @@ def grouped_areas(wanted=()):
     wanted = set(wanted)
     by_group = {g: [] for g in GROUP_ORDER}
     for key, label, description in AREAS:
+        if key not in REQUESTABLE:
+            continue
         by_group[GROUP_OF[key]].append(
             {"key": key, "label": label, "description": description, "wanted": key in wanted}
         )
     for areas_in_group in by_group.values():
         areas_in_group.sort(key=lambda a: not a["wanted"])
-    return [{"group": g, "areas": by_group[g]} for g in GROUP_ORDER]
+    return [{"group": g, "areas": by_group[g]} for g in GROUP_ORDER if by_group[g]]

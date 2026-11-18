@@ -31,7 +31,9 @@ class GroupsTests(PageBehaviourCase):
         keys = [a["key"] for group in areas.page_groups() for a in group["areas"]]
         self.assertEqual(sorted(keys), sorted(areas.KEYS))
         self.assertEqual(len(keys), len(set(keys)))
-        self.assertEqual([g["page"] for g in areas.page_groups()][:3], ["Image browser", "Image annotation", "Data management"])
+        # specimen pages and downloads (the Image browser's) are in every account, so nothing to grant there
+        self.assertEqual([g["page"] for g in areas.page_groups()][:2], ["Image annotation", "Data management"])
+        self.assertFalse(areas.BASIC_KEYS & set(keys))
 
     def test_bulk_validation_includes_validating_one_at_a_time(self):
         bulk = person("bulk", areas.BULK_VALIDATE)
